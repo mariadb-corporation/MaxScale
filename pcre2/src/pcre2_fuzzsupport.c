@@ -19,10 +19,12 @@ Written by Philip Hazel, October 2016
 
 #define MAX_MATCH_SIZE 1000
 
+#define DFA_WORKSPACE_COUNT 100
+
 #define ALLOWED_COMPILE_OPTIONS \
   (PCRE2_ANCHORED|PCRE2_ALLOW_EMPTY_CLASS|PCRE2_ALT_BSUX|PCRE2_ALT_CIRCUMFLEX| \
    PCRE2_ALT_VERBNAMES|PCRE2_AUTO_CALLOUT|PCRE2_CASELESS|PCRE2_DOLLAR_ENDONLY| \
-   PCRE2_DOTALL|PCRE2_DUPNAMES|PCRE2_EXTENDED|PCRE2_FIRSTLINE| \
+   PCRE2_DOTALL|PCRE2_DUPNAMES|PCRE2_ENDANCHORED|PCRE2_EXTENDED|PCRE2_FIRSTLINE| \
    PCRE2_MATCH_UNSET_BACKREF|PCRE2_MULTILINE|PCRE2_NEVER_BACKSLASH_C| \
    PCRE2_NO_AUTO_CAPTURE| \
    PCRE2_NO_AUTO_POSSESS|PCRE2_NO_DOTSTAR_ANCHOR|PCRE2_NO_START_OPTIMIZE| \
@@ -30,12 +32,12 @@ Written by Philip Hazel, October 2016
    PCRE2_UTF)
 
 #define ALLOWED_MATCH_OPTIONS \
-  (PCRE2_ANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
+  (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
    PCRE2_NOTEMPTY_ATSTART|PCRE2_PARTIAL_HARD| \
    PCRE2_PARTIAL_SOFT|PCRE2_NO_JIT)
-   
-/* This is the callout function. Its only purpose is to halt matching if there 
-are more than 100 callouts, as one way of stopping too much time being spent on 
+
+/* This is the callout function. Its only purpose is to halt matching if there
+are more than 100 callouts, as one way of stopping too much time being spent on
 fruitless matches. The callout data is a pointer to the counter. */
 
 static int callout_function(pcre2_callout_block *cb, void *callout_data)
@@ -44,9 +46,9 @@ static int callout_function(pcre2_callout_block *cb, void *callout_data)
 *((uint32_t *)callout_data) += 1;
 return (*((uint32_t *)callout_data) > 100)? PCRE2_ERROR_CALLOUT : 0;
 }
-   
-/* Putting in this apparently unnecessary prototype prevents gcc from giving a 
-"no previous prototype" warning when compiling at high warning level. */ 
+
+/* Putting in this apparently unnecessary prototype prevents gcc from giving a
+"no previous prototype" warning when compiling at high warning level. */
 
 int LLVMFuzzerTestOneInput(const unsigned char *, size_t);
 
@@ -59,12 +61,13 @@ uint32_t match_options;
 pcre2_match_data *match_data = NULL;
 pcre2_match_context *match_context = NULL;
 size_t match_size;
+int dfa_workspace[DFA_WORKSPACE_COUNT];
 int r1, r2;
 int i;
 
 if (size < 1) return 0;
 
-/* Limiting the length of the subject for matching stops fruitless searches 
+/* Limiting the length of the subject for matching stops fruitless searches
 in large trees taking too much time. */
 
 match_size = (size > MAX_MATCH_SIZE)? MAX_MATCH_SIZE : size;
@@ -82,14 +85,20 @@ r2 = rand();
 and also that PCRE2_NO_UTF_CHECK is unset, as there is no guarantee that the
 input is UTF-8. Also unset PCRE2_NEVER_UTF and PCRE2_NEVER_UCP as there is no
 reason to disallow UTF and UCP. Force PCRE2_NEVER_BACKSLASH_C to be set because
-\C in random patterns is highly likely to cause a crash.  */
+\C in random patterns is highly likely to cause a crash. */
 
 compile_options =
   ((((uint32_t)r1 << 16) | ((uint32_t)r2 & 0xffff)) & ALLOWED_COMPILE_OPTIONS) |
   PCRE2_NEVER_BACKSLASH_C;
-
+  
 match_options =
   ((((uint32_t)r1 << 16) | ((uint32_t)r2 & 0xffff)) & ALLOWED_MATCH_OPTIONS);
+  
+/* Discard partial matching if PCRE2_ENDANCHORED is set, because they are not
+allowed together and just give an immediate error return. */
+
+if (((compile_options|match_options) & PCRE2_ENDANCHORED) != 0)
+  match_options &= ~(PCRE2_PARTIAL_HARD|PCRE2_PARTIAL_SOFT); 
 
 /* Do the compile with and without the options, and after a successful compile,
 likewise do the match with and without the options. */
@@ -103,7 +112,7 @@ for (i = 0; i < 2; i++)
 
 #ifdef STANDALONE
   printf("Compile options %.8x never_backslash_c", compile_options);
-  printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+  printf("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
     ((compile_options & PCRE2_ALT_BSUX) != 0)? ",alt_bsux" : "",
     ((compile_options & PCRE2_ALT_CIRCUMFLEX) != 0)? ",alt_circumflex" : "",
     ((compile_options & PCRE2_ALT_VERBNAMES) != 0)? ",alt_verbnames" : "",
@@ -114,6 +123,7 @@ for (i = 0; i < 2; i++)
     ((compile_options & PCRE2_DOLLAR_ENDONLY) != 0)? ",dollar_endonly" : "",
     ((compile_options & PCRE2_DOTALL) != 0)? ",dotall" : "",
     ((compile_options & PCRE2_DUPNAMES) != 0)? ",dupnames" : "",
+    ((compile_options & PCRE2_ENDANCHORED) != 0)? ",endanchored" : "",
     ((compile_options & PCRE2_EXTENDED) != 0)? ",extended" : "",
     ((compile_options & PCRE2_FIRSTLINE) != 0)? ",firstline" : "",
     ((compile_options & PCRE2_MATCH_UNSET_BACKREF) != 0)? ",match_unset_backref" : "",
@@ -133,7 +143,7 @@ for (i = 0; i < 2; i++)
 
   code = pcre2_compile((PCRE2_SPTR)data, (PCRE2_SIZE)size, compile_options,
     &errorcode, &erroroffset, NULL);
-    
+
   /* Compilation succeeded */
 
   if (code != NULL)
@@ -141,8 +151,8 @@ for (i = 0; i < 2; i++)
     int j;
     uint32_t save_match_options = match_options;
 
-    /* Create match data and context blocks only when we first need them. Set 
-    low match and recursion limits to avoid wasting too much searching large 
+    /* Create match data and context blocks only when we first need them. Set
+    low match and depth limits to avoid wasting too much searching large
     pattern trees. Almost all matches are going to fail. */
 
     if (match_data == NULL)
@@ -168,18 +178,20 @@ for (i = 0; i < 2; i++)
         return 0;
         }
       (void)pcre2_set_match_limit(match_context, 100);
-      (void)pcre2_set_recursion_limit(match_context, 100); 
-      (void)pcre2_set_callout(match_context, callout_function, &callout_count); 
+      (void)pcre2_set_depth_limit(match_context, 100);
+      (void)pcre2_set_callout(match_context, callout_function, &callout_count);
       }
 
-    /* Match twice, with and without options */
+    /* Match twice, with and without options. */
 
     for (j = 0; j < 2; j++)
       {
 #ifdef STANDALONE
       printf("Match options %.8x", match_options);
-      printf("%s%s%s%s%s%s%s%s\n",
+      printf("%s%s%s%s%s%s%s%s%s%s\n",
         ((match_options & PCRE2_ANCHORED) != 0)? ",anchored" : "",
+        ((match_options & PCRE2_ENDANCHORED) != 0)? ",endanchored" : "",
+        ((match_options & PCRE2_NO_JIT) != 0)? ",no_jit" : "",
         ((match_options & PCRE2_NO_UTF_CHECK) != 0)? ",no_utf_check" : "",
         ((match_options & PCRE2_NOTBOL) != 0)? ",notbol" : "",
         ((match_options & PCRE2_NOTEMPTY) != 0)? ",notempty" : "",
@@ -205,10 +217,47 @@ for (i = 0; i < 2; i++)
       match_options = 0;  /* For second time */
       }
 
+    /* Match with DFA twice, with and without options. */
+
+    match_options = save_match_options & ~PCRE2_NO_JIT;  /* Not valid for DFA */
+
+    for (j = 0; j < 2; j++)
+      {
+#ifdef STANDALONE
+      printf("DFA match options %.8x", match_options);
+      printf("%s%s%s%s%s%s%s%s%s\n",
+        ((match_options & PCRE2_ANCHORED) != 0)? ",anchored" : "",
+        ((match_options & PCRE2_ENDANCHORED) != 0)? ",endanchored" : "",
+        ((match_options & PCRE2_NO_UTF_CHECK) != 0)? ",no_utf_check" : "",
+        ((match_options & PCRE2_NOTBOL) != 0)? ",notbol" : "",
+        ((match_options & PCRE2_NOTEMPTY) != 0)? ",notempty" : "",
+        ((match_options & PCRE2_NOTEMPTY_ATSTART) != 0)? ",notempty_atstart" : "",
+        ((match_options & PCRE2_NOTEOL) != 0)? ",noteol" : "",
+        ((match_options & PCRE2_PARTIAL_HARD) != 0)? ",partial_hard" : "",
+        ((match_options & PCRE2_PARTIAL_SOFT) != 0)? ",partial_soft" : "");
+#endif
+
+      callout_count = 0;
+      errorcode = pcre2_dfa_match(code, (PCRE2_SPTR)data,
+        (PCRE2_SIZE)match_size, 0, match_options, match_data, match_context,
+        dfa_workspace, DFA_WORKSPACE_COUNT);
+
+#ifdef STANDALONE
+      if (errorcode >= 0) printf("Match returned %d\n", errorcode); else
+        {
+        unsigned char buffer[256];
+        pcre2_get_error_message(errorcode, buffer, 256);
+        printf("Match failed: error %d: %s\n", errorcode, buffer);
+        }
+#endif
+
+      match_options = 0;  /* For second time */
+      }
+
     match_options = save_match_options;  /* Reset for the second compile */
     pcre2_code_free(code);
     }
-    
+
   /* Compilation failed */
 
   else
@@ -251,30 +300,30 @@ for (i = 1; i < argc; i++)
   size_t readsize;
   unsigned char *buffer;
   FILE *f;
-  
-  /* Handle a literal string. Copy to an exact size buffer so that checks for 
+
+  /* Handle a literal string. Copy to an exact size buffer so that checks for
   overrunning work. */
-  
+
   if (argv[i][0] == '=')
-    {    
+    {
     readsize = strlen(argv[i]) - 1;
-    printf("------ <Literal> ------\n"); 
+    printf("------ <Literal> ------\n");
     printf("Length = %lu\n", readsize);
-    printf("%.*s\n", (int)readsize, argv[i]+1); 
+    printf("%.*s\n", (int)readsize, argv[i]+1);
     buffer = (unsigned char *)malloc(readsize);
     if (buffer == NULL)
       printf("** Failed to allocate %lu bytes of memory\n", readsize);
     else
-      {    
-      memcpy(buffer, argv[i]+1, readsize); 
+      {
+      memcpy(buffer, argv[i]+1, readsize);
       LLVMFuzzerTestOneInput(buffer, readsize);
-      free(buffer);    
-      } 
+      free(buffer);
+      }
     continue;
-    }  
+    }
 
   /* Handle a string given in a file */
- 
+
   f = fopen(argv[i], "rb");
   if (f == NULL)
     {

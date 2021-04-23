@@ -360,4 +360,190 @@
 
 /[\s[:^ascii:]]/B,ucp
 
+/\pP/ucp
+    \x{7fffffff}
+
+# A special extra option allows excaped surrogate code points in 32-bit mode,
+# but subjects containing them must not be UTF-checked. These patterns give
+# errors in 16-bit mode.
+
+/\x{d800}/I,utf,allow_surrogate_escapes
+    \x{d800}\=no_utf_check
+
+/\udfff\o{157401}/utf,alt_bsux,allow_surrogate_escapes
+    \x{dfff}\x{df01}\=no_utf_check
+
+# This has different starting code units in 8-bit mode. 
+
+/^[^ab]/IB,utf
+    c
+    \x{ff}
+    \x{100}
+\= Expect no match
+    aaa
+    
+# Offsets are different in 8-bit mode. 
+
+/(?<=abc)(|def)/g,utf,replace=<$0>,substitute_callout
+    123abcáyzabcdef789abcሴqr
+    
+# A few script run tests in non-UTF mode (but they need Unicode support)
+
+/^(*script_run:.{4})/
+    \x{3041}\x{30a1}\x{3007}\x{3007}   Hiragana Katakana Han Han
+    \x{30a1}\x{3041}\x{3007}\x{3007}   Katakana Hiragana Han Han
+    \x{1100}\x{2e80}\x{2e80}\x{1101}   Hangul Han Han Hangul
+ 
+/^(*sr:.*)/utf,allow_surrogate_escapes
+    \x{2e80}\x{3105}\x{2e80}\x{30a1}   Han Bopomofo Han Katakana
+    \x{d800}\x{dfff}                   Surrogates (Unknown) \=no_utf_check
+
+/(?(n/utf
+
+/(?(á/utf
+
+# Invalid UTF-16/32 tests.
+
+/.../g,match_invalid_utf
+    abcd\x{df00}wxzy\x{df00}pqrs
+    abcd\x{80}wxzy\x{df00}pqrs
+
+/abc/match_invalid_utf
+    ab\x{df00}ab\=ph
+\= Expect no match
+    ab\x{df00}cdef\=ph
+
+/ab$/match_invalid_utf
+    ab\x{df00}cdeab
+\= Expect no match
+    ab\x{df00}cde
+
+/.../g,match_invalid_utf
+    abcd\x{80}wxzy\x{df00}pqrs
+
+/(?<=x)../g,match_invalid_utf
+    abcd\x{80}wxzy\x{df00}pqrs
+    abcd\x{80}wxzy\x{df00}xpqrs
+
+/X$/match_invalid_utf
+\= Expect no match
+    X\x{df00}
+    
+/(?<=..)X/match_invalid_utf,aftertext
+    AB\x{df00}AQXYZ
+    AB\x{df00}AQXYZ\=offset=5
+    AB\x{df00}\x{df00}AXYZXC\=offset=5
+\= Expect no match
+    AB\x{df00}XYZ
+    AB\x{df00}XYZ\=offset=3 
+    AB\x{df00}AXYZ
+    AB\x{df00}AXYZ\=offset=4
+    AB\x{df00}\x{df00}AXYZ\=offset=5
+
+/.../match_invalid_utf
+\= Expect no match
+    A\x{d800}B
+    A\x{110000}B 
+    
+/aa/utf,ucp,match_invalid_utf,global
+    aa\x{d800}aa
+
+/aa/utf,ucp,match_invalid_utf,global
+    \x{d800}aa
+
+# ---------------------------------------------------- 
+
+/(*UTF)(?=\x{123})/I
+
+/[\x{c1}\x{e1}]X[\x{145}\x{146}]/I,utf
+
+/[\xff\x{ffff}]/I,utf
+
+/[\xff\x{ff}]/I,utf
+
+/[\xff\x{ff}]/I
+
+/[Ss]/I
+
+/[Ss]/I,utf
+
+/(?:\x{ff}|\x{3000})/I,utf
+
+# ---------------------------------------------------- 
+# UCP and casing tests
+
+/\x{120}/i,I
+
+/\x{c1}/i,I,ucp
+
+/[\x{120}\x{121}]/iB,ucp
+
+/[ab\x{120}]+/iB,ucp
+    aABb\x{121}\x{120}
+
+/\x{c1}/i,no_start_optimize
+\= Expect no match
+    \x{e1}
+
+/\x{120}\x{c1}/i,ucp,no_start_optimize
+    \x{121}\x{e1}
+
+/\x{120}\x{c1}/i,ucp
+    \x{121}\x{e1}
+
+/[^\x{120}]/i,no_start_optimize
+    \x{121}
+
+/[^\x{120}]/i,ucp,no_start_optimize
+\= Expect no match
+    \x{121}
+
+/[^\x{120}]/i
+    \x{121}
+
+/[^\x{120}]/i,ucp
+\= Expect no match
+    \x{121}
+    
+/\x{120}{2}/i,ucp
+    \x{121}\x{121}
+
+/[^\x{120}]{2}/i,ucp
+\= Expect no match
+    \x{121}\x{121}
+
+/\x{c1}+\x{e1}/iB,ucp
+    \x{c1}\x{c1}\x{c1}
+
+/\x{c1}+\x{e1}/iIB,ucp
+    \x{c1}\x{c1}\x{c1}
+    \x{e1}\x{e1}\x{e1} 
+
+/a|\x{c1}/iI,ucp
+    \x{e1}xxx
+
+/\x{c1}|\x{e1}/iI,ucp
+
+/X(\x{e1})Y/ucp,replace=>\U$1<,substitute_extended
+    X\x{e1}Y
+
+/X(\x{121})Y/ucp,replace=>\U$1<,substitute_extended
+    X\x{121}Y
+
+/s/i,ucp
+    \x{17f} 
+
+/s/i,utf
+    \x{17f} 
+
+/[^s]/i,ucp
+\= Expect no match
+    \x{17f} 
+
+/[^s]/i,utf
+\= Expect no match
+    \x{17f} 
+
+# ---------------------------------------------------- 
+
 # End of testinput12

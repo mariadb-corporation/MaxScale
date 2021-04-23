@@ -1,4 +1,4 @@
-.TH PCRE2_GET_ERROR_MESSAGE 3 "17 June 2016" "PCRE2 10.22"
+.TH PCRE2_GET_ERROR_MESSAGE 3 "24 March 2017" "PCRE2 10.30"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -22,11 +22,11 @@ errors are negative numbers. The arguments are:
   \fIbuffer\fP      where to put the message
   \fIbufflen\fP     the length of the buffer (code units)
 .sp
-The function returns the length of the message, excluding the trailing zero, or
-the negative error code PCRE2_ERROR_NOMEMORY if the buffer is too small. In
-this case, the returned message is truncated (but still with a trailing zero).
-If \fIerrorcode\fP does not contain a recognized error code number, the
-negative value PCRE2_ERROR_BADDATA is returned.
+The function returns the length of the message in code units, excluding the
+trailing zero, or the negative error code PCRE2_ERROR_NOMEMORY if the buffer is
+too small. In this case, the returned message is truncated (but still with a
+trailing zero). If \fIerrorcode\fP does not contain a recognized error code
+number, the negative value PCRE2_ERROR_BADDATA is returned.
 .P
 There is a complete description of the PCRE2 native API in the
 .\" HREF

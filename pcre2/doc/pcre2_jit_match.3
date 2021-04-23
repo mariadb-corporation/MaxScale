@@ -1,4 +1,4 @@
-.TH PCRE2_JIT_MATCH 3 "03 November 2014" "PCRE2 10.0"
+.TH PCRE2_JIT_MATCH 3 "11 February 2020" "PCRE2 10.35"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -22,8 +22,10 @@ algorithm that is similar to Perl's. It is a "fast path" interface to JIT, and
 it bypasses some of the sanity checks that \fBpcre2_match()\fP applies.
 Its arguments are exactly the same as for
 .\" HREF
-\fBpcre2_match()\fP.
+\fBpcre2_match()\fP,
 .\"
+except that the subject string must be specified with a length;
+PCRE2_ZERO_TERMINATED is not supported.
 .P
 The supported options are PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY,
 PCRE2_NOTEMPTY_ATSTART, PCRE2_PARTIAL_HARD, and PCRE2_PARTIAL_SOFT. Unsupported

@@ -15,7 +15,7 @@ please consult the man page, in case the conversion went wrong.
 <ul>
 <li><a name="TOC1" href="#SEC1">PCRE2 PERFORMANCE</a>
 <li><a name="TOC2" href="#SEC2">COMPILED PATTERN MEMORY USAGE</a>
-<li><a name="TOC3" href="#SEC3">STACK USAGE AT RUN TIME</a>
+<li><a name="TOC3" href="#SEC3">STACK AND HEAP USAGE AT RUN TIME</a>
 <li><a name="TOC4" href="#SEC4">PROCESSING TIME</a>
 <li><a name="TOC5" href="#SEC5">AUTHOR</a>
 <li><a name="TOC6" href="#SEC6">REVISION</a>
@@ -29,11 +29,11 @@ of them.
 <br><a name="SEC2" href="#TOC1">COMPILED PATTERN MEMORY USAGE</a><br>
 <P>
 Patterns are compiled by PCRE2 into a reasonably efficient interpretive code,
-so that most simple patterns do not use much memory. However, there is one case
-where the memory usage of a compiled pattern can be unexpectedly large. If a
-parenthesized subpattern has a quantifier with a minimum greater than 1 and/or
-a limited maximum, the whole subpattern is repeated in the compiled code. For
-example, the pattern
+so that most simple patterns do not use much memory for storing the compiled
+version. However, there is one case where the memory usage of a compiled
+pattern can be unexpectedly large. If a parenthesized group has a quantifier
+with a minimum greater than 1 and/or a limited maximum, the whole group is
+repeated in the compiled code. For example, the pattern
 <pre>
   (abc|def){2,4}
 </pre>
@@ -52,13 +52,13 @@ example, the very simple pattern
 <pre>
   ((ab){1,1000}c){1,3}
 </pre>
-uses 51K bytes when compiled using the 8-bit library. When PCRE2 is compiled
-with its default internal pointer size of two bytes, the size limit on a
-compiled pattern is 64K code units in the 8-bit and 16-bit libraries, and this
-is reached with the above pattern if the outer repetition is increased from 3
-to 4. PCRE2 can be compiled to use larger internal pointers and thus handle
-larger compiled patterns, but it is better to try to rewrite your pattern to
-use less memory if you can.
+uses over 50KiB when compiled using the 8-bit library. When PCRE2 is
+compiled with its default internal pointer size of two bytes, the size limit on
+a compiled pattern is 65535 code units in the 8-bit and 16-bit libraries, and
+this is reached with the above pattern if the outer repetition is increased
+from 3 to 4. PCRE2 can be compiled to use larger internal pointers and thus
+handle larger compiled patterns, but it is better to try to rewrite your
+pattern to use less memory if you can.
 </P>
 <P>
 One way of reducing the memory usage for such patterns is to make use of
@@ -68,25 +68,42 @@ facility. Re-writing the above pattern as
 <pre>
   ((ab)(?2){0,999}c)(?1){0,2}
 </pre>
-reduces the memory requirements to 18K, and indeed it remains under 20K even
-with the outer repetition increased to 100. However, this pattern is not
-exactly equivalent, because the "subroutine" calls are treated as
-<a href="pcre2pattern.html#atomicgroup">atomic groups</a>
-into which there can be no backtracking if there is a subsequent matching
-failure. Therefore, PCRE2 cannot do this kind of rewriting automatically.
-Furthermore, there is a noticeable loss of speed when executing the modified
-pattern. Nevertheless, if the atomic grouping is not a problem and the loss of
-speed is acceptable, this kind of rewriting will allow you to process patterns
-that PCRE2 cannot otherwise handle.
+reduces the memory requirements to around 16KiB, and indeed it remains under
+20KiB even with the outer repetition increased to 100. However, this kind of
+pattern is not always exactly equivalent, because any captures within
+subroutine calls are lost when the subroutine completes. If this is not a
+problem, this kind of rewriting will allow you to process patterns that PCRE2
+cannot otherwise handle. The matching performance of the two different versions
+of the pattern are roughly the same. (This applies from release 10.30 - things
+were different in earlier releases.)
 </P>
-<br><a name="SEC3" href="#TOC1">STACK USAGE AT RUN TIME</a><br>
+<br><a name="SEC3" href="#TOC1">STACK AND HEAP USAGE AT RUN TIME</a><br>
 <P>
-When <b>pcre2_match()</b> is used for matching, certain kinds of pattern can
-cause it to use large amounts of the process stack. In some environments the
-default process stack is quite small, and if it runs out the result is often
-SIGSEGV. Rewriting your pattern can often help. The
-<a href="pcre2stack.html"><b>pcre2stack</b></a>
-documentation discusses this issue in detail.
+From release 10.30, the interpretive (non-JIT) version of <b>pcre2_match()</b>
+uses very little system stack at run time. In earlier releases recursive
+function calls could use a great deal of stack, and this could cause problems,
+but this usage has been eliminated. Backtracking positions are now explicitly
+remembered in memory frames controlled by the code. An initial 20KiB vector of
+frames is allocated on the system stack (enough for about 100 frames for small
+patterns), but if this is insufficient, heap memory is used. The amount of heap
+memory can be limited; if the limit is set to zero, only the initial stack
+vector is used. Rewriting patterns to be time-efficient, as described below,
+may also reduce the memory requirements.
+</P>
+<P>
+In contrast to <b>pcre2_match()</b>, <b>pcre2_dfa_match()</b> does use recursive
+function calls, but only for processing atomic groups, lookaround assertions,
+and recursion within the pattern. The original version of the code used to
+allocate quite large internal workspace vectors on the stack, which caused some
+problems for some patterns in environments with small stacks. From release
+10.32 the code for <b>pcre2_dfa_match()</b> has been re-factored to use heap
+memory when necessary for internal workspace when recursing, though recursive
+function calls are still used.
+</P>
+<P>
+The "match depth" parameter can be used to limit the depth of function
+recursion, and the "match heap" parameter to limit heap memory in
+<b>pcre2_dfa_match()</b>.
 </P>
 <br><a name="SEC4" href="#TOC1">PROCESSING TIME</a><br>
 <P>
@@ -175,7 +192,54 @@ appreciable time with strings longer than about 20 characters.
 </P>
 <P>
 In many cases, the solution to this kind of performance issue is to use an
-atomic group or a possessive quantifier.
+atomic group or a possessive quantifier. This can often reduce memory
+requirements as well. As another example, consider this pattern:
+<pre>
+  ([^&#60;]|&#60;(?!inet))+
+</pre>
+It matches from wherever it starts until it encounters "&#60;inet" or the end of
+the data, and is the kind of pattern that might be used when processing an XML
+file. Each iteration of the outer parentheses matches either one character that
+is not "&#60;" or a "&#60;" that is not followed by "inet". However, each time a
+parenthesis is processed, a backtracking position is passed, so this
+formulation uses a memory frame for each matched character. For a long string,
+a lot of memory is required. Consider now this rewritten pattern, which matches
+exactly the same strings:
+<pre>
+  ([^&#60;]++|&#60;(?!inet))+
+</pre>
+This runs much faster, because sequences of characters that do not contain "&#60;"
+are "swallowed" in one item inside the parentheses, and a possessive quantifier
+is used to stop any backtracking into the runs of non-"&#60;" characters. This
+version also uses a lot less memory because entry to a new set of parentheses
+happens only when a "&#60;" character that is not followed by "inet" is encountered
+(and we assume this is relatively rare).
+</P>
+<P>
+This example shows that one way of optimizing performance when matching long
+subject strings is to write repeated parenthesized subpatterns to match more
+than one character whenever possible.
+</P>
+<br><b>
+SETTING RESOURCE LIMITS
+</b><br>
+<P>
+You can set limits on the amount of processing that takes place when matching,
+and on the amount of heap memory that is used. The default values of the limits
+are very large, and unlikely ever to operate. They can be changed when PCRE2 is
+built, and they can also be set when <b>pcre2_match()</b> or
+<b>pcre2_dfa_match()</b> is called. For details of these interfaces, see the
+<a href="pcre2build.html"><b>pcre2build</b></a>
+documentation and the section entitled
+<a href="pcre2api.html#matchcontext">"The match context"</a>
+in the
+<a href="pcre2api.html"><b>pcre2api</b></a>
+documentation.
+</P>
+<P>
+The <b>pcre2test</b> test program has a modifier called "find_limits" which, if
+applied to a subject line, causes it to find the smallest limits that allow a
+pattern to match. This is done by repeatedly matching with different limits.
 </P>
 <br><a name="SEC5" href="#TOC1">AUTHOR</a><br>
 <P>
@@ -188,9 +252,9 @@ Cambridge, England.
 </P>
 <br><a name="SEC6" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 02 January 2015
+Last updated: 03 February 2019
 <br>
-Copyright &copy; 1997-2015 University of Cambridge.
+Copyright &copy; 1997-2019 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

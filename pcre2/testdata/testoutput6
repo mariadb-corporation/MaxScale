@@ -726,7 +726,7 @@ No match
  +4 ^   ^      c
  +2 ^    ^     b
  +3 ^     ^    |
-+12 ^     ^    
++12 ^     ^    End of pattern
  +1 ^     ^    a
  +4 ^     ^    c
  0: ababab
@@ -745,12 +745,12 @@ No match
  +4 ^   ^        c
  +2 ^    ^       b
  +3 ^     ^      |
-+12 ^     ^      
++12 ^     ^      End of pattern
  +1 ^     ^      a
  +4 ^     ^      c
  +5 ^      ^     d
  +6 ^       ^    ){3,4}
-+12 ^       ^    
++12 ^       ^    End of pattern
  0: abcdabcd
  1: abcdab
   abcdcdcdcdcd  
@@ -768,12 +768,12 @@ No match
  +4 ^   ^            c
  +5 ^    ^           d
  +6 ^     ^          ){3,4}
-+12 ^     ^          
++12 ^     ^          End of pattern
  +1 ^     ^          a
  +4 ^     ^          c
  +5 ^      ^         d
  +6 ^       ^        ){3,4}
-+12 ^       ^        
++12 ^       ^        End of pattern
  0: abcdcdcd
  1: abcdcd
 
@@ -876,7 +876,7 @@ Partial match: abc
  0: def
    
 /(?<=foo)bar/
-   foob\=ps,offset=2
+   foob\=ps,offset=2,allusedtext
 Partial match: foob
                <<<
    foobar...\=ps,dfa_restart,offset=4
@@ -2670,13 +2670,6 @@ No match
 /[\d-]+/
     12-34
  0: 12-34
-\= Expect no match
-    aaa
-No match
-
-/[\d-z]+/
-    12-34z
- 0: 12-34z
 \= Expect no match
     aaa
 No match
@@ -5715,17 +5708,6 @@ No match
  0: 
  0: 
 
-/^[\d-a]/
-    abcde
- 0: a
-    -things
- 0: -
-    0digit
- 0: 0
-\= Expect no match
-    bcdef    
-No match
-    
 /[[:space:]]+/
     > \x09\x0a\x0c\x0d\x0b<
  0:  \x09\x0a\x0c\x0d\x0b
@@ -5996,7 +5978,7 @@ Partial match: 123
  0: Content-Type:xxxyyyz
 
 /^abc/Im,newline=lf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: multiline
 Forced newline is LF
 First code unit at start or follows newline
@@ -6019,7 +6001,7 @@ No match
 No match
 
 /^abc/Im,newline=crlf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: multiline
 Forced newline is CRLF
 First code unit at start or follows newline
@@ -6034,7 +6016,7 @@ No match
 No match
     
 /^abc/Im,newline=cr
-Capturing subpattern count = 0
+Capture group count = 0
 Options: multiline
 Forced newline is CR
 First code unit at start or follows newline
@@ -6049,7 +6031,7 @@ No match
 No match
 
 /.*/I,newline=lf
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Forced newline is LF
 First code unit at start or follows newline
@@ -6062,7 +6044,7 @@ Subject length lower bound = 0
  0: abc\x0d
 
 /.*/I,newline=cr
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Forced newline is CR
 First code unit at start or follows newline
@@ -6075,7 +6057,7 @@ Subject length lower bound = 0
  0: abc
 
 /.*/I,newline=crlf
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Forced newline is CRLF
 First code unit at start or follows newline
@@ -6088,7 +6070,7 @@ Subject length lower bound = 0
  0: abc
 
 /\w+(.)(.)?def/Is
-Capturing subpattern count = 2
+Capture group count = 2
 Options: dotall
 Starting code units: 0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P 
   Q R S T U V W X Y Z _ a b c d e f g h i j k l m n o p q r s t u v w x y z 
@@ -6465,7 +6447,7 @@ No match
  0: \x0aA
 
 /a\Rb/I,bsr=anycrlf
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches CR, LF, or CRLF
 First code unit = 'a'
 Last code unit = 'b'
@@ -6483,7 +6465,7 @@ No match
 No match
 
 /a\Rb/I,bsr=unicode
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches any Unicode newline
 First code unit = 'a'
 Last code unit = 'b'
@@ -6500,7 +6482,7 @@ Subject length lower bound = 3
  0: a\x0bb
     
 /a\R?b/I,bsr=anycrlf
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches CR, LF, or CRLF
 First code unit = 'a'
 Last code unit = 'b'
@@ -6518,7 +6500,7 @@ No match
 No match
 
 /a\R?b/I,bsr=unicode
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches any Unicode newline
 First code unit = 'a'
 Last code unit = 'b'
@@ -6535,7 +6517,7 @@ Subject length lower bound = 2
  0: a\x0bb
     
 /a\R{2,4}b/I,bsr=anycrlf
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches CR, LF, or CRLF
 First code unit = 'a'
 Last code unit = 'b'
@@ -6553,7 +6535,7 @@ No match
 No match
 
 /a\R{2,4}b/I,bsr=unicode
-Capturing subpattern count = 0
+Capture group count = 0
 \R matches any Unicode newline
 First code unit = 'a'
 Last code unit = 'b'
@@ -6628,14 +6610,14 @@ No match
  +0 ^       x
  +1 ^^      y
  +2 ^ ^     z
- +3 ^  ^    
+ +3 ^  ^    End of pattern
  0: xyz
   abcxyz 
 --->abcxyz
  +0    ^       x
  +1    ^^      y
  +2    ^ ^     z
- +3    ^  ^    
+ +3    ^  ^    End of pattern
  0: xyz
 \= Expect no match 
   abc
@@ -6652,7 +6634,7 @@ No match
  +0    ^       x
  +1    ^^      y
  +2    ^ ^     z
- +3    ^  ^    
+ +3    ^  ^    End of pattern
  0: xyz
 \= Expect no match 
   abc
@@ -6686,7 +6668,7 @@ No match
 +15    ^       x
 +16    ^^      y
 +17    ^ ^     z
-+18    ^  ^    
++18    ^  ^    End of pattern
  0: xyz
   
 /(?C)ab/
@@ -6702,7 +6684,7 @@ No match
 --->ab
  +0 ^      a
  +1 ^^     b
- +2 ^ ^    
+ +2 ^ ^    End of pattern
  0: ab
   ab\=callout_none
  0: ab
@@ -6735,7 +6717,7 @@ No match
  +8    ^     [a]
 +17 ^  ^     |
 +22 ^   ^    $
-+23 ^   ^    
++23 ^   ^    End of pattern
  0: "ab"
     "ab"\=callout_none
  0: "ab"
@@ -6821,9 +6803,10 @@ Partial match: dogs
     xyzabc123pqr
 Failed: error -42: pattern contains an item that is not supported for DFA matching
     
-/(?<=abc)123/
+/(?<=abc)123/allusedtext
     xyzabc123pqr 
- 0: 123
+ 0: abc123
+    <<<   
     xyzabc12\=ps
 Partial match: abc12
                <<<
@@ -6831,9 +6814,10 @@ Partial match: abc12
 Partial match: abc12
                <<<
 
-/\babc\b/
+/\babc\b/allusedtext
     +++abc+++
- 0: abc
+ 0: +abc+
+    <   >
     +++ab\=ps
 Partial match: +ab
                <
@@ -6849,7 +6833,7 @@ Partial match: +ab
  0+ CBA
 
 /(abc|def|xyz)/I
-Capturing subpattern count = 1
+Capture group count = 1
 Starting code units: a d x 
 Subject length lower bound = 3
     terhjk;abcdaadsfe
@@ -6861,9 +6845,8 @@ Subject length lower bound = 3
 No match
 
 /(abc|def|xyz)/I,no_start_optimize
-Capturing subpattern count = 1
+Capture group count = 1
 Options: no_start_optimize
-Subject length lower bound = 0
     terhjk;abcdaadsfe
  0: abc
     the quick xyz brown fox
@@ -6951,7 +6934,7 @@ Failed: error -42: pattern contains an item that is not supported for DFA matchi
     ac
 Failed: error -42: pattern contains an item that is not supported for DFA matching
 
-/(?<=abc)def/
+/(?<=abc)def/allusedtext
     abc\=ph
 Partial match: abc
                <<<
@@ -7517,7 +7500,6 @@ Callout (10): "AB"
 /^a(b)c(?C1)def/
       abcdef\=callout_capture
 Callout 1: last capture = 0
- 0: 
 --->abcdef
     ^  ^       d
  0: abcdef
@@ -7538,7 +7520,6 @@ Callout 1: last capture = 0
 ------------------------------------------------------------------
       abcdef\=callout_capture
 Callout (10): {AB} last capture = 0
- 0: 
 --->abcdef
     ^  ^       d
  0: abcdef
@@ -7682,9 +7663,236 @@ No match
 ** Ignored after DFA matching: allcaptures
  0: a
 
-/(*LIMIT_RECURSION=100)^((.)(?1)|.)$/
-\= Expect recursion limit exceeded
+/(*LIMIT_DEPTH=100)^((.)(?1)|.)$/
+\= Expect depth limit exceeded
     a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
-Failed: error -53: recursion limit exceeded
+Failed: error -53: matching depth limit exceeded
+
+/(*LIMIT_HEAP=0)^((.)(?1)|.)$/
+\= Expect heap limit exceeded
+    a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+Failed: error -63: heap limit exceeded
+
+/(*LIMIT_HEAP=50000)^((.)(?1)|.)$/
+\= Expect success
+    a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+ 0: a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+
+/(02-)?[0-9]{3}-[0-9]{3}/
+    02-123-123
+ 0: 02-123-123
+
+/^(a(?2))(b)(?1)/
+    abbab\=find_limits 
+Minimum heap limit = 0
+Minimum match limit = 4
+Minimum depth limit = 2
+ 0: abbab
+
+/abc/endanchored
+    xyzabc
+ 0: abc
+\= Expect no match
+    xyzabcdef
+No match
+\= Expect error
+    xyzabc\=ph
+Failed: error -34: bad option value
+
+/abc/
+    xyzabc\=endanchored
+ 0: abc
+\= Expect no match
+    xyzabcdef\=endanchored
+No match
+\= Expect error
+    xyzabc\=ps,endanchored
+Failed: error -34: bad option value
+
+/abc|bcd/endanchored
+    xyzabcd
+ 0: bcd
+\= Expect no match
+    xyzabcdef
+No match
+
+/(*NUL)^.*/
+    a\nb\x00ccc
+ 0: a\x0ab
+    
+/(*NUL)^.*/s
+    a\nb\x00ccc
+ 0: a\x0ab\x00ccc
+    
+/^x/m,newline=nul
+    ab\x00xy
+ 0: x
+    
+/'#comment' 0d 0a 00 '^x\' 0a 'y'/x,newline=nul,hex
+    x\nyz 
+ 0: x\x0ay
+ 
+/(*NUL)^X\NY/
+    X\nY
+ 0: X\x0aY
+    X\rY
+ 0: X\x0dY
+\= Expect no match
+    X\x00Y      
+No match
+
+/(?<=abc|)/
+    abcde\=aftertext
+ 0: 
+ 0+ abcde
+    
+/(?<=|abc)/ 
+    abcde\=aftertext
+ 0: 
+ 0+ abcde
+
+/(?<=abc|)/endanchored
+    abcde\=aftertext
+ 0: 
+ 0+ 
+    
+/(?<=|abc)/endanchored
+    abcde\=aftertext
+ 0: 
+ 0+ 
+
+/(*LIMIT_MATCH=100).*(?![|H]?.*(?![|H]?););.*(?![|H]?.*(?![|H]?););\x00\x00\x00\x00\x00\x00\x00(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?![|);)?.*(![|H]?);)?.*(?![|H]?);)?.*(?![|H]?);)?.*(?![|H]););![|H]?););[|H]?);|H]?);)\x00\x00\x00\x00\x00\x00H]?););?![|H]?);)?.*(?![|H]?););[||H]?);)?.*(?![|H]?););[|H]?);(?![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););;[\x00\x00\x00\x00\x00\x00\x00![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););/no_dotstar_anchor
+\= Expect limit exceeded
+.*(?![|H]?.*(?![|H]?););.*(?![|H]?.*(?![|H]?););\x00\x00\x00\x00\x00\x00\x00(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?![|);)?.*(![|H]?);)?.*(?![|H]?);)?.*(?![|H]?);)?.*(?![|H]););![|H]?););[|H]?);|H]?);)\x00\x00\x00\x00\x00\x00H]?););?![|H]?);)?.*(?![|H]?););[||H]?);)?.*(?![|H]?););[|H]?);(?![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););;[\x00\x00\x00\x00\x00\x00\x00![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););
+Failed: error -47: match limit exceeded
+
+/\n/firstline
+    xyz\nabc
+ 0: \x0a
+
+/\nabc/firstline
+    xyz\nabc
+ 0: \x0aabc
+
+/\x{0a}abc/firstline,newline=crlf
+\= Expect no match
+    xyz\r\nabc
+No match
+
+/[abc]/firstline
+\= Expect no match
+    \na
+No match
+    
+/foobar/
+    the foobar thing\=copy_matched_subject
+ 0: foobar
+    the foobar thing\=copy_matched_subject,zero_terminate
+ 0: foobar
+
+/foobar/g
+    the foobar thing foobar again\=copy_matched_subject
+ 0: foobar
+ 0: foobar
+
+/(?(VERSION>=0)^B0W)/
+    B0W-W0W
+ 0: B0W
+\= Expect no match
+    0
+No match
+
+/(?(VERSION>=1000)^B0W|W0W)/
+    B0W-W0W
+ 0: W0W
+\= Expect no match
+    0
+No match
+
+/(?<=pqr)abc(?=xyz)/
+    123pqrabcxy\=ps,allusedtext
+Partial match: pqrabcxy
+               <<<
+    123pqrabcxyz\=ps,allusedtext
+ 0: pqrabcxyz
+    <<<   >>>
+
+/(?>a+b)/
+    aaaa\=ps
+Partial match: aaaa
+    aaaab\=ps
+ 0: aaaab
+    
+/(abc)(?1)/
+    abca\=ps
+Partial match: abca
+    abcabc\=ps
+ 0: abcabc
+
+/(?(?=abc).*|Z)/
+    ab\=ps
+Partial match: ab
+    abcxyz\=ps
+ 0: abcxyz
+
+/(abc)++x/
+    abcab\=ps
+Partial match: abcab
+    abc\=ps 
+Partial match: abc
+    ab\=ps
+Partial match: ab
+    abcx  
+ 0: abcx
+
+/\z/
+    abc\=ph 
+Partial match: 
+    abc\=ps 
+ 0: 
+   
+/\Z/
+    abc\=ph 
+Partial match: 
+    abc\=ps 
+ 0: 
+    abc\n\=ph
+Partial match: \x0a
+    abc\n\=ps
+ 0: 
+
+/c*+(?<=[bc])/
+    abc\=ph
+Partial match: c
+    ab\=ph
+Partial match: 
+    abc\=ps
+ 0: c
+    ab\=ps
+ 0: 
+
+/c++(?<=[bc])/
+    abc\=ph
+Partial match: c
+    ab\=ph
+Partial match: 
+
+/(?<=(?=.(?<=x)))/
+    abx
+ 0: 
+    ab\=ph
+Partial match: 
+    bxyz 
+ 0: 
+    xyz
+ 0: 
+
+/(?![ab]).*/
+    ab\=ph
+Partial match: 
+
+/c*+/
+    ab\=ph,offset=2
+Partial match: 
 
 # End of testinput6

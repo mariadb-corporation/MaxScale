@@ -19,16 +19,16 @@ SYNOPSIS
 <b>#include &#60;pcre2.h&#62;</b>
 </P>
 <P>
-<b>const unsigned char *pcre2_maketables(pcre22_general_context *<i>gcontext</i>);</b>
+<b>const uint8_t *pcre2_maketables(pcre2_general_context *<i>gcontext</i>);</b>
 </P>
 <br><b>
 DESCRIPTION
 </b><br>
 <P>
-This function builds a set of character tables for character values less than
-256. These can be passed to <b>pcre2_compile()</b> in a compile context in order
-to override the internal, built-in tables (which were either defaulted or made
-by <b>pcre2_maketables()</b> when PCRE2 was compiled). See the
+This function builds a set of character tables for character code points that
+are less than 256. These can be passed to <b>pcre2_compile()</b> in a compile
+context in order to override the internal, built-in tables (which were either
+defaulted or made by <b>pcre2_maketables()</b> when PCRE2 was compiled). See the
 <a href="pcre2_set_character_tables.html"><b>pcre2_set_character_tables()</b></a>
 page. You might want to do this if you are using a non-standard locale.
 </P>

@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2016 University of Cambridge
+          New API code Copyright (c) 2016-2019 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *  Create a match data block given ovector size  *
 *************************************************/
 
-/* A minimum of 1 is imposed on the number of ovector triplets. */
+/* A minimum of 1 is imposed on the number of ovector pairs. */
 
 PCRE2_EXP_DEFN pcre2_match_data * PCRE2_CALL_CONVENTION
 pcre2_match_data_create(uint32_t oveccount, pcre2_general_context *gcontext)
@@ -59,10 +59,11 @@ pcre2_match_data_create(uint32_t oveccount, pcre2_general_context *gcontext)
 pcre2_match_data *yield;
 if (oveccount < 1) oveccount = 1;
 yield = PRIV(memctl_malloc)(
-  sizeof(pcre2_match_data) + 3*oveccount*sizeof(PCRE2_SIZE),
+  offsetof(pcre2_match_data, ovector) + 2*oveccount*sizeof(PCRE2_SIZE),
   (pcre2_memctl *)gcontext);
 if (yield == NULL) return NULL;
 yield->oveccount = oveccount;
+yield->flags = 0;
 return yield;
 }
 
@@ -93,7 +94,12 @@ PCRE2_EXP_DEFN void PCRE2_CALL_CONVENTION
 pcre2_match_data_free(pcre2_match_data *match_data)
 {
 if (match_data != NULL)
+  {
+  if ((match_data->flags & PCRE2_MD_COPIED_SUBJECT) != 0)
+    match_data->memctl.free((void *)match_data->subject,
+      match_data->memctl.memory_data);
   match_data->memctl.free(match_data, match_data->memctl.memory_data);
+  }
 }
 
 
@@ -142,6 +148,19 @@ PCRE2_EXP_DEFN PCRE2_SIZE PCRE2_CALL_CONVENTION
 pcre2_get_startchar(pcre2_match_data *match_data)
 {
 return match_data->startchar;
+}
+
+
+
+/*************************************************
+*         Get size of match data block           *
+*************************************************/
+
+PCRE2_EXP_DEFN PCRE2_SIZE PCRE2_CALL_CONVENTION
+pcre2_get_match_data_size(pcre2_match_data *match_data)
+{
+return offsetof(pcre2_match_data, ovector) +
+  2 * (match_data->oveccount) * sizeof(PCRE2_SIZE);
 }
 
 /* End of pcre2_match_data.c */

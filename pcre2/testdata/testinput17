@@ -160,10 +160,13 @@
     aaaaaaaaaaaaaz\=match_limit=3000
 
 /(*LIMIT_MATCH=3000)(a+)*zz/I
+\= Expect limit exceeded
     aaaaaaaaaaaaaz
+\= Expect limit exceeded
     aaaaaaaaaaaaaz\=match_limit=60000
 
 /(*LIMIT_MATCH=60000)(*LIMIT_MATCH=3000)(a+)*zz/I
+\= Expect limit exceeded
     aaaaaaaaaaaaaz
 
 /(*LIMIT_MATCH=60000)(a+)*zz/I
@@ -175,12 +178,15 @@
 # These three have infinitely nested recursions. 
     
 /((?2))((?1))/
+\= Expect JIT stack limit reached
     abc
 
 /((?(R2)a+|(?1)b))()/
+\= Expect JIT stack limit reached
     aaaabcde
 
 /(?(R)a*(?1)|((?R))b)/
+\= Expect JIT stack limit reached
     aaaabcde
     
 # Invalid options disable JIT when called via pcre2_match(), causing the
@@ -277,7 +283,8 @@
 /[axm]{7}/
 
 /(.|.)*?bx/
-    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabax
+\= Expect limit exceeded
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabax\=match_limit=10000000
     
 # Test JIT disable 
 
@@ -292,9 +299,9 @@
 # ---- 
 
 /[aC]/mg,firstline,newline=lf
-match\nmatch
+    match\nmatch
 
 /[aCz]/mg,firstline,newline=lf
-match\nmatch
+    match\nmatch
 
 # End of testinput17

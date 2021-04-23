@@ -16,16 +16,17 @@ please consult the man page, in case the conversion went wrong.
 <li><a name="TOC1" href="#SEC1">PCRE2 JUST-IN-TIME COMPILER SUPPORT</a>
 <li><a name="TOC2" href="#SEC2">AVAILABILITY OF JIT SUPPORT</a>
 <li><a name="TOC3" href="#SEC3">SIMPLE USE OF JIT</a>
-<li><a name="TOC4" href="#SEC4">UNSUPPORTED OPTIONS AND PATTERN ITEMS</a>
-<li><a name="TOC5" href="#SEC5">RETURN VALUES FROM JIT MATCHING</a>
-<li><a name="TOC6" href="#SEC6">CONTROLLING THE JIT STACK</a>
-<li><a name="TOC7" href="#SEC7">JIT STACK FAQ</a>
-<li><a name="TOC8" href="#SEC8">FREEING JIT SPECULATIVE MEMORY</a>
-<li><a name="TOC9" href="#SEC9">EXAMPLE CODE</a>
-<li><a name="TOC10" href="#SEC10">JIT FAST PATH API</a>
-<li><a name="TOC11" href="#SEC11">SEE ALSO</a>
-<li><a name="TOC12" href="#SEC12">AUTHOR</a>
-<li><a name="TOC13" href="#SEC13">REVISION</a>
+<li><a name="TOC4" href="#SEC4">MATCHING SUBJECTS CONTAINING INVALID UTF</a>
+<li><a name="TOC5" href="#SEC5">UNSUPPORTED OPTIONS AND PATTERN ITEMS</a>
+<li><a name="TOC6" href="#SEC6">RETURN VALUES FROM JIT MATCHING</a>
+<li><a name="TOC7" href="#SEC7">CONTROLLING THE JIT STACK</a>
+<li><a name="TOC8" href="#SEC8">JIT STACK FAQ</a>
+<li><a name="TOC9" href="#SEC9">FREEING JIT SPECULATIVE MEMORY</a>
+<li><a name="TOC10" href="#SEC10">EXAMPLE CODE</a>
+<li><a name="TOC11" href="#SEC11">JIT FAST PATH API</a>
+<li><a name="TOC12" href="#SEC12">SEE ALSO</a>
+<li><a name="TOC13" href="#SEC13">AUTHOR</a>
+<li><a name="TOC14" href="#SEC14">REVISION</a>
 </ul>
 <br><a name="SEC1" href="#TOC1">PCRE2 JUST-IN-TIME COMPILER SUPPORT</a><br>
 <P>
@@ -89,7 +90,7 @@ or a negative error code.
 There is a limit to the size of pattern that JIT supports, imposed by the size
 of machine stack that it uses. The exact rules are not documented because they
 may change at any time, in particular, when new optimizations are introduced.
-If a pattern is too big, a call to \fBpcre2_jit_compile()\fB returns
+If a pattern is too big, a call to <b>pcre2_jit_compile()</b> returns
 PCRE2_ERROR_NOMEMORY.
 </P>
 <P>
@@ -144,12 +145,39 @@ support is not available, or the pattern was not processed by
 <b>pcre2_jit_compile()</b>, or the JIT compiler was not able to handle the
 pattern.
 </P>
-<br><a name="SEC4" href="#TOC1">UNSUPPORTED OPTIONS AND PATTERN ITEMS</a><br>
+<br><a name="SEC4" href="#TOC1">MATCHING SUBJECTS CONTAINING INVALID UTF</a><br>
+<P>
+When a pattern is compiled with the PCRE2_UTF option, subject strings are
+normally expected to be a valid sequence of UTF code units. By default, this is
+checked at the start of matching and an error is generated if invalid UTF is
+detected. The PCRE2_NO_UTF_CHECK option can be passed to <b>pcre2_match()</b> to
+skip the check (for improved performance) if you are sure that a subject string
+is valid. If this option is used with an invalid string, the result is
+undefined.
+</P>
+<P>
+However, a way of running matches on strings that may contain invalid UTF
+sequences is available. Calling <b>pcre2_compile()</b> with the
+PCRE2_MATCH_INVALID_UTF option has two effects: it tells the interpreter in
+<b>pcre2_match()</b> to support invalid UTF, and, if <b>pcre2_jit_compile()</b>
+is called, the compiled JIT code also supports invalid UTF. Details of how this
+support works, in both the JIT and the interpretive cases, is given in the
+<a href="pcre2unicode.html"><b>pcre2unicode</b></a>
+documentation.
+</P>
+<P>
+There is also an obsolete option for <b>pcre2_jit_compile()</b> called
+PCRE2_JIT_INVALID_UTF, which currently exists only for backward compatibility.
+It is superseded by the <b>pcre2_compile()</b> option PCRE2_MATCH_INVALID_UTF
+and should no longer be used. It may be removed in future.
+</P>
+<br><a name="SEC5" href="#TOC1">UNSUPPORTED OPTIONS AND PATTERN ITEMS</a><br>
 <P>
 The <b>pcre2_match()</b> options that are supported for JIT matching are
-PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY, PCRE2_NOTEMPTY_ATSTART,
-PCRE2_NO_UTF_CHECK, PCRE2_PARTIAL_HARD, and PCRE2_PARTIAL_SOFT. The
-PCRE2_ANCHORED option is not supported at match time.
+PCRE2_COPY_MATCHED_SUBJECT, PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY,
+PCRE2_NOTEMPTY_ATSTART, PCRE2_NO_UTF_CHECK, PCRE2_PARTIAL_HARD, and
+PCRE2_PARTIAL_SOFT. The PCRE2_ANCHORED and PCRE2_ENDANCHORED options are not
+supported at match time.
 </P>
 <P>
 If the PCRE2_NO_JIT option is passed to <b>pcre2_match()</b> it disables the
@@ -160,7 +188,7 @@ The only unsupported pattern items are \C (match a single data unit) when
 running in a UTF mode, and a callout immediately before an assertion condition
 in a conditional group.
 </P>
-<br><a name="SEC5" href="#TOC1">RETURN VALUES FROM JIT MATCHING</a><br>
+<br><a name="SEC6" href="#TOC1">RETURN VALUES FROM JIT MATCHING</a><br>
 <P>
 When a pattern is matched using JIT matching, the return values are the same
 as those given by the interpretive <b>pcre2_match()</b> code, with the addition
@@ -173,13 +201,13 @@ below for a discussion of JIT stack usage.
 The error code PCRE2_ERROR_MATCHLIMIT is returned by the JIT code if searching
 a very large pattern tree goes on for too long, as it is in the same
 circumstance when JIT is not used, but the details of exactly what is counted
-are not the same. The PCRE2_ERROR_RECURSIONLIMIT error code is never returned
+are not the same. The PCRE2_ERROR_DEPTHLIMIT error code is never returned
 when JIT matching is used.
 <a name="stackcontrol"></a></P>
-<br><a name="SEC6" href="#TOC1">CONTROLLING THE JIT STACK</a><br>
+<br><a name="SEC7" href="#TOC1">CONTROLLING THE JIT STACK</a><br>
 <P>
 When the compiled JIT code runs, it needs a block of memory to use as a stack.
-By default, it uses 32K on the machine stack. However, some large or
+By default, it uses 32KiB on the machine stack. However, some large or
 complicated patterns need more than this. The error PCRE2_ERROR_JIT_STACKLIMIT
 is given when there is not enough stack. Three functions are provided for
 managing blocks of memory for use as JIT stacks. There is further discussion
@@ -193,13 +221,10 @@ are a starting size, a maximum size, and a general context (for memory
 allocation functions, or NULL for standard memory allocation). It returns a
 pointer to an opaque structure of type <b>pcre2_jit_stack</b>, or NULL if there
 is an error. The <b>pcre2_jit_stack_free()</b> function is used to free a stack
-that is no longer needed. (For the technically minded: the address space is
-allocated by mmap or VirtualAlloc.)
-</P>
-<P>
-JIT uses far less memory for recursion than the interpretive code,
-and a maximum stack size of 512K to 1M should be more than enough for any
-pattern.
+that is no longer needed. If its argument is NULL, this function returns
+immediately, without doing anything. (For the technically minded: the address
+space is allocated by mmap or VirtualAlloc.) A maximum stack size of 512KiB to
+1MiB should be more than enough for any pattern.
 </P>
 <P>
 The <b>pcre2_jit_stack_assign()</b> function specifies which stack JIT code
@@ -211,9 +236,10 @@ should use. Its arguments are as follows:
 </pre>
 The first argument is a pointer to a match context. When this is subsequently
 passed to a matching function, its information determines which JIT stack is
-used. There are three cases for the values of the other two options:
+used. If this argument is NULL, the function returns immediately, without doing
+anything. There are three cases for the values of the other two options:
 <pre>
-  (1) If <i>callback</i> is NULL and <i>data</i> is NULL, an internal 32K block
+  (1) If <i>callback</i> is NULL and <i>data</i> is NULL, an internal 32KiB block
       on the machine stack is used. This is the default when a match
       context is created.
 
@@ -224,7 +250,7 @@ used. There are three cases for the values of the other two options:
   (3) If <i>callback</i> is not NULL, it must point to a function that is
       called with <i>data</i> as an argument at the start of matching, in
       order to set up a JIT stack. If the return from the callback
-      function is NULL, the internal 32K stack is used; otherwise the
+      function is NULL, the internal 32KiB stack is used; otherwise the
       return value must be a valid JIT stack, the result of calling
       <b>pcre2_jit_stack_create()</b>.
 </pre>
@@ -271,7 +297,7 @@ non-default JIT stacks might operate:
 </pre>
 All the functions described in this section do nothing if JIT is not available.
 <a name="stackfaq"></a></P>
-<br><a name="SEC7" href="#TOC1">JIT STACK FAQ</a><br>
+<br><a name="SEC8" href="#TOC1">JIT STACK FAQ</a><br>
 <P>
 (1) Why do we need JIT stacks?
 <br>
@@ -290,9 +316,9 @@ we do the recursion in memory.
 Modern operating systems have a nice feature: they can reserve an address space
 instead of allocating memory. We can safely allocate memory pages inside this
 address space, so the stack could grow without moving memory data (this is
-important because of pointers). Thus we can allocate 1M address space, and use
-only a single memory page (usually 4K) if that is enough. However, we can still
-grow up to 1M anytime if needed.
+important because of pointers). Thus we can allocate 1MiB address space, and
+use only a single memory page (usually 4KiB) if that is enough. However, we can
+still grow up to 1MiB anytime if needed.
 </P>
 <P>
 (3) Who "owns" a JIT stack?
@@ -313,12 +339,12 @@ stack through the JIT callback function.
 You can free a JIT stack at any time, as long as it will not be used by
 <b>pcre2_match()</b> again. When you assign the stack to a match context, only a
 pointer is set. There is no reference counting or any other magic. You can free
-compiled patterns, contexts, and stacks in any order, anytime. Just \fIdo
-not\fP call <b>pcre2_match()</b> with a match context pointing to an already
-freed stack, as that will cause SEGFAULT. (Also, do not free a stack currently
-used by <b>pcre2_match()</b> in another thread). You can also replace the stack
-in a context at any time when it is not in use. You should free the previous
-stack before assigning a replacement.
+compiled patterns, contexts, and stacks in any order, anytime.
+Just <i>do not</i> call <b>pcre2_match()</b> with a match context pointing to an
+already freed stack, as that will cause SEGFAULT. (Also, do not free a stack
+currently used by <b>pcre2_match()</b> in another thread). You can also replace
+the stack in a context at any time when it is not in use. You should free the
+previous stack before assigning a replacement.
 </P>
 <P>
 (5) Should I allocate/free a stack every time before/after calling
@@ -332,7 +358,7 @@ list of patterns.
 </P>
 <P>
 (6) OK, the stack is for long term memory allocation. But what happens if a
-pattern causes stack overflow with a stack of 1M? Is that 1M kept until the
+pattern causes stack overflow with a stack of 1MiB? Is that 1MiB kept until the
 stack is freed?
 <br>
 <br>
@@ -350,7 +376,7 @@ stack handling?
 No, thanks to Windows. If POSIX threads were used everywhere, we could throw
 out this complicated API.
 </P>
-<br><a name="SEC8" href="#TOC1">FREEING JIT SPECULATIVE MEMORY</a><br>
+<br><a name="SEC9" href="#TOC1">FREEING JIT SPECULATIVE MEMORY</a><br>
 <P>
 <b>void pcre2_jit_free_unused_memory(pcre2_general_context *<i>gcontext</i>);</b>
 </P>
@@ -362,7 +388,7 @@ all possible memory. You can cause this to happen by calling
 pcre2_jit_free_unused_memory(). Its argument is a general context, for custom
 memory management, or NULL for standard memory management.
 </P>
-<br><a name="SEC9" href="#TOC1">EXAMPLE CODE</a><br>
+<br><a name="SEC10" href="#TOC1">EXAMPLE CODE</a><br>
 <P>
 This is a single-threaded example that specifies a JIT stack without using a
 callback. A real program should include error checking after all the function
@@ -391,7 +417,7 @@ calls.
 
 </PRE>
 </P>
-<br><a name="SEC10" href="#TOC1">JIT FAST PATH API</a><br>
+<br><a name="SEC11" href="#TOC1">JIT FAST PATH API</a><br>
 <P>
 Because the API described above falls back to interpreted matching when JIT is
 not available, it is convenient for programs that are written for general use
@@ -404,10 +430,13 @@ processed by <b>pcre2_jit_compile()</b>).
 </P>
 <P>
 The fast path function is called <b>pcre2_jit_match()</b>, and it takes exactly
-the same arguments as <b>pcre2_match()</b>. The return values are also the same,
-plus PCRE2_ERROR_JIT_BADOPTION if a matching mode (partial or complete) is
-requested that was not compiled. Unsupported option bits (for example,
-PCRE2_ANCHORED) are ignored, as is the PCRE2_NO_JIT option.
+the same arguments as <b>pcre2_match()</b>. However, the subject string must be
+specified with a length; PCRE2_ZERO_TERMINATED is not supported. Unsupported
+option bits (for example, PCRE2_ANCHORED, PCRE2_ENDANCHORED and
+PCRE2_COPY_MATCHED_SUBJECT) are ignored, as is the PCRE2_NO_JIT option. The
+return values are also the same as for <b>pcre2_match()</b>, plus
+PCRE2_ERROR_JIT_BADOPTION if a matching mode (partial or complete) is requested
+that was not compiled.
 </P>
 <P>
 When you call <b>pcre2_match()</b>, as well as testing for invalid options, a
@@ -421,11 +450,11 @@ invalid data is passed, the result is undefined.
 Bypassing the sanity checks and the <b>pcre2_match()</b> wrapping can give
 speedups of more than 10%.
 </P>
-<br><a name="SEC11" href="#TOC1">SEE ALSO</a><br>
+<br><a name="SEC12" href="#TOC1">SEE ALSO</a><br>
 <P>
 <b>pcre2api</b>(3)
 </P>
-<br><a name="SEC12" href="#TOC1">AUTHOR</a><br>
+<br><a name="SEC13" href="#TOC1">AUTHOR</a><br>
 <P>
 Philip Hazel (FAQ by Zoltan Herczeg)
 <br>
@@ -434,11 +463,11 @@ University Computing Service
 Cambridge, England.
 <br>
 </P>
-<br><a name="SEC13" href="#TOC1">REVISION</a><br>
+<br><a name="SEC14" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 05 June 2016
+Last updated: 23 May 2019
 <br>
-Copyright &copy; 1997-2016 University of Cambridge.
+Copyright &copy; 1997-2019 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

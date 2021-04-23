@@ -1,4 +1,4 @@
-.TH PCRE2_MATCH_CONTEXT_FREE 3 "22 October 2014" "PCRE2 10.00"
+.TH PCRE2_MATCH_CONTEXT_FREE 3 "28 June 2018" "PCRE2 10.32"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -15,7 +15,8 @@ PCRE2 - Perl-compatible regular expressions (revised API)
 .sp
 This function frees the memory occupied by a match context, using the memory
 freeing function from the general context with which it was created, or
-\fBfree()\fP if that was not set.
+\fBfree()\fP if that was not set. If the argument is NULL, the function returns
+immediately without doing anything.
 .P
 There is a complete description of the PCRE2 native API in the
 .\" HREF

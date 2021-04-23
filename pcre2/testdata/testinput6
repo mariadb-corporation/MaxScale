@@ -486,7 +486,7 @@
    def\=dfa_restart
    
 /(?<=foo)bar/
-   foob\=ps,offset=2
+   foob\=ps,offset=2,allusedtext
    foobar...\=ps,dfa_restart,offset=4
    foobar\=offset=2
 \= Expect no match
@@ -1858,11 +1858,6 @@
 
 /[\d-]+/
     12-34
-\= Expect no match
-    aaa
-
-/[\d-z]+/
-    12-34z
 \= Expect no match
     aaa
 
@@ -3813,13 +3808,6 @@
 /a*/g
     abbab
 
-/^[\d-a]/
-    abcde
-    -things
-    0digit
-\= Expect no match
-    bcdef    
-    
 /[[:space:]]+/
     > \x09\x0a\x0c\x0d\x0b<
      
@@ -4427,12 +4415,12 @@
 /abc\K123/
     xyzabc123pqr
     
-/(?<=abc)123/
+/(?<=abc)123/allusedtext
     xyzabc123pqr 
     xyzabc12\=ps
     xyzabc12\=ph
 
-/\babc\b/
+/\babc\b/allusedtext
     +++abc+++
     +++ab\=ps
     +++ab\=ph
@@ -4502,7 +4490,7 @@
 /^(?(?!a(*SKIP)b))/
     ac
 
-/(?<=abc)def/
+/(?<=abc)def/allusedtext
     abc\=ph
 
 /abc$/
@@ -4882,8 +4870,160 @@
     aaa\=allcaptures
     a\=allcaptures
 
-/(*LIMIT_RECURSION=100)^((.)(?1)|.)$/
-\= Expect recursion limit exceeded
+/(*LIMIT_DEPTH=100)^((.)(?1)|.)$/
+\= Expect depth limit exceeded
     a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+
+/(*LIMIT_HEAP=0)^((.)(?1)|.)$/
+\= Expect heap limit exceeded
+    a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+
+/(*LIMIT_HEAP=50000)^((.)(?1)|.)$/
+\= Expect success
+    a[00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]
+
+/(02-)?[0-9]{3}-[0-9]{3}/
+    02-123-123
+
+/^(a(?2))(b)(?1)/
+    abbab\=find_limits 
+
+/abc/endanchored
+    xyzabc
+\= Expect no match
+    xyzabcdef
+\= Expect error
+    xyzabc\=ph
+
+/abc/
+    xyzabc\=endanchored
+\= Expect no match
+    xyzabcdef\=endanchored
+\= Expect error
+    xyzabc\=ps,endanchored
+
+/abc|bcd/endanchored
+    xyzabcd
+\= Expect no match
+    xyzabcdef
+
+/(*NUL)^.*/
+    a\nb\x00ccc
+    
+/(*NUL)^.*/s
+    a\nb\x00ccc
+    
+/^x/m,newline=nul
+    ab\x00xy
+    
+/'#comment' 0d 0a 00 '^x\' 0a 'y'/x,newline=nul,hex
+    x\nyz 
+ 
+/(*NUL)^X\NY/
+    X\nY
+    X\rY
+\= Expect no match
+    X\x00Y      
+
+/(?<=abc|)/
+    abcde\=aftertext
+    
+/(?<=|abc)/ 
+    abcde\=aftertext
+
+/(?<=abc|)/endanchored
+    abcde\=aftertext
+    
+/(?<=|abc)/endanchored
+    abcde\=aftertext
+
+/(*LIMIT_MATCH=100).*(?![|H]?.*(?![|H]?););.*(?![|H]?.*(?![|H]?););\x00\x00\x00\x00\x00\x00\x00(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?![|);)?.*(![|H]?);)?.*(?![|H]?);)?.*(?![|H]?);)?.*(?![|H]););![|H]?););[|H]?);|H]?);)\x00\x00\x00\x00\x00\x00H]?););?![|H]?);)?.*(?![|H]?););[||H]?);)?.*(?![|H]?););[|H]?);(?![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););;[\x00\x00\x00\x00\x00\x00\x00![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););/no_dotstar_anchor
+\= Expect limit exceeded
+.*(?![|H]?.*(?![|H]?););.*(?![|H]?.*(?![|H]?););\x00\x00\x00\x00\x00\x00\x00(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?!(?![|);)?.*(![|H]?);)?.*(?![|H]?);)?.*(?![|H]?);)?.*(?![|H]););![|H]?););[|H]?);|H]?);)\x00\x00\x00\x00\x00\x00H]?););?![|H]?);)?.*(?![|H]?););[||H]?);)?.*(?![|H]?););[|H]?);(?![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););;[\x00\x00\x00\x00\x00\x00\x00![|H]?););![|H]?););[|H]?);|H]?);)?.*(?![|H]?););
+
+/\n/firstline
+    xyz\nabc
+
+/\nabc/firstline
+    xyz\nabc
+
+/\x{0a}abc/firstline,newline=crlf
+\= Expect no match
+    xyz\r\nabc
+
+/[abc]/firstline
+\= Expect no match
+    \na
+    
+/foobar/
+    the foobar thing\=copy_matched_subject
+    the foobar thing\=copy_matched_subject,zero_terminate
+
+/foobar/g
+    the foobar thing foobar again\=copy_matched_subject
+
+/(?(VERSION>=0)^B0W)/
+    B0W-W0W
+\= Expect no match
+    0
+
+/(?(VERSION>=1000)^B0W|W0W)/
+    B0W-W0W
+\= Expect no match
+    0
+
+/(?<=pqr)abc(?=xyz)/
+    123pqrabcxy\=ps,allusedtext
+    123pqrabcxyz\=ps,allusedtext
+
+/(?>a+b)/
+    aaaa\=ps
+    aaaab\=ps
+    
+/(abc)(?1)/
+    abca\=ps
+    abcabc\=ps
+
+/(?(?=abc).*|Z)/
+    ab\=ps
+    abcxyz\=ps
+
+/(abc)++x/
+    abcab\=ps
+    abc\=ps 
+    ab\=ps
+    abcx  
+
+/\z/
+    abc\=ph 
+    abc\=ps 
+   
+/\Z/
+    abc\=ph 
+    abc\=ps 
+    abc\n\=ph
+    abc\n\=ps
+
+/c*+(?<=[bc])/
+    abc\=ph
+    ab\=ph
+    abc\=ps
+    ab\=ps
+
+/c++(?<=[bc])/
+    abc\=ph
+    ab\=ph
+
+/(?<=(?=.(?<=x)))/
+    abx
+    ab\=ph
+    bxyz 
+    xyz
+
+/(?![ab]).*/
+    ab\=ph
+
+/c*+/
+    ab\=ph,offset=2
 
 # End of testinput6

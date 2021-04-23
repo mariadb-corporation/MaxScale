@@ -87,10 +87,9 @@ uint32_t newline;
 
 PCRE2_SIZE erroroffset;
 PCRE2_SIZE *ovector;
+PCRE2_SIZE subject_length;
 
-size_t subject_length;
 pcre2_match_data *match_data;
-
 
 
 /**************************************************************************
@@ -121,12 +120,14 @@ if (argc - i != 2)
   return 1;
   }
 
-/* As pattern and subject are char arguments, they can be straightforwardly
-cast to PCRE2_SPTR as we are working in 8-bit code units. */
+/* Pattern and subject are char arguments, so they can be straightforwardly
+cast to PCRE2_SPTR because we are working in 8-bit code units. The subject
+length is cast to PCRE2_SIZE for completeness, though PCRE2_SIZE is in fact
+defined to be size_t. */
 
 pattern = (PCRE2_SPTR)argv[i];
 subject = (PCRE2_SPTR)argv[i+1];
-subject_length = strlen((char *)subject);
+subject_length = (PCRE2_SIZE)strlen((char *)subject);
 
 
 /*************************************************************************
@@ -155,16 +156,21 @@ if (re == NULL)
 
 
 /*************************************************************************
-* If the compilation succeeded, we call PCRE again, in order to do a     *
+* If the compilation succeeded, we call PCRE2 again, in order to do a    *
 * pattern match against the subject string. This does just ONE match. If *
 * further matching is needed, it will be done below. Before running the  *
-* match we must set up a match_data block for holding the result.        *
+* match we must set up a match_data block for holding the result. Using  *
+* pcre2_match_data_create_from_pattern() ensures that the block is       *
+* exactly the right size for the number of capturing parentheses in the  *
+* pattern. If you need to know the actual size of a match_data block as  *
+* a number of bytes, you can find it like this:                          *
+*                                                                        *
+* PCRE2_SIZE match_data_size = pcre2_get_match_data_size(match_data);    *
 *************************************************************************/
 
-/* Using this function ensures that the block is exactly the right size for
-the number of capturing parentheses in the pattern. */
-
 match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+/* Now run the match. */
 
 rc = pcre2_match(
   re,                   /* the compiled pattern */
@@ -188,7 +194,7 @@ if (rc < 0)
     default: printf("Matching error %d\n", rc); break;
     }
   pcre2_match_data_free(match_data);   /* Release memory used for the match */
-  pcre2_code_free(re);                 /* data and the compiled pattern. */
+  pcre2_code_free(re);                 /*   data and the compiled pattern. */
   return 1;
   }
 
@@ -211,13 +217,28 @@ pcre2_match_data_create_from_pattern() above. */
 if (rc == 0)
   printf("ovector was not big enough for all the captured substrings\n");
 
+/* We must guard against patterns such as /(?=.\K)/ that use \K in an assertion
+to set the start of a match later than its end. In this demonstration program,
+we just detect this case and give up. */
+
+if (ovector[0] > ovector[1])
+  {
+  printf("\\K was used in an assertion to set the match start after its end.\n"
+    "From end to start the match was: %.*s\n", (int)(ovector[0] - ovector[1]),
+      (char *)(subject + ovector[1]));
+  printf("Run abandoned\n");
+  pcre2_match_data_free(match_data);
+  pcre2_code_free(re);
+  return 1;
+  }
+
 /* Show substrings stored in the output vector by number. Obviously, in a real
 application you might want to do things other than print them. */
 
 for (i = 0; i < rc; i++)
   {
   PCRE2_SPTR substring_start = subject + ovector[2*i];
-  size_t substring_length = ovector[2*i+1] - ovector[2*i];
+  PCRE2_SIZE substring_length = ovector[2*i+1] - ovector[2*i];
   printf("%2d: %.*s\n", i, (int)substring_length, (char *)substring_start);
   }
 
@@ -338,6 +359,29 @@ for (;;)
     options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
     }
 
+  /* If the previous match was not an empty string, there is one tricky case to
+  consider. If a pattern contains \K within a lookbehind assertion at the
+  start, the end of the matched string can be at the offset where the match
+  started. Without special action, this leads to a loop that keeps on matching
+  the same substring. We must detect this case and arrange to move the start on
+  by one character. The pcre2_get_startchar() function returns the starting
+  offset that was passed to pcre2_match(). */
+
+  else
+    {
+    PCRE2_SIZE startchar = pcre2_get_startchar(match_data);
+    if (start_offset <= startchar)
+      {
+      if (startchar >= subject_length) break;   /* Reached end of subject.   */
+      start_offset = startchar + 1;             /* Advance by one character. */
+      if (utf8)                                 /* If UTF-8, it may be more  */
+        {                                       /*   than one code unit.     */
+        for (; start_offset < subject_length; start_offset++)
+          if ((subject[start_offset] & 0xc0) != 0x80) break;
+        }
+      }
+    }
+
   /* Run the next matching operation */
 
   rc = pcre2_match(
@@ -401,6 +445,21 @@ for (;;)
 
   if (rc == 0)
     printf("ovector was not big enough for all the captured substrings\n");
+
+  /* We must guard against patterns such as /(?=.\K)/ that use \K in an
+  assertion to set the start of a match later than its end. In this
+  demonstration program, we just detect this case and give up. */
+
+  if (ovector[0] > ovector[1])
+    {
+    printf("\\K was used in an assertion to set the match start after its end.\n"
+      "From end to start the match was: %.*s\n", (int)(ovector[0] - ovector[1]),
+        (char *)(subject + ovector[1]));
+    printf("Run abandoned\n");
+    pcre2_match_data_free(match_data);
+    pcre2_code_free(re);
+    return 1;
+    }
 
   /* As before, show substrings stored in the output vector by number, and then
   also any named substrings. */

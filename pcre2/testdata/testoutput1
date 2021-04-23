@@ -1,6 +1,10 @@
 # This set of tests is for features that are compatible with all versions of
 # Perl >= 5.10, in non-UTF mode. It should run clean for the 8-bit, 16-bit, and
-# 32-bit PCRE libraries, and also using the perltest.pl script.
+# 32-bit PCRE libraries, and also using the perltest.sh script.
+
+# WARNING: Use only / as the pattern delimiter. Although pcre2test supports
+# a number of delimiters, all those other than / give problems with the
+# perltest.sh script.
     
 #forbid_utf
 #newline_default lf any anycrlf
@@ -181,27 +185,6 @@ No match
     aaac
 No match
     abbbbbbbbbbbac
-No match
-
-/^(b+|a){1,2}?bc/
-    bbc
- 0: bbc
- 1: b
-
-/^(b*|ba){1,2}?bc/
-    babc
- 0: babc
- 1: ba
-    bbabc
- 0: bbabc
- 1: ba
-    bababc
- 0: bababc
- 1: ba
-\= Expect no match
-    bababbc
-No match
-    babababc
 No match
 
 /^(ba|b*){1,2}?bc/
@@ -2006,13 +1989,6 @@ No match
     aaa
 No match
 
-/[\d-z]+/
-    12-34z
- 0: 12-34z
-\= Expect no match
-    aaa
-No match
-
 /\x5c/
     \\
  0: \
@@ -2977,7 +2953,7 @@ No match
     qqq\nabc\nzzz
 No match
 
-"(?>.*/)foo"
+/(?>.*\/)foo/
     /this/is/a/very/long/line/in/deed/with/very/many/slashes/in/and/foo
  0: /this/is/a/very/long/line/in/deed/with/very/many/slashes/in/and/foo
 \= Expect no match     
@@ -3373,6 +3349,14 @@ No match
     blaH blah 
  0: blaH blah
  1: blaH
+
+/((?i)blah)\s+(?m)A(?i:\1)/
+    blah ABLAH
+ 0: blah ABLAH
+ 1: blah
+\= Expect no match
+    blah aBLAH
+No match
 
 /(?>a*)*/
     a
@@ -5764,17 +5748,6 @@ No match
  0: 
  0: 
 
-/^[\d-a]/
-    abcde
- 0: a
-    -things
- 0: -
-    0digit
- 0: 0
-\= Expect no match
-    bcdef    
-No match
-    
 /[[:space:]]+/
     > \x09\x0a\x0c\x0d\x0b<
  0:  \x09\x0a\x0c\x0d\x0b
@@ -6112,14 +6085,16 @@ No match
     A\x20B
  0:  
     
-"(?x)(?-x: \s*#\s*)"
+/(?x)(?-x: \s*#\s*)/
     A # B
  0:  # 
 \= Expect no match
     #  
 No match
+    A s#s B
+No match
 
-"(?x-is)(?:(?-ixs) \s*#\s*) include"
+/(?x-is)(?:(?-ixs) \s*#\s*) include/
     A #include
  0:  #include
 \= Expect no match
@@ -8321,16 +8296,6 @@ No match, mark = m
     AAAC
  0: AAC
 
-/a(*PRUNE:X)bc|qq/mark,no_start_optimize
-\= Expect no match
-    axy
-No match, mark = X
-
-/a(*THEN:X)bc|qq/mark,no_start_optimize
-\= Expect no match
-    axy
-No match, mark = X
-
 /(?=a(*MARK:A)b)..x/mark
     abxy
  0: abx
@@ -8443,12 +8408,12 @@ No match
  1: <unset>
  2: wxyz
 
-"(?>.*)foo"
+/(?>.*)foo/
 \= Expect no match
     abcdfooxyz
 No match
     
-"(?>.*?)foo"
+/(?>.*?)foo/
     abcdfooxyz
  0: foo
 
@@ -8688,22 +8653,6 @@ No match
 \= Expect no match
     a
 No match
-
-/(?=a\Kb)ab/
-    ab 
- 0: b
-
-/(?!a\Kb)ac/
-    ac 
- 0: ac
-    
-/^abc(?<=b\Kc)d/
-    abcd
- 0: cd
-
-/^abc(?<!b\Kq)d/
-    abcd
- 0: abcd
 
 /A(*PRUNE:A)A+(*SKIP:A)(B|Z) | AC/x,mark
 \= Expect no match
@@ -9029,19 +8978,19 @@ No match
     acb
 No match
 
-'\A(?:[^\"]++|\"(?:[^\"]*+|\"\")*+\")++'
+/\A(?:[^\"]++|\"(?:[^\"]*+|\"\")*+\")++/
     NON QUOTED \"QUOT\"\"ED\" AFTER \"NOT MATCHED
  0: NON QUOTED "QUOT""ED" AFTER 
 
-'\A(?:[^\"]++|\"(?:[^\"]++|\"\")*+\")++'
+/\A(?:[^\"]++|\"(?:[^\"]++|\"\")*+\")++/
     NON QUOTED \"QUOT\"\"ED\" AFTER \"NOT MATCHED
  0: NON QUOTED "QUOT""ED" AFTER 
 
-'\A(?:[^\"]++|\"(?:[^\"]++|\"\")++\")++'
+/\A(?:[^\"]++|\"(?:[^\"]++|\"\")++\")++/
     NON QUOTED \"QUOT\"\"ED\" AFTER \"NOT MATCHED
  0: NON QUOTED "QUOT""ED" AFTER 
 
-'\A([^\"1]++|[\"2]([^\"3]*+|[\"4][\"5])*+[\"6])++'
+/\A([^\"1]++|[\"2]([^\"3]*+|[\"4][\"5])*+[\"6])++/
     NON QUOTED \"QUOT\"\"ED\" AFTER \"NOT MATCHED
  0: NON QUOTED "QUOT""ED" AFTER 
  1:  AFTER 
@@ -9169,9 +9118,9 @@ No match
 
 /(\2)(\1)/
 
-"Z*(|d*){216}"
+/Z*(|d*){216}/
 
-"(?1)(?#?'){8}(a)"
+/(?1)(?#?'){8}(a)/
     baaaaaaaaac
  0: aaaaaaaaa
  1: a
@@ -9207,7 +9156,7 @@ No match
  6: 
  7: 
 
-"(?|(\k'Pm')|(?'Pm'))"
+/(?|(\k'Pm')|(?'Pm'))/
     abcd
  0: 
  1: 
@@ -9310,5 +9259,921 @@ No match
  0: aaaa
 
 /X?(R||){3335}/
+
+/(?1)(A(*COMMIT)|B)D/
+    ABD
+ 0: ABD
+ 1: B
+    XABD
+ 0: ABD
+ 1: B
+    BAD
+ 0: BAD
+ 1: A
+    ABXABD  
+ 0: ABD
+ 1: B
+\= Expect no match 
+    ABX 
+No match
+
+/(?(DEFINE)(?<m> 1? (?=(?<cond>2)?) 1 2 (?('cond')|3)))
+    \A
+    ()
+    (?&m)
+    \Z/x
+    123
+ 0: 123
+ 1: <unset>
+ 2: <unset>
+ 3: 
+
+/^(?: 
+(?: A| (1? (?=(?<cond>2)?) (1) 2 (?('cond')|3)) )
+(Z)
+)+$/x
+    AZ123Z
+ 0: AZ123Z
+ 1: 123
+ 2: <unset>
+ 3: 1
+ 4: Z
+\= Expect no match     
+    AZ12Z 
+No match
+    
+/^ (?(DEFINE) ( (?!(a)\2b)..) )   ()(?1)  /x
+    acb
+ 0: ac
+ 1: <unset>
+ 2: <unset>
+ 3: 
+\= Expect no match     
+    aab
+No match
+    
+/(?>ab|abab){1,5}?M/
+    abababababababababababM
+ 0: abababababM
+
+/(?>ab|abab){2}?M/
+    abababM
+ 0: ababM
+
+/((?(?=(a))a)+k)/
+    bbak
+ 0: ak
+ 1: ak
+ 2: a
+
+/((?(?=(a))a|)+k)/
+    bbak
+ 0: ak
+ 1: ak
+ 2: a
+
+/(?(?!(b))a|b)+k/
+    ababbalbbadabak
+ 0: abak
+ 1: b
+
+/(?!(b))c|b/
+    Ab
+ 0: b
+    Ac 
+ 0: c
+
+/(?=(b))b|c/
+    Ab
+ 0: b
+ 1: b
+    Ac 
+ 0: c
+
+/^(.|(.)(?1)\2)$/
+    a
+ 0: a
+ 1: a
+    aba
+ 0: aba
+ 1: aba
+ 2: a
+    abcba
+ 0: abcba
+ 1: abcba
+ 2: a
+    ababa
+ 0: ababa
+ 1: ababa
+ 2: a
+    abcdcba
+ 0: abcdcba
+ 1: abcdcba
+ 2: a
+
+/^((.)(?1)\2|.?)$/
+    a
+ 0: a
+ 1: a
+    aba
+ 0: aba
+ 1: aba
+ 2: a
+    abba
+ 0: abba
+ 1: abba
+ 2: a
+    abcba
+ 0: abcba
+ 1: abcba
+ 2: a
+    ababa
+ 0: ababa
+ 1: ababa
+ 2: a
+    abccba
+ 0: abccba
+ 1: abccba
+ 2: a
+    abcdcba
+ 0: abcdcba
+ 1: abcdcba
+ 2: a
+    abcddcba
+ 0: abcddcba
+ 1: abcddcba
+ 2: a
+
+/^(.)(\1|a(?2))/
+    bab
+ 0: bab
+ 1: b
+ 2: ab
+
+/^(.|(.)(?1)?\2)$/
+    abcba
+ 0: abcba
+ 1: abcba
+ 2: a
+    
+/^(?(?=(a))abc|def)/
+    abc
+ 0: abc
+ 1: a
+
+/^(?(?!(a))def|abc)/
+    abc
+ 0: abc
+ 1: a
+
+/^(?(?=(a)(*ACCEPT))abc|def)/
+    abc
+ 0: abc
+ 1: a
+
+/^(?(?!(a)(*ACCEPT))def|abc)/
+    abc
+ 0: abc
+ 1: a
+
+/^(?1)\d{3}(a)/
+    a123a
+ 0: a123a
+ 1: a
+
+# This pattern uses a lot of named subpatterns in order to match email
+# addresses in various formats. It's a heavy test for named subpatterns. In the
+# <atext> group, slash is coded as \x{2f} so that this pattern can also be
+# processed by perltest.sh, which does not cater for an escaped delimiter
+# within the pattern. $ within the pattern must also be escaped. All $ and @
+# characters in subject strings are escaped so that Perl doesn't interpret them
+# as variable insertions and " characters must also be escaped for Perl.
+
+# This set of subpatterns is more or less a direct transliteration of the BNF
+# definitions in RFC2822, without any of the obsolete features. The addition of
+# a possessive + to the definition of <phrase> reduced the match limit in PCRE2
+# from over 5 million to just under 400, and eliminated a very noticeable delay
+# when this file was passed to perltest.sh.
+
+/(?ix)(?(DEFINE)
+(?<addr_spec>       (?&local_part) \@ (?&domain) )
+(?<angle_addr>      (?&CFWS)?+ < (?&addr_spec) > (?&CFWS)?+ )
+(?<atext>           [a-z\d!#\$%&'*+-\x{2f}=?^_`{|}~] )
+(?<atom>            (?&CFWS)?+ (?&atext)+ (?&CFWS)?+ )
+(?<ccontent>        (?&ctext) | (?&quoted_pair) | (?&comment) )
+(?<ctext>           [^\x{9}\x{10}\x{13}\x{7f}-\x{ff}\ ()\\] )
+(?<comment>         \( (?: (?&FWS)?+ (?&ccontent) )*+ (?&FWS)?+ \) )
+(?<CFWS>            (?: (?&FWS)?+ (?&comment) )* (?# NOT possessive)
+                    (?: (?&FWS)?+ (?&comment) | (?&FWS) ) )
+(?<dcontent>        (?&dtext) | (?&quoted_pair) )
+(?<display_name>    (?&phrase) )
+(?<domain>          (?&dot_atom) | (?&domain_literal) )
+(?<domain_literal>  (?&CFWS)?+ \[ (?: (?&FWS)?+ (?&dcontent) )* (?&FWS)?+ \]
+                    (?&CFWS)?+ )
+(?<dot_atom>        (?&CFWS)?+ (?&dot_atom_text) (?&CFWS)?+ )
+(?<dot_atom_text>   (?&atext)++ (?: \. (?&atext)++)*+ )
+(?<dtext>           [^\x{9}\x{10}\x{13}\x{7f}-\x{ff}\ \[\]\\] )
+(?<FWS>             (?: [\t\ ]*+ \n)?+ [\t\ ]++ )
+(?<local_part>      (?&dot_atom) | (?&quoted_string)  )
+(?<mailbox>         (?&name_addr) | (?&addr_spec) )
+(?<name_addr>       (?&display_name)? (?&angle_addr) )
+(?<phrase>          (?&word)++ )
+(?<qcontent>        (?&qtext) | (?&quoted_pair) )
+(?<quoted_pair>     " (?&text) )
+(?<quoted_string>   (?&CFWS)?+ " (?: (?&FWS)?+ (?&qcontent))* (?&FWS)?+ "
+                    (?&CFWS)?+ )
+(?<qtext>           [^\x{9}\x{10}\x{13}\x{7f}-\x{ff}\ "\\] )
+(?<text>            [^\r\n] )
+(?<word>            (?&atom) | (?&quoted_string) )
+) # End DEFINE
+^(?&mailbox)$/
+    Alan Other <user\@dom.ain>
+ 0: Alan Other <user@dom.ain>
+    <user\@dom.ain>
+ 0: <user@dom.ain>
+    user\@dom.ain
+ 0: user@dom.ain
+    user\@[] 
+ 0: user@[]
+    user\@[domain literal] 
+ 0: user@[domain literal]
+    user\@[domain literal with \"[square brackets\"] inside] 
+ 0: user@[domain literal with "[square brackets"] inside]
+    \"A. Other\" <user.1234\@dom.ain> (a comment)
+ 0: "A. Other" <user.1234@dom.ain> (a comment)
+    A. Other <user.1234\@dom.ain> (a comment)
+ 0: A. Other <user.1234@dom.ain> (a comment)
+    \"/s=user/ou=host/o=place/prmd=uu.yy/admd= /c=gb/\"\@x400-re.lay
+ 0: "/s=user/ou=host/o=place/prmd=uu.yy/admd= /c=gb/"@x400-re.lay
+\= Expect no match
+    A missing angle <user\@some.where
+No match
+    The quick brown fox
+No match
+    
+# -------------------------------------------------------------------------- 
+
+# This pattern uses named groups to match default PCRE2 patterns. It's another
+# heavy test for named subpatterns. Once again, code slash as \x{2f} and escape 
+# $ even in classes so that this works with pcre2test.
+
+/(?sx)(?(DEFINE)
+
+(?<assertion>         (?&simple_assertion) | (?&lookaround) )
+
+(?<atomic_group>      \( \? > (?&regex) \) )
+
+(?<back_reference>    \\ \d+ |
+                      \\g (?: [+-]?\d+ | \{ (?: [+-]?\d+ | (?&groupname) ) \} ) |
+                      \\k <(?&groupname)> |
+                      \\k '(?&groupname)' |
+                      \\k \{ (?&groupname) \} |
+                      \( \? P= (?&groupname) \) )
+
+(?<branch>            (?:(?&assertion) |
+                         (?&callout) |
+                         (?&comment) |
+                         (?&option_setting) |
+                         (?&qualified_item) |
+                         (?&quoted_string) |
+                         (?&quoted_string_empty) | 
+                         (?&special_escape) |
+                         (?&verb)
+                      )* )
+
+(?<callout>           \(\?C (?: \d+ | 
+                      (?: (?<D>["'`^%\#\$]) 
+                        (?: \k'D'\k'D' | (?!\k'D') . )* \k'D' |
+                      \{ (?: \}\} | [^}]*+ )* \} ) 
+                      )? \) )
+
+(?<capturing_group>   \( (?: \? P? < (?&groupname) > | \? ' (?&groupname) ' )?
+                      (?&regex) \) )
+
+(?<character_class>   \[ \^?+ (?: \] (?&class_item)* | (?&class_item)+ ) \] )
+
+(?<character_type>    (?! \\N\{\w+\} ) \\ [dDsSwWhHvVRN] )
+
+(?<class_item>        (?: \[ : (?:
+                      alnum|alpha|ascii|blank|cntrl|digit|graph|lower|print|
+                      punct|space|upper|word|xdigit
+                      ) : \] |
+                      (?&quoted_string) |  
+                      (?&quoted_string_empty) | 
+                      (?&escaped_character) | 
+                      (?&character_type) | 
+                      [^]] ) )
+
+(?<comment>           \(\?\# [^)]* \) | (?&quoted_string_empty) | \\E )
+
+(?<condition>         (?: \( [+-]? \d+ \) |
+                          \( < (?&groupname) > \) |
+                          \( ' (?&groupname) ' \) |
+                          \( R \d* \) |
+                          \( R & (?&groupname) \) |
+                          \( (?&groupname) \) | 
+                          \( DEFINE \) |
+                          \( VERSION >?=\d+(?:\.\d\d?)? \) |
+                          (?&callout)?+ (?&comment)* (?&lookaround) ) )
+
+(?<conditional_group> \(\? (?&condition) (?&branch) (?: \| (?&branch) )? \) )
+
+(?<delimited_regex>   (?<delimiter> [-\x{2f}!"'`=_:;,%&@~]) (?&regex) 
+                      \k'delimiter' .* )
+
+(?<escaped_character> \\ (?: 0[0-7]{1,2} | [0-7]{1,3} | o\{ [0-7]+ \} |
+                      x \{ (*COMMIT) [[:xdigit:]]* \} | x [[:xdigit:]]{0,2} | 
+                      [aefnrt] | c[[:print:]] |
+                      [^[:alnum:]] ) )
+
+(?<group>             (?&capturing_group) | (?&non_capturing_group) |
+                      (?&resetting_group) | (?&atomic_group) |
+                      (?&conditional_group) )
+
+(?<groupname>         [a-zA-Z_]\w* )
+
+(?<literal_character> (?! (?&range_qualifier) ) [^[()|*+?.\$\\] )
+
+(?<lookaround>        \(\? (?: = | ! | <= | <! ) (?&regex) \) )
+
+(?<non_capturing_group> \(\? [iJmnsUx-]* : (?&regex) \) )
+
+(?<option_setting>    \(\? [iJmnsUx-]* \) )
+
+(?<qualified_item>    (?:\. |
+                         (?&lookaround) |
+                         (?&back_reference) |
+                         (?&character_class) |
+                         (?&character_type) |
+                         (?&escaped_character) |
+                         (?&group) |
+                         (?&subroutine_call) |
+                         (?&literal_character) |
+                         (?&quoted_string) 
+                      ) (?&comment)? (?&qualifier)? )
+
+(?<qualifier>         (?: [?*+] | (?&range_qualifier) ) [+?]? )
+
+(?<quoted_string>     (?: \\Q (?: (?!\\E | \k'delimiter') . )++ (?: \\E | ) ) ) 
+                      
+(?<quoted_string_empty>  \\Q\\E ) 
+
+(?<range_qualifier>   \{ (?: \d+ (?: , \d* )? | , \d+ ) \} )
+
+(?<regex>             (?&start_item)* (?&branch) (?: \| (?&branch) )* )
+
+(?<resetting_group>   \( \? \| (?&regex) \) )
+
+(?<simple_assertion>  \^ | \$ | \\A | \\b | \\B | \\G | \\z | \\Z )
+
+(?<special_escape>    \\K )
+
+(?<start_item>        \( \* (?:
+                      ANY |
+                      ANYCRLF |
+                      BSR_ANYCRLF |
+                      BSR_UNICODE |
+                      CR |
+                      CRLF |
+                      LF |
+                      LIMIT_MATCH=\d+ |
+                      LIMIT_DEPTH=\d+ |
+                      LIMIT_HEAP=\d+ | 
+                      NOTEMPTY |
+                      NOTEMPTY_ATSTART |
+                      NO_AUTO_POSSESS |
+                      NO_DOTSTAR_ANCHOR |
+                      NO_JIT |
+                      NO_START_OPT |
+                      NUL |
+                      UTF |
+                      UCP ) \) )
+
+(?<subroutine_call>   (?: \(\?R\) | \(\?[+-]?\d+\) |
+                      \(\? (?: & | P> ) (?&groupname) \) |
+                      \\g < (?&groupname) > |
+                      \\g ' (?&groupname) ' |
+                      \\g < [+-]? \d+ > |
+                      \\g ' [+-]? \d+ ) )
+
+(?<verb>              \(\* (?: ACCEPT | FAIL | F | COMMIT |
+                      (?:MARK)?:(?&verbname) |
+                      (?:PRUNE|SKIP|THEN) (?: : (?&verbname)? )? ) \) )
+
+(?<verbname>          [^)]+ )
+
+) # End DEFINE
+# Kick it all off...
+^(?&delimited_regex)$/subject_literal,jitstack=256
+    /^(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)\11*(\3\4)\1(?#)2$/
+ 0: /^(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)\11*(\3\4)\1(?#)2$/
+    /(cat(a(ract|tonic)|erpillar)) \1()2(3)/
+ 0: /(cat(a(ract|tonic)|erpillar)) \1()2(3)/
+    /^From +([^ ]+) +[a-zA-Z][a-zA-Z][a-zA-Z] +[a-zA-Z][a-zA-Z][a-zA-Z] +[0-9]?[0-9] +[0-9][0-9]:[0-9][0-9]/
+ 0: /^From +([^ ]+) +[a-zA-Z][a-zA-Z][a-zA-Z] +[a-zA-Z][a-zA-Z][a-zA-Z] +[0-9]?[0-9] +[0-9][0-9]:[0-9][0-9]/
+    /^From\s+\S+\s+([a-zA-Z]{3}\s+){2}\d{1,2}\s+\d\d:\d\d/
+ 0: /^From\s+\S+\s+([a-zA-Z]{3}\s+){2}\d{1,2}\s+\d\d:\d\d/
+    /<tr([\w\W\s\d][^<>]{0,})><TD([\w\W\s\d][^<>]{0,})>([\d]{0,}\.)(.*)((<BR>([\w\W\s\d][^<>]{0,})|[\s]{0,}))<\/a><\/TD><TD([\w\W\s\d][^<>]{0,})>([\w\W\s\d][^<>]{0,})<\/TD><TD([\w\W\s\d][^<>]{0,})>([\w\W\s\d][^<>]{0,})<\/TD><\/TR>/is
+ 0: /<tr([\w\W\s\d][^<>]{0,})><TD([\w\W\s\d][^<>]{0,})>([\d]{0,}\.)(.*)((<BR>([\w\W\s\d][^<>]{0,})|[\s]{0,}))<\/a><\/TD><TD([\w\W\s\d][^<>]{0,})>([\w\W\s\d][^<>]{0,})<\/TD><TD([\w\W\s\d][^<>]{0,})>([\w\W\s\d][^<>]{0,})<\/TD><\/TR>/is
+    /^(?(DEFINE) (?<A> a) (?<B> b) )  (?&A) (?&B) /
+ 0: /^(?(DEFINE) (?<A> a) (?<B> b) )  (?&A) (?&B) /
+    /(?(DEFINE)(?<byte>2[0-4]\d|25[0-5]|1\d\d|[1-9]?\d))\b(?&byte)(\.(?&byte)){3}/
+ 0: /(?(DEFINE)(?<byte>2[0-4]\d|25[0-5]|1\d\d|[1-9]?\d))\b(?&byte)(\.(?&byte)){3}/
+    /\b(?&byte)(\.(?&byte)){3}(?(DEFINE)(?<byte>2[0-4]\d|25[0-5]|1\d\d|[1-9]?\d))/
+ 0: /\b(?&byte)(\.(?&byte)){3}(?(DEFINE)(?<byte>2[0-4]\d|25[0-5]|1\d\d|[1-9]?\d))/
+    /^(\w++|\s++)*$/
+ 0: /^(\w++|\s++)*$/
+    /a+b?(*THEN)c+(*FAIL)/
+ 0: /a+b?(*THEN)c+(*FAIL)/
+    /(A (A|B(*ACCEPT)|C) D)(E)/x
+ 0: /(A (A|B(*ACCEPT)|C) D)(E)/x
+    /^\W*+(?:((.)\W*+(?1)\W*+\2|)|((.)\W*+(?3)\W*+\4|\W*+.\W*+))\W*+$/i
+ 0: /^\W*+(?:((.)\W*+(?1)\W*+\2|)|((.)\W*+(?3)\W*+\4|\W*+.\W*+))\W*+$/i
+    /A(*PRUNE)B(*SKIP)C(*THEN)D(*COMMIT)E(*F)F(*FAIL)G(?!)H(*ACCEPT)I/B
+ 0: /A(*PRUNE)B(*SKIP)C(*THEN)D(*COMMIT)E(*F)F(*FAIL)G(?!)H(*ACCEPT)I/B
+    /(?C`a``b`)(?C'a''b')(?C"a""b")(?C^a^^b^)(?C%a%%b%)(?C#a##b#)(?C$a$$b$)(?C{a}}b})/B,callout_info
+ 0: /(?C`a``b`)(?C'a''b')(?C"a""b")(?C^a^^b^)(?C%a%%b%)(?C#a##b#)(?C$a$$b$)(?C{a}}b})/B,callout_info
+    /(?sx)(?(DEFINE)(?<assertion> (?&simple_assertion) | (?&lookaround) )(?<atomic_group> \( \? > (?&regex) \) )(?<back_reference> \\ \d+ | \\g (?: [+-]?\d+ | \{ (?: [+-]?\d+ | (?&groupname) ) \} ) | \\k <(?&groupname)> | \\k '(?&groupname)' | \\k \{ (?&groupname) \} | \( \? P= (?&groupname) \) )(?<branch> (?:(?&assertion) | (?&callout) | (?&comment) | (?&option_setting) | (?&qualified_item) | (?&quoted_string) | (?&quoted_string_empty) | (?&special_escape) | (?&verb) )* )(?<callout> \(\?C (?: \d+ | (?: (?<D>["'`^%\#\$]) (?: \k'D'\k'D' | (?!\k'D') . )* \k'D' | \{ (?: \}\} | [^}]*+ )* \} ) )? \) )(?<capturing_group> \( (?: \? P? < (?&groupname) > | \? ' (?&groupname) ' )? (?&regex) \) )(?<character_class> \[ \^?+ (?: \] (?&class_item)* | (?&class_item)+ ) \] )(?<character_type> (?! \\N\{\w+\} ) \\ [dDsSwWhHvVRN] )(?<class_item> (?: \[ : (?: alnum|alpha|ascii|blank|cntrl|digit|graph|lower|print| punct|space|upper|word|xdigit ) : \] | (?&quoted_string) | (?&quoted_string_empty) | (?&escaped_character) | (?&character_type) | [^]] ) )(?<comment> \(\?\# [^)]* \) | (?&quoted_string_empty) | \\E )(?<condition> (?: \( [+-]? \d+ \) | \( < (?&groupname) > \) | \( ' (?&groupname) ' \) | \( R \d* \) | \( R & (?&groupname) \) | \( (?&groupname) \) | \( DEFINE \) | \( VERSION >?=\d+(?:\.\d\d?)? \) | (?&callout)?+ (?&comment)* (?&lookaround) ) )(?<conditional_group> \(\? (?&condition) (?&branch) (?: \| (?&branch) )? \) )(?<delimited_regex> (?<delimiter> [-\x{2f}!"'`=_:;,%&@~]) (?&regex) \k'delimiter' .* )(?<escaped_character> \\ (?: 0[0-7]{1,2} | [0-7]{1,3} | o\{ [0-7]+ \} | x \{ (*COMMIT) [[:xdigit:]]* \} | x [[:xdigit:]]{0,2} | [aefnrt] | c[[:print:]] | [^[:alnum:]] ) )(?<group> (?&capturing_group) | (?&non_capturing_group) | (?&resetting_group) | (?&atomic_group) | (?&conditional_group) )(?<groupname> [a-zA-Z_]\w* )(?<literal_character> (?! (?&range_qualifier) ) [^[()|*+?.\$\\] )(?<lookaround> \(\? (?: = | ! | <= | <! ) (?&regex) \) )(?<non_capturing_group> \(\? [iJmnsUx-]* : (?&regex) \) )(?<option_setting> \(\? [iJmnsUx-]* \) )(?<qualified_item> (?:\. | (?&lookaround) | (?&back_reference) | (?&character_class) | (?&character_type) | (?&escaped_character) | (?&group) | (?&subroutine_call) | (?&literal_character) | (?&quoted_string) ) (?&comment)? (?&qualifier)? )(?<qualifier> (?: [?*+] | (?&range_qualifier) ) [+?]? )(?<quoted_string> (?: \\Q (?: (?!\\E | \k'delimiter') . )++ (?: \\E | ) ) ) (?<quoted_string_empty> \\Q\\E ) (?<range_qualifier> \{ (?: \d+ (?: , \d* )? | , \d+ ) \} )(?<regex> (?&start_item)* (?&branch) (?: \| (?&branch) )* )(?<resetting_group> \( \? \| (?&regex) \) )(?<simple_assertion> \^ | \$ | \\A | \\b | \\B | \\G | \\z | \\Z )(?<special_escape> \\K )(?<start_item> \( \* (?: ANY | ANYCRLF | BSR_ANYCRLF | BSR_UNICODE | CR | CRLF | LF | LIMIT_MATCH=\d+ | LIMIT_DEPTH=\d+ | LIMIT_HEAP=\d+ | NOTEMPTY | NOTEMPTY_ATSTART | NO_AUTO_POSSESS | NO_DOTSTAR_ANCHOR | NO_JIT | NO_START_OPT | NUL | UTF | UCP ) \) )(?<subroutine_call> (?: \(\?R\) | \(\?[+-]?\d+\) | \(\? (?: & | P> ) (?&groupname) \) | \\g < (?&groupname) > | \\g ' (?&groupname) ' | \\g < [+-]? \d+ > | \\g ' [+-]? \d+ ) )(?<verb> \(\* (?: ACCEPT | FAIL | F | COMMIT | (?:MARK)?:(?&verbname) | (?:PRUNE|SKIP|THEN) (?: : (?&verbname)? )? ) \) )(?<verbname> [^)]+ ))^(?&delimited_regex)$/
+ 0: /(?sx)(?(DEFINE)(?<assertion> (?&simple_assertion) | (?&lookaround) )(?<atomic_group> \( \? > (?&regex) \) )(?<back_reference> \\ \d+ | \\g (?: [+-]?\d+ | \{ (?: [+-]?\d+ | (?&groupname) ) \} ) | \\k <(?&groupname)> | \\k '(?&groupname)' | \\k \{ (?&groupname) \} | \( \? P= (?&groupname) \) )(?<branch> (?:(?&assertion) | (?&callout) | (?&comment) | (?&option_setting) | (?&qualified_item) | (?&quoted_string) | (?&quoted_string_empty) | (?&special_escape) | (?&verb) )* )(?<callout> \(\?C (?: \d+ | (?: (?<D>["'`^%\#\$]) (?: \k'D'\k'D' | (?!\k'D') . )* \k'D' | \{ (?: \}\} | [^}]*+ )* \} ) )? \) )(?<capturing_group> \( (?: \? P? < (?&groupname) > | \? ' (?&groupname) ' )? (?&regex) \) )(?<character_class> \[ \^?+ (?: \] (?&class_item)* | (?&class_item)+ ) \] )(?<character_type> (?! \\N\{\w+\} ) \\ [dDsSwWhHvVRN] )(?<class_item> (?: \[ : (?: alnum|alpha|ascii|blank|cntrl|digit|graph|lower|print| punct|space|upper|word|xdigit ) : \] | (?&quoted_string) | (?&quoted_string_empty) | (?&escaped_character) | (?&character_type) | [^]] ) )(?<comment> \(\?\# [^)]* \) | (?&quoted_string_empty) | \\E )(?<condition> (?: \( [+-]? \d+ \) | \( < (?&groupname) > \) | \( ' (?&groupname) ' \) | \( R \d* \) | \( R & (?&groupname) \) | \( (?&groupname) \) | \( DEFINE \) | \( VERSION >?=\d+(?:\.\d\d?)? \) | (?&callout)?+ (?&comment)* (?&lookaround) ) )(?<conditional_group> \(\? (?&condition) (?&branch) (?: \| (?&branch) )? \) )(?<delimited_regex> (?<delimiter> [-\x{2f}!"'`=_:;,%&@~]) (?&regex) \k'delimiter' .* )(?<escaped_character> \\ (?: 0[0-7]{1,2} | [0-7]{1,3} | o\{ [0-7]+ \} | x \{ (*COMMIT) [[:xdigit:]]* \} | x [[:xdigit:]]{0,2} | [aefnrt] | c[[:print:]] | [^[:alnum:]] ) )(?<group> (?&capturing_group) | (?&non_capturing_group) | (?&resetting_group) | (?&atomic_group) | (?&conditional_group) )(?<groupname> [a-zA-Z_]\w* )(?<literal_character> (?! (?&range_qualifier) ) [^[()|*+?.\$\\] )(?<lookaround> \(\? (?: = | ! | <= | <! ) (?&regex) \) )(?<non_capturing_group> \(\? [iJmnsUx-]* : (?&regex) \) )(?<option_setting> \(\? [iJmnsUx-]* \) )(?<qualified_item> (?:\. | (?&lookaround) | (?&back_reference) | (?&character_class) | (?&character_type) | (?&escaped_character) | (?&group) | (?&subroutine_call) | (?&literal_character) | (?&quoted_string) ) (?&comment)? (?&qualifier)? )(?<qualifier> (?: [?*+] | (?&range_qualifier) ) [+?]? )(?<quoted_string> (?: \\Q (?: (?!\\E | \k'delimiter') . )++ (?: \\E | ) ) ) (?<quoted_string_empty> \\Q\\E ) (?<range_qualifier> \{ (?: \d+ (?: , \d* )? | , \d+ ) \} )(?<regex> (?&start_item)* (?&branch) (?: \| (?&branch) )* )(?<resetting_group> \( \? \| (?&regex) \) )(?<simple_assertion> \^ | \$ | \\A | \\b | \\B | \\G | \\z | \\Z )(?<special_escape> \\K )(?<start_item> \( \* (?: ANY | ANYCRLF | BSR_ANYCRLF | BSR_UNICODE | CR | CRLF | LF | LIMIT_MATCH=\d+ | LIMIT_DEPTH=\d+ | LIMIT_HEAP=\d+ | NOTEMPTY | NOTEMPTY_ATSTART | NO_AUTO_POSSESS | NO_DOTSTAR_ANCHOR | NO_JIT | NO_START_OPT | NUL | UTF | UCP ) \) )(?<subroutine_call> (?: \(\?R\) | \(\?[+-]?\d+\) | \(\? (?: & | P> ) (?&groupname) \) | \\g < (?&groupname) > | \\g ' (?&groupname) ' | \\g < [+-]? \d+ > | \\g ' [+-]? \d+ ) )(?<verb> \(\* (?: ACCEPT | FAIL | F | COMMIT | (?:MARK)?:(?&verbname) | (?:PRUNE|SKIP|THEN) (?: : (?&verbname)? )? ) \) )(?<verbname> [^)]+ ))^(?&delimited_regex)$/
+\= Expect no match
+    /((?(?C'')\QX\E(?!((?(?C'')(?!X=X));=)r*X=X));=)/
+No match
+    /(?:(?(2y)a|b)(X))+/
+No match
+    /a(*MARK)b/
+No match
+    /a(*CR)b/
+No match
+    /(?P<abn>(?P=abn)(?<badstufxxx)/
+No match
+
+# -------------------------------------------------------------------------- 
+
+/<(?x:[a b])>/xx
+    < >
+ 0: < >
+
+/<(?:[a b])>/xx
+    < >
+No match
+
+/<(?xxx:[a b])>/
+    < >
+No match
+    
+/<(?-x:[a b])>/xx
+    < >
+ 0: < >
+
+/[[:digit:]-]+/
+    12-24
+ 0: 12-24
+
+/((?<=((*ACCEPT)) )\1?\b) /
+\= Expect no match     
+    ((?<=((*ACCEPT)) )\\1?\\b)\x20
+No match
+
+/((?<=((*ACCEPT))X)\1?Y)\1/
+    XYYZ
+ 0: YY
+ 1: Y
+ 2: 
+
+/((?<=((*ACCEPT))X)\1?Y(*ACCEPT))\1/
+    XYYZ
+ 0: Y
+ 1: Y
+ 2: 
+
+/(?(DEFINE)(?<optional_a>a?)X)^(?&optional_a)a$/
+    aa
+ 0: aa
+    a
+ 0: a
+
+/^(a?)b(?1)a/
+    abaa
+ 0: abaa
+ 1: a
+    aba 
+ 0: aba
+ 1: a
+    baa
+ 0: baa
+ 1: 
+    ba  
+ 0: ba
+ 1: 
+
+/^(a?)+b(?1)a/
+    abaa
+ 0: abaa
+ 1: 
+    aba 
+ 0: aba
+ 1: 
+    baa
+ 0: baa
+ 1: 
+    ba  
+ 0: ba
+ 1: 
+
+/^(a?)++b(?1)a/
+    abaa
+ 0: abaa
+ 1: 
+    aba 
+ 0: aba
+ 1: 
+    baa
+ 0: baa
+ 1: 
+    ba  
+ 0: ba
+ 1: 
+
+/^(a?)+b/
+    b
+ 0: b
+ 1: 
+    ab
+ 0: ab
+ 1: 
+    aaab 
+ 0: aaab
+ 1: 
+
+/(?=a+)a(a+)++b/
+    aab
+ 0: aab
+ 1: a
+
+/(?<=\G.)/g,aftertext
+    abc
+ 0: 
+ 0+ bc
+ 0: 
+ 0+ c
+ 0: 
+ 0+ 
+
+/(?<=(?=.)?)/
+
+/(?<=(?=.)?+)/
+
+/(?<=(?=.)*)/
+
+/(?<=(?=.){4,5})/
+
+/(?<=(?=.){4,5}x)/
+
+/a(?=.(*:X))(*SKIP:X)(*F)|(.)/
+    abc
+ 0: a
+ 1: a
+
+/a(?>(*:X))(*SKIP:X)(*F)|(.)/
+    abc
+ 0: a
+ 1: a
+
+/a(?:(*:X))(*SKIP:X)(*F)|(.)/
+    abc
+ 0: b
+ 1: b
+
+#pattern no_start_optimize
+
+/(?>a(*:1))(?>b(*:1))(*SKIP:1)x|.*/
+    abc
+ 0: abc
+
+/(?>a(*:1))(?>b)(*SKIP:1)x|.*/
+    abc
+ 0: abc
+
+#subject mark
+
+/a(*ACCEPT:X)b/
+    abc
+ 0: a
+MK: X
+    
+/(?=a(*ACCEPT:QQ)bc)axyz/
+    axyz
+ 0: axyz
+MK: QQ
+
+/(?(DEFINE)(a(*ACCEPT:X)))(?1)b/
+    abc
+ 0: ab
+MK: X
+    
+/a(*F:X)b/
+    abc
+No match, mark = X
+    
+/(?(DEFINE)(a(*F:X)))(?1)b/
+    abc
+No match, mark = X
+
+/a(*COMMIT:X)b/
+    abc
+ 0: ab
+MK: X
+    
+/(?(DEFINE)(a(*COMMIT:X)))(?1)b/
+    abc
+ 0: ab
+MK: X
+    
+/a+(*:Z)b(*COMMIT:X)(*SKIP:Z)c|.*/
+    aaaabd
+ 0: bd
+
+/a+(*:Z)b(*COMMIT:X)(*SKIP:X)c|.*/
+    aaaabd
+No match, mark = X
+
+/a(*COMMIT:X)b/
+    axabc
+No match, mark = X
+
+#pattern -no_start_optimize
+#subject -mark 
+
+/(.COMMIT)(*COMMIT::::::::::interal error:::)/
+
+/(*COMMIT:ÿÿ)/
+
+/(*COMMIT:]w)/
+
+/(?i)A(?^)B(?^x:C D)(?^i)e f/
+    aBCDE F
+ 0: aBCDE F
+\= Expect no match
+    aBCDEF
+No match
+    AbCDe f
+No match
+
+/(*pla:foo).{6}/
+    abcfoobarxyz
+ 0: foobar
+\= Expect no match
+    abcfooba
+No match
+
+/(*positive_lookahead:foo).{6}/
+    abcfoobarxyz
+ 0: foobar
+    
+/(?(*pla:foo).{6}|a..)/
+    foobarbaz
+ 0: foobar
+    abcfoobar       
+ 0: abc
+
+/(?(*positive_lookahead:foo).{6}|a..)/
+    foobarbaz
+ 0: foobar
+    abcfoobar       
+ 0: abc
+    
+/(*plb:foo)bar/
+    abcfoobar
+ 0: bar
+\= Expect no match
+    abcbarfoo     
+No match
+
+/(*positive_lookbehind:foo)bar/
+    abcfoobar
+ 0: bar
+\= Expect no match
+    abcbarfoo
+No match
+    
+/(?(*plb:foo)bar|baz)/
+    abcfoobar
+ 0: bar
+    bazfoobar
+ 0: baz
+    abcbazfoobar
+ 0: baz
+    foobazfoobar    
+ 0: bar
+ 
+/(?(*positive_lookbehind:foo)bar|baz)/
+    abcfoobar
+ 0: bar
+    bazfoobar
+ 0: baz
+    abcbazfoobar
+ 0: baz
+    foobazfoobar    
+ 0: bar
+ 
+/(*nlb:foo)bar/
+    abcbarfoo     
+ 0: bar
+\= Expect no match
+    abcfoobar
+No match
+
+/(*negative_lookbehind:foo)bar/
+    abcbarfoo     
+ 0: bar
+\= Expect no match
+    abcfoobar
+No match
+    
+/(?(*nlb:foo)bar|baz)/
+    abcfoobaz 
+ 0: baz
+    abcbarbaz 
+ 0: bar
+\= Expect no match
+    abcfoobar
+No match
+ 
+/(?(*negative_lookbehind:foo)bar|baz)/
+    abcfoobaz 
+ 0: baz
+    abcbarbaz 
+ 0: bar
+\= Expect no match
+    abcfoobar
+No match
+ 
+/(*atomic:a+)\w/
+    aaab
+ 0: aaab
+\= Expect no match
+    aaaa      
+No match
+
+/   (?<word> \w+ )*    \.   /xi
+    pokus.
+ 0: pokus.
+ 1: pokus
+    
+/(?(DEFINE) (?<word> \w+ ) ) (?&word)*   \./xi
+    pokus.
+ 0: pokus.
+
+/(?(DEFINE) (?<word> \w+ ) ) ( (?&word)* )   \./xi 
+    pokus.
+ 0: pokus.
+ 1: <unset>
+ 2: pokus
+
+/(?&word)*  (?(DEFINE) (?<word> \w+ ) )  \./xi
+    pokus.
+ 0: pokus.
+
+/(?&word)*  \. (?<word> \w+ )/xi
+    pokus.hokus
+ 0: pokus.hokus
+ 1: hokus
+
+/a(?(?=(*:2)b).)/mark
+    abc
+ 0: ab
+MK: 2
+    acb     
+ 0: a
+
+/a(?(?!(*:2)b).)/mark
+    acb
+ 0: ac
+    abc     
+ 0: a
+MK: 2
+
+/(?:a|ab){1}+c/
+\= Expect no match
+    abc
+No match
+
+/(a|ab){1}+c/
+    abc
+No match
+    
+/(a+){1}+a/
+\= Expect no match
+    aaaa
+No match
+
+/(?(DEFINE)(a|ab))(?1){1}+c/
+    abc    
+No match
+
+/(?:a|(?=b)|.)*\z/
+    abc
+ 0: abc
+    
+/(?:a|(?=b)|.)*/
+    abc 
+ 0: a
+    
+/(?<=a(*SKIP)x)|c/
+    abcd
+No match
+    
+/(?<=a(*SKIP)x)|d/
+    abcd
+ 0: d
+ 
+/(?<=(?=.(?<=x)))/aftertext
+    abx
+ 0: 
+ 0+ x
+
+/(?<=(?=(?<=a)))b/
+    ab
+ 0: b
+
+/^(?<A>a)(?(<A>)b)((?<=b).*)$/
+    abc
+ 0: abc
+ 1: a
+ 2: c
+
+/^(a\1?){4}$/
+    aaaa
+ 0: aaaa
+ 1: a
+    aaaaaa
+ 0: aaaaaa
+ 1: aa
+
+/^((\1+)|\d)+133X$/
+    111133X
+ 0: 111133X
+ 1: 11
+ 2: 11
+
+/^(?=.*(?=(([A-Z]).*(?(1)\1)))(?!.+\2)){26}/i
+    The quick brown fox jumps over the lazy dog.
+ 0: 
+ 1: quick brown fox jumps over the lazy dog.
+ 2: q
+    Jackdaws love my big sphinx of quartz.
+ 0: 
+ 1: Jackdaws love my big sphinx of quartz.
+ 2: J
+    Pack my box with five dozen liquor jugs.
+ 0: 
+ 1: Pack my box with five dozen liquor jugs.
+ 2: P
+\= Expect no match
+    The quick brown fox jumps over the lazy cat.
+No match
+    Hackdaws love my big sphinx of quartz.
+No match
+    Pack my fox with five dozen liquor jugs.
+No match
+
+/^(?>.*?([A-Z])(?!.*\1)){26}/i
+    The quick brown fox jumps over the lazy dog.
+ 0: The quick brown fox jumps over the lazy dog
+ 1: g
+    Jackdaws love my big sphinx of quartz.
+ 0: Jackdaws love my big sphinx of quartz
+ 1: z
+    Pack my box with five dozen liquor jugs.
+ 0: Pack my box with five dozen liquor jugs
+ 1: s
+\= Expect no match
+    The quick brown fox jumps over the lazy cat.
+No match
+    Hackdaws love my big sphinx of quartz.
+No match
+    Pack my fox with five dozen liquor jugs.
+No match
+
+/(?<=X(?(DEFINE)(A)))X(*F)/
+\= Expect no match
+    AXYZ
+No match
+
+/(?<=X(?(DEFINE)(A)))./
+    AXYZ
+ 0: Y
+
+/(?<=X(?(DEFINE)(.*))Y)./
+    AXYZ
+ 0: Z
+
+/(?<=X(?(DEFINE)(Y))(?1))./
+    AXYZ
+ 0: Z
+
+/(?(DEFINE)(?<foo>bar))(?<![-a-z0-9])word/
+    word
+ 0: word
 
 # End of testinput1 

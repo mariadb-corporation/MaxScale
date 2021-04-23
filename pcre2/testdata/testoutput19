@@ -18,4 +18,8 @@ No match: POSIX code 17: match failed
     +++\x{c2}
  0: \xc2
     
+/"^AB" 00 "\x{1234}$"/hex,utf
+    AB\x{00}\x{1234}\=posix_startend=0:6 
+ 0: AB\x{00}\x{1234}
+    
 # End of testdata/testinput19

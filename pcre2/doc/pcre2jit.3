@@ -1,4 +1,4 @@
-.TH PCRE2JIT 3 "05 June 2016" "PCRE2 10.22"
+.TH PCRE2JIT 3 "23 May 2019" "PCRE2 10.34"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "PCRE2 JUST-IN-TIME COMPILER SUPPORT"
@@ -64,7 +64,7 @@ or a negative error code.
 There is a limit to the size of pattern that JIT supports, imposed by the size
 of machine stack that it uses. The exact rules are not documented because they
 may change at any time, in particular, when new optimizations are introduced.
-If a pattern is too big, a call to \fBpcre2_jit_compile()\fB returns
+If a pattern is too big, a call to \fBpcre2_jit_compile()\fP returns
 PCRE2_ERROR_NOMEMORY.
 .P
 PCRE2_JIT_COMPLETE requests the JIT compiler to generate code for complete
@@ -120,13 +120,42 @@ support is not available, or the pattern was not processed by
 pattern.
 .
 .
+.SH "MATCHING SUBJECTS CONTAINING INVALID UTF"
+.rs
+.sp
+When a pattern is compiled with the PCRE2_UTF option, subject strings are
+normally expected to be a valid sequence of UTF code units. By default, this is
+checked at the start of matching and an error is generated if invalid UTF is
+detected. The PCRE2_NO_UTF_CHECK option can be passed to \fBpcre2_match()\fP to
+skip the check (for improved performance) if you are sure that a subject string
+is valid. If this option is used with an invalid string, the result is
+undefined.
+.P
+However, a way of running matches on strings that may contain invalid UTF
+sequences is available. Calling \fBpcre2_compile()\fP with the
+PCRE2_MATCH_INVALID_UTF option has two effects: it tells the interpreter in
+\fBpcre2_match()\fP to support invalid UTF, and, if \fBpcre2_jit_compile()\fP
+is called, the compiled JIT code also supports invalid UTF. Details of how this
+support works, in both the JIT and the interpretive cases, is given in the
+.\" HREF
+\fBpcre2unicode\fP
+.\"
+documentation.
+.P
+There is also an obsolete option for \fBpcre2_jit_compile()\fP called
+PCRE2_JIT_INVALID_UTF, which currently exists only for backward compatibility.
+It is superseded by the \fBpcre2_compile()\fP option PCRE2_MATCH_INVALID_UTF
+and should no longer be used. It may be removed in future.
+.
+.
 .SH "UNSUPPORTED OPTIONS AND PATTERN ITEMS"
 .rs
 .sp
 The \fBpcre2_match()\fP options that are supported for JIT matching are
-PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY, PCRE2_NOTEMPTY_ATSTART,
-PCRE2_NO_UTF_CHECK, PCRE2_PARTIAL_HARD, and PCRE2_PARTIAL_SOFT. The
-PCRE2_ANCHORED option is not supported at match time.
+PCRE2_COPY_MATCHED_SUBJECT, PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY,
+PCRE2_NOTEMPTY_ATSTART, PCRE2_NO_UTF_CHECK, PCRE2_PARTIAL_HARD, and
+PCRE2_PARTIAL_SOFT. The PCRE2_ANCHORED and PCRE2_ENDANCHORED options are not
+supported at match time.
 .P
 If the PCRE2_NO_JIT option is passed to \fBpcre2_match()\fP it disables the
 use of JIT, forcing matching by the interpreter code.
@@ -152,7 +181,7 @@ below for a discussion of JIT stack usage.
 The error code PCRE2_ERROR_MATCHLIMIT is returned by the JIT code if searching
 a very large pattern tree goes on for too long, as it is in the same
 circumstance when JIT is not used, but the details of exactly what is counted
-are not the same. The PCRE2_ERROR_RECURSIONLIMIT error code is never returned
+are not the same. The PCRE2_ERROR_DEPTHLIMIT error code is never returned
 when JIT matching is used.
 .
 .
@@ -161,7 +190,7 @@ when JIT matching is used.
 .rs
 .sp
 When the compiled JIT code runs, it needs a block of memory to use as a stack.
-By default, it uses 32K on the machine stack. However, some large or
+By default, it uses 32KiB on the machine stack. However, some large or
 complicated patterns need more than this. The error PCRE2_ERROR_JIT_STACKLIMIT
 is given when there is not enough stack. Three functions are provided for
 managing blocks of memory for use as JIT stacks. There is further discussion
@@ -177,12 +206,10 @@ are a starting size, a maximum size, and a general context (for memory
 allocation functions, or NULL for standard memory allocation). It returns a
 pointer to an opaque structure of type \fBpcre2_jit_stack\fP, or NULL if there
 is an error. The \fBpcre2_jit_stack_free()\fP function is used to free a stack
-that is no longer needed. (For the technically minded: the address space is
-allocated by mmap or VirtualAlloc.)
-.P
-JIT uses far less memory for recursion than the interpretive code,
-and a maximum stack size of 512K to 1M should be more than enough for any
-pattern.
+that is no longer needed. If its argument is NULL, this function returns
+immediately, without doing anything. (For the technically minded: the address
+space is allocated by mmap or VirtualAlloc.) A maximum stack size of 512KiB to
+1MiB should be more than enough for any pattern.
 .P
 The \fBpcre2_jit_stack_assign()\fP function specifies which stack JIT code
 should use. Its arguments are as follows:
@@ -193,9 +220,10 @@ should use. Its arguments are as follows:
 .sp
 The first argument is a pointer to a match context. When this is subsequently
 passed to a matching function, its information determines which JIT stack is
-used. There are three cases for the values of the other two options:
+used. If this argument is NULL, the function returns immediately, without doing
+anything. There are three cases for the values of the other two options:
 .sp
-  (1) If \fIcallback\fP is NULL and \fIdata\fP is NULL, an internal 32K block
+  (1) If \fIcallback\fP is NULL and \fIdata\fP is NULL, an internal 32KiB block
       on the machine stack is used. This is the default when a match
       context is created.
 .sp
@@ -206,7 +234,7 @@ used. There are three cases for the values of the other two options:
   (3) If \fIcallback\fP is not NULL, it must point to a function that is
       called with \fIdata\fP as an argument at the start of matching, in
       order to set up a JIT stack. If the return from the callback
-      function is NULL, the internal 32K stack is used; otherwise the
+      function is NULL, the internal 32KiB stack is used; otherwise the
       return value must be a valid JIT stack, the result of calling
       \fBpcre2_jit_stack_create()\fP.
 .sp
@@ -268,9 +296,9 @@ we do the recursion in memory.
 Modern operating systems have a nice feature: they can reserve an address space
 instead of allocating memory. We can safely allocate memory pages inside this
 address space, so the stack could grow without moving memory data (this is
-important because of pointers). Thus we can allocate 1M address space, and use
-only a single memory page (usually 4K) if that is enough. However, we can still
-grow up to 1M anytime if needed.
+important because of pointers). Thus we can allocate 1MiB address space, and
+use only a single memory page (usually 4KiB) if that is enough. However, we can
+still grow up to 1MiB anytime if needed.
 .P
 (3) Who "owns" a JIT stack?
 .sp
@@ -287,12 +315,12 @@ stack through the JIT callback function.
 You can free a JIT stack at any time, as long as it will not be used by
 \fBpcre2_match()\fP again. When you assign the stack to a match context, only a
 pointer is set. There is no reference counting or any other magic. You can free
-compiled patterns, contexts, and stacks in any order, anytime. Just \fIdo
-not\fP call \fBpcre2_match()\fP with a match context pointing to an already
-freed stack, as that will cause SEGFAULT. (Also, do not free a stack currently
-used by \fBpcre2_match()\fP in another thread). You can also replace the stack
-in a context at any time when it is not in use. You should free the previous
-stack before assigning a replacement.
+compiled patterns, contexts, and stacks in any order, anytime.
+Just \fIdo not\fP call \fBpcre2_match()\fP with a match context pointing to an
+already freed stack, as that will cause SEGFAULT. (Also, do not free a stack
+currently used by \fBpcre2_match()\fP in another thread). You can also replace
+the stack in a context at any time when it is not in use. You should free the
+previous stack before assigning a replacement.
 .P
 (5) Should I allocate/free a stack every time before/after calling
 \fBpcre2_match()\fP?
@@ -303,7 +331,7 @@ say two minutes. The JIT callback can help to achieve this without keeping a
 list of patterns.
 .P
 (6) OK, the stack is for long term memory allocation. But what happens if a
-pattern causes stack overflow with a stack of 1M? Is that 1M kept until the
+pattern causes stack overflow with a stack of 1MiB? Is that 1MiB kept until the
 stack is freed?
 .sp
 Especially on embedded sytems, it might be a good idea to release memory
@@ -377,10 +405,13 @@ available, and which need the best possible performance, can instead use a
 processed by \fBpcre2_jit_compile()\fP).
 .P
 The fast path function is called \fBpcre2_jit_match()\fP, and it takes exactly
-the same arguments as \fBpcre2_match()\fP. The return values are also the same,
-plus PCRE2_ERROR_JIT_BADOPTION if a matching mode (partial or complete) is
-requested that was not compiled. Unsupported option bits (for example,
-PCRE2_ANCHORED) are ignored, as is the PCRE2_NO_JIT option.
+the same arguments as \fBpcre2_match()\fP. However, the subject string must be
+specified with a length; PCRE2_ZERO_TERMINATED is not supported. Unsupported
+option bits (for example, PCRE2_ANCHORED, PCRE2_ENDANCHORED and
+PCRE2_COPY_MATCHED_SUBJECT) are ignored, as is the PCRE2_NO_JIT option. The
+return values are also the same as for \fBpcre2_match()\fP, plus
+PCRE2_ERROR_JIT_BADOPTION if a matching mode (partial or complete) is requested
+that was not compiled.
 .P
 When you call \fBpcre2_match()\fP, as well as testing for invalid options, a
 number of other sanity checks are performed on the arguments. For example, if
@@ -413,6 +444,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 05 June 2016
-Copyright (c) 1997-2016 University of Cambridge.
+Last updated: 23 May 2019
+Copyright (c) 1997-2019 University of Cambridge.
 .fi

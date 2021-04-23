@@ -1,4 +1,4 @@
-.TH PCRE2_SUBSTRING_LIST_FREE 3 "21 October 2014" "PCRE2 10.00"
+.TH PCRE2_SUBSTRING_LIST_FREE 3 "28 June 2018" "PCRE2 10.32"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -14,7 +14,8 @@ PCRE2 - Perl-compatible regular expressions (revised API)
 .sp
 This is a convenience function for freeing the store obtained by a previous
 call to \fBpcre2substring_list_get()\fP. Its only argument is a pointer to
-the list of string pointers.
+the list of string pointers. If the argument is NULL, the function returns
+immediately, without doing anything.
 .P
 There is a complete description of the PCRE2 native API in the
 .\" HREF

@@ -1,4 +1,4 @@
-.TH PCRE2_SET_NEWLINE 3 "22 October 2014" "PCRE2 10.00"
+.TH PCRE2_SET_NEWLINE 3 "26 May 2017" "PCRE2 10.30"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -23,6 +23,7 @@ matching patterns. The second argument must be one of:
   PCRE2_NEWLINE_CRLF      CR followed by LF only
   PCRE2_NEWLINE_ANYCRLF   Any of the above
   PCRE2_NEWLINE_ANY       Any Unicode newline sequence
+  PCRE2_NEWLINE_NUL       The NUL character (binary zero)
 .sp
 The result is zero for success or PCRE2_ERROR_BADDATA if the second argument is
 invalid.

@@ -1,7 +1,7 @@
 # This set of tests is for UTF-8 support and Unicode property support, with
 # relevance only for the 8-bit library.
 
-# The next 4 patterns have UTF-8 errors
+# The next 5 patterns have UTF-8 errors
 
 /[√]/utf
 
@@ -10,6 +10,8 @@
 /√√√xxx/utf
 
 /√ÇÇÇÇÇÇÇÇ√/utf
+
+/√ÇÇÇÇÇÇÇÇ√/match_invalid_utf
 
 # Now test subjects
 
@@ -457,5 +459,162 @@
 /(*:*++++++++++++''''''''''''''''''''+''+++'+++x+++++++++++++++++++++++++++++++++++(++++++++++++++++++++:++++++%++:''''''''''''''''''''''''+++++++++++++++++++++++++++++++++++++++++++++++++++++-++++++++k+++++++''''+++'+++++++++++++++++++++++''''++++++++++++':∆ø)/utf
 
 /[\s[:^ascii:]]/B,ucp
+
+# A special extra option allows excaped surrogate code points in 8-bit mode,
+# but subjects containing them must not be UTF-checked.
+
+/\x{d800}/I,utf,allow_surrogate_escapes
+    \x{d800}\=no_utf_check
+
+/\udfff\o{157401}/utf,alt_bsux,allow_surrogate_escapes
+    \x{dfff}\x{df01}\=no_utf_check
+    
+# This has different starting code units in 8-bit mode. 
+
+/^[^ab]/IB,utf
+    c
+    \x{ff}
+    \x{100}
+\= Expect no match
+    aaa
+    
+# Offsets are different in 8-bit mode. 
+
+/(?<=abc)(|def)/g,utf,replace=<$0>,substitute_callout
+    123abc√°yzabcdef789abc·à¥qr
+    
+# Check name length with non-ASCII characters 
+
+/(?'AB√°C678901234567890123456789012'...)/utf
+
+/(?'AB√°C6789012345678901234567890123'...)/utf
+
+/(?'ABZC6789012345678901234567890123'...)/utf
+
+/(?(n/utf
+
+/(?(√°/utf
+
+# Invalid UTF-8 tests
+
+/.../g,match_invalid_utf
+    abcd\x80wxzy\x80pqrs
+    abcd\x{80}wxzy\x80pqrs
+
+/abc/match_invalid_utf
+    ab\x80ab\=ph
+\= Expect no match
+    ab\x80cdef\=ph
+
+/ab$/match_invalid_utf
+    ab\x80cdeab
+\= Expect no match
+    ab\x80cde
+
+/.../g,match_invalid_utf
+    abcd\x{80}wxzy\x80pqrs
+
+/(?<=x)../g,match_invalid_utf
+    abcd\x{80}wxzy\x80pqrs
+    abcd\x{80}wxzy\x80xpqrs
+    
+/X$/match_invalid_utf
+\= Expect no match
+    X\xc4
+    
+/(?<=..)X/match_invalid_utf,aftertext
+    AB\x80AQXYZ
+    AB\x80AQXYZ\=offset=5
+    AB\x80\x80AXYZXC\=offset=5
+\= Expect no match
+    AB\x80XYZ
+    AB\x80XYZ\=offset=3 
+    AB\xfeXYZ
+    AB\xffXYZ\=offset=3 
+    AB\x80AXYZ
+    AB\x80AXYZ\=offset=4
+    AB\x80\x80AXYZ\=offset=5
+
+/.../match_invalid_utf
+    AB\xc4CCC
+\= Expect no match
+    A\x{d800}B
+    A\x{110000}B
+    A\xc4B  
+
+/\bX/match_invalid_utf
+    A\x80X
+
+/\BX/match_invalid_utf
+\= Expect no match
+    A\x80X
+    
+/(?<=...)X/match_invalid_utf
+    AAA\x80BBBXYZ 
+\= Expect no match
+    AAA\x80BXYZ 
+    AAA\x80BBXYZ 
+
+# -------------------------------------
+
+/(*UTF)(?=\x{123})/I
+
+/[\x{c1}\x{e1}]X[\x{145}\x{146}]/I,utf
+
+/[Ûøæü,]/BI,utf
+
+/[\x{fff4}-\x{ffff8}]/I,utf
+
+/[\x{fff4}-\x{afff8}\x{10ffff}]/I,utf
+
+/[\xff\x{ffff}]/I,utf
+
+/[\xff\x{ff}]/I,utf
+    abc\x{ff}def
+
+/[\xff\x{ff}]/I
+    abc\x{ff}def
+
+/[Ss]/I
+
+/[Ss]/I,utf
+
+/(?:\x{ff}|\x{3000})/I,utf
+
+/x/utf
+    abxyz
+    \x80\=startchar
+    abc\x80\=startchar
+    abc\x80\=startchar,offset=3
+
+/\x{c1}+\x{e1}/iIB,ucp
+    \x{c1}\x{c1}\x{c1}
+    \x{e1}\x{e1}\x{e1} 
+
+/a|\x{c1}/iI,ucp
+    \x{e1}xxx
+
+/a|\x{c1}/iI,utf
+    \x{e1}xxx
+
+/\x{c1}|\x{e1}/iI,ucp
+
+/X(\x{e1})Y/ucp,replace=>\U$1<,substitute_extended
+    X\x{e1}Y
+
+/X(\x{e1})Y/i,ucp,replace=>\L$1<,substitute_extended
+    X\x{c1}Y
+
+# Without UTF or UCP characters > 127 have only one case in the default locale.
+
+/X(\x{e1})Y/replace=>\U$1<,substitute_extended
+    X\x{e1}Y
+
+/A/utf,match_invalid_utf,caseless
+    \xe5A
+
+/\bch\b/utf,match_invalid_utf
+    qchq\=ph
+    qchq\=ps
 
 # End of testinput10

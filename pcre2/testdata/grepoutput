@@ -346,7 +346,7 @@ RC=0
 ./testdata/grepinput-9-
 ./testdata/grepinput:10:This pattern is in lower case.
 ./testdata/grepinput-11-
-./testdata/grepinput-12-Here follows a whole lot of stuff that makes the file over 24K long.
+./testdata/grepinput-12-Here follows a whole lot of stuff that makes the file over 24KiB long.
 ./testdata/grepinput-13-
 --
 ./testdata/grepinput:623:Check up on PATTERN near the end.
@@ -379,6 +379,7 @@ RC=0
 ./testdata/grepinputx
 RC=0
 ---------------------------- Test 37 -----------------------------
+24KiB long so that it needs more than a single read() call to process it. New
 aaaaa0
 aaaaa2
 010203040506
@@ -392,7 +393,7 @@ pcre2grep: pcre2_match() gave error -47 while matching this text:
 
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
-pcre2grep: Error -46, -47 or -53 means that a resource limit was exceeded.
+pcre2grep: Error -46, -47, -53 or -63 means that a resource limit was exceeded.
 pcre2grep: Check your regex for nested unlimited loops.
 ---------------------------- Test 38 ------------------------------
 This line contains a binary zero here > < for testing.
@@ -454,17 +455,22 @@ RC=1
 ---------------------------- Test 51 ------------------------------
 over the lazy dog.
 This time it jumps and jumps and jumps.
+This line contains \E and (regex) *meta* [characters].
+The word is cat in this line
+The caterpillar sat on the mat
+The snowcat is not an animal
+A buried feline in the syndicate
 RC=0
 ---------------------------- Test 52 ------------------------------
 fox [1;31mjumps[0m
 This time it [1;31mjumps[0m and [1;31mjumps[0m and [1;31mjumps[0m.
 RC=0
 ---------------------------- Test 53 ------------------------------
-36972,6
-36990,4
-37024,4
-37066,5
-37083,4
+36976,6
+36994,4
+37028,4
+37070,5
+37087,4
 RC=0
 ---------------------------- Test 54 ------------------------------
 595:15,6
@@ -482,6 +488,7 @@ RC=0
 ./testdata/grepinput:456
 ./testdata/grepinput3:0
 ./testdata/grepinput8:0
+./testdata/grepinputM:0
 ./testdata/grepinputv:1
 ./testdata/grepinputx:0
 RC=0
@@ -513,20 +520,20 @@ RC=0
 pcre2grep: pcre2_match() gave error -47 while matching text that starts:
 
 This is a file of miscellaneous text that is used as test data for checking
-that the pcregrep command is working correctly. The file must be more than 24K
-long so that it needs more than a single read
+that the pcregrep command is working correctly. The file must be more than
+24KiB long so that it needs more than a single re
 
-pcre2grep: Error -46, -47 or -53 means that a resource limit was exceeded.
+pcre2grep: Error -46, -47, -53 or -63 means that a resource limit was exceeded.
 pcre2grep: Check your regex for nested unlimited loops.
 RC=1
 ---------------------------- Test 63 -----------------------------
 pcre2grep: pcre2_match() gave error -53 while matching text that starts:
 
 This is a file of miscellaneous text that is used as test data for checking
-that the pcregrep command is working correctly. The file must be more than 24K
-long so that it needs more than a single read
+that the pcregrep command is working correctly. The file must be more than
+24KiB long so that it needs more than a single re
 
-pcre2grep: Error -46, -47 or -53 means that a resource limit was exceeded.
+pcre2grep: Error -46, -47, -53 or -63 means that a resource limit was exceeded.
 pcre2grep: Check your regex for nested unlimited loops.
 RC=1
 ---------------------------- Test 64 ------------------------------
@@ -595,6 +602,33 @@ RC=0
 [0m[1;31mtriple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 
 [0mRC=0
+1:[1;31mtriple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+[0m6:[1;31mtriple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+[0m8:[1;31mtriple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+[0m13:[1;31mtriple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+[0mRC=0
+triple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+RC=0
+1:triple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+6:triple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+8:triple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+13:triple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+RC=0
 ---------------------------- Test 71 -----------------------------
 01
 RC=0
@@ -781,39 +815,42 @@ RC=0
 615:0,12
 RC=0
 ---------------------------- Test 112 -----------------------------
-37168,12
-37180,12
-37192,12
-37204,12
-37216,12
+37172,12
+37184,12
+37196,12
+37208,12
+37220,12
 RC=0
 ---------------------------- Test 113 -----------------------------
-476
+480
 RC=0
 ---------------------------- Test 114 -----------------------------
 testdata/grepinput:469
 testdata/grepinput3:0
 testdata/grepinput8:0
-testdata/grepinputv:1
+testdata/grepinputM:2
+testdata/grepinputv:3
 testdata/grepinputx:6
-TOTAL:476
+TOTAL:480
 RC=0
 ---------------------------- Test 115 -----------------------------
 testdata/grepinput:469
-testdata/grepinputv:1
+testdata/grepinputM:2
+testdata/grepinputv:3
 testdata/grepinputx:6
-TOTAL:476
+TOTAL:480
 RC=0
 ---------------------------- Test 116 -----------------------------
-476
+478
 RC=0
 ---------------------------- Test 117 -----------------------------
 469
 0
 0
-1
+2
+3
 6
-476
+480
 RC=0
 ---------------------------- Test 118 -----------------------------
 testdata/grepinput3
@@ -828,4 +865,118 @@ abc
 def
 xyz
 ---
+RC=0
+---------------------------- Test 120 ------------------------------
+./testdata/grepinput:the binary zero.:zerothe.
+./testdata/grepinput:a binary zero:zeroa
+./testdata/grepinput:the binary zero.:zerothe.
+RC=0
+---------------------------- Test 121 -----------------------------
+This line contains \E and (regex) *meta* [characters].
+RC=0
+---------------------------- Test 122 -----------------------------
+over the lazy dog.
+The word is cat in this line
+RC=0
+---------------------------- Test 123 -----------------------------
+over the lazy dog.
+The word is cat in this line
+RC=0
+---------------------------- Test 124 -----------------------------
+3:[1;31mstart end[0m in between [1;31mstart
+end[0m and following
+7:[1;31mstart end[0m in between [1;31mstart
+end[0m and following [1;31mstart
+end[0m other stuff
+11:[1;31mstart end[0m in between [1;31mstart
+
+end[0m
+16:[1;31mstart end[0m in between [1;31mstart
+end[0m
+RC=0
+3:[1;31mstart end[0m in between [1;31mstart
+end[0m and following
+5-Other stuff
+6-
+7:[1;31mstart end[0m in between [1;31mstart
+end[0m and following [1;31mstart
+end[0m other stuff
+10-
+11:[1;31mstart end[0m in between [1;31mstart
+
+end[0m
+14-
+15-** These two lines must be last.
+16:[1;31mstart end[0m in between [1;31mstart
+end[0m
+RC=0
+3:start end in between start
+end and following
+7:start end in between start
+end and following start
+end other stuff
+11:start end in between start
+
+end
+16:start end in between start
+end
+RC=0
+3:start end in between start
+end and following
+5-Other stuff
+6-
+7:start end in between start
+end and following start
+end other stuff
+10-
+11:start end in between start
+
+end
+14-
+15-** These two lines must be last.
+16:start end in between start
+end
+RC=0
+---------------------------- Test 125 -----------------------------
+[1;31ma[0m[1;31mb[0m[1;31mc[0m[1;31md[0m
+RC=0
+[1;31ma[0m[1;31mb[0m[1;31mc[0m[1;31md[0m
+RC=0
+[1;31ma[0mb[1;31mc[0md
+RC=0
+[1;31ma[0mb[1;31mc[0md
+RC=0
+---------------------------- Test 126 -----------------------------
+ABC XYZ
+RC=0
+---------------------------- Test 127 -----------------------------
+pattern
+RC=0
+---------------------------- Test 128 -----------------------------
+pcre2grep: Requested group 1 cannot be captured.
+pcre2grep: Use --om-capture to increase the size of the capture vector.
+RC=2
+---------------------------- Test 129 -----------------------------
+The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the
+lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox
+RC=0
+---------------------------- Test 130 -----------------------------
+fox
+fox
+fox
+fox
+RC=0
+---------------------------- Test 131 -----------------------------
+2
+RC=0
+---------------------------- Test 132 -----------------------------
+match 1:
+ a
+match 2:
+ b
+---
+ a
+RC=0
+---------------------------- Test 133 -----------------------------
+=AB3CD5=
 RC=0

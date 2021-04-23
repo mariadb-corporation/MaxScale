@@ -20,16 +20,19 @@ SYNOPSIS
 </P>
 <P>
 <b>int pcre2_set_character_tables(pcre2_compile_context *<i>ccontext</i>,</b>
-<b>  const unsigned char *<i>tables</i>);</b>
+<b>  const uint8_t *<i>tables</i>);</b>
 </P>
 <br><b>
 DESCRIPTION
 </b><br>
 <P>
 This function sets a pointer to custom character tables within a compile
-context. The second argument must be the result of a call to
-<b>pcre2_maketables()</b> or NULL to request the default tables. The result is
-always zero.
+context. The second argument must point to a set of PCRE2 character tables or
+be NULL to request the default tables. The result is always zero. Character
+tables can be created by calling <b>pcre2_maketables()</b> or by running the
+<b>pcre2_dftables</b> maintenance command in binary mode (see the
+<a href="pcre2build.html"><b>pcre2build</b></a>
+documentation).
 </P>
 <P>
 There is a complete description of the PCRE2 native API in the

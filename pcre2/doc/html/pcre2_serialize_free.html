@@ -27,13 +27,14 @@ DESCRIPTION
 <P>
 This function frees the memory that was obtained by
 <b>pcre2_serialize_encode()</b> to hold a serialized byte stream. The argument
-must point to such a byte stream.
+must point to such a byte stream or be NULL, in which case the function returns
+without doing anything.
 </P>
 <P>
 There is a complete description of the PCRE2 native API in the
 <a href="pcre2api.html"><b>pcre2api</b></a>
-page and a description of the POSIX API in the
-<a href="pcre2posix.html"><b>pcre2posix</b></a>
+page and a description of the serialization functions in the
+<a href="pcre2serialize.html"><b>pcre2serialize</b></a>
 page.
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

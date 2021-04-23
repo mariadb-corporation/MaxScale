@@ -5,7 +5,7 @@
 #forbid_utf
 #pattern posix
 
-# Test invalid options
+# Test some invalid options
 
 /abc/auto_callout
 ** Ignored with POSIX interface: auto_callout
@@ -19,6 +19,12 @@
   abc\=partial_hard
 ** Ignored with POSIX interface: partial_hard
  0: abc
+  
+/a(())bc/parens_nest_limit=1
+** Ignored with POSIX interface: parens_nest_limit
+
+/abc/allow_surrogate_escapes,max_pattern_length=2
+** Ignored with POSIX interface: allow_surrogate_escapes max_pattern_length
 
 # Real tests
 
@@ -40,6 +46,7 @@
     defabc\=noteol
  0: def
  1: def
+ 2: <unset>
  3: def
 
 /the quick brown fox/
@@ -168,4 +175,50 @@ Start of matched string is beyond its end - displaying from end to start.
  0: a
  1: a
      
+/^d(e)$/posix
+    acdef\=posix_startend=2:4
+ 0: de
+ 1: e
+    acde\=posix_startend=2 
+ 0: de
+ 1: e
+\= Expect no match     
+    acdef
+No match: POSIX code 17: match failed
+    acdef\=posix_startend=2 
+No match: POSIX code 17: match failed
+
+/^a\x{00}b$/posix
+    a\x{00}b\=posix_startend=0:3
+ 0: a\x00b
+
+/"A" 00 "B"/hex
+    A\x{00}B\=posix_startend=0:3
+ 0: A\x00B
+    
+/ABC/use_length 
+    ABC
+ 0: ABC
+
+/a\b(c/literal,posix
+    a\\b(c
+ 0: a\b(c
+
+/a\b(c/literal,posix,dotall
+Failed: POSIX code 16: bad argument at offset 0     
+
+/((a)(b)?(c))/posix
+    123ace
+ 0: ac
+ 1: ac
+ 2: a
+ 3: <unset>
+ 4: c
+    123ace\=posix_startend=2:6
+ 0: ac
+ 1: ac
+ 2: a
+ 3: <unset>
+ 4: c
+
 # End of testdata/testinput18

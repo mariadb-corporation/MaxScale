@@ -215,7 +215,7 @@ Failed: error 134 at offset 6: character code point value in \x{} or \o{} is too
 (?:  [^\\\x80-\xff\n\015()]  |  \\ [^\x80-\xff]  |  \( (?:  [^\\\x80-\xff\n\015()]  |  \\ [^\x80-\xff]  )* \)  )*
 \)  )*                       # optional trailing comment
 /Ix
-Capturing subpattern count = 0
+Capture group count = 0
 Contains explicit CR or LF match
 Options: extended
 Starting code units: \x09 \x20 ! " # $ % & ' ( * + - / 0 1 2 3 4 5 6 7 8 
@@ -224,25 +224,25 @@ Starting code units: \x09 \x20 ! " # $ % & ' ( * + - / 0 1 2 3 4 5 6 7 8
 Subject length lower bound = 3
 
 /\h/I
-Capturing subpattern count = 0
+Capture group count = 0
 Starting code units: \x09 \x20 \xa0 
 Subject length lower bound = 1
 
 /\H/I
-Capturing subpattern count = 0
+Capture group count = 0
 Subject length lower bound = 1
 
 /\v/I
-Capturing subpattern count = 0
+Capture group count = 0
 Starting code units: \x0a \x0b \x0c \x0d \x85 
 Subject length lower bound = 1
 
 /\V/I
-Capturing subpattern count = 0
+Capture group count = 0
 Subject length lower bound = 1
 
 /\R/I
-Capturing subpattern count = 0
+Capture group count = 0
 Starting code units: \x0a \x0b \x0c \x0d \x85 
 Subject length lower bound = 1
 

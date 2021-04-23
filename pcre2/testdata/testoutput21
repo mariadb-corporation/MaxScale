@@ -79,7 +79,7 @@
 Failed: error 183 at offset 4: using \C is disabled by the application
 
 /ab\Cde/info
-Capturing subpattern count = 0
+Capture group count = 0
 Contains \C
 First code unit = 'a'
 Last code unit = 'e'

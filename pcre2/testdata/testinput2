@@ -1,12 +1,12 @@
 # This set of tests is not Perl-compatible. It checks on special features
 # of PCRE2's API, error diagnostics, and the compiled code of some patterns.
-# It also checks the non-Perl syntax that PCRE2 supports (Python, .NET, 
-# Oniguruma). There are also some tests where PCRE2 and Perl differ, 
-# either because PCRE2 can't be compatible, or there is a possible Perl 
+# It also checks the non-Perl syntax that PCRE2 supports (Python, .NET,
+# Oniguruma). There are also some tests where PCRE2 and Perl differ,
+# either because PCRE2 can't be compatible, or there is a possible Perl
 # bug.
 
 # NOTE: This is a non-UTF set of tests. When UTF support is needed, use
-# test 5. 
+# test 5.
 
 #forbid_utf
 #newline_default lf any anycrlf
@@ -324,16 +324,7 @@
 \= Expect no match
     fooabar
 
-# This one is here because Perl behaves differently; see also the following.
-
-/^(a\1?){4}$/I
-\= Expect no match
-    aaaa
-    aaaaaa
-    
-# Perl does not fail these two for the final subjects. Neither did PCRE until
-# release 8.01. The problem is in backtracking into a subpattern that contains
-# a recursive reference to itself. PCRE has now made these into atomic patterns.
+# Perl does not fail these two for the final subjects.
 
 /^(xa|=?\1a){2}$/
     xa=xaa
@@ -910,6 +901,8 @@
 
 /[:x:]/I
 
+/\F/I
+
 /\l/I
 
 /\L/I
@@ -1099,6 +1092,9 @@
 
 /(?C)a|b/I
 
+/a|(b)(?C)/I
+    b
+
 /x(ab|(bc|(de|(?R))))/I
     xab
     xbc
@@ -1219,7 +1215,7 @@
    aaabbb
    aaabbb\=callout_data=0
    aaabbb\=callout_data=1
-\= Expect no match    
+\= Expect no match
    aaabbb\=callout_data=-1
 
 /ab(?P<one>cd)ef(?P<two>gh)/I
@@ -1291,19 +1287,19 @@
 /a+b/IB,auto_callout
   ab
   aaaab
-\= Expect no match 
+\= Expect no match
   aaaacb
 
 /(abc|def)x/IB,auto_callout
   abcx
   defx
-\= Expect no match 
+\= Expect no match
   abcdefzx
 
 /(abc|def)x/IB,auto_callout
   abcx
   defx
-\= Expect no match 
+\= Expect no match
   abcdefzx
 
 /(ab|cd){3,4}/I,auto_callout
@@ -1312,11 +1308,11 @@
   abcdcdcdcdcd
 
 /([ab]{,4}c|xy)/IB,auto_callout
-\= Expect no match 
+\= Expect no match
     Note: that { does NOT introduce a quantifier
 
 /([ab]{,4}c|xy)/IB,auto_callout
-\= Expect no match 
+\= Expect no match
     Note: that { does NOT introduce a quantifier
 
 /([ab]{1,4}c|xy){4,5}?123/IB,auto_callout
@@ -1465,7 +1461,7 @@
     a1b\=copy=A
     a2b\=copy=A
     a1b\=copy=Z,copy=A
-    
+
 /(?|(?<a>)(?<b>)(?<a>)|(?<a>)(?<b>)(?<a>))/I,dupnames
 
 /^(?P<A>a)(?P<A>b)/I,dupnames
@@ -1553,7 +1549,7 @@
 \= Expect no match
     xyz\nabclf
     xyz\rabclf
-    
+
 /^abc/Im,newline=cr
     xyz\rabc
 \= Expect no match
@@ -1620,6 +1616,7 @@
 /^a*A\d/IBi
     aaaA5
     aaaa5
+    a5 
 
 /(a*|b*)[cd]/I
 
@@ -2029,11 +2026,11 @@
     afoo
     \r\nfoo
     \nfoo
-    
+
 /^$/gm,newline=any
     abc\r\rxyz
-    abc\n\rxyz  
-\= Expect no match 
+    abc\n\rxyz
+\= Expect no match
     abc\r\nxyz
 
 /(?m)^$/g,newline=any,aftertext
@@ -2041,7 +2038,7 @@
 
 /(?m)^$|^\r\n/g,newline=any,aftertext
     abc\r\n\r\n
-    
+
 /(?m)$/g,newline=any,aftertext
     abc\r\n\r\n
 
@@ -2050,7 +2047,7 @@
 
 /^X/m
     XABC
-\= Expect no match 
+\= Expect no match
     XABC\=notbol
 
 /(ab|c)(?-1)/B
@@ -2059,8 +2056,8 @@
 /xy(?+1)(abc)/B
     xyabcabc
 \= Expect no match
-    xyabc  
-    
+    xyabc
+
 /x(?-0)y/
 
 /x(?-1)y/
@@ -2073,13 +2070,13 @@
     abcX
     Y
 \= Expect no match
-    abcY   
-    
+    abcY
+
 /^((?(+1)X|Y)(abc))+/B
     YabcXabc
     YabcXabcXabc
 \= Expect no match
-    XabcXabc  
+    XabcXabc
 
 /(?(-1)a)/B
 
@@ -2092,30 +2089,30 @@
 
 /(?<A>tom|bon)-\k{A}/
     tom-tom
-    bon-bon 
+    bon-bon
 \= Expect no match
-    tom-bon  
+    tom-bon
 
 /\g{A/
 
 /(?|(abc)|(xyz))/B
    >abc<
-   >xyz< 
+   >xyz<
 
 /(x)(?|(abc)|(xyz))(x)/B
     xabcx
-    xxyzx 
+    xxyzx
 
 /(x)(?|(abc)(pqr)|(xyz))(x)/B
     xabcpqrx
-    xxyzx 
+    xxyzx
 
 /\H++X/B
 \= Expect no match
     XXXX
-    
+
 /\H+\hY/B
-    XXXX Y 
+    XXXX Y
 
 /\H+ Y/B
 
@@ -2169,7 +2166,7 @@
 /^a+(*FAIL)/auto_callout
 \= Expect no match
     aaaaaa
-    
+
 /a+b?c+(*FAIL)/auto_callout
 \= Expect no match
     aaabccc
@@ -2181,7 +2178,7 @@
 /a+b?(*COMMIT)c+(*FAIL)/auto_callout
 \= Expect no match
     aaabccc
-    
+
 /a+b?(*SKIP)c+(*FAIL)/auto_callout
 \= Expect no match
     aaabcccaaabccc
@@ -2189,7 +2186,7 @@
 /a+b?(*THEN)c+(*FAIL)/auto_callout
 \= Expect no match
     aaabccc
-    
+
 /a(*MARK)b/
 
 /(?i:A{1,}\6666666666)/
@@ -2203,52 +2200,52 @@
 /.+A/newline=crlf
 \= Expect no match
     \r\nA
-    
+
 /\nA/newline=crlf
-    \r\nA 
+    \r\nA
 
 /[\r\n]A/newline=crlf
-    \r\nA 
+    \r\nA
 
 /(\r|\n)A/newline=crlf
-    \r\nA 
+    \r\nA
 
 /a(*CR)b/
 
 /(*CR)a.b/
     a\nb
 \= Expect no match
-    a\rb  
+    a\rb
 
 /(*CR)a.b/newline=lf
     a\nb
 \= Expect no match
-    a\rb  
+    a\rb
 
 /(*LF)a.b/newline=CRLF
     a\rb
 \= Expect no match
-    a\nb  
+    a\nb
 
 /(*CRLF)a.b/
     a\rb
-    a\nb  
+    a\nb
 \= Expect no match
-    a\r\nb  
+    a\r\nb
 
 /(*ANYCRLF)a.b/newline=CR
 \= Expect no match
     a\rb
-    a\nb  
-    a\r\nb  
+    a\nb
+    a\r\nb
 
 /(*ANY)a.b/newline=cr
 \= Expect no match
     a\rb
-    a\nb  
-    a\r\nb  
-    a\x85b 
-    
+    a\nb
+    a\r\nb
+    a\x85b
+
 /(*ANY).*/g
     abc\r\ndef
 
@@ -2258,63 +2255,81 @@
 /(*CRLF).*/g
     abc\r\ndef
 
+/(*NUL)^.*/
+    a\nb\x00ccc
+
+/(*NUL)^.*/s
+    a\nb\x00ccc
+
+/^x/m,newline=NUL
+    ab\x00xy
+
+/'#comment' 0d 0a 00 '^x\' 0a 'y'/x,newline=nul,hex
+    x\nyz
+
+/(*NUL)^X\NY/
+    X\nY
+    X\rY
+\= Expect no match
+    X\x00Y
+
 /a\Rb/I,bsr=anycrlf
     a\rb
     a\nb
     a\r\nb
 \= Expect no match
     a\x85b
-    a\x0bb     
+    a\x0bb
 
 /a\Rb/I,bsr=unicode
     a\rb
     a\nb
     a\r\nb
     a\x85b
-    a\x0bb     
-    
+    a\x0bb
+
 /a\R?b/I,bsr=anycrlf
     a\rb
     a\nb
     a\r\nb
 \= Expect no match
     a\x85b
-    a\x0bb     
+    a\x0bb
 
 /a\R?b/I,bsr=unicode
     a\rb
     a\nb
     a\r\nb
     a\x85b
-    a\x0bb     
-    
+    a\x0bb
+
 /a\R{2,4}b/I,bsr=anycrlf
     a\r\n\nb
     a\n\r\rb
     a\r\n\r\n\r\n\r\nb
 \= Expect no match
     a\x85\x85b
-    a\x0b\x0bb     
+    a\x0b\x0bb
 
 /a\R{2,4}b/I,bsr=unicode
     a\r\rb
     a\n\n\nb
     a\r\n\n\r\rb
     a\x85\x85b
-    a\x0b\x0bb     
-\= Expect no match 
-    a\r\r\r\r\rb 
- 
+    a\x0b\x0bb
+\= Expect no match
+    a\r\r\r\r\rb
+
 /(*BSR_ANYCRLF)a\Rb/I
     a\nb
-    a\rb 
+    a\rb
 
 /(*BSR_UNICODE)a\Rb/I
     a\x85b
 
 /(*BSR_ANYCRLF)(*CRLF)a\Rb/I
     a\nb
-    a\rb 
+    a\rb
 
 /(*CRLF)(*BSR_UNICODE)a\Rb/I
     a\x85b
@@ -2377,22 +2392,22 @@
 
 /^(?+1)(?<a>x|y){0}z/
     xzxx
-    yzyy 
+    yzyy
 \= Expect no match
-    xxz  
+    xxz
 
 /(\3)(\1)(a)/
 \= Expect no match
     cat
 
-/(\3)(\1)(a)/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/(\3)(\1)(a)/allow_empty_class,match_unset_backref,dupnames
     cat
-    
-/TA]/
-    The ACTA] comes 
 
-/TA]/alt_bsux,allow_empty_class,match_unset_backref,dupnames
-    The ACTA] comes 
+/TA]/
+    The ACTA] comes
+
+/TA]/allow_empty_class,match_unset_backref,dupnames
+    The ACTA] comes
 
 /(?2)[]a()b](abc)/
     abcbabc
@@ -2402,12 +2417,12 @@
 
 /(?1)[]a()b](abc)/
     abcbabc
-\= Expect no match 
+\= Expect no match
     abcXabc
 
 /(?1)[^]a()b](abc)/
     abcXabc
-\= Expect no match 
+\= Expect no match
     abcbabc
 
 /(?2)[]a()b](abc)(xyz)/
@@ -2423,29 +2438,29 @@
 
 /a[^]b/
 
-/a[]b/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/a[]b/allow_empty_class,match_unset_backref,dupnames
 \= Expect no match
     ab
 
-/a[]+b/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/a[]+b/allow_empty_class,match_unset_backref,dupnames
 \= Expect no match
-    ab 
+    ab
 
-/a[]*+b/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/a[]*+b/allow_empty_class,match_unset_backref,dupnames
 \= Expect no match
-    ab 
+    ab
 
-/a[^]b/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/a[^]b/allow_empty_class,match_unset_backref,dupnames
     aXb
-    a\nb 
+    a\nb
 \= Expect no match
-    ab  
-    
-/a[^]+b/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+    ab
+
+/a[^]+b/allow_empty_class,match_unset_backref,dupnames
     aXb
-    a\nX\nXb 
+    a\nX\nXb
 \= Expect no match
-    ab  
+    ab
 
 /a(?!)b/B
 
@@ -2458,32 +2473,32 @@
 
 /(?(?=.*b)b|^)/I,auto_callout
    adc
-   abc 
-   
+   abc
+
 /(?(?=b).*b|^d)/I
 
 /(?(?=.*b).*b|^d)/I
 
 /xyz/auto_callout
-  xyz 
-  abcxyz 
-\= Expect no match 
+  xyz
+  abcxyz
+\= Expect no match
   abc
-  abcxypqr  
-  
+  abcxypqr
+
 /xyz/auto_callout,no_start_optimize
-  abcxyz 
-\= Expect no match 
+  abcxyz
+\= Expect no match
   abc
-  abcxypqr  
-  
+  abcxypqr
+
 /(*NO_START_OPT)xyz/auto_callout
   abcxyz
-  
+
 /(*NO_AUTO_POSSESS)a+b/B
 
 /xyz/auto_callout,no_start_optimize
-  abcxyz 
+  abcxyz
 
 /^"((?(?=[a])[^"])|b)*"$/auto_callout
     "ab"
@@ -2496,133 +2511,133 @@
 
 /^X(?&N)(a)(?|(b)|(q))(c)(d)(?<N>Y)/
     XYabcdY
- 
+
 /Xa{2,4}b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /Xa{2,4}?b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /Xa{2,4}+b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\d{2,4}b/
     X\=ps
     X3\=ps
     X33\=ps
     X333\=ps
     X3333\=ps
-    
+
 /X\d{2,4}?b/
     X\=ps
     X3\=ps
     X33\=ps
     X333\=ps
     X3333\=ps
-    
+
 /X\d{2,4}+b/
     X\=ps
     X3\=ps
     X33\=ps
     X333\=ps
     X3333\=ps
-    
+
 /X\D{2,4}b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\D{2,4}?b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\D{2,4}+b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[abc]{2,4}b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[abc]{2,4}?b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[abc]{2,4}+b/
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[^a]{2,4}b/
     X\=ps
     Xz\=ps
     Xzz\=ps
     Xzzz\=ps
     Xzzzz\=ps
-    
+
 /X[^a]{2,4}?b/
     X\=ps
     Xz\=ps
     Xzz\=ps
     Xzzz\=ps
     Xzzzz\=ps
-    
+
 /X[^a]{2,4}+b/
     X\=ps
     Xz\=ps
     Xzz\=ps
     Xzzz\=ps
     Xzzzz\=ps
-    
+
 /(Y)X\1{2,4}b/
     YX\=ps
     YXY\=ps
     YXYY\=ps
     YXYYY\=ps
     YXYYYY\=ps
-    
+
 /(Y)X\1{2,4}?b/
     YX\=ps
     YXY\=ps
     YXYY\=ps
     YXYYY\=ps
     YXYYYY\=ps
-    
+
 /(Y)X\1{2,4}+b/
     YX\=ps
     YXY\=ps
     YXYY\=ps
     YXYYY\=ps
     YXYYYY\=ps
-    
+
 /\++\KZ|\d+X|9+Y/startchar
     ++++123999\=ps
     ++++123999Y\=ps
@@ -2632,7 +2647,7 @@
 \= Expect no match
     Z\=ps
     ZA\=ps
-    
+
 /Z(?!)/
 \= Expect no match
     Z\=ps
@@ -2641,7 +2656,7 @@
 /dog(sbody)?/
     dogs\=ps
     dogs\=ph
-    
+
 /dog(sbody)??/
     dogs\=ps
     dogs\=ph
@@ -2649,7 +2664,7 @@
 /dog|dogsbody/
     dogs\=ps
     dogs\=ph
- 
+
 /dogsbody|dog/
     dogs\=ps
     dogs\=ph
@@ -2661,14 +2676,14 @@
 /abc/
    abc\=ps
    abc\=ph
-   
+
 /abc\K123/startchar
     xyzabc123pqr
     xyzabc12\=ps
     xyzabc12\=ph
-    
+
 /(?<=abc)123/
-    xyzabc123pqr 
+    xyzabc123pqr
     xyzabc12\=ps
     xyzabc12\=ph
 
@@ -2690,11 +2705,11 @@
 \= Expect no match
     abcdef\=notempty
     xyzabcdef\=notempty
-    
+
 /^(?:(?=abc)|abc\K)/aftertext,startchar
     abcdef
     abcdef\=notempty_atstart
-\= Expect no match 
+\= Expect no match
     abcdef\=notempty
 
 /a?b?/aftertext
@@ -2703,79 +2718,79 @@
     xyzabc\=notempty
     xyzabc\=notempty_atstart
     xyz\=notempty_atstart
-\= Expect no match 
+\= Expect no match
     xyz\=notempty
 
 /^a?b?/aftertext
     xyz
     xyzabc
-\= Expect no match 
+\= Expect no match
     xyzabc\=notempty
     xyzabc\=notempty_atstart
     xyz\=notempty_atstart
     xyz\=notempty
-    
+
 /^(?<name>a|b\g<name>c)/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /^(?<name>a|b\g'name'c)/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /^(a|b\g<1>c)/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /^(a|b\g'1'c)/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /^(a|b\g'-1'c)/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /(^(a|b\g<-1>c))/
     aaaa
     bacxxx
-    bbaccxxx 
+    bbaccxxx
     bbbacccxx
 
 /(?-i:\g<name>)(?i:(?<name>a))/
     XaaX
-    XAAX 
+    XAAX
 
 /(?i:\g<name>)(?-i:(?<name>a))/
     XaaX
-\= Expect no match 
-    XAAX 
+\= Expect no match
+    XAAX
 
 /(?-i:\g<+1>)(?i:(a))/
     XaaX
-    XAAX 
+    XAAX
 
 /(?=(?<regex>(?#simplesyntax)\$(?<name>[a-zA-Z_\x{7f}-\x{ff}][a-zA-Z0-9_\x{7f}-\x{ff}]*)(?:\[(?<index>[a-zA-Z0-9_\x{7f}-\x{ff}]+|\$\g<name>)\]|->\g<name>(\(.*?\))?)?|(?#simple syntax withbraces)\$\{(?:\g<name>(?<indices>\[(?:\g<index>|'(?:\\.|[^'\\])*'|"(?:\g<regex>|\\.|[^"\\])*")\])?|\g<complex>|\$\{\g<complex>\})\}|(?#complexsyntax)\{(?<complex>\$(?<segment>\g<name>(\g<indices>*|\(.*?\))?)(?:->\g<segment>)*|\$\g<complex>|\$\{\g<complex>\})\}))\{/
 
 /(?<n>a|b|c)\g<n>*/
    abc
-   accccbbb 
+   accccbbb
 
 /^X(?7)(a)(?|(b)|(q)(r)(s))(c)(d)(Y)/
     XYabcdY
 
 /(?<=b(?1)|zzz)(a)/
     xbaax
-    xzzzax 
+    xzzzax
 
 /(a)(?<=b\1)/
 
@@ -2826,7 +2841,7 @@
     (?: [0-9a-f]{1,4} |       # 1-4 hex digits or
     (?(1)0 | () ) )           # if null previously matched, fail; else null
     :                         # followed by colon
-  ){1,7}                      # end item; 1-7 of them required               
+  ){1,7}                      # end item; 1-7 of them required
   [0-9a-f]{1,4} $             # final hex number at end of string
   (?(1)|.)                    # check that there was an empty component
   /Iix
@@ -2838,25 +2853,25 @@
 /(?|(?<a>A)|(?<b>B))/
 
 /(?:a(?<quote> (?<apostrophe>')|(?<realquote>")) |
-    b(?<quote> (?<apostrophe>')|(?<realquote>")) ) 
+    b(?<quote> (?<apostrophe>')|(?<realquote>")) )
     (?('quote')[a-z]+|[0-9]+)/Ix,dupnames
     a"aaaaa
-    b"aaaaa 
-\= Expect no match 
+    b"aaaaa
+\= Expect no match
     b"11111
-    a"11111 
-    
+    a"11111
+
 /^(?|(a)(b)(c)(?<D>d)|(?<D>e)) (?('D')X|Y)/IBx,dupnames
     abcdX
     eX
 \= Expect no match
     abcdY
-    ey     
-    
+    ey
+
 /(?<A>a) (b)(c)  (?<A>d  (?(R&A)$ | (?4)) )/IBx,dupnames
     abcdd
 \= Expect no match
-    abcdde  
+    abcdde
 
 /abcd*/
     xxxxabcd\=ps
@@ -2880,23 +2895,10 @@
     xxxxabcde\=ps
     xxxxabcde\=ph
 
-# This is not in the Perl-compatible test because Perl seems currently to be
-# broken and not behaving as specified in that it *does* bumpalong after
-# hitting (*COMMIT). 
-
-/(?1)(A(*COMMIT)|B)D/
-    ABD
-    XABD
-    BAD
-    ABXABD  
-\= Expect no match 
-    ABX 
-    BAXBAD  
-
-/(\3)(\1)(a)/alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/(\3)(\1)(a)/allow_empty_class,match_unset_backref,dupnames
     cat
 
-/(\3)(\1)(a)/I,alt_bsux,allow_empty_class,match_unset_backref,dupnames
+/(\3)(\1)(a)/I,allow_empty_class,match_unset_backref,dupnames
     cat
 
 /(\3)(\1)(a)/I
@@ -2905,16 +2907,16 @@
 
 /i(?(DEFINE)(?<s>a))/I
     i
-    
+
 /()i(?(1)a)/I
     ia
 
 /(?i)a(?-i)b|c/B
     XabX
     XAbX
-    CcC 
+    CcC
 \= Expect no match
-    XABX   
+    XABX
 
 /(?i)a(?s)b|c/B
 
@@ -2922,29 +2924,30 @@
 
 /^(ab(c\1)d|x){2}$/B
     xabcxd
-    
+
 /^(?&t)*+(?(DEFINE)(?<t>.))$/B
 
 /^(?&t)*(?(DEFINE)(?<t>.))$/B
 
 # This one is here because Perl gives the match as "b" rather than "ab". I
 # believe this to be a Perl bug.
-      
+
 /(?>a\Kb)z|(ab)/
-    ab\=startchar 
+    ab\=startchar
 
 /(?P<L1>(?P<L2>0|)|(?P>L2)(?P>L1))/
     abcd
-    0abc 
+    0abc
 
 /abc(*MARK:)pqr/
 
 /abc(*:)pqr/
 
-/abc(*FAIL:123)xyz/
+/(*COMMIT:X)/B
 
-# This should, and does, fail. In Perl, it does not, which I think is a 
+# This should, and does, fail. In Perl, it does not, which I think is a
 # bug because replacing the B in the pattern by (B|D) does make it fail.
+# Turning off Perl's optimization by inserting (??{""}) also makes it fail.
 
 /A(*COMMIT)B/aftertext,mark
 \= Expect no match
@@ -2959,37 +2962,37 @@
 /A(*PRUNE)B|A(*PRUNE)C/mark
 \= Expect no match
     AC
-    
+
 # Mark names can be duplicated. Perl doesn't give a mark for this one,
 # though PCRE2 does.
 
 /^A(*:A)B|^X(*:A)Y/mark
 \= Expect no match
     XAQQ
-    
-# COMMIT at the start of a pattern should be the same as an anchor. Perl 
+
+# COMMIT at the start of a pattern should be the same as an anchor. Perl
 # optimizations defeat this. So does the PCRE2 optimization unless we disable
 # it.
 
 /(*COMMIT)ABC/
     ABCDEFG
-    
+
 /(*COMMIT)ABC/no_start_optimize
 \= Expect no match
     DEFGABC
-    
+
 /^(ab (c+(*THEN)cd) | xyz)/x
 \= Expect no match
-    abcccd  
+    abcccd
 
 /^(ab (c+(*PRUNE)cd) | xyz)/x
 \= Expect no match
-    abcccd  
+    abcccd
 
 /^(ab (c+(*FAIL)cd) | xyz)/x
 \= Expect no match
-    abcccd  
-    
+    abcccd
+
 # Perl gets some of these wrong
 
 /(?>.(*ACCEPT))*?5/
@@ -3008,19 +3011,19 @@
     ACBD
 \= Expect no match
     A\nB
-    ACB\n   
+    ACB\n
 
 /A\NB./Bs
     ACBD
-    ACB\n 
+    ACB\n
 \= Expect no match
-    A\nB  
-  
+    A\nB
+
 /A\NB/newline=crlf
     A\nB
     A\rB
 \= Expect no match
-    A\r\nB    
+    A\r\nB
 
 /\R+b/B
 
@@ -3091,7 +3094,7 @@
 /.+/
 \= Bad offsets
     abc\=offset=4
-    abc\=offset=-4 
+    abc\=offset=-4
 \= Valid data
     abc\=offset=0
     abc\=offset=1
@@ -3111,24 +3114,24 @@
 
 /(?P<abn>(?P=axn)xxx)(?<axn>yy)/B
 
-# These tests are here because Perl gets the first one wrong. 
+# These tests are here because Perl gets the first one wrong.
 
 /(\R*)(.)/s
     \r\n
-    \r\r\n\n\r 
-    \r\r\n\n\r\n 
+    \r\r\n\n\r
+    \r\r\n\n\r\n
 
 /(\R)*(.)/s
     \r\n
-    \r\r\n\n\r 
-    \r\r\n\n\r\n 
+    \r\r\n\n\r
+    \r\r\n\n\r\n
 
 /((?>\r\n|\n|\x0b|\f|\r|\x85)*)(.)/s
     \r\n
-    \r\r\n\n\r 
-    \r\r\n\n\r\n 
+    \r\r\n\n\r
+    \r\r\n\n\r\n
 
-# ------------- 
+# -------------
 
 /^abc$/B
 
@@ -3136,12 +3139,12 @@
 
 /^(a)*+(\w)/
     aaaaX
-\= Expect no match 
+\= Expect no match
     aaaa
 
 /^(?:a)*+(\w)/
     aaaaX
-\= Expect no match 
+\= Expect no match
     aaaa
 
 /(a)++1234/IB
@@ -3200,39 +3203,39 @@
 
 /(abc)\1+/
 
-# Perl doesn't get these right IMO (the 3rd is PCRE2-specific) 
+# Perl doesn't get these right IMO (the 3rd is PCRE2-specific)
 
 /(?1)(?:(b(*ACCEPT))){0}/
     b
 
 /(?1)(?:(b(*ACCEPT))){0}c/
     bc
-\= Expect no match 
-    b 
+\= Expect no match
+    b
 
 /(?1)(?:((*ACCEPT))){0}c/
     c
     c\=notempty
 
 /^.*?(?(?=a)a|b(*THEN)c)/
-\= Expect no match 
+\= Expect no match
     ba
 
 /^.*?(?(?=a)a|bc)/
     ba
 
 /^.*?(?(?=a)a(*THEN)b|c)/
-\= Expect no match 
+\= Expect no match
     ac
 
 /^.*?(?(?=a)a(*THEN)b)c/
-\= Expect no match 
+\= Expect no match
     ac
 
 /^.*?(a(*THEN)b)c/
-\= Expect no match 
+\= Expect no match
     aabc
-    
+
 /^.*? (?1) c (?(DEFINE)(a(*THEN)b))/x
     aabc
 
@@ -3247,11 +3250,11 @@
 
 /(*MARK:A)(*SKIP:B)(C|X)/mark
     C
-\= Expect no match 
+\= Expect no match
     D
-     
+
 /(*:A)A+(*SKIP:A)(B|Z)/mark
-\= Expect no match 
+\= Expect no match
     AAAC
 
 # ----------------------------
@@ -3259,14 +3262,14 @@
 "(?=a*(*ACCEPT)b)c"
     c
     c\=notempty
-    
+
 /(?1)c(?(DEFINE)((*ACCEPT)b))/
     c
     c\=notempty
-    
+
 /(?>(*ACCEPT)b)c/
     c
-\= Expect no match 
+\= Expect no match
     c\=notempty
 
 /(?:(?>(a)))+a%/allaftertext
@@ -3274,7 +3277,7 @@
 
 /(a)b|ac/allaftertext
     ac\=ovector=1
-    
+
 /(a)(b)x|abc/allaftertext
      abc\=ovector=2
 
@@ -3299,7 +3302,7 @@
     foobazbarX
     barfooX
     bazX
-    foobarbazX    
+    foobarbazX
     bazfooX\=ovector=0
     bazfooX\=ovector=1
     bazfooX\=ovector=2
@@ -3363,17 +3366,17 @@
 /^(?>a+)(?>(z+))\w/B
     aaaazzzzb
 \= Expect no match
-    aazz  
+    aazz
 
 /(.)(\1|a(?2))/
     bab
-    
+
 /\1|(.)(?R)\1/
     cbbbc
-    
+
 /(.)((?(1)c|a)|a(?2))/
 \= Expect no match
-    baa  
+    baa
 
 /(?P<abn>(?P=abn)xxx)/B
 
@@ -3407,6 +3410,14 @@
     aU0041z
 \= Expect no match
     aAz
+    
+/^\u{7a}/alt_bsux
+    u{7a}
+\= Expect no match
+    zoo 
+
+/^\u{7a}/extra_alt_bsux
+    zoo 
 
 /(?(?=c)c|d)++Y/B
 
@@ -3414,7 +3425,7 @@
 
 /a[\NB]c/
     aNc
-    
+
 /a[B-\Nc]/
 
 /a[B\Nc]/
@@ -3426,34 +3437,34 @@
 # This test, with something more complicated than individual letters, causes
 # different behaviour in Perl. Perhaps it disables some optimization; no tag is
 # passed back for the failures, whereas in PCRE2 there is a tag.
-    
+
 /(A|P)(*:A)(B|P) | (X|P)(X|P)(*:B)(Y|P)/x,mark
     AABC
-    XXYZ 
+    XXYZ
 \= Expect no match
-    XAQQ  
-    XAQQXZZ  
-    AXQQQ 
-    AXXQQQ 
+    XAQQ
+    XAQQXZZ
+    AXQQQ
+    AXXQQQ
 
 # Perl doesn't give marks for these, though it does if the alternatives are
-# replaced by single letters. 
-    
+# replaced by single letters.
+
 /(b|q)(*:m)f|a(*:n)w/mark
-    aw 
-\= Expect no match 
+    aw
+\= Expect no match
     abc
 
 /(q|b)(*:m)f|a(*:n)w/mark
-    aw 
-\= Expect no match 
+    aw
+\= Expect no match
     abc
 
-# After a partial match, the behaviour is as for a failure. 
+# After a partial match, the behaviour is as for a failure.
 
 /^a(*:X)bcde/mark
    abc\=ps
-   
+
 # These are here because Perl doesn't return a mark, except for the first.
 
 /(?=(*:x))(q|)/aftertext,mark
@@ -3521,22 +3532,22 @@
     ababa\=ps
     ababa\=ph
     abababx
-    ababababx  
+    ababababx
 
 /^(..)\1{2,3}?x/
     aba\=ps
     ababa\=ps
     ababa\=ph
     abababx
-    ababababx  
-    
+    ababababx
+
 /^(..)(\1{2,3})ab/
     abababab
 
 /^\R/
     \r\=ps
     \r\=ph
-    
+
 /^\R{2,3}x/
     \r\=ps
     \r\=ph
@@ -3545,7 +3556,7 @@
     \r\r\r\=ps
     \r\r\r\=ph
     \r\rx
-    \r\r\rx    
+    \r\r\rx
 
 /^\R{2,3}?x/
     \r\=ps
@@ -3555,20 +3566,20 @@
     \r\r\r\=ps
     \r\r\r\=ph
     \r\rx
-    \r\r\rx    
-    
+    \r\r\rx
+
 /^\R?x/
     \r\=ps
     \r\=ph
     x
-    \rx  
+    \rx
 
 /^\R+x/
     \r\=ps
     \r\=ph
     \r\n\=ps
     \r\n\=ph
-    \rx  
+    \rx
 
 /^a$/newline=crlf
     a\r\=ps
@@ -3589,7 +3600,7 @@
 /./newline=crlf
     \r\=ps
     \r\=ph
-  
+
 /.{2,3}/newline=crlf
     \r\=ps
     \r\=ph
@@ -3608,9 +3619,9 @@
 
 "AB(C(D))(E(F))?(?(?=\2)(?=\4))"
     ABCDGHI\=ovector=01
-    
+
 # These are all run as real matches in test 1; here we are just checking the
-# settings of the anchored and startline bits.  
+# settings of the anchored and startline bits.
 
 /(?>.*?a)(?<=ba)/I
 
@@ -3646,10 +3657,10 @@
 
 /(?:(a)+(?C1)bb|aa(?C2)b)/
     aab\=callout_capture
-   
+
 /(?:(a)++(?C1)bb|aa(?C2)b)/
     aab\=callout_capture
-    
+
 /(?:(?>(a))(?C1)bb|aa(?C2)b)/
     aab\=callout_capture
 
@@ -3666,11 +3677,11 @@
 /(ab)x|ab/
     ab\=ovector=0
     ab\=ovector=1
-  
+
 /(?<=123)(*MARK:xx)abc/mark
     xxxx123a\=ph
     xxxx123a\=ps
-    
+
 /123\Kabc/startchar
     xxxx123a\=ph
     xxxx123a\=ps
@@ -3685,22 +3696,22 @@
 
 /aaaaa(*COMMIT)(*PRUNE)b|a+c/
     aaaaaac
-    
+
 # Here are some that Perl treats differently because of the way it handles
-# backtracking verbs. 
+# backtracking verbs.
 
 /(?!a(*COMMIT)b)ac|ad/
      ac
-     ad 
+     ad
 
 /^(?!a(*THEN)b|ac)../
-     ad 
+     ad
 \= Expect no match
      ac
 
 /^(?=a(*THEN)b|ac)/
     ac
-    
+
 /\A.*?(?:a|b(*THEN)c)/
     ba
 
@@ -3711,25 +3722,24 @@
     ba
 
 /(?:(a(*MARK:X)a+(*SKIP:X)b)){0}(?:(?1)|aac)/
-    aac 
+    aac
 
 /\A.*?(a|b(*THEN)c)/
     ba
 
 /^(A(*THEN)B|A(*THEN)D)/
-    AD           
-    
+    AD
+
 /(?!b(*THEN)a)bn|bnn/
     bnn
 
 /(?(?=b(*SKIP)a)bn|bnn)/
-\= Expect no match
     bnn
 
 /(?=b(*THEN)a|)bn|bnn/
     bnn
 
-# This test causes a segfault with Perl 5.18.0 
+# This test causes a segfault with Perl 5.18.0
 
 /^(?=(a)){0}b(?1)/
     backgammon
@@ -3837,13 +3847,13 @@
 
 /[a-c]{0,6}d/IB
 
-# End of special auto-possessive tests 
+# End of special auto-possessive tests
 
 /^A\o{1239}B/
     A\123B
 
 /^A\oB/
-    
+
 /^A\x{zz}B/
 
 /^A\x{12Z/
@@ -3915,13 +3925,13 @@
 
 /[[:<:]]red[[:>:]]/B
     little red riding hood
-    a /red/ thing 
+    a /red/ thing
     red is a colour
-    put it all on red  
+    put it all on red
 \= Expect no match
     no reduction
     Alfred Winifred
-    
+
 /[a[:<:]] should give error/
 
 /(?=ab\K)/aftertext
@@ -3930,7 +3940,7 @@
 /abcd/newline=lf,firstline
 \= Expect no match
     xx\nxabcd
-    
+
 # Test stack guard external calls.
 
 /(((a)))/stackguard=1
@@ -3961,25 +3971,25 @@
 
 /A\9B/
 
-# This one is here because Perl fails to match "12" for this pattern when the $ 
+# This one is here because Perl fails to match "12" for this pattern when the $
 # is present.
-    
+
 /^(?(?=abc)\w{3}:|\d\d)$/
     abc:
     12
 \= Expect no match
     123
-    xyz    
+    xyz
 
-# Perl gets this one wrong, giving "a" as the after text for ca and failing to 
+# Perl gets this one wrong, giving "a" as the after text for ca and failing to
 # match for cd.
 
 /(?(?=ab)ab)/aftertext
     abxxx
     ca
-    cd 
-    
-# This should test both paths for processing OP_RECURSE. 
+    cd
+
+# This should test both paths for processing OP_RECURSE.
 
 /(?(R)a+|(?R)b)/
     aaaabcde
@@ -3991,29 +4001,32 @@
 /(*NOTEMPTY)a*?b*?/
     ab
     ba
-    cb  
+    cb
 
 /(*NOTEMPTY_ATSTART)a*?b*?/aftertext
     ab
-    cdab 
+    cdab
 
 /(?(VERSION>=10.0)yes|no)/I
     yesno
-    
+
+/(?(VERSION>=10.04)yes|no)/
+    yesno
+
 /(?(VERSION=8)yes){3}/BI,aftertext
     yesno
 
 /(?(VERSION=8)yes|no){3}/I
     yesnononoyes
 \= Expect no match
-    yesno   
+    yesno
 
 /(?:(?<VERSION>abc)|xyz)(?(VERSION)yes|no)/I
     abcyes
     xyzno
 \= Expect no match
     abcno
-    xyzyes    
+    xyzyes
 
 /(?(VERSION<10)yes|no)/
 
@@ -4029,11 +4042,11 @@
 
 /(|ab)*?d/I
    abd
-   xyd 
+   xyd
 
 /(|ab)*?d/I,no_start_optimize
    abd
-   xyd 
+   xyd
 
 /\k<A>*(?<A>aa)(?<A>bb)/match_unset_backref,dupnames
     aabb
@@ -4093,7 +4106,7 @@
 
 /abc/replace=[9]XYZ
     123abc123
-    
+
 /abc/replace=xyz
     1abc2\=partial_hard
 
@@ -4105,23 +4118,23 @@
 
 /(?<=abc)(|def)/g,replace=<$0>
     123abcxyzabcdef789abcpqr
-    
+
 /./replace=$0
     a
-    
+
 /(.)(.)/replace=$2+$1
     abc
-    
+
 /(?<A>.)(?<B>.)/replace=$B+$A
     abc
-    
+
 /(.)(.)/g,replace=$2$1
-    abcdefgh  
-    
+    abcdefgh
+
 /(*:pear)apple|(*:orange)lemon|(*:strawberry)blackberry/g,replace=${*MARK}
     apple lemon blackberry
     apple strudel
-    fruitless  
+    fruitless
 
 /(*:pear)apple|(*:orange)lemon|(*:strawberry)blackberry/replace=${*MARK} sauce,
     apple lemon blackberry
@@ -4129,15 +4142,15 @@
 /(*:pear)apple|(*:orange)lemon|(*:strawberry)blackberry/g,replace=<$*MARK>
     apple lemon blackberry
     apple strudel
-    fruitless  
-    
-/(*:pear)apple/g,replace=${*MARKING} 
+    fruitless
+
+/(*:pear)apple/g,replace=${*MARKING}
     apple lemon blackberry
 
 /(*:pear)apple/g,replace=${*MARK-time
     apple lemon blackberry
 
-/(*:pear)apple/g,replace=${*mark} 
+/(*:pear)apple/g,replace=${*mark}
     apple lemon blackberry
 
 /(*:pear)apple|(*:orange)lemon|(*:strawberry)blackberry/g,replace=<$*MARKET>
@@ -4173,10 +4186,10 @@
 
 /(a)(b)|(c)/
     XcX\=ovector=2,get=1,get=2,get=3,get=4,getall
-    
+
 /x(?=ab\K)/
-    xab\=get=0 
-    xab\=copy=0 
+    xab\=get=0
+    xab\=copy=0
     xab\=getall
 
 /(?<A>a)|(?<A>b)/dupnames
@@ -4239,16 +4252,16 @@
      00765
      456
 \= Expect no match
-     356   
+     356
 
 '^(a)*+(\w)'
     g
-    g\=ovector=1 
+    g\=ovector=1
 
 '^(?:a)*+(\w)'
     g
-    g\=ovector=1 
-    
+    g\=ovector=1
+
 # These two pattern showeds up compile-time bugs
 
 "((?2){0,1999}())?"
@@ -4289,11 +4302,11 @@
 
 /^(?(?C25)(?=abc)abcd|xyz)/B,callout_info
     abcdefg
-    xyz123 
+    xyz123
 
 /^(?(?C$abc$)(?=abc)abcd|xyz)/B
     abcdefg
-    xyz123 
+    xyz123
 
 /^ab(?C'first')cd(?C"second")ef/
     abcdefg
@@ -4310,8 +4323,8 @@
 
 /(?(?!)a|b)/
     bbb
-\= Expect no match 
-    aaa 
+\= Expect no match
+    aaa
 
 # JIT gives a different error message for the infinite recursion
 
@@ -4345,9 +4358,9 @@
 /abc/
 \= Expect no match
     \[9x!xxx(]{9999}
-    
+
 /(abc)*/
-    \[abc]{5} 
+    \[abc]{5}
 
 /^/gm
     \n\n\n
@@ -4365,17 +4378,17 @@
 
 /A\8B\9C/
     A8B9C
-    
+
 /(?x:((?'a')) # comment (with parentheses) and | vertical
 (?-x:#not a comment (?'b')) # this is a comment ()
 (?'c')) # not a comment (?'d')/info
 
 /(?|(?'a')(2)(?'b')|(?'a')(?'a')(3))/I,dupnames
     A23B
-    B32A 
+    B32A
 
 # These are some patterns that used to cause buffer overflows or other errors
-# while compiling. 
+# while compiling.
 
 /.((?2)(?R)|\1|$)()/B
 
@@ -4459,7 +4472,7 @@
     {4,5a}bc
 
 /\x0{ab}/
-    \0{ab} 
+    \0{ab}
 
 /^(a(b))\1\g1\g{1}\g-1\g{-1}\g{-02}Z/
     ababababbbabZXXXX
@@ -4501,8 +4514,8 @@
 \= Expect no match
     aacb
 
-/(*MARK:a\zb)z/alt_verbnames 
-    
+/(*MARK:a\zb)z/alt_verbnames
+
 /(*:ab\t(d\)c)xxx/
 
 /(*:ab\t(d\)c)xxx/alt_verbnames,mark
@@ -4510,28 +4523,28 @@
 
 /(*:A\Qxx)x\EB)x/alt_verbnames,mark
     x
-    
+
 /(*:A\ExxxB)x/alt_verbnames,mark
-    x 
-    
+    x
+
 /(*: A \ and #comment
      \ B)x/x,alt_verbnames,mark
-    x  
-    
+    x
+
 /(*: A \ and #comment
      \ B)x/alt_verbnames,mark
-    x  
-    
+    x
+
 /(*: A \ and #comment
      \ B)x/x,mark
-    x  
-    
+    x
+
 /(*: A \ and #comment
      \ B)x/mark
-    x  
-    
+    x
+
 /(*:A
-B)x/alt_verbnames,mark 
+B)x/alt_verbnames,mark
     x
 
 /(*:abc\Qpqr)/alt_verbnames
@@ -4549,7 +4562,7 @@ B)x/alt_verbnames,mark
     1234abc\=offset_limit=7
 \= Expect no match
     1234abc\=offset_limit=6
-    
+
 /A/g,replace=-,use_offset_limit
     XAXAXAXAXA\=offset_limit=4
 
@@ -4563,16 +4576,22 @@ B)x/alt_verbnames,mark
 
 /abcd/null_context
     abcd\=null_context
-\= Expect error     
+\= Expect error - not allowed together
     abcd\=null_context,find_limits
-    abcd\=allusedtext,startchar 
+    abcd\=allusedtext,startchar
 
 /abcd/replace=w\rx\x82y\o{333}z(\Q12\$34$$\x34\E5$$),substitute_extended
     abcd
+
+/abcd/replace=w\rx\x82y\o{333}z(\Q12\$34$$\x34\E5$$),substitute_extended,substitute_literal
+    >>abcd<<
     
+/abcd/g,replace=\$1$2\,substitute_literal
+    XabcdYabcdZ
+
 /a(bc)(DE)/replace=a\u$1\U$1\E$1\l$2\L$2\Eab\Uab\LYZ\EDone,substitute_extended
     abcDE
- 
+
 /abcd/replace=xy\kz,substitute_extended
     abcd
 
@@ -4581,6 +4600,7 @@ B)x/alt_verbnames,mark
     ac
     ab\=replace=${1:+$1\:$1:$2}
     ac\=replace=${1:+$1\:$1:$2}
+    >>ac<<\=replace=${1:+$1\:$1:$2},substitute_literal
 
 /a(?:(b)|(c))/substitute_extended,replace=X${1:-1:-1}X${2:-2:-2}
     ab
@@ -4610,8 +4630,8 @@ B)x/alt_verbnames,mark
 
 /(?J)(?:(?<A>a)|(?<A>b))/replace=<$A>
     [a]
-    [b] 
-\= Expect error     
+    [b]
+\= Expect error
     (a)\=ovector=1
 
 /(a)|(b)/replace=<$1>
@@ -4620,6 +4640,13 @@ B)x/alt_verbnames,mark
 
 /(aa)(BB)/substitute_extended,replace=\U$1\L$2\E$1..\U$1\l$2$1
     aaBB
+    
+/abcd/replace=wxyz,substitute_matched
+    abcd
+    pqrs 
+
+/abcd/g
+    >abcd1234abcd5678<\=replace=wxyz,substitute_matched
 
 /^(o(\1{72}{\"{\\{00000059079}\d*){74}}){19}/I
 
@@ -4637,9 +4664,12 @@ B)x/alt_verbnames,mark
 /(?=a\K)/replace=z
     BaCaD
     
+/(?<=\K.)/g,replace=-
+    ab
+
 /(?'abcdefghijklmnopqrstuvwxyzABCDEFG'toolong)/
- 
-/(?'abcdefghijklmnopqrstuvwxyzABCDEF'justright)/ 
+
+/(?'abcdefghijklmnopqrstuvwxyzABCDEF'justright)/
 
 # These two use zero-termination
 /abcd/max_pattern_length=3
@@ -4762,7 +4792,7 @@ a)"xI
 
 /a|(b)c/replace=>$1<,substitute_unset_empty
     cat
-    xbcom 
+    xbcom
 
 /a|(b)c/
     cat\=replace=>$1<
@@ -4776,26 +4806,26 @@ a)"xI
 
 /a|(?'X'b)c/replace=>$X<,substitute_unset_empty
     cat
-    xbcom 
+    xbcom
 
 /a|(?'X'b)c/replace=>$Y<,substitute_unset_empty
     cat
-    cat\=substitute_unknown_unset 
-    cat\=substitute_unknown_unset,-substitute_unset_empty 
+    cat\=substitute_unknown_unset
+    cat\=substitute_unknown_unset,-substitute_unset_empty
 
 /a|(b)c/replace=>$2<,substitute_unset_empty
     cat
-    cat\=substitute_unknown_unset 
-    cat\=substitute_unknown_unset,-substitute_unset_empty 
+    cat\=substitute_unknown_unset
+    cat\=substitute_unknown_unset,-substitute_unset_empty
 
 /()()()/use_offset_limit
     \=ovector=11000000000
     \=callout_fail=11000000000
     \=callout_fail=1:11000000000
-    \=callout_data=11000000000 
-    \=callout_data=-11000000000 
-    \=offset_limit=1100000000000000000000 
-    \=copy=11000000000 
+    \=callout_data=11000000000
+    \=callout_data=-11000000000
+    \=offset_limit=1100000000000000000000
+    \=copy=11000000000
 
 /(*MARK:A\x00b)/mark
     abc
@@ -4844,22 +4874,22 @@ a)"xI
 
 /([ab])...(?<=\1)z/
     a11az
-    b11bz 
+    b11bz
 \= Expect no match
-    b11az 
-    
+    b11az
+
 /(?|([ab]))...(?<=\1)z/
 
 /([ab])(\1)...(?<=\2)z/
     aa11az
-    
-/(a\2)(b\1)(?<=\2)/ 
- 
+
+/(a\2)(b\1)(?<=\2)/
+
 /(?<A>[ab])...(?<=\k'A')z/
     a11az
-    b11bz 
+    b11bz
 \= Expect no match
-    b11az 
+    b11az
 
 /(?<A>[ab])...(?<=\k'A')(?<A>)z/dupnames
 
@@ -4873,8 +4903,8 @@ a)"xI
 
 /'ab(?C1)c'/hex,auto_callout
     abc
-    
-# Perl accepts these, but gives a warning. We can't warn, so give an error. 
+
+# Perl accepts these, but gives a warning. We can't warn, so give an error.
 
 /[a-[:digit:]]+/
     a-a9-a
@@ -4928,6 +4958,9 @@ a)"xI
 //replace=0
     \=offset=7
 
+/(?<=\G.)/g,replace=+
+    abc
+
 ".+\QX\E+"B,no_auto_possess
 
 ".+\QX\E+"B,auto_callout,no_auto_possess
@@ -4939,7 +4972,7 @@ a)"xI
 "()X|((((((((()))))))((((())))))\2())((((((\2\2)))\2)(\22((((\2\2)2))\2)))(2\ZZZ)+:)Z^|91ZiZZnter(ZZ |91Z(ZZ ZZ(\r2Z( or#(\Z2(Z\Z(\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)2))\2Z+:)Z|91Z(ZZ ZZ(\r2Z( or#(\Z2(Z\Z((Z*(\2(Z\':))\0)i|||||||||||||||loZ\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)2))\2Z)))int \)\0nte!rnal errpr\2\\21r(2\ZZZ)+:)Z!|91Z(ZZ ZZ(\r2Z( or#(\Z2(Z\Z(\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)2))\2Z)))int \)\0(2\ZZZ)+:)Z^|91ZiZZnter(ZZ |91Z(ZZ ZZ(\r2Z( or#(\Z2(Z\Z(\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)2))\2Z)))int \)\0(2\ZZZ)+:)Z^)))int \)\0(2\ZZZ)+:)Z^|91ZiZZnter(ZZernZal ZZ(\r2Z( or#(\Z2(Z\Z(\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)2))\2Z)))int \))\ZZ(\r2Z( or#(\Z2(Z\Z(\2\2)2))\2Z)Z(\22Z((\Z2(Z\Z(\2\2)))\2))))((((((\2\2))))))"I
 
 # This checks that new code for handling groups that may match an empty string
-# works on a very large number of alternatives. This pattern used to provoke a 
+# works on a very large number of alternatives. This pattern used to provoke a
 # complaint that it was too complicated.
 
 /(?:\[A|B|C|D|E|F|G|H|I|J|]{200}Z)/expand
@@ -4969,4 +5002,884 @@ a)"xI
 
 /(?<a>a)(?<b>b)\g{b}\g{a}\g{a}\g{a}\g{a}(?<a>xx)(?<b>zz)/I,dupnames
 
-# End of testinput2 
+//
+    \=ovector=7777777777
+
+# This is here because Perl matches, even though a COMMIT is encountered
+# outside of the recursion.
+
+/(?1)(A(*COMMIT)|B)D/
+    BAXBAD
+
+"(?1){2}(a)"B
+
+"(?1){2,4}(a)"B
+
+# This test differs from Perl for the first subject. Perl ends up with
+# $1 set to 'B'; PCRE2 has it unset (which I think is right).
+
+/^(?:
+(?:A| (?:B|B(*ACCEPT)) (?<=(.)) D)
+(Z)
+)+$/x
+    AZB
+    AZBDZ
+
+# The first of these, when run by Perl, gives the mark 'aa', which is wrong.
+
+'(?>a(*:aa))b|ac' mark
+    ac
+
+'(?:a(*:aa))b|ac' mark
+    ac
+
+/(R?){65}/
+    (R?){65}
+
+/\[(a)]{60}/expand
+    aaaa
+
+/(?<!\1((?U)1((?U))))(*F)/never_backslash_c,alt_bsux,anchored,extended
+
+/\g{3/
+
+/(a(?C1)(b)(c)d)+/
+  abcdabcd\=callout_capture
+
+# Perl matches this one, but PCRE does not because (*ACCEPT) clears out any
+# pending backtracks in the recursion.
+
+/^ (?(DEFINE) (..(*ACCEPT)|...) ) (?1)$/x
+\= Expect no match
+    abc
+
+# Perl gives no match for this one
+
+/(a(*MARK:m)(*ACCEPT)){0}(?1)/mark
+    abc
+
+/abc/endanchored
+    xyzabc
+\= Expect no match
+    xyzabcdef
+\= Expect error
+    xyzabc\=ph
+
+/abc/
+    xyzabc\=endanchored
+\= Expect no match
+    xyzabcdef\=endanchored
+\= Expect error
+    xyzabc\=ps,endanchored
+
+/abc(*ACCEPT)d/endanchored
+    xyzabc
+\= Expect no match
+    xyzabcdef
+
+/abc|bcd/endanchored
+    xyzabcd
+\= Expect no match
+    xyzabcdef
+
+/a(*ACCEPT)x|aa/endanchored
+    aaa
+
+# Check auto-anchoring when there is a group that is never obeyed at
+# the start of a branch.
+
+/(?(DEFINE)(a))^bc/I
+
+/(a){0}.*bc/sI
+
+# This should be anchored, as the condition is always false and there is
+# no alternative branch.
+
+/(?(VERSION>=999)yes)^bc/I
+
+# This should not be anchored.
+
+/(?(VERSION>=999)yes|no)^bc/I
+
+/(*LIMIT_HEAP=0)xxx/I
+
+/\d{0,3}(*:abc)(?C1)xxx/callout_info
+
+# ----------------------------------------------------------------------
+
+# These are a whole pile of tests that touch lines of code that are not
+# used by any other tests (at least when these were created).
+
+/^a+?x/i,no_start_optimize,no_auto_possess
+\= Expect no match
+    aaa
+
+/^[^a]{3,}?x/i,no_start_optimize,no_auto_possess
+\= Expect no match
+    bbb
+    cc
+
+/^X\S/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\W/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\H/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\h/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\V/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\v/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\h/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+
+/^X\V/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n
+
+/^X\v/no_start_optimize,no_auto_possess
+\= Expect no match
+    XX
+
+/^X.+?/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\R+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    XX
+
+/^X\H+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\h+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\V+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    X\n
+
+/^X\D+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    X9
+
+/^X\S+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    X\n
+
+/^X\W+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    XX
+
+/^X.+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+
+/(*CRLF)^X.+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\r\=ps
+
+/^X\R+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\nX
+    X\n\r\n
+    X\n\rY
+    X\n\nY
+    X\n\x{0c}Y
+
+/(*BSR_ANYCRLF)^X\R+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\nX
+    X\n\r\n
+    X\n\rY
+    X\n\nY
+    X\n\x{0c}Y
+
+/^X\H+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\t
+    XYY
+
+/^X\h+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\t\t
+    X\tY
+
+/^X\V+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+    XYY
+
+/^X\v+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n\n
+    X\nY
+
+/^X\D+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY9
+    XYY
+
+/^X\d+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X99
+    X9Y
+
+/^X\S+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+    XYY
+
+/^X\s+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n\n
+    X\nY
+
+/^X\W+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X.A
+    X++
+
+/^X\w+?Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    Xa.
+    Xaa
+
+/^X.{1,3}Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    Xa.bd
+
+/^X\h+Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    X\t\t
+    X\tY
+
+/^X\V+Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+    XYY
+
+/^(X(*THEN)Y|AB){0}(?1)/
+    ABX
+\= Expect no match
+    XAB
+
+/^(?!A(?C1)B)C/
+    ABC\=callout_error=1,no_jit
+
+/^(?!A(?C1)B)C/no_start_optimize
+    ABC\=callout_error=1
+
+/^(?(?!A(?C1)B)C)/
+    ABC\=callout_error=1
+
+# ----------------------------------------------------------------------
+
+/[a b c]/BxxI
+
+/[a b c]/BxxxI
+
+/[a b c]/B,extended_more
+
+/[ a b c ]/B,extended_more
+
+/[a b](?xx: [ 12 ] (?-xx:[ 34 ]) )y z/B
+
+# Unsetting /x also unsets /xx
+
+/[a b](?xx: [ 12 ] (?-x:[ 34 ]) )y z/B
+
+/(a)(?-n:(b))(c)/nB
+
+# ----------------------------------------------------------------------
+# These test the dangerous PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL option.
+
+/\j\x{z}\o{82}\L\uabcd\u\U\g{\g/B,\bad_escape_is_literal
+
+/\N{\c/IB,bad_escape_is_literal
+
+/[\j\x{z}\o\gAb\g]/B,bad_escape_is_literal
+
+/[Q-\N]/B,bad_escape_is_literal
+
+/[\s-_]/bad_escape_is_literal
+
+/[_-\s]/bad_escape_is_literal
+
+/[\B\R\X]/B
+
+/[\B\R\X]/B,bad_escape_is_literal
+
+/[A-\BP-\RV-\X]/B
+
+/[A-\BP-\RV-\X]/B,bad_escape_is_literal
+
+# ----------------------------------------------------------------------
+
+/a\b(c/literal
+    a\\b(c
+
+/a\b(c/literal,caseless
+    a\\b(c
+    a\\B(c
+
+/a\b(c/literal,firstline
+    XYYa\\b(c
+\= Expect no match
+    X\na\\b(c
+
+/a\b?c/literal,use_offset_limit
+    XXXXa\\b?c\=offset_limit=4
+\= Expect no match
+    XXXXa\\b?c\=offset_limit=3
+
+/a\b(c/literal,anchored,endanchored
+    a\\b(c
+\= Expect no match
+    Xa\\b(c
+    a\\b(cX
+    Xa\\b(cX
+
+//literal,extended
+
+/a\b(c/literal,auto_callout,no_start_optimize
+    XXXXa\\b(c
+
+/a\b(c/literal,auto_callout
+    XXXXa\\b(c
+
+/(*CR)abc/literal
+    (*CR)abc
+
+/cat|dog/I,match_word
+    the cat sat
+\= Expect no match
+    caterpillar
+    snowcat
+    syndicate
+
+/(cat)|dog/I,match_line,literal
+    (cat)|dog
+\= Expect no match
+    the cat sat
+    caterpillar
+    snowcat
+    syndicate
+
+/a whole line/match_line,multiline
+    Rhubarb \na whole line\n custard
+\= Expect no match
+    Not a whole line
+
+# Perl gets this wrong, failing to capture 'b' in group 1.
+
+/^(b+|a){1,2}?bc/
+    bbc
+    
+# And again here, for the "babc" subject string. 
+
+/^(b*|ba){1,2}?bc/
+    babc
+    bbabc
+    bababc
+\= Expect no match
+    bababbc
+    babababc
+
+/[[:digit:]-a]/
+
+/[[:digit:]-[:print:]]/
+
+/[\d-a]/
+
+/[\H-z]/
+
+/[\d-[:print:]]/
+
+# Perl gets the second of these wrong, giving no match.
+
+"(?<=(a))\1?b"I
+    ab
+    aaab 
+
+"(?=(a))\1?b"I
+    ab
+    aaab
+    
+# JIT does not support callout_extra  
+    
+/(*NO_JIT)(a+)b/auto_callout,no_start_optimize,no_auto_possess
+\= Expect no match
+    aac\=callout_extra 
+    
+/(*NO_JIT)a+(?C'XXX')b/no_start_optimize,no_auto_possess
+\= Expect no match
+    aac\=callout_extra 
+
+/\n/firstline
+    xyz\nabc
+
+/\nabc/firstline
+    xyz\nabc
+
+/\x{0a}abc/firstline,newline=crlf
+\= Expect no match
+    xyz\r\nabc
+
+/[abc]/firstline
+\= Expect no match
+    \na
+    
+# These tests are matched in test 1 as they are Perl compatible. Here we are
+# looking at what does and does not get auto-possessified. 
+
+/(?(DEFINE)(?<optional_a>a?))^(?&optional_a)a$/B
+
+/(?(DEFINE)(?<optional_a>a?)X)^(?&optional_a)a$/B
+    
+/^(a?)b(?1)a/B
+
+/^(a?)+b(?1)a/B
+
+/^(a?)++b(?1)a/B
+
+/^(a?)+b/B
+
+/(?=a+)a(a+)++b/B
+
+/(?<=(?=.){4,5}x)/B
+
+# Perl behaves differently with these when optimization is turned off
+
+/a(*PRUNE:X)bc|qq/mark,no_start_optimize
+\= Expect no match
+    axy
+
+/a(*THEN:X)bc|qq/mark,no_start_optimize
+\= Expect no match
+    axy
+
+/(?^x-i)AB/ 
+
+/(?^-i)AB/ 
+
+/(?x-i-i)/
+
+/(?(?=^))b/I
+    abc
+
+/(?(?=^)|)b/I
+    abc
+
+/(?(?=^)|^)b/I
+    bbc
+\= Expect no match
+    abc     
+
+/(?(1)^|^())/I
+
+/(?(1)^())b/I
+
+/(?(1)^())+b/I,aftertext
+    abc
+
+/(?(1)^()|^)+b/I,aftertext
+    bbc 
+\= Expect no match     
+    abc
+
+/(?(1)^()|^)*b/I,aftertext
+    bbc 
+    abc
+    xbc 
+
+/(?(1)^())+b/I,aftertext
+    abc
+
+/(?(1)^a()|^a)+b/I,aftertext
+    abc 
+\= Expect no match     
+    bbc
+
+/(?(1)^|^(a))+b/I,aftertext
+    abc 
+\= Expect no match     
+    bbc
+
+/(?(1)^a()|^a)*b/I,aftertext
+    abc 
+    bbc
+    xbc 
+
+/a(b)c|xyz/g,allvector,replace=<$0>
+    abcdefabcpqr\=ovector=4
+    abxyz\=ovector=4
+    abcdefxyz\=ovector=4
+    
+/a(b)c|xyz/allvector
+    abcdef\=ovector=4
+    abxyz\=ovector=4
+
+/a(b)c|xyz/g,replace=<$0>,substitute_callout
+    abcdefabcpqr
+    abxyzpqrabcxyz
+    12abc34xyz99abc55\=substitute_stop=2
+    12abc34xyz99abc55\=substitute_skip=1
+    12abc34xyz99abc55\=substitute_skip=2
+
+/a(b)c|xyz/g,replace=<$0>
+    abcdefabcpqr
+    abxyzpqrabcxyz
+    12abc34xyz\=substitute_stop=2
+    12abc34xyz\=substitute_skip=1
+
+/a(b)c|xyz/replace=<$0>
+    abcdefabcpqr
+    12abc34xyz\=substitute_skip=1
+    12abc34xyz\=substitute_stop=1
+
+/abc\rdef/
+    abc\ndef
+
+/abc\rdef\x{0d}xyz/escaped_cr_is_lf
+    abc\ndef\rxyz
+\= Expect no match     
+    abc\ndef\nxyz
+
+/(?(*ACCEPT)xxx)/
+
+/(?(*atomic:xx)xxx)/
+
+/(?(*script_run:xxx)zzz)/
+
+/foobar/
+    the foobar thing\=copy_matched_subject
+    the foobar thing\=copy_matched_subject,zero_terminate
+
+/foobar/g
+    the foobar thing foobar again\=copy_matched_subject
+
+/(*:XX)^abc/I
+
+/(*COMMIT:XX)^abc/I
+
+/(*ACCEPT:XX)^abc/I
+
+/abc/replace=xyz
+    abc\=null_context
+
+/abc/replace=xyz,substitute_callout
+    abc 
+\= Expect error message
+    abc\=null_context
+
+/\[()]{65535}()/expand
+
+/\[()]{65535}(?<A>)/expand
+
+/a(?:(*ACCEPT))??bc/
+    abc
+    axy
+
+/a(*ACCEPT)??bc/
+    abc
+    axy
+
+/a(*ACCEPT:XX)??bc/mark
+    abc
+    axy
+
+/(*:\)?/
+
+/(*:\Q \E){5}/alt_verbnames
+
+/(?=abc)/I
+
+/(?|(X)|(XY))\1abc/I
+
+/(?|(a)|(bcde))(c)\2/I
+
+/(?|(a)|(bcde))(c)\1/I
+
+/(?|(?'A'a)|(?'A'bcde))(?'B'c)\k'B'(?'A')/I,dupnames
+
+/(?|(?'A'a)|(?'A'bcde))(?'B'c)\k'A'(?'A')/I,dupnames
+
+/((a|)+)+Z/I
+
+/((?=a))[abcd]/I
+
+/A(?:(*ACCEPT))?B/info
+
+/(A(*ACCEPT)??B)C/
+    ABC
+    AXY 
+
+/(?<=(?<=a)b)c.*/I
+    abc\=ph
+\= Expect no match
+    xbc\=ph
+
+/(?<=ab)c.*/I
+    abc\=ph
+\= Expect no match
+    xbc\=ph
+
+/(?<=a(?<=a|a)c)/I
+
+/(?<=a(?<=a|ba)c)/I
+
+/(?<=(?<=a)b)(?<!abcd)/I
+
+/(?<=(?<=a)b)(?<!abcd)(?<=(?<=a)bcde)/I
+
+# Addition overflow
+/( {32742} {42})(?<!\1{65481})/
+
+# Multiplication overflow
+/(X{65535})(?<=\1{32770})/
+
+# ---- Non-atomic assertion tests ----
+
+# Expect error: not allowed as a condition
+/(?(*napla:xx)bc)/
+
+/\A(*pla:.*\b(\w++))(?>.*?\b\1\b){3}/
+    word1 word3 word1 word2 word3 word2 word2 word1 word3 word4
+
+/\A(*napla:.*\b(\w++))(?>.*?\b\1\b){3}/
+    word1 word3 word1 word2 word3 word2 word2 word1 word3 word4
+
+/\A(?*.*\b(\w++))(?>.*?\b\1\b){3}/
+    word1 word3 word1 word2 word3 word2 word2 word1 word3 word4
+
+/(*plb:(.)..|(.)...)(\1|\2)/
+    abcdb\=offset=4 
+    abcda\=offset=4 
+
+/(*naplb:(.)..|(.)...)(\1|\2)/
+    abcdb\=offset=4 
+    abcda\=offset=4 
+    
+/(?<*(.)..|(.)...)(\1|\2)/
+    abcdb\=offset=4 
+    abcda\=offset=4 
+    
+/(*non_atomic_positive_lookahead:ab)/B
+ 
+/(*non_atomic_positive_lookbehind:ab)/B 
+
+/(*pla:ab+)/B
+
+/(*napla:ab+)/B
+
+/(*napla:)+/
+
+/(*naplb:)+/
+
+/(*napla:^x|^y)/I
+
+/(*napla:abc|abd)/I
+
+/(*napla:a|(.)(*ACCEPT)zz)\1../
+    abcd
+    
+/(*napla:a(*ACCEPT)zz|(.))\1../
+    abcd
+    
+/(*napla:a|(*COMMIT)(.))\1\1/
+    aabc
+\= Expect no match     
+    abbc   
+
+/(*napla:a|(.))\1\1/
+    aabc
+    abbc   
+
+# ----
+
+# Expect error (recursion => not fixed length)
+/(\2)((?=(?<=\1)))/
+
+/c*+(?<=[bc])/
+    abc\=ph
+    ab\=ph
+    abc\=ps
+    ab\=ps
+
+/c++(?<=[bc])/
+    abc\=ph
+    ab\=ph
+
+/(?<=(?=.(?<=x)))/
+    abx
+    ab\=ph
+    bxyz 
+    xyz
+    
+/\z/
+   abc\=ph
+   abc\=ps 
+   
+/\Z/
+   abc\=ph
+   abc\=ps 
+   abc\n\=ph
+   abc\n\=ps
+
+/(?![ab]).*/
+    ab\=ph
+
+/c*+/
+    ab\=ph,offset=2
+
+/\A\s*(a|(?:[^`]{28500}){4})/I
+    a
+
+/\A\s*((?:[^`]{28500}){4})/I
+
+/\A\s*((?:[^`]{28500}){4}|a)/I
+    a
+
+/(?<A>a)(?(<A>)b)((?<=b).*)/B
+
+/(?(1)b)((?<=b).*)/B
+
+/(?(R1)b)((?<=b).*)/B
+
+/(?(DEFINE)b)((?<=b).*)/B
+
+/(?(VERSION=10.4)b)((?<=b).*)/B
+
+/[aA]b[cC]/IB
+
+/[cc]abcd/I
+
+/[Cc]abcd/I
+
+/[c]abcd/I
+
+/(?:c|C)abcd/I
+
+/(a)?a/I
+    manm
+
+/^(?|(\*)(*napla:\S*_(\2?+.+))|(\w)(?=\S*_(\2?+\1)))+_\2$/
+    *abc_12345abc
+
+/^(?|(\*)(*napla:\S*_(\3?+.+))|(\w)(?=\S*_((\2?+\1))))+_\2$/
+    *abc_12345abc
+
+/^((\1+)(?C)|\d)+133X$/
+    111133X\=callout_capture
+
+/abc/replace=xyz,substitute_replacement_only
+    123abc456
+
+/a(?<ONE>b)c(?<TWO>d)e/g,replace=X$ONE+${TWO}Z,substitute_replacement_only
+    "abcde-abcde-"
+     
+/a(b)c|xyz/g,replace=<$0>,substitute_callout,substitute_replacement_only
+    abcdefabcpqr                
+    abxyzpqrabcxyz              
+    12abc34xyz99abc55\=substitute_stop=2                          
+    12abc34xyz99abc55\=substitute_skip=1
+    12abc34xyz99abc55\=substitute_skip=2
+
+/a(..)d/replace=>$1<,substitute_matched
+    xyzabcdxyzabcdxyz
+    xyzabcdxyzabcdxyz\=ovector=2
+\= Expect error     
+    xyzabcdxyzabcdxyz\=ovector=1
+
+/a(..)d/g,replace=>$1<,substitute_matched
+    xyzabcdxyzabcdxyz
+    xyzabcdxyzabcdxyz\=ovector=2
+\= Expect error     
+    xyzabcdxyzabcdxyz\=ovector=1
+    xyzabcdxyzabcdxyz\=ovector=1,substitute_unset_empty
+
+/55|a(..)d/g,replace=>$1<,substitute_matched
+    xyz55abcdxyzabcdxyz\=ovector=2,substitute_unset_empty
+\= Expect error     
+    xyz55abcdxyzabcdxyz\=ovector=2
+
+/55|a(..)d/replace=>$1<,substitute_matched
+    xyz55abcdxyzabcdxyz\=ovector=2,substitute_unset_empty
+
+/55|a(..)d/replace=>$1<
+    xyz55abcdxyzabcdxyz\=ovector=2,substitute_unset_empty
+
+/55|a(..)d/g,replace=>$1<
+    xyz55abcdxyzabcdxyz\=ovector=2,substitute_unset_empty
+
+# Expect non-fixed-length error
+
+"(?<=X(?(DEFINE)(.*))(?1))."
+
+/\sxxx\s/tables=1
+\= Expect no match
+    AB\x{85}xxx\x{a0}XYZ
+
+/\sxxx\s/tables=2
+    AB\x{85}xxx\x{a0}XYZ
+
+/^\w+/tables=2
+    École
+
+/^\w+/tables=3
+    École
+
+#loadtables ./testbtables
+
+/^\w+/tables=3
+    École
+
+/"(*MARK:>" 00 "<).."/hex,mark,no_start_optimize
+    AB
+    A\=ph 
+\= Expect no match
+    A
+
+/"(*MARK:>" 00 "<).(?C1)."/hex,mark,no_start_optimize
+    AB
+
+/(?(VERSION=0.0/
+
+# Perl has made \K in lookarounds an error. At the moment PCRE2 still accepts.
+
+/(?=a\Kb)ab/
+    ab 
+
+/(?!a\Kb)ac/
+    ac 
+    
+/^abc(?<=b\Kc)d/
+    abcd
+
+/^abc(?<!b\Kq)d/
+    abcd
+    
+# --------- 
+
+# End of testinput2

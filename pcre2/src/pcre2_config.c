@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2016 University of Cambridge
+          New API code Copyright (c) 2016-2020 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 /* Save the configured link size, which is in bytes. In 16-bit and 32-bit modes
-its value gets changed by pcre2_internal.h to be in code units. */
+its value gets changed by pcre2_intmodedep.h (included by pcre2_internal.h) to
+be in code units. */
 
 static int configured_link_size = LINK_SIZE;
 
@@ -84,13 +85,17 @@ if (where == NULL)  /* Requests a length */
     return PCRE2_ERROR_BADOPTION;
 
     case PCRE2_CONFIG_BSR:
+    case PCRE2_CONFIG_COMPILED_WIDTHS:
+    case PCRE2_CONFIG_DEPTHLIMIT:
+    case PCRE2_CONFIG_HEAPLIMIT:
     case PCRE2_CONFIG_JIT:
     case PCRE2_CONFIG_LINKSIZE:
     case PCRE2_CONFIG_MATCHLIMIT:
+    case PCRE2_CONFIG_NEVER_BACKSLASH_C:
     case PCRE2_CONFIG_NEWLINE:
     case PCRE2_CONFIG_PARENSLIMIT:
-    case PCRE2_CONFIG_RECURSIONLIMIT:
-    case PCRE2_CONFIG_STACKRECURSE:
+    case PCRE2_CONFIG_STACKRECURSE:    /* Obsolete */
+    case PCRE2_CONFIG_TABLES_LENGTH:
     case PCRE2_CONFIG_UNICODE:
     return sizeof(uint32_t);
 
@@ -114,6 +119,28 @@ switch (what)
 #else
   *((uint32_t *)where) = PCRE2_BSR_UNICODE;
 #endif
+  break;
+
+  case PCRE2_CONFIG_COMPILED_WIDTHS:
+  *((uint32_t *)where) = 0
+#ifdef SUPPORT_PCRE2_8
+  + 1
+#endif
+#ifdef SUPPORT_PCRE2_16
+  + 2
+#endif
+#ifdef SUPPORT_PCRE2_32
+  + 4
+#endif
+  ;
+  break;
+
+  case PCRE2_CONFIG_DEPTHLIMIT:
+  *((uint32_t *)where) = MATCH_LIMIT_DEPTH;
+  break;
+
+  case PCRE2_CONFIG_HEAPLIMIT:
+  *((uint32_t *)where) = HEAP_LIMIT;
   break;
 
   case PCRE2_CONFIG_JIT:
@@ -147,20 +174,27 @@ switch (what)
   *((uint32_t *)where) = NEWLINE_DEFAULT;
   break;
 
+  case PCRE2_CONFIG_NEVER_BACKSLASH_C:
+#ifdef NEVER_BACKSLASH_C
+  *((uint32_t *)where) = 1;
+#else
+  *((uint32_t *)where) = 0;
+#endif
+  break;
+
   case PCRE2_CONFIG_PARENSLIMIT:
   *((uint32_t *)where) = PARENS_NEST_LIMIT;
   break;
 
-  case PCRE2_CONFIG_RECURSIONLIMIT:
-  *((uint32_t *)where) = MATCH_LIMIT_RECURSION;
-  break;
+  /* This is now obsolete. The stack is no longer used via recursion for
+  handling backtracking in pcre2_match(). */
 
   case PCRE2_CONFIG_STACKRECURSE:
-#ifdef HEAP_MATCH_RECURSE
   *((uint32_t *)where) = 0;
-#else
-  *((uint32_t *)where) = 1;
-#endif
+  break;
+
+  case PCRE2_CONFIG_TABLES_LENGTH:
+  *((uint32_t *)where) = TABLES_LENGTH;
   break;
 
   case PCRE2_CONFIG_UNICODE_VERSION:

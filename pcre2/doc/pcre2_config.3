@@ -1,4 +1,4 @@
-.TH PCRE2_CONFIG 3 "20 April 2014" "PCRE2 10.0"
+.TH PCRE2_CONFIG 3 "16 September 2017" "PCRE2 10.31"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -31,22 +31,29 @@ point to a uint32_t integer variable. The available codes are:
   PCRE2_CONFIG_BSR             Indicates what \eR matches by default:
                                  PCRE2_BSR_UNICODE
                                  PCRE2_BSR_ANYCRLF
+  PCRE2_CONFIG_COMPILED_WIDTHS Which of 8/16/32 support was compiled
+  PCRE2_CONFIG_DEPTHLIMIT      Default backtracking depth limit
+  PCRE2_CONFIG_HEAPLIMIT       Default heap memory limit
+.\" JOIN
   PCRE2_CONFIG_JIT             Availability of just-in-time compiler
                                 support (1=yes 0=no)
-  PCRE2_CONFIG_JITTARGET       Information about the target archi-
-                                 tecture for the JIT compiler
+.\" JOIN
+  PCRE2_CONFIG_JITTARGET       Information (a string) about the target
+                                 architecture for the JIT compiler
   PCRE2_CONFIG_LINKSIZE        Configured internal link size (2, 3, 4)
   PCRE2_CONFIG_MATCHLIMIT      Default internal resource limit
+  PCRE2_CONFIG_NEVER_BACKSLASH_C  Whether or not \eC is disabled
   PCRE2_CONFIG_NEWLINE         Code for the default newline sequence:
                                  PCRE2_NEWLINE_CR
                                  PCRE2_NEWLINE_LF
                                  PCRE2_NEWLINE_CRLF
                                  PCRE2_NEWLINE_ANY
                                  PCRE2_NEWLINE_ANYCRLF
+                                 PCRE2_NEWLINE_NUL
   PCRE2_CONFIG_PARENSLIMIT     Default parentheses nesting limit
-  PCRE2_CONFIG_RECURSIONLIMIT  Internal recursion depth limit
-  PCRE2_CONFIG_STACKRECURSE    Recursion implementation (1=stack
-                                 0=heap)
+  PCRE2_CONFIG_RECURSIONLIMIT  Obsolete: use PCRE2_CONFIG_DEPTHLIMIT
+  PCRE2_CONFIG_STACKRECURSE    Obsolete: always returns 0
+.\" JOIN
   PCRE2_CONFIG_UNICODE         Availability of Unicode support (1=yes
                                  0=no)
   PCRE2_CONFIG_UNICODE_VERSION The Unicode version (a string)

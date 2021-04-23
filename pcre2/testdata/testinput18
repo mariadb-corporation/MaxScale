@@ -5,7 +5,7 @@
 #forbid_utf
 #pattern posix
 
-# Test invalid options
+# Test some invalid options
 
 /abc/auto_callout
 
@@ -14,6 +14,10 @@
 
 /abc/
   abc\=partial_hard
+  
+/a(())bc/parens_nest_limit=1
+
+/abc/allow_surrogate_escapes,max_pattern_length=2
 
 # Real tests
 
@@ -109,4 +113,29 @@
 /(?=(a\K))/
     a
      
+/^d(e)$/posix
+    acdef\=posix_startend=2:4
+    acde\=posix_startend=2 
+\= Expect no match     
+    acdef
+    acdef\=posix_startend=2 
+
+/^a\x{00}b$/posix
+    a\x{00}b\=posix_startend=0:3
+
+/"A" 00 "B"/hex
+    A\x{00}B\=posix_startend=0:3
+    
+/ABC/use_length 
+    ABC
+
+/a\b(c/literal,posix
+    a\\b(c
+
+/a\b(c/literal,posix,dotall
+
+/((a)(b)?(c))/posix
+    123ace
+    123ace\=posix_startend=2:6
+
 # End of testdata/testinput18

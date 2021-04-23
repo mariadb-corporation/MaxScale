@@ -48,18 +48,20 @@ Friedl's terminology.
 OK, here's the real stuff
 -------------------------
 
-For the set of functions that formed the original PCRE1 library (which are
-unrelated to those mentioned above), I tried at first to invent an algorithm
-that used an amount of store bounded by a multiple of the number of characters
-in the pattern, to save on compiling time. However, because of the greater
-complexity in Perl regular expressions, I couldn't do this. In any case, a
-first pass through the pattern is helpful for other reasons.
+For the set of functions that formed the original PCRE1 library in 1997 (which
+are unrelated to those mentioned above), I tried at first to invent an
+algorithm that used an amount of store bounded by a multiple of the number of
+characters in the pattern, to save on compiling time. However, because of the
+greater complexity in Perl regular expressions, I couldn't do this, even though
+the then current Perl 5.004 patterns were much simpler than those supported
+nowadays. In any case, a first pass through the pattern is helpful for other
+reasons.
 
 
 Support for 16-bit and 32-bit data strings
 -------------------------------------------
 
-The library can be compiled in any combination of 8-bit, 16-bit or 32-bit
+The PCRE2 library can be compiled in any combination of 8-bit, 16-bit or 32-bit
 modes, creating up to three different libraries. In the description that
 follows, the word "short" is used for a 16-bit data quantity, and the phrase
 "code unit" is used for a quantity that is a byte in 8-bit mode, a short in
@@ -88,10 +90,10 @@ I had a flash of inspiration as to how I could run the real compile function in
 a "fake" mode that enables it to compute how much memory it would need, while
 in most cases only ever using a small amount of working memory, and without too
 many tests of the mode that might slow it down. So I refactored the compiling
-functions to work this way. This got rid of about 600 lines of source. It
-should make future maintenance and development easier. As this was such a major
-change, I never released 6.8, instead upping the number to 7.0 (other quite
-major changes were also present in the 7.0 release).
+functions to work this way. This got rid of about 600 lines of source and made
+further maintenance and development easier. As this was such a major change, I
+never released 6.8, instead upping the number to 7.0 (other quite major changes
+were also present in the 7.0 release).
 
 A side effect of this work was that the previous limit of 200 on the nesting
 depth of parentheses was removed. However, there was a downside: compiling ran
@@ -149,8 +151,8 @@ of code units in the item itself. The exception is the aforementioned large
 advance to check for such values. When auto-callouts are enabled, the generous
 assumption is made that there will be a callout for each pattern code unit
 (which of course is only actually true if all code units are literals) plus one
-at the end. There is a default parsed pattern vector on the stack, but if this
-is not big enough, heap memory is used.
+at the end. There is a default parsed pattern vector on the system stack, but
+if this is not big enough, heap memory is used.
 
 As before, the actual compiling function is run twice, the first time to
 determine the amount of memory needed for the final compiled pattern. It
@@ -162,7 +164,7 @@ simpler than before.
 Most errors can be diagnosed during the parsing scan. For those that cannot
 (for example, "lookbehind assertion is not fixed length"), the parsed code
 contains offsets into the pattern so that the actual compiling code can
-identify where errors occur.
+report where errors are.
 
 
 The elements of the parsed pattern vector
@@ -193,6 +195,7 @@ META_END              End of pattern (this value is 0x80000000)
 META_FAIL             (*FAIL)
 META_KET              ) closing parenthesis
 META_LOOKAHEAD        (?= start of lookahead
+META_LOOKAHEAD_NA     (*napla: start of non-atomic lookahead
 META_LOOKAHEADNOT     (?! start of negative lookahead
 META_NOCAPTURE        (?: no capture parens
 META_PLUS             +
@@ -217,10 +220,10 @@ The following have data in the lower 16 bits, and may be followed by other data
 elements:
 
 META_ALT              | alternation
-META_BACKREF
-META_CAPTURE
-META_ESCAPE
-META_RECURSE
+META_BACKREF          back reference
+META_CAPTURE          start of capturing group
+META_ESCAPE           non-literal escape sequence
+META_RECURSE          recursion call
 
 If the data for META_ALT is non-zero, it is inside a lookbehind, and the data
 is the length of its branch, for which OP_REVERSE must be generated.
@@ -232,8 +235,8 @@ META_BACKREF is followed by an offset if the back reference group number is 10
 or more. The offsets of the first ocurrences of references to groups whose
 numbers are less than 10 are put in cb->small_ref_offset[] (only the first
 occurrence is useful). On 64-bit systems this avoids using more than two parsed
-pattern elements for items such as \3. The offset is used when an error is
-given for a reference to a non-existent group.
+pattern elements for items such as \3. The offset is used when an error occurs
+because the reference is to a non-existent group.
 
 META_RECURSE is always followed by an offset, for use in error messages.
 
@@ -254,6 +257,7 @@ The following are followed by a length element, then a number of character code
 values (which should match with the length):
 
 META_MARK             (*MARK:xxxx)
+META_COMMIT_ARG       )*COMMIT:xxxx)
 META_PRUNE_ARG        (*PRUNE:xxx)
 META_SKIP_ARG         (*SKIP:xxxx)
 META_THEN_ARG         (*THEN:xxxx)
@@ -283,10 +287,11 @@ The following are also followed just by an offset, but also the lower 16 bits
 of the main word contain the length of the first branch of the lookbehind
 group; this is used when generating OP_REVERSE for that branch.
 
-META_LOOKBEHIND       (?<=
-META_LOOKBEHINDNOT    (?<!
+META_LOOKBEHIND       (?<=      start of lookbehind
+META_LOOKBEHIND_NA    (*naplb:  start of non-atomic lookbehind
+META_LOOKBEHINDNOT    (?<!      start of negative lookbehind
 
-The following are followed by two values, the minimum and maximum. Repeat
+The following are followed by two elements, the minimum and maximum. Repeat
 values are limited to 65535 (MAX_REPEAT). A maximum value of "unlimited" is
 represented by UNLIMITED_REPEAT, which is bigger than MAX_REPEAT:
 
@@ -343,9 +348,14 @@ Changeable options
 ------------------
 
 The /i, /m, or /s options (PCRE2_CASELESS, PCRE2_MULTILINE, PCRE2_DOTALL, and
-some others) may change in the middle of patterns. Their processing is handled
-entirely at compile time by generating different opcodes for the different
-settings. The runtime functions do not need to keep track of an options state.
+others) may be changed in the middle of patterns by items such as (?i). Their
+processing is handled entirely at compile time by generating different opcodes
+for the different settings. The runtime functions do not need to keep track of
+an option's state.
+
+PCRE2_DUPNAMES, PCRE2_EXTENDED, PCRE2_EXTENDED_MORE, and PCRE2_NO_AUTO_CAPTURE
+are tracked and processed during the parsing pre-pass. The others are handled
+from META_OPTIONS items during the main compile phase.
 
 
 Format of compiled patterns
@@ -363,19 +373,19 @@ default value for LINK_SIZE is 2, except for the 32-bit library, where it can
 only be 4. The 8-bit library can be compiled to used 3-byte or 4-byte values,
 and the 16-bit library can be compiled to use 4-byte values, though this
 impairs performance. Specifing a LINK_SIZE larger than 2 for these libraries is
-necessary only when patterns whose compiled length is greater than 64K code
+necessary only when patterns whose compiled length is greater than 65535 code
 units are going to be processed. When a LINK_SIZE value uses more than one code
 unit, the most significant unit is first.
 
 In this description, we assume the "normal" compilation options. Data values
 that are counts (e.g. quantifiers) are always two bytes long in 8-bit mode
-(most significant byte first), or one code unit in 16-bit and 32-bit modes.
+(most significant byte first), and one code unit in 16-bit and 32-bit modes.
 
 
 Opcodes with no following data
 ------------------------------
 
-These items are all just one unit long
+These items are all just one unit long:
 
   OP_END                 end of pattern
   OP_ANY                 match any one character other than newline
@@ -409,7 +419,7 @@ These items are all just one unit long
   OP_ACCEPT              ) These are Perl 5.10's "backtracking control
   OP_COMMIT              ) verbs". If OP_ACCEPT is inside capturing
   OP_FAIL                ) parentheses, it may be preceded by one or more
-  OP_PRUNE               ) OP_CLOSE, each followed by a count that
+  OP_PRUNE               ) OP_CLOSE, each followed by a number that
   OP_SKIP                ) indicates which parentheses must be closed.
   OP_THEN                )
 
@@ -423,27 +433,43 @@ character). Another use is for [^] when empty classes are permitted
 (PCRE2_ALLOW_EMPTY_CLASS is set).
 
 
-Backtracking control verbs with optional data
----------------------------------------------
+Backtracking control verbs
+--------------------------
 
-(*THEN) without an argument generates the opcode OP_THEN and no following data.
-OP_MARK is followed by the mark name, preceded by a length in one code unit,
-and followed by a binary zero. For (*PRUNE), (*SKIP), and (*THEN) with
-arguments, the opcodes OP_PRUNE_ARG, OP_SKIP_ARG, and OP_THEN_ARG are used,
-with the name following in the same format as OP_MARK.
+Verbs with no arguments generate opcodes with no following data (as listed
+in the section above). 
+
+(*MARK:NAME) generates OP_MARK followed by the mark name, preceded by a
+length in one code unit, and followed by a binary zero. The name length is
+limited by the size of the code unit.
+
+(*ACCEPT:NAME) and (*FAIL:NAME) are compiled as (*MARK:NAME)(*ACCEPT) and
+(*MARK:NAME)(*FAIL) respectively.
+
+For (*COMMIT:NAME), (*PRUNE:NAME), (*SKIP:NAME), and (*THEN:NAME), the opcodes
+OP_COMMIT_ARG, OP_PRUNE_ARG, OP_SKIP_ARG, and OP_THEN_ARG are used, with the
+name following in the same format as for OP_MARK.
 
 
 Matching literal characters
 ---------------------------
 
 The OP_CHAR opcode is followed by a single character that is to be matched
-casefully. For caseless matching, OP_CHARI is used. In UTF-8 or UTF-16 modes,
-the character may be more than one code unit long. In UTF-32 mode, characters
-are always exactly one code unit long.
+casefully. For caseless matching of characters that have at most two
+case-equivalent code points, OP_CHARI is used. In UTF-8 or UTF-16 modes, the
+character may be more than one code unit long. In UTF-32 mode, characters are
+always exactly one code unit long.
 
 If there is only one character in a character class, OP_CHAR or OP_CHARI is
 used for a positive class, and OP_NOT or OP_NOTI for a negative one (that is,
 for something like [^a]).
+
+Caseless matching (positive or negative) of characters that have more than two
+case-equivalent code points (which is possible only in UTF mode) is handled by
+compiling a Unicode property item (see below), with the pseudo-property
+PT_CLIST. The value of this property is an offset in a vector called
+"ucd_caseless_sets" which identifies the start of a short list of equivalent
+characters, terminated by the value NOTACHAR (0xffffffff).
 
 
 Repeating single characters
@@ -520,7 +546,8 @@ Each is followed by two code units that encode the desired property as a type
 and a value. The types are a set of #defines of the form PT_xxx, and the values
 are enumerations of the form ucp_xx, defined in the pcre2_ucp.h source file.
 The value is relevant only for PT_GC (General Category), PT_PC (Particular
-Category), and PT_SC (Script).
+Category), PT_SC (Script), and the pseudo-property PT_CLIST, which is used to
+identify a list of case-equivalent characters when there are three or more.
 
 Repeats of these items use the OP_TYPESTAR etc. set of opcodes, followed by
 three code units: OP_PROP or OP_NOTPROP, and then the desired property type and
@@ -532,7 +559,10 @@ Character classes
 
 If there is only one character in a class, OP_CHAR or OP_CHARI is used for a
 positive class, and OP_NOT or OP_NOTI for a negative one (that is, for
-something like [^a]).
+something like [^a]), except when caselessly matching a character that has more
+than two case-equivalent code points (which can happen only in UTF mode). In
+this case a Unicode property item is used, as described above in "Matching
+literal characters".
 
 A set of repeating opcodes (called OP_NOTSTAR etc.) are used for repeated,
 negated, single-character classes. The normal single-character opcodes
@@ -553,8 +583,8 @@ do.
 For classes containing characters with values greater than 255 or that contain
 \p or \P, OP_XCLASS is used. It optionally uses a bit map if any acceptable
 code points are less than 256, followed by a list of pairs (for a range) and/or
-single characters and/or properties. In caseless mode, both cases are
-explicitly listed.
+single characters and/or properties. In caseless mode, all equivalent
+characters are explicitly listed.
 
 OP_XCLASS is followed by a LINK_SIZE value containing the total length of the
 opcode and its data. This is followed by a code unit containing flag bits:
@@ -611,8 +641,8 @@ opcode to see if it is one of these:
   OP_CRMINRANGE
   OP_CRPOSRANGE
 
-All but the last three are single-code-unit items, with no data. The others are
-followed by the minimum and maximum repeat counts.
+All but the last three are single-code-unit items, with no data. The range
+opcodes are followed by the minimum and maximum repeat counts.
 
 
 Brackets and alternation
@@ -627,16 +657,17 @@ myself, can be round, square, curly, or pointy. Hence this usage rather than
 
 Non-capturing brackets use the opcode OP_BRA, capturing brackets use OP_CBRA. A
 bracket opcode is followed by a LINK_SIZE value which gives the offset to the
-next alternative OP_ALT or, if there aren't any branches, to the matching
-OP_KET opcode. Each OP_ALT is followed by a LINK_SIZE value giving the offset
-to the next one, or to the OP_KET opcode. For capturing brackets, the bracket
-number is a count that immediately follows the offset.
+next alternative OP_ALT or, if there aren't any branches, to the terminating
+opcode. Each OP_ALT is followed by a LINK_SIZE value giving the offset to the
+next one, or to the final opcode. For capturing brackets, the bracket number is
+a count that immediately follows the offset.
 
-OP_KET is used for subpatterns that do not repeat indefinitely, and OP_KETRMIN
-and OP_KETRMAX are used for indefinite repetitions, minimally or maximally
-respectively (see below for possessive repetitions). All three are followed by
-a LINK_SIZE value giving (as a positive number) the offset back to the matching
-bracket opcode.
+There are several opcodes that mark the end of a subpattern group. OP_KET is
+used for subpatterns that do not repeat indefinitely, OP_KETRMIN and
+OP_KETRMAX are used for indefinite repetitions, minimally or maximally
+respectively, and OP_KETRPOS for possessive repetitions (see below for more 
+details). All four are followed by a LINK_SIZE value giving (as a positive
+number) the offset back to the matching bracket opcode.
 
 If a subpattern is quantified such that it is permitted to match zero times, it
 is preceded by one of OP_BRAZERO, OP_BRAMINZERO, or OP_SKIPZERO. These are
@@ -677,30 +708,24 @@ repetition is zero, the group is preceded by OP_BRAPOSZERO.
 Once-only (atomic) groups
 -------------------------
 
-These are just like other subpatterns, but they start with the opcode
-OP_ONCE or OP_ONCE_NC. The former is used when there are no capturing brackets
-within the atomic group; the latter when there are. The distinction is needed
-for when there is a backtrack to before the group - any captures within the
-group must be reset, so it is necessary to retain backtracking points inside
-the group, even after it is complete, in order to do this. When there are no
-captures in an atomic group, all the backtracking can be discarded when it is
-complete. This is more efficient, and also uses less stack.
-
+These are just like other subpatterns, but they start with the opcode OP_ONCE.
 The check for matching an empty string in an unbounded repeat is handled
-entirely at runtime, so there are just these two opcodes for atomic groups.
+entirely at runtime, so there is just this one opcode for atomic groups.
 
 
 Assertions
 ----------
 
 Forward assertions are also just like other subpatterns, but starting with one
-of the opcodes OP_ASSERT or OP_ASSERT_NOT. Backward assertions use the opcodes
-OP_ASSERTBACK and OP_ASSERTBACK_NOT, and the first opcode inside the assertion
-is OP_REVERSE, followed by a count of the number of characters to move back the
-pointer in the subject string. In ASCII or UTF-32 mode, the count is also the
-number of code units, but in UTF-8/16 mode each character may occupy more than
-one code unit. A separate count is present in each alternative of a lookbehind
-assertion, allowing them to have different (but fixed) lengths.
+of the opcodes OP_ASSERT, OP_ASSERT_NA (non-atomic assertion), or
+OP_ASSERT_NOT. Backward assertions use the opcodes OP_ASSERTBACK, 
+OP_ASSERTBACK_NA, and OP_ASSERTBACK_NOT, and the first opcode inside the
+assertion is OP_REVERSE, followed by a count of the number of characters to
+move back the pointer in the subject string. In ASCII or UTF-32 mode, the count
+is also the number of code units, but in UTF-8/16 mode each character may
+occupy more than one code unit. A separate count is present in each alternative
+of a lookbehind assertion, allowing each branch to have a different (but fixed)
+length.
 
 
 Conditional subpatterns
@@ -733,11 +758,11 @@ tests the PCRE2 version number. This compiles into one of the opcodes OP_TRUE
 or OP_FALSE.
 
 If a condition is not a back reference, recursion test, DEFINE, or VERSION, it
-must start with an assertion, whose opcode normally immediately follows OP_COND
-or OP_SCOND. However, if automatic callouts are enabled, a callout is inserted
-immediately before the assertion. It is also possible to insert a manual
-callout at this point. Only assertion conditions may have callouts preceding
-the condition.
+must start with a parenthesized atomic assertion, whose opcode normally
+immediately follows OP_COND or OP_SCOND. However, if automatic callouts are
+enabled, a callout is inserted immediately before the assertion. It is also
+possible to insert a manual callout at this point. Only assertion conditions
+may have callouts preceding the condition.
 
 A condition that is the negative assertion (?!) is optimized to OP_FAIL in all
 parts of the pattern, so this is another opcode that may appear as a condition.
@@ -750,21 +775,28 @@ Recursion
 Recursion either matches the current pattern, or some subexpression. The opcode
 OP_RECURSE is followed by a LINK_SIZE value that is the offset to the starting
 bracket from the start of the whole pattern. OP_RECURSE is also used for
-"subroutine" calls, even though they are not strictly a recursion. Repeated
-recursions are automatically wrapped inside OP_ONCE brackets, because otherwise
-some patterns broke them. A non-repeated recursion is not wrapped in OP_ONCE
-brackets, but it is nevertheless still treated as an atomic group.
+"subroutine" calls, even though they are not strictly a recursion. Up till
+release 10.30 recursions were treated as atomic groups, making them
+incompatible with Perl (but PCRE had them well before Perl did). From 10.30,
+backtracking into recursions is supported.
+
+Repeated recursions used to be wrapped inside OP_ONCE brackets, which not only
+forced no backtracking, but also allowed repetition to be handled as for other
+bracketed groups. From 10.30 onwards, repeated recursions are duplicated for
+their minimum repetitions, and then wrapped in non-capturing brackets for the
+remainder. For example, (?1){3} is treated as (?1)(?1)(?1), and (?1){2,4} is
+treated as (?1)(?1)(?:(?1)){0,2}.
 
 
-Callout
--------
+Callouts
+--------
 
-A callout can nowadays have either a numerical argument or a string argument.
-These use OP_CALLOUT or OP_CALLOUT_STR, respectively. In each case these are
-followed by two LINK_SIZE values giving the offset in the pattern string to the
-start of the following item, and another count giving the length of this item.
-These values make it possible for pcre2test to output useful tracing
-information using callouts.
+A callout may have either a numerical argument or a string argument. These use
+OP_CALLOUT or OP_CALLOUT_STR, respectively. In each case these are followed by
+two LINK_SIZE values giving the offset in the pattern string to the start of
+the following item, and another count giving the length of this item. These
+values make it possible for pcre2test to output useful tracing information
+using callouts.
 
 In the case of a numeric callout, after these two values there is a single code
 unit containing the callout number, in the range 0-255, with 255 being used for
@@ -791,8 +823,8 @@ Opcode table checking
 ---------------------
 
 The last opcode that is defined in pcre2_internal.h is OP_TABLE_LENGTH. This is
-not a real opcode, but is used to check that tables indexed by opcode are the
-correct length, in order to catch updating errors.
+not a real opcode, but is used to check at compile time that tables indexed by
+opcode are the correct length, in order to catch updating errors.
 
 Philip Hazel
-November 2016
+12 July 2019

@@ -1,4 +1,4 @@
-.TH PCRE2_SERIALIZE_DECODE 3 "02 September 2015" "PCRE2 10.21"
+.TH PCRE2_SERIALIZE_DECODE 3 "27 June 2018" "PCRE2 10.32"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -16,7 +16,10 @@ PCRE2 - Perl-compatible regular expressions (revised API)
 .rs
 .sp
 This function decodes a serialized set of compiled patterns back into a list of
-individual patterns. Its arguments are:
+individual patterns. This is possible only on a host that is running the same
+version of PCRE2, with the same code unit width, and the host must also have
+the same endianness, pointer width and PCRE2_SIZE type. The arguments for
+\fBpcre2_serialize_decode()\fP are:
 .sp
   \fIcodes\fP            pointer to a vector in which to build the list
   \fInumber_of_codes\fP  number of slots in the vector
@@ -43,8 +46,8 @@ There is a complete description of the PCRE2 native API in the
 .\" HREF
 \fBpcre2api\fP
 .\"
-page and a description of the POSIX API in the
+page and a description of the serialization functions in the
 .\" HREF
-\fBpcre2posix\fP
+\fBpcre2serialize\fP
 .\"
 page.

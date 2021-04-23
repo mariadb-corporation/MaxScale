@@ -1,4 +1,4 @@
-.TH PCRE2MATCHING 3 "29 September 2014" "PCRE2 10.00"
+.TH PCRE2MATCHING 3 "23 May 2019" "PCRE2 10.34"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "PCRE2 MATCHING ALGORITHMS"
@@ -67,7 +67,7 @@ ungreedy repetition quantifiers are specified in the pattern.
 Because it ends up with a single path through the tree, it is relatively
 straightforward for this algorithm to keep track of the substrings that are
 matched by portions of the pattern in parentheses. This provides support for
-capturing parentheses and back references.
+capturing parentheses and backreferences.
 .
 .
 .SH "THE ALTERNATIVE MATCHING ALGORITHM"
@@ -113,7 +113,8 @@ do want multiple matches in such cases, either use an ungreedy repeat
 ("a\ed+?") or set the PCRE2_NO_AUTO_POSSESS option when compiling.
 .P
 There are a number of features of PCRE2 regular expressions that are not
-supported by the alternative matching algorithm. They are as follows:
+supported or behave differently in the alternative matching function. Those
+that are not supported cause an error if encountered.
 .P
 1. Because the algorithm finds all possible matches, the greedy or ungreedy
 nature of repetition quantifiers is not relevant (though it may affect
@@ -134,26 +135,31 @@ straightforward to keep track of captured substrings for the different matching
 possibilities, and PCRE2's implementation of this algorithm does not attempt to
 do this. This means that no captured substrings are available.
 .P
-3. Because no substrings are captured, back references within the pattern are
-not supported, and cause errors if encountered.
+3. Because no substrings are captured, backreferences within the pattern are
+not supported.
 .P
 4. For the same reason, conditional expressions that use a backreference as the
 condition or test for a specific group recursion are not supported.
 .P
-5. Because many paths through the tree may be active, the \eK escape sequence,
-which resets the start of the match when encountered (but may be on some paths
-and not on others), is not supported. It causes an error if encountered.
+5. Again for the same reason, script runs are not supported.
 .P
-6. Callouts are supported, but the value of the \fIcapture_top\fP field is
+6. Because many paths through the tree may be active, the \eK escape sequence,
+which resets the start of the match when encountered (but may be on some paths
+and not on others), is not supported.
+.P
+7. Callouts are supported, but the value of the \fIcapture_top\fP field is
 always 1, and the value of the \fIcapture_last\fP field is always 0.
 .P
-7. The \eC escape sequence, which (in the standard algorithm) always matches a
+8. The \eC escape sequence, which (in the standard algorithm) always matches a
 single code unit, even in a UTF mode, is not supported in these modes, because
 the alternative algorithm moves through the subject string one character (not
 code unit) at a time, for all active paths through the tree.
 .P
-8. Except for (*FAIL), the backtracking control verbs such as (*PRUNE) are not
+9. Except for (*FAIL), the backtracking control verbs such as (*PRUNE) are not
 supported. (*FAIL) is supported, and behaves like a failing negative assertion.
+.P
+10. The PCRE2_MATCH_INVALID_UTF option for \fBpcre2_compile()\fP is not
+supported by \fBpcre2_dfa_match()\fP.
 .
 .
 .SH "ADVANTAGES OF THE ALTERNATIVE ALGORITHM"
@@ -188,7 +194,8 @@ The alternative algorithm suffers from a number of disadvantages:
 because it has to search for all possible matches, but is also because it is
 less susceptible to optimization.
 .P
-2. Capturing parentheses and back references are not supported.
+2. Capturing parentheses, backreferences, script runs, and matching within
+invalid UTF string are not supported.
 .P
 3. Although atomic groups are supported, their use does not provide the
 performance advantage that it does for the standard algorithm.
@@ -208,6 +215,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 29 September 2014
-Copyright (c) 1997-2014 University of Cambridge.
+Last updated: 23 May 2019
+Copyright (c) 1997-2019 University of Cambridge.
 .fi

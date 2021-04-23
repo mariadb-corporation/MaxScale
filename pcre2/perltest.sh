@@ -1,8 +1,10 @@
 #! /bin/sh
 
 # Script for testing regular expressions with perl to check that PCRE2 handles
-# them the same. If the first argument to this script is "-w", Perl is also
-# called with "-w", which turns on its warning mode.
+# them the same. For testing with different versions of Perl, if the first
+# argument is -perl then the second is taken as the Perl command to use, and
+# both are then removed. If the next argument is "-w", Perl is called with
+# "-w", which turns on its warning mode.
 #
 # The Perl code has to have "use utf8" and "require Encode" at the start when
 # running UTF-8 tests, but *not* for non-utf8 tests. (The "require" would
@@ -10,8 +12,8 @@
 # the script will always run for these tests.)
 #
 # The desired effect is achieved by making this a shell script that passes the
-# Perl script to Perl through a pipe. If the first argument (possibly after
-# removing "-w") is "-utf8", a suitable prefix is set up.
+# Perl script to Perl through a pipe. If the next argument is "-utf8", a
+# suitable prefix is set up.
 #
 # The remaining arguments, if any, are passed to Perl. They are an input file
 # and an output file. If there is one argument, the output is written to
@@ -22,6 +24,12 @@
 perl=perl
 perlarg=''
 prefix=''
+
+if [ $# -gt 1 -a "$1" = "-perl" ] ; then
+  shift
+  perl=$1
+  shift
+fi
 
 if [ $# -gt 0 -a "$1" = "-w" ] ; then
   perlarg="-w"
@@ -42,13 +50,29 @@ fi
 #   aftertext          interpreted as "print $' afterwards"
 #   afteralltext       ignored
 #   dupnames           ignored (Perl always allows)
-#   mark               ignored
+#   jitstack           ignored
+#   mark               show mark information
 #   no_auto_possess    ignored
-#   no_start_optimize  ignored
+#   no_start_optimize  insert (??{""}) at pattern start (disables optimizing)
+#  -no_start_optimize  ignored
+#   subject_literal    does not process subjects for escapes
 #   ucp                sets Perl's /u modifier
 #   utf                invoke UTF-8 functionality
 #
-# The data lines must not have any pcre2test modifiers. They are processed as
+# Comment lines are ignored. The #pattern command can be used to set modifiers
+# that will be added to each subsequent pattern, after any modifiers it may
+# already have. NOTE: this is different to pcre2test where #pattern sets
+# defaults which can be overridden on individual patterns. The #subject command
+# may be used to set or unset a default "mark" modifier for data lines. This is
+# the only use of #subject that is supported. The #perltest, #forbid_utf, and
+# #newline_default commands, which are needed in the relevant pcre2test files,
+# are ignored. Any other #-command is ignored, with a warning message.
+#
+# The pattern lines should use only / as the delimiter. The other characters
+# that pcre2test supports cause problems with this script.
+#
+# The data lines must not have any pcre2test modifiers. Unless
+# "subject_literal" is on the pattern, data lines are processed as
 # Perl double-quoted strings, so if they contain " $ or @ characters, these
 # have to be escaped. For this reason, all such characters in the
 # Perl-compatible testinput1 and testinput4 files are escaped so that they can
@@ -61,6 +85,11 @@ fi
 # expressions, in order to check that PCRE2 diagnoses them correctly.
 
 (echo "$prefix" ; cat <<'PERLEND'
+
+# The alpha assertions currently give warnings even when -w is not specified.
+
+no warnings "experimental::alpha_assertions";
+no warnings "experimental::script_run";
 
 # Function for turning a string into a string of printing chars.
 
@@ -114,7 +143,10 @@ if (@ARGV > 1)
   }
 else { $outfile = "STDOUT"; }
 
-printf($outfile "Perl $] Regular Expressions\n\n");
+printf($outfile "Perl $^V\n\n");
+
+$extra_modifiers = "";
+$default_show_mark = 0;
 
 # Main loop
 
@@ -124,7 +156,42 @@ for (;;)
   printf "  re> " if $interact;
   last if ! ($_ = <$infile>);
   printf $outfile "$_" if ! $interact;
-  next if ($_ =~ /^\s*$/ || $_ =~ /^#/);
+  next if ($_ =~ /^\s*$/ || $_ =~ /^#[\s!]/);
+
+  # A few of pcre2test's #-commands are supported, or just ignored. Any others
+  # cause an error.
+
+  if ($_ =~ /^#pattern(.*)/)
+    {
+    $extra_modifiers = $1;
+    chomp($extra_modifiers);
+    $extra_modifiers =~ s/\s+$//;
+    next;
+    }
+  elsif ($_ =~ /^#subject(.*)/)
+    {
+    $mod = $1;
+    chomp($mod);
+    $mod =~ s/\s+$//;
+    if ($mod =~ s/(-?)mark,?//)
+      {
+      $minus = $1;
+      $default_show_mark = ($minus =~ /^$/);
+      }
+    if ($mod !~ /^\s*$/)
+      {
+      printf $outfile "** Warning: \"$mod\" in #subject ignored\n";
+      }
+    next;
+    }
+  elsif ($_ =~ /^#/)
+    {
+    if ($_ !~ /^#newline_default|^#perltest|^#forbid_utf/)
+      {
+      printf $outfile "** Warning: #-command ignored: %s", $_;
+      }
+    next;
+    }
 
   $pattern = $_;
 
@@ -143,11 +210,17 @@ for (;;)
 
   $pattern =~ /^\s*((.).*\2)(.*)$/s;
   $pat = $1;
-  $mod = $3;
+  $del = $2;
+  $mod = "$3,$extra_modifiers";
+  $mod =~ s/^,\s*//;
 
   # The private "aftertext" modifier means "print $' afterwards".
 
   $showrest = ($mod =~ s/aftertext,?//);
+
+  # The "subject_literal" modifer disables escapes in subjects.
+
+  $subject_literal = ($mod =~ s/subject_literal,?//);
 
   # "allaftertext" is used by pcre2test to print remainders after captures
 
@@ -161,18 +234,28 @@ for (;;)
 
   $mod =~ s/dupnames,?//;
 
-  # Remove "mark" (asks pcre2test to check MARK data) */
+  # Remove "jitstack".
 
-  $mod =~ s/mark,?//;
+  $mod =~ s/jitstack=\d+,?//;
+
+  # The "mark" modifier requests checking of MARK data */
+
+  $show_mark = $default_show_mark | ($mod =~ s/mark,?//);
 
   # "ucp" asks pcre2test to set PCRE2_UCP; change this to /u for Perl
 
   $mod =~ s/ucp,?/u/;
 
-  # Remove "no_auto_possess" and "no_start_optimize" (disable PCRE2 optimizations)
+  # Remove "no_auto_possess".
 
   $mod =~ s/no_auto_possess,?//;
-  $mod =~ s/no_start_optimize,?//;
+
+  # Use no_start_optimize (disable PCRE2 start-up optimization) to disable Perl
+  # optimization by inserting (??{""}) at the start of the pattern. We may
+  # also encounter -no_start_optimize from a #pattern setting.
+
+  $mod =~ s/-no_start_optimize,?//;
+  if ($mod =~ s/no_start_optimize,?//) { $pat =~ s/$del/$del(??{""})/; }
 
   # Add back retained modifiers and check that the pattern is valid.
 
@@ -222,7 +305,14 @@ for (;;)
     last if ($_ eq "");
     next if $_ =~ /^\\=(?:\s|$)/;   # Comment line
 
-    $x = eval "\"$_\"";   # To get escapes processed
+    if ($subject_literal)
+      {
+      $x = $_;
+      }
+    else
+      {
+      $x = eval "\"$_\"";   # To get escapes processed
+      }
 
     # Empty array for holding results, ensure $REGERROR and $REGMARK are
     # unset, then do the matching.
@@ -261,7 +351,7 @@ for (;;)
     elsif (scalar(@subs) == 0)
       {
       printf $outfile "No match";
-      if (defined $REGERROR && $REGERROR != 1)
+      if ($show_mark && defined $REGERROR && $REGERROR != 1)
         { printf $outfile (", mark = %s", &pchars($REGERROR)); }
       printf $outfile "\n";
       }
@@ -289,7 +379,7 @@ for (;;)
       # set and the input pattern was a UTF-8 string. We can, however, force
       # it to be so marked.
 
-      if (defined $REGMARK && $REGMARK != 1)
+      if ($show_mark && defined $REGMARK && $REGMARK != 1)
         {
         $xx = $REGMARK;
         $xx = Encode::decode_utf8($xx) if $utf8;
@@ -299,7 +389,10 @@ for (;;)
     }
   }
 
-# printf $outfile "\n";
+# By closing OUTFILE explicitly, we avoid a Perl warning in -w mode
+# "main::OUTFILE" used only once".
+
+close(OUTFILE) if $outfile eq "OUTFILE";
 
 PERLEND
 ) | $perl $perlarg - $@

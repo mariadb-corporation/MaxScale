@@ -26,8 +26,9 @@ DESCRIPTION
 </b><br>
 <P>
 This function is used to free a JIT stack that was created by
-<b>pcre2_jit_stack_create()</b> when it is no longer needed. For more details,
-see the
+<b>pcre2_jit_stack_create()</b> when it is no longer needed. If the argument is
+NULL, the function returns immediately without doing anything. For more
+details, see the
 <a href="pcre2jit.html"><b>pcre2jit</b></a>
 page.
 </P>

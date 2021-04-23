@@ -31,20 +31,20 @@
 #load testsaved2
 
 #pop info
-    foofoo             
+    foofoo
     barbar
-    
+
 #pop mark
     C
-\= Expect no match     
-    D 
-    
+\= Expect no match
+    D
+
 #pop
-    AmanaplanacanalPanama   
+    AmanaplanacanalPanama
 
 #pop info
     metcalfe 33
-    
+
 # Check for an error when different tables are used.
 
 /abc/push,tables=1
@@ -59,30 +59,30 @@
 
 #pop should give an error
     pqr
-    
+
 /abcd/pushcopy
     abcd
-    
+
 #pop
-    abcd 
+    abcd
 
 #pop should give an error
 
 /abcd/push
 #popcopy
     abcd
-    
+
 #pop
-    abcd 
-    
+    abcd
+
 /abcd/push
 #save testsaved1
 #pop should give an error
 
 #load testsaved1
-#popcopy 
+#popcopy
     abcd
-    
+
 #pop
     abcd
 
@@ -91,10 +91,18 @@
 /abcd/pushtablescopy
     abcd
 
-#popcopy 
+#popcopy
     abcd
-    
+
 #pop
-    abcd 
+    abcd
+
+# Must only specify one of these
+
+//push,pushcopy
+
+//push,pushtablescopy
+
+//pushcopy,pushtablescopy
 
 # End of testinput20

@@ -6,16 +6,18 @@
 #newline_default lf any anycrlf
 
 # PCRE2 and Perl disagree about the characteristics of certain Unicode
-# characters. For example, 061C is considered by Perl to be Arabic, though
-# is it not listed as such in the Unicode Scripts.txt file, and 2066-2069 are
-# graphic and printable according to Perl, though they are actually "isolate"
-# control characters. That is why the following tests are here rather than in
-# test 4.
+# characters. For example, 061C was considered by Perl to be Arabic, though
+# it was not listed as such in the Unicode Scripts.txt file for Unicode 8.
+# However, it *is* in that file for Unicode 10, but when I came to re-check,
+# Perl had changed in the meantime, with 5.026 not recognizing it as Arabic.
+
+# 2066-2069 are graphic and printable according to Perl, though they are
+# actually "isolate" control characters. That is why the following tests are
+# here rather than in test 4.
 
 /^[\p{Arabic}]/utf
-\= Expect no match
     \x{061c}
-    
+
 /^[[:graph:]]+$/utf,ucp
 \= Expect no match
     \x{61c}
@@ -39,14 +41,14 @@
 /^[[:^print:]]+$/utf,ucp
     \x{09}\x{1D}\x{85}\x{61c}\x{2028}\x{2029}\x{2065}\x{2066}\x{2067}
     \x{2068}\x{2069}
-     
+
 # Perl does not consider U+180e to be a space character. It is true that it
 # does not appear in the Unicode PropList.txt file as such, but in many other
 # sources it is listed as a space, and has been treated as such in PCRE for
-# a long time. 
+# a long time.
 
 /^>[[:blank:]]*/utf,ucp
-    >\x{20}\x{a0}\x{1680}\x{180e}\x{2000}\x{202f}\x{9}\x{b}\x{2028} 
+    >\x{20}\x{a0}\x{1680}\x{180e}\x{2000}\x{202f}\x{9}\x{b}\x{2028}
 
 /^A\s+Z/utf,ucp
     A\x{85}\x{180e}\x{2005}Z
@@ -54,7 +56,7 @@
 /^A[\s]+Z/utf,ucp
     A\x{2005}Z
     A\x{85}\x{2005}Z
-    
+
 /^[[:graph:]]+$/utf,ucp
 \= Expect no match
     \x{180e}
@@ -106,7 +108,7 @@
 
 /\x{0041}\x{2262}\x{0391}\x{002e}/IB,utf
     \x{0041}\x{2262}\x{0391}\x{002e}
-    
+
 /.{3,5}X/IB,utf
     \x{212ab}\x{212ab}\x{212ab}\x{861}X
 
@@ -118,23 +120,16 @@
 \= Expect no match
     c
     \x{ff}
-    \x{100}  
+    \x{100}
 
-/^[^ab]/IB,utf
-    c
-    \x{ff}
-    \x{100}  
-\= Expect no match 
-    aaa
-  
 /\x{100}*(\d+|"(?1)")/utf
     1234
-    "1234" 
+    "1234"
     \x{100}1234
-    "\x{100}1234"  
-    \x{100}\x{100}12ab 
-    \x{100}\x{100}"12" 
-\= Expect no match 
+    "\x{100}1234"
+    \x{100}\x{100}12ab
+    \x{100}\x{100}"12"
+\= Expect no match
     \x{100}\x{100}abcd
 
 /\x{100}*/IB,utf
@@ -150,7 +145,7 @@
     \x{104}
 \= Expect no match
     \x{105}
-    \x{ff}    
+    \x{ff}
 
 /[\xFF]/IB
     >\xff<
@@ -160,18 +155,18 @@
 /[Ä-Ü]/utf
     Ö # Matches without Study
     \x{d6}
-    
+
 /[Ä-Ü]/utf
     Ö <-- Same with Study
     \x{d6}
-    
+
 /[\x{c4}-\x{dc}]/utf
     Ö # Matches without Study
-    \x{d6} 
+    \x{d6}
 
 /[\x{c4}-\x{dc}]/utf
     Ö <-- Same with Study
-    \x{d6} 
+    \x{d6}
 
 /[^\x{100}]abc(xyz(?1))/IB,utf
 
@@ -185,19 +180,22 @@
 
 /\W/utf
     A.B
-    A\x{100}B 
-  
-/\w/utf
-    \x{100}X   
+    A\x{100}B
 
-/^\ሴ/IB,utf
+/\w/utf
+    \x{100}X
+
+# Use no_start_optimize because the first code unit is different in 8-bit from
+# the wider modes.
+
+/^\ሴ/IB,utf,no_start_optimize
 
 /()()()()()()()()()()
  ()()()()()()()()()()
  ()()()()()()()()()()
  ()()()()()()()()()()
  A (x) (?41) B/x,utf
-    AxxB     
+    AxxB
 
 /^[\x{100}\E-\Q\E\x{150}]/B,utf
 
@@ -215,11 +213,11 @@
     a\r\nb
     a\x0bb
     a\x0cb
-    a\x{85}b   
-    a\x{2028}b 
-    a\x{2029}b 
+    a\x{85}b
+    a\x{2028}b
+    a\x{2029}b
 \= Expect no match
-    a\n\rb    
+    a\n\rb
 
 /^a\R*b/bsr=unicode,utf
     ab
@@ -228,9 +226,9 @@
     a\r\nb
     a\x0bb
     a\x0c\x{2028}\x{2029}b
-    a\x{85}b   
-    a\n\rb    
-    a\n\r\x{85}\x0cb 
+    a\x{85}b
+    a\n\rb
+    a\n\r\x{85}\x0cb
 
 /^a\R+b/bsr=unicode,utf
     a\nb
@@ -238,20 +236,20 @@
     a\r\nb
     a\x0bb
     a\x0c\x{2028}\x{2029}b
-    a\x{85}b   
-    a\n\rb    
-    a\n\r\x{85}\x0cb 
+    a\x{85}b
+    a\n\rb
+    a\n\r\x{85}\x0cb
 \= Expect no match
-    ab  
+    ab
 
 /^a\R{1,3}b/bsr=unicode,utf
     a\nb
     a\n\rb
     a\n\r\x{85}b
-    a\r\n\r\nb 
-    a\r\n\r\n\r\nb 
+    a\r\n\r\nb
+    a\r\n\r\n\r\nb
     a\n\r\n\rb
-    a\n\n\r\nb 
+    a\n\n\r\nb
 \= Expect no match
     a\n\n\n\rb
     a\r
@@ -260,28 +258,28 @@
     X X\x0a
     X\x09X\x0b
 \= Expect no match
-    \x{a0} X\x0a   
-    
+    \x{a0} X\x0a
+
 /\H*\h+\V?\v{3,4}/utf
     \x09\x20\x{a0}X\x0a\x0b\x0c\x0d\x0a
     \x09\x20\x{a0}\x0a\x0b\x0c\x0d\x0a
     \x09\x20\x{a0}\x0a\x0b\x0c
-\= Expect no match 
+\= Expect no match
     \x09\x20\x{a0}\x0a\x0b
-     
+
 /\H\h\V\v/utf
     \x{3001}\x{3000}\x{2030}\x{2028}
     X\x{180e}X\x{85}
 \= Expect no match
-    \x{2009} X\x0a   
-    
+    \x{2009} X\x0a
+
 /\H*\h+\V?\v{3,4}/utf
     \x{1680}\x{180e}\x{2007}X\x{2028}\x{2029}\x0c\x0d\x0a
     \x09\x{205f}\x{a0}\x0a\x{2029}\x0c\x{2028}\x0a
     \x09\x20\x{202f}\x0a\x0b\x0c
-\= Expect no match 
+\= Expect no match
     \x09\x{200a}\x{a0}\x{2028}\x0b
-     
+
 /[\h]/B,utf
     >\x{1680}
 
@@ -295,57 +293,57 @@
 /[\V]/B,utf
 
 /.*$/newline=any,utf
-    \x{1ec5} 
-    
+    \x{1ec5}
+
 /a\Rb/I,bsr=anycrlf,utf
     a\rb
     a\nb
     a\r\nb
 \= Expect no match
     a\x{85}b
-    a\x0bb     
+    a\x0bb
 
 /a\Rb/I,bsr=unicode,utf
     a\rb
     a\nb
     a\r\nb
     a\x{85}b
-    a\x0bb     
-    
+    a\x0bb
+
 /a\R?b/I,bsr=anycrlf,utf
     a\rb
     a\nb
     a\r\nb
 \= Expect no match
     a\x{85}b
-    a\x0bb     
+    a\x0bb
 
 /a\R?b/I,bsr=unicode,utf
     a\rb
     a\nb
     a\r\nb
     a\x{85}b
-    a\x0bb     
- 
+    a\x0bb
+
 /.*a.*=.b.*/utf,newline=any
     QQQ\x{2029}ABCaXYZ=!bPQR
 \= Expect no match
     a\x{2029}b
-    \x61\xe2\x80\xa9\x62 
+    \x61\xe2\x80\xa9\x62
 
 /[[:a\x{100}b:]]/utf
 
-/a[^]b/utf,alt_bsux,allow_empty_class,match_unset_backref
+/a[^]b/utf,allow_empty_class,match_unset_backref
     a\x{1234}b
-    a\nb 
+    a\nb
 \= Expect no match
-    ab  
-    
-/a[^]+b/utf,alt_bsux,allow_empty_class,match_unset_backref
+    ab
+
+/a[^]+b/utf,allow_empty_class,match_unset_backref
     aXb
-    a\nX\nX\x{1234}b 
+    a\nX\nX\x{1234}b
 \= Expect no match
-    ab  
+    ab
 
 /(\x{de})\1/
     \x{de}\x{de}
@@ -359,42 +357,42 @@
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /Xa{2,4}?b/utf
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /Xa{2,4}+b/utf
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\x{123}{2,4}b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X\x{123}{2,4}?b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X\x{123}{2,4}+b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X\x{123}{2,4}b/utf
 \= Expect no match
     Xx\=ps
@@ -402,7 +400,7 @@
     X\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}\x{123}x\=ps
-    
+
 /X\x{123}{2,4}?b/utf
 \= Expect no match
     Xx\=ps
@@ -410,7 +408,7 @@
     X\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}\x{123}x\=ps
-    
+
 /X\x{123}{2,4}+b/utf
 \= Expect no match
     Xx\=ps
@@ -418,21 +416,21 @@
     X\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}x\=ps
     X\x{123}\x{123}\x{123}\x{123}x\=ps
-    
+
 /X\d{2,4}b/utf
     X\=ps
     X3\=ps
     X33\=ps
     X333\=ps
     X3333\=ps
-    
+
 /X\d{2,4}?b/utf
     X\=ps
     X3\=ps
     X33\=ps
     X333\=ps
     X3333\=ps
-    
+
 /X\d{2,4}+b/utf
     X\=ps
     X3\=ps
@@ -446,14 +444,14 @@
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\D{2,4}?b/utf
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X\D{2,4}+b/utf
     X\=ps
     Xa\=ps
@@ -467,14 +465,14 @@
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X\D{2,4}?b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X\D{2,4}+b/utf
     X\=ps
     X\x{123}\=ps
@@ -488,14 +486,14 @@
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[abc]{2,4}?b/utf
     X\=ps
     Xa\=ps
     Xaa\=ps
     Xaaa\=ps
     Xaaaa\=ps
-    
+
 /X[abc]{2,4}+b/utf
     X\=ps
     Xa\=ps
@@ -509,14 +507,14 @@
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X[abc\x{123}]{2,4}?b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X[abc\x{123}]{2,4}+b/utf
     X\=ps
     X\x{123}\=ps
@@ -530,14 +528,14 @@
     Xzz\=ps
     Xzzz\=ps
     Xzzzz\=ps
-    
+
 /X[^a]{2,4}?b/utf
     X\=ps
     Xz\=ps
     Xzz\=ps
     Xzzz\=ps
     Xzzzz\=ps
-    
+
 /X[^a]{2,4}+b/utf
     X\=ps
     Xz\=ps
@@ -551,14 +549,14 @@
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X[^a]{2,4}?b/utf
     X\=ps
     X\x{123}\=ps
     X\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\=ps
     X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /X[^a]{2,4}+b/utf
     X\=ps
     X\x{123}\=ps
@@ -572,14 +570,14 @@
     YXYY\=ps
     YXYYY\=ps
     YXYYYY\=ps
-    
+
 /(Y)X\1{2,4}?b/utf
     YX\=ps
     YXY\=ps
     YXYY\=ps
     YXYYY\=ps
     YXYYYY\=ps
-    
+
 /(Y)X\1{2,4}+b/utf
     YX\=ps
     YXY\=ps
@@ -593,14 +591,14 @@
     \x{123}X\x{123}\x{123}\=ps
     \x{123}X\x{123}\x{123}\x{123}\=ps
     \x{123}X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /(\x{123})X\1{2,4}?b/utf
     \x{123}X\=ps
     \x{123}X\x{123}\=ps
     \x{123}X\x{123}\x{123}\=ps
     \x{123}X\x{123}\x{123}\x{123}\=ps
     \x{123}X\x{123}\x{123}\x{123}\x{123}\=ps
-    
+
 /(\x{123})X\1{2,4}+b/utf
     \x{123}X\=ps
     \x{123}X\x{123}\=ps
@@ -642,13 +640,13 @@
     AB\x{a0}xxx\x{85}XYZ
 
 /\S \S/utf,tables=2
-    \x{a2} \x{84} 
+    \x{a2} \x{84}
 
 'A#хц'Bx,newline=any,utf
 
 'A#хц
   PQ'Bx,newline=any,utf
-  
+
 /a+#хaa
   z#XX?/Bx,newline=any,utf
 
@@ -663,13 +661,13 @@
 
 /(\R*)(.)/s,utf
     \r\n
-    \r\r\n\n\r 
-    \r\r\n\n\r\n 
+    \r\r\n\n\r
+    \r\r\n\n\r\n
 
 /(\R)*(.)/s,utf
     \r\n
-    \r\r\n\n\r 
-    \r\r\n\n\r\n 
+    \r\r\n\n\r
+    \r\r\n\n\r\n
 
 /[^\x{1234}]+/Ii,utf
 
@@ -690,7 +688,7 @@
 
 /f.*/s,utf
     for\=ph
-    
+
 /\x{d7ff}\x{e000}/utf
 
 /\x{d800}/utf
@@ -779,7 +777,7 @@
 /./utf,newline=crlf
     \r\=ps
     \r\=ph
-  
+
 /.{2,3}/utf,newline=crlf
     \r\=ps
     \r\=ph
@@ -816,6 +814,12 @@
 
 /\ud800/utf,alt_bsux,allow_empty_class,match_unset_backref
 
+/^\u{0000000000010ffff}/utf,extra_alt_bsux
+    \x{10ffff}
+
+/\u/utf,alt_bsux
+    \\u
+
 /^a+[a\x{200}]/B,utf
     aa
 
@@ -837,9 +841,9 @@
 /[\p{Nd}+-]+/IB,utf
     1234
     12-34
-    12+\x{661}-34  
+    12+\x{661}-34
 \= Expect no match
-    abcd  
+    abcd
 
 /(?:[\PPa*]*){8,}/
 
@@ -886,7 +890,7 @@
 /\p{Zl}{2,3}+/B,utf
       
     \x{2028}\x{2028}\x{2028}
-    
+
 /\p{Zl}/B,utf
 
 /\p{Lu}{3}+/B,utf
@@ -906,8 +910,8 @@
 /^\p{Cs}/utf
     \x{dfff}\=no_utf_check
 \= Expect no match
-    \x{09f} 
-  
+    \x{09f}
+
 /^\p{Mn}/utf
     \x{1a1b}
 
@@ -925,60 +929,60 @@
 \= Expect no match
     X
     \x{2c2}
-  
+
 /^\p{Zs}/utf
     \ \
     \x{a0}
     \x{1680}
     \x{2000}
-    \x{2001}     
+    \x{2001}
 \= Expect no match
     \x{2028}
-    \x{200d} 
-  
+    \x{200d}
+
 # These are here because Perl has problems with the negative versions of the
 # properties and has changed how it behaves for caseless matching.
-      
+
 /\p{^Lu}/i,utf
     1234
 \= Expect no match
-    ABC 
+    ABC
 
 /\P{Lu}/i,utf
     1234
 \= Expect no match
-    ABC 
+    ABC
 
 /\p{Ll}/i,utf
     a
     Az
 \= Expect no match
-    ABC   
+    ABC
 
 /\p{Lu}/i,utf
     A
-    a\x{10a0}B 
-\= Expect no match 
+    a\x{10a0}B
+\= Expect no match
     a
-    \x{1d00}  
+    \x{1d00}
 
 /\p{Lu}/i,utf
     A
     aZ
 \= Expect no match
-    abc   
+    abc
 
 /[\x{c0}\x{391}]/i,utf
     \x{c0}
-    \x{e0} 
+    \x{e0}
 
 # The next two are special cases where the lengths of the different cases of
 # the same character differ. The first went wrong with heap frame storage; the
-# second was broken in all cases. 
+# second was broken in all cases.
 
 /^\x{023a}+?(\x{0130}+)/i,utf
   \x{023a}\x{2c65}\x{0130}
-  
+
 /^\x{023a}+([^X])/i,utf
   \x{023a}\x{2c65}X
 
@@ -996,71 +1000,71 @@
 
 /^\x{c0}$/i,utf
     \x{c0}
-    \x{e0} 
+    \x{e0}
 
 /^\x{e0}$/i,utf
     \x{c0}
-    \x{e0} 
+    \x{e0}
 
 # The next two should be Perl-compatible, but it fails to match \x{e0}. PCRE
 # will match it only with UCP support, because without that it has no notion
-# of case for anything other than the ASCII letters.  
+# of case for anything other than the ASCII letters.
 
 /((?i)[\x{c0}])/utf
     \x{c0}
-    \x{e0} 
+    \x{e0}
 
 /(?i:[\x{c0}])/utf
     \x{c0}
-    \x{e0} 
+    \x{e0}
 
-# These are PCRE's extra properties to help with Unicodizing \d etc. 
+# These are PCRE's extra properties to help with Unicodizing \d etc.
 
 /^\p{Xan}/utf
     ABCD
     1234
     \x{6ca}
     \x{a6c}
-    \x{10a7}   
+    \x{10a7}
 \= Expect no match
-    _ABC   
+    _ABC
 
 /^\p{Xan}+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
 \= Expect no match
-    _ABC   
+    _ABC
 
 /^\p{Xan}+?/utf
     \x{6ca}\x{a6c}\x{10a7}_
 
 /^\p{Xan}*/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
-    
+
 /^\p{Xan}{2,9}/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
-    
+
 /^\p{Xan}{2,9}?/utf
     \x{6ca}\x{a6c}\x{10a7}_
-    
+
 /^[\p{Xan}]/utf
     ABCD1234_
     1234abcd_
     \x{6ca}
     \x{a6c}
-    \x{10a7}   
+    \x{10a7}
 \= Expect no match
-    _ABC   
- 
+    _ABC
+
 /^[\p{Xan}]+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
 \= Expect no match
-    _ABC   
+    _ABC
 
 /^>\p{Xsp}/utf
     >\x{1680}\x{2028}\x{0b}
-    >\x{a0} 
+    >\x{a0}
 \= Expect no match
-    \x{0b} 
+    \x{0b}
 
 /^>\p{Xsp}+/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
@@ -1070,24 +1074,24 @@
 
 /^>\p{Xsp}*/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>\p{Xsp}{2,9}/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>\p{Xsp}{2,9}?/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>[\p{Xsp}]/utf
     >\x{2028}\x{0b}
- 
+
 /^>[\p{Xsp}]+/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
 
 /^>\p{Xps}/utf
     >\x{1680}\x{2028}\x{0b}
-    >\x{a0} 
+    >\x{a0}
 \= Expect no match
-    \x{0b} 
+    \x{0b}
 
 /^>\p{Xps}+/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
@@ -1097,16 +1101,16 @@
 
 /^>\p{Xps}*/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>\p{Xps}{2,9}/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>\p{Xps}{2,9}?/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
-    
+
 /^>[\p{Xps}]/utf
     >\x{2028}\x{0b}
- 
+
 /^>[\p{Xps}]+/utf
     > \x{09}\x{0a}\x{0c}\x{0d}\x{a0}\x{1680}\x{2028}\x{0b}
 
@@ -1116,9 +1120,9 @@
     \x{6ca}
     \x{a6c}
     \x{10a7}
-    _ABC    
+    _ABC
 \= Expect no match
-    [] 
+    []
 
 /^\p{Xwd}+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
@@ -1128,32 +1132,32 @@
 
 /^\p{Xwd}*/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
-    
+
 /^\p{Xwd}{2,9}/utf
     A_B12\x{6ca}\x{a6c}\x{10a7}
-    
+
 /^\p{Xwd}{2,9}?/utf
     \x{6ca}\x{a6c}\x{10a7}_
-    
+
 /^[\p{Xwd}]/utf
     ABCD1234_
     1234abcd_
     \x{6ca}
     \x{a6c}
-    \x{10a7}   
-    _ABC 
+    \x{10a7}
+    _ABC
 \= Expect no match
-    []   
- 
+    []
+
 /^[\p{Xwd}]+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
 
-# A check not in UTF-8 mode 
+# A check not in UTF-8 mode
 
 /^[\p{Xwd}]+/
     ABCD1234_
-    
-# Some negative checks 
+
+# Some negative checks
 
 /^[\P{Xwd}]+/utf
     !.+\x{019}\x{35a}AB
@@ -1223,53 +1227,53 @@
 
 /[[:xdigit:]]/B,ucp
 
-# Unicode properties for \b abd \B 
+# Unicode properties for \b abd \B
 
 /\b...\B/utf,ucp
     abc_
-    \x{37e}abc\x{376} 
-    \x{37e}\x{376}\x{371}\x{393}\x{394} 
-    !\x{c0}++\x{c1}\x{c2} 
-    !\x{c0}+++++ 
+    \x{37e}abc\x{376}
+    \x{37e}\x{376}\x{371}\x{393}\x{394}
+    !\x{c0}++\x{c1}\x{c2}
+    !\x{c0}+++++
 
-# Without PCRE_UCP, non-ASCII always fail, even if < 256  
+# Without PCRE_UCP, non-ASCII always fail, even if < 256
 
 /\b...\B/utf
     abc_
-\= Expect no match 
-    \x{37e}abc\x{376} 
-    \x{37e}\x{376}\x{371}\x{393}\x{394} 
-    !\x{c0}++\x{c1}\x{c2} 
-    !\x{c0}+++++ 
+\= Expect no match
+    \x{37e}abc\x{376}
+    \x{37e}\x{376}\x{371}\x{393}\x{394}
+    !\x{c0}++\x{c1}\x{c2}
+    !\x{c0}+++++
 
-# With PCRE_UCP, non-UTF8 chars that are < 256 still check properties  
+# With PCRE_UCP, non-UTF8 chars that are < 256 still check properties
 
 /\b...\B/ucp
     abc_
-    !\x{c0}++\x{c1}\x{c2} 
-    !\x{c0}+++++ 
+    !\x{c0}++\x{c1}\x{c2}
+    !\x{c0}+++++
 
-# Some of these are silly, but they check various combinations 
+# Some of these are silly, but they check various combinations
 
 /[[:^alpha:][:^cntrl:]]+/B,utf,ucp
     123
-    abc 
+    abc
 
 /[[:^cntrl:][:^alpha:]]+/B,utf,ucp
     123
-    abc 
+    abc
 
 /[[:alpha:]]+/B,utf,ucp
     abc
 
 /[[:^alpha:]\S]+/B,utf,ucp
     123
-    abc 
+    abc
 
 /[^\d]+/B,utf,ucp
     abc123
     abc\x{123}
-    \x{660}abc   
+    \x{660}abc
 
 /\p{Lu}+9\p{Lu}+B\p{Lu}+b/B
 
@@ -1289,7 +1293,7 @@
 
 /A+\p{N}A+\dB+\p{N}*B+\d*/B,ucp
 
-# These behaved oddly in Perl, so they are kept in this test 
+# These behaved oddly in Perl, so they are kept in this test
 
 /(\x{23a}\x{23a}\x{23a})?\1/i,utf
 \= Expect no match
@@ -1321,43 +1325,43 @@
 
 /(\x{2c65}\x{2c65})\1/i,utf
     \x{2c65}\x{2c65}\x{23a}\x{23a}
-    
+
 /(ⱥⱥ)\1/i,utf
-    ⱥⱥȺȺ 
-    
+    ⱥⱥȺȺ
+
 /(\x{23a}\x{23a}\x{23a})\1Y/i,utf
     X\x{23a}\x{23a}\x{23a}\x{2c65}\x{2c65}\x{2c65}YZ
 
 /(\x{2c65}\x{2c65})\1Y/i,utf
     X\x{2c65}\x{2c65}\x{23a}\x{23a}YZ
 
-# These scripts weren't yet in Perl when I added Unicode 6.0.0 to PCRE 
+# These scripts weren't yet in Perl when I added Unicode 6.0.0 to PCRE
 
 /^[\p{Batak}]/utf
     \x{1bc0}
     \x{1bff}
 \= Expect no match
     \x{1bf4}
-    
+
 /^[\p{Brahmi}]/utf
     \x{11000}
     \x{1106f}
 \= Expect no match
     \x{1104e}
-    
+
 /^[\p{Mandaic}]/utf
     \x{840}
     \x{85e}
 \= Expect no match
     \x{85c}
-    \x{85d}    
+    \x{85d}
 
 /(\X*)(.)/s,utf
     A\x{300}
 
 /^S(\X*)e(\X*)$/utf
     Stéréo
-    
+
 /^\X/utf
     ́réo
 
@@ -1389,8 +1393,8 @@
     aa\=ps
     aa\=ph
     aba\=ps
-    
-# These Unicode 6.1.0 scripts are not known to Perl.  
+
+# These Unicode 6.1.0 scripts are not known to Perl.
 
 /\p{Chakma}\d/utf,ucp
     \x{11100}\x{1113c}
@@ -1405,7 +1409,7 @@
     A\x{300}\x{301}\=ph
     A\x{301}\=ps
     A\x{301}\=ph
-    
+
 /^\X{2,3}/utf
     A\=ps
     A\=ph
@@ -1421,7 +1425,7 @@
     AA\=ph
     A\x{300}\x{301}A\x{300}\x{301}\=ps
     A\x{300}\x{301}A\x{300}\x{301}\=ph
-    
+
 /^\X+/utf
     AA\=ps
     AA\=ph
@@ -1488,8 +1492,8 @@
 /is{2}t/i,utf
 \= Expect no match
     iskt
-    
-# This property is a PCRE special 
+
+# This property is a PCRE special
 
 /^\p{Xuc}/utf
     $abc
@@ -1497,7 +1501,7 @@
     `abc
     \x{1234}abc
 \= Expect no match
-    abc     
+    abc
 
 /^\p{Xuc}+/utf
     $@`\x{a0}\x{1234}\x{e000}**
@@ -1554,8 +1558,8 @@
     @abc
     `abc
     \x{1234}abc
-    
-# Some auto-possessification tests 
+
+# Some auto-possessification tests
 
 /\pN+\z/B
 
@@ -1605,7 +1609,7 @@
 
 /\p{Xan}+\p{Nd} \P{Xan}+\p{Nd} \p{Xan}+\P{Nd} \P{Xan}+\P{Nd}/Bx,ucp
 
-# End auto-possessification tests  
+# End auto-possessification tests
 
 /\w+/B,utf,ucp,auto_callout
     abcd
@@ -1625,7 +1629,7 @@
 /\d+\s{0,5}=\s*\S?=\w{0,4}\W*/B,utf,ucp
 
 /[RST]+/Bi,utf,ucp
-    
+
 /[R-T]+/Bi,utf,ucp
 
 /[Q-U]+/Bi,utf,ucp
@@ -1638,7 +1642,7 @@
 
 /\x{100}\x{200}\K\x{300}/utf,startchar
     \x{100}\x{200}\x{300}
-    
+
 # Test UTF characters in a substitution
 
 /ábc/utf,replace=XሴZ
@@ -1697,7 +1701,7 @@
 /[^[:ascii:]\W]/utf,ucp,bincode
     \x{de}
     \x{200}
-\= Expect no match     
+\= Expect no match
     \x{300}
     \x{37e}
 
@@ -1725,11 +1729,11 @@
     \x{1d7cf}
 \= Expect no match
     \x{10000}
-    
+
 # Hex uses pattern length, not zero-terminated. This tests for overrunning
 # the given length of a pattern.
 
-/'(*UTF)'/hex 
+/'(*UTF)'/hex
 
 /'#('/hex,extended,utf
 
@@ -1763,4 +1767,425 @@
 
 /[^\HH]/Bi,utf
 
-# End of testinput5 
+//g,utf
+    \=zero_terminate
+
+/^(?1)\p{Nd}{3}(a)/
+    a123a
+
+/\p{Nd}{0,3}[\pL](*:abc)(?C1)xxx/callout_info
+
+# ---------------------------------------------------------------------------
+
+# A bunch of tests that hit lines of code that others do not (at least when
+# these were created).
+
+/^[^a]{3,}?x/i,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    bbb
+    cc
+
+/^[ac]{3,}?x/i,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    aaa\x{100}
+
+/^X\X/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{L&}+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{L}+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{Lu}+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{Arabic}+?/no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{Xan}+?/ucp,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\s+?/ucp,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    XX
+
+/^X\S+?/ucp,no_start_optimize,no_auto_possess
+    XX
+\= Expect no match
+    X
+
+/^X\w+?/ucp,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X[^\x{b5}]+?/i,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X[\x{b5}]+?/i,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{Xuc}+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X.+?Z/s,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\R+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\H+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\V+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\s+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    XX
+
+/^X\S+?/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+
+/^X\p{Any}{1,3}?Z/s,no_start_optimize,no_auto_possess
+    XYYYZ
+\= Expect no match
+    XY
+    XYY
+    XYYY
+    XYYYYZ
+
+/^X\p{L&}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+
+/^X\p{L}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+
+/^X\p{Lu}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+
+/^X\P{Han}{1,3}?Z/s,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+    XY\x{2f00}!
+
+/^X\p{Xan}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+
+/^X\p{Xsp}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n
+    X\n!
+    X\n\n! 
+
+/^X\P{Xsp}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XYY\n
+
+/^X\p{Xwd}{1,3}?Z/s,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+    XYY! 
+
+/^X\x{b5}+?Z/i,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    X\x{b5} 
+    X\x{b5}\x{b5}Y 
+
+/^X\p{Xuc}+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    X$
+    X@@Y  
+
+/(*CRLF)^X.+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect partial match
+    XYY\r\=ph 
+\= Expect no match
+    X
+
+/^X.+?Z/s,utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X
+    XYY 
+
+/^X\R+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\nX
+    X\n\rX
+    X\n\r\nX
+    X\n\n
+    X\n\x{0c}    
+
+/(*BSR_ANYCRLF)^X\R+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\nX
+    X\n\rX
+    X\n\r\nX
+    X\n\n
+    X\n\x{0c}    
+
+/^X\H+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\t
+    XYY 
+
+/^X\h+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\t\t
+    X\tY
+
+/^X\V+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+    XYY 
+
+/^X\v+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n\n
+    X\nY
+
+/^X\D+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY9
+    XYY 
+
+/^X\d+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X99
+    X9Y
+
+/^X\S+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    XY\n
+    XYY 
+
+/^X\s+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X\n\n
+    X\nY
+
+/^X\W+?Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X.A
+    X++ 
+
+/^X\p{L&}{1,3}Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+    XY!
+
+/^X\p{L}{1,3}Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+
+/^X\p{Xan}{1,3}Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XY
+
+/^X\P{Xsp}{1,3}Z/no_start_optimize,no_auto_possess
+\= Expect no match
+    XYY
+
+/^X\p{Xuc}+Z/utf,no_start_optimize,no_auto_possess
+\= Expect no match
+    X$
+
+# ----------------------------------------------------------------------
+# These test the dangerous PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL option.
+
+/\x{d800}/B,utf,bad_escape_is_literal
+
+/\ud800/B,utf,alt_bsux,bad_escape_is_literal
+
+# ----------------------------------------------------------------------
+
+/Aሴ+B/literal,utf,no_utf_check
+    Aሴ+B
+    
+# These are here because I upgraded to Unicode 10.0.0 before Perl did, so it
+# doesn't recognize all these scripts. In time these three tests can be moved
+# to test 4.
+
+/^(\p{Adlam}+)(\p{Bhaiksuki}+)(\p{Marchen}+)(\p{Newa}+)(\p{Osage}+)
+  (\p{Tangut}+)(\p{Masaram_Gondi}+)(\p{Nushu}+)(\p{Soyombo}+)
+  (\p{Zanabazar_Square}+)/x,utf
+    \x{1E900}\x{1E924}\x{1E953}\x{11C00}\x{11C2D}\x{11C3E}\x{11C70}\x{11C77}\x{11CAB}\x{11400}\x{1142F}\x{11455}\x{104B0}\x{104D8}\x{104FB}\x{16FE0}\x{18800}\x{18AF2}\x{11D00}\x{11D3A}\x{11D59}\x{16FE1}\x{1B170}\x{1B2FB}\x{11A50}\x{11A58}\x{11AA2}\x{11A00}\x{11A07}\x{11A47} 
+
+/^\x{1E900}\x{104B0}/i,utf
+    \x{1E900}\x{104B0}
+    \x{1E922}\x{104D8}
+
+/^(?:(\X)(?C))+$/utf
+    \x{1E900}\x{1E924}\x{1E953}\x{11C00}\x{11C2D}\x{11C3E}\x{11C70}\x{11C77}\x{11CAB}\x{11400}\x{1142F}\x{11455}\x{104B0}\x{104D8}\x{104FB}\x{16FE0}\x{18800}\x{18AF2}\x{11D00}\x{11D3A}\x{11D59}\x{16FE1}\x{1B170}\x{1B2FB}\x{11A50}\x{11A58}\x{11AA2}\x{11A00}\x{11A07}\x{11A47}\=callout_capture,callout_no_where 
+
+# Similarly for Unicode 11.0.0
+
+/^(\p{Dogra}+)(\p{Gunjala_Gondi}+)(\p{Hanifi_Rohingya}+)(\p{Makasar}+)
+  (\p{Medefaidrin}+)(\p{Old_Sogdian}+)(\p{Sogdian}+)/x,utf
+    \x{11800}\x{11da9}\x{10d27}\x{11ee0}\x{16e48}\x{10f27}\x{10f30} 
+
+# These two are here because of differences from Perl.
+
+/^\X/utf
+    A\x{200d}B                     A ZWJ
+    \x{261d}\x{261d}B              Extended_Pictographic Extended_Pictographic 
+    \x{261D}\x{1F3FB}B             Extended_Pictographic Extend
+    \x{1F1E6}\x{1F1E7}B            RegionalIndicator RegionalIndicator 
+    \x{261D}\x{1F3FB}\x{261d}B     Extended_Pictographic Extend E-P
+    \x{261D}\x{1F3FB}\x{200d}\x{261d}B     Extended_Pictographic Extend ZWJ E-P
+
+# Regional indicators
+
+/^(\X)(\X)/utf,aftertext
+    \x{1F1E6}\x{1F1E7}\x{1F1E7}B
+    \x{1F1E6}\x{1F1E7}\x{1F1E7}\x{1F1E6}B
+    
+# More differences from Perl
+
+/^[\p{Arabic}]/utf
+\= Expect no match
+    \x{650}
+    \x{651}  
+    \x{652}  
+    \x{653}  
+    \x{654} 
+    \x{655} 
+    
+/^\p{Common}/utf
+    \x{60c}
+    \x{61f}  
+    \x{964}
+    \x{965}  
+
+/^\p{Inherited}/utf
+    \x{64b}
+    \x{654}
+    \x{655}
+    \x{1D1AA} 
+
+/\N{U+}/
+
+/\N{U+}/utf
+
+/\N{U}/
+
+# This tests the non-UTF Unicode NEL pattern whitespace character, only
+# recognized by PCRE2 with /x when there is Unicode support.
+
+/A      
+�B/x
+    AB 
+    
+# This tests Unicode Pattern White Space characters in verb names when they
+# are being processed with PCRE2_EXTENDED. Note: there are UTF-8 characters
+# with code points greater than 255 between A, B, and C in the pattern.
+
+/(*: A‎B C)abc/x,utf,mark,alt_verbnames
+    abc
+    
+# Script run tests: auto-possessification
+
+/^(*sr:.*)/B,utf 
+    paypаl.com   A classic example of why script run checks are a good thing
+
+/^(*sr:.*(*ACCEPT))/utf 
+    paypаl.com   But *ACCEPT breaks things
+
+/^(*sr:\x{2e80}*)/B,utf
+
+/^(*sr:\x{2e80}*)\x{2e80}/B,utf
+
+/(?<!)(*sr:)/B
+
+/(?<=abc(?=X(*sr:BXY)CCC)XBXYCCC)./B
+   abcXBXYCCC!
+
+# Some script run patterns are broken in Perl 5.28.0. These can be moved into
+# test 4 when a mended version of Perl is released.
+
+/^(*sr:.{4})/utf
+    \x{0980}12\x{0993}     Bengali Common-digits Bengali
+    \x{0780}12\x{07b1}     Thaana Common-digits Thaana
+    \x{0e01}12\x{0e5b}     Thai Common-digits Thai
+    \x{1780}12\x{19ff}     Khmer Common-digits Khmer
+    \x{0904}12\x{0939}     Devanagari Common-digits Devanagari
+    A\x{ff10}\x{ff19}B     Latin Common-notascii-digits Latin 
+    A\x{1d7ce}\x{1d7cf}B   Latin fancy-common-digits Latin
+    
+# These ones involve non-ASCII but nevertheless Common digits. As of October
+# 2018 even blead Perl wasn't handling all of these - but is going to. 
+
+/^(*sr:.{4})/utf
+    A\x{ff10}\x{ff19}B     Latin Common-notascii-digits Latin 
+    \x{ff10}\x{ff19}..     Common-notascii-digits Common Common
+    A\x{ff10}BC            Latin Common-notascii-digit Latin Latin
+    A\x{1d7ce}\x{1d7cf}B   Latin fancy-common-digits Latin
+    \x{1d7ce}\x{1d7cf},,   fancy-common-digits Common Common
+    A\x{1d7ce}BC           Latin fancy-common-digit Latin Latin
+    
+# Some Unicode 12.1.0 new script characters
+
+/\p{Elymaic}\p{Nandinagari}\p{Nyiakeng_Puachue_Hmong}\p{Wancho}/utf
+    \x{10fe5}\x{119AC}\x{1E10E}\x{1E2D1} 
+
+# Some Unicode 13.0.0 new script characters
+
+/\p{Chorasmian}\p{Dives_Akuru}\p{Khitan_Small_Script}\p{Yezidi}/utf
+    \x{10FB0}\x{11900}\x{18B00}\x{10E80}
+
+# ------- 
+
+# Test reference and errors in non-ASCII characters in group names
+
+/(?'𑠅ABC'...)/I,utf
+   abcde\=copy=𑠅ABC
+
+# Bad ones
+
+/(?'AB၌C'...)\g{AB၌C}/utf
+
+/(?'٠ABC'...)/utf
+
+/(?'²ABC'...)/utf
+
+/(?'X²ABC'...)/utf
+
+# -------
+
+/\p{Any}*xyz/I
+
+/(|�)7/caseless,ucp
+
+/(\xc1)\1/i,ucp
+    \xc1\xe1\=no_jit
+    
+# End of testinput5

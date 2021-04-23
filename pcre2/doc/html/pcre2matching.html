@@ -85,7 +85,7 @@ ungreedy repetition quantifiers are specified in the pattern.
 Because it ends up with a single path through the tree, it is relatively
 straightforward for this algorithm to keep track of the substrings that are
 matched by portions of the pattern in parentheses. This provides support for
-capturing parentheses and back references.
+capturing parentheses and backreferences.
 </P>
 <br><a name="SEC4" href="#TOC1">THE ALTERNATIVE MATCHING ALGORITHM</a><br>
 <P>
@@ -134,7 +134,8 @@ do want multiple matches in such cases, either use an ungreedy repeat
 </P>
 <P>
 There are a number of features of PCRE2 regular expressions that are not
-supported by the alternative matching algorithm. They are as follows:
+supported or behave differently in the alternative matching function. Those
+that are not supported cause an error if encountered.
 </P>
 <P>
 1. Because the algorithm finds all possible matches, the greedy or ungreedy
@@ -158,31 +159,38 @@ possibilities, and PCRE2's implementation of this algorithm does not attempt to
 do this. This means that no captured substrings are available.
 </P>
 <P>
-3. Because no substrings are captured, back references within the pattern are
-not supported, and cause errors if encountered.
+3. Because no substrings are captured, backreferences within the pattern are
+not supported.
 </P>
 <P>
 4. For the same reason, conditional expressions that use a backreference as the
 condition or test for a specific group recursion are not supported.
 </P>
 <P>
-5. Because many paths through the tree may be active, the \K escape sequence,
-which resets the start of the match when encountered (but may be on some paths
-and not on others), is not supported. It causes an error if encountered.
+5. Again for the same reason, script runs are not supported.
 </P>
 <P>
-6. Callouts are supported, but the value of the <i>capture_top</i> field is
+6. Because many paths through the tree may be active, the \K escape sequence,
+which resets the start of the match when encountered (but may be on some paths
+and not on others), is not supported.
+</P>
+<P>
+7. Callouts are supported, but the value of the <i>capture_top</i> field is
 always 1, and the value of the <i>capture_last</i> field is always 0.
 </P>
 <P>
-7. The \C escape sequence, which (in the standard algorithm) always matches a
+8. The \C escape sequence, which (in the standard algorithm) always matches a
 single code unit, even in a UTF mode, is not supported in these modes, because
 the alternative algorithm moves through the subject string one character (not
 code unit) at a time, for all active paths through the tree.
 </P>
 <P>
-8. Except for (*FAIL), the backtracking control verbs such as (*PRUNE) are not
+9. Except for (*FAIL), the backtracking control verbs such as (*PRUNE) are not
 supported. (*FAIL) is supported, and behaves like a failing negative assertion.
+</P>
+<P>
+10. The PCRE2_MATCH_INVALID_UTF option for <b>pcre2_compile()</b> is not
+supported by <b>pcre2_dfa_match()</b>.
 </P>
 <br><a name="SEC5" href="#TOC1">ADVANTAGES OF THE ALTERNATIVE ALGORITHM</a><br>
 <P>
@@ -215,7 +223,8 @@ because it has to search for all possible matches, but is also because it is
 less susceptible to optimization.
 </P>
 <P>
-2. Capturing parentheses and back references are not supported.
+2. Capturing parentheses, backreferences, script runs, and matching within
+invalid UTF string are not supported.
 </P>
 <P>
 3. Although atomic groups are supported, their use does not provide the
@@ -232,9 +241,9 @@ Cambridge, England.
 </P>
 <br><a name="SEC8" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 29 September 2014
+Last updated: 23 May 2019
 <br>
-Copyright &copy; 1997-2014 University of Cambridge.
+Copyright &copy; 1997-2019 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

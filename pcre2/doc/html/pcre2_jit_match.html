@@ -33,7 +33,9 @@ processed by the JIT compiler against a given subject string, using a matching
 algorithm that is similar to Perl's. It is a "fast path" interface to JIT, and
 it bypasses some of the sanity checks that <b>pcre2_match()</b> applies.
 Its arguments are exactly the same as for
-<a href="pcre2_match.html"><b>pcre2_match()</b>.</a>
+<a href="pcre2_match.html"><b>pcre2_match()</b>,</a>
+except that the subject string must be specified with a length;
+PCRE2_ZERO_TERMINATED is not supported.
 </P>
 <P>
 The supported options are PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY,

@@ -67,7 +67,7 @@ Memory allocation (code space): 20
   2   2 Ket
   4     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Options: extended
 Subject length lower bound = 0
@@ -80,7 +80,7 @@ Memory allocation (code space): 28
   4   4 Ket
   6     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: extended
 First code unit = 'a'
 Subject length lower bound = 1
@@ -187,7 +187,7 @@ Memory allocation (code space): 80
   0  17 Bra
   2  13 CBra 1
   5     a
-  7   4 Once
+  7   4 SBra
   9   2 Recurse
  11   4 KetRmax
  13     b
@@ -376,7 +376,7 @@ Memory allocation (code space): 52
  10  10 Ket
  12     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'A'
 Last code unit = '.'
@@ -390,7 +390,7 @@ Memory allocation (code space): 44
   8   8 Ket
  10     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{d55c}
 Last code unit = \x{c5b4}
@@ -404,7 +404,7 @@ Memory allocation (code space): 44
   8   8 Ket
  10     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{65e5}
 Last code unit = \x{8a9e}
@@ -720,100 +720,88 @@ Memory allocation (code space): 28
 
 /(((a\2)|(a*)\g<-1>))*a?/
 ------------------------------------------------------------------
-  0  39 Bra
+  0  35 Bra
   2     Brazero
-  3  32 SCBra 1
-  6  27 Once
-  8  12 CBra 2
- 11   7 CBra 3
- 14     a
- 16     \2
- 18   7 Ket
- 20  11 Alt
- 22   5 CBra 4
- 25     a*
- 27   5 Ket
- 29  22 Recurse
- 31  23 Ket
- 33  27 Ket
- 35  32 KetRmax
- 37     a?+
- 39  39 Ket
- 41     End
+  3  28 SCBra 1
+  6  12 CBra 2
+  9   7 CBra 3
+ 12     a
+ 14     \2
+ 16   7 Ket
+ 18  11 Alt
+ 20   5 CBra 4
+ 23     a*
+ 25   5 Ket
+ 27  20 Recurse
+ 29  23 Ket
+ 31  28 KetRmax
+ 33     a?+
+ 35  35 Ket
+ 37     End
 ------------------------------------------------------------------
 
 /((?+1)(\1))/
 ------------------------------------------------------------------
-  0  20 Bra
-  2  16 Once
-  4  12 CBra 1
-  7   9 Recurse
-  9   5 CBra 2
- 12     \1
- 14   5 Ket
- 16  12 Ket
- 18  16 Ket
- 20  20 Ket
- 22     End
+  0  16 Bra
+  2  12 CBra 1
+  5   7 Recurse
+  7   5 CBra 2
+ 10     \1
+ 12   5 Ket
+ 14  12 Ket
+ 16  16 Ket
+ 18     End
 ------------------------------------------------------------------
 
 "(?1)(?#?'){2}(a)"
 ------------------------------------------------------------------
-  0  21 Bra
-  2   4 Once
-  4  14 Recurse
-  6   4 Ket
-  8   4 Once
- 10  14 Recurse
- 12   4 Ket
- 14   5 CBra 1
- 17     a
- 19   5 Ket
- 21  21 Ket
- 23     End
+  0  13 Bra
+  2   6 Recurse
+  4   6 Recurse
+  6   5 CBra 1
+  9     a
+ 11   5 Ket
+ 13  13 Ket
+ 15     End
 ------------------------------------------------------------------
 
 /.((?2)(?R)|\1|$)()/
 ------------------------------------------------------------------
-  0  28 Bra
+  0  24 Bra
   2     Any
-  3  18 Once
-  5   7 CBra 1
-  8  23 Recurse
- 10   0 Recurse
- 12   4 Alt
- 14     \1
- 16   3 Alt
- 18     $
- 19  14 Ket
- 21  18 Ket
- 23   3 CBra 2
- 26   3 Ket
- 28  28 Ket
- 30     End
+  3   7 CBra 1
+  6  19 Recurse
+  8   0 Recurse
+ 10   4 Alt
+ 12     \1
+ 14   3 Alt
+ 16     $
+ 17  14 Ket
+ 19   3 CBra 2
+ 22   3 Ket
+ 24  24 Ket
+ 26     End
 ------------------------------------------------------------------
 
 /.((?3)(?R)()(?2)|\1|$)()/
 ------------------------------------------------------------------
-  0  35 Bra
+  0  31 Bra
   2     Any
-  3  25 Once
-  5  14 CBra 1
-  8  30 Recurse
- 10   0 Recurse
- 12   3 CBra 2
- 15   3 Ket
- 17  12 Recurse
- 19   4 Alt
- 21     \1
- 23   3 Alt
- 25     $
- 26  21 Ket
- 28  25 Ket
- 30   3 CBra 3
- 33   3 Ket
- 35  35 Ket
- 37     End
+  3  14 CBra 1
+  6  26 Recurse
+  8   0 Recurse
+ 10   3 CBra 2
+ 13   3 Ket
+ 15  10 Recurse
+ 17   4 Alt
+ 19     \1
+ 21   3 Alt
+ 23     $
+ 24  21 Ket
+ 26   3 CBra 3
+ 29   3 Ket
+ 31  31 Ket
+ 33     End
 ------------------------------------------------------------------
 
 /(?1)()((((((\1++))\x85)+)|))/
@@ -857,10 +845,8 @@ Memory allocation (code space): 28
 # with link size - hence multiple tests with different values.
 
 /(?'ABC'\[[bar](]{792}*THEN:\[A]{255}\[)]{793}/expand,-fullbincode,parens_nest_limit=1000
-Failed: error 186 at offset 5813: regular expression is too complicated
 
 /(?'ABC'\[[bar](]{793}*THEN:\[A]{255}\[)]{794}/expand,-fullbincode,parens_nest_limit=1000
-Failed: error 186 at offset 5820: regular expression is too complicated
 
 /(?'ABC'\[[bar](]{1793}*THEN:\[A]{255}\[)]{1794}/expand,-fullbincode,parens_nest_limit=2000
 Failed: error 186 at offset 12820: regular expression is too complicated
@@ -909,7 +895,7 @@ Failed: error 186 at offset 12820: regular expression is too complicated
  79  79 Ket
  81     End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Max back reference = 1
 May match empty string
 Subject length lower bound = 0
@@ -943,7 +929,7 @@ Subject length lower bound = 0
  43  43 Ket
  45     End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Max back reference = 1
 May match empty string
 Subject length lower bound = 0
@@ -1016,7 +1002,7 @@ No match
 133 133 Ket
 135     End
 ------------------------------------------------------------------
-Capturing subpattern count = 10
+Capture group count = 10
 May match empty string
 Subject length lower bound = 0
 
@@ -1024,5 +1010,9 @@ Subject length lower bound = 0
 Failed: error 114 at offset 509: missing closing parenthesis
 
 /([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00](*ACCEPT)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/-fullbincode
+
+#pattern -fullbincode
+
+/\[()]{65535}/expand
 
 # End of testinput8

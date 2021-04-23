@@ -32,33 +32,33 @@
 #load testsaved2
 
 #pop info
-Capturing subpattern count = 2
+Capture group count = 2
 Max back reference = 2
-Named capturing subpatterns:
+Named capture groups:
   n   1
   n   2
 Options: dupnames
 Starting code units: b f 
 Subject length lower bound = 6
-    foofoo             
+    foofoo
  0: foofoo
  1: foo
     barbar
  0: barbar
  1: <unset>
  2: bar
-    
+
 #pop mark
     C
  0: C
  1: C
 MK: A
-\= Expect no match     
-    D 
+\= Expect no match
+    D
 No match, mark = A
-    
+
 #pop
-    AmanaplanacanalPanama   
+    AmanaplanacanalPanama
  0: AmanaplanacanalPanama
  1: <unset>
  2: <unset>
@@ -66,8 +66,8 @@ No match, mark = A
  4: A
 
 #pop info
-Capturing subpattern count = 4
-Named capturing subpatterns:
+Capture group count = 4
+Named capture groups:
   ADDR          2
   ADDRESS_PAT   4
   NAME          1
@@ -78,7 +78,7 @@ Subject length lower bound = 3
  0: metcalfe 33
  1: metcalfe
  2: 33
-    
+
 # Check for an error when different tables are used.
 
 /abc/push,tables=1
@@ -97,13 +97,13 @@ Serialization failed: error -30: patterns do not all use the same character tabl
 #pop should give an error
 ** Can't pop off an empty stack
     pqr
-    
+
 /abcd/pushcopy
     abcd
  0: abcd
-    
+
 #pop
-    abcd 
+    abcd
  0: abcd
 
 #pop should give an error
@@ -113,21 +113,21 @@ Serialization failed: error -30: patterns do not all use the same character tabl
 #popcopy
     abcd
  0: abcd
-    
+
 #pop
-    abcd 
+    abcd
  0: abcd
-    
+
 /abcd/push
 #save testsaved1
 #pop should give an error
 ** Can't pop off an empty stack
 
 #load testsaved1
-#popcopy 
+#popcopy
     abcd
  0: abcd
-    
+
 #pop
     abcd
  0: abcd
@@ -139,12 +139,23 @@ Serialization failed: error -30: patterns do not all use the same character tabl
     abcd
  0: abcd
 
-#popcopy 
+#popcopy
     abcd
  0: abcd
-    
+
 #pop
-    abcd 
+    abcd
  0: abcd
+
+# Must only specify one of these
+
+//push,pushcopy
+** Not allowed together: push pushcopy
+
+//push,pushtablescopy
+** Not allowed together: push pushtablescopy
+
+//pushcopy,pushtablescopy
+** Not allowed together: pushcopy pushtablescopy
 
 # End of testinput20

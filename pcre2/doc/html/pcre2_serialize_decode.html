@@ -28,7 +28,10 @@ DESCRIPTION
 </b><br>
 <P>
 This function decodes a serialized set of compiled patterns back into a list of
-individual patterns. Its arguments are:
+individual patterns. This is possible only on a host that is running the same
+version of PCRE2, with the same code unit width, and the host must also have
+the same endianness, pointer width and PCRE2_SIZE type. The arguments for
+<b>pcre2_serialize_decode()</b> are:
 <pre>
   <i>codes</i>            pointer to a vector in which to build the list
   <i>number_of_codes</i>  number of slots in the vector
@@ -54,8 +57,8 @@ on a system with different endianness.
 <P>
 There is a complete description of the PCRE2 native API in the
 <a href="pcre2api.html"><b>pcre2api</b></a>
-page and a description of the POSIX API in the
-<a href="pcre2posix.html"><b>pcre2posix</b></a>
+page and a description of the serialization functions in the
+<a href="pcre2serialize.html"><b>pcre2serialize</b></a>
 page.
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

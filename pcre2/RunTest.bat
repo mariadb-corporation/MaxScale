@@ -26,6 +26,7 @@
 @rem Updated for new test 14 (moving others up a number), August 2015.
 @rem Tidied and updated for new tests 21, 22, 23 by PH, October 2015.
 @rem PH added missing "set type" for test 22, April 2016.
+@rem PH added copy command for new testbtables file, November 2020
 
 
 setlocal enabledelayedexpansion
@@ -263,7 +264,7 @@ if errorlevel 1 (
   set failed="yes"
   goto :eof
 ) else if [%1]==[2] (
-  %pcre2test% %mode% %4 %5 %6 %7 %8 %9 -error -63,-62,-2,-1,0,100,188,189,190,191 >>%2%bits%\%testoutput%
+  %pcre2test% %mode% %4 %5 %6 %7 %8 %9 -error -70,-62,-2,-1,0,100,101,191,200 >>%2%bits%\%testoutput%
 )
 
 set type=
@@ -284,15 +285,6 @@ fc /n %srcdir%\testdata\%testoutput%%type% %2%bits%\%testoutput% >NUL
 
 if errorlevel 1 (
   echo.          failed comparison: fc /n %srcdir%\testdata\%testoutput% %2%bits%\%testoutput%
-  if [%1]==[2] (
-    echo.
-    echo ** Test 2 requires a lot of stack. PCRE2 can be configured to
-    echo ** use heap for recursion. Otherwise, to pass Test 2
-    echo ** you generally need to allocate 8 mb stack to PCRE2.
-    echo ** See the 'pcre2stack' page for a discussion of PCRE2's
-    echo ** stack usage.
-    echo.
-)
   if [%1]==[3] (
     echo.
     echo ** Test 3 failure usually means french locale is not
@@ -314,6 +306,7 @@ if %jit% EQU 1 call :runsub 1 testoutjit "Test with JIT Override" -q -jit
 goto :eof
 
 :do2
+  copy /y %srcdir%\testdata\testbtables testbtables 
   call :runsub 2 testout "API, errors, internals, and non-Perl stuff" -q
   if %jit% EQU 1 call :runsub 2 testoutjit "Test with JIT Override" -q -jit
 goto :eof

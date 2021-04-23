@@ -36,20 +36,21 @@ for success and non-zero otherwise. The arguments are:
   <i>callout_data</i>   User data that is passed to the callback
 </pre>
 The <i>callback()</i> function is passed a pointer to a data block containing
-the following fields:
+the following fields (not necessarily in this order):
 <pre>
-  <i>version</i>                Block version number
-  <i>pattern_position</i>       Offset to next item in pattern
-  <i>next_item_length</i>       Length of next item in pattern
-  <i>callout_number</i>         Number for numbered callouts
-  <i>callout_string_offset</i>  Offset to string within pattern
-  <i>callout_string_length</i>  Length of callout string
-  <i>callout_string</i>         Points to callout string or is NULL
+  uint32_t   <i>version</i>                Block version number
+  uint32_t   <i>callout_number</i>         Number for numbered callouts
+  PCRE2_SIZE <i>pattern_position</i>       Offset to next item in pattern
+  PCRE2_SIZE <i>next_item_length</i>       Length of next item in pattern
+  PCRE2_SIZE <i>callout_string_offset</i>  Offset to string within pattern
+  PCRE2_SIZE <i>callout_string_length</i>  Length of callout string
+  PCRE2_SPTR <i>callout_string</i>         Points to callout string or is NULL
 </pre>
-The second argument is the callout data that was passed to
-<b>pcre2_callout_enumerate()</b>. The <b>callback()</b> function must return zero
-for success. Any other value causes the pattern scan to stop, with the value
-being passed back as the result of <b>pcre2_callout_enumerate()</b>.
+The second argument passed to the <b>callback()</b> function is the callout data
+that was passed to <b>pcre2_callout_enumerate()</b>. The <b>callback()</b>
+function must return zero for success. Any other value causes the pattern scan
+to stop, with the value being passed back as the result of
+<b>pcre2_callout_enumerate()</b>.
 </P>
 <P>
 There is a complete description of the PCRE2 native API in the

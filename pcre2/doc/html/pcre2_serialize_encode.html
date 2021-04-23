@@ -28,7 +28,12 @@ DESCRIPTION
 </b><br>
 <P>
 This function encodes a list of compiled patterns into a byte stream that can
-be saved on disc or elsewhere. Its arguments are:
+be saved on disc or elsewhere. Note that this is not an abstract format like
+Java or .NET. Conversion of the byte stream back into usable compiled patterns
+can only happen on a host that is running the same version of PCRE2, with the
+same code unit width, and the host must also have the same endianness, pointer
+width and PCRE2_SIZE type. The arguments for <b>pcre2_serialize_encode()</b>
+are:
 <pre>
   <i>codes</i>             pointer to a vector containing the list
   <i>number_of_codes</i>   number of slots in the vector
@@ -53,8 +58,8 @@ that a slot in the vector does not point to a compiled pattern.
 <P>
 There is a complete description of the PCRE2 native API in the
 <a href="pcre2api.html"><b>pcre2api</b></a>
-page and a description of the POSIX API in the
-<a href="pcre2posix.html"><b>pcre2posix</b></a>
+page and a description of the serialization functions in the
+<a href="pcre2serialize.html"><b>pcre2serialize</b></a>
 page.
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

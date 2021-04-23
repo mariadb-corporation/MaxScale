@@ -35,6 +35,9 @@ first.
 <tr><td><a href="pcre2compat.html">pcre2compat</a></td>
     <td>&nbsp;&nbsp;Compability with Perl</td></tr>
 
+<tr><td><a href="pcre2convert.html">pcre2convert</a></td>
+    <td>&nbsp;&nbsp;Experimental foreign pattern conversion functions</td></tr>
+
 <tr><td><a href="pcre2demo.html">pcre2demo</a></td>
     <td>&nbsp;&nbsp;A demonstration C program that uses the PCRE2 library</td></tr>
 
@@ -67,9 +70,6 @@ first.
 
 <tr><td><a href="pcre2serialize.html">pcre2serialize</a></td>
     <td>&nbsp;&nbsp;Serializing functions for saving precompiled patterns</td></tr>
-
-<tr><td><a href="pcre2stack.html">pcre2stack</a></td>
-    <td>&nbsp;&nbsp;Discussion of PCRE2's stack usage</td></tr>
 
 <tr><td><a href="pcre2syntax.html">pcre2syntax</a></td>
     <td>&nbsp;&nbsp;Syntax quick-reference summary</td></tr>
@@ -115,6 +115,18 @@ in the library.
 <tr><td><a href="pcre2_config.html">pcre2_config</a></td>
     <td>&nbsp;&nbsp;Show build-time configuration options</td></tr>
 
+<tr><td><a href="pcre2_convert_context_copy.html">pcre2_convert_context_copy</a></td>
+    <td>&nbsp;&nbsp;Copy a convert context</td></tr>
+
+<tr><td><a href="pcre2_convert_context_create.html">pcre2_convert_context_create</a></td>
+    <td>&nbsp;&nbsp;Create a convert context</td></tr>
+
+<tr><td><a href="pcre2_convert_context_free.html">pcre2_convert_context_free</a></td>
+    <td>&nbsp;&nbsp;Free a convert context</td></tr>
+
+<tr><td><a href="pcre2_converted_pattern_free.html">pcre2_converted_pattern_free</a></td>
+    <td>&nbsp;&nbsp;Free converted foreign pattern</td></tr>
+
 <tr><td><a href="pcre2_dfa_match.html">pcre2_dfa_match</a></td>
     <td>&nbsp;&nbsp;Match a compiled pattern to a subject string
     (DFA algorithm; <i>not</i> Perl compatible)</td></tr>
@@ -129,10 +141,13 @@ in the library.
     <td>&nbsp;&nbsp;Free a general context</td></tr>
 
 <tr><td><a href="pcre2_get_error_message.html">pcre2_get_error_message</a></td>
-    <td>&nbsp;&nbsp;Free study data</td></tr>
+    <td>&nbsp;&nbsp;Get textual error message for error number</td></tr>
 
 <tr><td><a href="pcre2_get_mark.html">pcre2_get_mark</a></td>
     <td>&nbsp;&nbsp;Get a (*MARK) name</td></tr>
+
+<tr><td><a href="pcre2_get_match_data_size.html">pcre2_get_match_data_size</a></td>
+    <td>&nbsp;&nbsp;Get the size of a match data block</td></tr>
 
 <tr><td><a href="pcre2_get_ovector_count.html">pcre2_get_ovector_count</a></td>
     <td>&nbsp;&nbsp;Get the ovector count</td></tr>
@@ -164,6 +179,9 @@ in the library.
 <tr><td><a href="pcre2_maketables.html">pcre2_maketables</a></td>
     <td>&nbsp;&nbsp;Build character tables in current locale</td></tr>
 
+<tr><td><a href="pcre2_maketables_free.html">pcre2_maketables_free</a></td>
+    <td>&nbsp;&nbsp;Free character tables</td></tr>
+
 <tr><td><a href="pcre2_match.html">pcre2_match</a></td>
     <td>&nbsp;&nbsp;Match a compiled pattern to a subject string
     (Perl compatible)</td></tr>
@@ -185,6 +203,9 @@ in the library.
 
 <tr><td><a href="pcre2_match_data_free.html">pcre2_match_data_free</a></td>
     <td>&nbsp;&nbsp;Free a match data block</td></tr>
+
+<tr><td><a href="pcre2_pattern_convert.html">pcre2_pattern_convert</a></td>
+    <td>&nbsp;&nbsp;Experimental foreign pattern converter</td></tr>
 
 <tr><td><a href="pcre2_pattern_info.html">pcre2_pattern_info</a></td>
     <td>&nbsp;&nbsp;Extract information about a pattern</td></tr>
@@ -210,8 +231,23 @@ in the library.
 <tr><td><a href="pcre2_set_character_tables.html">pcre2_set_character_tables</a></td>
     <td>&nbsp;&nbsp;Set character tables</td></tr>
 
+<tr><td><a href="pcre2_set_compile_extra_options.html">pcre2_set_compile_extra_options</a></td>
+    <td>&nbsp;&nbsp;Set compile time extra options</td></tr>
+
 <tr><td><a href="pcre2_set_compile_recursion_guard.html">pcre2_set_compile_recursion_guard</a></td>
     <td>&nbsp;&nbsp;Set up a compile recursion guard function</td></tr>
+
+<tr><td><a href="pcre2_set_depth_limit.html">pcre2_set_depth_limit</a></td>
+    <td>&nbsp;&nbsp;Set the match backtracking depth limit</td></tr>
+
+<tr><td><a href="pcre2_set_glob_escape.html">pcre2_set_glob_escape</a></td>
+    <td>&nbsp;&nbsp;Set glob escape character</td></tr>
+
+<tr><td><a href="pcre2_set_glob_separator.html">pcre2_set_glob_separator</a></td>
+    <td>&nbsp;&nbsp;Set glob separator character</td></tr>
+
+<tr><td><a href="pcre2_set_heap_limit.html">pcre2_set_heap_limit</a></td>
+    <td>&nbsp;&nbsp;Set the match backtracking heap limit</td></tr>
 
 <tr><td><a href="pcre2_set_match_limit.html">pcre2_set_match_limit</a></td>
     <td>&nbsp;&nbsp;Set the match limit</td></tr>
@@ -229,10 +265,10 @@ in the library.
     <td>&nbsp;&nbsp;Set the parentheses nesting limit</td></tr>
 
 <tr><td><a href="pcre2_set_recursion_limit.html">pcre2_set_recursion_limit</a></td>
-    <td>&nbsp;&nbsp;Set the match recursion limit</td></tr>
+    <td>&nbsp;&nbsp;Obsolete: use pcre2_set_depth_limit</td></tr>
 
 <tr><td><a href="pcre2_set_recursion_memory_management.html">pcre2_set_recursion_memory_management</a></td>
-    <td>&nbsp;&nbsp;Set match recursion memory management</td></tr>
+    <td>&nbsp;&nbsp;Obsolete function that (from 10.30 onwards) does nothing</td></tr>
 
 <tr><td><a href="pcre2_substitute.html">pcre2_substitute</a></td>
     <td>&nbsp;&nbsp;Match a compiled pattern to a subject string and do

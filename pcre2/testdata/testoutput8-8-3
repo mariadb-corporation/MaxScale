@@ -67,7 +67,7 @@ Memory allocation (code space): 9
   4   4 Ket
   8     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Options: extended
 Subject length lower bound = 0
@@ -80,7 +80,7 @@ Memory allocation (code space): 11
   6   6 Ket
  10     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: extended
 First code unit = 'a'
 Subject length lower bound = 1
@@ -187,7 +187,7 @@ Memory allocation (code space): 35
   0  30 Bra
   4  22 CBra 1
  10     a
- 12   8 Once
+ 12   8 SBra
  16   4 Recurse
  20   8 KetRmax
  24     b
@@ -376,7 +376,7 @@ Memory allocation (code space): 20
  15  15 Ket
  19     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'A'
 Last code unit = '.'
@@ -390,7 +390,7 @@ Memory allocation (code space): 21
  16  16 Ket
  20     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \xed
 Last code unit = \xb4
@@ -404,7 +404,7 @@ Memory allocation (code space): 21
  16  16 Ket
  20     End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \xe6
 Last code unit = \x9e
@@ -720,100 +720,88 @@ Memory allocation (code space): 12
 
 /(((a\2)|(a*)\g<-1>))*a?/
 ------------------------------------------------------------------
-  0  70 Bra
+  0  62 Bra
   4     Brazero
-  5  59 SCBra 1
- 11  49 Once
- 15  21 CBra 2
- 21  11 CBra 3
- 27     a
- 29     \2
- 32  11 Ket
- 36  20 Alt
- 40   8 CBra 4
- 46     a*
- 48   8 Ket
- 52  40 Recurse
- 56  41 Ket
- 60  49 Ket
- 64  59 KetRmax
- 68     a?+
- 70  70 Ket
- 74     End
+  5  51 SCBra 1
+ 11  21 CBra 2
+ 17  11 CBra 3
+ 23     a
+ 25     \2
+ 28  11 Ket
+ 32  20 Alt
+ 36   8 CBra 4
+ 42     a*
+ 44   8 Ket
+ 48  36 Recurse
+ 52  41 Ket
+ 56  51 KetRmax
+ 60     a?+
+ 62  62 Ket
+ 66     End
 ------------------------------------------------------------------
 
 /((?+1)(\1))/
 ------------------------------------------------------------------
-  0  39 Bra
-  4  31 Once
-  8  23 CBra 1
- 14  18 Recurse
- 18   9 CBra 2
- 24     \1
- 27   9 Ket
- 31  23 Ket
- 35  31 Ket
- 39  39 Ket
- 43     End
+  0  31 Bra
+  4  23 CBra 1
+ 10  14 Recurse
+ 14   9 CBra 2
+ 20     \1
+ 23   9 Ket
+ 27  23 Ket
+ 31  31 Ket
+ 35     End
 ------------------------------------------------------------------
 
 "(?1)(?#?'){2}(a)"
 ------------------------------------------------------------------
-  0  40 Bra
-  4   8 Once
-  8  28 Recurse
- 12   8 Ket
- 16   8 Once
- 20  28 Recurse
- 24   8 Ket
- 28   8 CBra 1
- 34     a
- 36   8 Ket
- 40  40 Ket
- 44     End
+  0  24 Bra
+  4  12 Recurse
+  8  12 Recurse
+ 12   8 CBra 1
+ 18     a
+ 20   8 Ket
+ 24  24 Ket
+ 28     End
 ------------------------------------------------------------------
 
 /.((?2)(?R)|\1|$)()/
 ------------------------------------------------------------------
-  0  53 Bra
+  0  45 Bra
   4     Any
-  5  34 Once
-  9  14 CBra 1
- 15  43 Recurse
- 19   0 Recurse
- 23   7 Alt
- 27     \1
- 30   5 Alt
- 34     $
- 35  26 Ket
- 39  34 Ket
- 43   6 CBra 2
- 49   6 Ket
- 53  53 Ket
- 57     End
+  5  14 CBra 1
+ 11  35 Recurse
+ 15   0 Recurse
+ 19   7 Alt
+ 23     \1
+ 26   5 Alt
+ 30     $
+ 31  26 Ket
+ 35   6 CBra 2
+ 41   6 Ket
+ 45  45 Ket
+ 49     End
 ------------------------------------------------------------------
 
 /.((?3)(?R)()(?2)|\1|$)()/
 ------------------------------------------------------------------
-  0  67 Bra
+  0  59 Bra
   4     Any
-  5  48 Once
-  9  28 CBra 1
- 15  57 Recurse
- 19   0 Recurse
- 23   6 CBra 2
- 29   6 Ket
- 33  23 Recurse
- 37   7 Alt
- 41     \1
- 44   5 Alt
- 48     $
- 49  40 Ket
- 53  48 Ket
- 57   6 CBra 3
- 63   6 Ket
- 67  67 Ket
- 71     End
+  5  28 CBra 1
+ 11  49 Recurse
+ 15   0 Recurse
+ 19   6 CBra 2
+ 25   6 Ket
+ 29  19 Recurse
+ 33   7 Alt
+ 37     \1
+ 40   5 Alt
+ 44     $
+ 45  40 Ket
+ 49   6 CBra 3
+ 55   6 Ket
+ 59  59 Ket
+ 63     End
 ------------------------------------------------------------------
 
 /(?1)()((((((\1++))\x85)+)|))/
@@ -907,7 +895,7 @@ Failed: error 186 at offset 12820: regular expression is too complicated
 150 150 Ket
 154     End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Max back reference = 1
 May match empty string
 Subject length lower bound = 0
@@ -941,7 +929,7 @@ Subject length lower bound = 0
  76  76 Ket
  80     End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Max back reference = 1
 May match empty string
 Subject length lower bound = 0
@@ -1014,7 +1002,7 @@ No match
 266 266 Ket
 270     End
 ------------------------------------------------------------------
-Capturing subpattern count = 10
+Capture group count = 10
 May match empty string
 Subject length lower bound = 0
 
@@ -1022,5 +1010,9 @@ Subject length lower bound = 0
 Failed: error 114 at offset 509: missing closing parenthesis
 
 /([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00](*ACCEPT)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/-fullbincode
+
+#pattern -fullbincode
+
+/\[()]{65535}/expand
 
 # End of testinput8

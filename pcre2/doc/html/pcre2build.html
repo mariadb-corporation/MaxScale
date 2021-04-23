@@ -23,21 +23,22 @@ please consult the man page, in case the conversion went wrong.
 <li><a name="TOC8" href="#SEC8">NEWLINE RECOGNITION</a>
 <li><a name="TOC9" href="#SEC9">WHAT \R MATCHES</a>
 <li><a name="TOC10" href="#SEC10">HANDLING VERY LARGE PATTERNS</a>
-<li><a name="TOC11" href="#SEC11">AVOIDING EXCESSIVE STACK USAGE</a>
-<li><a name="TOC12" href="#SEC12">LIMITING PCRE2 RESOURCE USAGE</a>
-<li><a name="TOC13" href="#SEC13">CREATING CHARACTER TABLES AT BUILD TIME</a>
-<li><a name="TOC14" href="#SEC14">USING EBCDIC CODE</a>
-<li><a name="TOC15" href="#SEC15">PCRE2GREP SUPPORT FOR EXTERNAL SCRIPTS</a>
-<li><a name="TOC16" href="#SEC16">PCRE2GREP OPTIONS FOR COMPRESSED FILE SUPPORT</a>
-<li><a name="TOC17" href="#SEC17">PCRE2GREP BUFFER SIZE</a>
-<li><a name="TOC18" href="#SEC18">PCRE2TEST OPTION FOR LIBREADLINE SUPPORT</a>
-<li><a name="TOC19" href="#SEC19">INCLUDING DEBUGGING CODE</a>
-<li><a name="TOC20" href="#SEC20">DEBUGGING WITH VALGRIND SUPPORT</a>
-<li><a name="TOC21" href="#SEC21">CODE COVERAGE REPORTING</a>
+<li><a name="TOC11" href="#SEC11">LIMITING PCRE2 RESOURCE USAGE</a>
+<li><a name="TOC12" href="#SEC12">CREATING CHARACTER TABLES AT BUILD TIME</a>
+<li><a name="TOC13" href="#SEC13">USING EBCDIC CODE</a>
+<li><a name="TOC14" href="#SEC14">PCRE2GREP SUPPORT FOR EXTERNAL SCRIPTS</a>
+<li><a name="TOC15" href="#SEC15">PCRE2GREP OPTIONS FOR COMPRESSED FILE SUPPORT</a>
+<li><a name="TOC16" href="#SEC16">PCRE2GREP BUFFER SIZE</a>
+<li><a name="TOC17" href="#SEC17">PCRE2TEST OPTION FOR LIBREADLINE SUPPORT</a>
+<li><a name="TOC18" href="#SEC18">INCLUDING DEBUGGING CODE</a>
+<li><a name="TOC19" href="#SEC19">DEBUGGING WITH VALGRIND SUPPORT</a>
+<li><a name="TOC20" href="#SEC20">CODE COVERAGE REPORTING</a>
+<li><a name="TOC21" href="#SEC21">DISABLING THE Z AND T FORMATTING MODIFIERS</a>
 <li><a name="TOC22" href="#SEC22">SUPPORT FOR FUZZERS</a>
-<li><a name="TOC23" href="#SEC23">SEE ALSO</a>
-<li><a name="TOC24" href="#SEC24">AUTHOR</a>
-<li><a name="TOC25" href="#SEC25">REVISION</a>
+<li><a name="TOC23" href="#SEC23">OBSOLETE OPTION</a>
+<li><a name="TOC24" href="#SEC24">SEE ALSO</a>
+<li><a name="TOC25" href="#SEC25">AUTHOR</a>
+<li><a name="TOC26" href="#SEC26">REVISION</a>
 </ul>
 <br><a name="SEC1" href="#TOC1">BUILDING PCRE2</a><br>
 <P>
@@ -78,19 +79,20 @@ running
 <pre>
   ./configure --help
 </pre>
-The following sections include descriptions of options whose names begin with
---enable or --disable. These settings specify changes to the defaults for the
-<b>configure</b> command. Because of the way that <b>configure</b> works,
---enable and --disable always come in pairs, so the complementary option always
-exists as well, but as it specifies the default, it is not described.
+The following sections include descriptions of "on/off" options whose names
+begin with --enable or --disable. Because of the way that <b>configure</b>
+works, --enable and --disable always come in pairs, so the complementary option
+always exists as well, but as it specifies the default, it is not described.
+Options that specify values have names that start with --with. At the end of a
+<b>configure</b> run, a summary of the configuration is output.
 </P>
 <br><a name="SEC3" href="#TOC1">BUILDING 8-BIT, 16-BIT AND 32-BIT LIBRARIES</a><br>
 <P>
 By default, a library called <b>libpcre2-8</b> is built, containing functions
-that take string arguments contained in vectors of bytes, interpreted either as
+that take string arguments contained in arrays of bytes, interpreted either as
 single-byte characters, or UTF-8 strings. You can also build two other
 libraries, called <b>libpcre2-16</b> and <b>libpcre2-32</b>, which process
-strings that are contained in vectors of 16-bit and 32-bit code units,
+strings that are contained in arrays of 16-bit and 32-bit code units,
 respectively. These can be interpreted either as single-unit characters or
 UTF-16/UTF-32 strings. To build these additional libraries, add one or both of
 the following to the <b>configure</b> command:
@@ -126,7 +128,7 @@ To build it without Unicode support, add
   --disable-unicode
 </pre>
 to the <b>configure</b> command. This setting applies to all three libraries. It
-is not possible to build one library with Unicode support, and another without,
+is not possible to build one library with Unicode support and another without
 in the same configuration.
 </P>
 <P>
@@ -138,10 +140,10 @@ locked this out by setting PCRE2_NEVER_UTF.
 </P>
 <P>
 UTF support allows the libraries to process character code points up to
-0x10ffff in the strings that they handle. It also provides support for
-accessing the Unicode properties of such characters, using pattern escapes such
-as \P, \p, and \X. Only the general category properties such as <i>Lu</i> and
-<i>Nd</i> are supported. Details are given in the
+0x10ffff in the strings that they handle. Unicode support also gives access to
+the Unicode properties of characters, using pattern escapes such as \P, \p,
+and \X. Only the general category properties such as <i>Lu</i> and <i>Nd</i> are
+supported. Details are given in the
 <a href="pcre2pattern.html"><b>pcre2pattern</b></a>
 documentation.
 </P>
@@ -165,20 +167,32 @@ out by setting the PCRE2_NEVER_BACKSLASH_C option when calling
 </P>
 <br><a name="SEC7" href="#TOC1">JUST-IN-TIME COMPILER SUPPORT</a><br>
 <P>
-Just-in-time compiler support is included in the build by specifying
+Just-in-time (JIT) compiler support is included in the build by specifying
 <pre>
   --enable-jit
 </pre>
 This support is available only for certain hardware architectures. If this
 option is set for an unsupported architecture, a building error occurs.
-See the
+If in doubt, use
+<pre>
+  --enable-jit=auto
+</pre>
+which enables JIT only if the current hardware is supported. You can check
+if JIT is enabled in the configuration summary that is output at the end of a
+<b>configure</b> run. If you are enabling JIT under SELinux you may also want to
+add
+<pre>
+  --enable-jit-sealloc
+</pre>
+which enables the use of an execmem allocator in JIT that is compatible with
+SELinux. This has no effect if JIT is not enabled. See the
 <a href="pcre2jit.html"><b>pcre2jit</b></a>
 documentation for a discussion of JIT usage. When JIT support is enabled,
-pcre2grep automatically makes use of it, unless you add
+<b>pcre2grep</b> automatically makes use of it, unless you add
 <pre>
   --disable-pcre2grep-jit
 </pre>
-to the "configure" command.
+to the <b>configure</b> command.
 </P>
 <br><a name="SEC8" href="#TOC1">NEWLINE RECOGNITION</a><br>
 <P>
@@ -203,19 +217,23 @@ to the <b>configure</b> command. There is a fourth option, specified by
   --enable-newline-is-anycrlf
 </pre>
 which causes PCRE2 to recognize any of the three sequences CR, LF, or CRLF as
-indicating a line ending. Finally, a fifth option, specified by
+indicating a line ending. A fifth option, specified by
 <pre>
   --enable-newline-is-any
 </pre>
 causes PCRE2 to recognize any Unicode newline sequence. The Unicode newline
 sequences are the three just mentioned, plus the single characters VT (vertical
 tab, U+000B), FF (form feed, U+000C), NEL (next line, U+0085), LS (line
-separator, U+2028), and PS (paragraph separator, U+2029).
+separator, U+2028), and PS (paragraph separator, U+2029). The final option is
+<pre>
+  --enable-newline-is-nul
+</pre>
+which causes NUL (binary zero) to be set as the default line-ending character.
 </P>
 <P>
 Whatever default line ending convention is selected when PCRE2 is built can be
 overridden by applications that use the library. At build time it is
-conventional to use the standard for your operating system.
+recommended to use the standard for your operating system.
 </P>
 <br><a name="SEC9" href="#TOC1">WHAT \R MATCHES</a><br>
 <P>
@@ -227,7 +245,7 @@ specify
 </pre>
 the default is changed so that \R matches only CR, LF, or CRLF. Whatever is
 selected when PCRE2 is built can be overridden by applications that use the
-called.
+library.
 </P>
 <br><a name="SEC10" href="#TOC1">HANDLING VERY LARGE PATTERNS</a><br>
 <P>
@@ -235,10 +253,10 @@ Within a compiled pattern, offset values are used to point from one part to
 another (for example, from an opening parenthesis to an alternation
 metacharacter). By default, in the 8-bit and 16-bit libraries, two-byte values
 are used for these offsets, leading to a maximum size for a compiled pattern of
-around 64K code units. This is sufficient to handle all but the most gigantic
-patterns. Nevertheless, some people do want to process truly enormous patterns,
-so it is possible to compile PCRE2 to use three-byte or four-byte offsets by
-adding a setting such as
+around 64 thousand code units. This is sufficient to handle all but the most
+gigantic patterns. Nevertheless, some people do want to process truly enormous
+patterns, so it is possible to compile PCRE2 to use three-byte or four-byte
+offsets by adding a setting such as
 <pre>
   --with-link-size=3
 </pre>
@@ -248,58 +266,63 @@ longer offsets slows down the operation of PCRE2 because it has to load
 additional data when handling them. For the 32-bit library the value is always
 4 and cannot be overridden; the value of --with-link-size is ignored.
 </P>
-<br><a name="SEC11" href="#TOC1">AVOIDING EXCESSIVE STACK USAGE</a><br>
+<br><a name="SEC11" href="#TOC1">LIMITING PCRE2 RESOURCE USAGE</a><br>
 <P>
-When matching with the <b>pcre2_match()</b> function, PCRE2 implements
-backtracking by making recursive calls to an internal function called
-<b>match()</b>. In environments where the size of the stack is limited, this can
-severely limit PCRE2's operation. (The Unix environment does not usually suffer
-from this problem, but it may sometimes be necessary to increase the maximum
-stack size. There is a discussion in the
-<a href="pcre2stack.html"><b>pcre2stack</b></a>
-documentation.) An alternative approach to recursion that uses memory from the
-heap to remember data, instead of using recursive function calls, has been
-implemented to work round the problem of limited stack size. If you want to
-build a version of PCRE2 that works this way, add
-<pre>
-  --disable-stack-for-recursion
-</pre>
-to the <b>configure</b> command. By default, the system functions <b>malloc()</b>
-and <b>free()</b> are called to manage the heap memory that is required, but
-custom memory management functions can be called instead. PCRE2 runs noticeably
-more slowly when built in this way. This option affects only the
-<b>pcre2_match()</b> function; it is not relevant for <b>pcre2_dfa_match()</b>.
-</P>
-<br><a name="SEC12" href="#TOC1">LIMITING PCRE2 RESOURCE USAGE</a><br>
-<P>
-Internally, PCRE2 has a function called <b>match()</b>, which it calls
-repeatedly (sometimes recursively) when matching a pattern with the
-<b>pcre2_match()</b> function. By controlling the maximum number of times this
-function may be called during a single matching operation, a limit can be
-placed on the resources used by a single call to <b>pcre2_match()</b>. The limit
-can be changed at run time, as described in the
+The <b>pcre2_match()</b> function increments a counter each time it goes round
+its main loop. Putting a limit on this counter controls the amount of computing
+resource used by a single call to <b>pcre2_match()</b>. The limit can be changed
+at run time, as described in the
 <a href="pcre2api.html"><b>pcre2api</b></a>
 documentation. The default is 10 million, but this can be changed by adding a
 setting such as
 <pre>
   --with-match-limit=500000
 </pre>
-to the <b>configure</b> command. This setting has no effect on the
-<b>pcre2_dfa_match()</b> matching function.
+to the <b>configure</b> command. This setting also applies to the
+<b>pcre2_dfa_match()</b> matching function, and to JIT matching (though the
+counting is done differently).
 </P>
 <P>
-In some environments it is desirable to limit the depth of recursive calls of
-<b>match()</b> more strictly than the total number of calls, in order to
-restrict the maximum amount of stack (or heap, if --disable-stack-for-recursion
-is specified) that is used. A second limit controls this; it defaults to the
-value that is set for --with-match-limit, which imposes no additional
-constraints. However, you can set a lower limit by adding, for example,
+The <b>pcre2_match()</b> function starts out using a 20KiB vector on the system
+stack to record backtracking points. The more nested backtracking points there
+are (that is, the deeper the search tree), the more memory is needed. If the
+initial vector is not large enough, heap memory is used, up to a certain limit,
+which is specified in kibibytes (units of 1024 bytes). The limit can be changed
+at run time, as described in the
+<a href="pcre2api.html"><b>pcre2api</b></a>
+documentation. The default limit (in effect unlimited) is 20 million. You can
+change this by a setting such as
 <pre>
-  --with-match-limit-recursion=10000
+  --with-heap-limit=500
 </pre>
-to the <b>configure</b> command. This value can also be overridden at run time.
+which limits the amount of heap to 500 KiB. This limit applies only to
+interpretive matching in <b>pcre2_match()</b> and <b>pcre2_dfa_match()</b>, which
+may also use the heap for internal workspace when processing complicated
+patterns. This limit does not apply when JIT (which has its own memory
+arrangements) is used.
 </P>
-<br><a name="SEC13" href="#TOC1">CREATING CHARACTER TABLES AT BUILD TIME</a><br>
+<P>
+You can also explicitly limit the depth of nested backtracking in the
+<b>pcre2_match()</b> interpreter. This limit defaults to the value that is set
+for --with-match-limit. You can set a lower default limit by adding, for
+example,
+<pre>
+  --with-match-limit_depth=10000
+</pre>
+to the <b>configure</b> command. This value can be overridden at run time. This
+depth limit indirectly limits the amount of heap memory that is used, but
+because the size of each backtracking "frame" depends on the number of
+capturing parentheses in a pattern, the amount of heap that is used before the
+limit is reached varies from pattern to pattern. This limit was more useful in
+versions before 10.30, where function recursion was used for backtracking.
+</P>
+<P>
+As well as applying to <b>pcre2_match()</b>, the depth limit also controls
+the depth of recursive function calls in <b>pcre2_dfa_match()</b>. These are
+used for lookaround assertions, atomic groups, and recursion within patterns.
+The limit does not apply to JIT matching.
+<a name="createtables"></a></P>
+<br><a name="SEC12" href="#TOC1">CREATING CHARACTER TABLES AT BUILD TIME</a><br>
 <P>
 PCRE2 uses fixed tables for processing characters whose code points are less
 than 256. By default, PCRE2 is built with a set of tables that are distributed
@@ -309,14 +332,36 @@ only. If you add
   --enable-rebuild-chartables
 </pre>
 to the <b>configure</b> command, the distributed tables are no longer used.
-Instead, a program called <b>dftables</b> is compiled and run. This outputs the
-source for new set of tables, created in the default locale of your C run-time
-system. (This method of replacing the tables does not work if you are cross
-compiling, because <b>dftables</b> is run on the local host. If you need to
-create alternative tables when cross compiling, you will have to do so "by
-hand".)
+Instead, a program called <b>pcre2_dftables</b> is compiled and run. This
+outputs the source for new set of tables, created in the default locale of your
+C run-time system. This method of replacing the tables does not work if you are
+cross compiling, because <b>pcre2_dftables</b> needs to be run on the local
+host and therefore not compiled with the cross compiler.
 </P>
-<br><a name="SEC14" href="#TOC1">USING EBCDIC CODE</a><br>
+<P>
+If you need to create alternative tables when cross compiling, you will have to
+do so "by hand". There may also be other reasons for creating tables manually.
+To cause <b>pcre2_dftables</b> to be built on the local host, run a normal
+compiling command, and then run the program with the output file as its
+argument, for example:
+<pre>
+  cc src/pcre2_dftables.c -o pcre2_dftables
+  ./pcre2_dftables src/pcre2_chartables.c
+</pre>
+This builds the tables in the default locale of the local host. If you want to
+specify a locale, you must use the -L option:
+<pre>
+  LC_ALL=fr_FR ./pcre2_dftables -L src/pcre2_chartables.c
+</pre>
+You can also specify -b (with or without -L). This causes the tables to be
+written in binary instead of as source code. A set of binary tables can be
+loaded into memory by an application and passed to <b>pcre2_compile()</b> in the
+same way as tables created by calling <b>pcre2_maketables()</b>. The tables are
+just a string of bytes, independent of hardware characteristics such as
+endianness. This means they can be bundled with an application that runs in
+different environments, to ensure consistent behaviour.
+</P>
+<br><a name="SEC13" href="#TOC1">USING EBCDIC CODE</a><br>
 <P>
 PCRE2 assumes by default that it will run in an environment where the character
 code is ASCII or Unicode, which is a superset of ASCII. This is the case for
@@ -351,16 +396,19 @@ The options that select newline behaviour, such as --enable-newline-is-cr,
 and equivalent run-time options, refer to these character values in an EBCDIC
 environment.
 </P>
-<br><a name="SEC15" href="#TOC1">PCRE2GREP SUPPORT FOR EXTERNAL SCRIPTS</a><br>
+<br><a name="SEC14" href="#TOC1">PCRE2GREP SUPPORT FOR EXTERNAL SCRIPTS</a><br>
 <P>
-By default, on non-Windows systems, <b>pcre2grep</b> supports the use of
-callouts with string arguments within the patterns it is matching, in order to
-run external scripts. For details, see the
+By default <b>pcre2grep</b> supports the use of callouts with string arguments
+within the patterns it is matching. There are two kinds: one that generates
+output using local code, and another that calls an external program or script.
+If --disable-pcre2grep-callout-fork is added to the <b>configure</b> command,
+only the first kind of callout is supported; if --disable-pcre2grep-callout is
+used, all callouts are completely ignored. For more details of <b>pcre2grep</b>
+callouts, see the
 <a href="pcre2grep.html"><b>pcre2grep</b></a>
-documentation. This support can be disabled by adding
---disable-pcre2grep-callout to the <b>configure</b> command.
+documentation.
 </P>
-<br><a name="SEC16" href="#TOC1">PCRE2GREP OPTIONS FOR COMPRESSED FILE SUPPORT</a><br>
+<br><a name="SEC15" href="#TOC1">PCRE2GREP OPTIONS FOR COMPRESSED FILE SUPPORT</a><br>
 <P>
 By default, <b>pcre2grep</b> reads all files as plain text. You can build it so
 that it recognizes files whose names end in <b>.gz</b> or <b>.bz2</b>, and reads
@@ -373,25 +421,25 @@ to the <b>configure</b> command. These options naturally require that the
 relevant libraries are installed on your system. Configuration will fail if
 they are not.
 </P>
-<br><a name="SEC17" href="#TOC1">PCRE2GREP BUFFER SIZE</a><br>
+<br><a name="SEC16" href="#TOC1">PCRE2GREP BUFFER SIZE</a><br>
 <P>
 <b>pcre2grep</b> uses an internal buffer to hold a "window" on the file it is
 scanning, in order to be able to output "before" and "after" lines when it
-finds a match. The starting size of the buffer is controlled by a parameter
-whose default value is 20K. The buffer itself is three times this size, but
-because of the way it is used for holding "before" lines, the longest line that
-is guaranteed to be processable is the parameter size. If a longer line is
-encountered, <b>pcre2grep</b> automatically expands the buffer, up to a
-specified maximum size, whose default is 1M or the starting size, whichever is
-the larger. You can change the default parameter values by adding, for example,
+finds a match. The default starting size of the buffer is 20KiB. The buffer
+itself is three times this size, but because of the way it is used for holding
+"before" lines, the longest line that is guaranteed to be processable is the
+notional buffer size. If a longer line is encountered, <b>pcre2grep</b>
+automatically expands the buffer, up to a specified maximum size, whose default
+is 1MiB or the starting size, whichever is the larger. You can change the
+default parameter values by adding, for example,
 <pre>
   --with-pcre2grep-bufsize=51200
   --with-pcre2grep-max-bufsize=2097152
 </pre>
-to the <b>configure</b> command. The caller of \fPpcre2grep\fP can override
+to the <b>configure</b> command. The caller of <b>pcre2grep</b> can override
 these values by using --buffer-size and --max-buffer-size on the command line.
 </P>
-<br><a name="SEC18" href="#TOC1">PCRE2TEST OPTION FOR LIBREADLINE SUPPORT</a><br>
+<br><a name="SEC17" href="#TOC1">PCRE2TEST OPTION FOR LIBREADLINE SUPPORT</a><br>
 <P>
 If you add one of
 <pre>
@@ -425,7 +473,7 @@ automatically included, you may need to add something like
 </pre>
 immediately before the <b>configure</b> command.
 </P>
-<br><a name="SEC19" href="#TOC1">INCLUDING DEBUGGING CODE</a><br>
+<br><a name="SEC18" href="#TOC1">INCLUDING DEBUGGING CODE</a><br>
 <P>
 If you add
 <pre>
@@ -434,7 +482,7 @@ If you add
 to the <b>configure</b> command, additional debugging code is included in the
 build. This feature is intended for use by the PCRE2 maintainers.
 </P>
-<br><a name="SEC20" href="#TOC1">DEBUGGING WITH VALGRIND SUPPORT</a><br>
+<br><a name="SEC19" href="#TOC1">DEBUGGING WITH VALGRIND SUPPORT</a><br>
 <P>
 If you add
 <pre>
@@ -444,7 +492,7 @@ to the <b>configure</b> command, PCRE2 will use valgrind annotations to mark
 certain memory regions as unaddressable. This allows it to detect invalid
 memory accesses, and is mostly useful for debugging PCRE2 itself.
 </P>
-<br><a name="SEC21" href="#TOC1">CODE COVERAGE REPORTING</a><br>
+<br><a name="SEC20" href="#TOC1">CODE COVERAGE REPORTING</a><br>
 <P>
 If your C compiler is gcc, you can build a version of PCRE2 that can generate a
 code coverage report for its test suite. To enable this, you must install
@@ -501,6 +549,20 @@ This cleans all coverage data including the generated coverage report. For more
 information about code coverage, see the <b>gcov</b> and <b>lcov</b>
 documentation.
 </P>
+<br><a name="SEC21" href="#TOC1">DISABLING THE Z AND T FORMATTING MODIFIERS</a><br>
+<P>
+The C99 standard defines formatting modifiers z and t for size_t and
+ptrdiff_t values, respectively. By default, PCRE2 uses these modifiers in
+environments other than Microsoft Visual Studio when __STDC_VERSION__ is
+defined and has a value greater than or equal to 199901L (indicating C99).
+However, there is at least one environment that claims to be C99 but does not
+support these modifiers. If
+<pre>
+  --disable-percent-zt
+</pre>
+is specified, no use is made of the z or t modifiers. Instead of %td or %zu,
+%lu is used, with a cast for size_t values.
+</P>
 <br><a name="SEC22" href="#TOC1">SUPPORT FOR FUZZERS</a><br>
 <P>
 There is a special option for use by people who want to run fuzzing tests on
@@ -514,19 +576,34 @@ contains a single function called LLVMFuzzerTestOneInput() whose arguments are
 a pointer to a string and the length of the string. When called, this function
 tries to compile the string as a pattern, and if that succeeds, to match it.
 This is done both with no options and with some random options bits that are
-generated from the string. Setting --enable-fuzz-support also causes a binary
-called <b>pcre2fuzzcheck</b> to be created. This is normally run under valgrind
-or used when PCRE2 is compiled with address sanitizing enabled. It calls the
-fuzzing function and outputs information about it is doing. The input strings
-are specified by arguments: if an argument starts with "=" the rest of it is a
-literal input string. Otherwise, it is assumed to be a file name, and the
-contents of the file are the test string.
+generated from the string.
 </P>
-<br><a name="SEC23" href="#TOC1">SEE ALSO</a><br>
+<P>
+Setting --enable-fuzz-support also causes a binary called <b>pcre2fuzzcheck</b>
+to be created. This is normally run under valgrind or used when PCRE2 is
+compiled with address sanitizing enabled. It calls the fuzzing function and
+outputs information about what it is doing. The input strings are specified by
+arguments: if an argument starts with "=" the rest of it is a literal input
+string. Otherwise, it is assumed to be a file name, and the contents of the
+file are the test string.
+</P>
+<br><a name="SEC23" href="#TOC1">OBSOLETE OPTION</a><br>
+<P>
+In versions of PCRE2 prior to 10.30, there were two ways of handling
+backtracking in the <b>pcre2_match()</b> function. The default was to use the
+system stack, but if
+<pre>
+  --disable-stack-for-recursion
+</pre>
+was set, memory on the heap was used. From release 10.30 onwards this has
+changed (the stack is no longer used) and this option now does nothing except
+give a warning.
+</P>
+<br><a name="SEC24" href="#TOC1">SEE ALSO</a><br>
 <P>
 <b>pcre2api</b>(3), <b>pcre2-config</b>(3).
 </P>
-<br><a name="SEC24" href="#TOC1">AUTHOR</a><br>
+<br><a name="SEC25" href="#TOC1">AUTHOR</a><br>
 <P>
 Philip Hazel
 <br>
@@ -535,11 +612,11 @@ University Computing Service
 Cambridge, England.
 <br>
 </P>
-<br><a name="SEC25" href="#TOC1">REVISION</a><br>
+<br><a name="SEC26" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 01 November 2016
+Last updated: 20 March 2020
 <br>
-Copyright &copy; 1997-2016 University of Cambridge.
+Copyright &copy; 1997-2020 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

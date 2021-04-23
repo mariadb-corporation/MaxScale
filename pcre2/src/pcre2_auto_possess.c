@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2016 University of Cambridge
+          New API code Copyright (c) 2016-2020 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -292,6 +292,7 @@ possessification, and if so, fills a list with its properties.
 Arguments:
   code        points to start of expression
   utf         TRUE if in UTF mode
+  ucp         TRUE if in UCP mode
   fcc         points to the case-flipping table
   list        points to output list
               list[0] will be filled with the opcode
@@ -304,7 +305,7 @@ Returns:      points to the start of the next opcode if *code is accepted
 */
 
 static PCRE2_SPTR
-get_chr_property_list(PCRE2_SPTR code, BOOL utf, const uint8_t *fcc,
+get_chr_property_list(PCRE2_SPTR code, BOOL utf, BOOL ucp, const uint8_t *fcc,
   uint32_t *list)
 {
 PCRE2_UCHAR c = *code;
@@ -316,7 +317,8 @@ uint32_t chr;
 uint32_t *clist_dest;
 const uint32_t *clist_src;
 #else
-(void)utf;    /* Suppress "unused parameter" compiler warning */
+(void)utf;    /* Suppress "unused parameter" compiler warnings */
+(void)ucp;
 #endif
 
 list[0] = c;
@@ -396,7 +398,7 @@ switch(c)
   list[2] = chr;
 
 #ifdef SUPPORT_UNICODE
-  if (chr < 128 || (chr < 256 && !utf))
+  if (chr < 128 || (chr < 256 && !utf && !ucp))
     list[3] = fcc[chr];
   else
     list[3] = UCD_OTHERCASE(chr);
@@ -503,16 +505,17 @@ which case the base cannot be possessified.
 Arguments:
   code        points to the byte code
   utf         TRUE in UTF mode
+  ucp         TRUE in UCP mode
   cb          compile data block
   base_list   the data list of the base opcode
-  base_end    the end of the data list
+  base_end    the end of the base opcode
   rec_limit   points to recursion depth counter
 
 Returns:      TRUE if the auto-possessification is possible
 */
 
 static BOOL
-compare_opcodes(PCRE2_SPTR code, BOOL utf, const compile_block *cb,
+compare_opcodes(PCRE2_SPTR code, BOOL utf, BOOL ucp, const compile_block *cb,
   const uint32_t *base_list, PCRE2_SPTR base_end, int *rec_limit)
 {
 PCRE2_UCHAR c;
@@ -558,50 +561,89 @@ for(;;)
     continue;
     }
 
+  /* At the end of a branch, skip to the end of the group. */
+
   if (c == OP_ALT)
     {
     do code += GET(code, 1); while (*code == OP_ALT);
     c = *code;
     }
 
+  /* Inspect the next opcode. */
+
   switch(c)
     {
-    case OP_END:
-    case OP_KETRPOS:
-    /* TRUE only in greedy case. The non-greedy case could be replaced by
-    an OP_EXACT, but it is probably not worth it. (And note that OP_EXACT
-    uses more memory, which we cannot get at this stage.) */
+    /* We can always possessify a greedy iterator at the end of the pattern,
+    which is reached after skipping over the final OP_KET. A non-greedy
+    iterator must never be possessified. */
 
+    case OP_END:
     return base_list[1] != 0;
 
+    /* When an iterator is at the end of certain kinds of group we can inspect
+    what follows the group by skipping over the closing ket. Note that this
+    does not apply to OP_KETRMAX or OP_KETRMIN because what follows any given
+    iteration is variable (could be another iteration or could be the next
+    item). As these two opcodes are not listed in the next switch, they will
+    end up as the next code to inspect, and return FALSE by virtue of being
+    unsupported. */
+
     case OP_KET:
-    /* If the bracket is capturing, and referenced by an OP_RECURSE, or
-    it is an atomic sub-pattern (assert, once, etc.) the non-greedy case
-    cannot be converted to a possessive form. */
+    case OP_KETRPOS:
+    /* The non-greedy case cannot be converted to a possessive form. */
 
     if (base_list[1] == 0) return FALSE;
 
+    /* If the bracket is capturing it might be referenced by an OP_RECURSE
+    so its last iterator can never be possessified if the pattern contains
+    recursions. (This could be improved by keeping a list of group numbers that
+    are called by recursion.) */
+
     switch(*(code - GET(code, 1)))
       {
-      case OP_ASSERT:
-      case OP_ASSERT_NOT:
-      case OP_ASSERTBACK:
-      case OP_ASSERTBACK_NOT:
-      case OP_ONCE:
-      case OP_ONCE_NC:
+      case OP_CBRA:
+      case OP_SCBRA:
+      case OP_CBRAPOS:
+      case OP_SCBRAPOS:
+      if (cb->had_recurse) return FALSE;
+      break;
+
+      /* A script run might have to backtrack if the iterated item can match
+      characters from more than one script. So give up unless repeating an
+      explicit character. */
+
+      case OP_SCRIPT_RUN:
+      if (base_list[0] != OP_CHAR && base_list[0] != OP_CHARI)
+        return FALSE;
+      break;
 
       /* Atomic sub-patterns and assertions can always auto-possessify their
       last iterator. However, if the group was entered as a result of checking
       a previous iterator, this is not possible. */
 
+      case OP_ASSERT:
+      case OP_ASSERT_NOT:
+      case OP_ASSERTBACK:
+      case OP_ASSERTBACK_NOT:
+      case OP_ONCE:
       return !entered_a_group;
+
+      /* Non-atomic assertions - don't possessify last iterator. This needs
+      more thought. */
+
+      case OP_ASSERT_NA:
+      case OP_ASSERTBACK_NA:
+      return FALSE;
       }
+
+    /* Skip over the bracket and inspect what comes next. */
 
     code += PRIV(OP_lengths)[c];
     continue;
 
+    /* Handle cases where the next item is a group. */
+
     case OP_ONCE:
-    case OP_ONCE_NC:
     case OP_BRA:
     case OP_CBRA:
     next_code = code + GET(code, 1);
@@ -612,7 +654,7 @@ for(;;)
 
     while (*next_code == OP_ALT)
       {
-      if (!compare_opcodes(code, utf, cb, base_list, base_end, rec_limit))
+      if (!compare_opcodes(code, utf, ucp, cb, base_list, base_end, rec_limit))
         return FALSE;
       code = next_code + 1 + LINK_SIZE;
       next_code += GET(next_code, 1);
@@ -625,27 +667,32 @@ for(;;)
     case OP_BRAMINZERO:
 
     next_code = code + 1;
-    if (*next_code != OP_BRA && *next_code != OP_CBRA
-        && *next_code != OP_ONCE && *next_code != OP_ONCE_NC) return FALSE;
+    if (*next_code != OP_BRA && *next_code != OP_CBRA &&
+        *next_code != OP_ONCE) return FALSE;
 
     do next_code += GET(next_code, 1); while (*next_code == OP_ALT);
 
     /* The bracket content will be checked by the OP_BRA/OP_CBRA case above. */
 
     next_code += 1 + LINK_SIZE;
-    if (!compare_opcodes(next_code, utf, cb, base_list, base_end, rec_limit))
+    if (!compare_opcodes(next_code, utf, ucp, cb, base_list, base_end,
+         rec_limit))
       return FALSE;
 
     code += PRIV(OP_lengths)[c];
     continue;
 
+    /* The next opcode does not need special handling; fall through and use it
+    to see if the base can be possessified. */
+
     default:
     break;
     }
 
-  /* Check for a supported opcode, and load its properties. */
+  /* We now have the next appropriate opcode to compare with the base. Check
+  for a supported opcode, and load its properties. */
 
-  code = get_chr_property_list(code, utf, cb->fcc, list);
+  code = get_chr_property_list(code, utf, ucp, cb->fcc, list);
   if (code == NULL) return FALSE;    /* Unsupported */
 
   /* If either opcode is a small character list, set pointers for comparing
@@ -702,7 +749,7 @@ for(;;)
       if ((*xclass_flags & XCL_MAP) == 0)
         {
         /* No bits are set for characters < 256. */
-        if (list[1] == 0) return TRUE;
+        if (list[1] == 0) return (*xclass_flags & XCL_NOT) == 0;
         /* Might be an empty repeat. */
         continue;
         }
@@ -1015,7 +1062,7 @@ for(;;)
       if (chr > 255) break;
       class_bitset = (uint8_t *)
         ((list_ptr == list ? code : base_end) - list_ptr[2]);
-      if ((class_bitset[chr >> 3] & (1 << (chr & 7))) != 0) return FALSE;
+      if ((class_bitset[chr >> 3] & (1u << (chr & 7))) != 0) return FALSE;
       break;
 
 #ifdef SUPPORT_WIDE_CHARS
@@ -1057,7 +1104,6 @@ leaving the remainder of the pattern unpossessified.
 
 Arguments:
   code        points to start of the byte code
-  utf         TRUE in UTF mode
   cb          compile data block
 
 Returns:      0 for success
@@ -1065,28 +1111,31 @@ Returns:      0 for success
 */
 
 int
-PRIV(auto_possessify)(PCRE2_UCHAR *code, BOOL utf, const compile_block *cb)
+PRIV(auto_possessify)(PCRE2_UCHAR *code, const compile_block *cb)
 {
 PCRE2_UCHAR c;
 PCRE2_SPTR end;
 PCRE2_UCHAR *repeat_opcode;
 uint32_t list[8];
 int rec_limit = 1000;  /* Was 10,000 but clang+ASAN uses a lot of stack. */
+BOOL utf = (cb->external_options & PCRE2_UTF) != 0;
+BOOL ucp = (cb->external_options & PCRE2_UCP) != 0;
 
 for (;;)
   {
   c = *code;
 
-  if (c > OP_TABLE_LENGTH) return -1;   /* Something gone wrong */
+  if (c >= OP_TABLE_LENGTH) return -1;   /* Something gone wrong */
 
   if (c >= OP_STAR && c <= OP_TYPEPOSUPTO)
     {
     c -= get_repeat_base(c) - OP_STAR;
     end = (c <= OP_MINUPTO) ?
-      get_chr_property_list(code, utf, cb->fcc, list) : NULL;
+      get_chr_property_list(code, utf, ucp, cb->fcc, list) : NULL;
     list[1] = c == OP_STAR || c == OP_PLUS || c == OP_QUERY || c == OP_UPTO;
 
-    if (end != NULL && compare_opcodes(end, utf, cb, list, end, &rec_limit))
+    if (end != NULL && compare_opcodes(end, utf, ucp, cb, list, end,
+        &rec_limit))
       {
       switch(c)
         {
@@ -1138,11 +1187,11 @@ for (;;)
     if (c >= OP_CRSTAR && c <= OP_CRMINRANGE)
       {
       /* end must not be NULL. */
-      end = get_chr_property_list(code, utf, cb->fcc, list);
+      end = get_chr_property_list(code, utf, ucp, cb->fcc, list);
 
       list[1] = (c & 1) == 0;
 
-      if (compare_opcodes(end, utf, cb, list, end, &rec_limit))
+      if (compare_opcodes(end, utf, ucp, cb, list, end, &rec_limit))
         {
         switch (c)
           {
@@ -1207,6 +1256,7 @@ for (;;)
 #endif
 
     case OP_MARK:
+    case OP_COMMIT_ARG:
     case OP_PRUNE_ARG:
     case OP_SKIP_ARG:
     case OP_THEN_ARG:

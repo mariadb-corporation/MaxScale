@@ -1,13 +1,15 @@
 README file for PCRE2 (Perl-compatible regular expression library)
 ------------------------------------------------------------------
 
-PCRE2 is a re-working of the original PCRE library to provide an entirely new
-API. The latest release of PCRE2 is always available in three alternative
-formats from:
+PCRE2 is a re-working of the original PCRE1 library to provide an entirely new
+API. Since its initial release in 2015, there has been further development of
+the code and it now differs from PCRE1 in more than just the API. There are new
+features and the internals have been improved. The latest release of PCRE2 is
+available in three alternative formats from:
 
-  ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre2-xxx.tar.gz
-  ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre2-xxx.tar.bz2
-  ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre2-xxx.zip
+https://ftp.pcre.org/pub/pcre/pcre2-10.xx.tar.gz
+https://ftp.pcre.org/pub/pcre/pcre2-10.xx.tar.bz2
+https://ftp.pcre.org/pub/pcre/pcre2-10.xx.tar.zip
 
 There is a mailing list for discussion about the development of PCRE (both the
 original and new APIs) at pcre-dev@exim.org. You can access the archives and
@@ -15,8 +17,8 @@ subscribe or manage your subscription here:
 
    https://lists.exim.org/mailman/listinfo/pcre-dev
 
-Please read the NEWS file if you are upgrading from a previous release.
-The contents of this README file are:
+Please read the NEWS file if you are upgrading from a previous release. The
+contents of this README file are:
 
   The PCRE2 APIs
   Documentation for PCRE2
@@ -39,12 +41,12 @@ The PCRE2 APIs
 PCRE2 is written in C, and it has its own API. There are three sets of
 functions, one for the 8-bit library, which processes strings of bytes, one for
 the 16-bit library, which processes strings of 16-bit values, and one for the
-32-bit library, which processes strings of 32-bit values. There are no C++
-wrappers.
+32-bit library, which processes strings of 32-bit values. Unlike PCRE1, there
+are no C++ wrappers.
 
 The distribution does contain a set of C wrapper functions for the 8-bit
 library that are based on the POSIX regular expression API (see the pcre2posix
-man page). These can be found in a library called libpcre2-posix. Note that this
+man page). These are built into a library called libpcre2-posix. Note that this
 just provides a POSIX calling interface to PCRE2; the regular expressions
 themselves still follow Perl syntax and semantics. The POSIX API is restricted,
 and does not give full access to all of PCRE2's facilities.
@@ -53,20 +55,8 @@ The header file for the POSIX-style functions is called pcre2posix.h. The
 official POSIX name is regex.h, but I did not want to risk possible problems
 with existing files of that name by distributing it that way. To use PCRE2 with
 an existing program that uses the POSIX API, pcre2posix.h will have to be
-renamed or pointed at by a link.
-
-If you are using the POSIX interface to PCRE2 and there is already a POSIX
-regex library installed on your system, as well as worrying about the regex.h
-header file (as mentioned above), you must also take care when linking programs
-to ensure that they link with PCRE2's libpcre2-posix library. Otherwise they
-may pick up the POSIX functions of the same name from the other library.
-
-One way of avoiding this confusion is to compile PCRE2 with the addition of
--Dregcomp=PCRE2regcomp (and similarly for the other POSIX functions) to the
-compiler flags (CFLAGS if you are using "configure" -- see below). This has the
-effect of renaming the functions so that the names no longer clash. Of course,
-you have to do the same thing for your applications, or write them using the
-new names.
+renamed or pointed at by a link (or the program modified, of course). See the
+pcre2posix documentation for more details.
 
 
 Documentation for PCRE2
@@ -95,10 +85,9 @@ PCRE2 documentation is supplied in two other forms:
 Building PCRE2 on non-Unix-like systems
 ---------------------------------------
 
-For a non-Unix-like system, please read the comments in the file
-NON-AUTOTOOLS-BUILD, though if your system supports the use of "configure" and
-"make" you may be able to build PCRE2 using autotools in the same way as for
-many Unix-like systems.
+For a non-Unix-like system, please read the file NON-AUTOTOOLS-BUILD, though if
+your system supports the use of "configure" and "make" you may be able to build
+PCRE2 using autotools in the same way as for many Unix-like systems.
 
 PCRE2 can also be configured using CMake, which can be run in various ways
 (command line, GUI, etc). This creates Makefiles, solution files, etc. The file
@@ -172,21 +161,28 @@ library. They are also documented in the pcre2build man page.
   give large performance improvements on certain platforms, add --enable-jit to
   the "configure" command. This support is available only for certain hardware
   architectures. If you try to enable it on an unsupported architecture, there
-  will be a compile time error.
+  will be a compile time error. If in doubt, use --enable-jit=auto, which
+  enables JIT only if the current hardware is supported.
 
-. If you do not want to make use of the support for UTF-8 Unicode character
-  strings in the 8-bit library, UTF-16 Unicode character strings in the 16-bit
-  library, or UTF-32 Unicode character strings in the 32-bit library, you can
-  add --disable-unicode to the "configure" command. This reduces the size of
-  the libraries. It is not possible to configure one library with Unicode
-  support, and another without, in the same configuration.
+. If you are enabling JIT under SELinux environment you may also want to add
+  --enable-jit-sealloc, which enables the use of an executable memory allocator
+  that is compatible with SELinux. Warning: this allocator is experimental!
+  It does not support fork() operation and may crash when no disk space is
+  available. This option has no effect if JIT is disabled.
+
+. If you do not want to make use of the default support for UTF-8 Unicode
+  character strings in the 8-bit library, UTF-16 Unicode character strings in
+  the 16-bit library, or UTF-32 Unicode character strings in the 32-bit
+  library, you can add --disable-unicode to the "configure" command. This
+  reduces the size of the libraries. It is not possible to configure one
+  library with Unicode support, and another without, in the same configuration.
+  It is also not possible to use --enable-ebcdic (see below) with Unicode
+  support, so if this option is set, you must also use --disable-unicode.
 
   When Unicode support is available, the use of a UTF encoding still has to be
   enabled by setting the PCRE2_UTF option at run time or starting a pattern
   with (*UTF). When PCRE2 is compiled with Unicode support, its input can only
-  either be ASCII or UTF-8/16/32, even when running on EBCDIC platforms. It is
-  not possible to use both --enable-unicode and --enable-ebcdic at the same
-  time.
+  either be ASCII or UTF-8/16/32, even when running on EBCDIC platforms.
 
   As well as supporting UTF strings, Unicode support includes support for the
   \P, \p, and \X sequences that recognize Unicode character properties.
@@ -196,13 +192,14 @@ library. They are also documented in the pcre2build man page.
   or starting a pattern with (*UCP).
 
 . You can build PCRE2 to recognize either CR or LF or the sequence CRLF, or any
-  of the preceding, or any of the Unicode newline sequences, as indicating the
-  end of a line. Whatever you specify at build time is the default; the caller
-  of PCRE2 can change the selection at run time. The default newline indicator
-  is a single LF character (the Unix standard). You can specify the default
-  newline indicator by adding --enable-newline-is-cr, --enable-newline-is-lf,
-  --enable-newline-is-crlf, --enable-newline-is-anycrlf, or
-  --enable-newline-is-any to the "configure" command, respectively.
+  of the preceding, or any of the Unicode newline sequences, or the NUL (zero)
+  character as indicating the end of a line. Whatever you specify at build time
+  is the default; the caller of PCRE2 can change the selection at run time. The
+  default newline indicator is a single LF character (the Unix standard). You
+  can specify the default newline indicator by adding --enable-newline-is-cr,
+  --enable-newline-is-lf, --enable-newline-is-crlf,
+  --enable-newline-is-anycrlf, --enable-newline-is-any, or
+  --enable-newline-is-nul to the "configure" command, respectively.
 
 . By default, the sequence \R in a pattern matches any Unicode line ending
   sequence. This is independent of the option specifying what PCRE2 considers
@@ -224,29 +221,41 @@ library. They are also documented in the pcre2build man page.
 
   --with-parens-nest-limit=500
 
-. PCRE2 has a counter that can be set to limit the amount of resources it uses
-  when matching a pattern. If the limit is exceeded during a match, the match
-  fails. The default is ten million. You can change the default by setting, for
-  example,
+. PCRE2 has a counter that can be set to limit the amount of computing resource
+  it uses when matching a pattern. If the limit is exceeded during a match, the
+  match fails. The default is ten million. You can change the default by
+  setting, for example,
 
   --with-match-limit=500000
 
   on the "configure" command. This is just the default; individual calls to
-  pcre2_match() can supply their own value. There is more discussion on the
-  pcre2api man page.
+  pcre2_match() or pcre2_dfa_match() can supply their own value. There is more
+  discussion in the pcre2api man page (search for pcre2_set_match_limit).
 
-. There is a separate counter that limits the depth of recursive function calls
-  during a matching process. This also has a default of ten million, which is
-  essentially "unlimited". You can change the default by setting, for example,
+. There is a separate counter that limits the depth of nested backtracking
+  (pcre2_match()) or nested function calls (pcre2_dfa_match()) during a
+  matching process, which indirectly limits the amount of heap memory that is
+  used, and in the case of pcre2_dfa_match() the amount of stack as well. This
+  counter also has a default of ten million, which is essentially "unlimited".
+  You can change the default by setting, for example,
 
-  --with-match-limit-recursion=500000
+  --with-match-limit-depth=5000
 
-  Recursive function calls use up the runtime stack; running out of stack can
-  cause programs to crash in strange ways. There is a discussion about stack
-  sizes in the pcre2stack man page.
+  There is more discussion in the pcre2api man page (search for
+  pcre2_set_depth_limit).
+
+. You can also set an explicit limit on the amount of heap memory used by
+  the pcre2_match() and pcre2_dfa_match() interpreters:
+
+  --with-heap-limit=500
+
+  The units are kibibytes (units of 1024 bytes). This limit does not apply when
+  the JIT optimization (which has its own memory control features) is used.
+  There is more discussion on the pcre2api man page (search for
+  pcre2_set_heap_limit).
 
 . In the 8-bit library, the default maximum compiled pattern size is around
-  64K bytes. You can increase this by adding --with-link-size=3 to the
+  64 kibibytes. You can increase this by adding --with-link-size=3 to the
   "configure" command. PCRE2 then uses three bytes instead of two for offsets
   to different parts of the compiled pattern. In the 16-bit library,
   --with-link-size=3 is the same as --with-link-size=4, which (in both
@@ -254,29 +263,15 @@ library. They are also documented in the pcre2build man page.
   performance in the 8-bit and 16-bit libraries. In the 32-bit library, the
   link size setting is ignored, as 4-byte offsets are always used.
 
-. You can build PCRE2 so that its internal match() function that is called from
-  pcre2_match() does not call itself recursively. Instead, it uses memory
-  blocks obtained from the heap to save data that would otherwise be saved on
-  the stack. To build PCRE2 like this, use
-
-  --disable-stack-for-recursion
-
-  on the "configure" command. PCRE2 runs more slowly in this mode, but it may
-  be necessary in environments with limited stack sizes. This applies only to
-  the normal execution of the pcre2_match() function; if JIT support is being
-  successfully used, it is not relevant. Equally, it does not apply to
-  pcre2_dfa_match(), which does not use deeply nested recursion. There is a
-  discussion about stack sizes in the pcre2stack man page.
-
 . For speed, PCRE2 uses four tables for manipulating and identifying characters
   whose code point values are less than 256. By default, it uses a set of
   tables for ASCII encoding that is part of the distribution. If you specify
 
   --enable-rebuild-chartables
 
-  a program called dftables is compiled and run in the default C locale when
-  you obey "make". It builds a source file called pcre2_chartables.c. If you do
-  not specify this option, pcre2_chartables.c is created as a copy of
+  a program called pcre2_dftables is compiled and run in the default C locale
+  when you obey "make". It builds a source file called pcre2_chartables.c. If
+  you do not specify this option, pcre2_chartables.c is created as a copy of
   pcre2_chartables.c.dist. See "Character tables" below for further
   information.
 
@@ -302,8 +297,8 @@ library. They are also documented in the pcre2build man page.
   unaddressable. This allows it to detect invalid memory accesses, and is
   mostly useful for debugging PCRE2 itself.
 
-. In environments where the gcc compiler is used and lcov version 1.6 or above
-  is installed, if you specify
+. In environments where the gcc compiler is used and lcov is installed, if you
+  specify
 
   --enable-coverage
 
@@ -317,10 +312,14 @@ library. They are also documented in the pcre2build man page.
 . When JIT support is enabled, pcre2grep automatically makes use of it, unless
   you add --disable-pcre2grep-jit to the "configure" command.
 
-. On non-Windows sytems there is support for calling external scripts during
-  matching in the pcre2grep command via PCRE2's callout facility with string
-  arguments. This support can be disabled by adding --disable-pcre2grep-callout
-  to the "configure" command.
+. There is support for calling external programs during matching in the
+  pcre2grep command, using PCRE2's callout facility with string arguments. This
+  support can be disabled by adding --disable-pcre2grep-callout to the
+  "configure" command. There are two kinds of callout: one that generates
+  output from inbuilt code, and another that calls an external program. The
+  latter has special support for Windows and VMS; otherwise it assumes the
+  existence of the fork() function. This facility can be disabled by adding
+  --disable-pcre2grep-callout-fork to the "configure" command.
 
 . The pcre2grep program currently supports only 8-bit data files, and so
   requires the 8-bit PCRE2 library. It is possible to compile pcre2grep to use
@@ -373,6 +372,15 @@ library. They are also documented in the pcre2build man page.
   tgetflag, or tgoto, this is the problem, and linking with the ncurses library
   should fix it.
 
+. The C99 standard defines formatting modifiers z and t for size_t and
+  ptrdiff_t values, respectively. By default, PCRE2 uses these modifiers in
+  environments other than Microsoft Visual Studio when __STDC_VERSION__ is
+  defined and has a value greater than or equal to 199901L (indicating C99).
+  However, there is at least one environment that claims to be C99 but does not
+  support these modifiers. If --disable-percent-zt is specified, no use is made
+  of the z or t modifiers. Instead or %td or %zu, %lu is used, with a cast for
+  size_t values.
+
 . There is a special option called --enable-fuzz-support for use by people who
   want to run fuzzing tests on PCRE2. At present this applies only to the 8-bit
   library. If set, it causes an extra library called libpcre2-fuzzsupport.a to
@@ -388,6 +396,13 @@ library. They are also documented in the pcre2build man page.
   arguments: if an argument starts with "=" the rest of it is a literal input
   string. Otherwise, it is assumed to be a file name, and the contents of the
   file are the test string.
+
+. Releases before 10.30 could be compiled with --disable-stack-for-recursion,
+  which caused pcre2_match() to use individual blocks on the heap for
+  backtracking instead of recursive function calls (which use the stack). This
+  is now obsolete since pcre2_match() was refactored always to use the heap (in
+  a much more efficient way than before). This option is retained for backwards
+  compatibility, but has no effect other than to output a warning.
 
 The "configure" script builds the following files for the basic C library:
 
@@ -533,11 +548,11 @@ Cross-compiling using autotools
 
 You can specify CC and CFLAGS in the normal way to the "configure" command, in
 order to cross-compile PCRE2 for some other host. However, you should NOT
-specify --enable-rebuild-chartables, because if you do, the dftables.c source
-file is compiled and run on the local host, in order to generate the inbuilt
-character tables (the pcre2_chartables.c file). This will probably not work,
-because dftables.c needs to be compiled with the local compiler, not the cross
-compiler.
+specify --enable-rebuild-chartables, because if you do, the pcre2_dftables.c
+source file is compiled and run on the local host, in order to generate the
+inbuilt character tables (the pcre2_chartables.c file). This will probably not
+work, because pcre2_dftables.c needs to be compiled with the local compiler,
+not the cross compiler.
 
 When --enable-rebuild-chartables is not specified, pcre2_chartables.c is
 created by making a copy of pcre2_chartables.c.dist, which is a default set of
@@ -545,9 +560,10 @@ tables that assumes ASCII code. Cross-compiling with the default tables should
 not be a problem.
 
 If you need to modify the character tables when cross-compiling, you should
-move pcre2_chartables.c.dist out of the way, then compile dftables.c by hand
-and run it on the local host to make a new version of pcre2_chartables.c.dist.
-Then when you cross-compile PCRE2 this new version of the tables will be used.
+move pcre2_chartables.c.dist out of the way, then compile pcre2_dftables.c by
+hand and run it on the local host to make a new version of
+pcre2_chartables.c.dist. See the pcre2build section "Creating character tables
+at build time" for more details.
 
 
 Making new tarballs
@@ -655,31 +671,42 @@ with the perltest.sh script, and test 5 checking PCRE2-specific things.
 Tests 6 and 7 check the pcre2_dfa_match() alternative matching function, in
 non-UTF mode and UTF-mode with Unicode property support, respectively.
 
-Test 8 checks some internal offsets and code size features; it is run only when
-the default "link size" of 2 is set (in other cases the sizes change) and when
-Unicode support is enabled.
+Test 8 checks some internal offsets and code size features, but it is run only
+when Unicode support is enabled. The output is different in 8-bit, 16-bit, and
+32-bit modes and for different link sizes, so there are different output files
+for each mode and link size.
 
 Tests 9 and 10 are run only in 8-bit mode, and tests 11 and 12 are run only in
 16-bit and 32-bit modes. These are tests that generate different output in
 8-bit mode. Each pair are for general cases and Unicode support, respectively.
+
 Test 13 checks the handling of non-UTF characters greater than 255 by
 pcre2_dfa_match() in 16-bit and 32-bit modes.
 
-Test 14 contains a number of tests that must not be run with JIT. They check,
+Test 14 contains some special UTF and UCP tests that give different output for
+different code unit widths.
+
+Test 15 contains a number of tests that must not be run with JIT. They check,
 among other non-JIT things, the match-limiting features of the intepretive
 matcher.
 
-Test 15 is run only when JIT support is not available. It checks that an
+Test 16 is run only when JIT support is not available. It checks that an
 attempt to use JIT has the expected behaviour.
 
-Test 16 is run only when JIT support is available. It checks JIT complete and
+Test 17 is run only when JIT support is available. It checks JIT complete and
 partial modes, match-limiting under JIT, and other JIT-specific features.
 
-Tests 17 and 18 are run only in 8-bit mode. They check the POSIX interface to
+Tests 18 and 19 are run only in 8-bit mode. They check the POSIX interface to
 the 8-bit library, without and with Unicode support, respectively.
 
-Test 19 checks the serialization functions by writing a set of compiled
+Test 20 checks the serialization functions by writing a set of compiled
 patterns to a file, and then reloading and checking them.
+
+Tests 21 and 22 test \C support when the use of \C is not locked out, without
+and with UTF support, respectively. Test 23 tests \C when it is locked out.
+
+Tests 24 and 25 test the experimental pattern conversion functions, without and
+with UTF support, respectively.
 
 
 Character tables
@@ -695,43 +722,51 @@ compile context.
 The source file called pcre2_chartables.c contains the default set of tables.
 By default, this is created as a copy of pcre2_chartables.c.dist, which
 contains tables for ASCII coding. However, if --enable-rebuild-chartables is
-specified for ./configure, a different version of pcre2_chartables.c is built
-by the program dftables (compiled from dftables.c), which uses the ANSI C
+specified for ./configure, a new version of pcre2_chartables.c is built by the
+program pcre2_dftables (compiled from pcre2_dftables.c), which uses the ANSI C
 character handling functions such as isalnum(), isalpha(), isupper(),
 islower(), etc. to build the table sources. This means that the default C
-locale which is set for your system will control the contents of these default
+locale that is set for your system will control the contents of these default
 tables. You can change the default tables by editing pcre2_chartables.c and
 then re-building PCRE2. If you do this, you should take care to ensure that the
 file does not get automatically re-generated. The best way to do this is to
 move pcre2_chartables.c.dist out of the way and replace it with your customized
 tables.
 
-When the dftables program is run as a result of --enable-rebuild-chartables,
-it uses the default C locale that is set on your system. It does not pay
-attention to the LC_xxx environment variables. In other words, it uses the
-system's default locale rather than whatever the compiling user happens to have
-set. If you really do want to build a source set of character tables in a
-locale that is specified by the LC_xxx variables, you can run the dftables
-program by hand with the -L option. For example:
+When the pcre2_dftables program is run as a result of specifying
+--enable-rebuild-chartables, it uses the default C locale that is set on your
+system. It does not pay attention to the LC_xxx environment variables. In other
+words, it uses the system's default locale rather than whatever the compiling
+user happens to have set. If you really do want to build a source set of
+character tables in a locale that is specified by the LC_xxx variables, you can
+run the pcre2_dftables program by hand with the -L option. For example:
 
-  ./dftables -L pcre2_chartables.c.special
+  ./pcre2_dftables -L pcre2_chartables.c.special
 
-The first two 256-byte tables provide lower casing and case flipping functions,
-respectively. The next table consists of three 32-byte bit maps which identify
-digits, "word" characters, and white space, respectively. These are used when
-building 32-byte bit maps that represent character classes for code points less
-than 256. The final 256-byte table has bits indicating various character types,
-as follows:
+The second argument names the file where the source code for the tables is
+written. The first two 256-byte tables provide lower casing and case flipping
+functions, respectively. The next table consists of a number of 32-byte bit
+maps which identify certain character classes such as digits, "word"
+characters, white space, etc. These are used when building 32-byte bit maps
+that represent character classes for code points less than 256. The final
+256-byte table has bits indicating various character types, as follows:
 
     1   white space character
     2   letter
-    4   decimal digit
-    8   hexadecimal digit
+    4   lower case letter
+    8   decimal digit
    16   alphanumeric or '_'
-  128   regular expression metacharacter or binary zero
 
-You should not alter the set of characters that contain the 128 bit, as that
-will cause PCRE2 to malfunction.
+You can also specify -b (with or without -L) when running pcre2_dftables. This
+causes the tables to be written in binary instead of as source code. A set of
+binary tables can be loaded into memory by an application and passed to
+pcre2_compile() in the same way as tables created dynamically by calling
+pcre2_maketables(). The tables are just a string of bytes, independent of
+hardware characteristics such as endianness. This means they can be bundled
+with an application that runs in different environments, to ensure consistent
+behaviour.
+
+See also the pcre2build section "Creating character tables at build time".
 
 
 File manifest
@@ -742,7 +777,7 @@ The distribution should contain the files listed below.
 (A) Source files for the PCRE2 library functions and their headers are found in
     the src directory:
 
-  src/dftables.c           auxiliary program for building pcre2_chartables.c
+  src/pcre2_dftables.c     auxiliary program for building pcre2_chartables.c
                            when --enable-rebuild-chartables is specified
 
   src/pcre2_chartables.c.dist  a default set of character tables that assume
@@ -754,8 +789,10 @@ The distribution should contain the files listed below.
   src/pcre2_compile.c      )
   src/pcre2_config.c       )
   src/pcre2_context.c      )
+  src/pcre2_convert.c      )
   src/pcre2_dfa_match.c    )
   src/pcre2_error.c        )
+  src/pcre2_extuni.c       )
   src/pcre2_find_bracket.c )
   src/pcre2_jit_compile.c  )
   src/pcre2_jit_match.c    ) sources for the functions in the library,
@@ -766,6 +803,7 @@ The distribution should contain the files listed below.
   src/pcre2_newline.c      )
   src/pcre2_ord2utf.c      )
   src/pcre2_pattern_info.c )
+  src/pcre2_script_run.c   )
   src/pcre2_serialize.c    )
   src/pcre2_string_utils.c )
   src/pcre2_study.c        )
@@ -793,7 +831,6 @@ The distribution should contain the files listed below.
   src/pcre2demo.c          simple demonstration of coding calls to PCRE2
   src/pcre2grep.c          source of a grep utility that uses PCRE2
   src/pcre2test.c          comprehensive test program
-  src/pcre2_printint.c     part of pcre2test
   src/pcre2_jit_test.c     JIT test program
 
 (C) Auxiliary files:
@@ -858,12 +895,12 @@ The distribution should contain the files listed below.
 
 (E) Auxiliary files for building PCRE2 "by hand"
 
-  pcre2.h.generic         ) a version of the public PCRE2 header file
+  src/pcre2.h.generic     ) a version of the public PCRE2 header file
                           )   for use in non-"configure" environments
-  config.h.generic        ) a version of config.h for use in non-"configure"
+  src/config.h.generic    ) a version of config.h for use in non-"configure"
                           )   environments
 
 Philip Hazel
-Email local part: ph10
-Email domain: cam.ac.uk
-Last updated: 01 November 2016
+Email local part: Philip.Hazel
+Email domain: gmail.com
+Last updated: 04 December 2020

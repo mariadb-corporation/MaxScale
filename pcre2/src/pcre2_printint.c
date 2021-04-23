@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2016 University of Cambridge
+          New API code Copyright (c) 2016-2019 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -340,7 +340,7 @@ for(;;)
       case OP_TABLE_LENGTH +
         ((sizeof(OP_names)/sizeof(const char *) == OP_TABLE_LENGTH) &&
         (sizeof(OP_lengths) == OP_TABLE_LENGTH)):
-      break;
+      return;
 /* ========================================================================== */
 
     case OP_END:
@@ -392,8 +392,10 @@ for(;;)
     case OP_ASSERT_NOT:
     case OP_ASSERTBACK:
     case OP_ASSERTBACK_NOT:
+    case OP_ASSERT_NA:
+    case OP_ASSERTBACK_NA:
     case OP_ONCE:
-    case OP_ONCE_NC:
+    case OP_SCRIPT_RUN:
     case OP_COND:
     case OP_SCOND:
     case OP_REVERSE:
@@ -673,17 +675,18 @@ for(;;)
         map = (uint8_t *)ccode;
         if (invertmap)
           {
-          for (i = 0; i < 32; i++) inverted_map[i] = ~map[i];
+          /* Using 255 ^ instead of ~ avoids clang sanitize warning. */
+          for (i = 0; i < 32; i++) inverted_map[i] = 255 ^ map[i];
           map = inverted_map;
           }
 
         for (i = 0; i < 256; i++)
           {
-          if ((map[i/8] & (1 << (i&7))) != 0)
+          if ((map[i/8] & (1u << (i&7))) != 0)
             {
             int j;
             for (j = i+1; j < 256; j++)
-              if ((map[j/8] & (1 << (j&7))) == 0) break;
+              if ((map[j/8] & (1u << (j&7))) == 0) break;
             if (i == '-' || i == ']') fprintf(f, "\\");
             if (PRINTABLE(i)) fprintf(f, "%c", i);
               else fprintf(f, "\\x%02x", i);
@@ -800,6 +803,7 @@ for(;;)
     break;
 
     case OP_MARK:
+    case OP_COMMIT_ARG:
     case OP_PRUNE_ARG:
     case OP_SKIP_ARG:
     case OP_THEN_ARG:

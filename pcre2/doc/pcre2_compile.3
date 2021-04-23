@@ -1,4 +1,4 @@
-.TH PCRE2_COMPILE 3 "22 April 2015" "PCRE2 10.20"
+.TH PCRE2_COMPILE 3 "23 May 2019" "PCRE2 10.34"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -25,27 +25,36 @@ arguments are:
   \fIerroffset\fP     Where to put an error offset
   \fIccontext\fP      Pointer to a compile context or NULL
 .sp
-The length of the string and any error offset that is returned are in code
-units, not characters. A compile context is needed only if you want to change
+The length of the pattern and any error offset that is returned are in code
+units, not characters. A compile context is needed only if you want to provide
+custom memory allocation functions, or to provide an external function for
+system stack size checking, or to change one or more of these parameters:
 .sp
-  What \eR matches (Unicode newlines or CR, LF, CRLF only)
-  PCRE2's character tables
-  The newline character sequence
-  The compile time nested parentheses limit
+  What \eR matches (Unicode newlines, or CR, LF, CRLF only);
+  PCRE2's character tables;
+  The newline character sequence;
+  The compile time nested parentheses limit;
+  The maximum pattern length (in code units) that is allowed.
+  The additional options bits (see pcre2_set_compile_extra_options())
 .sp
-or provide an external function for stack size checking. The option bits are:
+The option bits are:
 .sp
   PCRE2_ANCHORED           Force pattern anchoring
+  PCRE2_ALLOW_EMPTY_CLASS  Allow empty classes
   PCRE2_ALT_BSUX           Alternative handling of \eu, \eU, and \ex
   PCRE2_ALT_CIRCUMFLEX     Alternative handling of ^ in multiline mode
+  PCRE2_ALT_VERBNAMES      Process backslashes in verb names
   PCRE2_AUTO_CALLOUT       Compile automatic callouts
   PCRE2_CASELESS           Do caseless matching
   PCRE2_DOLLAR_ENDONLY     $ not to match newline at end
   PCRE2_DOTALL             . matches anything including NL
   PCRE2_DUPNAMES           Allow duplicate names for subpatterns
+  PCRE2_ENDANCHORED        Pattern can match only at end of subject
   PCRE2_EXTENDED           Ignore white space and # comments
   PCRE2_FIRSTLINE          Force matching to be before newline
-  PCRE2_MATCH_UNSET_BACKREF  Match unset back references
+  PCRE2_LITERAL            Pattern characters are all literal
+  PCRE2_MATCH_INVALID_UTF  Enable support for matching invalid UTF
+  PCRE2_MATCH_UNSET_BACKREF  Match unset backreferences
   PCRE2_MULTILINE          ^ and $ match newlines within data
   PCRE2_NEVER_BACKSLASH_C  Lock out the use of \eC in patterns
   PCRE2_NEVER_UCP          Lock out PCRE2_UCP, e.g. via (*UCP)
@@ -59,19 +68,27 @@ or provide an external function for stack size checking. The option bits are:
                              (only relevant if PCRE2_UTF is set)
   PCRE2_UCP                Use Unicode properties for \ed, \ew, etc.
   PCRE2_UNGREEDY           Invert greediness of quantifiers
+  PCRE2_USE_OFFSET_LIMIT   Enable offset limit for unanchored matching
   PCRE2_UTF                Treat pattern and subjects as UTF strings
 .sp
-PCRE2 must be built with Unicode support in order to use PCRE2_UTF, PCRE2_UCP
-and related options.
+PCRE2 must be built with Unicode support (the default) in order to use
+PCRE2_UTF, PCRE2_UCP and related options.
 .P
-The yield of the function is a pointer to a private data structure that
+Additional options may be set in the compile context via the
+.\" HREF
+\fBpcre2_set_compile_extra_options\fP
+.\"
+function.
+.P
+The yield of this function is a pointer to a private data structure that
 contains the compiled pattern, or NULL if an error was detected.
 .P
-There is a complete description of the PCRE2 native API in the
+There is a complete description of the PCRE2 native API, with more detail on
+each option, in the
 .\" HREF
 \fBpcre2api\fP
 .\"
-page and a description of the POSIX API in the
+page, and a description of the POSIX API in the
 .\" HREF
 \fBpcre2posix\fP
 .\"

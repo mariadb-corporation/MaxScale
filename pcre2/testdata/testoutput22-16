@@ -4,12 +4,12 @@
 # in some widths and not in others.
 
 /ab\Cde/utf,info
-Capturing subpattern count = 0
+Capture group count = 0
 Contains \C
 Options: utf
 First code unit = 'a'
 Last code unit = 'e'
-Subject length lower bound = 0
+Subject length lower bound = 2
     abXde
  0: abXde
 
@@ -165,5 +165,18 @@ No match
 \= Expect no match in 8-bit mode
     a\x{100}b
  0: a\x{100}b
+
+/^ab\C/utf,no_start_optimize
+\= Expect no match - tests \C at end of subject
+    ab
+No match
+
+/\C[^\v]+\x80/utf
+    [AΏBŀC]
+No match
+
+/\C[^\d]+\x80/utf
+    [AΏBŀC]
+No match
 
 # End of testinput22

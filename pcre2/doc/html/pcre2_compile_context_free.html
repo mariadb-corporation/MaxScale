@@ -27,7 +27,8 @@ DESCRIPTION
 <P>
 This function frees the memory occupied by a compile context, using the memory
 freeing function from the general context with which it was created, or
-<b>free()</b> if that was not set.
+<b>free()</b> if that was not set. If the argument is NULL, the function returns
+immediately without doing anything.
 </P>
 <P>
 There is a complete description of the PCRE2 native API in the

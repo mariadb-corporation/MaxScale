@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2016 University of Cambridge
+          New API code Copyright (c) 2016-2019 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,12 @@ POSSIBILITY OF SUCH DAMAGE.
 
 
 /* This module is a wrapper that provides a POSIX API to the underlying PCRE2
-functions. */
+functions. The operative functions are called pcre2_regcomp(), etc., with
+wrappers that use the plain POSIX names. In addition, pcre2posix.h defines the
+POSIX names as macros for the pcre2_xxx functions, so any program that includes
+it and uses the POSIX names will call the base functions directly. This makes
+it easier for an application to be sure it gets the PCRE2 versions in the
+presence of other POSIX regex libraries. */
 
 
 #ifdef HAVE_CONFIG_H
@@ -93,7 +98,7 @@ information; I know nothing about MSVC myself). For example, something like
 
   void __cdecl function(....)
 
-might be needed. In order so make this easy, all the exported functions have
+might be needed. In order to make this easy, all the exported functions have
 PCRE2_CALL_CONVENTION just before their names. It is rarely needed; if not
 set, we ensure here that it has no effect. */
 
@@ -142,6 +147,7 @@ static const int eint2[] = {
   32, REG_INVARG,  /* this version of PCRE2 does not have Unicode support */
   37, REG_EESCAPE, /* PCRE2 does not support \L, \l, \N{name}, \U, or \u */
   56, REG_INVARG,  /* internal error: unknown newline setting */
+  92, REG_INVARG,  /* invalid option bits with PCRE2_LITERAL */
 };
 
 /* Table of texts corresponding to POSIX error codes */
@@ -169,13 +175,59 @@ static const char *const pstring[] = {
 
 
 
+/*************************************************
+*      Wrappers with traditional POSIX names     *
+*************************************************/
+
+/* Keep defining them to preseve the ABI for applications linked to the pcre2
+POSIX library before these names were changed into macros in pcre2posix.h.
+This also ensures that the POSIX names are callable from languages that do not
+include pcre2posix.h. It is vital to #undef the macro definitions from
+pcre2posix.h! */
+
+#undef regerror
+PCRE2POSIX_EXP_DECL size_t regerror(int, const regex_t *, char *, size_t);
+PCRE2POSIX_EXP_DEFN size_t PCRE2_CALL_CONVENTION
+regerror(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size)
+{
+return pcre2_regerror(errcode, preg, errbuf, errbuf_size);
+}
+
+#undef regfree
+PCRE2POSIX_EXP_DECL void regfree(regex_t *);
+PCRE2POSIX_EXP_DEFN void PCRE2_CALL_CONVENTION
+regfree(regex_t *preg)
+{
+pcre2_regfree(preg);
+}
+
+#undef regcomp
+PCRE2POSIX_EXP_DECL int regcomp(regex_t *, const char *, int);
+PCRE2POSIX_EXP_DEFN int PCRE2_CALL_CONVENTION
+regcomp(regex_t *preg, const char *pattern, int cflags)
+{
+return pcre2_regcomp(preg, pattern, cflags);
+}
+
+#undef regexec
+PCRE2POSIX_EXP_DECL int regexec(const regex_t *, const char *, size_t,
+  regmatch_t *, int);
+PCRE2POSIX_EXP_DEFN int PCRE2_CALL_CONVENTION
+regexec(const regex_t *preg, const char *string, size_t nmatch,
+  regmatch_t pmatch[], int eflags)
+{
+return pcre2_regexec(preg, string, nmatch, pmatch, eflags);
+}
+
+
 
 /*************************************************
 *          Translate error code to string        *
 *************************************************/
 
 PCRE2POSIX_EXP_DEFN size_t PCRE2_CALL_CONVENTION
-regerror(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size)
+pcre2_regerror(int errcode, const regex_t *preg, char *errbuf,
+  size_t errbuf_size)
 {
 int used;
 const char *message;
@@ -198,18 +250,16 @@ return used + 1;
 
 
 
-
 /*************************************************
 *           Free store held by a regex           *
 *************************************************/
 
 PCRE2POSIX_EXP_DEFN void PCRE2_CALL_CONVENTION
-regfree(regex_t *preg)
+pcre2_regfree(regex_t *preg)
 {
 pcre2_match_data_free(preg->re_match_data);
 pcre2_code_free(preg->re_pcre2_code);
 }
-
 
 
 
@@ -228,23 +278,28 @@ Returns:      0 on success
 */
 
 PCRE2POSIX_EXP_DEFN int PCRE2_CALL_CONVENTION
-regcomp(regex_t *preg, const char *pattern, int cflags)
+pcre2_regcomp(regex_t *preg, const char *pattern, int cflags)
 {
 PCRE2_SIZE erroffset;
+PCRE2_SIZE patlen;
 int errorcode;
 int options = 0;
 int re_nsub = 0;
 
+patlen = ((cflags & REG_PEND) != 0)? (PCRE2_SIZE)(preg->re_endp - pattern) :
+  PCRE2_ZERO_TERMINATED;
+
 if ((cflags & REG_ICASE) != 0)    options |= PCRE2_CASELESS;
 if ((cflags & REG_NEWLINE) != 0)  options |= PCRE2_MULTILINE;
 if ((cflags & REG_DOTALL) != 0)   options |= PCRE2_DOTALL;
+if ((cflags & REG_NOSPEC) != 0)   options |= PCRE2_LITERAL;
 if ((cflags & REG_UTF) != 0)      options |= PCRE2_UTF;
 if ((cflags & REG_UCP) != 0)      options |= PCRE2_UCP;
 if ((cflags & REG_UNGREEDY) != 0) options |= PCRE2_UNGREEDY;
 
 preg->re_cflags = cflags;
-preg->re_pcre2_code = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED,
-   options, &errorcode, &erroffset, NULL);
+preg->re_pcre2_code = pcre2_compile((PCRE2_SPTR)pattern, patlen, options,
+  &errorcode, &erroffset, NULL);
 preg->re_erroffset = erroffset;
 
 if (preg->re_pcre2_code == NULL)
@@ -259,7 +314,7 @@ if (preg->re_pcre2_code == NULL)
 
   if (errorcode < (int)(sizeof(eint1)/sizeof(const int)))
     return eint1[errorcode];
-  for (i = 0; i < sizeof(eint2)/(2*sizeof(const int)); i += 2)
+  for (i = 0; i < sizeof(eint2)/sizeof(const int); i += 2)
     if (errorcode == eint2[i]) return eint2[i+1];
   return REG_BADPAT;
   }
@@ -268,6 +323,7 @@ if (preg->re_pcre2_code == NULL)
   PCRE2_INFO_CAPTURECOUNT, &re_nsub);
 preg->re_nsub = (size_t)re_nsub;
 preg->re_match_data = pcre2_match_data_create(re_nsub + 1, NULL);
+preg->re_erroffset = (size_t)(-1);  /* No meaning after successful compile */
 
 if (preg->re_match_data == NULL)
   {
@@ -290,7 +346,7 @@ for each match. If REG_NOSUB was specified at compile time, the nmatch and
 pmatch arguments are ignored, and the only result is yes/no/error. */
 
 PCRE2POSIX_EXP_DEFN int PCRE2_CALL_CONVENTION
-regexec(const regex_t *preg, const char *string, size_t nmatch,
+pcre2_regexec(const regex_t *preg, const char *string, size_t nmatch,
   regmatch_t pmatch[], int eflags)
 {
 int rc, so, eo;
@@ -300,8 +356,6 @@ pcre2_match_data *md = (pcre2_match_data *)preg->re_match_data;
 if ((eflags & REG_NOTBOL) != 0) options |= PCRE2_NOTBOL;
 if ((eflags & REG_NOTEOL) != 0) options |= PCRE2_NOTEOL;
 if ((eflags & REG_NOTEMPTY) != 0) options |= PCRE2_NOTEMPTY;
-
-((regex_t *)preg)->re_erroffset = (size_t)(-1);  /* Only has meaning after compile */
 
 /* When REG_NOSUB was specified, or if no vector has been passed in which to
 put captured strings, ensure that nmatch is zero. This will stop any attempt to
@@ -338,8 +392,10 @@ if (rc >= 0)
   if ((size_t)rc > nmatch) rc = (int)nmatch;
   for (i = 0; i < (size_t)rc; i++)
     {
-    pmatch[i].rm_so = ovector[i*2];
-    pmatch[i].rm_eo = ovector[i*2+1];
+    pmatch[i].rm_so = (ovector[i*2] == PCRE2_UNSET)? -1 :
+      (int)(ovector[i*2] + so);
+    pmatch[i].rm_eo = (ovector[i*2+1] == PCRE2_UNSET)? -1 :
+      (int)(ovector[i*2+1] + so);
     }
   for (; i < nmatch; i++) pmatch[i].rm_so = pmatch[i].rm_eo = -1;
   return 0;

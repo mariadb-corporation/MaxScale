@@ -38,7 +38,11 @@ passed to a matching function. The arguments of this function are:
 </PRE>
 </P>
 <P>
-If <i>callback</i> is NULL and <i>callback_data</i> is NULL, an internal 32K
+If <i>mcontext</i> is NULL, the function returns immediately, without doing
+anything.
+</P>
+<P>
+If <i>callback</i> is NULL and <i>callback_data</i> is NULL, an internal 32KiB
 block on the machine stack is used.
 </P>
 <P>
@@ -49,8 +53,9 @@ If <i>callback</i> is NULL and <i>callback_data</i> is not NULL,
 <P>
 If <i>callback</i> not NULL, it is called with <i>callback_data</i> as an
 argument at the start of matching, in order to set up a JIT stack. If the
-result is NULL, the internal 32K stack is used; otherwise the return value must
-be a valid JIT stack, the result of calling <b>pcre2_jit_stack_create()</b>.
+result is NULL, the internal 32KiB stack is used; otherwise the return value
+must be a valid JIT stack, the result of calling
+<b>pcre2_jit_stack_create()</b>.
 </P>
 <P>
 You may safely use the same JIT stack for multiple patterns, as long as they

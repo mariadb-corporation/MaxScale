@@ -3,14 +3,14 @@
 # are different without JIT.
 
 /abc/I,jit,jitverify
-Capturing subpattern count = 0
+Capture group count = 0
 First code unit = 'a'
 Last code unit = 'c'
 Subject length lower bound = 3
 JIT support is not available in this version of PCRE2
 
 /a*/I
-Capturing subpattern count = 0
+Capture group count = 0
 May match empty string
 Subject length lower bound = 0
 

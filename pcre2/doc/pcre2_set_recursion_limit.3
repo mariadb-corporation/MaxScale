@@ -1,4 +1,4 @@
-.TH PCRE2_SET_RECURSION_LIMIT 3 "24 October 2014" "PCRE2 10.00"
+.TH PCRE2_SET_RECURSION_LIMIT 3 "25 March 2017" "PCRE2 10.30"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -14,8 +14,8 @@ PCRE2 - Perl-compatible regular expressions (revised API)
 .SH DESCRIPTION
 .rs
 .sp
-This function sets the recursion limit field in a match context. The result is
-always zero.
+This function is obsolete and should not be used in new code. Use
+\fBpcre2_set_depth_limit()\fP instead.
 .P
 There is a complete description of the PCRE2 native API in the
 .\" HREF

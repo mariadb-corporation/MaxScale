@@ -18,3 +18,17 @@ RC=0
 22:6,2
 22:8,2
 RC=0
+---------------------------- Test U4 ------------------------------
+pcre2grep: pcre2_match() gave error -22 while matching this text:
+
+Aက�CD Z
+
+UTF-8 error: isolated byte with 0x80 bit set at offset 4
+
+RC=1
+---------------------------- Test U5 ------------------------------
+CD Z
+RC=0
+---------------------------- Test U6 -----------------------------
+=ǓǤ=
+RC=0

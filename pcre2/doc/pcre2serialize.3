@@ -1,4 +1,4 @@
-.TH PCRE2SERIALIZE 3 "24 May 2016" "PCRE2 10.22"
+.TH PCRE2SERIALIZE 3 "27 June 2018" "PCRE2 10.32"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "SAVING AND RE-USING PRECOMPILED PCRE2 PATTERNS"
@@ -28,6 +28,14 @@ the same code unit width, and must also have the same endianness, pointer width
 and PCRE2_SIZE type. For example, patterns compiled on a 32-bit system using
 PCRE2's 16-bit library cannot be reloaded on a 64-bit system, nor can they be
 reloaded using the 8-bit library.
+.P
+Note that "serialization" in PCRE2 does not convert compiled patterns to an
+abstract format like Java or .NET serialization. The serialized output is
+really just a bytecode dump, which is why it can only be reloaded in the same
+environment as the one that created it. Hence the restrictions mentioned above.
+Applications that are not statically linked with a fixed version of PCRE2 must
+be prepared to recompile patterns from their sources, in order to be immune to
+PCRE2 upgrades.
 .
 .
 .SH "SECURITY CONCERNS"
@@ -37,17 +45,20 @@ The facility for saving and restoring compiled patterns is intended for use
 within individual applications. As such, the data supplied to
 \fBpcre2_serialize_decode()\fP is expected to be trusted data, not data from
 arbitrary external sources. There is only some simple consistency checking, not
-complete validation of what is being re-loaded.
+complete validation of what is being re-loaded. Corrupted data may cause
+undefined results. For example, if the length field of a pattern in the
+serialized data is corrupted, the deserializing code may read beyond the end of
+the byte stream that is passed to it.
 .
 .
 .SH "SAVING COMPILED PATTERNS"
 .rs
 .sp
-Before compiled patterns can be saved they must be serialized, that is,
-converted to a stream of bytes. A single byte stream may contain any number of
-compiled patterns, but they must all use the same character tables. A single
-copy of the tables is included in the byte stream (its size is 1088 bytes). For
-more details of character tables, see the
+Before compiled patterns can be saved they must be serialized, which in PCRE2
+means converting the pattern to a stream of bytes. A single byte stream may
+contain any number of compiled patterns, but they must all use the same
+character tables. A single copy of the tables is included in the byte stream
+(its size is 1088 bytes). For more details of character tables, see the
 .\" HTML <a href="pcre2api.html#localesupport">
 .\" </a>
 section on locale support
@@ -103,7 +114,9 @@ non-binary data, be sure that the file is opened for binary output.
 Serializing a set of patterns leaves the original data untouched, so they can
 still be used for matching. Their memory must eventually be freed in the usual
 way by calling \fBpcre2_code_free()\fP. When you have finished with the byte
-stream, it too must be freed by calling \fBpcre2_serialize_free()\fP.
+stream, it too must be freed by calling \fBpcre2_serialize_free()\fP. If this
+function is called with a NULL argument, it returns immediately without doing
+anything.
 .
 .
 .SH "RE-USING PRECOMPILED PATTERNS"
@@ -181,6 +194,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 24 May 2016
-Copyright (c) 1997-2016 University of Cambridge.
+Last updated: 27 June 2018
+Copyright (c) 1997-2018 University of Cambridge.
 .fi

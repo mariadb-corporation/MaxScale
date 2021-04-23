@@ -1030,7 +1030,7 @@ No match
 No match
      
 /a\Rb/I,bsr=anycrlf,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 \R matches CR, LF, or CRLF
 First code unit = 'a'
@@ -1049,7 +1049,7 @@ No match
 No match
 
 /a\Rb/I,bsr=unicode,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 \R matches any Unicode newline
 First code unit = 'a'
@@ -1067,7 +1067,7 @@ Subject length lower bound = 3
  0: a\x{0b}b
     
 /a\R?b/I,bsr=anycrlf,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 \R matches CR, LF, or CRLF
 First code unit = 'a'
@@ -1086,7 +1086,7 @@ No match
 No match
 
 /a\R?b/I,bsr=unicode,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 \R matches any Unicode newline
 First code unit = 'a'

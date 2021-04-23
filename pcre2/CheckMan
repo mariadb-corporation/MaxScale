@@ -16,6 +16,7 @@ while (scalar(@ARGV) > 0)
   
   while (<IN>)
     {  
+    $count = 0;
     $line++; 
     if (/^\s*$/)
       {
@@ -50,14 +51,24 @@ while (scalar(@ARGV) > 0)
         $yield = 1;
         }
       }
-    else
+    elsif (/\\[^ef]|\\f[^IBP]/)
       {
-      if (/\\[^ef]|\\f[^IBP]/)
-        {
-        printf "Bad backslash in line $line of $file\n";  
-        $yield = 1; 
-        } 
-      }   
+      printf "Bad backslash in line $line of $file\n";
+      $yield = 1;
+      }
+    while (/\\f[BI]/g)
+      {
+      $count++;
+      }
+    while (/\\fP/g)
+      {
+      $count--;
+      }
+    if ($count != 0)
+      {
+      printf "Mismatching formatting in line $line of $file\n";
+      $yield = 1;
+      }
     }
      
   close(IN);   

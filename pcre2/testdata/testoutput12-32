@@ -18,7 +18,7 @@
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{ffff}
 Subject length lower bound = 1
@@ -30,7 +30,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{10000}
 Subject length lower bound = 1
@@ -42,7 +42,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Subject length lower bound = 1
@@ -54,7 +54,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{1000}
 Subject length lower bound = 1
@@ -66,7 +66,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{10000}
 Subject length lower bound = 1
@@ -78,7 +78,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100000}
 Subject length lower bound = 1
@@ -90,7 +90,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{10ffff}
 Subject length lower bound = 1
@@ -102,7 +102,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \xff
 Subject length lower bound = 1
@@ -114,7 +114,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Subject length lower bound = 1
@@ -126,7 +126,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x80
 Subject length lower bound = 1
@@ -138,7 +138,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \xff
 Subject length lower bound = 1
@@ -150,7 +150,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{d55c}
 Last code unit = \x{c5b4}
@@ -165,7 +165,7 @@ Subject length lower bound = 3
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{65e5}
 Last code unit = \x{8a9e}
@@ -180,7 +180,7 @@ Subject length lower bound = 3
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x80
 Subject length lower bound = 1
@@ -192,7 +192,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x84
 Subject length lower bound = 1
@@ -204,7 +204,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{104}
 Subject length lower bound = 1
@@ -216,7 +216,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{861}
 Subject length lower bound = 1
@@ -228,7 +228,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{212ab}
 Subject length lower bound = 1
@@ -240,7 +240,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x09 \x0a 
   \x0b \x0c \x0d \x0e \x0f \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 
@@ -276,7 +276,7 @@ No match
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Last code unit = \x{100}
@@ -295,7 +295,7 @@ Subject length lower bound = 3
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 Starting code units: x \xff 
 Subject length lower bound = 1
@@ -312,7 +312,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 Starting code units: a x \xff 
 Subject length lower bound = 1
@@ -329,7 +329,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 Starting code units: a x \xff 
 Subject length lower bound = 1
@@ -347,7 +347,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 Starting code units: x \xff 
 Subject length lower bound = 1
@@ -359,7 +359,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Subject length lower bound = 1
@@ -372,7 +372,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'a'
 Last code unit = \x{100}
@@ -386,7 +386,7 @@ Subject length lower bound = 2
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'a'
 Last code unit = \x{101}
@@ -399,7 +399,7 @@ Subject length lower bound = 3
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Subject length lower bound = 1
 
 /[\x{100}]/IB,utf
@@ -409,7 +409,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Subject length lower bound = 1
@@ -427,7 +427,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \xff
 Subject length lower bound = 1
@@ -441,7 +441,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Subject length lower bound = 1
 
@@ -456,14 +456,14 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 First code unit = \x{100}
 Last code unit = 'z'
 Subject length lower bound = 7
 
 /\777/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{1ff}
 Subject length lower bound = 1
@@ -480,7 +480,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Last code unit = \x{200}
@@ -494,7 +494,7 @@ Subject length lower bound = 2
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = \x{100}
 Last code unit = 'X'
@@ -538,11 +538,11 @@ No match
 Failed: error -27: UTF-32 error: code points 0xd800-0xdfff are not defined at offset 2
 
 /(*UTF16)\x{11234}/
-Failed: error 160 at offset 5: (*VERB) not recognized or malformed
+Failed: error 160 at offset 7: (*VERB) not recognized or malformed
   abcd\x{11234}pqr
 
 /(*UTF)\x{11234}/I
-Capturing subpattern count = 0
+Capture group count = 0
 Compile options: <none>
 Overall options: utf
 First code unit = \x{11234}
@@ -559,10 +559,10 @@ Failed: error 160 at offset 5: (*VERB) not recognized or malformed
   abcd\x{11234}pqr
 
 /(*CRLF)(*UTF16)(*BSR_UNICODE)a\Rb/I
-Failed: error 160 at offset 12: (*VERB) not recognized or malformed
+Failed: error 160 at offset 14: (*VERB) not recognized or malformed
 
 /(*CRLF)(*UTF32)(*BSR_UNICODE)a\Rb/I
-Capturing subpattern count = 0
+Capture group count = 0
 Compile options: <none>
 Overall options: utf
 \R matches any Unicode newline
@@ -572,7 +572,7 @@ Last code unit = 'b'
 Subject length lower bound = 3
 
 /\h/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x09 \x20 \xa0 \xff 
 Subject length lower bound = 1
@@ -596,7 +596,7 @@ Subject length lower bound = 1
  0: \x{3000}
 
 /\v/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x0a \x0b \x0c \x0d \x85 \xff 
 Subject length lower bound = 1
@@ -614,7 +614,7 @@ Subject length lower bound = 1
  0: \x{2028}
 
 /\h*A/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x09 \x20 A \xa0 \xff 
 Last code unit = 'A'
@@ -625,7 +625,7 @@ Subject length lower bound = 1
  0: \x{2000}A
 
 /\R*A/I,bsr=unicode,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 \R matches any Unicode newline
 Starting code units: \x0a \x0b \x0c \x0d A \x85 \xff 
@@ -637,21 +637,21 @@ Subject length lower bound = 1
  0: \x{2028}A
 
 /\v+A/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x0a \x0b \x0c \x0d \x85 \xff 
 Last code unit = 'A'
 Subject length lower bound = 2
 
 /\s?xxx\s/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x09 \x0a \x0b \x0c \x0d \x20 x 
 Last code unit = 'x'
 Subject length lower bound = 4
 
 /\sxxx\s/I,utf,tables=2
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x09 \x0a \x0b \x0c \x0d \x20 \x85 \xa0 
 Last code unit = 'x'
@@ -662,7 +662,7 @@ Subject length lower bound = 5
  0: \x{a0}xxx\x{85}
 
 /\S \S/I,utf,tables=2
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x0e \x0f 
   \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 \x1a \x1b \x1c \x1d \x1e 
@@ -702,25 +702,25 @@ Failed: error -33: bad offset value
 Failed: error -33: bad offset value
 
 /\x{1234}+/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = \x{1234}
 Subject length lower bound = 1
 
 /\x{1234}+?/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = \x{1234}
 Subject length lower bound = 1
 
 /\x{1234}++/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = \x{1234}
 Subject length lower bound = 1
 
 /\x{1234}{2}/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = \x{1234}
 Last code unit = \x{1234}
@@ -733,7 +733,7 @@ Subject length lower bound = 2
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Subject length lower bound = 1
 
@@ -745,14 +745,14 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'X'
 Last code unit = \x{200}
 Subject length lower bound = 2
 
 /\R/I,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x0a \x0b \x0c \x0d \x85 \xff 
 Subject length lower bound = 1
@@ -930,7 +930,7 @@ Failed: error 174 at offset 0: using UTF is disabled by the application
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = 'A' (caseless)
 Last code unit = \x{1fb0} (caseless)
@@ -943,7 +943,7 @@ Subject length lower bound = 5
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'A'
 Last code unit = \x{1fb0}
@@ -956,7 +956,7 @@ Subject length lower bound = 5
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 First code unit = 'A'
 Last code unit = \x{1fb0}
@@ -969,14 +969,14 @@ Subject length lower bound = 3
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = 'A' (caseless)
 Last code unit = \x{1fb0} (caseless)
 Subject length lower bound = 3
 
 /\x{401}\x{420}\x{421}\x{422}\x{423}\x{424}\x{425}\x{426}\x{427}\x{428}\x{429}\x{42a}\x{42b}\x{42c}\x{42d}\x{42e}\x{42f}/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 First code unit = \x{401} (caseless)
 Last code unit = \x{42f} (caseless)
@@ -1011,7 +1011,7 @@ Subject length lower bound = 17
 ------------------------------------------------------------------
 
 /\x{212a}+/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: K k \xff 
 Subject length lower bound = 1
@@ -1019,7 +1019,7 @@ Subject length lower bound = 1
  0: KKkk\x{212a}
 
 /s+/Ii,utf
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: S s \xff 
 Subject length lower bound = 1
@@ -1042,7 +1042,7 @@ Failed: error 134 at offset 10: character code point value in \x{} or \o{} is to
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: A \xff 
 Last code unit = 'A'
@@ -1059,7 +1059,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: 0 1 2 3 4 5 6 7 8 9 \xff 
 Subject length lower bound = 1
@@ -1071,7 +1071,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: Z \xff 
 Subject length lower bound = 1
@@ -1089,7 +1089,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: z { | } ~ \x7f \x80 \x81 \x82 \x83 \x84 \x85 \x86 \x87 
   \x88 \x89 \x8a \x8b \x8c \x8d \x8e \x8f \x90 \x91 \x92 \x93 \x94 \x95 \x96 
@@ -1109,7 +1109,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: - ] a d z \xff 
 Subject length lower bound = 1
@@ -1130,7 +1130,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 1
+Capture group count = 1
 Options: utf
 Starting code units: a b \xff 
 Last code unit = 'z'
@@ -1144,7 +1144,7 @@ Subject length lower bound = 7
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x09 \x0a \x0b \x0c \x0d \x20 \xff 
 Subject length lower bound = 1
@@ -1157,7 +1157,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: 0 1 2 3 4 5 6 7 8 9 \xff 
 Subject length lower bound = 1
@@ -1170,7 +1170,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: 0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P 
   Q R S T U V W X Y Z _ a b c d e f g h i j k l m n o p q r s t u v w x y z 
@@ -1185,7 +1185,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x09 \x0a 
   \x0b \x0c \x0d \x0e \x0f \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 
@@ -1211,7 +1211,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x0e \x0f 
   \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 \x1a \x1b \x1c \x1d \x1e 
@@ -1237,7 +1237,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: utf
 Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x09 \x0a 
   \x0b \x0c \x0d \x0e \x0f \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 
@@ -1260,7 +1260,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: \xff 
 Subject length lower bound = 1
@@ -1283,7 +1283,7 @@ No match
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: Z z { | } ~ \x7f \x80 \x81 \x82 \x83 \x84 \x85 \x86 
   \x87 \x88 \x89 \x8a \x8b \x8c \x8d \x8e \x8f \x90 \x91 \x92 \x93 \x94 \x95 
@@ -1329,7 +1329,7 @@ No match
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: Z z { | } ~ \x7f \x80 \x81 \x82 \x83 \x84 \x85 \x86 
   \x87 \x88 \x89 \x8a \x8b \x8c \x8d \x8e \x8f \x90 \x91 \x92 \x93 \x94 \x95 
@@ -1351,7 +1351,7 @@ Subject length lower bound = 1
         Ket
         End
 ------------------------------------------------------------------
-Capturing subpattern count = 0
+Capture group count = 0
 Options: caseless utf
 Starting code units: \xff 
 Last code unit = 'B' (caseless)
@@ -1408,5 +1408,375 @@ No match
         Ket
         End
 ------------------------------------------------------------------
+
+/\pP/ucp
+    \x{7fffffff}
+No match
+
+# A special extra option allows excaped surrogate code points in 32-bit mode,
+# but subjects containing them must not be UTF-checked. These patterns give
+# errors in 16-bit mode.
+
+/\x{d800}/I,utf,allow_surrogate_escapes
+Capture group count = 0
+Options: utf
+Extra options: allow_surrogate_escapes
+First code unit = \x{d800}
+Subject length lower bound = 1
+    \x{d800}\=no_utf_check
+ 0: \x{d800}
+
+/\udfff\o{157401}/utf,alt_bsux,allow_surrogate_escapes
+    \x{dfff}\x{df01}\=no_utf_check
+ 0: \x{dfff}\x{df01}
+
+# This has different starting code units in 8-bit mode. 
+
+/^[^ab]/IB,utf
+------------------------------------------------------------------
+        Bra
+        ^
+        [\x00-`c-\xff] (neg)
+        Ket
+        End
+------------------------------------------------------------------
+Capture group count = 0
+Compile options: utf
+Overall options: anchored utf
+Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x09 \x0a 
+  \x0b \x0c \x0d \x0e \x0f \x10 \x11 \x12 \x13 \x14 \x15 \x16 \x17 \x18 \x19 
+  \x1a \x1b \x1c \x1d \x1e \x1f \x20 ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 
+  5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y 
+  Z [ \ ] ^ _ ` c d e f g h i j k l m n o p q r s t u v w x y z { | } ~ \x7f 
+  \x80 \x81 \x82 \x83 \x84 \x85 \x86 \x87 \x88 \x89 \x8a \x8b \x8c \x8d \x8e 
+  \x8f \x90 \x91 \x92 \x93 \x94 \x95 \x96 \x97 \x98 \x99 \x9a \x9b \x9c \x9d 
+  \x9e \x9f \xa0 \xa1 \xa2 \xa3 \xa4 \xa5 \xa6 \xa7 \xa8 \xa9 \xaa \xab \xac 
+  \xad \xae \xaf \xb0 \xb1 \xb2 \xb3 \xb4 \xb5 \xb6 \xb7 \xb8 \xb9 \xba \xbb 
+  \xbc \xbd \xbe \xbf \xc0 \xc1 \xc2 \xc3 \xc4 \xc5 \xc6 \xc7 \xc8 \xc9 \xca 
+  \xcb \xcc \xcd \xce \xcf \xd0 \xd1 \xd2 \xd3 \xd4 \xd5 \xd6 \xd7 \xd8 \xd9 
+  \xda \xdb \xdc \xdd \xde \xdf \xe0 \xe1 \xe2 \xe3 \xe4 \xe5 \xe6 \xe7 \xe8 
+  \xe9 \xea \xeb \xec \xed \xee \xef \xf0 \xf1 \xf2 \xf3 \xf4 \xf5 \xf6 \xf7 
+  \xf8 \xf9 \xfa \xfb \xfc \xfd \xfe \xff 
+Subject length lower bound = 1
+    c
+ 0: c
+    \x{ff}
+ 0: \x{ff}
+    \x{100}
+ 0: \x{100}
+\= Expect no match
+    aaa
+No match
+    
+# Offsets are different in 8-bit mode. 
+
+/(?<=abc)(|def)/g,utf,replace=<$0>,substitute_callout
+    123abcáyzabcdef789abcሴqr
+ 1(2) Old 6 6 "" New 6 8 "<>"
+ 2(2) Old 12 12 "" New 14 16 "<>"
+ 3(2) Old 12 15 "def" New 16 21 "<def>"
+ 4(2) Old 21 21 "" New 27 29 "<>"
+ 4: 123abc<>\x{e1}yzabc<><def>789abc<>\x{1234}qr
+    
+# A few script run tests in non-UTF mode (but they need Unicode support)
+
+/^(*script_run:.{4})/
+    \x{3041}\x{30a1}\x{3007}\x{3007}   Hiragana Katakana Han Han
+ 0: \x{3041}\x{30a1}\x{3007}\x{3007}
+    \x{30a1}\x{3041}\x{3007}\x{3007}   Katakana Hiragana Han Han
+ 0: \x{30a1}\x{3041}\x{3007}\x{3007}
+    \x{1100}\x{2e80}\x{2e80}\x{1101}   Hangul Han Han Hangul
+ 0: \x{1100}\x{2e80}\x{2e80}\x{1101}
+ 
+/^(*sr:.*)/utf,allow_surrogate_escapes
+    \x{2e80}\x{3105}\x{2e80}\x{30a1}   Han Bopomofo Han Katakana
+ 0: \x{2e80}\x{3105}\x{2e80}
+    \x{d800}\x{dfff}                   Surrogates (Unknown) \=no_utf_check
+ 0: \x{d800}
+
+/(?(n/utf
+Failed: error 142 at offset 4: syntax error in subpattern name (missing terminator?)
+
+/(?(á/utf
+Failed: error 142 at offset 4: syntax error in subpattern name (missing terminator?)
+
+# Invalid UTF-16/32 tests.
+
+/.../g,match_invalid_utf
+    abcd\x{df00}wxzy\x{df00}pqrs
+ 0: abc
+ 0: wxz
+ 0: pqr
+    abcd\x{80}wxzy\x{df00}pqrs
+ 0: abc
+ 0: d\x{80}w
+ 0: xzy
+ 0: pqr
+
+/abc/match_invalid_utf
+    ab\x{df00}ab\=ph
+Partial match: ab
+\= Expect no match
+    ab\x{df00}cdef\=ph
+No match
+
+/ab$/match_invalid_utf
+    ab\x{df00}cdeab
+ 0: ab
+\= Expect no match
+    ab\x{df00}cde
+No match
+
+/.../g,match_invalid_utf
+    abcd\x{80}wxzy\x{df00}pqrs
+ 0: abc
+ 0: d\x{80}w
+ 0: xzy
+ 0: pqr
+
+/(?<=x)../g,match_invalid_utf
+    abcd\x{80}wxzy\x{df00}pqrs
+ 0: zy
+    abcd\x{80}wxzy\x{df00}xpqrs
+ 0: zy
+ 0: pq
+
+/X$/match_invalid_utf
+\= Expect no match
+    X\x{df00}
+No match
+    
+/(?<=..)X/match_invalid_utf,aftertext
+    AB\x{df00}AQXYZ
+ 0: X
+ 0+ YZ
+    AB\x{df00}AQXYZ\=offset=5
+ 0: X
+ 0+ YZ
+    AB\x{df00}\x{df00}AXYZXC\=offset=5
+ 0: X
+ 0+ C
+\= Expect no match
+    AB\x{df00}XYZ
+No match
+    AB\x{df00}XYZ\=offset=3 
+No match
+    AB\x{df00}AXYZ
+No match
+    AB\x{df00}AXYZ\=offset=4
+No match
+    AB\x{df00}\x{df00}AXYZ\=offset=5
+No match
+
+/.../match_invalid_utf
+\= Expect no match
+    A\x{d800}B
+No match
+    A\x{110000}B 
+No match
+    
+/aa/utf,ucp,match_invalid_utf,global
+    aa\x{d800}aa
+ 0: aa
+ 0: aa
+
+/aa/utf,ucp,match_invalid_utf,global
+    \x{d800}aa
+ 0: aa
+
+# ---------------------------------------------------- 
+
+/(*UTF)(?=\x{123})/I
+Capture group count = 0
+May match empty string
+Compile options: <none>
+Overall options: utf
+First code unit = \x{123}
+Subject length lower bound = 1
+
+/[\x{c1}\x{e1}]X[\x{145}\x{146}]/I,utf
+Capture group count = 0
+Options: utf
+First code unit = \xc1 (caseless)
+Last code unit = \x{145} (caseless)
+Subject length lower bound = 3
+
+/[\xff\x{ffff}]/I,utf
+Capture group count = 0
+Options: utf
+Starting code units: \xff 
+Subject length lower bound = 1
+
+/[\xff\x{ff}]/I,utf
+Capture group count = 0
+Options: utf
+Starting code units: \xff 
+Subject length lower bound = 1
+
+/[\xff\x{ff}]/I
+Capture group count = 0
+Starting code units: \xff 
+Subject length lower bound = 1
+
+/[Ss]/I
+Capture group count = 0
+First code unit = 'S' (caseless)
+Subject length lower bound = 1
+
+/[Ss]/I,utf
+Capture group count = 0
+Options: utf
+Starting code units: S s 
+Subject length lower bound = 1
+
+/(?:\x{ff}|\x{3000})/I,utf
+Capture group count = 0
+Options: utf
+Starting code units: \xff 
+Subject length lower bound = 1
+
+# ---------------------------------------------------- 
+# UCP and casing tests
+
+/\x{120}/i,I
+Capture group count = 0
+Options: caseless
+First code unit = \x{120}
+Subject length lower bound = 1
+
+/\x{c1}/i,I,ucp
+Capture group count = 0
+Options: caseless ucp
+First code unit = \xc1 (caseless)
+Subject length lower bound = 1
+
+/[\x{120}\x{121}]/iB,ucp
+------------------------------------------------------------------
+        Bra
+     /i \x{120}
+        Ket
+        End
+------------------------------------------------------------------
+
+/[ab\x{120}]+/iB,ucp
+------------------------------------------------------------------
+        Bra
+        [ABab\x{120}-\x{121}]++
+        Ket
+        End
+------------------------------------------------------------------
+    aABb\x{121}\x{120}
+ 0: aABb\x{121}\x{120}
+
+/\x{c1}/i,no_start_optimize
+\= Expect no match
+    \x{e1}
+No match
+
+/\x{120}\x{c1}/i,ucp,no_start_optimize
+    \x{121}\x{e1}
+ 0: \x{121}\xe1
+
+/\x{120}\x{c1}/i,ucp
+    \x{121}\x{e1}
+ 0: \x{121}\xe1
+
+/[^\x{120}]/i,no_start_optimize
+    \x{121}
+ 0: \x{121}
+
+/[^\x{120}]/i,ucp,no_start_optimize
+\= Expect no match
+    \x{121}
+No match
+
+/[^\x{120}]/i
+    \x{121}
+ 0: \x{121}
+
+/[^\x{120}]/i,ucp
+\= Expect no match
+    \x{121}
+No match
+    
+/\x{120}{2}/i,ucp
+    \x{121}\x{121}
+ 0: \x{121}\x{121}
+
+/[^\x{120}]{2}/i,ucp
+\= Expect no match
+    \x{121}\x{121}
+No match
+
+/\x{c1}+\x{e1}/iB,ucp
+------------------------------------------------------------------
+        Bra
+     /i \x{c1}+
+     /i \x{e1}
+        Ket
+        End
+------------------------------------------------------------------
+    \x{c1}\x{c1}\x{c1}
+ 0: \xc1\xc1\xc1
+
+/\x{c1}+\x{e1}/iIB,ucp
+------------------------------------------------------------------
+        Bra
+     /i \x{c1}+
+     /i \x{e1}
+        Ket
+        End
+------------------------------------------------------------------
+Capture group count = 0
+Options: caseless ucp
+First code unit = \xc1 (caseless)
+Last code unit = \xe1 (caseless)
+Subject length lower bound = 2
+    \x{c1}\x{c1}\x{c1}
+ 0: \xc1\xc1\xc1
+    \x{e1}\x{e1}\x{e1} 
+ 0: \xe1\xe1\xe1
+
+/a|\x{c1}/iI,ucp
+Capture group count = 0
+Options: caseless ucp
+Starting code units: A a \xc1 \xe1 
+Subject length lower bound = 1
+    \x{e1}xxx
+ 0: \xe1
+
+/\x{c1}|\x{e1}/iI,ucp
+Capture group count = 0
+Options: caseless ucp
+First code unit = \xc1 (caseless)
+Subject length lower bound = 1
+
+/X(\x{e1})Y/ucp,replace=>\U$1<,substitute_extended
+    X\x{e1}Y
+ 1: >\xc1<
+
+/X(\x{121})Y/ucp,replace=>\U$1<,substitute_extended
+    X\x{121}Y
+ 1: >\x{120}<
+
+/s/i,ucp
+    \x{17f} 
+ 0: \x{17f}
+
+/s/i,utf
+    \x{17f} 
+ 0: \x{17f}
+
+/[^s]/i,ucp
+\= Expect no match
+    \x{17f} 
+No match
+
+/[^s]/i,utf
+\= Expect no match
+    \x{17f} 
+No match
+
+# ---------------------------------------------------- 
 
 # End of testinput12
