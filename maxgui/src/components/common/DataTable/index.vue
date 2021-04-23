@@ -20,8 +20,8 @@
             :dense="dense"
             :no-data-text="noDataText"
             :custom-sort="customSort"
-            @current-items="getCurrentItems"
-            @on-drag-end="$emit('on-drag-end', $event)"
+            @current-items="colsHasRowSpan ? getCurrentItems : null"
+            @on-drag-end="draggable ? $emit('on-drag-end', $event) : null"
         >
             <!----------------------------------------------------TABLE HEAD------------------------------------------>
             <template v-slot:header="{ props: { headers } }">
@@ -39,7 +39,6 @@
                 </table-header>
             </template>
 
-            <!----------------------------------------------------TABLE ROW------------------------------------------->
             <template v-slot:item="{ item, index: rowIndex }">
                 <table-row
                     :key="item.nodeId || item.id"
@@ -47,17 +46,12 @@
                     :editableCell="editableCell"
                     :draggable="draggable"
                     :showActionsOnHover="showActionsOnHover"
-                    :lastPageItemIndex="lastPageItemIndex"
                 >
                     <template v-slot:cell="{ data: { indexOfHoveredRow } }">
                         <table-cell
                             v-for="(header, cellIndex) in headers"
                             :key="cellIndex"
-                            :ref="
-                                cellIndex < colsHasRowSpan
-                                    ? `${item.groupId}RowspanCell`
-                                    : `${item.groupId}Cell`
-                            "
+                            :ref="setRowspanRef({ cellIndex, item })"
                             :cellIndex="cellIndex"
                             :colsHasRowSpan="colsHasRowSpan"
                             :item="item"
@@ -208,7 +202,7 @@ export default {
         hasOrderNumber: { type: Boolean, default: false },
         showActionsOnHover: { type: Boolean, default: false },
         // rowspan feature, data array must contains objects having groupId property.
-        colsHasRowSpan: { type: Number },
+        colsHasRowSpan: { type: Number, default: 0 },
         // if data has child object or array, enable this props in adanvce
         isTree: { type: Boolean, default: false },
     },
@@ -222,8 +216,6 @@ export default {
             //For nested data, display dropdown table row
             hasValidChild: false,
             nodeActiveIds: [],
-            //rowspan feature
-            lastPageItemIndex: null,
             // this is needed when using custom activator in v-menu.
             componentId: this.$help.lodash.uniqueId('component_v-menu_'),
         }
@@ -244,12 +236,11 @@ export default {
         },
 
         tableRows: function() {
-            const self = this
-            if (self.isTree) {
+            if (this.isTree) {
                 let newArr = []
-                self.levelRecursive(self.processingData, newArr, self.nodeActiveIds)
+                this.levelRecursive(this.processingData, newArr, this.nodeActiveIds)
                 return newArr
-            } else return self.processingData
+            } else return this.processingData
         },
     },
 
@@ -348,11 +339,17 @@ export default {
         },
 
         //--------------------------------- @private methods for Rowspan feature----------------------------------------
+        setRowspanRef({ cellIndex, item }) {
+            if (!this.colsHasRowSpan) return null
+            return cellIndex < this.colsHasRowSpan
+                ? `${item.groupId}RowspanCell`
+                : `${item.groupId}Cell`
+        },
         getCurrentItems(items) {
             // This ensure rowspan table feature works
-            this.colsHasRowSpan && items.length && this.processingRowspanTable(items, 'mutate')
-            // for styling purpose
-            this.lastPageItemIndex = items.length - 1
+            if (items.length) {
+                this.processingRowspanTable(items, 'mutate')
+            }
         },
 
         /**
@@ -375,6 +372,7 @@ export default {
         handleDisplayRowspan(target) {
             let uniqueSet = new Set(target.map(item => item.groupId))
             let itemsId = [...uniqueSet]
+
             let groupedId = this.$help.hashMapByPath({ arr: target, path: 'groupId' })
             let result = []
             for (let i = 0; i < itemsId.length; ++i) {
@@ -556,12 +554,6 @@ export default {
                 &:hover {
                     td.actions button {
                         opacity: 1;
-                    }
-                }
-
-                &.last-row {
-                    td {
-                        border-bottom: thin solid $table-border;
                     }
                 }
             }

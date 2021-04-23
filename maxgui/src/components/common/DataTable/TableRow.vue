@@ -41,7 +41,6 @@ export default {
         editableCell: { type: Boolean, required: true },
         draggable: { type: Boolean, required: true },
         showActionsOnHover: { type: Boolean, required: true },
-        lastPageItemIndex: { type: Number, required: true },
     },
     data() {
         return {
@@ -51,10 +50,8 @@ export default {
     },
 
     methods: {
-        trClasses(rowIndex) {
+        trClasses() {
             return {
-                // for styling and common class
-                'last-row': rowIndex === this.lastPageItemIndex,
                 // for editable feature
                 'v-data-table__editable-cell-mode': this.editableCell,
                 // for row draggble feature
