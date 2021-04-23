@@ -1087,21 +1087,15 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    uint32_t orig_id = 0;
-
     if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !route_info().large_query())
     {
-        // Store the original ID in case routing fails
-        orig_id = extract_binary_ps_id(buffer.get());
-        // Replace the ID with our internal one, the backends will replace it with their own ID
-        auto new_id = route_info().stmt_id();
-        replace_binary_ps_id(buffer.get(), new_id);
+        mxb_assert(extract_binary_ps_id(buffer.get()) == route_info().stmt_id());
 
         if (cmd == MXS_COM_STMT_EXECUTE)
         {
             // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store it
             // for later use. If it doesn't, add it if the current target has never gotten it.
-            process_stmt_execute(&buffer, new_id, target);
+            process_stmt_execute(&buffer, route_info().stmt_id(), target);
         }
     }
 
@@ -1112,12 +1106,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
      * continuing an ongoing query.
      */
     bool success = target->write(gwbuf_clone(buffer.get()), response);
-
-    if (orig_id)
-    {
-        // Put the original ID back in case we try to route the query again
-        replace_binary_ps_id(buffer.get(), orig_id);
-    }
 
     if (success)
     {
