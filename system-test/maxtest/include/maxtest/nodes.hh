@@ -16,6 +16,7 @@ typedef std::set<std::string> StringSet;
 namespace maxtest
 {
 class SharedData;
+class TestLogger;
 
 struct CmdResult
 {
@@ -91,7 +92,7 @@ public:
     const std::string& ip4s() const;
     const std::string& ip6s() const;
 
-    SharedData& shared();
+    TestLogger& log();
     bool        is_remote() const;
 
     const std::string m_name;       /**< E.g. "node_001" */
@@ -198,6 +199,4 @@ protected:
 
 private:
     std::vector<std::unique_ptr<mxt::VMNode>> m_vms;
-
-    bool check_node_ssh(int node);
 };

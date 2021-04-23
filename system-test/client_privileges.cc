@@ -40,7 +40,6 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
     test.set_timeout(60);
 
-    test.maxscales->ssl = false;
     test.repl->connect();
 
     auto& mxs = test.maxscale();

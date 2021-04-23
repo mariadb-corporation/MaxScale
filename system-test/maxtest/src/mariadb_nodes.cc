@@ -530,9 +530,9 @@ bool MariaDBCluster::prepare_for_test(int i)
         return false;
     }
 
-    auto conn = srv->try_open_admin_connection();
-    if (conn->is_open())
+    if (srv->ping_or_open_admin_connection())
     {
+        auto conn = srv->admin_connection();
         if (conn->cmd("FLUSH HOSTS;") && conn->cmd("SET GLOBAL max_connections=10000"))
         {
             conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
@@ -574,26 +574,6 @@ int MariaDBCluster::execute_query_all_nodes(const char* sql)
     }
     close_connections();
     return local_result;
-}
-
-int MariaDBCluster::truncate_mariadb_logs()
-{
-    mxt::BoolFuncArray funcs;
-    for (int i = 0; i < N; i++)
-    {
-        auto server = m_backends[i].get();
-        if (server->m_vm.is_remote())
-        {
-            auto truncate = [server]() {
-                    return server->m_vm.run_cmd_sudo("truncate -s 0 /var/lib/mysql/*.err;"
-                                                     "truncate -s 0 /var/log/syslog;"
-                                                     "truncate -s 0 /var/log/messages;"
-                                                     "rm -f /etc/my.cnf.d/binlog_enc*;");
-                };
-            funcs.push_back(move(truncate));
-        }
-    }
-    return m_shared.concurrent_run(funcs);
 }
 
 void MariaDBCluster::close_active_connections()
@@ -925,9 +905,10 @@ bool MariaDBCluster::check_create_test_db()
     bool rval = false;
     if (!m_backends.empty())
     {
-        auto conn = m_backends[0]->try_open_admin_connection();
-        if (conn->is_open())
+        auto srv = m_backends[0].get();
+        if (srv->ping_or_open_admin_connection())
         {
+            auto conn = srv->admin_connection();
             if (conn->cmd("DROP DATABASE IF EXISTS test;") && conn->cmd("CREATE DATABASE test;"))
             {
                 rval = true;
@@ -965,13 +946,16 @@ bool MariaDBCluster::basic_test_prepare()
     return run_on_every_backend(prepare_one);
 }
 
-MariaDBCluster::ConnArray MariaDBCluster::admin_connect_to_all()
+int MariaDBCluster::ping_or_open_admin_connections()
 {
-    ConnArray rval;
-    rval.resize(N);
+    std::atomic_int rval {0};
 
     auto add_connection = [this, &rval](int i) {
-            rval[i] = m_backends[i]->try_open_admin_connection();
+            bool success = m_backends[i]->ping_or_open_admin_connection();
+            if (success)
+            {
+                rval++;
+            }
             return true;
         };
     run_on_every_backend(add_connection);
@@ -1027,11 +1011,10 @@ const MariaDBServer::Status& MariaDBServer::status() const
 bool MariaDBServer::update_status()
 {
     bool rval = false;
-    auto con = try_open_admin_connection();
-    if (con->is_open())
+    if (ping_or_open_admin_connection())
     {
-        m_status.version_num = con->version_info().version;
-        auto res = con->query("SELECT @@server_id, @@read_only;");
+        m_status.version_num = m_admin_conn->version_info().version;
+        auto res = m_admin_conn->query("SELECT @@server_id, @@read_only;");
         if (res && res->next_row())
         {
             m_status.server_id = res->get_int(0);
@@ -1045,9 +1028,9 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
 {
-    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
+    auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
     sett.user = m_cluster.user_name;
     sett.password = m_cluster.password;
@@ -1063,16 +1046,31 @@ std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_connection()
     return conn;
 }
 
-std::unique_ptr<mxt::MariaDB> MariaDBServer::try_open_admin_connection()
+bool MariaDBServer::ping_or_open_admin_connection()
 {
-    auto conn = std::make_unique<mxt::MariaDB>(m_vm.shared().log);
-    auto& sett = conn->connection_settings();
-    sett.user = admin_user;
-    sett.password = admin_pw;
-    sett.clear_sql_mode = true;
-    sett.timeout = 10;
-    conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
-    return conn;
+    bool rval = false;
+    if (m_admin_conn && m_admin_conn->is_open() && m_admin_conn->ping())
+    {
+        // Connection already exists and works.
+        rval = true;
+    }
+    else
+    {
+        auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
+        auto& sett = conn->connection_settings();
+        sett.user = admin_user;
+        sett.password = admin_pw;
+        sett.clear_sql_mode = true;
+        sett.timeout = 10;
+        conn->try_open(m_vm.ip4s(), m_cluster.port[m_ind]);
+
+        m_admin_conn = move(conn);      // Saved even if not open, so that m_admin_conn is not left null.
+        if (m_admin_conn->is_open())
+        {
+            rval = true;
+        }
+    }
+    return rval;
 }
 
 std::string MariaDBServer::version_as_string()
@@ -1092,5 +1090,11 @@ const string& MariaDBServer::cnf_name() const
 VMNode& MariaDBServer::vm_node()
 {
     return m_vm;
+}
+
+mxt::MariaDB* MariaDBServer::admin_connection()
+{
+    // Can assume that the connection has been created.
+    return m_admin_conn.get();
 }
 }

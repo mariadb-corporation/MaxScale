@@ -32,7 +32,6 @@ void replicate_from(TestConnections& test, int server_ind, int target_ind)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->ssl = false;
 
     auto& mxs = test.maxscale();
     mxs.wait_monitor_ticks();
@@ -57,7 +56,7 @@ int main(int argc, char* argv[])
         test.repl->block_node(0);
         test.repl->block_node(1);
         test.repl->block_node(2);
-        auto srv4_conn = test.repl->backend(3)->try_open_admin_connection();
+        auto srv4_conn = test.repl->backend(3)->try_open_connection();
         srv4_conn->cmd("STOP SLAVE;");
         srv4_conn->cmd("RESET SLAVE ALL;");
 

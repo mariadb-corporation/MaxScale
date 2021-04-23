@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
                            test.maxscales->ip4(0),
                            test.maxscales->user_name,
                            test.maxscales->password,
-                           test.ssl);
+                           test.maxscale_ssl);
     test.add_result(conn == NULL, "Error connecting to MaxScale");
 
     test.tprintf("Creating and selecting 'test_db' DB");
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
                            test.maxscales->ip4(0),
                            test.maxscales->user_name,
                            test.maxscales->password,
-                           test.ssl);
+                           test.maxscale_ssl);
     test.try_query(conn, "USE test_db");
     test.try_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
     test.set_timeout(60);

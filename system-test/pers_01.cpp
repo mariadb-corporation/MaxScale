@@ -23,7 +23,6 @@ int main(int argc, char* argv[])
 
 int test_main(TestConnections& test)
 {
-    test.maxscales->ssl = false;
     test.set_timeout(300);
     test.add_result(test.create_connections(0, 70, true, true, true, false),
                     "Error creating connections");

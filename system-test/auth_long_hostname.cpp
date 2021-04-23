@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
                             Test->maxscales->ip4(0),
                             (char*) "user_long_host11",
                             (char*)  "old",
-                            Test->ssl);
+                            Test->maxscale_ssl);
 
     if (mysql_errno(conn) != 0)
     {

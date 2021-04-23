@@ -36,6 +36,7 @@ public:
     bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
 
     void set_use_ipv6(bool use_ipv6);
+    void set_ssl(bool ssl);
 
     const char* ip4(int i = 0) const;
     const char* ip(int i = 0) const;
@@ -49,6 +50,8 @@ public:
 
     const std::string& prefix() const;
     const std::string& node_name(int i) const;
+
+    bool ssl() const;
 
     int rwsplit_port[N_MXS] {-1};           /**< RWSplit port */
     int readconn_master_port[N_MXS] {-1};   /**< ReadConnection in master mode port */
@@ -73,8 +76,6 @@ public:
 
     std::string maxscale_cnf[N_MXS];    /**< full name of Maxscale configuration file */
     std::string maxscale_log_dir[N_MXS];/**< name of log files directory */
-
-    bool ssl = false;
 
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
@@ -131,7 +132,7 @@ public:
      */
     MYSQL* open_rwsplit_connection(int m = 0, const std::string& db = "test")
     {
-        return open_conn(rwsplit_port[m], ip4(m), user_name, password, ssl);
+        return open_conn(rwsplit_port[m], ip4(m), user_name, password, m_ssl);
     }
 
     /**
@@ -139,7 +140,7 @@ public:
      */
     Connection rwsplit(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), rwsplit_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), rwsplit_port[m], user_name, password, db, m_ssl);
     }
 
     /**
@@ -147,7 +148,7 @@ public:
      */
     Connection get_connection(int port, int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), port, user_name, password, db, ssl);
+        return Connection(ip4(m), port, user_name, password, db, m_ssl);
     }
 
     /**
@@ -157,7 +158,7 @@ public:
      */
     MYSQL* open_readconn_master_connection(int m = 0)
     {
-        return open_conn(readconn_master_port[m], ip4(m), user_name, password, ssl);
+        return open_conn(readconn_master_port[m], ip4(m), user_name, password, m_ssl);
     }
 
     /**
@@ -165,7 +166,7 @@ public:
      */
     Connection readconn_master(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), readconn_master_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), readconn_master_port[m], user_name, password, db, m_ssl);
     }
 
     /**
@@ -175,7 +176,7 @@ public:
      */
     MYSQL* open_readconn_slave_connection(int m = 0)
     {
-        return open_conn(readconn_slave_port[m], ip4(m), user_name, password, ssl);
+        return open_conn(readconn_slave_port[m], ip4(m), user_name, password, m_ssl);
     }
 
     /**
@@ -183,7 +184,7 @@ public:
      */
     Connection readconn_slave(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), readconn_slave_port[m], user_name, password, db, ssl);
+        return Connection(ip4(m), readconn_slave_port[m], user_name, password, db, m_ssl);
     }
 
     /**
@@ -271,6 +272,7 @@ public:
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
+    bool m_ssl {false};         /**< Use ssl when connecting to MaxScale */
 
     int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */

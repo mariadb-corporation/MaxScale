@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
                             test.maxscales->ip4(0),
                             (char*) "old",
                             (char*)  "old",
-                            test.ssl);
+                            test.maxscale_ssl);
     test.add_result(mysql_errno(conn) == 0, "Connections is open for the user with old style password.\n");
     mysql_close(conn);
 

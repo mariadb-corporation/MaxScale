@@ -131,7 +131,7 @@ bool ReplicationCluster::check_replication()
         }
 
         auto srv = backend(i);
-        auto conn = srv->try_open_admin_connection();
+        auto conn = srv->admin_connection();
         if (conn->is_open())
         {
             auto res1 = conn->try_query("SELECT COUNT(*) FROM mysql.user;");
@@ -140,7 +140,7 @@ bool ReplicationCluster::check_replication()
                 res = false;
             }
 
-            auto conn_ptr = conn.get();
+            auto conn_ptr = conn;
             if (i == master_ind)
             {
                 if (check_master_node(conn_ptr))
@@ -308,8 +308,9 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
         bool is_replicating {false};
     };
 
-    auto update_one_server = [](mxt::MariaDB* conn) {
+    auto update_one_server = [](mxt::MariaDBServer* server) {
             ReplData rval;
+            auto conn = server->admin_connection();
             if (conn->is_open())
             {
                 auto res = conn->multiquery({"select @@gtid_current_pos;", "show all slaves status;"});
@@ -343,18 +344,18 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
             return rval;
         };
 
-    auto update_all = [this, &update_one_server](const ConnArray& conns) {
-            int n = conns.size();
+    auto update_all = [this, &update_one_server](const std::vector<MariaDBServer*>& servers) {
+            size_t n = servers.size();
             std::vector<ReplData> rval;
             rval.resize(n);
 
             mxt::BoolFuncArray funcs;
             funcs.reserve(n);
 
-            for (int i = 0; i < n; i++)
+            for (size_t i = 0; i < n; i++)
             {
-                auto func = [&rval, &conns, i, &update_one_server]() {
-                        rval[i] = update_one_server(conns[i].get());
+                auto func = [&rval, &servers, i, &update_one_server]() {
+                        rval[i] = update_one_server(servers[i]);
                         return true;
                     };
                 funcs.push_back(std::move(func));
@@ -363,19 +364,29 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
             return rval;
         };
 
+    ping_or_open_admin_connections();
     auto master = backend(master_node_ind);
-    auto master_conn = master->try_open_admin_connection();
-    Gtid best_found = update_one_server(master_conn.get()).gtid;
+    Gtid master_gtid = update_one_server(master).gtid;
 
     bool rval = false;
 
-    if (best_found.server_id < 0)
+    if (master_gtid.server_id < 0)
     {
-        m_shared.log.log_msgf("Could not read valid gtid:s when waiting for cluster sync.");
+        m_shared.log.log_msgf("Could not read gtid from master %s when waiting for cluster sync.",
+                              master->vm_node().m_name.c_str());
     }
     else
     {
-        auto waiting_catchup = admin_connect_to_all();
+        std::vector<MariaDBServer*> waiting_catchup;
+        waiting_catchup.reserve(N - 1);
+        for (int i = 0; i < N; i++)
+        {
+            auto srv = backend(i);
+            if (srv != master && srv->admin_connection()->is_open())
+            {
+                waiting_catchup.push_back(srv);
+            }
+        }
         int expected_catchups = waiting_catchup.size();
         int successful_catchups = 0;
         mxb::StopWatch timer;
@@ -387,7 +398,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
             if (verbose())
             {
                 logger().log_msgf("Waiting for %zu servers to sync with master.",
-                                  waiting_catchup.size() - 1);
+                                  waiting_catchup.size());
             }
 
             for (size_t i = 0; i < waiting_catchup.size();)
@@ -400,13 +411,13 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
                 {
                     // Query or connection failed.
                 }
-                else if (elem.gtid.domain != best_found.domain)
+                else if (elem.gtid.domain != master_gtid.domain)
                 {
                     // If a test uses complicated gtid:s, it needs to handle it on it's own.
                     m_shared.log.log_msgf("Found different gtid domain id:s (%li and %li) when waiting "
-                                          "for cluster sync.", elem.gtid.domain, best_found.domain);
+                                          "for cluster sync.", elem.gtid.domain, master_gtid.domain);
                 }
-                else if (elem.gtid.seq_no >= best_found.seq_no)
+                else if (elem.gtid.seq_no >= master_gtid.seq_no)
                 {
                     in_sync = true;
                 }

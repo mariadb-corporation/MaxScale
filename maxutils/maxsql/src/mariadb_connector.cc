@@ -435,6 +435,30 @@ bool MariaDB::is_open() const
     return m_conn != nullptr;
 }
 
+bool MariaDB::ping()
+{
+    bool rval = false;
+    if (m_conn)
+    {
+        if (mysql_ping(m_conn) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            m_errornum = mysql_errno(m_conn);
+            m_errormsg = mxb::string_printf("Ping failed. Error %li: %s", m_errornum, mysql_error(m_conn));
+        }
+    }
+    else
+    {
+        m_errornum = USER_ERROR;
+        m_errormsg = no_connection;
+    }
+
+    return rval;
+}
+
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
     : QueryResult(column_names(resultset))
     , m_resultset(resultset)

@@ -32,7 +32,6 @@ string generate_2fa_token(TestConnections& test, const string& secret);
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    test.maxscales->ssl = false;
     test.repl->connect();
     delete_slave_binlogs(test);
 

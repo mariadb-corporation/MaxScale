@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
                                   test.maxscales->ip4(0),
                                   (char*) "test_user",
                                   (char*) "pass",
-                                  test.ssl);
+                                  test.maxscale_ssl);
 
     if (conn == NULL)
     {

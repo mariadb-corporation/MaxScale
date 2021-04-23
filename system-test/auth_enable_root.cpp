@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
                      Test->maxscales->ip4(0),
                      (char*) "root",
                      (char*)  "skysqlroot",
-                     Test->ssl);
+                     Test->maxscale_ssl);
     if (mysql_errno(conn) != 0)
     {
         Test->add_result(1, "Connection using 'root' user failed, error: %s\n", mysql_error(conn));

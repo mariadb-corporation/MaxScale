@@ -23,7 +23,7 @@ void run_test(TestConnections* Test, const char* database)
                                database,
                                "table_privilege",
                                "pass",
-                               Test->ssl);
+                               Test->maxscale_ssl);
 
     if (conn && mysql_errno(conn) == 0)
     {

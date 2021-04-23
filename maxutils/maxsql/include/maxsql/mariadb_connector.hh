@@ -120,6 +120,13 @@ public:
     std::vector<std::unique_ptr<mxq::QueryResult>> multiquery(const std::vector<std::string>& queries);
 
     /**
+     * Ping the server.
+     *
+     * @return True on success
+     */
+    bool ping();
+
+    /**
      * Get latest error.
      *
      * @return Error string
