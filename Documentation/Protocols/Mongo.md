@@ -252,7 +252,7 @@ if other fields are explicitly included.
 
 ### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 
-TBW
+No fields are relevant for this command.
 
 ### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
 
