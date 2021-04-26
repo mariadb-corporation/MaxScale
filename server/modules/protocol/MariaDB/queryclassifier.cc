@@ -590,7 +590,12 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     uint32_t id = mysql_extract_ps_id(pBuffer);
 
     // MARIADB_PS_DIRECT_EXEC_ID is a special ID that refers to the previous prepared statement
-    return id == MARIADB_PS_DIRECT_EXEC_ID ? m_prev_ps_id : id;
+    if (id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_ps_id)
+    {
+        return m_prev_ps_id;
+    }
+
+    return id;
 }
 
 void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
