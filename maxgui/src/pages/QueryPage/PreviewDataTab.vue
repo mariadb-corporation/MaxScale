@@ -28,12 +28,20 @@
                 type="table: table-thead, table-tbody"
                 :max-height="`${dynHeight - headerHeight}px`"
             />
-            <result-data-table
-                v-else
-                :height="dynHeight - headerHeight"
-                :headers="tableHeaders"
-                :rows="tableRows"
-            />
+            <template v-else>
+                <result-data-table
+                    v-show="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
+                    :height="dynHeight - headerHeight"
+                    :headers="previewDataHeaders"
+                    :rows="previewDataRows"
+                />
+                <result-data-table
+                    v-show="activeView === SQL_QUERY_MODES.VIEW_DETAILS"
+                    :height="dynHeight - headerHeight"
+                    :headers="detailsDataHeaders"
+                    :rows="detailsDataRows"
+                />
+            </template>
         </div>
     </div>
 </template>
@@ -78,25 +86,17 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
         }),
-        tableHeaders() {
-            switch (this.activeView) {
-                case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                    return this.genHeaders(this.preview_data)
-                case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    return this.genHeaders(this.data_details)
-                default:
-                    return []
-            }
+        previewDataHeaders() {
+            return this.genHeaders(this.preview_data)
         },
-        tableRows() {
-            switch (this.activeView) {
-                case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                    return this.genRows(this.preview_data)
-                case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    return this.genRows(this.data_details)
-                default:
-                    return []
-            }
+        previewDataRows() {
+            return this.genRows(this.preview_data)
+        },
+        detailsDataHeaders() {
+            return this.genHeaders(this.data_details)
+        },
+        detailsDataRows() {
+            return this.genRows(this.data_details)
         },
         isPrwDataLoading() {
             return this.loading_preview_data || this.loading_data_details
