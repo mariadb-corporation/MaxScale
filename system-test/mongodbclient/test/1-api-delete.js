@@ -142,6 +142,14 @@ describe('delete', function () {
         rv = await mxsdb.command({find: name});
 
         assert.equal(rv.cursor.firstBatch.length, 42);
+
+        var q1 = { $and: [{i: { $gte: 5}}, {i: {$lt: 8}}] };
+        var q2 = { $and: [{i: { $gte: 30}}, {i: {$lt: 38}}] };
+
+        rv = await del([{q:q1, limit: 0}, {q:q2, limit: 0}]);
+
+        assert.equal(rv.ok, 1);
+        assert.equal(rv.n, (8 - 5) + (38 - 30));
     });
 
     after(function () {
