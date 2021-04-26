@@ -49,8 +49,8 @@ describe('aggregation', function () {
 
         var rv = await mxsdb.command(command);
 
-        assert(rv.ok == 1);
-        assert(rv.n == nExpected);
+        assert.equal(rv.ok, 1);
+        assert.equal(rv.n, nExpected);
     }
 
     async function count_both(nExpected, skip, limit, query) {
@@ -68,8 +68,8 @@ describe('aggregation', function () {
 
         var rv = await db.command({insert: name, documents: documents});
 
-        assert(rv.ok == 1);
-        assert(rv.n == n - m);
+        assert.equal(rv.ok, 1);
+        assert.equal(rv.n, n - m);
     }
 
     async function insert_both(m, n) {

@@ -58,9 +58,9 @@ describe('AUTO_CREATE', function () {
 
     it('Allows non-existent collection (i.e. table) to be accessed', async function () {
         var cursor = await collection.find();
-        assert(cursor);
+        assert.notEqual(cursor, null);
         var hasNext = await cursor.hasNext();
-        assert(!hasNext);
+        assert.equal(hasNext, false);
     });
 
     it('Creates collection (i.e. table) to be inserted into', async function () {

@@ -69,7 +69,7 @@ describe('aggregation', function () {
 
         if (n != undefined)
         {
-            assert(n, mngrv.values.length);
+            assert.equal(n, mngrv.values.length);
         }
     }
 
@@ -87,7 +87,7 @@ describe('aggregation', function () {
     });
 
     it('Distincts correctly a non-existent collection', async function () {
-        await distinct('dummy', 'dummy');
+        await distinct('dummy');
     });
 
     it('Distincts top-level field', async function () {
@@ -101,8 +101,8 @@ describe('aggregation', function () {
 
             var rv = await db.command({insert: name, documents: documents});
 
-            assert(rv.ok == 1);
-            assert(rv.n == n - m);
+            assert.equal(rv.ok, 1);
+            assert.equal(rv.n, n - m);
         }
 
         // Let's add 50 documents, i-field goes from 0 - 49.
@@ -130,8 +130,8 @@ describe('aggregation', function () {
 
             var rv = await db.command({insert: name, documents: documents});
 
-            assert(rv.ok == 1);
-            assert(rv.n == n - m);
+            assert.equal(rv.ok, 1);
+            assert.equal(rv.n, n - m);
         }
 
         prepare(); // Cleanup database
@@ -153,7 +153,7 @@ describe('aggregation', function () {
     it('Distincts correctly with query', async function () {
         var query = { "j.i": 24 }; // There will be two of these documents.
 
-        await distinct("j.i", 1);
+        await distinct("j.i", 1, query);
     });
 
     after(function () {

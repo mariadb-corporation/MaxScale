@@ -78,13 +78,13 @@ describe('FIND', function () {
             var doc;
 
             doc = await collection.findOne(query);
-            assert(doc);
+            assert.notEqual(doc, null);
             assert.strictEqual(doc.field, i);
 
             var cursor = collection.find(query);
 
             doc = await cursor.next();
-            assert(doc);
+            assert.notEqual(doc, null);
             assert.strictEqual(doc.field, i);
         }
     });

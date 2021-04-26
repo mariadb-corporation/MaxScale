@@ -63,7 +63,7 @@ describe('MISCALLENOUS', function () {
 
             query["_id"] = id;
             var doc = await collection.findOne(query);
-            assert(doc)
+            assert.notEqual(doc, null)
             assert.deepStrictEqual(doc["_id"], id);
         }
     });
@@ -78,10 +78,13 @@ describe('MISCALLENOUS', function () {
 
         try {
             result = await collection.insertOne(o);
-            assert(false, "Exception should be thrown.");
+            assert.equal("Exception should be thrown.", null);
         }
         catch (x) {
-            assert(x.code == 11000); // Duplicate
+            assert.notEqual(x.writeErrors, null);
+            assert.notEqual(x.writeErrors.length, 0);
+            var error = x.writeErrors[0];
+            assert.equal(error.code, 11000); // Duplicate
         }
     });
 
