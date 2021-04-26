@@ -12,7 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "mariadbmonitor/fail_switch_rejoin_common.cpp"
+#include "../mariadbmonitor/fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
 #include <maxbase/format.hh>
@@ -29,7 +29,6 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
     const char uninstall_plugin[] = "UNINSTALL SONAME 'auth_pam';";
@@ -548,7 +547,7 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
     bool rval = false;
     MYSQL* maxconn = mysql_init(NULL);
     // Need to set plugin directory so that dialog.so is found.
-    const char plugin_path[] = "../connector-c/install/lib/mariadb/plugin";
+    const char plugin_path[] = "../../connector-c/install/lib/mariadb/plugin";
     mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path);
     mysql_real_connect(maxconn, host, user.c_str(), pass.c_str(), db, port, NULL, 0);
     auto err = mysql_error(maxconn);

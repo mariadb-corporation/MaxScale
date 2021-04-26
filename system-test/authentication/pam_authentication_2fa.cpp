@@ -16,7 +16,7 @@
 #include <maxtest/execute_cmd.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
-#include "mariadbmonitor/fail_switch_rejoin_common.cpp"
+#include "../mariadbmonitor/fail_switch_rejoin_common.cpp"
 
 using std::string;
 using std::cout;
