@@ -12,11 +12,12 @@
                             <v-btn
                                 class="maintain-btn"
                                 text
+                                color="primary"
                                 :disabled="stateMode === 'maintenance'"
                                 v-on="on"
                                 @click="handleClick('maintain')"
                             >
-                                <v-icon size="22" color="primary">
+                                <v-icon size="22">
                                     $vuetify.icons.paused
                                 </v-icon>
                             </v-btn>
@@ -32,11 +33,12 @@
                             <v-btn
                                 class="clear-btn"
                                 text
+                                color="primary"
                                 :disabled="stateMode !== 'maintenance' && stateMode !== 'drained'"
                                 v-on="on"
                                 @click="handleClick('clear')"
                             >
-                                <v-icon size="22" color="primary">
+                                <v-icon size="22">
                                     $vuetify.icons.restart
                                 </v-icon>
                             </v-btn>
@@ -55,12 +57,13 @@
                         <template v-slot:activator="{ on }">
                             <v-btn
                                 class="drain-btn"
+                                color="primary"
                                 :disabled="stateMode === 'maintenance' || stateMode === 'drained'"
                                 text
                                 v-on="on"
                                 @click="handleClick('drain')"
                             >
-                                <v-icon size="22" color="primary">
+                                <v-icon size="22">
                                     $vuetify.icons.drain
                                 </v-icon>
                             </v-btn>
@@ -77,8 +80,14 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn class="delete-btn" text v-on="on" @click="handleClick('delete')">
-                                <v-icon size="18" color="error">
+                            <v-btn
+                                class="delete-btn"
+                                text
+                                color="error"
+                                v-on="on"
+                                @click="handleClick('delete')"
+                            >
+                                <v-icon size="18">
                                     $vuetify.icons.delete
                                 </v-icon>
                             </v-btn>
@@ -113,10 +122,10 @@
             <icon-sprite-sheet size="13" class="status-icon mr-1" :frame="stateIconFrame">
                 status
             </icon-sprite-sheet>
-            <span class="color text-navigation body-2 server-healthy">
+            <span class="color text-navigation text-body-2 server-healthy">
                 {{ serverHealthy }}
             </span>
-            <span v-if="version_string" class="color text-field-text body-2">
+            <span v-if="version_string" class="color text-field-text text-body-2">
                 |
                 <span class="version-string">{{ $t('version') }} {{ version_string }}</span>
             </span>

@@ -8,7 +8,7 @@
         flat
         color="deep-ocean"
     >
-        <v-toolbar-title class="headline">
+        <v-toolbar-title class="app-headline text-h5">
             <router-link to="/dashboard/servers">
                 <img src="@/assets/logo.svg" alt="MariaDB Logo" />
                 <span class="product-name tk-azo-sans-web font-weight-medium  white--text">
@@ -99,7 +99,7 @@ export default {
     }
 }
 
-.headline {
+.app-headline {
     a {
         text-decoration: none;
     }

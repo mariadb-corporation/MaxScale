@@ -12,11 +12,12 @@
                             <v-btn
                                 class="stop-btn"
                                 text
+                                color="primary"
                                 :disabled="serviceState === 'Stopped'"
                                 v-on="on"
                                 @click="actionHandle('stop')"
                             >
-                                <v-icon size="22" color="primary">
+                                <v-icon size="22">
                                     $vuetify.icons.stopped
                                 </v-icon>
                             </v-btn>
@@ -32,11 +33,12 @@
                             <v-btn
                                 class="start-btn"
                                 text
+                                color="primary"
                                 :disabled="serviceState === 'Started'"
                                 v-on="on"
                                 @click="actionHandle('start')"
                             >
-                                <v-icon size="22" color="primary">
+                                <v-icon size="22">
                                     $vuetify.icons.running
                                 </v-icon>
                             </v-btn>
@@ -56,10 +58,11 @@
                             <v-btn
                                 class="delete-btn"
                                 text
+                                color="error"
                                 v-on="on"
                                 @click="actionHandle('destroy')"
                             >
-                                <v-icon size="18" color="error">
+                                <v-icon size="18">
                                     $vuetify.icons.delete
                                 </v-icon>
                             </v-btn>
@@ -84,7 +87,7 @@
             >
                 status
             </icon-sprite-sheet>
-            <span class="service-state color text-navigation body-2">
+            <span class="service-state color text-navigation text-body-2">
                 {{ serviceState }}
             </span>
         </template>

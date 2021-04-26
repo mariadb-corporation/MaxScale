@@ -9,8 +9,14 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn class="delete-btn" text v-on="on" @click="handleDelete">
-                                <v-icon size="18" color="error">
+                            <v-btn
+                                class="delete-btn"
+                                text
+                                color="error"
+                                v-on="on"
+                                @click="handleDelete"
+                            >
+                                <v-icon size="18">
                                     $vuetify.icons.delete
                                 </v-icon>
                             </v-btn>

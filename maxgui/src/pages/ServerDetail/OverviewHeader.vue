@@ -13,7 +13,7 @@
             </template>
             <template v-slot:card-body>
                 <span
-                    class="detail-overview__card__name caption text-uppercase font-weight-bold color text-deep-ocean"
+                    class="detail-overview__card__name text-caption text-uppercase font-weight-bold color text-deep-ocean"
                 >
                     {{ name.replace('_', ' ') }}
                 </span>
@@ -120,7 +120,7 @@ export default {
             targetSelectItemType: 'monitors',
             itemsList: [],
             defaultItems: {},
-            valueClass: 'detail-overview__card__value text-no-wrap body-2',
+            valueClass: 'detail-overview__card__value text-no-wrap text-body-2',
         }
     },
 

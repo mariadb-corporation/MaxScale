@@ -27,7 +27,7 @@ module.exports = {
 
         const app = loginpage.section.app
         app.assert.elementCount('@logo', 1)
-        app.expect.section('@headline').text.to.match(/^Welcome$/)
+        app.expect.section('@app-headline').text.to.match(/^Welcome$/)
 
         browser.end()
     },

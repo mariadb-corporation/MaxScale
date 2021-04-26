@@ -106,14 +106,14 @@ describe('ServiceDetail - OverviewHeader', () => {
             expect(title.text()).to.be.equals('Overview')
         })
         it(`Should show router in the first outlined-overview-card`, async () => {
-            const cardTitle = outlineOverviewCards[0].find('.caption')
+            const cardTitle = outlineOverviewCards[0].find('.text-caption')
             const cardBody = outlineOverviewCards[0].find('.router')
             expect(cardTitle.text()).to.be.equals('ROUTER')
             expect(cardBody.text()).to.be.equals(router)
         })
         it(`Should show started time in the second outlined-overview-card`, async () => {
             const { dateFormat } = wrapper.vm.$help
-            const cardTitle = outlineOverviewCards[1].find('.caption')
+            const cardTitle = outlineOverviewCards[1].find('.text-caption')
             const cardBody = outlineOverviewCards[1].find('.started')
             expect(cardTitle.text()).to.be.equals('STARTED AT')
             expect(cardBody.text()).to.be.equals(dateFormat({ value: started }))

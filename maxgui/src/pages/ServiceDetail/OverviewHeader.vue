@@ -6,20 +6,24 @@
                     {{ $t('overview') }}
                 </template>
                 <template v-slot:card-body>
-                    <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
+                    <span
+                        class="text-caption text-uppercase font-weight-bold color text-deep-ocean"
+                    >
                         ROUTER
                     </span>
-                    <span class="router text-no-wrap body-2">
+                    <span class="router text-no-wrap text-body-2">
                         {{ currentService.attributes.router }}
                     </span>
                 </template>
             </outlined-overview-card>
             <outlined-overview-card wrapperClass="mt-5">
                 <template v-slot:card-body>
-                    <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
+                    <span
+                        class="text-caption text-uppercase font-weight-bold color text-deep-ocean"
+                    >
                         STARTED AT
                     </span>
-                    <span class="started text-no-wrap body-2">
+                    <span class="started text-no-wrap text-body-2">
                         {{ $help.dateFormat({ value: currentService.attributes.started }) }}
                     </span>
                 </template>

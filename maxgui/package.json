@@ -56,7 +56,7 @@
         "vue-moment": "^4.1.0",
         "vue-router": "^3.5.1",
         "vue-template-compiler": "^2.6.12",
-        "vuetify": "~2.2.34",
+        "vuetify": "^2.3.19",
         "vuetify-loader": "^1.7.2",
         "vuex": "^3.6.2",
         "worker-loader": "^2.0.0"

@@ -9,7 +9,7 @@
             @card-hover="showEditBtn = $event"
         >
             <template v-slot:card-body>
-                <span class="caption text-uppercase font-weight-bold color text-deep-ocean">
+                <span class="text-caption text-uppercase font-weight-bold color text-deep-ocean">
                     {{ name.replace('_', ' ') }}
                 </span>
 
@@ -17,11 +17,11 @@
                     <router-link
                         v-if="value !== 'undefined'"
                         :to="`/dashboard/servers/${value}`"
-                        class="text-no-wrap body-2 no-underline"
+                        class="text-no-wrap text-body-2 no-underline"
                     >
                         <span>{{ value }} </span>
                     </router-link>
-                    <span v-else class="text-no-wrap body-2">
+                    <span v-else class="text-no-wrap text-body-2">
                         {{ value }}
                     </span>
                     <v-btn
@@ -44,7 +44,7 @@
                     </v-tooltip>
                 </template>
 
-                <span v-else class="text-no-wrap body-2">
+                <span v-else class="text-no-wrap text-body-2">
                     {{ value }}
                 </span>
             </template>

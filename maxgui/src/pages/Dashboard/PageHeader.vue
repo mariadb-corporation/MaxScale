@@ -3,7 +3,7 @@
         <portal to="page-header">
             <h4
                 style="margin-bottom: 0px; line-height: normal;"
-                class="color text-navigation display-1 text-capitalize"
+                class="color text-navigation text-h4 text-capitalize"
             >
                 {{ pageTitle }}
             </h4>
@@ -42,11 +42,11 @@
                 </template>
 
                 <v-sheet style="border-radius: 10px;" class="px-6 py-6" max-width="320px">
-                    <span class="d-block mb-1 body-2 font-weight-bold text-capitalize">
+                    <span class="d-block mb-1 text-body-2 font-weight-bold text-capitalize">
                         {{ $t('aboutMaxScale') }}
                     </span>
                     <div v-for="(value, name) in getMaxScaleInfo" :key="name">
-                        <span class="d-flex body-2">
+                        <span class="d-flex text-body-2">
                             <span class="text-capitalize" style="width:35%">
                                 {{ name.split('_').join(' ') }}
                             </span>

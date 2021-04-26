@@ -1,7 +1,7 @@
 <template>
     <div :class="['d-flex flex-column detail-overview', wrapperClass]">
         <p
-            class="detail-overview__title body-2 mb-3 text-uppercase color font-weight-bold text-navigation"
+            class="detail-overview__title text-body-2 mb-3 text-uppercase color font-weight-bold text-navigation"
         >
             <slot name="title">
                 <span :style="{ visibility: 'hidden' }">hidden</span>

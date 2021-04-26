@@ -53,7 +53,7 @@
                         <router-link
                             :key="serviceId"
                             :to="`/dashboard/services/${serviceId}`"
-                            class="body-2 d-block no-underline"
+                            class="text-body-2 d-block no-underline"
                         >
                             <span>{{ serviceId }} </span>
                         </router-link>

@@ -120,7 +120,7 @@ export default {
                 // for showing index number columns from item
                 this.hasOrderNumber &&
                     cellIndex === 0 &&
-                    'overline px-2 border-right-table-border text-field-text',
+                    'text-overline px-2 border-right-table-border text-field-text',
                 // for rowspan feature
                 item.hidden && cellIndex < this.colsHasRowSpan && 'hide',
                 this.colsHasRowSpan &&

@@ -22,7 +22,7 @@
                     </v-icon>
                 </v-btn>
                 <p
-                    class="collapse-title mb-0 body-2 font-weight-bold color text-navigation text-uppercase"
+                    class="collapse-title mb-0 text-body-2 font-weight-bold color text-navigation text-uppercase"
                 >
                     {{ title }}
                     <span v-if="titleInfo || titleInfo === 0" class="ml-1 color text-field-text">

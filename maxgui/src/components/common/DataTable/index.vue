@@ -103,7 +103,7 @@
                 style="border-radius: 10px;overflow:auto"
                 class="pa-4"
             >
-                <span class="body-2">
+                <span class="text-body-2">
                     {{ getValue(truncatedMenu.item, truncatedMenu.header) }}
                 </span>
             </v-sheet>
@@ -502,11 +502,11 @@ export default {
     background: #f2fcff !important;
     opacity: 0.6;
 }
-.data-table-full {
+.v-data-table.data-table-full {
     table {
         thead {
             tr {
-                box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1) !important;
+                box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1);
                 th {
                     text-transform: uppercase;
                     font-size: 11px;

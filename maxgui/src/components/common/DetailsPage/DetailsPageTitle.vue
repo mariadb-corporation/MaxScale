@@ -15,7 +15,7 @@
                 <div class="d-inline-flex align-center">
                     <h4
                         style="line-height: normal;"
-                        class="ml-1 mb-0 color text-navigation display-1  page-title"
+                        class="ml-1 mb-0 color text-navigation text-h4  page-title"
                     >
                         {{ $route.params.id }}
                     </h4>
@@ -68,7 +68,6 @@ export default {
     .v-list {
         padding-top: 0;
         padding-bottom: 0;
-        border-radius: 0px;
     }
 }
 </style>
