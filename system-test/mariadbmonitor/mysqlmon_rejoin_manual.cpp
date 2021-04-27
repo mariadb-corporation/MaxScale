@@ -20,13 +20,10 @@ using std::endl;
 
 int main(int argc, char** argv)
 {
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
     // Set up test table
     basic_test(test);
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
     auto& mxs = test.maxscale();
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
@@ -34,7 +31,6 @@ int main(int argc, char** argv)
     mysql_close(maxconn);
     test.tprintf(LINE);
     print_gtids(test);
-    get_input();
 
     mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
     if (test.ok())

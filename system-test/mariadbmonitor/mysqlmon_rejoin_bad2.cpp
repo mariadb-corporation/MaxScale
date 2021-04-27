@@ -62,12 +62,8 @@ static void expect(TestConnections& test, const char* zServer, const char* zStat
 
 int main(int argc, char** argv)
 {
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     test.repl->connect();
-
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
     // Set up test table
     basic_test(test);
 
@@ -78,7 +74,6 @@ int main(int argc, char** argv)
     get_output(test);
 
     print_gtids(test);
-    get_input();
     mysql_close(maxconn);
 
     // Stop master, wait for failover

@@ -11,8 +11,6 @@
  * Public License.
  */
 
-#include <vector>
-
 #include <maxtest/testconnections.hh>
 #include "fail_switch_rejoin_common.cpp"
 #include <iostream>
@@ -24,14 +22,11 @@ using std::endl;
 int main(int argc, char** argv)
 {
     char result_tmp[bufsize];
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
 
     // Set up test table
     basic_test(test);
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
     test.repl->sync_slaves(0);

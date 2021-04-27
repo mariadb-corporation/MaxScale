@@ -22,11 +22,8 @@ using std::cout;
 
 int main(int argc, char** argv)
 {
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     test.repl->connect();
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
     // Set up test table
     basic_test(test);
     // Advance gtid:s a bit to so gtid variables are updated.

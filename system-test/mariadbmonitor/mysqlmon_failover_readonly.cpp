@@ -23,8 +23,6 @@ using std::cout;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
     // Test uses 2 slaves, stop the last one to prevent it from replicating anything.
     test.repl->stop_node(3);
     // Set up test table

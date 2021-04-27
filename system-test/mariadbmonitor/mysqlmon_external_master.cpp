@@ -47,7 +47,6 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     // Create a table and a user and start a thread that does writes
     MYSQL* node0 = test.repl->nodes[0];

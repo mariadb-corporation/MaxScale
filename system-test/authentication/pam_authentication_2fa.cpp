@@ -33,7 +33,6 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
     const char uninstall_plugin[] = "UNINSTALL SONAME 'auth_pam';";

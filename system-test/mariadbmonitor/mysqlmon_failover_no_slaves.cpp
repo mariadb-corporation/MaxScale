@@ -29,10 +29,8 @@ const string maint = "Maintenance";
 
 int main(int argc, char** argv)
 {
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
 
-    delete_slave_binlogs(test);
     basic_test(test);
     MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
     bool success = generate_traffic_and_check(test, conn, 5);

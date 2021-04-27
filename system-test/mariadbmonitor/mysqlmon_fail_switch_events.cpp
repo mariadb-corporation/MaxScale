@@ -204,7 +204,6 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     try_delete_event(test);
     // Schedule a repeating event.

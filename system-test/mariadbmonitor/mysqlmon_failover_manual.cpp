@@ -20,7 +20,6 @@ int main(int argc, char** argv)
     // interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     basic_test(test);
     print_gtids(test);

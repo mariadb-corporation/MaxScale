@@ -20,8 +20,6 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     // Set up test table
     basic_test(test);
-    // Delete binlogs to sync gtid:s
-    delete_slave_binlogs(test);
 
     auto& mxs = test.maxscale();
     // Advance gtid:s a bit to so gtid variables are updated.

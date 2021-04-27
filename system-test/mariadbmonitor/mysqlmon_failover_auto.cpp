@@ -18,7 +18,6 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     test.repl->connect();
-    delete_slave_binlogs(test);
 
     test.maxscales->wait_for_monitor(2);
     basic_test(test);
