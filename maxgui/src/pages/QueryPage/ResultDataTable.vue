@@ -1,6 +1,5 @@
 <template>
     <div>
-        <!-- TODO:Add resizable column feat -->
         <div ref="tableTools" class="table-tools">
             <v-text-field
                 v-model="search_keyword"
@@ -13,17 +12,13 @@
                 hide-details
             />
         </div>
-        <data-table
-            tableClass="query-result-data-table"
-            :search="search_keyword"
+        <virtual-scroll-table
+            :benched="0"
             :headers="headers"
-            :data="rows"
-            keepPrimitiveValue
-            dense
-            fixed-header
+            :rows="filteredRows"
+            :itemHeight="30"
             :height="tableHeight"
-            :showAll="shouldShowAll"
-            :itemsPerPage="itemsPerPage"
+            @scroll-end="fetchMore"
         />
     </div>
 </template>
@@ -55,18 +50,12 @@ export default {
         }
     },
     computed: {
-        shouldShowAll() {
-            return this.rows.length <= 100
-        },
-        itemsPerPage() {
-            return this.shouldShowAll ? -1 : 100
-        },
         tableHeight() {
             let res = this.height - this.tableToolsHeight
-            if (!this.shouldShowAll) {
-                res -= 60 // footer height
-            } else res -= 8 // padding height
-            return `${res}px`
+            return res
+        },
+        filteredRows() {
+            return this.rows.filter(item => `${item}`.includes(this.search_keyword))
         },
     },
     mounted() {
@@ -76,6 +65,9 @@ export default {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
+        },
+        async fetchMore() {
+            /* TODO: emit to parent */
         },
     },
 }

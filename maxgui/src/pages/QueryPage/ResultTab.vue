@@ -45,7 +45,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import genQryResData from 'mixins/genQryResData'
 import { mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
@@ -53,7 +52,6 @@ export default {
     components: {
         ResultDataTable,
     },
-    mixins: [genQryResData],
     props: {
         dynHeight: { type: Number, required: true },
         queryTxt: { type: String, require: true },
@@ -70,10 +68,12 @@ export default {
             loading_query_result: state => state.query.loading_query_result,
         }),
         tableHeaders() {
-            return this.genHeaders(this.query_result)
+            if (!this.query_result.columns) return []
+            return this.query_result.columns
         },
         tableRows() {
-            return this.genRows(this.query_result)
+            if (!this.query_result.rowset) return []
+            return this.query_result.rowset
         },
     },
     watch: {

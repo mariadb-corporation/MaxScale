@@ -27,7 +27,7 @@ import DetailsPage from './DetailsPage'
 import Parameters from './Parameters'
 import SplitPane from './SplitPane'
 import MTreeVIew from './MTreeView'
-
+import VirtualScrollTable from './VirtualScrollTable'
 export default {
     'page-wrapper': PageWrapper,
     'global-search': GlobalSearch,
@@ -43,4 +43,5 @@ export default {
     ...DetailsPage,
     'split-pane': SplitPane,
     'm-treeview': MTreeVIew,
+    'virtual-scroll-table': VirtualScrollTable,
 }
