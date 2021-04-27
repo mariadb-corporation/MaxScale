@@ -256,7 +256,13 @@ No fields are relevant for this command.
 
 ### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+getMore | long | The cursor id.
+collection | string | The name of the collection over which the cursor is operating.
+batchSize | positive integer | Optional. The number of documents to return in the batch.
 
 ### [insert](https://docs.mongodb.com/manual/reference/command/insert)
 
