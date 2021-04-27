@@ -54,7 +54,7 @@ public:
      * @param testfunc Test function
      * @return Return value.
      */
-    int run_test(int argc, char* argv[], const std::function<int(TestConnections&)>& testfunc);
+    int run_test(int argc, char* argv[], const std::function<void(TestConnections&)>& testfunc);
 
 
     /**

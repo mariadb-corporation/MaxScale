@@ -29,9 +29,16 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
 
 string generate_2fa_token(TestConnections& test, const string& secret);
 
+void test_main(TestConnections& test);
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    return test.run_test(argc, argv, test_main);
+}
+
+void test_main(TestConnections& test)
+{
     test.repl->connect();
 
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
@@ -187,7 +194,6 @@ R"(\" RATE_LIMIT 3 30
 
     cleanup();
     test.repl->disconnect();
-    return test.global_result;
 }
 
 // Helper function for checking PAM-login. If db is empty, log to null database.
