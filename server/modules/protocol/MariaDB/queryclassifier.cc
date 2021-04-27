@@ -367,6 +367,7 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
 
 void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
 {
+    m_prev_ps_id = id;
     return m_sPs_manager->store(pBuffer, id);
 }
 
@@ -600,7 +601,9 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
 
 void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
 {
-    m_prev_ps_id = id;
+    // The previous PS ID can be larger than the ID of the response being stored if multiple prepared
+    // statements were sent at the same time.
+    mxb_assert(m_prev_ps_id == id);
 
     if (param_count)
     {
