@@ -39,6 +39,7 @@ class HttpResponse
 public:
     using Headers = std::unordered_map<std::string, std::string>;
     using Handler = WebSocket::Handler;
+    using Callback = std::function<HttpResponse()>;
 
     HttpResponse(const HttpResponse& response);
     HttpResponse& operator=(const HttpResponse& response);
@@ -57,6 +58,16 @@ public:
      * @param handler WebSocket handler to use
      */
     HttpResponse(Handler handler);
+
+    /**
+     * Create a response from a callback
+     *
+     * The callback is called in a context where blocking operations are allowed. Use this if the response is
+     * generated via some blocking operation.
+     *
+     * @param callback The callback function to be called
+     */
+    HttpResponse(Callback callback);
 
     ~HttpResponse();
 
@@ -139,11 +150,17 @@ public:
         return m_handler;
     }
 
+    Callback callback()
+    {
+        return m_cb;
+    }
+
 private:
-    json_t* m_body;     /**< Message body */
-    int     m_code;     /**< The HTTP code for the response */
-    Headers m_headers;  /**< Extra headers */
-    Handler m_handler;
+    json_t*  m_body;    /**< Message body */
+    int      m_code;    /**< The HTTP code for the response */
+    Headers  m_headers; /**< Extra headers */
+    Handler  m_handler; /**< WebSocket upgrade handler */
+    Callback m_cb;      /**< Callback used to generate the response */
 
     std::vector<std::string> m_cookies;
 

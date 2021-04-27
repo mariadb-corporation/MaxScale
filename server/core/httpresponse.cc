@@ -47,11 +47,15 @@ HttpResponse::HttpResponse(int code, json_t* response)
 }
 
 HttpResponse::HttpResponse(Handler handler)
-    : m_body(nullptr)
-    , m_code(MHD_HTTP_SWITCHING_PROTOCOLS)
-    , m_headers{{HTTP_RESPONSE_HEADER_DATE, http_get_date()}}
-    , m_handler(handler)
+    : HttpResponse(MHD_HTTP_SWITCHING_PROTOCOLS)
 {
+    m_handler = handler;
+}
+
+HttpResponse::HttpResponse(Callback callback)
+    : HttpResponse(MHD_HTTP_FORBIDDEN)
+{
+    m_cb = callback;
 }
 
 HttpResponse::HttpResponse(const HttpResponse& response)
@@ -59,6 +63,7 @@ HttpResponse::HttpResponse(const HttpResponse& response)
     , m_code(response.m_code)
     , m_headers(response.m_headers)
     , m_handler(response.m_handler)
+    , m_cb(response.m_cb)
     , m_cookies(response.m_cookies)
 {
 }
@@ -70,6 +75,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& response)
     m_code = response.m_code;
     m_headers = response.m_headers;
     m_handler = response.m_handler;
+    m_cb = response.m_cb;
     m_cookies = response.m_cookies;
     json_decref(body);
     return *this;

@@ -767,6 +767,10 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
             reply = HttpResponse(MHD_HTTP_UPGRADE_REQUIRED);
         }
     }
+    else if (auto cb = reply.callback())
+    {
+        reply = cb();
+    }
 
     string data;
 
