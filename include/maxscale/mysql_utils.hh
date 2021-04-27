@@ -22,7 +22,24 @@
 #include <maxscale/server.hh>
 
 /**
- * Creates a connection to a MySQL database engine. If necessary, initializes SSL.
+ * Creates a new database connection.
+ *
+ * @param con     The initialized connection
+ * @param address The host to connect to
+ * @param port    The port to connect to
+ * @param user    Username used for the connection
+ * @param passwd  The password for the user
+ * @param ssl     The SSL configuration to use
+ * @param flags   Connection flags for Connector-C
+ *
+ * @return New connection or NULL on error
+ */
+MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
+                              const char* user, const char* passwd,
+                              const mxb::SSLConfig& ssl, int flags = 0);
+
+/**
+ * Creates a database connection to a server.
  *
  * @param con    A valid MYSQL structure.
  * @param server The server on which the MySQL engine is running.
@@ -140,7 +157,6 @@ namespace maxscale
 std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
                                                 std::string* errmsg_out = nullptr,
                                                 unsigned int* errno_out = nullptr);
-
 }
 
 /**
@@ -157,5 +173,3 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
  *         must not be freed.
  */
 const char* mxs_response_to_string(GWBUF* pPacket);
-
-

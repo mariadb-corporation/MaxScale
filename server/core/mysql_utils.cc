@@ -33,10 +33,10 @@
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/config.hh>
 
-MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd)
+MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
+                              const char* user, const char* passwd,
+                              const mxb::SSLConfig& ssl, int flags)
 {
-    auto ssl = server->ssl_config();
-
     if (ssl.enabled)
     {
         char enforce_tls = 1;
@@ -67,16 +67,6 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
         }
     }
 
-    bool server_is_db = server->info().is_database();
-
-    char yes = 1;
-    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
-    if (server_is_db)
-    {
-        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
-        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET @@session.autocommit=1;");
-    }
-
     const auto& local_address = mxs::Config::get().local_address;
 
     if (!local_address.empty())
@@ -85,15 +75,33 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
     }
 
     MYSQL* mysql = nullptr;
-    auto address = server->address();
+
     if (address[0] == '/')
     {
-        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, address, 0);
+        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, address, flags);
     }
     else
     {
-        mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, port, NULL, 0);
+        mysql = mysql_real_connect(con, address, user, passwd, NULL, port, NULL, flags);
     }
+
+    return mysql;
+}
+
+MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* user, const char* passwd)
+{
+    bool server_is_db = server->info().is_database();
+    if (server_is_db)
+    {
+        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+        mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET @@session.autocommit=1;");
+    }
+
+    char yes = 1;
+    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
+
+    auto ssl = server->ssl_config();
+    MYSQL* mysql = mxs_mysql_real_connect(con, server->address(), port, user, passwd, ssl);
 
     if (server_is_db && mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
     {
