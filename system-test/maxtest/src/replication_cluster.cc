@@ -23,6 +23,7 @@
 using std::string;
 using std::cout;
 using std::endl;
+using ServerArray = std::vector<mxt::MariaDBServer*>;
 
 namespace
 {
@@ -41,12 +42,13 @@ const char setup_slave[] =
 
 const string sl_io = "Slave_IO_Running";
 const string sl_sql = "Slave_SQL_Running";
+const string show_slaves = "show all slaves status;";
 
-bool is_readonly(mxt::MariaDB* conn)
+bool is_writable(mxt::MariaDB* conn)
 {
     bool rval = false;
     auto res = conn->try_query("select @@read_only;");
-    if (res && res->next_row() && res->get_bool(0) == true)
+    if (res && res->next_row() && res->get_bool(0) == false)
     {
         rval = true;
     }
@@ -66,45 +68,52 @@ const std::string& ReplicationCluster::type_string() const
     return type_mariadb;
 }
 
-int ReplicationCluster::start_replication()
+bool ReplicationCluster::start_replication()
 {
-    int local_result = 0;
-
-    // Start all nodes
-    for (int i = 0; i < N; i++)
+    const int n = N;
+    // Generate users on all nodes.
+    // TODO: most users can be generated just on the master once replication is on.
+    for (int i = 0; i < n; i++)
     {
-        if (start_node(i, (char*) ""))
-        {
-            printf("Start of node %d failed\n", i);
-            return 1;
-        }
-
         create_users(i);
     }
 
-    robust_connect(10);
+    ping_or_open_admin_connections();
 
-    string change_master = mxb::string_printf(
-        "change master to master_host='%s', master_port=%i, master_user='repl', master_password='repl', "
-        "master_use_gtid=slave_pos;",
-        ip_private(0), port[0]);
-
-    for (int i = 0; i < N; i++)
+    // At this point, the servers have conflicting gtids but identical data. Set gtids manually so
+    // replication can start.
+    bool reset_ok = true;
+    for (int i = 0; i < n; i++)
     {
-        execute_query(nodes[i], "SET GLOBAL read_only=OFF");
-        execute_query(nodes[i], "STOP SLAVE;");
-        execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
-
-        if (i != 0)
+        auto conn = backend(i)->admin_connection();
+        if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
         {
-            execute_query(nodes[i], "%s", change_master.c_str());
-            execute_query(nodes[i], "START SLAVE");
+            reset_ok = false;
         }
     }
 
-    disconnect();
+    bool rval = false;
+    if (reset_ok)
+    {
+        bool repl_ok = true;
+        // Finally, begin replication.
+        string change_master = gen_change_master_cmd(backend(0));
+        for (int i = 1; i < n; i++)
+        {
+            auto conn = backend(i)->admin_connection();
+            if (!conn->try_cmd(change_master) || !conn->try_cmd("START SLAVE;"))
+            {
+                repl_ok = false;
+            }
+        }
 
-    return local_result;
+        if (repl_ok)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 bool ReplicationCluster::check_replication()
@@ -115,98 +124,112 @@ bool ReplicationCluster::check_replication()
         logger().log_msgf("Checking %s", my_name.c_str());
     }
 
-    if (!update_status())
-    {
-        cout << "Failed to update status" << endl;
-        return false;
-    }
-
-    bool res = true;
-    int master_ind = 0;     // The first server should be master.
-    for (int i = 0; i < N && res; i++)
-    {
-        if (ssl && !check_ssl(i))
-        {
-            res = false;
-        }
-
-        auto srv = backend(i);
-        auto conn = srv->admin_connection();
-        if (conn->is_open())
-        {
-            auto res1 = conn->try_query("SELECT COUNT(*) FROM mysql.user;");
-            if (!res1)
-            {
-                res = false;
-            }
-
-            auto conn_ptr = conn;
-            if (i == master_ind)
-            {
-                if (check_master_node(conn_ptr))
-                {
-                    // To ensure replication is working, add an event to the master, then check for sync.
-                    if (!conn->try_cmd("flush tables;"))
-                    {
-                        res = false;
-                    }
-                }
-                else
-                {
-                    res = false;
-                    logger().log_msgf("Master node check failed for node %d.", i);
-                }
-            }
-            else
-            {
-                if (!good_slave_thread_status(conn_ptr, i) || is_readonly(conn_ptr))
-                {
-                    res = false;
-                    if (verbose)
-                    {
-                        printf("Slave %d check failed\n", i);
-                    }
-                }
-            }
-        }
-        else
-        {
-            res = false;
-        }
-    }
-
-    if (res && !sync_slaves(master_ind))
-    {
-        res = false;
-    }
-
-    if (verbose)
-    {
-        logger().log_msgf("Master-Slave cluster %s.", res ? "replicating" : "not replicating.");
-    }
-    return res;
-}
-
-bool ReplicationCluster::check_master_node(mxt::MariaDB* conn)
-{
-    bool rval = false;
-    auto res = conn->try_query("show all slaves status;");
-    if (res)
-    {
-        if (res->get_row_count() == 0)
-        {
-            if (!is_readonly(conn))
+    auto check_disable_read_only = [this](mxt::MariaDBServer* srv) {
+            bool rval = false;
+            auto conn = srv->admin_connection();
+            if (is_writable(conn))
             {
                 rval = true;
             }
             else
             {
-                logger().log_msg("The master is in read-only mode.");
+                logger().log_msgf("%s is in read-only mode, trying to disable.",
+                                  srv->vm_node().m_name.c_str());
+                if (conn->try_cmd("set global read_only=0;") && is_writable(conn))
+                {
+                    rval = true;
+                    logger().log_msgf("Read-only disabled on %s", srv->vm_node().m_name.c_str());
+                }
             }
+            return rval;
+        };
+
+    const int n = N;
+    bool all_writable = true;
+    for (int i = 0; i < n; i++)
+    {
+        if (!check_disable_read_only(backend(i)))
+        {
+            all_writable = false;
+        }
+    }
+
+    bool res = false;
+    if (all_writable)
+    {
+        // Check that the supposed master is not replicating. If it is, remove the slave connection.
+        auto master = backend(0);
+        if (remove_all_slave_conns(master))
+        {
+            bool repl_set_up = true;
+            // Master ok, check slaves.
+            for (int i = 1; i < n; i++)
+            {
+                if (!good_slave_thread_status(backend(i), master))
+                {
+                    repl_set_up = false;
+                }
+            }
+
+            if (repl_set_up)
+            {
+                // Replication should be ok, but test it by writing an event to master.
+                if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves(0))
+                {
+                    res = true;
+
+                    // TODO: Move elsewhere?
+                    if (ssl)
+                    {
+                        for (int i = 0; i < n && res; i++)
+                        {
+                            if (!check_ssl(i))
+                            {
+                                res = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    logger().log_msgf("%s %s.", my_name.c_str(), res ? "replicating" : "not replicating.");
+    return res;
+}
+
+bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
+{
+    bool rval = false;
+    auto conn = server->admin_connection();
+    auto name = server->vm_node().m_name.c_str();
+    auto res = conn->try_query(show_slaves);
+    if (res)
+    {
+        int rows = res->get_row_count();
+        if (rows == 0)
+        {
+            rval = true;
         }
         else
         {
-            logger().log_msg("The master is configured as a slave.");
+            logger().log_msgf("%s has %i slave connection(s), removing them.", name, rows);
+            if (conn->try_cmd("stop all slaves;"))
+            {
+                while (res->next_row())
+                {
+                    string conn_name = res->get_string("Connection_name");
+                    string reset = mxb::string_printf("reset slave '%s' all;", conn_name.c_str());
+                    conn->try_cmd(reset);
+                }
+
+                auto res2 = conn->try_query(show_slaves);
+                if (res2->get_row_count() == 0)
+                {
+                    rval = true;
+                    logger().log_msgf("Slave connection(s) removed from %s.", name);
+                }
+            }
         }
     }
     return rval;
@@ -215,78 +238,119 @@ bool ReplicationCluster::check_master_node(mxt::MariaDB* conn)
 /**
  * Check replication connection status
  *
- * @param conn MYSQL struct (connection have to be open)
- * @param node Node index
  * @return True if all is well
  */
-bool ReplicationCluster::good_slave_thread_status(mxt::MariaDB* conn, int node)
+bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master)
 {
-    bool rval = false;
-    bool multisource_repl = false;
-    bool gtid_ok = false;
-    string io_running;
-    string sql_running;
+    auto is_replicating_from_master = [this, slave, master](mxq::QueryResult* res) {
+            auto namec = slave->vm_node().m_name.c_str();
+            string conn_name = res->get_string("Connection_name");
+            string host = res->get_string("Master_Host");
+            int port = res->get_int("Master_Port");
 
-    const string y = "Yes";
-    const string n = "No";
+            bool rval = false;
+            if (conn_name.empty() && host == master->vm_node().priv_ip() && port == master->port())
+            {
+                string io_running = res->get_string(sl_io);
+                string sql_running = res->get_string(sl_sql);
 
-    // Doing 3 attempts to check status
-    for (int i = 0; i < 2; i++)
-    {
-        auto res = conn->try_query("show all slaves status;");
-        if (res)
-        {
-            int rows = res->get_row_count();
-            if (rows != 1)
-            {
-                if (rows > 1)
+                if ((io_running == "Yes" || io_running == "Connecting") && sql_running == "Yes")
                 {
-                    multisource_repl = true;
-                }
-                break;
-            }
-            else
-            {
-                res->next_row();
-                io_running = res->get_string(sl_io);
-                sql_running = res->get_string(sl_sql);
-                if (!io_running.empty() && io_running != y && io_running != n)
-                {
-                    // May not be final value, wait and try again.
-                    sleep(1);
+                    string using_gtid = res->get_string("Using_Gtid");
+                    if (using_gtid == "Slave_Pos" || using_gtid == "Current_Pos")
+                    {
+                        rval = true;
+                    }
+                    else
+                    {
+                        logger().log_msgf("%s is not using gtid in replication.", namec);
+                    }
                 }
                 else
                 {
-                    string gtid_io = res->get_string("Gtid_IO_Pos");
-                    string using_gtid = res->get_string("Using_Gtid");
-                    if (!gtid_io.empty() && !using_gtid.empty())
-                    {
-                        gtid_ok = true;
-                    }
-                    break;
+                    logger().log_msgf("Replication threads of %s are not in expected states. "
+                                      "IO: '%s', SQL: '%s'", namec, io_running.c_str(), sql_running.c_str());
+                }
+            }
+            else
+            {
+                logger().log_msgf("%s is not replicating from master or the replication is not in standard "
+                                  "configuration.", namec);
+            }
+            return rval;
+        };
+
+    bool recreate = false;
+    bool error = false;
+
+    auto conn = slave->admin_connection();
+    auto res = conn->try_query(show_slaves);
+    if (res)
+    {
+        int rows = res->get_row_count();
+        if (rows > 1)
+        {
+            // Multisource replication, remove connections.
+            if (remove_all_slave_conns(slave))
+            {
+                recreate = true;
+            }
+            else
+            {
+                error = true;
+            }
+        }
+        else if (rows == 1)
+        {
+            res->next_row();
+            if (!is_replicating_from_master(res.get()))
+            {
+                if (remove_all_slave_conns(slave))
+                {
+                    recreate = true;
+                }
+                else
+                {
+                    error = true;
                 }
             }
         }
-    }
-
-    if (!gtid_ok)
-    {
-        logger().log_msgf("Node %d: Not using gtid replication.", node);
-    }
-    else if (multisource_repl)
-    {
-        logger().log_msgf("Node %d: More than one configured slave.", node);
+        else
+        {
+            // No connection, create one.
+            recreate = true;
+        }
     }
     else
     {
-        if (io_running == y && sql_running == y)
+        error = true;
+    }
+
+    bool rval = false;
+    if (!error)
+    {
+        if (recreate)
         {
-            rval = true;
+            string change_cmd = gen_change_master_cmd(master);
+            if (conn->try_cmd(change_cmd) && conn->try_cmd("start slave;"))
+            {
+                // Replication should be starting. Give the slave some time to get started, then check that
+                // replication is at least starting.
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                res = conn->try_query(show_slaves);
+                if (res && res->get_row_count() == 1)
+                {
+                    res->next_row();
+                    if (is_replicating_from_master(res.get()))
+                    {
+                        rval = true;
+                    }
+                }
+            }
         }
         else
         {
-            logger().log_msgf("Node %d: Slave_IO_Running: '%s', Slave_SQL_Running: '%s'",
-                              node, io_running.c_str(), sql_running.c_str());
+            rval = true;
         }
     }
 
@@ -300,11 +364,17 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
         int64_t domain {-1};
         int64_t server_id {-1};
         int64_t seq_no {-1};
+
+        bool operator==(const Gtid& rhs)
+        {
+            return domain == rhs.domain && server_id == rhs.server_id && seq_no == rhs.seq_no;
+        }
     };
 
     struct ReplData
     {
         Gtid gtid;
+        bool repl_configured {false};
         bool is_replicating {false};
     };
 
@@ -335,6 +405,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
                     auto& slave_ss = res[1];
                     if (slave_ss->next_row())
                     {
+                        rval.repl_configured = true;
                         string io_state = slave_ss->get_string(sl_io);
                         string sql_state = slave_ss->get_string(sl_sql);
                         rval.is_replicating = (io_state != "No" && sql_state == "Yes");
@@ -344,7 +415,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
             return rval;
         };
 
-    auto update_all = [this, &update_one_server](const std::vector<MariaDBServer*>& servers) {
+    auto update_all = [this, &update_one_server](const ServerArray& servers) {
             size_t n = servers.size();
             std::vector<ReplData> rval;
             rval.resize(n);
@@ -409,17 +480,21 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
 
                 if (elem.gtid.server_id < 0)
                 {
-                    // Query or connection failed.
+                    // Query or connection failed. Cannot sync.
+                }
+                else if (elem.gtid == master_gtid)
+                {
+                    in_sync = true;
+                }
+                else if (!elem.repl_configured)
+                {
+                    // Not in matching gtid and no replication configured. Cannot sync.
                 }
                 else if (elem.gtid.domain != master_gtid.domain)
                 {
                     // If a test uses complicated gtid:s, it needs to handle it on it's own.
                     m_shared.log.log_msgf("Found different gtid domain id:s (%li and %li) when waiting "
                                           "for cluster sync.", elem.gtid.domain, master_gtid.domain);
-                }
-                else if (elem.gtid.seq_no >= master_gtid.seq_no)
-                {
-                    in_sync = true;
                 }
                 else if (elem.is_replicating)
                 {
@@ -592,5 +667,12 @@ const std::string& ReplicationCluster::name() const
 std::string ReplicationCluster::get_srv_cnf_filename(int node)
 {
     return mxb::string_printf("server%i.cnf", node + 1);
+}
+
+std::string ReplicationCluster::gen_change_master_cmd(MariaDBServer* master)
+{
+    return mxb::string_printf("change master to master_host='%s', master_port=%i, master_user='%s', "
+                              "master_password='%s', master_use_gtid=slave_pos;",
+                              master->vm_node().priv_ip(), master->port(), "repl", "repl");
 }
 }

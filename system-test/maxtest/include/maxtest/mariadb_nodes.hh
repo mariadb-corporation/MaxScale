@@ -61,6 +61,7 @@ public:
     const std::string& cnf_name() const;
 
     VMNode& vm_node();
+    int     port();
 
 private:
     Status   m_status;
@@ -192,9 +193,9 @@ public:
     /**
      * Start replication in manner relevant to the cluster.
      *
-     * @return  0 on success
+     * @return  True on success
      */
-    virtual int start_replication() = 0;
+    virtual bool start_replication() = 0;
 
     /**
      * Create the default users used by all tests
@@ -281,7 +282,7 @@ public:
 
     /**
      * Initializes and tests ssh-connection and removes some logs. If this fails, VMs are seriously wrong
-     * and continuing is pointless.
+     * and continuing is pointless. Does not communicate with the server processes.
      *
      * @return True on success
      */
@@ -375,7 +376,7 @@ public:
      * @param i Node index
      * @return True on success
      */
-    virtual bool prepare_server(int i);
+    virtual bool reset_server(int i);
 
     /**
      * @brief cnf_servers Generates backend servers description for maxscale.cnf
@@ -456,11 +457,12 @@ private:
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
-    bool reset_and_prepare_servers();
+    bool reset_servers();
     bool run_on_every_backend(const std::function<bool(int)>& func);
 
     /**
-     * Check if the cluster is replicating or otherwise properly synced.
+     * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.
+     * Should not wipe out database contents etc.
      *
      * @return True if cluster is ready for test
      */

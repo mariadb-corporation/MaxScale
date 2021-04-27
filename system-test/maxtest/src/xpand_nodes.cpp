@@ -29,7 +29,7 @@ XpandCluster::XpandCluster(mxt::SharedData* shared)
 {
 }
 
-bool XpandCluster::prepare_server(int m)
+bool XpandCluster::reset_server(int m)
 {
     bool rv = false;
     int ec;
@@ -141,8 +141,11 @@ bool XpandCluster::prepare_server(int m)
     return rv;
 }
 
-
-int XpandCluster::start_replication()
+/**
+ * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster
+ * @return True on success
+ */
+bool XpandCluster::start_replication()
 {
     int rv = 0;
 
@@ -220,7 +223,7 @@ int XpandCluster::start_replication()
         rv = 1;
     }
 
-    return rv;
+    return rv == 0;
 }
 
 bool XpandCluster::check_replication()
