@@ -12,13 +12,16 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "../mariadbmonitor/fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
 #include <maxbase/format.hh>
 
 using std::string;
 using std::cout;
+namespace
+{
+const string plugin_path = string(mxt::test_build_dir) + "/../connector-c/install/lib/mariadb/plugin";
+}
 
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& database);
@@ -30,64 +33,71 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     test.repl->connect();
 
+    const int N = 2;    // Use just two backends so that setup is fast.
+    test.expect(test.repl->N >= N, "Test requires at least two backends.");
+    if (!test.ok())
+    {
+        return test.global_result;
+    }
+
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
     const char uninstall_plugin[] = "UNINSTALL SONAME 'auth_pam';";
 
     const char pam_user[] = "dduck";
     const char pam_pw[] = "313";
-    const char pam_config_name[] = "duckburg";
+    const char pam_config_name[] = "pam_config_msg";
 
     const string add_user_cmd = (string)"useradd " + pam_user;
-    const string add_pw_cmd = (string)"echo " + pam_user + ":" + pam_pw + " | chpasswd";
+    const string add_pw_cmd = mxb::string_printf("echo %s:%s | chpasswd", pam_user, pam_pw);
     const string read_shadow = "chmod o+r /etc/shadow";
 
     const string remove_user_cmd = (string)"userdel --remove " + pam_user;
     const string read_shadow_off = "chmod o-r /etc/shadow";
 
+    const string pam_message_contents = "Lorem ipsum";
+
     // To make most out of this test, use a custom pam service configuration. It needs to be written to
     // all backends.
 
-    const string pam_config_file = (string)"/etc/pam.d/" + pam_config_name;
-    const string pam_message_file = "/tmp/messages.txt";
-    const string pam_config_contents =
-            "auth             optional        pam_echo.so file=" + pam_message_file + "\n"
-            "auth             required        pam_unix.so audit\n"
-            "auth             optional        pam_echo.so file=" + pam_message_file + "\n"
-            "auth             required        pam_unix.so audit\n"
-            "account          required        pam_unix.so audit\n";
+    string pam_config_path_src = mxb::string_printf("%s/authentication/%s", test_dir, pam_config_name);
+    string pam_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_config_name);
 
-    const string pam_message_contents = "I know what you did last summer!";
+    const char pam_msgfile[] = "pam_test_msg.txt";
+    string pam_msgfile_path_src = mxb::string_printf("%s/authentication/%s", test_dir, pam_msgfile);
+    string pam_msgfile_path_dst = mxb::string_printf("/tmp/%s", pam_msgfile);
 
-    const string create_pam_conf_cmd = "printf \"" + pam_config_contents + "\" > " + pam_config_file;
-    const string create_pam_message_cmd = "printf \"" + pam_message_contents + "\" > " + pam_message_file;
-    const string delete_pam_conf_cmd = "rm -f " + pam_config_file;
-    const string delete_pam_message_cmd = "rm -f " + pam_message_file;
+    const string delete_pam_conf_cmd = "rm -f " + pam_config_path_dst;
+    const string delete_pam_message_cmd = "rm -f " + pam_msgfile_path_dst;
 
     test.repl->connect();
     auto mxs_ip = test.maxscales->ip4(0);
 
     // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also,
     // make /etc/shadow readable for all so that the server process can access it.
-    for (int i = 0; i < test.repl->N; i++)
+
+    for (int i = 0; i < N; i++)
     {
         MYSQL* conn = test.repl->nodes[i];
         test.try_query(conn, install_plugin);
-        test.repl->ssh_node_f(i, true, "%s", add_user_cmd.c_str());
-        test.repl->ssh_node_f(i, true, "%s", add_pw_cmd.c_str());
-        test.repl->ssh_node_f(i, true, "%s", read_shadow.c_str());
 
-        // Also, create the custom pam config and message file.
-        test.repl->ssh_node_f(i, true, "%s", create_pam_conf_cmd.c_str());
-        test.repl->ssh_node_f(i, true, "%s", create_pam_message_cmd.c_str());
+        auto& vm = test.repl->backend(i)->vm_node();
+        vm.run_cmd_sudo(add_user_cmd);
+        vm.run_cmd_sudo(add_pw_cmd);
+        vm.run_cmd_sudo(read_shadow);
+
+        // Also, copy the custom pam config and message file.
+        vm.copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
+        vm.copy_to_node_sudo(pam_msgfile_path_src, pam_msgfile_path_dst);
     }
 
     // Also create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
     // local users.
-    test.maxscales->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", read_shadow.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", create_pam_conf_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", create_pam_message_cmd.c_str());
+    auto& mxs_vm = test.maxscales->vm_node();
+    mxs_vm.run_cmd_sudo(add_user_cmd);
+    mxs_vm.run_cmd_sudo(add_pw_cmd);
+    mxs_vm.run_cmd_sudo(read_shadow);
+    mxs_vm.copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
+    mxs_vm.copy_to_node_sudo(pam_msgfile_path_src, pam_msgfile_path_dst);
 
     if (test.ok())
     {
@@ -99,38 +109,13 @@ int main(int argc, char** argv)
         cout << "Test preparations failed.\n";
     }
 
-    auto expect_server_status = [&test](const string& server_name, const string& status) {
-            auto set_to_string = [](const StringSet& str_set) -> string {
-                    string rval;
-                    string sep;
-                    for (const string& elem : str_set)
-                    {
-                        rval += elem + sep;
-                        sep = ", ";
-                    }
-                    return rval;
-                };
-
-            auto status_set = test.maxscales->get_server_status(server_name.c_str());
-            string status_str = set_to_string(status_set);
-            bool found = (status_set.count(status) == 1);
-            test.expect(found, "%s was not %s as was expected. Status: %s.",
-                        server_name.c_str(), status.c_str(), status_str.c_str());
-        };
-
-    string server_names[] = {"server1", "server2", "server3", "server4"};
-    string master = "Master";
-    string slave = "Slave";
+    auto& mxs = test.maxscale();
 
     if (test.ok())
     {
-        get_output(test);
-        print_gtids(test);
-
-        expect_server_status(server_names[0], master);
-        expect_server_status(server_names[1], slave);
-        expect_server_status(server_names[2], slave);
-        expect_server_status(server_names[3], slave);
+        auto servers_status = mxs.get_servers();
+        servers_status.check_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st});
+        servers_status.print();
     }
 
     // Helper function for checking PAM-login. If db is empty, log to null database.
@@ -142,8 +127,11 @@ int main(int argc, char** argv)
             }
         };
 
-    auto update_users = [&test]() {
-            test.maxscales->restart();
+    auto update_users = [&mxs]() {
+            mxs.stop();
+            mxs.delete_log();
+            mxs.start();
+            mxs.wait_monitor_ticks();
         };
 
     if (test.ok())
@@ -169,7 +157,7 @@ int main(int argc, char** argv)
         sleep(1);
         test.repl->sync_slaves();
         update_users();
-        get_output(test);
+        mxs.get_servers().print();
 
         // If ok so far, try logging in with PAM.
         if (test.ok())
@@ -202,10 +190,9 @@ int main(int argc, char** argv)
         test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | "
                                        "mysql --user=root",
                               dummy_user);
-        sleep(1);
         test.repl->sync_slaves();
         update_users();
-        get_output(test);
+        mxs.get_servers().print();
 
         if (test.ok())
         {
@@ -244,10 +231,8 @@ int main(int argc, char** argv)
         test.try_query(conn, grant_role_fmt, r3, r2);
         test.try_query(conn, "GRANT SELECT ON *.* TO '%s';", r3);
         test.try_query(conn, "FLUSH PRIVILEGES;");
-        sleep(1);
         test.repl->sync_slaves();
         update_users();
-        get_output(test);
 
         // If ok so far, try logging in with PAM.
         if (test.ok())
@@ -467,7 +452,7 @@ int main(int argc, char** argv)
 
         // Test pam_use_cleartext_plugin. Enable the setting on all backends.
         cout << "Enabling " << setting_val << " on all backends.\n";
-        for (int i = 0; i < test.repl->N; i++)
+        for (int i = 0; i < N; i++)
         {
             alter_setting(i, true);
         }
@@ -496,27 +481,28 @@ int main(int argc, char** argv)
         }
 
         cout << "Disabling " << setting_val << " on all backends.\n";
-        for (int i = 0; i < test.repl->N; i++)
+        for (int i = 0; i < N; i++)
         {
             alter_setting(i, false);
         }
     }
 
     // Cleanup: remove linux user and files from the MaxScale node.
-    test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_message_cmd.c_str());
+    mxs_vm.run_cmd_sudo(remove_user_cmd);
+    mxs_vm.run_cmd_sudo(read_shadow_off);
+    mxs_vm.run_cmd_sudo(delete_pam_conf_cmd);
+    mxs_vm.run_cmd_sudo(delete_pam_message_cmd);
 
     // Cleanup: remove the linux users on the backends, unload pam plugin.
-    for (int i = 0; i < test.repl->N; i++)
+    for (int i = 0; i < N; i++)
     {
         MYSQL* conn = test.repl->nodes[i];
         test.try_query(conn, "UNINSTALL SONAME 'auth_pam';");
-        test.repl->ssh_node_f(i, true, "%s", remove_user_cmd.c_str());
-        test.repl->ssh_node_f(i, true, "%s", read_shadow_off.c_str());
-        test.repl->ssh_node_f(i, true, "%s", delete_pam_conf_cmd.c_str());
-        test.repl->ssh_node_f(i, true, "%s", delete_pam_message_cmd.c_str());
+        auto& vm = test.repl->backend(i)->vm_node();
+        vm.run_cmd_sudo(remove_user_cmd);
+        vm.run_cmd_sudo(read_shadow_off);
+        vm.run_cmd_sudo(delete_pam_conf_cmd);
+        vm.run_cmd_sudo(delete_pam_message_cmd);
     }
 
     test.repl->disconnect();
@@ -547,8 +533,7 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
     bool rval = false;
     MYSQL* maxconn = mysql_init(NULL);
     // Need to set plugin directory so that dialog.so is found.
-    const char plugin_path[] = "../../connector-c/install/lib/mariadb/plugin";
-    mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path);
+    mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path.c_str());
     mysql_real_connect(maxconn, host, user.c_str(), pass.c_str(), db, port, NULL, 0);
     auto err = mysql_error(maxconn);
     if (*err)

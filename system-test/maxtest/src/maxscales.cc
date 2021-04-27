@@ -424,6 +424,11 @@ bool Maxscales::ssl() const
     return m_ssl;
 }
 
+mxt::VMNode& Maxscales::vm_node()
+{
+    return *node(0);
+}
+
 namespace maxtest
 {
 
@@ -724,6 +729,12 @@ void MaxScale::stop()
 {
     auto res = m_maxscales->stop_maxscale(m_node_ind);
     logger().expect(res == 0, "MaxScale stop failed, error %i.", res);
+}
+
+void MaxScale::delete_log()
+{
+    m_maxscales->vm_node().run_cmd_output("truncate -s 0 /var/log/maxscale/maxscale.log",
+                                          mxt::VMNode::CmdPriv::SUDO);
 }
 
 std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::string& db)

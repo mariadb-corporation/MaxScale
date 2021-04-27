@@ -496,6 +496,41 @@ bool VMNode::is_remote() const
 {
     return m_type == NodeType::REMOTE;
 }
+
+mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)
+{
+    return run_cmd_output(cmd, CmdPriv::SUDO);
+}
+
+bool VMNode::copy_to_node_sudo(const string& src, const string& dest)
+{
+    const char err_fmt[] = "Command '%s' failed. Output: %s";
+    bool rval = false;
+    string temp_file = mxb::string_printf("%s/temporary.tmp", m_homedir.c_str());
+    if (copy_to_node(src, temp_file))
+    {
+        string copy_cmd = mxb::string_printf("cp %s %s", temp_file.c_str(), dest.c_str());
+        string rm_cmd = mxb::string_printf("rm %s", temp_file.c_str());
+        auto copy_res = run_cmd_output_sudo(copy_cmd);
+        auto rm_res = run_cmd_output_sudo(rm_cmd);
+        if (copy_res.rc == 0)
+        {
+            if (rm_res.rc == 0)
+            {
+                rval = true;
+            }
+            else
+            {
+                log().add_failure(err_fmt, rm_cmd.c_str(), rm_res.output.c_str());
+            }
+        }
+        else
+        {
+            log().add_failure(err_fmt, copy_cmd.c_str(), copy_res.output.c_str());
+        }
+    }
+    return rval;
+}
 }
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)

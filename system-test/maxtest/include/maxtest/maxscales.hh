@@ -270,6 +270,8 @@ public:
     bool use_valgrind() const;
     bool prepare_for_test();
 
+    mxt::VMNode& vm_node();
+
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl when connecting to MaxScale */
@@ -440,6 +442,7 @@ public:
 
     void start();
     void stop();
+    void delete_log();
 
     std::unique_ptr<mxt::MariaDB> open_rwsplit_connection(const std::string& db = "");
 

@@ -9,6 +9,3 @@ struct TestDefinition
 };
 
 extern const TestDefinition* test_definitions;
-
-/** The default template to use */
-extern const char* default_template;
