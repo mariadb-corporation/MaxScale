@@ -108,37 +108,11 @@ int header_cb(void* cls,
     return MHD_YES;
 }
 
-int cookie_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
-{
-    std::pair<std::string, std::string>* res = (std::pair<std::string, std::string>*)cls;
-
-    if (key == TOKEN_BODY)
-    {
-        res->first = value;
-    }
-    else if (key == TOKEN_SIG)
-    {
-        res->second = value;
-    }
-
-    return MHD_YES;
-}
-
 Client::Headers get_headers(MHD_Connection* connection)
 {
     Client::Headers rval;
     MHD_get_connection_values(connection, MHD_HEADER_KIND, header_cb, &rval);
     return rval;
-}
-
-std::string get_cookie_token(MHD_Connection* connection)
-{
-    std::pair<std::string, std::string> token;
-    MHD_get_connection_values(connection, MHD_COOKIE_KIND, cookie_cb, &token);
-    return token.first + token.second;
 }
 
 static bool modifies_data(const string& method)
@@ -912,7 +886,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         if (!is_auth_endpoint(request))
         {
             // Not the /auth endpoint, use the cookie or Bearer token
-            auto cookie_token = get_cookie_token(m_connection);
+            auto cookie_token = request.get_cookie(TOKEN_BODY) + request.get_cookie(TOKEN_SIG);
             auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
             if (!cookie_token.empty())

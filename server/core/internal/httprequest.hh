@@ -136,6 +136,30 @@ public:
     }
 
     /**
+     * @brief Get cookie value
+     *
+     * @param cookie Cookie to get
+     *
+     * @return Cookie value or empty string if the cookie was not found
+     */
+    std::string get_cookie(std::string cookie) const
+    {
+        std::transform(cookie.begin(), cookie.end(), cookie.begin(), ::tolower);
+        auto it = m_cookies.find(cookie);
+        return it != m_cookies.end() ? it->second : "";
+    }
+
+    /**
+     * Get all cookies
+     *
+     * @return All request cookies
+     */
+    const std::map<std::string, std::string>& get_cookies() const
+    {
+        return m_cookies;
+    }
+
+    /**
      * @brief Get option value
      *
      * @param header Option to get
@@ -315,6 +339,7 @@ private:
 
     std::map<std::string, std::string> m_options;       /**< Request options */
     std::map<std::string, std::string> m_headers;       /**< Request headers */
+    std::map<std::string, std::string> m_cookies;       /**< Request cookies */
     std::unique_ptr<json_t>            m_json;          /**< Request body */
     std::string                        m_json_string;   /**< String version of @c m_json */
     std::string                        m_resource;      /**< Requested resource */

@@ -60,6 +60,7 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
 {
     MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND, value_collector, &m_options);
     MHD_get_connection_values(m_connection, MHD_HEADER_KIND, value_collector, &m_headers);
+    MHD_get_connection_values(m_connection, MHD_COOKIE_KIND, value_collector, &m_cookies);
 
     process_uri(url, m_resource_parts);
 
