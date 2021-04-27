@@ -51,6 +51,9 @@ public:
     void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
     void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
 
+    static void create_first_batch(bsoncxx::builder::basic::document& doc,
+                                   const std::string& ns);
+
     const mxb::TimePoint& last_use() const
     {
         return m_used;

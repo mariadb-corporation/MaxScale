@@ -31,6 +31,9 @@ int64_t next_id()
     return ++id;
 }
 
+// If bit 63 is 0 and bit 62 a 1, then the value is interpreted as a 'Long'.
+const int64_t BSON_LONG_BIT = (int64_t(1) << 62);
+
 string create_leaf_entry(const string& extraction, const std::string& value)
 {
     mxb_assert(extraction.find('.') == string::npos);
@@ -95,7 +98,7 @@ MongoCursor::MongoCursor(const std::string& ns,
                          const vector<string>& extractions,
                          mxs::Buffer&& mariadb_response)
     : m_ns(ns)
-    , m_id(next_id())
+    , m_id(next_id() | BSON_LONG_BIT)
     , m_exhausted(false)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
@@ -114,6 +117,23 @@ void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc, int
 void MongoCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
     create_batch(doc, key::NEXTBATCH, nBatch);
+}
+
+//static
+void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
+                                     const std::string& ns)
+{
+    ArrayBuilder batch;
+
+    int64_t id = 0;
+
+    DocumentBuilder cursor;
+    cursor.append(kvp("firstBatch", batch.extract()));
+    cursor.append(kvp("id", id));
+    cursor.append(kvp("ns", ns));
+
+    doc.append(kvp("cursor", cursor.extract()));
+    doc.append(kvp("ok", 1));
 }
 
 void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,

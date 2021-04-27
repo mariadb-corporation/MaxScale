@@ -410,8 +410,7 @@ public:
                 if (code == ER_NO_SUCH_TABLE)
                 {
                     DocumentBuilder doc;
-                    MongoCursor cursor(table(Quoted::NO));
-                    cursor.create_first_batch(doc, 0);
+                    MongoCursor::create_first_batch(doc, table(Quoted::NO));
 
                     pResponse = create_response(doc.extract());
                 }
