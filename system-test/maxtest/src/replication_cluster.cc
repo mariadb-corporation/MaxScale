@@ -44,6 +44,11 @@ const string sl_io = "Slave_IO_Running";
 const string sl_sql = "Slave_SQL_Running";
 const string show_slaves = "show all slaves status;";
 
+bool repl_thread_run_states_ok(const string& io, const string& sql)
+{
+    return (io == "Yes" || io == "Connecting" || io == "Preparing") && sql == "Yes";
+}
+
 bool is_writable(mxt::MariaDB* conn)
 {
     bool rval = false;
@@ -177,18 +182,6 @@ bool ReplicationCluster::check_replication()
                 if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves(0))
                 {
                     res = true;
-
-                    // TODO: Move elsewhere?
-                    if (ssl)
-                    {
-                        for (int i = 0; i < n && res; i++)
-                        {
-                            if (!check_ssl(i))
-                            {
-                                res = false;
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -254,7 +247,7 @@ bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBS
                 string io_running = res->get_string(sl_io);
                 string sql_running = res->get_string(sl_sql);
 
-                if ((io_running == "Yes" || io_running == "Connecting") && sql_running == "Yes")
+                if (repl_thread_run_states_ok(io_running, sql_running))
                 {
                     string using_gtid = res->get_string("Using_Gtid");
                     if (using_gtid == "Slave_Pos" || using_gtid == "Current_Pos")
@@ -365,7 +358,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
         int64_t server_id {-1};
         int64_t seq_no {-1};
 
-        bool operator==(const Gtid& rhs)
+        bool operator==(const Gtid& rhs) const
         {
             return domain == rhs.domain && server_id == rhs.server_id && seq_no == rhs.seq_no;
         }
@@ -408,7 +401,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
                         rval.repl_configured = true;
                         string io_state = slave_ss->get_string(sl_io);
                         string sql_state = slave_ss->get_string(sl_sql);
-                        rval.is_replicating = (io_state != "No" && sql_state == "Yes");
+                        rval.is_replicating = repl_thread_run_states_ok(io_state, sql_state);
                     }
                 }
             }

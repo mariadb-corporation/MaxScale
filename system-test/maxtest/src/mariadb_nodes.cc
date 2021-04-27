@@ -102,7 +102,7 @@ int MariaDBCluster::connect(int i, const std::string& db)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), user_name, password, 50, ssl);
+        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), user_name, password, 50, m_ssl);
     }
 
     if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
@@ -171,7 +171,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     password = envvar_get_set(key_pw.c_str(), "skysql");
 
     string key_ssl = mxb::string_printf("%s_ssl", prefixc);
-    ssl = readenv_bool(key_ssl.c_str(), false);
+    setenv(key_ssl.c_str(), m_ssl ? "true" : "false", 1);
 
     const string space = " ";
     const char start_db_def[] = "systemctl start mariadb || service mysql start";
@@ -287,7 +287,7 @@ void MariaDBCluster::create_users(int node)
                "export node_user=\"%s\"; "
                "export node_password=\"%s\"; "
                "%s/create_user.sh \"%s\" %s",
-               ssl ? "REQUIRE SSL" : "",
+               m_ssl ? "REQUIRE SSL" : "",
                user_name.c_str(),
                password.c_str(),
                access_homedir(0),
@@ -535,32 +535,6 @@ std::string MariaDBCluster::anonymous_users_query() const
     return "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''";
 }
 
-bool MariaDBCluster::prepare_for_test(int i)
-{
-    auto& srv = m_backends[i];
-    // This is required until the system test code can modify users on its own.
-    auto standard_user_conn = srv->try_open_connection();
-    if (!standard_user_conn->is_open())
-    {
-        return false;
-    }
-
-    bool rval = true;
-    if (srv->ping_or_open_admin_connection())
-    {
-        auto conn = srv->admin_connection();
-        if (conn->cmd("FLUSH HOSTS;") && conn->cmd("SET GLOBAL max_connections=10000"))
-        {
-            conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
-        }
-        else
-        {
-            rval = false;
-        }
-    }
-    return rval;
-}
-
 bool MariaDBCluster::prepare_servers_for_test()
 {
     // Remove anonymous users. TODO: Extend this to detect leftover users and create any missing users.
@@ -573,9 +547,10 @@ bool MariaDBCluster::prepare_servers_for_test()
         if (res)
         {
             drop_ok = true;
-            if (res->get_row_count() > 0)
+            int rows = res->get_row_count();
+            if (rows > 0)
             {
-                logger().log_msgf("Detected anonymous users on %s, dropping them.", name().c_str());
+                logger().log_msgf("Detected %i anonymous users on %s, dropping them.", rows, name().c_str());
                 while (res->next_row())
                 {
                     string user = res->get_string(0);
@@ -592,10 +567,38 @@ bool MariaDBCluster::prepare_servers_for_test()
     bool rval = false;
     if (drop_ok)
     {
-        auto func = [this](int i) {
-                return prepare_for_test(i);
-            };
-        rval = run_on_every_backend(func);
+        bool normal_conn_ok = check_normal_conns();
+        if (!normal_conn_ok)
+        {
+            // Try to regenerate users. The user generation script replaces users. As the cluster
+            // is replicating, doing this on the master should be enough.
+            logger().log_msgf("Recreating users on '%s' with SSL %s.",
+                              m_backends[0]->m_vm.m_name.c_str(), m_ssl ? "on" : "off");
+            create_users(0);
+            sleep(1);   // Wait for cluster sync. Could come up with something better.
+            normal_conn_ok = check_normal_conns();
+            logger().log_msgf("Connections to %s %s after recreating users.",
+                              name().c_str(), normal_conn_ok ? "worked" : "failed");
+        }
+
+        if (normal_conn_ok)
+        {
+            rval = true;
+            for (int i = 0; i < N; i++)
+            {
+                auto srv = m_backends[i].get();
+                srv->ping_or_open_admin_connection();
+                auto conn = srv->admin_connection();
+                if (conn->cmd("SET GLOBAL max_connections=10000"))
+                {
+                    conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+        }
     }
 
     return rval;
@@ -842,56 +845,6 @@ void MariaDBCluster::disable_ssl()
     }
 }
 
-bool MariaDBCluster::check_ssl(int node)
-{
-    bool ok = true;
-    auto conn = get_connection(node);
-    conn.ssl(true);
-
-    if (!conn.connect())
-    {
-        printf("Failed to connect to database with SSL enabled: %s\n", conn.error());
-        ok = false;
-
-        conn.ssl(false);
-        printf("Attempting to connect without SSL...\n");
-
-        if (conn.connect())
-        {
-            printf("Connection was successful, server is not configured with SSL.\n");
-        }
-        else
-        {
-            printf("Failed to connect to database with SSL disabled: %s\n", conn.error());
-        }
-    }
-    else
-    {
-        auto version = conn.field("select variable_value from information_schema.session_status "
-                                  "where variable_name like 'ssl_version'");
-
-        if (version.empty())
-        {
-            printf("Failed to establish SSL connection to database\n");
-            ok = false;
-        }
-        else
-        {
-            printf("SSL version: %s\n", version.c_str());
-        }
-
-        conn.ssl(false);
-
-        if (conn.connect())
-        {
-            printf("Connection was successful, server does not require SSL.\n");
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
 bool MariaDBCluster::using_ipv6() const
 {
     return m_use_ipv6;
@@ -1027,6 +980,63 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
     return m_shared.concurrent_run(funcs);
 }
 
+bool MariaDBCluster::check_normal_conns()
+{
+    using SslMode = mxt::MariaDBServer::SslMode;
+
+    // Check that normal connections to backends work. If ssl-mode is on, the connector refuses non-ssl
+    // connections.
+    bool rval = true;
+    for (int i = 0; i < N; i++)
+    {
+        auto srv = backend(i);
+        if (m_ssl)
+        {
+            auto conn = srv->try_open_connection(SslMode::ON);
+            if (!conn->is_open())
+            {
+                logger().log_msgf("Connecting to '%s' as '%s' with SSL failed when SSL should be enabled.",
+                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                rval = false;
+            }
+
+            // Normal connections without ssl should not work.
+            conn = srv->try_open_connection(SslMode::OFF);
+            if (conn->is_open())
+            {
+                logger().log_msgf("Connecting to '%s' as '%s' without SSL succeeded when "
+                                  "SSL should be required.",
+                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                rval = false;
+            }
+        }
+        else
+        {
+            auto conn = srv->try_open_connection(SslMode::OFF);
+            if (!conn->is_open())
+            {
+                logger().log_msgf("Connecting to '%s' as '%s' without SSL failed when SSL should not "
+                                  "be required.",
+                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                rval = false;
+            }
+            // SSL-connections would likely work as well, as server is always configured for it. No need to
+            // test it, though.
+        }
+    }
+    return rval;
+}
+
+bool MariaDBCluster::ssl() const
+{
+    return m_ssl;
+}
+
+void MariaDBCluster::set_use_ssl(bool use_ssl)
+{
+    m_ssl = use_ssl;
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
@@ -1078,13 +1088,13 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
     sett.user = m_cluster.user_name;
     sett.password = m_cluster.password;
-    if (m_cluster.ssl)
+    if (ssl == SslMode::ON)
     {
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
@@ -1094,6 +1104,11 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
     auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
     conn->try_open(ip, port());
     return conn;
+}
+
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
+{
+    return try_open_connection(m_cluster.ssl() ? SslMode::ON : SslMode::OFF);
 }
 
 bool MariaDBServer::ping_or_open_admin_connection()

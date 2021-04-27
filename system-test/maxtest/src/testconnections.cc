@@ -628,6 +628,9 @@ bool TestConnections::read_test_info()
         if (test_labels.count("BACKEND_SSL") > 0)
         {
             backend_ssl = true;
+            // Enable ssl for MaxScale as well.
+            // TODO: think of adding another label for this.
+            maxscale_ssl = true;
         }
     }
     else
@@ -2038,7 +2041,7 @@ bool TestConnections::initialize_nodes()
             if (new_cluster->setup(m_network_config, n_min_expected))
             {
                 new_cluster->set_use_ipv6(ipv6);
-                new_cluster->ssl = be_ssl;
+                new_cluster->set_use_ssl(be_ssl);
                 auto prepare_cluster = [new_cluster]() {
                         return new_cluster->basic_test_prepare();
                     };
