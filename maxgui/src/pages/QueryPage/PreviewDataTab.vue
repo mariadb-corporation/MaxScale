@@ -30,13 +30,15 @@
             />
             <template v-else>
                 <result-data-table
-                    v-show="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
+                    v-if="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
+                    :key="SQL_QUERY_MODES.PREVIEW_DATA"
                     :height="dynHeight - headerHeight"
                     :headers="previewDataHeaders"
                     :rows="previewDataRows"
                 />
                 <result-data-table
-                    v-show="activeView === SQL_QUERY_MODES.VIEW_DETAILS"
+                    v-else
+                    :key="SQL_QUERY_MODES.VIEW_DETAILS"
                     :height="dynHeight - headerHeight"
                     :headers="detailsDataHeaders"
                     :rows="detailsDataRows"
@@ -85,20 +87,20 @@ export default {
             curr_query_mode: state => state.query.curr_query_mode,
         }),
         previewDataHeaders() {
-            if (!this.preview_data.columns) return []
-            return this.preview_data.columns
+            if (!this.preview_data.fields) return []
+            return this.preview_data.fields
         },
         previewDataRows() {
-            if (!this.preview_data.rowset) return []
-            return this.preview_data.rowset
+            if (!this.preview_data.data) return []
+            return this.preview_data.data
         },
         detailsDataHeaders() {
-            if (!this.data_details.columns) return []
-            return this.data_details.columns
+            if (!this.data_details.fields) return []
+            return this.data_details.fields
         },
         detailsDataRows() {
-            if (!this.data_details.rowset) return []
-            return this.data_details.rowset
+            if (!this.data_details.data) return []
+            return this.data_details.data
         },
         isPrwDataLoading() {
             return this.loading_preview_data || this.loading_data_details
@@ -142,11 +144,11 @@ export default {
         async handleFetch(SQL_QUERY_MODE) {
             switch (SQL_QUERY_MODE) {
                 case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                    if (!this.preview_data.columns)
+                    if (!this.preview_data.fields)
                         await this.fetchPreviewData(this.previewDataSchemaId)
                     break
                 case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    if (!this.data_details.columns)
+                    if (!this.data_details.fields)
                         await this.fetchDataDetails(this.previewDataSchemaId)
                     break
             }

@@ -68,12 +68,12 @@ export default {
             loading_query_result: state => state.query.loading_query_result,
         }),
         tableHeaders() {
-            if (!this.query_result.columns) return []
-            return this.query_result.columns
+            if (!this.query_result.fields) return []
+            return this.query_result.fields
         },
         tableRows() {
-            if (!this.query_result.rowset) return []
-            return this.query_result.rowset
+            if (!this.query_result.data) return []
+            return this.query_result.data
         },
     },
     watch: {

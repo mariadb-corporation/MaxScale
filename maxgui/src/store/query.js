@@ -11,7 +11,6 @@
  * Public License.
  */
 import dummy_schema_test from 'utils/dummy_schema_test'
-import { preview_data, data_details } from 'utils/dummy_result_test'
 
 export default {
     namespaced: true,
@@ -70,43 +69,49 @@ export default {
                 logger.error(e)
             }
         },
-        async fetchPreviewData({ commit /* , dispatch, state */ }, schemaId) {
+
+        //TODO: DRY fetchPreviewData and fetchDataDetails actions
+        async fetchPreviewData({ commit }, schemaId) {
             try {
                 commit('SET_LOADING_PREVIEW_DATA', true)
                 const query = `SELECT * FROM ${schemaId};`
-                /* eslint-disable no-console */
-                console.log('sending query', query)
-                // TODO: Replace with actual data
-                /*      dispatch('query/fetchQueryResult', query)
-                if (state.query_result) {
-                    commit('SET_PREVIEW_DATA', Object.freeze(state.query_result))
+                //TODO: for testing purpose, replace it with config obj
+                const body = {
+                    user: 'maxskysql',
+                    password: 'skysql',
+                    sql: query,
+                    timeout: 5,
+                    db: 'mysql',
+                }
+                let res = await this.vue.$axios.post(`/servers/server_0/query`, body)
+                if (res.data) {
+                    await this.vue.$help.delay(400)
+                    commit('SET_PREVIEW_DATA', Object.freeze(res.data))
                     commit('SET_LOADING_PREVIEW_DATA', false)
                 }
-                */
-                await this.vue.$help.delay(400)
-                commit('SET_PREVIEW_DATA', Object.freeze(preview_data.data))
-                commit('SET_LOADING_PREVIEW_DATA', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchPreviewData')
                 logger.error(e)
             }
         },
-        async fetchDataDetails({ commit /* , dispatch, state*/ }, schemaId) {
+        async fetchDataDetails({ commit }, schemaId) {
             try {
                 commit('SET_LOADING_DATA_DETAILS', true)
                 const query = `DESCRIBE ${schemaId};`
-                /* eslint-disable no-console */
-                console.log('sending query', query)
-                // TODO: Replace with actual data
-                /*
-                    dispatch("query/fetchQueryResult",query)
-                if (state.query_result) {
-                    commit('SET_DATA_DETAILS', Object.freeze(state.query_result))
+                //TODO: for testing purpose, replace it with config obj
+                const body = {
+                    user: 'maxskysql',
+                    password: 'skysql',
+                    sql: query,
+                    timeout: 5,
+                    db: 'mysql',
+                }
+                let res = await this.vue.$axios.post(`/servers/server_0/query`, body)
+                if (res.data) {
+                    await this.vue.$help.delay(400)
+                    commit('SET_DATA_DETAILS', Object.freeze(res.data))
                     commit('SET_LOADING_DATA_DETAILS', false)
-                } */
-                await this.vue.$help.delay(400)
-                commit('SET_DATA_DETAILS', Object.freeze(data_details.data))
-                commit('SET_LOADING_DATA_DETAILS', false)
+                }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchDataDetails')
                 logger.error(e)
@@ -124,22 +129,20 @@ export default {
         async fetchQueryResult({ commit }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
-                /* eslint-disable no-console */
-                console.log('sending query', query)
-                // TODO: Replace with actual data
-                /*    const body = {
-                    data: {
-                        sqlText: query,
-                    },
+                //TODO: for testing purpose, replace it with config obj
+                const body = {
+                    user: 'maxskysql',
+                    password: 'skysql',
+                    sql: query,
+                    timeout: 5,
+                    db: 'mysql',
                 }
-                let res = await this.vue.$axios.post(`/query/`, body)
-                if (res.data.data) {
-                    commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
+                let res = await this.vue.$axios.post(`/servers/server_0/query`, body)
+                if (res.data) {
+                    await this.vue.$help.delay(400)
+                    commit('SET_QUERY_RESULT', Object.freeze(res.data))
                     commit('SET_LOADING_QUERY_RESULT', false)
-                } */
-                await this.vue.$help.delay(400)
-                commit('SET_QUERY_RESULT', Object.freeze(preview_data.data))
-                commit('SET_LOADING_QUERY_RESULT', false)
+                }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
