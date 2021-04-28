@@ -36,6 +36,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/threadpool.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/resource.hh"
@@ -716,24 +717,35 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     HttpResponse reply = is_auth_endpoint(m_request) ?
         generate_token(m_request) : resource_handle_request(m_request);
 
+    int rc = MHD_NO;
+
     if ((m_ws_handler = reply.websocket_handler()))
     {
         if (m_request.get_header("Upgrade") == "websocket")
         {
             // The endpoint requested a WebSocket connection, start the upgrade
             upgrade_to_ws();
-            return MHD_YES;
+            rc = MHD_YES;
         }
         else
         {
-            reply = HttpResponse(MHD_HTTP_UPGRADE_REQUIRED);
+            rc = queue_response(HttpResponse(MHD_HTTP_UPGRADE_REQUIRED));
         }
     }
     else if (auto cb = reply.callback())
     {
-        reply = cb();
+        rc = queue_delayed_response(cb);
+    }
+    else
+    {
+        rc = queue_response(reply);
     }
 
+    return rc;
+}
+
+int Client::queue_response(const HttpResponse& reply)
+{
     string data;
 
     if (json_t* js = reply.get_response())
@@ -780,6 +792,19 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     MXS_DEBUG("Response: HTTP %d", reply.get_code());
 
     return rval;
+}
+
+int Client::queue_delayed_response(const HttpResponse::Callback& cb)
+{
+    MHD_suspend_connection(m_connection);
+
+    mxs::thread_pool().execute(
+        [cb, this]() {
+            queue_response(cb());
+            MHD_resume_connection(m_connection);
+        });
+
+    return MHD_YES;
 }
 
 HttpResponse Client::generate_token(const HttpRequest& request)

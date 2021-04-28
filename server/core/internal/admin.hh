@@ -125,6 +125,8 @@ private:
     void         send_no_https_error() const;
     void         add_cors_headers(MHD_Response*) const;
     void         upgrade_to_ws();
+    int          queue_response(const HttpResponse& response);
+    int          queue_delayed_response(const HttpResponse::Callback& cb);
 
     static void handle_ws_upgrade(void* cls, MHD_Connection* connection, void* con_cls,
                                   const char* extra_in, size_t extra_in_size,
