@@ -36,7 +36,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp("isMaster", true));
+        doc.append(kvp("ismaster", true));
         doc.append(kvp("topologyVersion", topology_version()));
         doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
         doc.append(kvp("maxMessageSizeBytes", mongo::MAX_MSG_SIZE));

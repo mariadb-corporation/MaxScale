@@ -346,7 +346,7 @@ No commands from this group are currently supported.
 
 ### [isMaster](https://docs.mongodb.com/manual/reference/command/isMaster/)
 
-TBW
+No fields are relevant for this command.
 
 ## [Sharding Commands](https://docs.mongodb.com/manual/reference/command/nav-sharding/)
 
