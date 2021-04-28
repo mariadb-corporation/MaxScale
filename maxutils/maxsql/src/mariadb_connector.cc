@@ -243,6 +243,7 @@ bool MariaDB::cmd(const std::string& sql)
                     "Query '%s' returned %lu columns and %lu rows of data when none was expected.",
                     sql.c_str(), cols, rows);
                 m_errornum = USER_ERROR;
+                mysql_free_result(result);
             }
         }
         else
