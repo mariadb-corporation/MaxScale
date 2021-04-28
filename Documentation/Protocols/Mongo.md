@@ -356,7 +356,12 @@ No commands from this group are currently supported.
 
 ### [endSessions](https://docs.mongodb.com/manual/reference/command/endSessions/)
 
-TBW
+No fields are relevant for this command.
+
+The following document will always be returned.
+```
+{ "ok" : 1 }
+```
 
 ## [Administration Commands](https://docs.mongodb.com/manual/reference/command/nav-administration/)
 
