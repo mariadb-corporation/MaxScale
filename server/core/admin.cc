@@ -743,6 +743,10 @@ int Client::queue_response(const HttpResponse& reply)
         {
             flags |= JSON_INDENT(4);
         }
+        else
+        {
+            flags |= JSON_COMPACT;
+        }
 
         data = json_dumps(js, flags);
         len = strlen(data);
