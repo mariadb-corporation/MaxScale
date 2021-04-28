@@ -274,6 +274,11 @@ json_t* format_result(MYSQL* conn, int rc)
                         value = json_string(row[i]);
                         break;
                     }
+
+                    if (!value)
+                    {
+                        value = json_null();
+                    }
                 }
                 else
                 {
@@ -283,6 +288,7 @@ json_t* format_result(MYSQL* conn, int rc)
                 json_array_append_new(arr, value);
             }
 
+            mxb_assert(json_array_size(arr) == (size_t)n);
             json_array_append_new(data, arr);
         }
 
