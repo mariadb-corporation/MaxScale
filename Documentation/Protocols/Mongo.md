@@ -367,7 +367,11 @@ The following document will always be returned.
 
 ### [create](https://docs.mongodb.com/manual/reference/command/create/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+create| string | The name of the collection to create.
 
 ### [drop](https://docs.mongodb.com/manual/reference/command/drop/)
 
