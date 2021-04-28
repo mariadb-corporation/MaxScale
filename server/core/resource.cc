@@ -40,6 +40,7 @@
 #include "internal/service.hh"
 #include "internal/session.hh"
 #include "internal/listener.hh"
+#include "internal/jwt.hh"
 
 using std::map;
 using std::string;
@@ -212,6 +213,10 @@ bool Resource::requires_body() const
 namespace
 {
 
+// Cookies where the connection ID token is stored
+const std::string CONN_ID_BODY = "conn_id_body";
+const std::string CONN_ID_SIG = "conn_id_sig";
+
 bool option_rdns_is_on(const HttpRequest& request)
 {
     return request.get_option("rdns") == "true";
@@ -219,17 +224,24 @@ bool option_rdns_is_on(const HttpRequest& request)
 
 int64_t get_connection_id(const HttpRequest& request)
 {
+    bool ok = false;
+    std::string aud;
     int64_t id = 0;
     mxb::Json json(request.get_json());
 
     if (json.contains("connection_id"))
     {
-        id = json.get_int("connection_id");
+        std::tie(ok, aud) = mxs::jwt::get_audience(json.get_string("conn_id"));
     }
     else
     {
-        std::string id_str = request.get_cookie("connection_id");
-        id = strtol(id_str.c_str(), nullptr, 10);
+        auto tok = request.get_cookie(CONN_ID_BODY) + request.get_cookie(CONN_ID_SIG);
+        std::tie(ok, aud) = mxs::jwt::get_audience(tok);
+    }
+
+    if (ok)
+    {
+        id = strtol(aud.c_str(), nullptr, 10);
     }
 
     return id;
@@ -1216,19 +1228,31 @@ HttpResponse cb_connect_server(const HttpRequest& request)
 
     auto server = ServerManager::find_by_unique_name(request.uri_part(1));
 
+    if (id)
+    {
+        //
+        // TODO: Close the old connection
+        //
+    }
+
     //
     // TODO: Create the connection
     //
 
-    HttpResponse response(MHD_HTTP_NO_CONTENT);
+    // TODO: Figure out how long the connections should be kept valid
+    int max_age = 28800;
+    auto token = mxs::jwt::create("mxs-query", std::to_string(id), max_age);
 
     if (request.get_option("persist") == "yes")
     {
-        // TODO: Use the generated ID here and store it as a JWT
-        response.add_cookie("connection_id=" + std::to_string(id));
+        HttpResponse response(MHD_HTTP_NO_CONTENT);
+        response.add_split_cookie(CONN_ID_BODY, CONN_ID_SIG, token, max_age);
+        return response;
     }
-
-    return response;
+    else
+    {
+        return HttpResponse(MHD_HTTP_OK, json_pack("{s:{s:s}}", "meta", "token", token.c_str()));
+    }
 }
 
 HttpResponse cb_disconnect_server(const HttpRequest& request)
