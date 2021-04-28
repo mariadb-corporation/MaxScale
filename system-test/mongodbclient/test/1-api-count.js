@@ -21,7 +21,7 @@ const mariadb = test.mariadb;
 const mongodb = test.mongodb;
 const assert = test.assert;
 
-describe('aggregation', function () {
+describe('count', function () {
     let mng;
     let mxs;
     let mngdb;

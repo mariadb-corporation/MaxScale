@@ -62,6 +62,74 @@ var MngMongo = {
     }
 };
 
+class MDB {
+    constructor(client, db) {
+        this.client = client;
+        this.db = db;
+    }
+
+    static async create(m, name) {
+        var client = await m.createClient();
+
+        if (!name) {
+            name = "test";
+        }
+
+        var db = client.db(name);
+
+        return new MDB(client, db);
+    }
+
+    async close() {
+        await this.client.close();
+        this.client = null;
+        this.db = null;
+    }
+
+    async reset(name) {
+        try {
+            await this.db.command({drop: name});
+        }
+        catch (x)
+        {
+            if (x.code != 26) // NameSpace not found
+            {
+                throw x;
+            }
+        }
+    }
+
+    async getLastError() {
+        var rv;
+
+        try {
+            rv = await this.runCommand({"getLastError": 1});
+        }
+        catch (x)
+        {
+            rv = x;
+        }
+
+        return rv;
+    }
+
+    async runCommand(command) {
+        return await this.db.command(command);
+    }
+
+    async nothrowCommand(command) {
+        var rv;
+        try {
+            rv = await this.db.command(command);
+        }
+        catch (x) {
+            rv = x;
+        }
+
+        return rv;
+    }
+};
+
 module.exports = {
     config,
     mariadb,
@@ -69,5 +137,6 @@ module.exports = {
     assert,
     MariaDB,
     MxsMongo,
-    MngMongo
+    MngMongo,
+    MDB
 };

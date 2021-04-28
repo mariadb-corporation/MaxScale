@@ -296,9 +296,9 @@ INSERT command. That is, if the insertion of any document fails, for instance,
 due to a duplicate id, then no document will be inserted. If `ordered` is `false`,
 then the behavior is identical with that of `as_mongodb`.
 
-### [resetError](https://docs.mongodb.com/manual/reference/command/getLastError/)
+### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
 
-TBW
+No fields are relevant for this command.
 
 ### [update](https://docs.mongodb.com/manual/reference/command/update)
 
