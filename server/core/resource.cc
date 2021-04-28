@@ -217,6 +217,24 @@ bool option_rdns_is_on(const HttpRequest& request)
     return request.get_option("rdns") == "true";
 }
 
+int64_t get_connection_id(const HttpRequest& request)
+{
+    int64_t id = 0;
+    mxb::Json json(request.get_json());
+
+    if (json.contains("connection_id"))
+    {
+        id = json.get_int("connection_id");
+    }
+    else
+    {
+        std::string id_str = request.get_cookie("connection_id");
+        id = strtol(id_str.c_str(), nullptr, 10);
+    }
+
+    return id;
+}
+
 json_t* format_result(MYSQL* conn, int rc)
 {
     json_t* rval = json_object();
@@ -1178,6 +1196,52 @@ HttpResponse cb_create_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_connect_server(const HttpRequest& request)
+{
+    mxb_assert(request.get_json());
+    mxb::Json json(request.get_json());
+    std::string user;
+    std::string pw;
+    std::string db;
+    int64_t timeout = 10;
+    int64_t id = get_connection_id(request);
+
+    json.try_get_int("timeout", &timeout);
+    json.try_get_string("db", &db);
+
+    if (!json.try_get_string("user", &user) || !json.try_get_string("password", &pw))
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing `user` or `password`."));
+    }
+
+    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
+
+    //
+    // TODO: Create the connection
+    //
+
+    HttpResponse response(MHD_HTTP_NO_CONTENT);
+
+    if (request.get_option("persist") == "yes")
+    {
+        // TODO: Use the generated ID here and store it as a JWT
+        response.add_cookie("connection_id=" + std::to_string(id));
+    }
+
+    return response;
+}
+
+HttpResponse cb_disconnect_server(const HttpRequest& request)
+{
+    int64_t id = get_connection_id(request);
+
+    //
+    // TODO: Close the connection
+    //
+
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_query_server(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
@@ -1196,6 +1260,9 @@ HttpResponse cb_query_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_FORBIDDEN,
                             mxs_json_error("Missing one of `user`, `password` or `sql`."));
     }
+
+    // TODO: Use the ID to find the open connection
+    int64_t id = get_connection_id(request);
 
     auto server = ServerManager::find_by_unique_name(request.uri_part(1));
     return execute_query(server->address(), server->port(), server->ssl_config(), user, pw, db, sql, timeout);
@@ -1504,6 +1571,7 @@ public:
         m_post.emplace_back(cb_create_listener, "listeners");
         m_post.emplace_back(cb_create_user, "users", "inet");
         m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
+        m_post.emplace_back(cb_connect_server, "servers", ":server", "connect");
         m_post.emplace_back(cb_query_server, "servers", ":server", "query");
 
         /** All of the above require a request body */
@@ -1522,6 +1590,7 @@ public:
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
+        m_post.emplace_back(cb_disconnect_server, "servers", ":server", "disconnect");
 
         /** Update resources */
         m_patch.emplace_back(cb_alter_server, "servers", ":server");
