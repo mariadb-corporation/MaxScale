@@ -375,7 +375,11 @@ create| string | The name of the collection to create.
 
 ### [drop](https://docs.mongodb.com/manual/reference/command/drop/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+drop| string | The name of the collection to drop.
 
 ### [dropDatabase](https://docs.mongodb.com/manual/reference/command/dropDatabase/)
 

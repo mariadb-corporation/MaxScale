@@ -99,6 +99,43 @@ class MDB {
         }
     }
 
+    async find(name, options) {
+        var command = {
+            find: name
+        };
+
+        if (options) {
+            for (p in options) {
+                command[p] = options[p];
+            }
+        }
+
+        return await this.runCommand(command);
+    };
+
+    async insert_n(name, n, cb) {
+        var documents = [];
+        for (var i = 0; i < n; ++i) {
+            var doc = {};
+
+            if (cb) {
+                cb(doc);
+            }
+            else {
+                doc.i = i;
+            };
+
+            documents.push(doc);
+        }
+
+        var command = {
+            insert: name,
+            documents: documents
+        };
+
+        return await this.runCommand(command);
+    }
+
     async getLastError() {
         var rv;
 
