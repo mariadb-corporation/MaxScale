@@ -128,6 +128,22 @@ public:
     }
 
     /**
+     * Adds a JWT token as a cookie split into a public and private part
+     *
+     * The cookie is stored using SameSite=Lax for the public part and with SameSite=Strict; HttpOnly for the
+     * private part. If the REST API uses HTTPS, then both cookies are stored with the Secure option.
+     *
+     * The token must be a JWT token and it is up to the caller to make sure it is valid.
+     *
+     * @param public_name   The name of the cookie where the public part is stored
+     * @param private_name  The name of the cookie where the private part is stored
+     * @param private_value The JWT token to store in the cookie
+     * @param max_age       Maximum age of the cookie in seconds, 0 for no maximum age
+     */
+    void add_split_cookie(const std::string& public_name, const std::string& private_name,
+                          const std::string& token, uint32_t max_age = 0);
+
+    /**
      * Removes fields from the response
      *
      * @param type   The JSON API object type (e.g. services for a single service or a collection of services)

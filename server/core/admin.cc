@@ -27,7 +27,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/stat.h>
-#include <jwt-cpp/jwt.h>
 
 #include <maxbase/atomic.h>
 #include <maxbase/assert.h>
@@ -41,6 +40,7 @@
 #include "internal/adminusers.hh"
 #include "internal/resource.hh"
 #include "internal/websocket.hh"
+#include "internal/jwt.hh"
 
 using std::string;
 using std::ifstream;
@@ -92,7 +92,6 @@ static struct ThisUnit
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
     bool               cors = false;
-    std::string        sign_key;
 
     std::unordered_map<std::string, std::string> files;
 } this_unit;
@@ -344,20 +343,6 @@ bool authorize_user(const char* user, const char* method, const char* url)
     }
 
     return rval;
-}
-
-void init_jwt_sign_key()
-{
-    // Initialize JWT signing key
-    std::random_device gen;
-    constexpr auto KEY_BITS = 512;
-    constexpr auto VALUE_SIZE = sizeof(decltype(gen()));
-    constexpr auto NUM_VALUES = KEY_BITS / VALUE_SIZE;
-    std::vector<decltype(gen())> key;
-    key.reserve(NUM_VALUES);
-    std::generate_n(std::back_inserter(key), NUM_VALUES, std::ref(gen));
-    this_unit.sign_key.assign((const char*)key.data(), key.size() * VALUE_SIZE);
-    mxb_assert(this_unit.sign_key.size() == KEY_BITS);
 }
 
 void add_extra_headers(MHD_Response* response)
@@ -822,13 +807,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         }
     }
 
-    auto now = std::chrono::system_clock::now();
-    auto token = jwt::create()
-        .set_issuer("maxscale")
-        .set_audience(m_user)
-        .set_issued_at(now)
-        .set_expires_at(now + std::chrono::seconds {token_age})
-        .sign(jwt::algorithm::hs256 {this_unit.sign_key});
+    auto token = mxs::jwt::create("maxscale", m_user, token_age);
 
     if (request.get_option("persist") == "yes")
     {
@@ -837,23 +816,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         // CSRF attack. This also prevents JavaScript from ever accessing the token which completely prevents
         // the token from leaking.
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
-
-        auto pos = token.find_last_of('.');
-        std::string cookie_opts;
-
-        if (this_unit.using_ssl)
-        {
-            cookie_opts = "; Secure";
-        }
-
-        if (!max_age.empty())
-        {
-            cookie_opts += "; Max-Age=" + std::to_string(token_age);
-        }
-
-        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts + "; SameSite=Lax");
-        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; SameSite=Strict; HttpOnly");
-
+        reply.add_split_cookie(TOKEN_BODY, TOKEN_SIG, token, !max_age.empty() ? token_age : 0);
         return reply;
     }
     else
@@ -867,20 +830,7 @@ bool Client::auth_with_token(const std::string& token)
 {
     bool rval = false;
 
-    try
-    {
-        auto d = jwt::decode(token);
-        jwt::verify()
-        .allow_algorithm(jwt::algorithm::hs256 {this_unit.sign_key})
-        .with_issuer("maxscale")
-        .verify(d);
-
-        m_user = *d.get_audience().begin();
-        rval = true;
-    }
-    catch (const std::exception& e)
-    {
-    }
+    std::tie(rval, m_user) = mxs::jwt::get_audience(token);
 
     return rval;
 }
@@ -991,8 +941,6 @@ bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
     const auto& config = mxs::Config::get();
-
-    init_jwt_sign_key();
 
     if (!load_ssl_certificates())
     {

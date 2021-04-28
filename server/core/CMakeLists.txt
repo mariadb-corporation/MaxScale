@@ -17,6 +17,7 @@ add_library(maxscale-common SHARED
   indexedstorage.cc
   json.cc
   json_api.cc
+  jwt.cc
   listener.cc
   load_utils.cc
   log.cc
