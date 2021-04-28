@@ -1,15 +1,17 @@
 <template>
+    <!-- TODO: Virtual scroll treeview -->
     <m-treeview
         :items="schemaList"
         :search="$parent.searchSchema"
         :filter="filter"
-        :open.sync="activeNodes"
         hoverable
         dense
         open-on-click
         transition
+        :load-children="handleLoadChildren"
     >
         <template v-slot:label="{ item, hover }">
+            <!-- TODO: use activator props instead of activator slots  -->
             <v-tooltip
                 :value="hover"
                 right
@@ -44,6 +46,7 @@
                 </v-list>
             </v-tooltip>
         </template>
+
         <template v-slot:append="{ hover, item }">
             <div v-show="hover || shouldShowOptionMenu(item)">
                 <v-btn icon x-small @click="e => openNodeMenu({ e, item })">
@@ -90,6 +93,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapActions } from 'vuex'
+
 export default {
     name: 'db-list-tree',
     props: {
@@ -97,7 +102,6 @@ export default {
     },
     data() {
         return {
-            activeNodes: [],
             tableOptions: [
                 this.$t('previewData'),
                 this.$t('viewDetails'),
@@ -122,17 +126,27 @@ export default {
         },
     },
     watch: {
-        schemaList: {
-            deep: true,
-            handler(v) {
-                if (v.length) this.activeNodes.push(v[0].id)
-            },
-        },
         showOptions(v) {
             if (!v) this.activeItem = null
         },
     },
     methods: {
+        ...mapActions({
+            fetchTables: 'query/fetchTables',
+            fetchCols: 'query/fetchCols',
+        }),
+        async handleLoadChildren(item) {
+            await this.emitPromise('load-children', item)
+        },
+        async emitPromise(method, ...params) {
+            const listener = this.$listeners[method]
+            if (listener) {
+                const res = await listener(...params)
+                return res === undefined || res
+            }
+            return false
+        },
+
         openNodeMenu({ e, item }) {
             e.stopPropagation()
             this.showOptions = !this.showOptions
@@ -180,6 +194,6 @@ export default {
     height: 16px;
 }
 ::v-deep .v-treeview-node__level {
-    width: 20px;
+    width: 16px;
 }
 </style>

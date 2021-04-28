@@ -11,6 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
+import update from 'immutability-helper'
 
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
@@ -515,6 +516,7 @@ Object.defineProperties(Vue.prototype, {
                 isFunction,
                 isUndefined,
                 lodash,
+                immutableUpdate: update,
             }
         },
     },

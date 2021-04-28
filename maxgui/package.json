@@ -35,6 +35,7 @@
         "eslint-plugin-vuetify": "^1.0.0-beta.8",
         "fibers": "^4.0.3",
         "git-describe": "^4.0.4",
+        "immutability-helper": "^3.1.1",
         "lodash": "^4.17.21",
         "moment-duration-format": "^2.3.2",
         "moment-locales-webpack-plugin": "1.2.0",

@@ -56,7 +56,7 @@
                         <!-- sidebar panel -->
                         <db-list
                             class="db-tb-list"
-                            :schemaList="schema.schemaList"
+                            :schemaList="db_tree"
                             @is-fullscreen="isFullScreen = $event"
                             @is-collapsed="isCollapsed = $event"
                             @reload-schema="loadSchema"
@@ -75,6 +75,7 @@
                                     })
                             "
                             @place-to-editor="placeToEditor"
+                            @load-children="handleLoadChildren"
                         />
                     </template>
                     <template slot="pane-right">
@@ -89,7 +90,7 @@
                                 <query-editor
                                     v-model="queryTxt"
                                     class="editor pt-2 pl-2"
-                                    :tableDist="distArr"
+                                    :tableDist="getDbCmplList"
                                 />
                             </template>
                             <template slot="pane-right">
@@ -151,64 +152,14 @@ export default {
     },
     computed: {
         ...mapState({
-            conn_schema: state => state.query.conn_schema,
-            loading_schema: state => state.query.loading_schema,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
+            db_tree: state => state.query.db_tree,
+            db_completion_list: state => state.query.db_completion_list,
         }),
-        distArr: function() {
-            return this.schema.schemaFlatList
-        },
-        schema() {
-            let res = { schemaList: [], schemaFlatList: [] }
-            if (this.loading_schema) return res
-            const { schemas = [] } = this.conn_schema
-            res.schemaList = schemas.map(({ name: schemaId, tables = [] }) => {
-                res.schemaFlatList.push({
-                    label: schemaId,
-                    detail: 'SCHEMA',
-                    insertText: schemaId,
-                    type: 'schema',
-                })
-                return {
-                    type: 'schema',
-                    name: schemaId,
-                    id: schemaId,
-                    children: tables.map(({ name: tableName, columns = [] }) => {
-                        const tableId = `${schemaId}.${tableName}`
-                        res.schemaFlatList.push({
-                            label: tableName,
-                            detail: 'TABLE',
-                            insertText: tableName,
-                            type: 'table',
-                        })
-                        return {
-                            type: 'table',
-                            name: tableName,
-                            id: tableId,
-                            level: 1,
-                            children: columns.map(({ name: columnName, dataType }) => {
-                                res.schemaFlatList.push({
-                                    label: columnName,
-                                    insertText: columnName,
-                                    detail: 'COLUMN',
-                                    type: 'column',
-                                })
-                                return {
-                                    type: 'column',
-                                    name: columnName,
-                                    dataType: dataType,
-                                    id: `${tableId}.${columnName}`,
-                                    level: 2,
-                                }
-                            }),
-                        }
-                    }),
-                }
-            })
+        getDbCmplList() {
             // remove duplicated labels
-            res.schemaFlatList = this.$help.lodash.uniqBy(res.schemaFlatList, 'label')
-            return res
+            return this.$help.lodash.uniqBy(this.db_completion_list, 'label')
         },
     },
     watch: {
@@ -224,15 +175,21 @@ export default {
     },
     methods: {
         ...mapActions({
-            fetchConnectionSchema: 'query/fetchConnectionSchema',
+            fetchDbList: 'query/fetchDbList',
             fetchPreviewData: 'query/fetchPreviewData',
             fetchDataDetails: 'query/fetchDataDetails',
             fetchQueryResult: 'query/fetchQueryResult',
             setCurrQueryMode: 'query/setCurrQueryMode',
             clearDataPreview: 'query/clearDataPreview',
+            fetchTables: 'query/fetchTables',
+            fetchCols: 'query/fetchCols',
         }),
         async loadSchema() {
-            await this.fetchConnectionSchema()
+            await this.fetchDbList()
+        },
+        async handleLoadChildren(item) {
+            if (!item.id.includes('.')) await this.fetchTables(item)
+            else await this.fetchCols(item)
         },
         //TODO: move all bounding pct calculation to another component
         getSidebarBoundingPct({ isMin }) {

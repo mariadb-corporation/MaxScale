@@ -129,7 +129,6 @@ export default {
                         [i]: headerWidth,
                     }
                 }
-                console.log('cellWidthMap', cellWidthMap)
                 this.cellWidthMap = cellWidthMap
             }
         },
