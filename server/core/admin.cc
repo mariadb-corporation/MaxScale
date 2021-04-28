@@ -976,7 +976,7 @@ bool mxs_admin_init()
     }
     else if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
-        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG | MHD_ALLOW_UPGRADE;
+        int options = MHD_USE_EPOLL_INTERNAL_THREAD | MHD_USE_DEBUG | MHD_ALLOW_UPGRADE;
 
         if (addr.ss_family == AF_INET6)
         {
