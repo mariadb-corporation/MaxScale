@@ -53,7 +53,6 @@ static void process_uri(string& uri, std::deque<string>& uri_parts)
 
 HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string method, json_t* data)
     : m_json(data)
-    , m_json_string(data ? mxs::json_dump(data, 0) : "")
     , m_resource(url)
     , m_verb(method)
     , m_connection(connection)
@@ -80,6 +79,8 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
     }
 
     m_hostname += MXS_REST_API_VERSION;
+
+    fix_api_version();
 }
 
 HttpRequest::~HttpRequest()
@@ -170,6 +171,6 @@ std::string HttpRequest::to_string() const
 
     req << "\r\n";
 
-    req << m_json_string;
+    req << get_json_str();
     return req.str();
 }

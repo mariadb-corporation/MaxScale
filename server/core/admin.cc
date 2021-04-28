@@ -133,7 +133,7 @@ int handle_client(void* cls,
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new(std::nothrow) Client(connection)) == NULL)
+        if ((*con_cls = new(std::nothrow) Client(connection, url, method)) == NULL)
         {
             return MHD_NO;
         }
@@ -444,10 +444,11 @@ bool is_auth_endpoint(const HttpRequest& request)
 }
 }
 
-Client::Client(MHD_Connection* connection)
+Client::Client(MHD_Connection* connection, const char* url, const char* method)
     : m_connection(connection)
     , m_state(INIT)
     , m_headers(get_headers(connection))
+    , m_request(connection, url, method, nullptr)
 {
 }
 
@@ -550,15 +551,12 @@ bool Client::send_cors_preflight_request(const std::string& verb)
 bool Client::serve_file(const std::string& url) const
 {
     bool rval = false;
-    HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
-    request.fix_api_version();
-
-    std::string path = get_filename(request);
+    std::string path = get_filename(m_request);
 
     if (!path.empty())
     {
         MXS_DEBUG("Client requested file: %s", path.c_str());
-        MXS_DEBUG("Request:\n%s", request.to_string().c_str());
+        MXS_DEBUG("Request:\n%s", m_request.to_string().c_str());
         std::string data = get_file(path);
 
         if (!data.empty())
@@ -570,7 +568,7 @@ bool Client::serve_file(const std::string& url) const
                                                 (void*)data.c_str(),
                                                 MHD_RESPMEM_MUST_COPY);
 
-            if (this_unit.cors && !get_header("Origin").empty())
+            if (this_unit.cors && !m_request.get_header("Origin").empty())
             {
                 add_cors_headers(response);
             }
@@ -712,25 +710,15 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         return MHD_YES;
     }
 
-    HttpRequest request(m_connection, url, method, json);
-    HttpResponse reply(MHD_HTTP_NOT_FOUND);
-    MXS_DEBUG("Request:\n%s", request.to_string().c_str());
-    request.fix_api_version();
+    m_request.set_json(json);
+    MXS_DEBUG("Request:\n%s", m_request.to_string().c_str());
 
-    if (is_auth_endpoint(request))
-    {
-        reply = generate_token(request);
-    }
-    else
-    {
-        reply = resource_handle_request(request);
-    }
+    HttpResponse reply = is_auth_endpoint(m_request) ?
+        generate_token(m_request) : resource_handle_request(m_request);
 
-    m_ws_handler = reply.websocket_handler();
-
-    if (m_ws_handler)
+    if ((m_ws_handler = reply.websocket_handler()))
     {
-        if (get_header("Upgrade") == "websocket")
+        if (m_request.get_header("Upgrade") == "websocket")
         {
             // The endpoint requested a WebSocket connection, start the upgrade
             upgrade_to_ws();
@@ -751,7 +739,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     if (json_t* js = reply.get_response())
     {
         int flags = JSON_SORT_KEYS;
-        string pretty = request.get_option("pretty");
+        string pretty = m_request.get_option("pretty");
 
         if (pretty == "true" || pretty.length() == 0)
         {
@@ -879,14 +867,12 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
     if (mxs::Config::get().admin_auth)
     {
-        HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
-        request.fix_api_version();
         bool done = false;
 
-        if (!is_auth_endpoint(request))
+        if (!is_auth_endpoint(m_request))
         {
             // Not the /auth endpoint, use the cookie or Bearer token
-            auto cookie_token = request.get_cookie(TOKEN_BODY) + request.get_cookie(TOKEN_SIG);
+            auto cookie_token = m_request.get_cookie(TOKEN_BODY) + m_request.get_cookie(TOKEN_SIG);
             auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
             if (!cookie_token.empty())
@@ -960,7 +946,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
             if (!rval)
             {
-                if (is_auth_endpoint(request))
+                if (is_auth_endpoint(m_request))
                 {
                     send_token_auth_error();
                 }

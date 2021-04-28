@@ -35,7 +35,7 @@ public:
      *
      * @param connection The connection handle for this client
      */
-    Client(MHD_Connection* connection);
+    Client(MHD_Connection* connection, const char* url, const char* method);
 
     // Handle HTTP request
     int handle(const std::string& url, const std::string& method,
@@ -110,6 +110,7 @@ private:
     state           m_state;        /**< Client state */
     std::string     m_user;         /**< The user account */
     Headers         m_headers;
+    HttpRequest     m_request;
 
     WebSocket::Handler m_ws_handler;
 

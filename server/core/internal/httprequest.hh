@@ -220,9 +220,9 @@ public:
      *
      * @return Request body or empty string if no body is defined
      */
-    const std::string& get_json_str() const
+    std::string get_json_str() const
     {
-        return m_json_string;
+        return m_json ? mxs::json_dump(m_json.get()) : "";
     }
 
     /**
@@ -233,6 +233,11 @@ public:
     json_t* get_json() const
     {
         return m_json.get();
+    }
+
+    void set_json(json_t* json)
+    {
+        m_json.reset(json);
     }
 
     /**
@@ -324,14 +329,8 @@ public:
      */
     std::string to_string() const;
 
-    /**
-     * @brief Drop the API version prefix
-     *
-     * @return True if prefix is present and was successfully removed
-     */
-    void fix_api_version();
-
 private:
+    void fix_api_version();
 
     /** Constants */
     static const std::string HTTP_PREFIX;
@@ -341,7 +340,6 @@ private:
     std::map<std::string, std::string> m_headers;       /**< Request headers */
     std::map<std::string, std::string> m_cookies;       /**< Request cookies */
     std::unique_ptr<json_t>            m_json;          /**< Request body */
-    std::string                        m_json_string;   /**< String version of @c m_json */
     std::string                        m_resource;      /**< Requested resource */
     std::deque<std::string>            m_resource_parts;/**< @c m_resource split into parts */
     std::string                        m_verb;          /**< Request method */
