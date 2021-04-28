@@ -746,7 +746,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
 int Client::queue_response(const HttpResponse& reply)
 {
-    string data;
+    char* data = nullptr;
+    size_t len = 0;
 
     if (json_t* js = reply.get_response())
     {
@@ -758,13 +759,11 @@ int Client::queue_response(const HttpResponse& reply)
             flags |= JSON_INDENT(4);
         }
 
-        data = mxs::json_dump(js, flags);
+        data = json_dumps(js, flags);
+        len = strlen(data);
     }
 
-    MHD_Response* response =
-        MHD_create_response_from_buffer(data.size(),
-                                        (void*)data.c_str(),
-                                        MHD_RESPMEM_MUST_COPY);
+    MHD_Response* response = MHD_create_response_from_buffer(len, data, MHD_RESPMEM_MUST_FREE);
 
     for (const auto& a : reply.get_headers())
     {
