@@ -158,3 +158,50 @@ const std::string& GaleraCluster::name() const
 {
     return my_name;
 }
+
+bool GaleraCluster::reset_server(int i)
+{
+    auto* srv = backend(i);
+    srv->stop_database();
+    srv->cleanup_database();
+    reset_server_settings(i);
+
+    auto& vm = srv->vm_node();
+    auto namec = vm.m_name.c_str();
+
+    // Note: These should be done by MDBCI
+    vm.run_cmd_sudo("test -d /etc/apparmor.d/ && "
+                    "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
+                    "sudo service apparmor restart && "
+                    "chmod a+r -R /etc/my.cnf.d/*");
+
+    bool rval = false;
+    const char vrs_cmd[] = "/usr/sbin/mysqld --version";
+    auto res_version = vm.run_cmd_output(vrs_cmd);
+
+    if (res_version.rc == 0)
+    {
+        string version_digits = extract_version_from_string(res_version.output);
+        if (version_digits.compare(0, 3, "10.") == 0)
+        {
+            const char reset_db_cmd[] = "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql";
+            logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
+            vm.run_cmd_sudo(reset_db_cmd);
+            rval = true;
+        }
+        else
+        {
+            logger().add_failure("'%s' on '%s' returned '%s'. Detected server version '%s' is not "
+                                 "supported by the test system.",
+                                 vrs_cmd, namec, res_version.output.c_str(),
+                                 version_digits.c_str());
+        }
+    }
+    else
+    {
+        logger().add_failure("'%s' failed.", vrs_cmd);
+    }
+
+    // Cannot start server yet, Galera is not properly configured.
+    return rval;
+}

@@ -366,14 +366,6 @@ public:
     void reset_server_settings(int node);
 
     /**
-     * Initialize MariaDB setup (run mysql_install_db) and create test users
-     *
-     * @param i Node index
-     * @return True on success
-     */
-    virtual bool reset_server(int i);
-
-    /**
      * @brief cnf_servers Generates backend servers description for maxscale.cnf
      * @return Servers description including IPs, ports
      */
@@ -384,8 +376,6 @@ public:
      * @return List of servers, e.g server1,server2,server3,...
      */
     std::string cnf_servers_line();
-
-    bool using_ipv6() const;
 
     const std::string& cnf_server_prefix() const;
 
@@ -412,6 +402,7 @@ public:
     int ping_or_open_admin_connections();
 
     bool ssl() const;
+    bool using_ipv6() const;
 
 protected:
     /**
@@ -440,6 +431,8 @@ protected:
      */
     virtual std::string unblock_command(int node) const;
 
+    std::string extract_version_from_string(const std::string& version);
+
     mxt::TestLogger& logger();
 
     std::string m_test_dir;             /**< path to test application */
@@ -465,6 +458,14 @@ private:
      * @return True if cluster is ready for test
      */
     virtual bool check_replication() = 0;
+
+    /**
+     * Initialize MariaDB setup (run mysql_install_db).
+     *
+     * @param i Node index
+     * @return True on success
+     */
+    virtual bool reset_server(int i);
 
     bool check_normal_conns();
 };
