@@ -21,6 +21,7 @@ import Drain from 'icons/Drain'
 import Edit from 'icons/Edit'
 import NotFound from 'icons/NotFound'
 import Paused from 'icons/Paused'
+import QueryEditor from 'icons/QueryEditor'
 import Reports from 'icons/Reports'
 import Restart from 'icons/Restart'
 import Reload from 'icons/Reload'
@@ -70,6 +71,9 @@ export default {
     },
     paused: {
         component: Paused,
+    },
+    queryEditor: {
+        component: QueryEditor,
     },
     reports: {
         component: Reports,

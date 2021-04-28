@@ -11,9 +11,9 @@
  * Public License.
  */
 // Sidebar components
-import Dashboard from 'pages/Dashboard'
-
+const Dashboard = () => import(/* webpackChunkName: "sidebar-routes-dashboard" */ 'pages/Dashboard')
 const Settings = () => import(/* webpackChunkName: "sidebar-routes-settings" */ 'pages/Settings')
+const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
 import tabRoutes from './tabRoutes'
 
 export default [
@@ -42,5 +42,16 @@ export default [
             icon: '$vuetify.icons.settings',
         },
         name: 'settings',
+    },
+    {
+        path: '/query',
+        component: QueryPage,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.queryEditor',
+        },
+        name: 'queryEditor',
     },
 ]

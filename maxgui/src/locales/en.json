@@ -103,6 +103,7 @@
     "viewDetails": "View Details",
     "placeSchemaInEditor": "Place Schema in Editor",
     "placeColumnNameInEditor": "Place Column Name in Editor",
+    "queryEditor": "Query Editor",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
