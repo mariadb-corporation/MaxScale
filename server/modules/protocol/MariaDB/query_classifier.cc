@@ -140,7 +140,7 @@ public:
     {
         mxb_assert(this_unit.classifier);
 
-        for (auto a : m_infos)
+        for (const auto& a : m_infos)
         {
             this_unit.classifier->qc_info_close(a.second.pInfo);
         }
