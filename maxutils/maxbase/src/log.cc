@@ -386,6 +386,11 @@ namespace
 
 class MessageRegistry;
 
+static bool return_false(int)
+{
+    return false;
+}
+
 struct this_unit
 {
     int                              augmentation;      // Can change during the lifetime of log_manager.
@@ -399,7 +404,7 @@ struct this_unit
     std::unique_ptr<MessageRegistry> sMessage_registry;
     size_t                           (* context_provider)(char* buffer, size_t len);
     void                             (* in_memory_log)(const char* buffer, size_t len);
-    bool                             (* should_log)(int priority);
+    bool                             (* should_log)(int priority) = return_false;
 } this_unit =
 {
     DEFAULT_LOG_AUGMENTATION,   // augmentation
@@ -642,8 +647,8 @@ bool mxb_log_get_session_trace()
 bool mxb_log_should_log(int priority)
 {
     return mxb_log_is_priority_enabled(priority)
-           || (this_unit.should_log && this_unit.should_log(priority))
-           || mxb_log_get_session_trace();
+           | this_unit.should_log(priority)
+           | mxb_log_get_session_trace();
 }
 
 bool mxb_log_rotate()
@@ -939,7 +944,7 @@ int mxb_log_message(int priority,
                     err = 0;
                 }
                 else if (mxb_log_is_priority_enabled(level)
-                         || (this_unit.should_log && this_unit.should_log(level)))
+                         | this_unit.should_log(level))
                 {
                     if (this_unit.do_syslog && LOG_PRI(priority) != LOG_DEBUG)
                     {
