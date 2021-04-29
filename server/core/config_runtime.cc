@@ -2273,63 +2273,89 @@ bool runtime_alter_logs_from_json(json_t* json)
         json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
         json_t* value;
         rval = true;
+        std::string err;
+        auto& cnf = mxs::Config::get();
 
         if ((value = mxs_json_pointer(param, "highprecision")))
         {
-            mxs_log_set_highprecision_enabled(json_boolean_value(value));
+            if (!cnf.ms_timestamp.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "maxlog")))
         {
-            mxs_log_set_maxlog_enabled(json_boolean_value(value));
+            if (!cnf.maxlog.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "syslog")))
         {
-            mxs_log_set_syslog_enabled(json_boolean_value(value));
+            if (!cnf.syslog.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "log_info")))
         {
-            mxs_log_set_priority_enabled(LOG_INFO, json_boolean_value(value));
+            if (!cnf.log_info.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "log_warning")))
         {
-            mxs_log_set_priority_enabled(LOG_WARNING, json_boolean_value(value));
+            if (!cnf.log_warning.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "log_notice")))
         {
-            mxs_log_set_priority_enabled(LOG_NOTICE, json_boolean_value(value));
+            if (!cnf.log_notice.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
         if ((value = mxs_json_pointer(param, "log_debug")))
         {
-            mxs_log_set_priority_enabled(LOG_DEBUG, json_boolean_value(value));
+            if (!cnf.log_debug.set_from_json(value, &err))
+            {
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
+            }
         }
 
-        if ((param = mxs_json_pointer(param, "throttling")) && json_is_object(param))
+        if ((value = mxs_json_pointer(param, "throttling")))
         {
-            MXS_LOG_THROTTLING throttle;
-            mxs_log_get_throttling(&throttle);
-
-            if ((value = mxs_json_pointer(param, "count")))
+            if (json_t* old_name = json_object_get(value, "window_ms"))
             {
-                throttle.count = json_integer_value(value);
+                json_object_set(value, "window", old_name);
             }
 
-            if ((value = mxs_json_pointer(param, "suppress_ms")))
+            if (json_t* old_name = json_object_get(value, "suppress_ms"))
             {
-                throttle.suppress_ms = json_integer_value(value);
+                json_object_set(value, "suppress", old_name);
             }
 
-            if ((value = mxs_json_pointer(param, "window_ms")))
+            if (!cnf.log_throttling.set_from_json(value, &err))
             {
-                throttle.window_ms = json_integer_value(value);
+                MXS_ERROR("%s", err.c_str());
+                rval = false;
             }
-
-            mxs_log_set_throttling(&throttle);
         }
     }
 

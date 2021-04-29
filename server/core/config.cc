@@ -579,8 +579,12 @@ Config::Config()
     retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
                                session_set_retain_last_statements(count);
                            }),
-    syslog(this, &s_syslog),
-    maxlog(this, &s_maxlog),
+    syslog(this, &s_syslog, [](bool enable) {
+               mxs_log_set_syslog_enabled(enable);
+           }),
+    maxlog(this, &s_maxlog, [](bool enable) {
+               mxs_log_set_maxlog_enabled(enable);
+           }),
     auth_conn_timeout(this, &s_auth_conn_timeout),
     auth_read_timeout(this, &s_auth_read_timeout),
     auth_write_timeout(this, &s_auth_write_timeout),
