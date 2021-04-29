@@ -1,0 +1,15 @@
+[maxscale]
+threads=###threads###
+
+[RW Split Router]
+type=service
+router=readwritesplit
+user=maxskysql
+password=skysql
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+authenticator_options=unknown=option

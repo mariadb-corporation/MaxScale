@@ -27,6 +27,7 @@ const char* bad_configs[] =
 //    "old_passwd",
     "no_use_of_reserved_names",
     "no_spaces_in_section_names",
+    "no_unknown_auth_options",
     NULL
 };
 
