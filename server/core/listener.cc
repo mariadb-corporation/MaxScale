@@ -261,11 +261,11 @@ bool ListenerManager::listener_is_duplicate(const SListener& listener)
 template<class Params, class Unknown>
 SListener ListenerManager::create(const std::string& name, Params params, Unknown unknown)
 {
-    SListener listener;
+    SListener rval;
 
     if (s_spec.validate(params, &unknown))
     {
-        listener.reset(new Listener(name));
+        SListener listener(new Listener(name));
 
         if (listener->m_config.configure(params))
         {
@@ -275,14 +275,12 @@ SListener ListenerManager::create(const std::string& name, Params params, Unknow
             {
                 std::lock_guard<std::mutex> guard(m_lock);
                 m_listeners.push_back(listener);
-            }
-            else
-            {
-                listener.reset();
+                rval = std::move(listener);
             }
         }
     }
-    return listener;
+
+    return rval;
 }
 
 void ListenerManager::destroy_instances()
