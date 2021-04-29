@@ -36,6 +36,7 @@ namespace
 // These need to match the values in create_user.sh.
 const string admin_user = "test-admin";
 const string admin_pw = "test-admin-pw";
+}
 
 /**
  * Tries to find MariaDB server version number in the output of 'mysqld --version'
@@ -43,7 +44,7 @@ const string admin_pw = "test-admin-pw";
  * @param version String returned by 'mysqld --version'
  * @return String with version number
  */
-string extract_version_from_string(const string& version)
+string MariaDBCluster::extract_version_from_string(const string& version)
 {
     int pos1 = 0;
     int pos2 = 0;
@@ -58,7 +59,6 @@ string extract_version_from_string(const string& version)
         pos2++;
     }
     return version.substr(pos1, pos2 - pos1);
-}
 }
 
 MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_server_prefix)

@@ -20,15 +20,15 @@ class GaleraCluster : public MariaDBCluster
 public:
     GaleraCluster(mxt::SharedData* shared);
 
-    const std::string& type_string() const override;
-
     bool start_replication() override;
 
     std::string get_srv_cnf_filename(int node) override;
 
+    const std::string& type_string() const override;
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
 
 private:
     bool check_replication() override;
+    bool reset_server(int i) override;
 };

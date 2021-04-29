@@ -12,28 +12,18 @@
  */
 #pragma once
 
-/**
- * @file xpand_nodes.h - work with Xpand setup
- *
- */
-
-#include <cerrno>
 #include <string>
 #include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
-
 class XpandCluster : public MariaDBCluster
 {
 public:
-
     XpandCluster(mxt::SharedData* shared);
 
     const std::string& type_string() const override;
 
     bool start_replication() override;
-
-    bool reset_server(int i) override;
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
@@ -42,6 +32,7 @@ public:
 
 private:
     bool check_replication() override;
+    bool reset_server(int i) override;
 
     std::string anonymous_users_query() const override;
     std::string block_command(int node) const override;
