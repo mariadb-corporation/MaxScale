@@ -544,89 +544,14 @@ public:
 
         ComResponse response(mariadb_response.data());
 
-        if (m_mode == NORMAL)
+        switch (m_mode)
         {
-            if (!response.is_err() || ComERR(response).code() != ER_NO_SUCH_TABLE)
-            {
-                state = OrderedCommand::translate(std::move(mariadb_response), &pResponse);
-            }
-            else
-            {
-                if (m_database.config().auto_create_tables)
-                {
-                    // The table did not exist, so it must be created.
-                    mxb_assert(m_dcid == 0);
+        case NORMAL:
+            state = translate_normal(std::move(mariadb_response), &pResponse);
+            break;
 
-                    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
-                            m_dcid = 0;
-
-                            if (action == Worker::Call::EXECUTE)
-                            {
-                                m_mode = TABLE_CREATING;
-
-                                stringstream ss;
-                                ss << "CREATE TABLE "
-                                   << table()
-                                   << " (id VARCHAR("
-                                   << m_database.config().id_length
-                                   << ") NOT NULL UNIQUE, doc JSON)";
-
-                                send_downstream(ss.str());
-                            }
-
-                            return false;
-                        });
-                }
-                else
-                {
-                    stringstream ss;
-                    ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
-                       << "is false.";
-
-                    throw HardError(ss.str(), error::COMMAND_FAILED);
-                }
-            }
-        }
-        else
-        {
-            mxb_assert(m_mode == TABLE_CREATING);
-
-            switch (response.type())
-            {
-            case ComResponse::OK_PACKET:
-                MXS_NOTICE("TABLE created, now executing statment.");
-                m_mode = NORMAL;
-                execute_one_statement();
-                break;
-
-            case ComResponse::ERR_PACKET:
-                {
-                    ComERR err(response);
-
-                    auto code = err.code();
-
-                    if (code == ER_TABLE_EXISTS_ERROR)
-                    {
-                        MXS_NOTICE("TABLE created by someone else, now executing statment.");
-                        m_mode = NORMAL;
-                        execute_one_statement();
-                    }
-                    else
-                    {
-                        MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
-                        pResponse = MariaDBError(err).create_response(*this);
-                        state = READY;
-                    }
-                }
-                break;
-
-            default:
-                mxb_assert(!true);
-                MXS_ERROR("Expected OK or ERR packet, received something else.");
-
-                throw HardError("Unexpected response received from backend.",
-                                error::COMMAND_FAILED).create_response(*this);
-            }
+        case TABLE_CREATING:
+            state = translate_table_creating(std::move(mariadb_response), &pResponse);
         }
 
         mxb_assert((state == BUSY && pResponse == nullptr) || (state == READY && pResponse != nullptr));
@@ -710,6 +635,109 @@ public:
     }
 
 protected:
+    State translate_normal(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_mode == NORMAL);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        if (!response.is_err() || ComERR(response).code() != ER_NO_SUCH_TABLE)
+        {
+            state = OrderedCommand::translate(std::move(mariadb_response), &pResponse);
+        }
+        else
+        {
+            if (m_database.config().auto_create_tables)
+            {
+                // The table did not exist, so it must be created.
+                mxb_assert(m_dcid == 0);
+
+                m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                        m_dcid = 0;
+
+                        if (action == Worker::Call::EXECUTE)
+                        {
+                            m_mode = TABLE_CREATING;
+
+                            stringstream ss;
+                            ss << "CREATE TABLE "
+                               << table()
+                               << " (id VARCHAR("
+                               << m_database.config().id_length
+                               << ") NOT NULL UNIQUE, doc JSON)";
+
+                            send_downstream(ss.str());
+                        }
+
+                        return false;
+                    });
+            }
+            else
+            {
+                stringstream ss;
+                ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
+                   << "is false.";
+
+                throw HardError(ss.str(), error::COMMAND_FAILED);
+            }
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    State translate_table_creating(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_mode == TABLE_CREATING);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            MXS_NOTICE("TABLE created, now executing statment.");
+            m_mode = NORMAL;
+            execute_one_statement();
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                auto code = err.code();
+
+                if (code == ER_TABLE_EXISTS_ERROR)
+                {
+                    MXS_NOTICE("TABLE created by someone else, now executing statment.");
+                    m_mode = NORMAL;
+                    execute_one_statement();
+                }
+                else
+                {
+                    MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            MXS_ERROR("Expected OK or ERR packet, received something else.");
+
+            throw HardError("Unexpected response received from backend.",
+                            error::COMMAND_FAILED).create_response(*this);
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
     vector<string> generate_sql(const vector<bsoncxx::document::view>& documents) override
     {
         vector<string> statements;
