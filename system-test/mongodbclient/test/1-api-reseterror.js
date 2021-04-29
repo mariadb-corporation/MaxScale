@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/getLastError/
+// https://docs.mongodb.com/manual/reference/command/resetError/
 
 const assert = require('assert');
 const test = require('./mongotest')

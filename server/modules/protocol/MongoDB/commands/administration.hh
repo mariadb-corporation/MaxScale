@@ -206,6 +206,7 @@ public:
                 if (err.code() == ER_DB_DROP_EXISTS)
                 {
                     // Report with "ok" == 1, but without "dropped".
+                    ok = 1;
                 }
                 else
                 {

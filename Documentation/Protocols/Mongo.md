@@ -252,7 +252,11 @@ if other fields are explicitly included.
 
 ### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 
-No fields are relevant for this command.
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+getLastError | any | Ignored.
 
 ### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
 
@@ -298,7 +302,11 @@ then the behavior is identical with that of `as_mongodb`.
 
 ### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
 
-No fields are relevant for this command.
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+resetError | any | Ignored.
 
 ### [update](https://docs.mongodb.com/manual/reference/command/update)
 
@@ -346,7 +354,11 @@ No commands from this group are currently supported.
 
 ### [isMaster](https://docs.mongodb.com/manual/reference/command/isMaster/)
 
-No fields are relevant for this command.
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+isMaster | any | Ignored.
 
 ## [Sharding Commands](https://docs.mongodb.com/manual/reference/command/nav-sharding/)
 
@@ -356,7 +368,11 @@ No commands from this group are currently supported.
 
 ### [endSessions](https://docs.mongodb.com/manual/reference/command/endSessions/)
 
-No fields are relevant for this command.
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+endSessions | array | Ignored.
 
 The following document will always be returned.
 ```
@@ -383,7 +399,11 @@ drop| string | The name of the collection to drop.
 
 ### [dropDatabase](https://docs.mongodb.com/manual/reference/command/dropDatabase/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+dropDatabase | any | Ignored.
 
 ### [killCursors](https://docs.mongodb.com/manual/reference/command/killCursors/)
 
