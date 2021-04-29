@@ -111,15 +111,31 @@ public:
      * To be used for signaling that the worker is about to call epoll_wait().
      *
      * @param now  The current time.
+     *
+     * @return The timeout the client should pass to epoll_wait().
      */
-    void about_to_wait(uint64_t now)
+    int about_to_wait(uint64_t now)
     {
         m_wait_start = now;
+
+        auto duration = now - m_start_time;
+
+        if (duration >= GRANULARITY)
+        {
+            about_to_work(now);
+            duration = GRANULARITY;
+        }
+        else
+        {
+            duration = GRANULARITY - duration;
+        }
+
+        return duration;
     }
 
-    void about_to_wait(mxb::TimePoint tp)
+    int about_to_wait(mxb::TimePoint now)
     {
-        about_to_wait(get_time_ms(tp));
+        return about_to_wait(get_time_ms(now));
     }
 
     /**

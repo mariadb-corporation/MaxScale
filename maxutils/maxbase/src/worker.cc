@@ -91,7 +91,7 @@ void WorkerLoad::about_to_work(uint64_t now)
 
     m_wait_time += (now - m_wait_start);
 
-    if (duration > ONE_SECOND)
+    if (duration >= GRANULARITY)
     {
         int load_percentage = 100 * ((duration - m_wait_time) / (double)duration);
 
@@ -795,16 +795,8 @@ void Worker::poll_waitevents()
 
         auto real_now = mxb::Clock::now();
         uint64_t now = Load::get_time_ms(real_now);
-        int timeout = Load::GRANULARITY - (now - m_load.start_time());
 
-        if (timeout < 0)
-        {
-            // If the processing of the last batch of events took us past the next
-            // time boundary, we ensure we return immediately.
-            timeout = 0;
-        }
-
-        m_load.about_to_wait(now);
+        auto timeout = m_load.about_to_wait(now);
         nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
         m_epoll_tick_now = mxb::Clock::now();
 
