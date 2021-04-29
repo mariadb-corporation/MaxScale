@@ -9,6 +9,7 @@ piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
 sharedir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
 persistdir=@CMAKE_INSTALL_PREFIX@/lib/maxscale/maxscale.cnf.d/
 module_configdir=@CMAKE_INSTALL_PREFIX@/etc/maxscale.modules.d/
+admin_secure_gui=false
 
 [server1]
 type=server

@@ -415,12 +415,13 @@ module.exports = function () {
   this.validate = validate_json;
   this.host = "localhost:8989/v1";
   this.base_url = "http://" + this.host;
+  this.credentials = { username: "admin", password: "mariadb" };
 
   this.doRequest = async function (method, endpoint, opts) {
     var o = opts || {};
 
     if (!o.auth) {
-      o.auth = { username: "admin", password: "mariadb" };
+      o.auth = this.credentials;
     }
 
     o.method = method;

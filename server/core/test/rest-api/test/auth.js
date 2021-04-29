@@ -1,4 +1,7 @@
 require("../utils.js")();
+const jwt = require("jsonwebtoken");
+const axiosCookieJarSupport = require("axios-cookiejar-support").default;
+const tough = require("tough-cookie");
 
 function set_auth(auth, value) {
   return request
@@ -110,27 +113,63 @@ describe("Authentication", function () {
 describe("JSON Web Tokens", function () {
   before(startMaxScale);
 
-  it("rejects /auth endpoint without HTTPS", function () {
-    var token = "";
-    return request.get(base_url + "/auth").should.be.rejected;
+  // TODO: Enable this when test uses TLS without admin_secure_gui=false
+  // it("rejects /auth endpoint without HTTPS", function () {
+  //   var token = "";
+  //   return request.get(base_url + "/auth").should.be.rejected;
+  // });
+
+  var token = "";
+
+  it("generates valid token", async function () {
+    var res = await request.get(base_url + "/auth");
+    token = res.meta.token;
+    jwt.decode(token).should.not.throw;
   });
 
-  // TODO: Enable this when the test suite uses TLS
-  //   it("generates valid token", function () {
-  //     var token = "";
-  //     return request
-  //       .get(base_url + "/auth")
-  //       .then((res) => {
-  //         token = res.meta.token;
-  //       })
-  //       .then(() =>
-  //         request.get("http://" + host + "/servers", { headers: { Authorization: "Bearer " + token } })
-  //       ).should.be.fulfilled;
-  //   });
+  it("accepts token in Bearer", async function () {
+    await axios.get("http://" + host + "/servers", {
+      headers: { Authorization: "Bearer " + token },
+    });
+  });
+
+  it("stores token in cookies", async function () {
+    const c = axios.create({
+      baseURL: base_url,
+      withCredentials: true,
+    });
+
+    axiosCookieJarSupport(c);
+    c.defaults.jar = new tough.CookieJar();
+    await c.get("/auth?persist=yes", { auth: credentials });
+
+    // The cookies are stored based on the hostname. For some reason the first URI component is included in it as well.
+    var cookies = c.defaults.jar.getCookiesSync("http://localhost/v1/");
+    expect(cookies).to.not.be.empty;
+
+    var keys = cookies.map((cookie) => cookie.key);
+    expect(keys).to.include("token_body");
+    expect(keys).to.include("token_sig");
+  });
+
+  it("accepts token in cookies", async function () {
+    const c = axios.create({
+      baseURL: base_url,
+      withCredentials: true,
+    });
+
+    axiosCookieJarSupport(c);
+    c.defaults.jar = new tough.CookieJar();
+
+    await c.get("/auth?persist=yes", { auth: credentials });
+    await c.get("servers/server1").should.be.fulfilled;
+    c.defaults.jar = null;
+    await c.get("servers/server1").should.be.rejected;
+  });
 
   it("rejects invalid token", function () {
-    var token = "thisisnotavalidjsonwebtoken";
-    return request.get(base_url + "/servers", { auth: {}, headers: { Authorization: "Bearer " + token } })
+    var bad_token = "thisisnotavalidjsonwebtoken";
+    return request.get(base_url + "/servers", { auth: {}, headers: { Authorization: "Bearer " + bad_token } })
       .should.be.rejected;
   });
 

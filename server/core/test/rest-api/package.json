@@ -11,11 +11,14 @@
   "dependencies": {
     "ajv": "^5.5.2",
     "axios": "^0.21.1",
+    "axios-cookiejar-support": "^1.0.1",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
+    "jsonwebtoken": "^8.5.1",
     "mariadb": "^2.0.1-beta",
     "mocha": "^7.1.1",
     "prettier": "^2.2.1",
+    "tough-cookie": "^4.0.0",
     "ws": "^7.3.1"
   },
   "prettier": {
