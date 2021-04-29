@@ -20,11 +20,11 @@
                 content-class="shadow-drop"
             >
                 <template v-slot:activator="{ on }">
-                    <div class="text-truncate" v-on="on">
+                    <div class="d-flex align-center node-label" v-on="on">
                         <v-icon class="mr-1" size="12" color="deep-ocean">
                             {{ iconSheet(item) }}
                         </v-icon>
-                        {{ item.name }}
+                        <span class="text-truncate d-inline-block">{{ item.name }}</span>
                     </div>
                 </template>
                 <v-list class="mariadb-v-list" dense>
@@ -195,5 +195,8 @@ export default {
 }
 ::v-deep .v-treeview-node__level {
     width: 16px;
+}
+.node-label {
+    height: 40px;
 }
 </style>
