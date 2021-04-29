@@ -98,9 +98,9 @@ public:
      * Reset the load calculation. Should be called immediately before the
      * worker enters its eternal epoll_wait()-loop.
      */
-    void reset()
+    void reset(mxb::TimePoint tp)
     {
-        uint64_t now = get_time_ms();
+        uint64_t now = get_time_ms(tp);
 
         m_start_time = now;
         m_wait_start = 0;
@@ -117,9 +117,9 @@ public:
         m_wait_start = now;
     }
 
-    void about_to_wait()
+    void about_to_wait(mxb::TimePoint tp)
     {
-        about_to_wait(get_time_ms());
+        about_to_wait(get_time_ms(tp));
     }
 
     /**
@@ -129,9 +129,9 @@ public:
      */
     void about_to_work(uint64_t now);
 
-    void about_to_work()
+    void about_to_work(mxb::TimePoint tp)
     {
-        about_to_work(get_time_ms());
+        about_to_work(get_time_ms(tp));
     }
 
     /**
@@ -173,7 +173,7 @@ public:
      *
      * @return Current time in milliseconds.
      */
-    static uint64_t get_time_ms();
+    static uint64_t get_time_ms(TimePoint tp);
 
 private:
 
@@ -758,13 +758,13 @@ public:
      *            be called again.
      */
     uint32_t delayed_call(int32_t delay,
-                          std::function<bool (Worker::Call::action_t action)> f)
+                          std::function<bool(Worker::Call::action_t action)> f)
     {
         return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), f));
     }
 
     uint32_t delayed_call(const std::chrono::milliseconds& delay,
-                          std::function<bool (Worker::Call::action_t action)> f)
+                          std::function<bool(Worker::Call::action_t action)> f)
     {
         return add_delayed_call(new DelayedCallFunctor(delay.count(), next_delayed_call_id(), f));
     }
@@ -887,7 +887,7 @@ private:
             // delay is very short and the execution time for the function very long,
             // then we will not succeed with that and the function will simply be
             // invoked as frequently as possible.
-            int64_t now = WorkerLoad::get_time_ms();
+            int64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
             int64_t then = m_at + m_delay;
 
             if (now > then)
@@ -905,7 +905,7 @@ private:
         DelayedCall(int32_t delay, int32_t id)
             : m_id(id)
             , m_delay(delay >= 0 ? delay : 0)
-            , m_at(get_at(m_delay))
+            , m_at(get_at(delay, mxb::Clock::now()))
         {
             mxb_assert(delay >= 0);
         }
@@ -913,11 +913,11 @@ private:
         virtual bool do_call(Worker::Call::action_t action) = 0;
 
     private:
-        static int64_t get_at(int32_t delay)
+        static int64_t get_at(int32_t delay, mxb::TimePoint tp)
         {
             mxb_assert(delay >= 0);
 
-            int64_t now = WorkerLoad::get_time_ms();
+            int64_t now = WorkerLoad::get_time_ms(tp);
 
             return now + delay;
         }
@@ -1048,7 +1048,7 @@ private:
     public:
         DelayedCallFunctor(int32_t delay,
                            int32_t id,
-                           std::function<bool (Worker::Call::action_t)> f)
+                           std::function<bool(Worker::Call::action_t)> f)
             : DelayedCall(delay, id)
             , m_f(f)
         {
@@ -1061,7 +1061,7 @@ private:
         }
 
     private:
-        std::function<bool (Worker::Call::action_t)> m_f;
+        std::function<bool(Worker::Call::action_t)> m_f;
     };
 
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);

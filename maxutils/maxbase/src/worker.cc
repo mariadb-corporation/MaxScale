@@ -79,8 +79,8 @@ WorkerLoad::WorkerLoad()
     : m_start_time(0)
     , m_wait_start(0)
     , m_wait_time(0)
-    , m_load_1_hour(60) // 60 minutes in an hour
-    , m_load_1_minute(60, &m_load_1_hour) // 60 seconds in a minute
+    , m_load_1_hour(60)                     // 60 minutes in an hour
+    , m_load_1_minute(60, &m_load_1_hour)   // 60 seconds in a minute
     , m_load_1_second(&m_load_1_minute)
 {
 }
@@ -103,19 +103,11 @@ void WorkerLoad::about_to_work(uint64_t now)
 }
 
 // static
-uint64_t WorkerLoad::get_time_ms()
+uint64_t WorkerLoad::get_time_ms(mxb::TimePoint tp)
 {
-    timespec t;
+    using namespace std::chrono;
 
-    int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
-    if (rv != 0)
-    {
-        mxb_assert(errno == EINVAL);    // CLOCK_MONOTONIC_COARSE not supported.
-        rv = clock_gettime(CLOCK_MONOTONIC, &t);
-        mxb_assert(rv == 0);
-    }
-
-    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
+    return duration_cast<milliseconds>(tp.time_since_epoch()).count();
 }
 
 namespace
@@ -361,7 +353,7 @@ Worker::RandomEngine& Worker::random_engine()
 
 void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
 {
-    auto pWorker = mxb::Worker::get_current(); // Must be in a worker thread.
+    auto pWorker = mxb::Worker::get_current();      // Must be in a worker thread.
     auto& rand_eng = pWorker->m_random_engine;
     size_t bytes_written = 0;
     while (bytes_written < nBytes)
@@ -770,11 +762,11 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
 namespace
 {
 
-long time_in_100ms_ticks()
+long time_in_100ms_ticks(maxbase::TimePoint tp)
 {
     using TenthSecondDuration = std::chrono::duration<long, std::ratio<1, 10>>;
 
-    auto dur = maxbase::Clock::now().time_since_epoch();
+    auto dur = tp.time_since_epoch();
     auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
 
     return tenth.count();
@@ -788,7 +780,7 @@ void Worker::poll_waitevents()
 {
     struct epoll_event events[m_max_events];
 
-    m_load.reset();
+    m_load.reset(mxb::Clock::now());
 
     int64_t nFds_total = 0;
     int64_t nPolls_effective = 0;
@@ -801,7 +793,8 @@ void Worker::poll_waitevents()
 
         atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
 
-        uint64_t now = Load::get_time_ms();
+        auto real_now = mxb::Clock::now();
+        uint64_t now = Load::get_time_ms(real_now);
         int timeout = Load::GRANULARITY - (now - m_load.start_time());
 
         if (timeout < 0)
@@ -813,7 +806,10 @@ void Worker::poll_waitevents()
 
         m_load.about_to_wait(now);
         nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
-        m_load.about_to_work();
+        m_epoll_tick_now = mxb::Clock::now();
+
+        m_load.about_to_work(m_epoll_tick_now);
+        uint64_t cycle_start = time_in_100ms_ticks(m_epoll_tick_now);
 
         if (nfds == -1 && errno != EINTR)
         {
@@ -826,6 +822,7 @@ void Worker::poll_waitevents()
                       eno);
         }
 
+        // Set some stats (time taken is negligible).
         if (nfds > 0)
         {
             nPolls_effective += 1;
@@ -852,13 +849,14 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
-        m_epoll_tick_now = maxbase::Clock::now(mxb::NowType::RealTime);
-        uint64_t cycle_start = time_in_100ms_ticks();
+        // Set loop_now before the loop, and inside the loop
+        // just before looping back to the top.
+        auto loop_now = maxbase::Clock::now();
 
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
-            int64_t started = time_in_100ms_ticks();
+            int64_t started = time_in_100ms_ticks(loop_now);
             int64_t qtime = started - cycle_start;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
@@ -902,7 +900,8 @@ void Worker::poll_waitevents()
             }
 
             /** Calculate event execution statistics */
-            qtime = time_in_100ms_ticks() - started;
+            loop_now = maxbase::Clock::now();
+            qtime = time_in_100ms_ticks(loop_now) - started;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
             {
@@ -922,7 +921,7 @@ void Worker::poll_waitevents()
 
 void Worker::tick()
 {
-    int64_t now = WorkerLoad::get_time_ms();
+    int64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
 
     vector<DelayedCall*> repeating_calls;
 
@@ -1002,7 +1001,7 @@ void Worker::adjust_timer()
     {
         DelayedCall* pCall = m_sorted_calls.begin()->second;
 
-        uint64_t now = WorkerLoad::get_time_ms();
+        uint64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
         int64_t delay = pCall->at() - now;
 
         if (delay <= 0)

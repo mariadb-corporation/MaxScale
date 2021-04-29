@@ -146,7 +146,7 @@ private:
 
     static long now()
     {
-        return mxb::WorkerLoad::get_time_ms();
+        return mxb::WorkerLoad::get_time_ms(mxb::Clock::now());
     }
 
     // XpandNode::Persister
