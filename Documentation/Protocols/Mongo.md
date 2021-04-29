@@ -73,6 +73,17 @@ Enumeration values:
    * `return_error`: An error document is returned.
    * `return_empty`: An empty document is returned.
 
+## `auto_create_databases`
+
+   * Type: boolean
+   * Mandatory: false
+   * Default: `true`
+
+Specifies whether databases should automatically be created, as needed.
+
+Note that setting this parameter to `true`, without also setting
+`auto_create_tables` to `true`, has no effect at all.
+
 ## `auto_create_tables`
 
    * Type: boolean
@@ -80,6 +91,10 @@ Enumeration values:
    * Default: `true`
 
 Specifies whether tables should automatically be created, as needed.
+
+Note that this applies only if the relevant database already exists.
+If a database should also be created if needed, then `auto_create_databases`
+must also be set to `true`.
 
 ## `id_length`
 
@@ -117,7 +132,9 @@ automatically closed.
 
 # Databases and Tables
 
-_Mongodbprotocol_ never creates databases, but they must be created manually.
+By default, _mongodbprotocol_ automatically creates databases as needed.
+The default behavior can be changed by setting `auto_create_databases` to
+false. In that case, databases must manually be created.
 
 Each Mongo _collection_ corresponds to a MariaDB table with the same name.
 However, it is always possible to access a collection irrespective of whether

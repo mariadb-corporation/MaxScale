@@ -44,6 +44,14 @@ mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknow
     },
     GlobalConfig::RETURN_ERROR);
 
+mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
+    &mongodbprotocol::specification,
+    "auto_create_databases",
+    "Whether databases should be created automatically. If enabled, whenever a document is "
+    "inserted to a collection the corresponding database will automatically be created if "
+    "it does not exist already.",
+    true);
+
 mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
     &mongodbprotocol::specification,
     "auto_create_tables",
@@ -86,6 +94,7 @@ GlobalConfig::GlobalConfig()
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
     add_native(&GlobalConfig::on_unknown_command, &s_on_unknown_command);
+    add_native(&GlobalConfig::auto_create_databases, &s_auto_create_databases);
     add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
     add_native(&GlobalConfig::id_length, &s_id_length);
     add_native(&GlobalConfig::insert_behavior, &s_insert_behavior);
