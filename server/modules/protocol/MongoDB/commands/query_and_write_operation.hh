@@ -552,6 +552,11 @@ public:
 
         case TABLE_CREATING:
             state = translate_table_creating(std::move(mariadb_response), &pResponse);
+            break;
+
+        case DATABASE_CREATING:
+            state = translate_database_creating(std::move(mariadb_response), &pResponse);
+            break;
         }
 
         mxb_assert((state == BUSY && pResponse == nullptr) || (state == READY && pResponse != nullptr));
@@ -680,7 +685,7 @@ protected:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            MXS_NOTICE("TABLE created, now executing statment.");
+            MXS_NOTICE("Table created, now executing statment.");
             m_mode = NORMAL;
             execute_one_statement();
             break;
@@ -693,13 +698,75 @@ protected:
 
                 if (code == ER_TABLE_EXISTS_ERROR)
                 {
-                    MXS_NOTICE("TABLE created by someone else, now executing statment.");
+                    MXS_NOTICE("Table created by someone else, now executing statment.");
                     m_mode = NORMAL;
                     execute_one_statement();
+                }
+                else if (code == ER_BAD_DB_ERROR && err.message().find("Unknown database") == 0)
+                {
+                    if (m_database.config().auto_create_databases)
+                    {
+                        create_database();
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Database " << m_database.name() << " does not exist, and "
+                           << "'auto_create_databases' is false.";
+
+                        throw HardError(ss.str(), error::COMMAND_FAILED);
+                    }
                 }
                 else
                 {
                     MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            MXS_ERROR("Expected OK or ERR packet, received something else.");
+
+            throw HardError("Unexpected response received from backend.",
+                            error::COMMAND_FAILED).create_response(*this);
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    State translate_database_creating(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_mode == DATABASE_CREATING);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            MXS_NOTICE("Database created, now creating table.");
+            create_table();
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                auto code = err.code();
+
+                if (code == ER_DB_CREATE_EXISTS)
+                {
+                    MXS_NOTICE("Database created by someone else, now creating table.");
+                    create_table();
+                }
+                else
+                {
+                    MXS_ERROR("Could not create database: (%d), %s", err.code(), err.message().c_str());
                     throw MariaDBError(err);
                 }
             }
@@ -733,6 +800,26 @@ protected:
                        << " (id VARCHAR("
                        << m_database.config().id_length
                        << ") NOT NULL UNIQUE, doc JSON)";
+
+                    send_downstream(ss.str());
+                }
+
+                return false;
+            });
+    }
+
+    void create_database()
+    {
+        m_mode = DATABASE_CREATING;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    stringstream ss;
+                    ss << "CREATE DATABASE " << m_database.name();
 
                     send_downstream(ss.str());
                 }
@@ -844,6 +931,7 @@ protected:
     {
         NORMAL,
         TABLE_CREATING,
+        DATABASE_CREATING
     };
 
     Mode                                m_mode { NORMAL };
