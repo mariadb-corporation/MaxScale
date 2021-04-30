@@ -544,18 +544,18 @@ public:
 
         ComResponse response(mariadb_response.data());
 
-        switch (m_mode)
+        switch (m_action)
         {
-        case NORMAL:
-            state = translate_normal(std::move(mariadb_response), &pResponse);
+        case Action::INSERTING_DATA:
+            state = translate_inserting_data(std::move(mariadb_response), &pResponse);
             break;
 
-        case TABLE_CREATING:
-            state = translate_table_creating(std::move(mariadb_response), &pResponse);
+        case Action::CREATING_TABLE:
+            state = translate_creating_table(std::move(mariadb_response), &pResponse);
             break;
 
-        case DATABASE_CREATING:
-            state = translate_database_creating(std::move(mariadb_response), &pResponse);
+        case Action::CREATING_DATABASE:
+            state = translate_creating_database(std::move(mariadb_response), &pResponse);
             break;
         }
 
@@ -640,9 +640,9 @@ public:
     }
 
 protected:
-    State translate_normal(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_inserting_data(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_mode == NORMAL);
+        mxb_assert(m_action == Action::INSERTING_DATA);
 
         State state = BUSY;
         GWBUF* pResponse = nullptr;
@@ -673,9 +673,9 @@ protected:
         return state;
     }
 
-    State translate_table_creating(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_mode == TABLE_CREATING);
+        mxb_assert(m_action == Action::CREATING_TABLE);
 
         State state = BUSY;
         GWBUF* pResponse = nullptr;
@@ -686,7 +686,7 @@ protected:
         {
         case ComResponse::OK_PACKET:
             MXS_NOTICE("Table created, now executing statment.");
-            m_mode = NORMAL;
+            m_action = Action::INSERTING_DATA;
             execute_one_statement();
             break;
 
@@ -699,7 +699,7 @@ protected:
                 if (code == ER_TABLE_EXISTS_ERROR)
                 {
                     MXS_NOTICE("Table created by someone else, now executing statment.");
-                    m_mode = NORMAL;
+                    m_action = Action::INSERTING_DATA;
                     execute_one_statement();
                 }
                 else if (code == ER_BAD_DB_ERROR && err.message().find("Unknown database") == 0)
@@ -737,9 +737,9 @@ protected:
         return state;
     }
 
-    State translate_database_creating(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_mode == DATABASE_CREATING);
+        mxb_assert(m_action == Action::CREATING_DATABASE);
 
         State state = BUSY;
         GWBUF* pResponse = nullptr;
@@ -786,7 +786,7 @@ protected:
 
     void create_table()
     {
-        m_mode = TABLE_CREATING;
+        m_action = Action::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
         m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
@@ -810,7 +810,7 @@ protected:
 
     void create_database()
     {
-        m_mode = DATABASE_CREATING;
+        m_action = Action::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
         m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
@@ -927,14 +927,14 @@ protected:
         m_n += response.affected_rows();
     }
 
-    enum Mode
+    enum class Action
     {
-        NORMAL,
-        TABLE_CREATING,
-        DATABASE_CREATING
+        INSERTING_DATA,
+        CREATING_TABLE,
+        CREATING_DATABASE
     };
 
-    Mode                                m_mode { NORMAL };
+    Action                              m_action { Action::INSERTING_DATA };
     uint32_t                            m_dcid { 0 };
     mutable int64_t                     m_nDocuments { 0 };
     vector<bsoncxx::document::element>  m_ids;
