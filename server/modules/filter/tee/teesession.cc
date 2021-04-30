@@ -57,7 +57,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
 
 TeeSession::~TeeSession()
 {
-    m_client->self_destruct();
+    delete m_client;
 }
 
 void TeeSession::close()
