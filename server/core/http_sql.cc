@@ -26,6 +26,10 @@ namespace
 const std::string CONN_ID_BODY = "conn_id_body";
 const std::string CONN_ID_SIG = "conn_id_sig";
 
+const HttpResponse no_id_error(
+    MHD_HTTP_FORBIDDEN,
+    mxs_json_error("No connection token in cookies or in `connection_id`."));
+
 int64_t get_connection_id(const HttpRequest& request)
 {
     bool ok = false;
@@ -51,6 +55,7 @@ int64_t get_connection_id(const HttpRequest& request)
     return id;
 }
 
+// TODO: Use a std::unique_ptr<QueryResult> as the source of the data
 json_t* format_result(MYSQL* conn, int rc)
 {
     json_t* rval = json_object();
@@ -198,44 +203,14 @@ HttpResponse::Callback execute_query(const std::string& host, int port, const mx
                return HttpResponse(MHD_HTTP_OK, rval);
            };
 }
-}
 
-// static
-HttpResponse HttpSql::connect(const HttpRequest& request)
+HttpResponse create_connect_response(int64_t id, bool persist)
 {
-    mxb::Json json(request.get_json());
-    std::string user;
-    std::string pw;
-    std::string db;
-    int64_t timeout = 10;
-    int64_t id = get_connection_id(request);
-
-    json.try_get_int("timeout", &timeout);
-    json.try_get_string("db", &db);
-
-    if (!json.try_get_string("user", &user) || !json.try_get_string("password", &pw))
-    {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing `user` or `password`."));
-    }
-
-    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
-
-    if (id)
-    {
-        //
-        // TODO: Close the old connection
-        //
-    }
-
-    //
-    // TODO: Create the connection
-    //
-
     // TODO: Figure out how long the connections should be kept valid
     int max_age = 28800;
     auto token = mxs::jwt::create("mxs-query", std::to_string(id), max_age);
 
-    if (request.get_option("persist") == "yes")
+    if (persist)
     {
         HttpResponse response(MHD_HTTP_NO_CONTENT);
         response.add_split_cookie(CONN_ID_BODY, CONN_ID_SIG, token, max_age);
@@ -246,31 +221,77 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, json_pack("{s:{s:s}}", "meta", "token", token.c_str()));
     }
 }
+}
+
+//
+// Public API functions
+//
+
+// static
+HttpResponse HttpSql::connect(const HttpRequest& request)
+{
+    mxb::Json json(request.get_json());
+    ConnectionConfig config;
+    json.try_get_int("timeout", &config.timeout);
+    json.try_get_string("db", &config.db);
+
+    if (int64_t id = get_connection_id(request))
+    {
+        close_connection(id);
+    }
+
+    if (!json.try_get_string("user", &config.user) || !json.try_get_string("password", &config.password))
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing `user` or `password`."));
+    }
+
+    Server* server = ServerManager::find_by_unique_name(request.uri_part(1));
+    mxb_assert(server);
+
+    config.host = server->address();
+    config.port = server->port();
+    config.ssl = server->ssl_config();
+
+    bool persist = request.get_option("persist") == "yes";
+
+    return HttpResponse(
+        [config, persist]() {
+            std::string err;
+
+            if (int64_t new_id = create_connection(config, &err))
+            {
+                return create_connect_response(new_id, persist);
+            }
+            else
+            {
+                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", err.c_str()));
+            }
+        });
+}
 
 // static
 HttpResponse HttpSql::query(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
-    std::string user;
-    std::string pw;
     std::string sql;
-    std::string db = json.get_string("db");
-    int64_t timeout = 10;
-    json.try_get_int("timeout", &timeout);
-
-    if (!json.try_get_string("user", &user)
-        || !json.try_get_string("password", &pw)
-        || !json.try_get_string("sql", &sql))
-    {
-        return HttpResponse(MHD_HTTP_FORBIDDEN,
-                            mxs_json_error("Missing one of `user`, `password` or `sql`."));
-    }
-
-    // TODO: Use the ID to find the open connection
     int64_t id = get_connection_id(request);
 
-    auto server = ServerManager::find_by_unique_name(request.uri_part(1));
-    return execute_query(server->address(), server->port(), server->ssl_config(), user, pw, db, sql, timeout);
+    if (!json.try_get_string("sql", &sql))
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
+    }
+    else if (!id)
+    {
+        return no_id_error;
+    }
+
+    return HttpResponse(
+        [id, sql]() {
+            execute_query(id, sql);
+            // TODO: Return the result as JSON in the response
+            read_result(id);
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        });
 }
 
 // static
@@ -278,9 +299,45 @@ HttpResponse HttpSql::disconnect(const HttpRequest& request)
 {
     int64_t id = get_connection_id(request);
 
-    //
-    // TODO: Close the connection
-    //
+    if (!id)
+    {
+        return no_id_error;
+    }
 
-    return HttpResponse(MHD_HTTP_NO_CONTENT);
+    return HttpResponse(
+        [id]() {
+            close_connection(id);
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        });
+}
+
+//
+// SQL connection implementation
+//
+
+// static
+int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* err)
+{
+    // TODO: Create the connection
+    return 1;
+}
+
+// static
+bool HttpSql::execute_query(int64_t id, const std::string& sql)
+{
+    // TODO: Execute the query
+    return true;
+}
+
+// static
+bool HttpSql::read_result(int64_t id)
+{
+    // TODO: Read the result
+    return true;
+}
+
+// static
+void HttpSql::close_connection(int64_t id)
+{
+    // TODO: Close the connection
 }

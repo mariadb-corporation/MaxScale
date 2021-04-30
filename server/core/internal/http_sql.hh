@@ -29,4 +29,29 @@ public:
     static HttpResponse query(const HttpRequest& request);
 
     static HttpResponse disconnect(const HttpRequest& request);
+
+private:
+
+    struct ConnectionConfig
+    {
+        std::string    host;
+        int            port;
+        std::string    user;
+        std::string    password;
+        std::string    db;
+        int64_t        timeout = 10;
+        mxb::SSLConfig ssl;
+    };
+
+    //
+    // The functions that implement the connection creation and query execution
+    //
+
+    static int64_t create_connection(const ConnectionConfig& config, std::string* err);
+
+    static bool execute_query(int64_t id, const std::string& sql);
+
+    static bool read_result(int64_t id);
+
+    static void close_connection(int64_t id);
 };
