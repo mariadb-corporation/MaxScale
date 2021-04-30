@@ -186,6 +186,7 @@ struct ThisUnit
         { mxb::tolower(key::WHATSMYURI),              create_info<command::WhatsMyUri>() },
 
         { mxb::tolower(key::MXSDIAGNOSE),             create_info<command::MxsDiagnose>() },
+        { mxb::tolower(key::MXSCREATEDATABASE),       create_info<command::MxsCreateDatabase>() },
         { mxb::tolower(key::MXSGETCONFIG),            create_info<command::MxsGetConfig>() },
         { mxb::tolower(key::MXSSETCONFIG),            create_info<command::MxsSetConfig>() },
     };

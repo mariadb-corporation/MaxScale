@@ -172,6 +172,84 @@ public:
     }
 };
 
+class MxsCreateDatabase;
+
+template<>
+struct IsAdmin<MxsCreateDatabase>
+{
+    static const bool is_admin { true };
+};
+
+class MxsCreateDatabase : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = key::MXSCREATEDATABASE;
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<MxsCreateDatabase>::is_admin;
+    }
+
+    string generate_sql() override
+    {
+        m_name = value_as<string>();
+
+        stringstream sql;
+        sql << "CREATE DATABASE `" << m_name << "`";
+
+        return sql.str();
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(mariadb_response.data());
+
+        DocumentBuilder doc;
+
+        int32_t ok = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            ok = 1;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_DB_CREATE_EXISTS)
+                {
+                    stringstream ss;
+                    ss << "The database '" << m_name << "' exists already.";
+
+                    throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        doc.append(kvp("ok", ok));
+
+        *ppResponse = create_response(doc.extract());
+
+        return READY;
+    }
+
+private:
+    string m_name;
+};
+
 }
 
 }

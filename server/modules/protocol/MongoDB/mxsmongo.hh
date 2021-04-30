@@ -344,6 +344,7 @@ const char WHATSMYURI[]              = "whatsmyuri";
 
 // MaxScale Commands
 const char MXSDIAGNOSE[]             = "mxsDiagnose";
+const char MXSCREATEDATABASE[]       = "mxsCreateDatabase";
 const char MXSGETCONFIG[]            = "mxsGetConfig";
 const char MXSSETCONFIG[]            = "mxsSetConfig";
 

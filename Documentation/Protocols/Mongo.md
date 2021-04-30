@@ -476,6 +476,54 @@ No commands from this group are currently supported.
 
 ## MaxScale Specific Commands
 
+### mxsCreateDatabase
+
+#### Definition
+
+##### **mxsCreateDatabase**
+
+The 'mxsCreateDatabase' command creates a new database and must be run
+against the `admin` database.
+
+#### Syntax
+
+The 'mxsCreateDatabase' has the following syntax:
+```
+db.adminCommand(
+    {
+       mxsCreateDatabase: <name>
+    }
+)
+```
+##### Command Fields
+
+The command takes the following fields:
+
+Field | Type | Description
+------|------|------------
+mxsCreateDatabase | string | The name of the database to be created.
+
+##### Returns
+
+If database creation succeeds, the command returns a document with the
+single field `ok` whose value is `1`.
+
+```
+> db.adminCommand({mxsCreateDatabase: "db"});
+{ "ok" : 1 }
+```
+
+If the database creation fails, the command returns an error document.
+```
+> db.adminCommand({mxsCreateDatabase: "db"});
+{
+	"ok" : 0,
+	"errmsg" : "The database 'db' exists already.",
+	"code" : 48,
+	"codeName" : "NamespaceExists"
+}
+```
+
 ### mxsDiagnose
 
 #### Definition
@@ -487,7 +535,7 @@ MaxScale will handle that command.
 
 #### Syntax
 
-The `mxsDiagnose` command has the following syntaxt:
+The `mxsDiagnose` command has the following syntax:
 ```
 db.runCommand(
     {
