@@ -652,28 +652,7 @@ protected:
         {
             if (m_database.config().auto_create_tables)
             {
-                // The table did not exist, so it must be created.
-                mxb_assert(m_dcid == 0);
-
-                m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
-                        m_dcid = 0;
-
-                        if (action == Worker::Call::EXECUTE)
-                        {
-                            m_mode = TABLE_CREATING;
-
-                            stringstream ss;
-                            ss << "CREATE TABLE "
-                               << table()
-                               << " (id VARCHAR("
-                               << m_database.config().id_length
-                               << ") NOT NULL UNIQUE, doc JSON)";
-
-                            send_downstream(ss.str());
-                        }
-
-                        return false;
-                    });
+                create_table();
             }
             else
             {
@@ -736,6 +715,30 @@ protected:
 
         *ppResponse = pResponse;
         return state;
+    }
+
+    void create_table()
+    {
+        m_mode = TABLE_CREATING;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    stringstream ss;
+                    ss << "CREATE TABLE "
+                       << table()
+                       << " (id VARCHAR("
+                       << m_database.config().id_length
+                       << ") NOT NULL UNIQUE, doc JSON)";
+
+                    send_downstream(ss.str());
+                }
+
+                return false;
+            });
     }
 
     vector<string> generate_sql(const vector<bsoncxx::document::view>& documents) override
