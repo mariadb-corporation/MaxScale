@@ -36,6 +36,8 @@ public:
 
     static HttpResponse query(const HttpRequest& request);
 
+    static HttpResponse result(const HttpRequest& request);
+
     static HttpResponse disconnect(const HttpRequest& request);
 
 private:

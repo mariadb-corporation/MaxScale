@@ -1047,6 +1047,11 @@ HttpResponse cb_query_server(const HttpRequest& request)
     return HttpSql::query(request);
 }
 
+HttpResponse cb_query_result(const HttpRequest& request)
+{
+    return HttpSql::result(request);
+}
+
 HttpResponse cb_alter_user(const HttpRequest& request)
 {
     auto user = request.last_uri_part();
@@ -1337,6 +1342,9 @@ public:
         m_get.emplace_back(cb_all_inet_users, "users", "inet");
         m_get.emplace_back(cb_all_unix_users, "users", "unix");     // For backward compatibility.
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
+
+        // TODO: Maybe connections should be a separate collection?
+        m_get.emplace_back(cb_query_result, "servers", ":server", "query");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");

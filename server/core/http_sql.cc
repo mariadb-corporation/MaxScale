@@ -18,6 +18,7 @@
 #include <maxbase/json.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/mysql_utils.hh>
+#include <maxscale/cn_strings.hh>
 
 namespace
 {
@@ -293,6 +294,10 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
 // static
 HttpResponse HttpSql::query(const HttpRequest& request)
 {
+    mxb_assert(request.uri_part_count() == 3);
+    mxb_assert(request.uri_part(0) == "servers");
+    mxb_assert(request.uri_part(2) == "query");
+
     mxb::Json json(request.get_json());
     std::string sql;
     int64_t id = get_connection_id(request);
@@ -306,12 +311,90 @@ HttpResponse HttpSql::query(const HttpRequest& request)
         return no_id_error;
     }
 
+    std::string location = request.host() + request.get_uri();
+
     return HttpResponse(
-        [id, sql]() {
-            execute_query(id, sql);
-            // TODO: Return the result as JSON in the response
-            read_result(id, 0);
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        [id, sql, location]() {
+            if (execute_query(id, sql))
+            {
+                HttpResponse response(MHD_HTTP_CREATED);
+                response.add_header(MHD_HTTP_HEADER_LOCATION, location);
+                return response;
+            }
+            else
+            {
+                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("ID %ld not found", id));
+            }
+        });
+}
+
+// static
+HttpResponse HttpSql::result(const HttpRequest& request)
+{
+    mxb::Json json(request.get_json());
+    std::string sql;
+    int64_t id = get_connection_id(request);
+
+    if (!id)
+    {
+        return no_id_error;
+    }
+
+    std::string host = request.host();
+    std::string self = request.get_uri();
+
+    int64_t page_size = 0;
+    auto opt = request.get_option("page[size]");
+
+    if (!opt.empty())
+    {
+        page_size = strtol(opt.c_str(), nullptr, 10);
+    }
+
+    return HttpResponse(
+        [id, sql, host, self, page_size]() {
+            std::vector<std::unique_ptr<Result>> results = read_result(id, page_size);
+
+            if (!results.empty())
+            {
+                mxb::Json js(mxb::Json::Type::OBJECT);
+
+                json_t* arr = json_array();
+
+                for (const auto& r : results)
+                {
+                    json_array_append_new(arr, r->to_json());
+                }
+
+                json_t* attr = json_object();
+                json_object_set_new(attr, "results", arr);
+
+                json_t* obj = json_object();
+                json_object_set_new(obj, CN_ID, json_string(std::to_string(id).c_str()));
+                json_object_set_new(obj, CN_TYPE, json_string("results"));
+                json_object_set_new(obj, CN_ATTRIBUTES, attr);
+
+                json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
+
+                // Create pagination links
+                json_t* links = json_object_get(rval, CN_LINKS);
+                std::string base = json_string_value(json_object_get(links, "self"));
+                bool more_results = false;
+
+                // TODO: Create the pagination link if there are more results. Currently everything
+                // is read immediately.
+                if (page_size && more_results)
+                {
+                    auto next = base + "?page[size]=" + std::to_string(page_size);
+                    json_object_set_new(links, "next", json_string(next.c_str()));
+                }
+
+                return HttpResponse(MHD_HTTP_OK, rval);
+            }
+            else
+            {
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
+            }
         });
 }
 
