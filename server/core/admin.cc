@@ -79,6 +79,7 @@ const char* gui_not_secure_page =
 </html>
 )EOF";
 
+const std::string TOKEN_ISSUER = "maxscale";
 const std::string TOKEN_BODY = "token_body";
 const std::string TOKEN_SIG = "token_sig";
 
@@ -811,7 +812,7 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         }
     }
 
-    auto token = mxs::jwt::create("maxscale", m_user, token_age);
+    auto token = mxs::jwt::create(TOKEN_ISSUER, m_user, token_age);
 
     if (request.get_option("persist") == "yes")
     {
@@ -834,7 +835,7 @@ bool Client::auth_with_token(const std::string& token)
 {
     bool rval = false;
 
-    std::tie(rval, m_user) = mxs::jwt::get_audience(token);
+    std::tie(rval, m_user) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
 
     return rval;
 }

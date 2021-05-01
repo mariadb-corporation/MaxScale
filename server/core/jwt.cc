@@ -59,7 +59,7 @@ std::string create(const std::string& issuer, const std::string& audience, int m
            .sign(::jwt::algorithm::hs256 {this_unit.sign_key});
 }
 
-std::pair<bool, std::string> get_audience(const std::string& token)
+std::pair<bool, std::string> get_audience(const std::string& issuer, const std::string& token)
 {
     bool rval = false;
     std::string audience;
@@ -70,7 +70,7 @@ std::pair<bool, std::string> get_audience(const std::string& token)
 
         ::jwt::verify()
         .allow_algorithm(::jwt::algorithm::hs256 {this_unit.sign_key})
-        .with_issuer("maxscale")
+        .with_issuer(issuer)
         .verify(d);
 
         audience = *d.get_audience().begin();

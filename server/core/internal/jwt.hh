@@ -29,7 +29,7 @@ namespace jwt
  * for uniquely identifying a user. Custom values could be added but, for the sake simplicity, we only use the
  * one standard value to store the actual user information.
  *
- * @param issue    The issuer of this token (e.g. maxscale)
+ * @param issuer   The issuer of this token (e.g. maxscale)
  * @param audience The recipient of the token. The information stored here is not encrypted so don't store
  *                 anything sensitive in it.
  * @param max_age  The age in seconds the token is valid for.
@@ -41,10 +41,14 @@ std::string create(const std::string& issuer, const std::string& audience, int m
 /**
  * Extract the audience value from a JSON Web Token
  *
- * @param token A JWT token that is validated before the audience value is extracted
+ * The function checks that the issuer of the token is the same as the one who created it. If the token has
+ * multiple audience values, only the first one is returned.
+ *
+ * @param issuer The issuer who created this token
+ * @param token  A JWT token that is validated before the audience value is extracted
  *
  * @return A boolean indicating whether the token is valid and the audience value if it is
  */
-std::pair<bool, std::string> get_audience(const std::string& token);
+std::pair<bool, std::string> get_audience(const std::string& issuer, const std::string& token);
 }
 }

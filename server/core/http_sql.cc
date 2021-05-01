@@ -26,6 +26,8 @@ namespace
 const std::string CONN_ID_BODY = "conn_id_body";
 const std::string CONN_ID_SIG = "conn_id_sig";
 
+const std::string TOKEN_ISSUER = "mxs-query";
+
 const HttpResponse no_id_error(
     MHD_HTTP_FORBIDDEN,
     mxs_json_error("No connection token in cookies or in `connection_id`."));
@@ -39,12 +41,17 @@ int64_t get_connection_id(const HttpRequest& request)
 
     if (json.contains("connection_id"))
     {
-        std::tie(ok, aud) = mxs::jwt::get_audience(json.get_string("conn_id"));
+        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, json.get_string("conn_id"));
     }
     else
     {
-        auto tok = request.get_cookie(CONN_ID_BODY) + request.get_cookie(CONN_ID_SIG);
-        std::tie(ok, aud) = mxs::jwt::get_audience(tok);
+        auto body = request.get_cookie(CONN_ID_BODY);
+        auto sig = request.get_cookie(CONN_ID_SIG);
+
+        if (!body.empty() && !sig.empty())
+        {
+            std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, body + sig);
+        }
     }
 
     if (ok)
@@ -208,7 +215,7 @@ HttpResponse create_connect_response(int64_t id, bool persist)
 {
     // TODO: Figure out how long the connections should be kept valid
     int max_age = 28800;
-    auto token = mxs::jwt::create("mxs-query", std::to_string(id), max_age);
+    auto token = mxs::jwt::create(TOKEN_ISSUER, std::to_string(id), max_age);
 
     if (persist)
     {
