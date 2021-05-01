@@ -61,19 +61,12 @@ int64_t get_connection_id(const HttpRequest& request)
 
     return id;
 }
+}
 
-// TODO: Use a std::unique_ptr<QueryResult> as the source of the data
-json_t* format_result(MYSQL* conn, int rc)
+class RowsResult : public HttpSql::Result
 {
-    json_t* rval = json_object();
-
-    if (rc != 0)
-    {
-        json_object_set_new(rval, "errno", json_integer(mysql_errno(conn)));
-        json_object_set_new(rval, "message", json_string(mysql_error(conn)));
-        json_object_set_new(rval, "sqlstate", json_string(mysql_sqlstate(conn)));
-    }
-    else if (auto res = mysql_use_result(conn))
+public:
+    RowsResult(MYSQL* conn, MYSQL_RES* res)
     {
         int64_t rows = 0;
         json_t* data = json_array();
@@ -138,77 +131,98 @@ json_t* format_result(MYSQL* conn, int rc)
             json_array_append_new(data, arr);
         }
 
-        json_object_set_new(rval, "data", data);
-        json_object_set_new(rval, "fields", meta);
+        m_json = json_object();
+        json_object_set_new(m_json, "data", data);
+        json_object_set_new(m_json, "fields", meta);
+    }
+
+    ~RowsResult()
+    {
+        json_decref(m_json);
+    }
+
+    json_t* to_json() const
+    {
+        return json_incref(m_json);
+    }
+
+private:
+    json_t* m_json;
+};
+
+class OkResult : public HttpSql::Result
+{
+public:
+    OkResult(MYSQL* conn)
+        : m_insert_id(mysql_insert_id(conn))
+        , m_warnings(mysql_warning_count(conn))
+        , m_affected_rows(mysql_affected_rows(conn))
+    {
+    }
+
+    json_t* to_json() const
+    {
+        json_t* rval = json_object();
+        json_object_set_new(rval, "last_insert_id", json_integer(m_insert_id));
+        json_object_set_new(rval, "warnings", json_integer(m_warnings));
+        json_object_set_new(rval, "affected_rows", json_integer(m_affected_rows));
+        return rval;
+    }
+
+private:
+    int m_insert_id;
+    int m_warnings;
+    int m_affected_rows;
+};
+
+class ErrResult : public HttpSql::Result
+{
+public:
+    ErrResult(MYSQL* conn)
+        : m_errno(mysql_errno(conn))
+        , m_errmsg(mysql_error(conn))
+        , m_sqlstate(mysql_sqlstate(conn))
+    {
+    }
+
+    json_t* to_json() const
+    {
+        json_t* rval = json_object();
+        json_object_set_new(rval, "errno", json_integer(m_errno));
+        json_object_set_new(rval, "message", json_string(m_errmsg.c_str()));
+        json_object_set_new(rval, "sqlstate", json_string(m_sqlstate.c_str()));
+        return rval;
+    }
+
+private:
+    int         m_errno;
+    std::string m_errmsg;
+    std::string m_sqlstate;
+};
+
+namespace
+{
+
+// TODO: Use a std::unique_ptr<QueryResult> as the source of the data
+std::unique_ptr<HttpSql::Result> format_result(MYSQL* conn)
+{
+    std::unique_ptr<HttpSql::Result> rval;
+
+    if (mysql_errno(conn))
+    {
+        rval = std::make_unique<ErrResult>(conn);
+    }
+    else if (auto res = mysql_use_result(conn))
+    {
+        rval = std::make_unique<RowsResult>(conn, res);
         mysql_free_result(res);
     }
     else
     {
-        json_object_set_new(rval, "last_insert_id", json_integer(mysql_insert_id(conn)));
-        json_object_set_new(rval, "warnings", json_integer(mysql_warning_count(conn)));
-        json_object_set_new(rval, "affected_rows", json_integer(mysql_affected_rows(conn)));
+        rval = std::make_unique<OkResult>(conn);
     }
 
     return rval;
-}
-
-HttpResponse::Callback execute_query(const std::string& host, int port, const mxb::SSLConfig& ssl,
-                                     const std::string& user, const std::string& pw, const std::string& db,
-                                     const std::string& sql, unsigned int timeout)
-{
-    return [=]() {
-               MYSQL* conn = mysql_init(nullptr);
-               json_t* rval = nullptr;
-
-               mysql_optionsv(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
-               mysql_optionsv(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-               mysql_optionsv(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-
-               if (mxs_mysql_real_connect(conn, host.c_str(), port, user.c_str(), pw.c_str(), ssl,
-                                          CLIENT_MULTI_RESULTS | CLIENT_MULTI_STATEMENTS))
-               {
-                   if (!db.empty() && mysql_query(conn, ("USE `" + db + "`").c_str()) != 0)
-                   {
-                       rval = format_result(conn, 1);
-                   }
-                   else
-                   {
-                       std::vector<json_t*> results;
-                       bool again = false;
-                       int rc = mysql_query(conn, sql.c_str());
-                       results.push_back(format_result(conn, rc));
-
-                       while (rc == 0 && mysql_more_results(conn))
-                       {
-                           rc = mysql_next_result(conn);
-                           results.push_back(format_result(conn, rc));
-                       }
-
-                       mxb_assert(!results.empty());
-
-                       if (results.size() > 1)
-                       {
-                           rval = json_array();
-
-                           for (json_t* res : results)
-                           {
-                               json_array_append_new(rval, res);
-                           }
-                       }
-                       else
-                       {
-                           rval = results.front();
-                       }
-                   }
-               }
-               else
-               {
-                   rval = format_result(conn, 1);
-               }
-
-               mysql_close(conn);
-               return HttpResponse(MHD_HTTP_OK, rval);
-           };
 }
 
 HttpResponse create_connect_response(int64_t id, bool persist)
@@ -296,7 +310,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
         [id, sql]() {
             execute_query(id, sql);
             // TODO: Return the result as JSON in the response
-            read_result(id);
+            read_result(id, 0);
             return HttpResponse(MHD_HTTP_NO_CONTENT);
         });
 }
@@ -337,10 +351,10 @@ bool HttpSql::execute_query(int64_t id, const std::string& sql)
 }
 
 // static
-bool HttpSql::read_result(int64_t id)
+std::vector<std::unique_ptr<HttpSql::Result>> HttpSql::read_result(int64_t id, int64_t rows_max)
 {
     // TODO: Read the result
-    return true;
+    return {};
 }
 
 // static

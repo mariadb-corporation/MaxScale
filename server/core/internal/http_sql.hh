@@ -24,6 +24,14 @@
 class HttpSql
 {
 public:
+
+    struct Result
+    {
+        virtual ~Result() = default;
+
+        virtual json_t* to_json() const = 0;
+    };
+
     static HttpResponse connect(const HttpRequest& request);
 
     static HttpResponse query(const HttpRequest& request);
@@ -51,7 +59,7 @@ private:
 
     static bool execute_query(int64_t id, const std::string& sql);
 
-    static bool read_result(int64_t id);
+    static std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max);
 
     static void close_connection(int64_t id);
 };
