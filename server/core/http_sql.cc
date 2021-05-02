@@ -38,11 +38,11 @@ int64_t get_connection_id(const HttpRequest& request)
     bool ok = false;
     std::string aud;
     int64_t id = 0;
-    mxb::Json json(request.get_json());
+    std::string token = request.get_option("token");
 
-    if (json.contains("connection_id"))
+    if (!token.empty())
     {
-        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, json.get_string("conn_id"));
+        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
     }
     else
     {
