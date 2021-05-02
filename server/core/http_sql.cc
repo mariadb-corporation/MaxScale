@@ -355,7 +355,8 @@ HttpResponse HttpSql::result(const HttpRequest& request)
 
     return HttpResponse(
         [id, sql, host, self, page_size, query_id]() {
-            std::vector<std::unique_ptr<Result>> results = read_result(id, page_size);
+            bool more_results = false;
+            std::vector<std::unique_ptr<Result>> results = read_result(id, page_size, &more_results);
 
             if (!results.empty())
             {
@@ -381,12 +382,10 @@ HttpResponse HttpSql::result(const HttpRequest& request)
                 // Create pagination links
                 json_t* links = json_object_get(rval, CN_LINKS);
                 std::string base = json_string_value(json_object_get(links, "self"));
-                bool more_results = false;
 
-                // TODO: Create the pagination link if there are more results. Currently everything
-                // is read immediately.
-                if (page_size && more_results)
+                if (more_results)
                 {
+                    mxb_assert_message(page_size, "page_size must be defined if result is paginated");
                     auto next = base + "?page[size]=" + std::to_string(page_size);
                     json_object_set_new(links, "next", json_string(next.c_str()));
                 }
@@ -452,7 +451,8 @@ int64_t HttpSql::execute_query(int64_t id, const std::string& sql)
 }
 
 // static
-std::vector<std::unique_ptr<HttpSql::Result>> HttpSql::read_result(int64_t id, int64_t rows_max)
+std::vector<std::unique_ptr<HttpSql::Result>>
+HttpSql::read_result(int64_t id, int64_t rows_max, bool* more_results)
 {
     // TODO: Read the result
     return {};
