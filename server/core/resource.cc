@@ -164,7 +164,8 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
                                       || target == Server::specification().module()
                                       || get_module(target, mxs::ModuleType::UNKNOWN)))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
-            || (path == ":listener" && listener_find(target.c_str())))
+            || (path == ":listener" && listener_find(target.c_str()))
+            || (path == ":query_id" && HttpSql::is_query(target)))
         {
             rval = true;
         }
@@ -1344,7 +1345,7 @@ public:
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
 
         // TODO: Maybe connections should be a separate collection?
-        m_get.emplace_back(cb_query_result, "servers", ":server", "query");
+        m_get.emplace_back(cb_query_result, "servers", ":server", "query", ":query_id");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");

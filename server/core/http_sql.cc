@@ -311,13 +311,14 @@ HttpResponse HttpSql::query(const HttpRequest& request)
         return no_id_error;
     }
 
-    std::string location = request.host() + request.get_uri();
+    std::string location_base = request.host() + request.get_uri();
 
     return HttpResponse(
-        [id, sql, location]() {
-            if (execute_query(id, sql))
+        [id, sql, location_base]() {
+            if (int64_t query_id = execute_query(id, sql))
             {
                 HttpResponse response(MHD_HTTP_CREATED);
+                auto location = location_base + "/" + std::to_string(id) + "-" + std::to_string(query_id);
                 response.add_header(MHD_HTTP_HEADER_LOCATION, location);
                 return response;
             }
@@ -342,6 +343,7 @@ HttpResponse HttpSql::result(const HttpRequest& request)
 
     std::string host = request.host();
     std::string self = request.get_uri();
+    std::string query_id = request.uri_part(request.uri_part_count() - 1);
 
     int64_t page_size = 0;
     auto opt = request.get_option("page[size]");
@@ -352,7 +354,7 @@ HttpResponse HttpSql::result(const HttpRequest& request)
     }
 
     return HttpResponse(
-        [id, sql, host, self, page_size]() {
+        [id, sql, host, self, page_size, query_id]() {
             std::vector<std::unique_ptr<Result>> results = read_result(id, page_size);
 
             if (!results.empty())
@@ -370,7 +372,7 @@ HttpResponse HttpSql::result(const HttpRequest& request)
                 json_object_set_new(attr, "results", arr);
 
                 json_t* obj = json_object();
-                json_object_set_new(obj, CN_ID, json_string(std::to_string(id).c_str()));
+                json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
                 json_object_set_new(obj, CN_TYPE, json_string("results"));
                 json_object_set_new(obj, CN_ATTRIBUTES, attr);
 
@@ -415,6 +417,22 @@ HttpResponse HttpSql::disconnect(const HttpRequest& request)
         });
 }
 
+// static
+bool HttpSql::is_query(const std::string& id)
+{
+    bool rval = false;
+    auto pos = id.find('-');
+
+    if (pos != std::string::npos)
+    {
+        int64_t conn_id = strtol(id.substr(0, pos).c_str(), nullptr, 10);
+        int64_t query_id = strtol(id.substr(pos + 1).c_str(), nullptr, 10);
+        rval = true; // TODO: Check that the IDs exist
+    }
+
+    return rval;
+}
+
 //
 // SQL connection implementation
 //
@@ -427,10 +445,10 @@ int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* 
 }
 
 // static
-bool HttpSql::execute_query(int64_t id, const std::string& sql)
+int64_t HttpSql::execute_query(int64_t id, const std::string& sql)
 {
     // TODO: Execute the query
-    return true;
+    return 1;
 }
 
 // static

@@ -40,6 +40,8 @@ public:
 
     static HttpResponse disconnect(const HttpRequest& request);
 
+    static bool is_query(const std::string& id);
+
 private:
 
     struct ConnectionConfig
@@ -59,7 +61,7 @@ private:
 
     static int64_t create_connection(const ConnectionConfig& config, std::string* err);
 
-    static bool execute_query(int64_t id, const std::string& sql);
+    static int64_t execute_query(int64_t id, const std::string& sql);
 
     static std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max);
 
