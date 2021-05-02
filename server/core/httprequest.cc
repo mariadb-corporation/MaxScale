@@ -53,7 +53,6 @@ static void process_uri(string& uri, std::deque<string>& uri_parts)
 
 HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string method, json_t* data)
     : m_json(data)
-    , m_resource(url)
     , m_verb(method)
     , m_connection(connection)
 {
@@ -78,9 +77,17 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
         m_hostname += "/";
     }
 
-    m_hostname += MXS_REST_API_VERSION;
+    if (uri_part(0) == MXS_REST_API_VERSION)
+    {
+        // The request contained the API version, include it in all responses
+        m_hostname += MXS_REST_API_VERSION;
+        m_hostname += "/";
+    }
 
     fix_api_version();
+
+    // Store the URI without the API version
+    m_resource = uri_segment(0, uri_part_count());
 }
 
 HttpRequest::~HttpRequest()

@@ -243,6 +243,8 @@ public:
     /**
      * @brief Get complete request URI
      *
+     * Note that the returned URI does not include a leading or a trailing slash.
+     *
      * @return The complete request URI
      */
     std::string get_uri() const
