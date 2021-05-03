@@ -971,8 +971,9 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 # END: Galera tests                        #
 ############################################
 
+
 ############################################
-# BEGIN: tests for Xpand monitor        #
+# BEGIN: tests for Xpand monitor           #
 ############################################
 
 # Also covers the following bugs:
@@ -986,8 +987,20 @@ set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)
 add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution LABELS XPAND_BACKEND)
 
 ############################################
-# END: tests for Xpand monitor          #
+# END: tests for Xpand monitor             #
 ############################################
+
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+add_test_executable_notest(gui_demo.cpp gui_demo gui_demo LABELS gui_demo REPL_BACKEND)
+
+##############################################
+# END: DUMMY test to create GUI demo setup   #
+##############################################
+
 
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
