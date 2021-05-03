@@ -10,13 +10,17 @@
         </v-tab>
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
-                <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
+                <keep-alive>
+                    <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
+                </keep-alive>
             </v-tab-item>
             <v-tab-item :value="SQL_QUERY_MODES.PREVIEW_DATA" :class="tabItemClass">
-                <preview-data-tab
-                    :dynDim="componentDynDim"
-                    :previewDataSchemaId="previewDataSchemaId"
-                />
+                <keep-alive>
+                    <preview-data-tab
+                        :dynDim="componentDynDim"
+                        :previewDataSchemaId="previewDataSchemaId"
+                    />
+                </keep-alive>
             </v-tab-item>
         </v-tabs-items>
     </v-tabs>

@@ -19,6 +19,7 @@
             :itemHeight="30"
             :height="tableHeight"
             :width="width"
+            showRowIndex
             @scroll-end="fetchMore"
         />
     </div>
@@ -78,8 +79,5 @@ export default {
 <style lang="scss" scoped>
 .std.filter-result {
     width: 200px;
-}
-::v-deep .query-result-data-table .v-data-footer__select {
-    display: none;
 }
 </style>

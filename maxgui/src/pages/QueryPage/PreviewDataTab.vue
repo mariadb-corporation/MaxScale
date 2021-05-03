@@ -3,7 +3,7 @@
         <div ref="header" class="pb-2 result-header">
             <div v-if="previewDataSchemaId" class="schema-view-title">
                 <span><b>Table:</b> {{ previewDataSchemaId }}</span>
-                <v-btn-toggle v-model="activeView" class="ml-4">
+                <v-btn-toggle v-model="activeView" class="ml-4" mandatory>
                     <v-btn :value="SQL_QUERY_MODES.PREVIEW_DATA" x-small text color="primary">
                         Data
                     </v-btn>
@@ -28,7 +28,7 @@
                 type="table: table-thead, table-tbody"
                 :max-height="`${dynDim.height - headerHeight}px`"
             />
-            <template v-else>
+            <keep-alive v-else>
                 <result-data-table
                     v-if="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
                     :key="SQL_QUERY_MODES.PREVIEW_DATA"
@@ -45,7 +45,7 @@
                     :headers="detailsDataHeaders"
                     :rows="detailsDataRows"
                 />
-            </template>
+            </keep-alive>
         </div>
     </div>
 </template>
@@ -118,8 +118,8 @@ export default {
                 return this.curr_query_mode
             },
             set(value) {
-                // v-btn-toggle return undefined when a btn is click twice
-                if (value) this.setCurrQueryMode(value)
+                if (this.curr_query_mode !== this.SQL_QUERY_MODES.QUERY_VIEW)
+                    this.setCurrQueryMode(value)
             },
         },
     },

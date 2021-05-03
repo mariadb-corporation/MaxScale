@@ -20,7 +20,6 @@
         </div>
         <v-virtual-scroll
             v-if="rows.length"
-            ref="virtualScroll"
             :bench="benched"
             :items="rows"
             :height="height - itemHeight"
@@ -85,12 +84,12 @@ export default {
         itemHeight: { type: Number, require: true },
         width: { type: Number, require: true },
         benched: { type: Number, require: true },
+        showRowIndex: { type: Boolean, default: false },
     },
     data() {
         return {
             cellWidthMap: {},
             headerStyle: {},
-            showRowIndex: true,
         }
     },
     computed: {
