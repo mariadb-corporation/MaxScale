@@ -49,9 +49,15 @@
                     split="vert"
                     :disable="!isFullScreen || isCollapsed"
                 >
+                    <!-- sidebar panel -->
                     <template slot="pane-left">
-                        <!-- sidebar panel -->
+                        <v-card
+                            v-if="loading_db_tree"
+                            class="fill-height db-tb-list"
+                            :loading="loading_db_tree"
+                        />
                         <db-list
+                            v-else
                             class="db-tb-list"
                             :schemaList="db_tree"
                             @is-fullscreen="isFullScreen = $event"
@@ -147,6 +153,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
             db_tree: state => state.query.db_tree,
+            loading_db_tree: state => state.query.loading_db_tree,
             db_completion_list: state => state.query.db_completion_list,
         }),
         getDbCmplList() {

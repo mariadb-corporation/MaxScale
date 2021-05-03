@@ -39,7 +39,9 @@ export default {
         UPDATE_DB_CMPL_LIST(state, payload) {
             state.db_completion_list = [...state.db_completion_list, ...payload]
         },
-
+        CLEAR_DB_CMPL_LIST(state) {
+            state.db_completion_list = []
+        },
         SET_LOADING_PREVIEW_DATA(state, payload) {
             state.loading_preview_data = payload
         },
@@ -109,6 +111,7 @@ export default {
                         })
                     })
                     commit('SET_DB_TREE', dbTree)
+                    commit('CLEAR_DB_CMPL_LIST')
                     commit('UPDATE_DB_CMPL_LIST', dbCmplList)
                     commit('SET_LOADING_DB_TREE', false)
                 }
