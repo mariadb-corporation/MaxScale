@@ -64,6 +64,13 @@ port=4010
 authenticator=pamauth
 authenticator_options=pam_use_cleartext_plugin=true
 
+[ListenerMapping]
+type=listener
+service=RWSplit-Router
+port=4011
+authenticator=pamauth
+authenticator_options=pam_backend_mapping=mariadb
+
 [server1]
 type=server
 address=###node_server_IP_1###

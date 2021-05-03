@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string>
 #include <maxbase/format.hh>
+#include <maxtest/mariadb_connector.hh>
 
 using std::string;
 using std::cout;
@@ -23,8 +24,12 @@ namespace
 const string plugin_path = string(mxt::test_build_dir) + "/../connector-c/install/lib/mariadb/plugin";
 }
 
+MYSQL* pam_login(TestConnections& test, int port, const string& user, const string& pass,
+                 const string& database);
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& database);
+bool test_mapped_pam_login(TestConnections& test, int port, const string& user, const string& pass,
+                           const string& expected_user);
 bool test_normal_login(TestConnections& test, int port, const string& user, const string& pass,
                        const string& db = "");
 void test_main(TestConnections& test);
@@ -275,6 +280,7 @@ void test_main(TestConnections& test)
     int nomatch_port = 4008;
     int caseless_port = 4009;
     int cleartext_port = 4010;
+    int user_map_port = 4011;
 
     const char login_failed_msg[] = "Login to port %i failed.";
     if (test.ok())
@@ -493,6 +499,95 @@ void test_main(TestConnections& test)
         }
     }
 
+    if (test.ok())
+    {
+        // Test user account mapping (MXS-3475). For this, the pam_user_map.so-file is required.
+        // This file is installed with the server, but not with MaxScale. Depending on distro, the file
+        // may be in different places. Check both.
+        auto& vm = test.repl->backend(0)->vm_node();
+        string lib_source1 = "/usr/lib64/security/pam_user_map.so";
+        string lib_source2 = "/usr/lib/security/pam_user_map.so";
+        string lib_temp = "/tmp/pam_user_map.so";
+        const char pam_map_config_name[] = "pam_config_user_map";
+
+        string pam_map_config_path_src = mxb::string_printf("%s/authentication/%s",
+                                                            test_dir, pam_map_config_name);
+        string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
+        string pam_user_map_conf_src = mxb::string_printf("%s/authentication/user_map.conf", test_dir);
+        string pam_user_map_conf_dst = "/etc/security/user_map.conf";
+
+        if (vm.copy_from_node(lib_source1, lib_temp) || vm.copy_from_node(lib_source2, lib_temp))
+        {
+            if (mxs_vm.copy_to_node(lib_temp, lib_temp))
+            {
+                test.logger().log_msg("pam_user_map.so copied to MaxScale VM.");
+            }
+            else
+            {
+                test.add_failure("Failed to copy library '%s' to %s.",
+                                 lib_temp.c_str(), mxs_vm.m_name.c_str());
+            }
+        }
+        else
+        {
+            test.add_failure("Failed to copy library '%s' or '%s' to host machine.",
+                             lib_source1.c_str(), lib_source2.c_str());
+        }
+
+        mxs_vm.copy_to_node_sudo(pam_map_config_path_src, pam_map_config_path_dst);
+        mxs_vm.copy_to_node_sudo(pam_user_map_conf_src, pam_user_map_conf_dst);
+
+        if (test.ok())
+        {
+            // For this case, it's enough to create the Linux user on the MaxScale VM.
+            const char orig_user[] = "orig_pam_user";
+            const char orig_pass[] = "orig_pam_pw";
+            const string add_orig_user_cmd = (string)"useradd " + orig_user;
+            const string add_orig_pw_cmd = mxb::string_printf("echo %s:%s | chpasswd", orig_user, orig_pass);
+            mxs_vm.run_cmd_output_sudo(add_orig_user_cmd);
+            mxs_vm.run_cmd_sudo(add_orig_pw_cmd);
+
+            auto srv = test.repl->backend(0);
+            auto conn = srv->try_open_connection();
+            string create_orig_user_query = mxb::string_printf(create_pam_user_fmt,
+                                                               orig_user, pam_map_config_name);
+            conn->cmd(create_orig_user_query);
+            const char mapped_user[] = "mapped_mariadb";
+            string create_mapped_user_query = mxb::string_printf("create or replace user '%s'@'%%';",
+                                                                 mapped_user);
+            conn->cmd(create_mapped_user_query);
+            // Try to login with wrong username so MaxScale updates accounts.
+            sleep(1);
+            bool login_success = test_pam_login(test, user_map_port, "wrong", "wrong", "");
+            test.expect(!login_success, "Login succeeded when it should not have.");
+            sleep(1);
+            bool mapped_login_ok = test_mapped_pam_login(test, user_map_port, orig_user, orig_pass,
+                                                         mapped_user);
+            test.expect(mapped_login_ok, "Mapped login failed.");
+
+            // Cleanup
+            const char drop_user_fmt[] = "DROP USER '%s'@'%%';";
+            string drop_orig_user_query = mxb::string_printf(drop_user_fmt, orig_user);
+            conn->cmd(drop_orig_user_query);
+            string drop_mapped_user_query = mxb::string_printf(drop_user_fmt, mapped_user);
+            conn->cmd(drop_mapped_user_query);
+            const string remove_orig_user_cmd = (string)"userdel --remove " + orig_user;
+            mxs_vm.run_cmd_output_sudo(remove_orig_user_cmd);
+        }
+
+        // Delete the library file from both the tester VM and MaxScale VM.
+        string del_pam_lib_cmd = "rm -f " + lib_temp;
+        system(del_pam_lib_cmd.c_str());
+        mxs_vm.run_cmd_output_sudo(del_pam_lib_cmd);
+
+        // Delete config files from MaxScale VM.
+        const string delete_pam_map_conf_cmd = "rm -f " + pam_map_config_path_dst;
+        const string delete_pam_user_map_conf_cmd = "rm -f " + pam_user_map_conf_dst;
+        mxs_vm.run_cmd_output_sudo(delete_pam_map_conf_cmd);
+        mxs_vm.run_cmd_output_sudo(delete_pam_user_map_conf_cmd);
+    }
+
+    test.tprintf("Test complete. Cleaning up.");
     // Cleanup: remove linux user and files from the MaxScale node.
     mxs_vm.run_cmd_sudo(remove_user_cmd);
     mxs_vm.run_cmd_sudo(read_shadow_off);
@@ -516,8 +611,8 @@ void test_main(TestConnections& test)
 
 
 // Helper function for checking PAM-login. If db is empty, log to null database.
-bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
-                    const string& database)
+MYSQL* pam_login(TestConnections& test, int port, const string& user, const string& pass,
+                 const string& database)
 {
     const char* host = test.maxscales->ip4(0);
     const char* db = nullptr;
@@ -535,7 +630,7 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
         printf("Trying to log in to [%s]:%i as %s.\n", host, port, user.c_str());
     }
 
-    bool rval = false;
+    MYSQL* rval = nullptr;
     MYSQL* maxconn = mysql_init(NULL);
     // Need to set plugin directory so that dialog.so is found.
     mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path.c_str());
@@ -544,8 +639,21 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
     if (*err)
     {
         test.tprintf("Could not log in: '%s'", err);
+        mysql_close(maxconn);
     }
     else
+    {
+        rval = maxconn;
+    }
+    return rval;
+}
+
+bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
+                    const string& database)
+{
+    bool rval = false;
+    auto maxconn = pam_login(test, port, user, pass, database);
+    if (maxconn)
     {
         if (execute_query_silent(maxconn, "SELECT rand();") == 0)
         {
@@ -557,7 +665,37 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
             cout << "Query rejected: '" << mysql_error(maxconn) << "'\n";
         }
     }
-    mysql_close(maxconn);
+    return rval;
+}
+
+bool test_mapped_pam_login(TestConnections& test, int port, const string& user, const string& pass,
+                           const string& expected_user)
+{
+    bool rval = false;
+    auto maxconn = pam_login(test, port, user, pass, "");
+    if (maxconn)
+    {
+        auto res = get_result(maxconn, "select user();");
+        if (!res.empty())
+        {
+            string effective_user = res[0][0];
+            effective_user = mxt::cutoff_string(effective_user, '@');
+            if (effective_user == expected_user)
+            {
+                test.tprintf("Logged in. Mapped user is '%s', as expected.", effective_user.c_str());
+                rval = true;
+            }
+            else
+            {
+                test.tprintf("User '%s' mapped to '%s' when '%s' was expected.",
+                             user.c_str(), effective_user.c_str(), expected_user.c_str());
+            }
+        }
+        else
+        {
+            cout << "Query rejected: '" << mysql_error(maxconn) << "'\n";
+        }
+    }
     return rval;
 }
 

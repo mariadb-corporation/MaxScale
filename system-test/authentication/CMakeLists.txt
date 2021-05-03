@@ -4,6 +4,7 @@
 # 3. skip_authentication and match_host (MXS-2941)
 # 4. lower_case_table_names
 # 5. log_password_mismatch (MXS-2916)
+# 6. pam_backend_mapping=mariadb (MXS-3475)
 #
 # Also tests MXS-1662: PAM admin authentication
 add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cpp
