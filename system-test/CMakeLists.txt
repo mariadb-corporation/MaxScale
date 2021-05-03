@@ -1032,7 +1032,8 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 
 # MXS-2146: Add test case for csmon
 # https://jira.mariadb.org/browse/MXS-2146
-add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND)
+add_test_executable_notest(gui_demo.cpp gui_demo gui_demo LABELS gui_demo REPL_BACKEND)
+add_test_executable_notest(gui_demo_galera.cpp gui_demo_galera gui_demo_galera LABELS gui_demo_galera GALERA_BACKEND)
 
 ############################################
 # END: ColumnStore tests                   #
@@ -1126,6 +1127,20 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 ############################################
 # END: tests with 15 machines backend      #
 ############################################
+
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+
+
 
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
