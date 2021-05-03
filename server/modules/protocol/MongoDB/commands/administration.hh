@@ -475,10 +475,16 @@ public:
 
     string generate_sql() override
     {
+        optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
+
         stringstream sql;
         sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
             << "FROM information_schema.tables "
-            << "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql')";
+            << "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql') "
+            << "UNION "
+            << "SELECT schema_name as table_schema, '' as table_name, 0 as bytes "
+            << "FROM information_schema.schemata "
+            << "WHERE schema_name NOT IN ('information_schema', 'performance_schema', 'mysql')";
 
         return sql.str();
     }
@@ -548,8 +554,12 @@ public:
 
                     DocumentBuilder database;
                     database.append(kvp("name", name));
-                    database.append(kvp("sizeOnDisk", bytes));
-                    database.append(kvp("empty", bytes == 0));
+
+                    if (!m_name_only)
+                    {
+                        database.append(kvp("sizeOnDisk", bytes));
+                        database.append(kvp("empty", bytes == 0));
+                    }
 
                     databases.append(database.extract());
                 }
@@ -563,6 +573,9 @@ public:
         *ppResponse = create_response(doc.extract());
         return READY;
     }
+
+private:
+    bool m_name_only { false };
 };
 
 // https://docs.mongodb.com/manual/reference/command/listIndexes/

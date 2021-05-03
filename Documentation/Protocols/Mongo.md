@@ -446,7 +446,12 @@ for being accessed using _mongodbprotocol_.
 
 ### [listDatabases](https://docs.mongodb.com/manual/reference/command/listDatabases/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+listDatabases | any | Ignored.
+nameOnly | boolean | Optional. A flag to indicate whether the command should return just the database names, or return both database names and size information.
 
 ### [renameCollection](https://docs.mongodb.com/manual/reference/command/renameCollection/)
 
