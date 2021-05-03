@@ -205,7 +205,7 @@ fi
 
 if [ $cmake_version_ok -eq 0 ] ; then
 
-    if [ "$(uname -p)" == "aarch64" ]
+    if [ "$(arch)" == "aarch64" ]
     then
         cmake_version="3.20.2"
         cmake_filename="cmake-${cmake_version}-linux-aarch64.tar.gz"
@@ -288,7 +288,7 @@ sudo make install
 popd
 
 
-if [ "$(uname -p)" == "aarch64" ]
+if [ "$(arch)" == "aarch64" ]
 then
     node_arch=arm64
 else
