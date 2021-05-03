@@ -10,11 +10,11 @@
         </v-tab>
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
-                <result-tab :dynHeight="dynTabItemHeight" :queryTxt="queryTxt" />
+                <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
             </v-tab-item>
             <v-tab-item :value="SQL_QUERY_MODES.PREVIEW_DATA" :class="tabItemClass">
                 <preview-data-tab
-                    :dynHeight="dynTabItemHeight"
+                    :dynDim="componentDynDim"
                     :previewDataSchemaId="previewDataSchemaId"
                 />
             </v-tab-item>
@@ -47,7 +47,13 @@ export default {
     props: {
         previewDataSchemaId: { type: String, require: true },
         queryTxt: { type: String, require: true },
-        dynHeight: { type: Number, require: true },
+        dynDim: {
+            type: Object,
+            validator(obj) {
+                return 'width' in obj && 'height' in obj
+            },
+            required: true,
+        },
     },
     data() {
         return {
@@ -61,9 +67,12 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
         }),
-        dynTabItemHeight() {
-            // dynHeight - $tab-bar-height - pt-2 - border thickness
-            return this.dynHeight - 24 - 8 - 2
+        componentDynDim() {
+            /* Use ref to calculate the dim
+             * width: dynDim.width - px-5
+             * height: dynDim.height - $tab-bar-height - pt-2 - border thickness
+             */
+            return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 - 2 }
         },
         activeTab: {
             get() {

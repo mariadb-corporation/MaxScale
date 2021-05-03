@@ -36,7 +36,10 @@ export default {
 <style lang="scss" scoped>
 .splitter-pane {
     position: absolute;
-    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* TODO: transition time affects the process of getting dim through ref
+     * Add delay when calculating dim
+     */
+    /*   transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); */
     overflow: hidden;
     &--vert {
         height: 100%;

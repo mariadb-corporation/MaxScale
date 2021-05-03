@@ -18,6 +18,7 @@
             :rows="filteredRows"
             :itemHeight="30"
             :height="tableHeight"
+            :width="width"
             @scroll-end="fetchMore"
         />
     </div>
@@ -42,6 +43,7 @@ export default {
         headers: { type: Array, require: true },
         rows: { type: Array, require: true },
         height: { type: Number, require: true },
+        width: { type: Number, require: true },
     },
     data() {
         return {

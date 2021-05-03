@@ -42,9 +42,6 @@
                 class="fill-height"
                 :class="[!isFullScreen ? 'pt-6 pb-8' : 'panels--fullscreen']"
             >
-                <!-- Only show split-pane when minSidebarPct is calculated.
-                    This ensures @get-panes-dim event is calculated correctly
-                -->
                 <split-pane
                     v-if="minSidebarPct"
                     v-model="sidebarPct"
@@ -80,12 +77,7 @@
                     </template>
                     <template slot="pane-right">
                         <!-- Main panel -->
-                        <split-pane
-                            v-model="editorPanePct"
-                            split="horiz"
-                            :minPercent="10"
-                            @get-panes-dim="setMainPaneDim"
-                        >
+                        <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
                             <template slot="pane-left">
                                 <query-editor
                                     v-model="queryTxt"
@@ -95,7 +87,8 @@
                             </template>
                             <template slot="pane-right">
                                 <query-result
-                                    :dynHeight="mainPaneDim.resultPane_height"
+                                    ref="queryResultPane"
+                                    :dynDim="resultPaneDim"
                                     class="query-result"
                                     :previewDataSchemaId="previewDataSchemaId"
                                     :queryTxt="queryTxt"
@@ -143,10 +136,9 @@ export default {
             isFullScreen: false,
             isCollapsed: false,
             previewDataSchemaId: '',
-            mainPaneDim: {
-                mainPane_width: 0,
-                editorPane_height: 0,
-                resultPane_height: 0,
+            resultPaneDim: {
+                height: 0,
+                width: 0,
             },
         }
     },
@@ -169,10 +161,17 @@ export default {
         isCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: v }))
         },
+        sidebarPct() {
+            this.$nextTick(() => this.setResultPaneDim())
+        },
+        editorPanePct() {
+            this.$nextTick(() => this.setResultPaneDim())
+        },
     },
     async created() {
         await this.loadSchema()
     },
+
     methods: {
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
@@ -184,6 +183,15 @@ export default {
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
         }),
+        setResultPaneDim() {
+            if (this.$refs.queryResultPane) {
+                const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el
+                this.resultPaneDim = {
+                    width: clientWidth,
+                    height: clientHeight,
+                }
+            }
+        },
         async loadSchema() {
             await this.fetchDbList()
         },
@@ -210,14 +218,6 @@ export default {
         onResize() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
         },
-        setMainPaneDim({ paneL_width, paneL_height, paneR_height }) {
-            this.mainPaneDim = {
-                mainPane_width: paneL_width, // equals to dim.paneR_width
-                editorPane_height: paneL_height,
-                resultPane_height: paneR_height,
-            }
-        },
-
         async onRun() {
             this.setCurrQueryMode(this.SQL_QUERY_MODES.QUERY_VIEW)
             await this.fetchQueryResult(this.queryTxt)
@@ -251,7 +251,10 @@ export default {
 $header-height: 50px;
 .query-page {
     background: #ffffff;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* TODO: transition time affects the process of getting dim through ref
+     * Add delay when calculating dim
+     */
+    /*   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); */
     &--fullscreen {
         padding: 0px !important;
         width: 100%;

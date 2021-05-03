@@ -21,7 +21,7 @@
         <v-virtual-scroll
             v-if="rows.length"
             ref="virtualScroll"
-            bench="0"
+            :bench="benched"
             :items="rows"
             :height="height - itemHeight"
             :item-height="itemHeight"
@@ -83,6 +83,7 @@ export default {
         rows: { type: Array, require: true },
         height: { type: Number, require: true },
         itemHeight: { type: Number, require: true },
+        width: { type: Number, require: true },
         benched: { type: Number, require: true },
     },
     data() {
@@ -112,10 +113,13 @@ export default {
             }
         },
     },
-    mounted() {
-        this.$nextTick(() => {
+    watch: {
+        width() {
             this.setCellWidthMap()
-        })
+        },
+    },
+    mounted() {
+        this.setCellWidthMap()
     },
     methods: {
         setCellWidthMap() {

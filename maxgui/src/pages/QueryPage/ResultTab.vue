@@ -20,11 +20,12 @@
                 v-if="loading_query_result"
                 :loading="loading_query_result"
                 type="table: table-thead, table-tbody"
-                :max-height="`${dynHeight - headerHeight}px`"
+                :max-height="`${dynDim.height - headerHeight}px`"
             />
             <result-data-table
                 v-else
-                :height="dynHeight - headerHeight"
+                :height="dynDim.height - headerHeight"
+                :width="dynDim.width"
                 :headers="tableHeaders"
                 :rows="tableRows"
             />
@@ -53,8 +54,14 @@ export default {
         ResultDataTable,
     },
     props: {
-        dynHeight: { type: Number, required: true },
         queryTxt: { type: String, require: true },
+        dynDim: {
+            type: Object,
+            validator(obj) {
+                return 'width' in obj && 'height' in obj
+            },
+            required: true,
+        },
     },
     data() {
         return {

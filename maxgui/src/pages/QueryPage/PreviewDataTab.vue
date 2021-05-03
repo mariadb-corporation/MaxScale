@@ -26,20 +26,22 @@
                 v-if="isPrwDataLoading"
                 :loading="isPrwDataLoading"
                 type="table: table-thead, table-tbody"
-                :max-height="`${dynHeight - headerHeight}px`"
+                :max-height="`${dynDim.height - headerHeight}px`"
             />
             <template v-else>
                 <result-data-table
                     v-if="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
                     :key="SQL_QUERY_MODES.PREVIEW_DATA"
-                    :height="dynHeight - headerHeight"
+                    :height="dynDim.height - headerHeight"
+                    :width="dynDim.width"
                     :headers="previewDataHeaders"
                     :rows="previewDataRows"
                 />
                 <result-data-table
                     v-else
                     :key="SQL_QUERY_MODES.VIEW_DETAILS"
-                    :height="dynHeight - headerHeight"
+                    :height="dynDim.height - headerHeight"
+                    :width="dynDim.width"
                     :headers="detailsDataHeaders"
                     :rows="detailsDataRows"
                 />
@@ -70,7 +72,13 @@ export default {
     },
     props: {
         previewDataSchemaId: { type: String, require: true },
-        dynHeight: { type: Number, required: true },
+        dynDim: {
+            type: Object,
+            validator(obj) {
+                return 'width' in obj && 'height' in obj
+            },
+            required: true,
+        },
     },
     data() {
         return {
