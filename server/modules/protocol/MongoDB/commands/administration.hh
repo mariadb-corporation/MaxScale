@@ -275,6 +275,15 @@ public:
             ++i;
         }
 
+        if (i == 0)
+        {
+            stringstream ss;
+            ss << "Must specify at least one cursor id in: { killCursors: \"" << value_as<string>()
+               << "\" cursors: [], $db: \"" << m_database.name() << "\" }";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         set<int64_t> removed = m_database.context().kill_cursors(collection, ids);
 
         ArrayBuilder cursorsKilled;

@@ -105,7 +105,7 @@ class MDB {
         };
 
         if (options) {
-            for (p in options) {
+            for (var p in options) {
                 command[p] = options[p];
             }
         }

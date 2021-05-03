@@ -424,7 +424,12 @@ dropDatabase | any | Ignored.
 
 ### [killCursors](https://docs.mongodb.com/manual/reference/command/killCursors/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+killCursors | string | The name of the colection.
+cursors | array | The ids of the cursors to kill.
 
 ### [listCollections](https://docs.mongodb.com/manual/reference/command/listCollections/)
 
