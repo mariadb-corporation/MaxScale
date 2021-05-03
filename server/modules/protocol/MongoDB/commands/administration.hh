@@ -342,7 +342,7 @@ public:
     {
         ComResponse response(mariadb_response.data());
 
-        DocumentBuilder doc;
+        GWBUF* pResponse = nullptr;
 
         switch (response.type())
         {
@@ -351,7 +351,19 @@ public:
             break;
 
         case ComResponse::ERR_PACKET:
-            throw MariaDBError(ComERR(response));
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_BAD_DB_ERROR)
+                {
+                    ArrayBuilder firstBatch;
+                    pResponse = create_command_response(firstBatch);
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -410,23 +422,31 @@ public:
                     firstBatch.append(collection.extract());
                 }
 
-                string ns = m_database.name() + ".$cmd.listCollections";
-
-                DocumentBuilder cursor;
-                cursor.append(kvp("id", int64_t(0)));
-                cursor.append(kvp("ns", ns));
-                cursor.append(kvp("firstBatch", firstBatch.extract()));
-
-                doc.append(kvp("cursor", cursor.extract()));
-                doc.append(kvp("ok", 1));
+                pResponse = create_command_response(firstBatch);
             }
         }
 
-        *ppResponse = create_response(doc.extract());
+        *ppResponse = pResponse;
         return READY;
     }
 
 private:
+    GWBUF* create_command_response(ArrayBuilder& firstBatch)
+    {
+        string ns = m_database.name() + ".$cmd.listCollections";
+
+        DocumentBuilder cursor;
+        cursor.append(kvp("id", int64_t(0)));
+        cursor.append(kvp("ns", ns));
+        cursor.append(kvp("firstBatch", firstBatch.extract()));
+
+        DocumentBuilder doc;
+        doc.append(kvp("cursor", cursor.extract()));
+        doc.append(kvp("ok", 1));
+
+        return create_response(doc.extract());
+    }
+
     bool m_name_only { false };
 };
 

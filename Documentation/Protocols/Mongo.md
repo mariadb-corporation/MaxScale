@@ -433,7 +433,16 @@ cursors | array | The ids of the cursors to kill.
 
 ### [listCollections](https://docs.mongodb.com/manual/reference/command/listCollections/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+listCollections | any | Ignored.
+nameOnly | boolean | Optional. A flag to indicate whether the command should return just the collection names and type or return both the name and other information.
+
+Note that the command lists all collections (that is, tables) that are found
+in the current database. The listed collections may or may not be suitable
+for being accessed using _mongodbprotocol_.
 
 ### [listDatabases](https://docs.mongodb.com/manual/reference/command/listDatabases/)
 
