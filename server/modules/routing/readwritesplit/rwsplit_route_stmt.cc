@@ -476,7 +476,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             if (backend->is_waiting_result() || backend->execute_session_command())
             {
                 nsucc += 1;
-                mxb::atomic::add(&backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
                 m_server_stats[backend->target()].inc_total();
                 m_server_stats[backend->target()].inc_read();
 
@@ -1146,7 +1145,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_total();
 
         const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ

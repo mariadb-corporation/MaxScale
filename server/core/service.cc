@@ -1404,6 +1404,11 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
+
+    // Track the number of packets sent through this service. Although the traffic can consist of multiple
+    // packets in some cases, most of the time the packet count statistic is close to the real packet count.
+    mxb::atomic::add(&m_service->stats().packets, 1, mxb::atomic::RELAXED);
+
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
