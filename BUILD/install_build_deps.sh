@@ -288,9 +288,15 @@ sudo make install
 popd
 
 
+if [ "$(uname -p)" == "aarch64" ]
+then
+    node_arch=arm64
+else
+    node_arch=x64
+fi
 
-wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-x64.tar.gz
-tar -axf node-v10.20.0-linux-x64.tar.gz
-sudo cp -t /usr -r node-v10.20.0-linux-x64/*
+wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-${node_arch}.tar.gz
+tar -axf node-v10.20.0-linux-${node_arch}.tar.gz
+sudo cp -t /usr -r node-v10.20.0-linux-${node_arch}/*
 
 sudo rm -rf $tmpdir
