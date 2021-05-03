@@ -55,6 +55,10 @@ private:
         mxb::SSLConfig ssl;
     };
 
+    // Helper for reading query results
+    static HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
+                                          const std::string& query_id, int64_t page_size);
+
     //
     // The functions that implement the connection creation and query execution
     //

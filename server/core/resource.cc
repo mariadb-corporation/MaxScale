@@ -1345,7 +1345,7 @@ public:
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
 
         // TODO: Maybe connections should be a separate collection?
-        m_get.emplace_back(cb_query_result, "servers", ":server", "query", ":query_id");
+        m_get.emplace_back(cb_query_result, "servers", ":server", "queries", ":query_id");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
@@ -1360,7 +1360,7 @@ public:
         m_post.emplace_back(cb_create_user, "users", "inet");
         m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
         m_post.emplace_back(cb_connect_server, "servers", ":server", "connect");
-        m_post.emplace_back(cb_query_server, "servers", ":server", "query");
+        m_post.emplace_back(cb_query_server, "servers", ":server", "queries");
 
         /** All of the above require a request body */
         for (auto& r : m_post)

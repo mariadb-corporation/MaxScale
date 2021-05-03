@@ -93,6 +93,16 @@ public:
     int get_code() const;
 
     /**
+     * @brief Set the HTTP response code
+     *
+     * @param code The HTTP response code to use
+     */
+    void set_code(int code)
+    {
+        m_code = code;
+    }
+
+    /**
      * @brief Add an extra header to this response
      *
      * @param key   Header name

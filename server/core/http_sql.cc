@@ -62,6 +62,19 @@ int64_t get_connection_id(const HttpRequest& request)
 
     return id;
 }
+
+int64_t get_page_size(const HttpRequest& request)
+{
+    int64_t page_size = 0;
+    auto opt = request.get_option("page[size]");
+
+    if (!opt.empty())
+    {
+        page_size = strtol(opt.c_str(), nullptr, 10);
+    }
+
+    return page_size;
+}
 }
 
 class RowsResult : public HttpSql::Result
@@ -366,7 +379,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 {
     mxb_assert(request.uri_part_count() == 3);
     mxb_assert(request.uri_part(0) == "servers");
-    mxb_assert(request.uri_part(2) == "query");
+    mxb_assert(request.uri_part(2) == "queries");
 
     mxb::Json json(request.get_json());
     std::string sql;
@@ -381,15 +394,17 @@ HttpResponse HttpSql::query(const HttpRequest& request)
         return no_id_error;
     }
 
-    std::string location_base = request.host() + request.get_uri();
+    std::string host = request.host();
+    std::string self = request.get_uri();
+    int64_t page_size = get_page_size(request);
 
     return HttpResponse(
-        [id, sql, location_base]() {
+        [id, sql, host, self, page_size]() {
             if (int64_t query_id = execute_query(id, sql))
             {
-                HttpResponse response(MHD_HTTP_CREATED);
-                auto location = location_base + "/" + std::to_string(id) + "-" + std::to_string(query_id);
-                response.add_header(MHD_HTTP_HEADER_LOCATION, location);
+                std::string id_str = std::to_string(id) + "-" + std::to_string(query_id);
+                HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
+                response.set_code(MHD_HTTP_CREATED);
                 return response;
             }
             else
@@ -403,7 +418,6 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 HttpResponse HttpSql::result(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
-    std::string sql;
     int64_t id = get_connection_id(request);
 
     if (!id)
@@ -414,58 +428,11 @@ HttpResponse HttpSql::result(const HttpRequest& request)
     std::string host = request.host();
     std::string self = request.get_uri();
     std::string query_id = request.uri_part(request.uri_part_count() - 1);
-
-    int64_t page_size = 0;
-    auto opt = request.get_option("page[size]");
-
-    if (!opt.empty())
-    {
-        page_size = strtol(opt.c_str(), nullptr, 10);
-    }
+    int64_t page_size = get_page_size(request);
 
     return HttpResponse(
-        [id, sql, host, self, page_size, query_id]() {
-            bool more_results = false;
-            std::vector<std::unique_ptr<Result>> results = read_result(id, page_size, &more_results);
-
-            if (!results.empty())
-            {
-                mxb::Json js(mxb::Json::Type::OBJECT);
-
-                json_t* arr = json_array();
-
-                for (const auto& r : results)
-                {
-                    json_array_append_new(arr, r->to_json());
-                }
-
-                json_t* attr = json_object();
-                json_object_set_new(attr, "results", arr);
-
-                json_t* obj = json_object();
-                json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
-                json_object_set_new(obj, CN_TYPE, json_string("results"));
-                json_object_set_new(obj, CN_ATTRIBUTES, attr);
-
-                json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
-
-                // Create pagination links
-                json_t* links = json_object_get(rval, CN_LINKS);
-                std::string base = json_string_value(json_object_get(links, "self"));
-
-                if (more_results)
-                {
-                    mxb_assert_message(page_size, "page_size must be defined if result is paginated");
-                    auto next = base + "?page[size]=" + std::to_string(page_size);
-                    json_object_set_new(links, "next", json_string(next.c_str()));
-                }
-
-                return HttpResponse(MHD_HTTP_OK, rval);
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
-            }
+        [id, host, self, query_id, page_size]() {
+            return read_query_result(id, host, self, query_id, page_size);
         });
 }
 
@@ -500,6 +467,51 @@ bool HttpSql::is_query(const std::string& id)
     }
 
     return rval;
+}
+
+// static
+HttpResponse HttpSql::read_query_result(int64_t id, const std::string& host, const std::string& self,
+                                        const std::string& query_id, int64_t page_size)
+{
+    bool more_results = false;
+    std::vector<std::unique_ptr<Result>> results = read_result(id, page_size, &more_results);
+
+    if (!results.empty())
+    {
+        json_t* arr = json_array();
+
+        for (const auto& r : results)
+        {
+            json_array_append_new(arr, r->to_json());
+        }
+
+        json_t* attr = json_object();
+        json_object_set_new(attr, "results", arr);
+
+        json_t* obj = json_object();
+        json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
+        json_object_set_new(obj, CN_TYPE, json_string("queries"));
+        json_object_set_new(obj, CN_ATTRIBUTES, attr);
+
+        json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
+
+        // Create pagination links
+        json_t* links = json_object_get(rval, CN_LINKS);
+        std::string base = json_string_value(json_object_get(links, "self"));
+
+        if (more_results)
+        {
+            mxb_assert_message(page_size, "page_size must be defined if result is paginated");
+            auto next = base + "?page[size]=" + std::to_string(page_size);
+            json_object_set_new(links, "next", json_string(next.c_str()));
+        }
+
+        return HttpResponse(MHD_HTTP_OK, rval);
+    }
+    else
+    {
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
+    }
 }
 
 //
