@@ -18,5 +18,5 @@ fi
 cd $PWD/maxctrl
 
 npm install --production
-npm install --production pkg@4.4.5
+npm install --production pkg@5.1.0
 node_modules/pkg/lib-es5/bin.js -t node10-linux .
