@@ -64,7 +64,7 @@ public:
         doc.append(kvp("bits", 64));
         doc.append(kvp("debug", debug));
         doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
-        doc.append(kvp("opensll", openssl.extract()));
+        doc.append(kvp("openssl", openssl.extract()));
         doc.append(kvp("modules", modules.extract()));
         doc.append(kvp("ok", 1));
 

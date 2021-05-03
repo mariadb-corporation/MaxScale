@@ -466,7 +466,14 @@ to | string | The new namespace of the collection. Moving a collection/table fro
 
 ### [buildInfo](https://docs.mongodb.com/manual/reference/command/buildInfo/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+buildInfo | any | Ignored.
+
+The command returns a document containing the stable fields. In addition, there is a field `maxscale` whose value is the MaxScale version, expressed as a string.
+
 
 ### [getCmdLineOpts](https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/)
 
