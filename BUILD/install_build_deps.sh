@@ -117,12 +117,14 @@ then
     fi
     sudo yum install -y --nogpgcheck ${enable_power_tools} \
          gcc gcc-c++ ncurses-devel bison glibc-devel \
-         libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
-         libedit-devel systemtap-sdt-devel rpm-sign wget \
+         libgcc perl make libtool openssl-devel libaio libaio-devel  \
+         systemtap-sdt-devel rpm-sign \
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
-         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
+         sqlite sqlite-devel pkgconfig rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
          cyrus-sasl-devel libxml2-devel krb5-devel
+
+    sudo yum install -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
 
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
