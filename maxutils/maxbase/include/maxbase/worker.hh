@@ -32,6 +32,8 @@
 #include <maxbase/random.hh>
 #include <maxbase/stopwatch.hh>
 
+using namespace std::chrono_literals;
+
 namespace maxbase
 {
 
@@ -84,10 +86,7 @@ public:
         ONE_HOUR   = 60 * ONE_MINUTE,
     };
 
-    enum
-    {
-        GRANULARITY = ONE_SECOND
-    };
+    const mxb::Duration GRANULARITY = 1s;
 
     /**
      * Constructor
@@ -98,13 +97,11 @@ public:
      * Reset the load calculation. Should be called immediately before the
      * worker enters its eternal epoll_wait()-loop.
      */
-    void reset(mxb::TimePoint tp)
+    void reset(mxb::TimePoint now)
     {
-        uint64_t now = get_time_ms(tp);
-
         m_start_time = now;
-        m_wait_start = 0;
-        m_wait_time = 0;
+        m_wait_start = now;
+        m_wait_time = 0s;
     }
 
     /**
@@ -114,7 +111,7 @@ public:
      *
      * @return The timeout the client should pass to epoll_wait().
      */
-    int about_to_wait(uint64_t now)
+    mxb::Duration about_to_wait(mxb::TimePoint now)
     {
         m_wait_start = now;
 
@@ -133,22 +130,12 @@ public:
         return duration;
     }
 
-    int about_to_wait(mxb::TimePoint now)
-    {
-        return about_to_wait(get_time_ms(now));
-    }
-
     /**
      * To be used for signaling that the worker has returned from epoll_wait().
      *
      * @param now  The current time.
      */
-    void about_to_work(uint64_t now);
-
-    void about_to_work(mxb::TimePoint tp)
-    {
-        about_to_work(get_time_ms(tp));
-    }
+    void about_to_work(TimePoint now);
 
     /**
      * Returns the last calculated load,
@@ -179,26 +166,24 @@ public:
      *
      * @return The start time.
      */
-    uint64_t start_time() const
+    mxb::TimePoint start_time() const
     {
         return m_start_time;
     }
 
     /**
-     * Returns the current time using CLOCK_MONOTONIC.
-     *
-     * @return Current time in milliseconds.
+     * @return Convert a timepoint to milliseconds (for C-style interfaces).
      */
     static uint64_t get_time_ms(TimePoint tp);
 
 private:
 
-    uint64_t m_start_time;      /*< When was the current 1-second period started. */
-    uint64_t m_wait_start;      /*< The time when the worker entered epoll_wait(). */
-    uint64_t m_wait_time;       /*< How much time the worker has spent in epoll_wait(). */
-    AverageN m_load_1_hour;     /*< The average load during the last hour. */
-    AverageN m_load_1_minute;   /*< The average load during the last minute. */
-    Average1 m_load_1_second;   /*< The load during the last 1-second period. */
+    mxb::TimePoint m_start_time {}; /*< When was the current 1-second period started. */
+    mxb::TimePoint m_wait_start {}; /*< The time when the worker entered epoll_wait(). */
+    mxb::Duration  m_wait_time {};  /*< How much time the worker has spent in epoll_wait(). */
+    AverageN       m_load_1_hour;   /*< The average load during the last hour. */
+    AverageN       m_load_1_minute; /*< The average load during the last minute. */
+    Average1       m_load_1_second; /*< The load during the last 1-second period. */
 };
 
 /**

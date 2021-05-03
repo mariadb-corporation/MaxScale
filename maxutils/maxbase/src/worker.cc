@@ -33,6 +33,7 @@
 using std::function;
 using std::vector;
 using std::stringstream;
+using namespace std::chrono;
 
 namespace
 {
@@ -76,27 +77,24 @@ namespace maxbase
 {
 
 WorkerLoad::WorkerLoad()
-    : m_start_time(0)
-    , m_wait_start(0)
-    , m_wait_time(0)
-    , m_load_1_hour(60)                     // 60 minutes in an hour
+    : m_load_1_hour(60)                     // 60 minutes in an hour
     , m_load_1_minute(60, &m_load_1_hour)   // 60 seconds in a minute
     , m_load_1_second(&m_load_1_minute)
 {
 }
 
-void WorkerLoad::about_to_work(uint64_t now)
+void WorkerLoad::about_to_work(TimePoint now)
 {
-    uint64_t duration = now - m_start_time;
+    auto dur = now - m_start_time;
 
     m_wait_time += (now - m_wait_start);
 
-    if (duration >= GRANULARITY)
+    if (dur >= GRANULARITY)
     {
-        int load_percentage = 100 * ((duration - m_wait_time) / (double)duration);
+        int load_percentage = 0.5 + 100 * ((dur - m_wait_time).count() / (double)dur.count());
 
         m_start_time = now;
-        m_wait_time = 0;
+        m_wait_time = 0s;
 
         m_load_1_second.add_value(load_percentage);
     }
@@ -105,8 +103,6 @@ void WorkerLoad::about_to_work(uint64_t now)
 // static
 uint64_t WorkerLoad::get_time_ms(mxb::TimePoint tp)
 {
-    using namespace std::chrono;
-
     return duration_cast<milliseconds>(tp.time_since_epoch()).count();
 }
 
@@ -764,10 +760,10 @@ namespace
 
 long time_in_100ms_ticks(maxbase::TimePoint tp)
 {
-    using TenthSecondDuration = std::chrono::duration<long, std::ratio<1, 10>>;
+    using TenthSecondDuration = duration<long, std::ratio<1, 10>>;
 
     auto dur = tp.time_since_epoch();
-    auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
+    auto tenth = duration_cast<TenthSecondDuration>(dur);
 
     return tenth.count();
 }
@@ -787,17 +783,17 @@ void Worker::poll_waitevents()
 
     while (!should_shutdown())
     {
-        int nfds;
-
         m_state = POLLING;
 
         atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
 
-        auto real_now = mxb::Clock::now();
-        uint64_t now = Load::get_time_ms(real_now);
+        auto now = mxb::Clock::now();
 
-        auto timeout = m_load.about_to_wait(now);
-        nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
+        int timeout = duration_cast<milliseconds>(m_load.about_to_wait(now)).count();
+        // Don't allow a 0 timeout as that would cause fast looping for 1ms
+        timeout = std::max(timeout, 1);
+        int nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
+
         m_epoll_tick_now = mxb::Clock::now();
 
         m_load.about_to_work(m_epoll_tick_now);
@@ -843,7 +839,7 @@ void Worker::poll_waitevents()
 
         // Set loop_now before the loop, and inside the loop
         // just before looping back to the top.
-        auto loop_now = maxbase::Clock::now();
+        auto loop_now = m_epoll_tick_now;
 
         for (int i = 0; i < nfds; i++)
         {
