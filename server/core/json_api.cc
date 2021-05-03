@@ -36,6 +36,24 @@ const char CN_RELATED[] = "related";
 const char DETAIL[] = "detail";
 const char ERRORS[] = "errors";
 
+// Removes leading slashes and adds a trailing one if not present
+string uri_component(const string& str)
+{
+    if (str.empty())
+    {
+        return str;
+    }
+
+    string rval = str.front() == '/' ? str.substr(1) : str;
+
+    if (rval.back() != '/')
+    {
+        rval += "/";
+    }
+
+    return rval;
+}
+
 bool target_validator(const char* str)
 {
     return mxs::Target::find(str);
@@ -135,12 +153,13 @@ std::string validate_relationships(json_t* json)
 static json_t* self_link(const std::string& host, const std::string& self, const std::string& related = "")
 {
     json_t* self_link = json_object();
-    string links = host + self;
+    string base = uri_component(host);
+    string links = base + uri_component(self);
     json_object_set_new(self_link, CN_SELF, json_string(links.c_str()));
 
     if (!related.empty())
     {
-        string rel = host + related;
+        string rel = base + uri_component(related);
         json_object_set_new(self_link, CN_RELATED, json_string(rel.c_str()));
     }
 
@@ -237,22 +256,7 @@ void mxs_json_add_relation(json_t* rel, const char* id, const char* type)
 json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
 {
     json_t* links = json_object();
-
-    string self = host;
-
-    if (path[0] != '/')
-    {
-        self += "/";
-    }
-
-    self += path;
-
-    if (self[self.length() - 1] != '/')
-    {
-        self += "/";
-    }
-
-    self += id;
+    string self = uri_component(host) + uri_component(path) + uri_component(id);
     json_object_set_new(links, CN_SELF, json_string(self.c_str()));
 
     return links;
