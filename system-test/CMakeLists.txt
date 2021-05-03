@@ -815,19 +815,7 @@ add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2
 # MXS-2414: Block host after repeated authentication failures
 add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication LABELS REPL_BACKEND)
 
-# PAM authentication and various other authentication related issues:
-# 1. PAM authentication, normal + roles (MXS-2478)
-# 2. Multiple authenticators on the same listener (MXS-2497)
-# 3. skip_authentication and match_host (MXS-2941)
-# 4. lower_case_table_names
-# 5. log_password_mismatch (MXS-2916)
-#
-# Also tests MXS-1662: PAM admin authentication
-add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
-
-# MXS-3225, MXS-2383 Pam two factor authentication (2FA) test. Works only on Centos so far, so label as
-# HEAVY to prevent runs on general test runs.
-add_test_executable(pam_authentication_2fa.cpp pam_authentication_2fa pam_authentication_2fa LABELS HEAVY REPL_BACKEND)
+add_subdirectory(authentication)
 
 # Test three jdbc-connectors.
 add_test_executable(jdbc_connectors.cc jdbc_connectors replication REPL_BACKEND)
