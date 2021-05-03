@@ -203,14 +203,24 @@ else
   echo "CMake not found"
 fi
 
-cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
 if [ $cmake_version_ok -eq 0 ] ; then
-  wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
-  if [ $? != 0 ] ; then
-    echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
-    wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
-  fi
-  sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
+
+    if [ "$(uname -p)" == "aarch64" ]
+    then
+        cmake_version="3.20.2"
+        cmake_filename="cmake-${cmake_version}-linux-aarch64.tar.gz"
+        wget https://github.com/Kitware/CMake/releases/download/v${cmake_version}/${cmake_filename}
+        sudo tar -axf ${cmake_filename} -C /usr/ --strip-components=1
+    else
+        cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
+        wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
+        if [ $? != 0 ] ; then
+            echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
+            wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
+        fi
+        sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
+    fi
+
   cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
   if verlt $cmake_version $cmake_version_required ; then
     echo "CMake installation failed"
