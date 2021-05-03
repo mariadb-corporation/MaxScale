@@ -243,6 +243,76 @@ HttpResponse create_connect_response(int64_t id, bool persist)
         return HttpResponse(MHD_HTTP_OK, json_pack("{s:{s:s}}", "meta", "token", token.c_str()));
     }
 }
+
+// An extremely simple implementation of connection management for testing purposes.
+class Manager
+{
+public:
+
+    struct Connection
+    {
+        MYSQL*  conn {nullptr};
+        bool    expecting_result {false};
+        int64_t query_id {0};
+    };
+
+    Connection get(int64_t id)
+    {
+        Connection conn;
+        std::lock_guard<std::mutex> guard(m_connection_lock);
+        auto it = m_connections.find(id);
+
+        if (it != m_connections.end())
+        {
+            conn = it->second;
+            m_connections.erase(it);
+        }
+
+        return conn;
+    }
+
+    int64_t add(MYSQL* conn)
+    {
+        std::lock_guard<std::mutex> guard(m_connection_lock);
+        int64_t id = m_id_gen++;
+        Connection c {conn, false};
+        m_connections.emplace(id, c);
+
+        if (m_id_gen <= 0)
+        {
+            m_id_gen = 1;
+        }
+
+        return id;
+    }
+
+    void put(int64_t id, Connection conn)
+    {
+        std::lock_guard<std::mutex> guard(m_connection_lock);
+        m_connections.emplace(id, conn);
+    }
+
+    bool is_query(int64_t conn_id, int64_t query_id) const
+    {
+        bool rval = false;
+        std::lock_guard<std::mutex> guard(m_connection_lock);
+        auto it = m_connections.find(conn_id);
+
+        if (it != m_connections.end())
+        {
+            rval = query_id == it->second.query_id;
+        }
+
+        return rval;
+    }
+
+private:
+    std::map<int64_t, Connection> m_connections;
+    mutable std::mutex            m_connection_lock;
+    int64_t                       m_id_gen {1};
+};
+
+Manager manager;
 }
 
 //
@@ -426,7 +496,7 @@ bool HttpSql::is_query(const std::string& id)
     {
         int64_t conn_id = strtol(id.substr(0, pos).c_str(), nullptr, 10);
         int64_t query_id = strtol(id.substr(pos + 1).c_str(), nullptr, 10);
-        rval = true; // TODO: Check that the IDs exist
+        rval = manager.is_query(conn_id, query_id);
     }
 
     return rval;
@@ -439,27 +509,92 @@ bool HttpSql::is_query(const std::string& id)
 // static
 int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* err)
 {
-    // TODO: Create the connection
-    return 1;
+    int64_t id = 0;
+    MYSQL* conn = mysql_init(nullptr);
+
+    unsigned int timeout = config.timeout;
+    mysql_optionsv(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+    mysql_optionsv(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+    mysql_optionsv(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+
+    if (mxs_mysql_real_connect(conn, config.host.c_str(), config.port, config.user.c_str(),
+                               config.password.c_str(), config.ssl,
+                               CLIENT_MULTI_RESULTS | CLIENT_MULTI_STATEMENTS))
+    {
+        if (config.db.empty() || mysql_query(conn, ("USE `" + config.db + "`").c_str()) == 0)
+        {
+            id = manager.add(conn);
+        }
+        else
+        {
+            *err = mysql_error(conn);
+            mysql_close(conn);
+        }
+    }
+    else
+    {
+        *err = mysql_error(conn);
+        mysql_close(conn);
+    }
+
+    return id;
 }
 
 // static
 int64_t HttpSql::execute_query(int64_t id, const std::string& sql)
 {
-    // TODO: Execute the query
-    return 1;
+    int64_t query_id = 0;
+    auto c = manager.get(id);
+
+    if (c.conn)
+    {
+        mysql_real_query(c.conn, sql.c_str(), sql.size());
+        c.expecting_result = true;
+        ++c.query_id;
+
+        if (c.query_id <= 0)
+        {
+            c.query_id = 1;
+        }
+
+        query_id = c.query_id;
+        manager.put(id, c);
+    }
+
+    return query_id;
 }
 
 // static
 std::vector<std::unique_ptr<HttpSql::Result>>
 HttpSql::read_result(int64_t id, int64_t rows_max, bool* more_results)
 {
-    // TODO: Read the result
-    return {};
+    std::vector<std::unique_ptr<HttpSql::Result>> results;
+    auto c = manager.get(id);
+
+    if (c.conn)
+    {
+        if (c.expecting_result)
+        {
+            results.push_back(format_result(c.conn));
+
+            while (mysql_more_results(c.conn))
+            {
+                mysql_next_result(c.conn);
+                results.push_back(format_result(c.conn));
+            }
+
+            c.expecting_result = false;
+        }
+
+        manager.put(id, c);
+    }
+
+    return results;
 }
 
 // static
 void HttpSql::close_connection(int64_t id)
 {
-    // TODO: Close the connection
+    auto c = manager.get(id);
+    mysql_close(c.conn);
 }
