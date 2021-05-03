@@ -10,6 +10,10 @@ cd $tmpdir
 
 distro_id=`cat /etc/*-release | grep "^ID_LIKE=" | sed "s/ID=//"`
 
+function is_arm() {
+    [ "$(arch)" == "aarch64" ]
+}
+
 unset packager_type
 
 if [[ ${distro_id} =~ "suse" ]]
@@ -79,6 +83,12 @@ then
   ${apt_cmd} install libsystemd-dev || \
       ${apt_cmd} install libsystemd-daemon-dev
 
+  if is_arm
+  then
+     # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+     ${apt_cmd} install python3
+  fi
+
    ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
@@ -129,6 +139,12 @@ then
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
 
+    if is_arm
+    then
+       # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+       sudo yum -y install python3
+    fi
+
     # Enable the devtoolkit to get a newer compiler
 
     # CentOS: install the centos-release-scl repo
@@ -174,6 +190,12 @@ then
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
+    if is_arm
+    then
+       # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+       sudo zypper -n install python3
+    fi
+
     if [ $? != 0 ]
     then
       sudo zypper -n install libedit-devel
@@ -212,7 +234,7 @@ fi
 
 if [ $cmake_version_ok -eq 0 ] ; then
 
-    if [ "$(arch)" == "aarch64" ]
+    if is_arm
     then
         cmake_version="3.20.2"
         cmake_filename="cmake-${cmake_version}-linux-aarch64.tar.gz"
@@ -295,7 +317,7 @@ sudo make install
 popd
 
 
-if [ "$(arch)" == "aarch64" ]
+if is_arm
 then
     node_arch=arm64
 else
