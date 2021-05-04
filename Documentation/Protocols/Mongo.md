@@ -510,7 +510,13 @@ ping | any | Ignored.
 
 ### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+whatsmyri | any | Ignored.
+
+This is an internal command, implemented only because the Mongo Shell uses it.
 
 ## [Free Monitoring Commands](https://docs.mongodb.com/manual/reference/command/nav-free-monitoring/)
 
