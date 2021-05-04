@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/dropDatabase
+// https://docs.mongodb.com/manual/reference/command/killCursors
 
 const assert = require('assert');
 const test = require('./mongotest')

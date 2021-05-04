@@ -11,8 +11,6 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/dropDatabase
-
 const assert = require('assert');
 const test = require('./mongotest')
 

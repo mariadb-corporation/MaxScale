@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/create/
+// https://docs.mongodb.com/manual/reference/command/drop/
 
 const assert = require('assert');
 const test = require('./mongotest')

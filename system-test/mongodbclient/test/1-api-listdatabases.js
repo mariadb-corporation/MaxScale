@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/dropDatabase
+// https://docs.mongodb.com/manual/reference/command/listDatabases
 
 const assert = require('assert');
 const test = require('./mongotest')
@@ -40,7 +40,7 @@ describe(name, function () {
         assert.equal(rv2.code, 13);
     });
 
-    it('Can list datbases using admin.', async function () {
+    it('Can list databases using admin.', async function () {
         mng.close();
         mxs.close();
 

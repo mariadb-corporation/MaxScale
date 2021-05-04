@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/dropDatabase
+// https://docs.mongodb.com/manual/reference/command/renameCollection
 
 const assert = require('assert');
 const test = require('./mongotest')
@@ -36,7 +36,7 @@ describe(name, function () {
     });
 
     it('Can rename collection in same database.', async function () {
-        // First delte the db.
+        // First delete the db.
         await conn.query("DROP DATABASE IF EXISTS " + dbname1);
 
         // Then create it.

@@ -428,7 +428,7 @@ The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
-killCursors | string | The name of the colection.
+killCursors | string | The name of the collection.
 cursors | array | The ids of the cursors to kill.
 
 ### [listCollections](https://docs.mongodb.com/manual/reference/command/listCollections/)
@@ -460,7 +460,7 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 renameCollection | string | The namespace of the collection to rename. The namespace is a combination of the database name and the name of the collection.
-to | string | The new namespace of the collection. Moving a collection/table from one database to another succeeds preovided the both databases reside in the same filesystem.
+to | string | The new namespace of the collection. Moving a collection/table from one database to another succeeds provided the databases reside in the same filesystem.
 
 ## [Diagnostic Commands](https://docs.mongodb.com/manual/reference/command/nav-diagnostic/)
 

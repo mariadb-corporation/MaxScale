@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/listCommands
+// https://docs.mongodb.com/manual/reference/command/ping
 
 const assert = require('assert');
 const test = require('./mongotest')
