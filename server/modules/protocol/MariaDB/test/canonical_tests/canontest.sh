@@ -18,7 +18,13 @@ else
 fi
 
 $EXECUTABLE $INPUT $OUTPUT
+
+# Squeeze white space into single spaces, and
+# remove white space at beginning and end of lines
+sed -i -e 's/^[[:space:]]\+//g' -e 's/[[:space:]]\+$//g' -e 's/[[:space:]]\+/ /g' $OUTPUT
+
 diff $OUTPUT $EXPECTED > $DIFFLOG
+
 if [ $? -eq 0 ]
 then
     echo "PASSED"		>> $TESTLOG
