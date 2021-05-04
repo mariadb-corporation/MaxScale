@@ -2247,6 +2247,10 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
         else
         {
             auth_val.status = AuthRes::Status::SUCCESS;
+            // Need to copy the authentication tokens directly. The tokens should work as is for PAM and
+            // GSSAPI.
+            m_session_data->backend_token = m_session_data->client_token;
+            m_session_data->backend_token_2fa = m_session_data->client_token_2fa;
         }
 
         if (auth_val.status == AuthRes::Status::SUCCESS)
