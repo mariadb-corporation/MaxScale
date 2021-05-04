@@ -34,6 +34,7 @@
 * Multiple modes of operation for `causal_reads`.
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.5.11 Release Notes](Release-Notes/MaxScale-2.5.11-Release-Notes.md)
 * [MariaDB MaxScale 2.5.10 Release Notes](Release-Notes/MaxScale-2.5.10-Release-Notes.md)
 * [MariaDB MaxScale 2.5.9 Release Notes](Release-Notes/MaxScale-2.5.9-Release-Notes.md)
 * [MariaDB MaxScale 2.5.8 Release Notes](Release-Notes/MaxScale-2.5.8-Release-Notes.md)

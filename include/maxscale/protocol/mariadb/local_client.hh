@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-03-24
+ * Change Date: 2025-04-28
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -68,13 +68,6 @@ public:
      */
     bool queue_query(GWBUF* buffer);
 
-    /**
-     * Destroy the client by sending a COM_QUIT to the backend
-     *
-     * @note After calling this function, object must be treated as a deleted object
-     */
-    void self_destruct();
-
     //
     // API function implementations for mxs::Component
     //
@@ -88,6 +81,5 @@ public:
 private:
     LocalClient() = default;
 
-    bool                           m_self_destruct {false};
     std::unique_ptr<mxs::Endpoint> m_down;
 };
