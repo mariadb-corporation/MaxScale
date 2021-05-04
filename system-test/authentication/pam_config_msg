@@ -1,0 +1,6 @@
+auth             optional        pam_echo.so file=/tmp/pam_test_msg.txt
+auth             required        pam_unix.so audit
+auth             optional        pam_echo.so file=/tmp/pam_test_msg.txt
+auth             required        pam_unix.so audit
+account          required        pam_unix.so audit
+

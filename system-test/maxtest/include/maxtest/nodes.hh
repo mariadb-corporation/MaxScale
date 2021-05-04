@@ -61,6 +61,8 @@ public:
      */
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
+    mxt::CmdResult run_cmd_output_sudo(const std::string& cmd);
+
     bool configure(const mxt::NetworkConfig& nwconfig);
 
     /**
@@ -78,6 +80,17 @@ public:
      * @return True on success
      */
     bool copy_to_node(const std::string& src, const std::string& dest);
+
+    /**
+     * Copy a local file to the node with sudo privs. Required when the destination directory
+     * is restricted. Implemented by first scp:ing the file to home dir, then copying it to destination
+     * and finally deleting the temporary.
+     *
+     * @param src Source file on the local filesystem
+     * @param dest Destination file on the remote file system
+     * @return True on success
+     */
+    bool copy_to_node_sudo(const std::string& src, const std::string& dest);
 
     bool copy_from_node(const std::string& src, const std::string& dest);
 

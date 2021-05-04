@@ -1,27 +1,27 @@
 [maxscale]
 threads=###threads###
-admin_pam_readwrite_service=duckburg
+admin_pam_readwrite_service=pam_config_msg
 log_info=1
 users_refresh_time=2
 
 [MySQL-Monitor]
 type=monitor
 module=mariadbmon
-servers= server1, server2, server3, server4
+servers= server1, server2
 user=maxskysql
 password= skysql
 monitor_interval=1000
 failcount=1
 replication_user=repl
 replication_password=repl
-backend_connect_timeout=10
-backend_read_timeout=10
-backend_write_timeout=10
+backend_connect_timeout=5
+backend_read_timeout=5
+backend_write_timeout=5
 
 [RWSplit-Router]
 type=service
 router=readwritesplit
-servers=server1, server2, server3, server4
+servers=server1, server2
 user=maxskysql
 password=skysql
 
@@ -73,13 +73,3 @@ port=###node_server_port_1###
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
-
-[server3]
-type=server
-address=###node_server_IP_3###
-port=###node_server_port_3###
-
-[server4]
-type=server
-address=###node_server_IP_4###
-port=###node_server_port_4###
