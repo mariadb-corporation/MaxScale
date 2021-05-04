@@ -502,7 +502,11 @@ listCommands | any | Ignored.
 
 ### [ping](https://docs.mongodb.com/manual/reference/command/ping/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+ping | any | Ignored.
 
 ### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
 
