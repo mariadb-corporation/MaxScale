@@ -122,8 +122,15 @@ public:
     }
 };
 
-
 // https://docs.mongodb.com/manual/reference/command/getLog/
+class GetLog;
+
+template<>
+struct IsAdmin<command::GetLog>
+{
+    static const bool is_admin { true };
+};
+
 class GetLog final : public ImmediateCommand
 {
 public:
@@ -131,6 +138,11 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<GetLog>::is_admin;
+    }
 
     void populate_response(DocumentBuilder& doc) override
     {
@@ -155,7 +167,7 @@ public:
         }
         else
         {
-            string message("No RamLog names: ");
+            string message("No RamLog named: ");
             message += value;
 
             doc.append(kvp("ok", 0));

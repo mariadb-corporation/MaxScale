@@ -484,7 +484,13 @@ getCmdLineOpts | any | Ignored.
 
 ### [getLog](https://docs.mongodb.com/manual/reference/command/getLog/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+getLog | string | `*`, `global` and `startupWarnings`
+
+The command returns a document of the correct format, but _no_ actual log data will be returned.
 
 ### [listCommands](https://docs.mongodb.com/manual/reference/command/listCommands/)
 
