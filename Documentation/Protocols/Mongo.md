@@ -494,7 +494,11 @@ The command returns a document of the correct format, but _no_ actual log data w
 
 ### [listCommands](https://docs.mongodb.com/manual/reference/command/listCommands/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+listCommands | any | Ignored.
 
 ### [ping](https://docs.mongodb.com/manual/reference/command/ping/)
 
