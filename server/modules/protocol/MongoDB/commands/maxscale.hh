@@ -19,6 +19,14 @@ namespace mxsmongo
 namespace command
 {
 
+class MxsDiagnose;
+
+template<>
+struct IsAdmin<MxsDiagnose>
+{
+    static const bool is_admin { true };
+};
+
 class MxsDiagnose final : public ImmediateCommand
 {
 public:
@@ -26,6 +34,11 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<MxsDiagnose>::is_admin;
+    }
 
     void populate_response(DocumentBuilder& doc)
     {
@@ -80,6 +93,15 @@ public:
     }
 };
 
+
+class MxsGetConfig;
+
+template<>
+struct IsAdmin<MxsGetConfig>
+{
+    static const bool is_admin { true };
+};
+
 class MxsGetConfig final : public ImmediateCommand
 {
 public:
@@ -87,6 +109,11 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<MxsGetConfig>::is_admin;
+    }
 
     void populate_response(DocumentBuilder& doc)
     {
@@ -100,6 +127,7 @@ public:
         DocumentBuilder config;
         config.append(kvp(C::s_on_unknown_command.name(),
                           C::s_on_unknown_command.to_string(c.on_unknown_command)));
+        config.append(kvp(C::s_auto_create_databases.name(), c.auto_create_databases));
         config.append(kvp(C::s_auto_create_tables.name(), c.auto_create_tables));
         config.append(kvp(C::s_id_length.name(), static_cast<int32_t>(c.id_length)));
         config.append(kvp(C::s_insert_behavior.name(),
@@ -110,6 +138,15 @@ public:
     }
 };
 
+
+class MxsSetConfig;
+
+template<>
+struct IsAdmin<MxsSetConfig>
+{
+    static const bool is_admin { true };
+};
+
 class MxsSetConfig final : public ImmediateCommand
 {
 public:
@@ -118,12 +155,18 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
+    bool is_admin() const override
+    {
+        return IsAdmin<MxsSetConfig>::is_admin;
+    }
+
     void populate_response(DocumentBuilder& doc)
     {
         using C = GlobalConfig;
         auto& c = m_database.config();
 
         auto on_unknown_command = c.on_unknown_command;
+        auto auto_create_databases = c.auto_create_databases;
         auto auto_create_tables = c.auto_create_tables;
         auto id_length = c.id_length;
         auto insert_behavior = c.insert_behavior;
@@ -140,6 +183,7 @@ public:
             }
         }
 
+        optional(config, C::s_auto_create_databases.name(), &auto_create_databases);
         optional(config, C::s_auto_create_tables.name(), &auto_create_tables);
 
         if (optional(config, C::s_id_length.name(), &id_length, Conversion::RELAXED))
@@ -164,6 +208,7 @@ public:
         }
 
         c.on_unknown_command = on_unknown_command;
+        c.auto_create_databases = auto_create_databases;
         c.auto_create_tables = auto_create_tables;
         c.id_length = id_length;
         c.insert_behavior = insert_behavior;

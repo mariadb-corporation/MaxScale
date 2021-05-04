@@ -594,7 +594,8 @@ If the database creation fails, the command returns an error document.
 ##### **mxsDiagnose**
 
 The `mxsDiagnose` command provides diagnostics for any other command; that is, how
-MaxScale will handle that command.
+MaxScale will handle that command. The command must be run against the 'admin'
+database.
 
 #### Syntax
 
@@ -660,7 +661,8 @@ and there will be a field `error` whose value is an error object.
 
 #### **mxsGetConfig**
 
-The `mxsGetConfig` command returns the current configuration of the session.
+The `mxsGetConfig` command returns the current configuration of the session
+and must be run against the 'admin' database.
 
 #### Syntax
 
@@ -701,7 +703,8 @@ the session. For example:
 
 #### **mxsSetConfig**
 
-The `mxsSetConfig` command changes the configuration of the session.
+The `mxsSetConfig` command changes the configuration of the session
+and must be run against the 'admin' database.
 
 Note that the changes only affect the current session and are **not**
 persisted.
