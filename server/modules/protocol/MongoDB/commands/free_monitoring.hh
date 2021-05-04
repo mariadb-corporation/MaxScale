@@ -24,6 +24,14 @@ namespace command
 {
 
 // https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
+class GetFreeMonitoringStatus;
+
+template<>
+struct IsAdmin<command::GetFreeMonitoringStatus>
+{
+    static const bool is_admin { true };
+};
+
 class GetFreeMonitoringStatus final : public ImmediateCommand
 {
 public:
@@ -31,6 +39,11 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<GetFreeMonitoringStatus>::is_admin;
+    }
 
     void populate_response(DocumentBuilder& doc) override
     {

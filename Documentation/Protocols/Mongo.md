@@ -391,7 +391,7 @@ Field | Type | Description
 ------|------|------------
 endSessions | array | Ignored.
 
-The following document will always be returned.
+The following document will always be returned:
 ```
 { "ok" : 1 }
 ```
@@ -522,7 +522,16 @@ This is an internal command, implemented only because the Mongo Shell uses it.
 
 ### [getFreeMonitoringStatus](https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/)
 
-TBW
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+getFreeMonitoringStatus | any | Ignored.
+
+The following document will always be returned:
+```
+{ "state" : "undecided", "ok" : 1 }
+```
 
 ## [System Events Auditing Commands](https://docs.mongodb.com/manual/reference/command/nav-auditing/)
 
