@@ -28,7 +28,7 @@
                 type="table: table-thead, table-tbody"
                 :max-height="`${dynDim.height - headerHeight}px`"
             />
-            <keep-alive v-else>
+            <template v-else>
                 <result-data-table
                     v-if="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
                     :key="SQL_QUERY_MODES.PREVIEW_DATA"
@@ -45,7 +45,7 @@
                     :headers="detailsDataHeaders"
                     :rows="detailsDataRows"
                 />
-            </keep-alive>
+            </template>
         </div>
     </div>
 </template>

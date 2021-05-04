@@ -4,17 +4,29 @@
             <span> Results </span>
         </v-tab>
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PREVIEW_DATA}`">
-            <span>
-                Data preview
-            </span>
+            <span> Data preview </span>
         </v-tab>
-        <v-tabs-items v-model="activeTab" class="tab-items">
-            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
+        <v-tabs-items
+            v-model="activeTab"
+            :class="
+                `tab-items ${
+                    activeTab === SQL_QUERY_MODES.QUERY_VIEW
+                        ? 'v-window-item--active--slide-in-left'
+                        : 'v-window-item--active--slide-in-right'
+                }`
+            "
+            active-class="v-window-item--active"
+        >
+            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass" transition="none">
                 <keep-alive>
                     <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
                 </keep-alive>
             </v-tab-item>
-            <v-tab-item :value="SQL_QUERY_MODES.PREVIEW_DATA" :class="tabItemClass">
+            <v-tab-item
+                :value="SQL_QUERY_MODES.PREVIEW_DATA"
+                :class="tabItemClass"
+                transition="none"
+            >
                 <keep-alive>
                     <preview-data-tab
                         :dynDim="componentDynDim"
@@ -118,6 +130,39 @@ $tab-bar-height: 24px;
     height: calc(100% - #{$tab-bar-height});
     .v-window__container {
         height: 100%;
+    }
+}
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0%);
+    }
+}
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0%);
+    }
+}
+
+::v-deep.v-window-item {
+    display: block !important; // override display: none; set by v-tab-items
+    position: absolute;
+    width: 100%;
+    visibility: hidden;
+    &--active {
+        position: relative;
+        visibility: visible;
+        &--slide-in-right {
+            animation: slide-in-right 0.3s;
+        }
+        &--slide-in-left {
+            animation: slide-in-left 0.3s;
+        }
     }
 }
 </style>
