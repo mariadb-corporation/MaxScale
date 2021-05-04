@@ -5,105 +5,112 @@
         class="fill-height"
         :class="{ 'wrapper-container': !isFullScreen }"
     >
-        <div class="query-page fill-height" :class="{ 'query-page--fullscreen': isFullScreen }">
-            <div
-                class="page-header d-flex ml-n1"
-                :class="{ 'page-header--fullscreen': isFullScreen }"
+        <div
+            class="query-page d-flex flex-column fill-height"
+            :class="{ 'query-page--fullscreen': isFullScreen }"
+        >
+            <v-toolbar
+                outlined
+                elevation="0"
+                height="50"
+                class="query-page__header border-bottom-none"
+                :class="{ 'query-page__header--fullscreen': isFullScreen }"
             >
-                <div class="d-flex align-center">
-                    <div class="d-inline-flex align-center">
-                        <h4
-                            style="line-height: normal;"
-                            class="ml-1 mb-0 color text-navigation text-h4 text-capitalize"
-                        >
-                            {{ $route.name }}
-                        </h4>
-                    </div>
-                </div>
-                <v-spacer />
-                <div class="d-flex flex-wrap ">
-                    <v-btn
-                        width="80"
-                        outlined
-                        height="36"
-                        rounded
-                        class="text-capitalize px-8 font-weight-medium"
-                        depressed
-                        small
-                        color="accent-dark"
-                        :disabled="!queryTxt"
-                        @click="onRun"
-                    >
-                        {{ $t('run') }}
-                    </v-btn>
-                </div>
-            </div>
-            <v-sheet
-                class="fill-height"
-                :class="[!isFullScreen ? 'pt-6 pb-8' : 'panels--fullscreen']"
-            >
-                <split-pane
-                    v-if="minSidebarPct"
-                    v-model="sidebarPct"
-                    :minPercent="minSidebarPct"
-                    split="vert"
-                    :disable="!isFullScreen || isCollapsed"
+                <v-toolbar-title class="color text-navigation text-capitalize">
+                    {{ $route.name }}
+                </v-toolbar-title>
+                <v-spacer></v-spacer>
+                <!-- TODO: place these buttons nicely and open connection modal when click Connect -->
+                <v-btn
+                    width="80"
+                    outlined
+                    height="36"
+                    rounded
+                    class="text-capitalize px-8 font-weight-medium"
+                    depressed
+                    small
+                    color="accent-dark"
                 >
-                    <!-- sidebar panel -->
-                    <template slot="pane-left">
-                        <v-card
-                            v-if="loading_db_tree"
-                            class="fill-height db-tb-list"
-                            :loading="loading_db_tree"
-                        />
-                        <db-list
-                            v-else
-                            class="db-tb-list"
-                            :schemaList="db_tree"
-                            @is-fullscreen="isFullScreen = $event"
-                            @is-collapsed="isCollapsed = $event"
-                            @reload-schema="loadSchema"
-                            @preview-data="
-                                schemaId =>
-                                    handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PREVIEW_DATA,
-                                        schemaId,
-                                    })
-                            "
-                            @view-details="
-                                schemaId =>
-                                    handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.VIEW_DETAILS,
-                                        schemaId,
-                                    })
-                            "
-                            @place-to-editor="placeToEditor"
-                            @load-children="handleLoadChildren"
-                        />
-                    </template>
-                    <template slot="pane-right">
-                        <!-- Main panel -->
-                        <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
-                            <template slot="pane-left">
-                                <query-editor
-                                    v-model="queryTxt"
-                                    class="editor pt-2 pl-2"
-                                    :tableDist="getDbCmplList"
-                                />
-                            </template>
-                            <template slot="pane-right">
-                                <query-result
-                                    ref="queryResultPane"
-                                    :dynDim="resultPaneDim"
-                                    class="query-result"
-                                    :previewDataSchemaId="previewDataSchemaId"
-                                    :queryTxt="queryTxt"
-                                />
-                            </template>
-                        </split-pane>
-                    </template>
-                </split-pane>
-            </v-sheet>
+                    Connect
+                </v-btn>
+                <v-btn
+                    width="80"
+                    outlined
+                    height="36"
+                    rounded
+                    class="ml-4 text-capitalize px-8 font-weight-medium"
+                    depressed
+                    small
+                    color="accent-dark"
+                    :disabled="!queryTxt"
+                    @click="onRun"
+                >
+                    {{ $t('run') }}
+                </v-btn>
+            </v-toolbar>
+
+            <split-pane
+                v-if="minSidebarPct"
+                v-model="sidebarPct"
+                class="query-page__content"
+                :minPercent="minSidebarPct"
+                split="vert"
+                :disable="!isFullScreen || isCollapsed"
+            >
+                <!-- sidebar panel -->
+                <template slot="pane-left">
+                    <v-card
+                        v-if="loading_db_tree"
+                        class="fill-height db-tb-list"
+                        :loading="loading_db_tree"
+                    />
+                    <db-list
+                        v-else
+                        class="db-tb-list"
+                        :schemaList="db_tree"
+                        @is-fullscreen="isFullScreen = $event"
+                        @is-collapsed="isCollapsed = $event"
+                        @reload-schema="loadSchema"
+                        @preview-data="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PREVIEW_DATA,
+                                    schemaId,
+                                })
+                        "
+                        @view-details="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.VIEW_DETAILS,
+                                    schemaId,
+                                })
+                        "
+                        @place-to-editor="placeToEditor"
+                        @load-children="handleLoadChildren"
+                    />
+                </template>
+                <template slot="pane-right">
+                    <!-- Main panel -->
+                    <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
+                        <template slot="pane-left">
+                            <query-editor
+                                v-model="queryTxt"
+                                class="editor pt-2 pl-2"
+                                :tableDist="getDbCmplList"
+                            />
+                        </template>
+                        <template slot="pane-right">
+                            <query-result
+                                ref="queryResultPane"
+                                :dynDim="resultPaneDim"
+                                class="query-result"
+                                :previewDataSchemaId="previewDataSchemaId"
+                                :queryTxt="queryTxt"
+                            />
+                        </template>
+                    </split-pane>
+                </template>
+            </split-pane>
         </div>
     </div>
 </template>
@@ -178,7 +185,6 @@ export default {
     async created() {
         await this.loadSchema()
     },
-
     methods: {
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
@@ -190,6 +196,7 @@ export default {
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
         }),
+
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el
@@ -254,7 +261,6 @@ export default {
     width: 100%;
     height: 100%;
 }
-
 $header-height: 50px;
 .query-page {
     background: #ffffff;
@@ -272,15 +278,10 @@ $header-height: 50px;
         position: fixed;
         overflow: hidden;
     }
-    .page-header {
+    &__header {
         &--fullscreen {
             margin-left: 0px !important;
-            padding: 16px 16px 16px 8px;
         }
-    }
-    $page-header-height: 70px; // including empty space
-    .panels--fullscreen {
-        height: calc(100% - #{$page-header-height});
     }
 }
 </style>
