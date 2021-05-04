@@ -35,12 +35,19 @@ documentation of the [users](Resources-User.md) resource.
 
 MaxScale supports authentication via
 [JSON Web Tokens](https://tools.ietf.org/html/rfc7519).
+
+```
+GET /v1/auth
+```
+
 The `/v1/auth` endpoint can be used to generate new tokens which are returned in
 the following form.
 
 ```javascript
 {
-    "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw"
+    "meta": {
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw"
+    }
 }
 ```
 
@@ -50,11 +57,28 @@ an error. To allow use of the `/auth` endpoint without encryption, use
 `admin_secure_gui=false`.
 
 If the token is used to authenticate users in a web browser, the token can be
-optionally stored in cookies. This can be enabled with the `persist` parameter.
+optionally stored in cookies. This can be enabled with the `persist=yes`
+parameter in the request:
+
+```
+GET /v1/auth?persist=yes
+```
+
+When the token is stored in the cookies, it will be split into two parts: the
+JWT body will be stored in a cookie named `token_body` and the JWT signature is
+stored in `token_sig`. The JWT signature will be stored with `SameSite=Strict`
+and `HttpOnly` cookie options which means the JavaScript context of the browser
+will not have access to it. This is done to prevent CSRF attacks.
 
 By default, the generated tokens are valid for 8 hours. The token validity
-period can be set with the `max-age` request parameter. If MaxScale is
-restarted, all generated tokens are invalidated.
+period can be set with the `max-age` request parameter:
+
+```
+GET /v1/auth?max-age=28800
+```
+
+When `max-age` is combined with `persist`, the `Max-Age` cookie option is
+also set to the same value.
 
 To use the token for authentication, the generated token must be presented in
 the Authorization header with the Bearer authentication scheme. For example, the
@@ -63,6 +87,8 @@ token above would be used in the following manner:
 ```
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw
 ```
+
+If MaxScale is restarted, all generated tokens are invalidated.
 
 #### `/auth` Request Parameters
 

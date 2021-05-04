@@ -8,7 +8,7 @@ public:
 
     void pre() override
     {
-        test.expect(master.query("SET GLOBAL max_allowed_packet=@@max_allowed_packet * 2"),
+        test.expect(master.query("SET GLOBAL max_allowed_packet=33554432"),
                     "Could not set max_allowed_packet: %s", master.error());
         test.expect(master.query("CREATE TABLE test.t1(d LONGTEXT)"), "CREATE should work: %s",
                     master.error());

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-03-24
+ * Change Date: 2025-04-28
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -582,8 +582,12 @@ Config::Config(int argc, char** argv)
     retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
                                session_set_retain_last_statements(count);
                            }),
-    syslog(this, &s_syslog),
-    maxlog(this, &s_maxlog),
+    syslog(this, &s_syslog, [](bool enable) {
+               mxs_log_set_syslog_enabled(enable);
+           }),
+    maxlog(this, &s_maxlog, [](bool enable) {
+               mxs_log_set_maxlog_enabled(enable);
+           }),
     auth_conn_timeout(this, &s_auth_conn_timeout),
     auth_read_timeout(this, &s_auth_read_timeout),
     auth_write_timeout(this, &s_auth_write_timeout),

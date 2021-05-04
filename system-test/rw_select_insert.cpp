@@ -218,9 +218,9 @@ int main(int argc, char* argv[])
         Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     }
 
+    get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->stop_timeout();
     Test->repl->sync_slaves();
-    get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_select(&new_selects[0],
                                       &new_inserts[0],
                                       &selects[0],
@@ -241,9 +241,9 @@ int main(int argc, char* argv[])
         Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     }
 
+    get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->stop_timeout();
     Test->repl->sync_slaves();
-    get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_insert(&new_selects[0],
                                       &new_inserts[0],
                                       &selects[0],

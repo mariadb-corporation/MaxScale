@@ -97,7 +97,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
 
     Test->set_timeout(120);
     Test->tprintf("Restoring max_allowed_packet");
-    set_max_packet(Test, binlog, (char*) "set global max_allowed_packet = 1048576;");
+    set_max_packet(Test, binlog, (char*) "set global max_allowed_packet = 16777216;");
 
     Test->set_timeout(1000);
     conn = connect_to_serv(Test, binlog);
