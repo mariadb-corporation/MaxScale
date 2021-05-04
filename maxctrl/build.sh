@@ -17,6 +17,11 @@ fi
 
 cd $PWD/maxctrl
 
+if [ "$(arch)" == "aarch64" ]
+then
+    opts="--build"
+fi
+
 npm install --production
 npm install --production pkg@5.1.0
-node_modules/pkg/lib-es5/bin.js -t node10-linux .
+node_modules/pkg/lib-es5/bin.js $opts -t node10-linux .
