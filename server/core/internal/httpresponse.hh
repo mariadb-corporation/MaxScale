@@ -147,11 +147,22 @@ public:
      *
      * @param public_name   The name of the cookie where the public part is stored
      * @param private_name  The name of the cookie where the private part is stored
-     * @param private_value The JWT token to store in the cookie
+     * @param token         The JWT token to store in the cookie
      * @param max_age       Maximum age of the cookie in seconds, 0 for no maximum age
      */
     void add_split_cookie(const std::string& public_name, const std::string& private_name,
                           const std::string& token, uint32_t max_age = 0);
+
+    /**
+     * Removes a cookie split into a public and private part
+     *
+     * This adds cookie values with an expiration date in the past which is the canonical way of deleting
+     * cookies.
+     *
+     * @param public_name   The name of the cookie where the public part is stored
+     * @param private_name  The name of the cookie where the private part is stored
+     */
+    void remove_split_cookie(const std::string& public_name, const std::string& private_name);
 
     /**
      * Removes fields from the response

@@ -197,7 +197,7 @@ void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& t
 void HttpResponse::add_split_cookie(const std::string& public_name, const std::string& private_name,
                                     const std::string& token, uint32_t max_age)
 {
-    std::string cookie_opts;
+    std::string cookie_opts = "; Path=/";
 
     if (mxs_admin_https_enabled())
     {
@@ -212,6 +212,13 @@ void HttpResponse::add_split_cookie(const std::string& public_name, const std::s
     auto pos = token.find_last_of('.');
     add_cookie(public_name + "=" + token.substr(0, pos) + cookie_opts + "; SameSite=Lax");
     add_cookie(private_name + "=" + token.substr(pos) + cookie_opts + "; SameSite=Strict; HttpOnly");
+}
+
+void HttpResponse::remove_split_cookie(const std::string& public_name, const std::string& private_name)
+{
+    std::string cookie_opts = "; Path=/; Expires=" + http_to_date(0);
+    add_cookie(public_name + "=" + cookie_opts);
+    add_cookie(private_name + "=" + cookie_opts);
 }
 
 void HttpResponse::remove_fields(const std::string& type, const std::unordered_set<std::string>& fields)

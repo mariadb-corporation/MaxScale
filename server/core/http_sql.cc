@@ -595,7 +595,9 @@ HttpResponse HttpSql::disconnect(const HttpRequest& request)
     return HttpResponse(
         [id]() {
             close_connection(id);
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
+            HttpResponse response(MHD_HTTP_NO_CONTENT);
+            response.remove_split_cookie(CONN_ID_BODY, CONN_ID_SIG);
+            return response;
         });
 }
 
