@@ -19,20 +19,9 @@
                 <v-toolbar-title class="color text-navigation text-capitalize">
                     {{ $route.name }}
                 </v-toolbar-title>
+
                 <v-spacer></v-spacer>
-                <!-- TODO: place these buttons nicely and open connection modal when click Connect -->
-                <v-btn
-                    width="80"
-                    outlined
-                    height="36"
-                    rounded
-                    class="text-capitalize px-8 font-weight-medium"
-                    depressed
-                    small
-                    color="accent-dark"
-                >
-                    Connect
-                </v-btn>
+                <connection-manager />
                 <v-btn
                     width="80"
                     outlined
@@ -48,7 +37,6 @@
                     {{ $t('run') }}
                 </v-btn>
             </v-toolbar>
-
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -64,30 +52,32 @@
                         class="fill-height db-tb-list"
                         :loading="loading_db_tree"
                     />
-                    <db-list
-                        v-else
-                        class="db-tb-list"
-                        :schemaList="db_tree"
-                        @is-fullscreen="isFullScreen = $event"
-                        @is-collapsed="isCollapsed = $event"
-                        @reload-schema="loadSchema"
-                        @preview-data="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PREVIEW_DATA,
-                                    schemaId,
-                                })
-                        "
-                        @view-details="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.VIEW_DETAILS,
-                                    schemaId,
-                                })
-                        "
-                        @place-to-editor="placeToEditor"
-                        @load-children="handleLoadChildren"
-                    />
+                    <v-fade-transition>
+                        <db-list
+                            v-show="!loading_db_tree"
+                            class="db-tb-list"
+                            :schemaList="db_tree"
+                            @is-fullscreen="isFullScreen = $event"
+                            @is-collapsed="isCollapsed = $event"
+                            @reload-schema="loadSchema"
+                            @preview-data="
+                                schemaId =>
+                                    handleFetchPreview({
+                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PREVIEW_DATA,
+                                        schemaId,
+                                    })
+                            "
+                            @view-details="
+                                schemaId =>
+                                    handleFetchPreview({
+                                        SQL_QUERY_MODE: SQL_QUERY_MODES.VIEW_DETAILS,
+                                        schemaId,
+                                    })
+                            "
+                            @place-to-editor="placeToEditor"
+                            @load-children="handleLoadChildren"
+                        />
+                    </v-fade-transition>
                 </template>
                 <template slot="pane-right">
                     <!-- Main panel -->
@@ -132,13 +122,14 @@ import QueryEditor from '@/components/QueryEditor'
 import DbList from './DbList'
 import QueryResult from './QueryResult'
 import { mapActions, mapState } from 'vuex'
-
+import ConnectionManager from './ConnectionManager'
 export default {
     name: 'query-view',
     components: {
         'query-editor': QueryEditor,
         DbList,
         QueryResult,
+        ConnectionManager,
     },
     data() {
         return {
@@ -182,8 +173,8 @@ export default {
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
-    async created() {
-        await this.loadSchema()
+    async mounted() {
+        if (this.checkCurrOpenConn()) await this.loadSchema()
     },
     methods: {
         ...mapActions({
@@ -196,7 +187,9 @@ export default {
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
         }),
-
+        checkCurrOpenConn() {
+            return Boolean(this.$help.getCookie('conn_id_body'))
+        },
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el
