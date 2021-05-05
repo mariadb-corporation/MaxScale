@@ -546,7 +546,6 @@ HttpResponse HttpSql::query(const HttpRequest& request)
                 std::string id_str = std::to_string(id) + "-" + std::to_string(query_id);
                 HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
                 response.set_code(MHD_HTTP_CREATED);
-                response.add_header(MHD_HTTP_HEADER_LOCATION, host + self + "/" + id_str);
 
                 // Add the request SQL into the initial response
                 json_t* attr = mxs_json_pointer(response.get_response(), "/data/attributes");
@@ -636,15 +635,17 @@ HttpResponse HttpSql::read_query_result(int64_t id, const std::string& host, con
         // Create pagination links
         json_t* links = json_object_get(rval, CN_LINKS);
         std::string base = json_string_value(json_object_get(links, "self"));
+        HttpResponse response(MHD_HTTP_OK, rval);
 
         if (more_results)
         {
             mxb_assert_message(page_size, "page_size must be defined if result is paginated");
             auto next = base + "?page[size]=" + std::to_string(page_size);
             json_object_set_new(links, "next", json_string(next.c_str()));
+            response.add_header(MHD_HTTP_HEADER_LOCATION, base);
         }
 
-        return HttpResponse(MHD_HTTP_OK, rval);
+        return response;
     }
     else
     {
