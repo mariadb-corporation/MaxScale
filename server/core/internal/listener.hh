@@ -221,6 +221,11 @@ public:
 
     static mxs::config::Specification* specification();
 
+    mxb::SSLConfig ssl_config() const
+    {
+        return create_ssl_config();
+    }
+
 private:
     friend class ListenerManager;
 
@@ -323,7 +328,7 @@ private:
                                          mxs::ListenerSessionData::ConnectionInitSql* output);
 
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
-    mxb::SSLConfig create_ssl_config();
+    mxb::SSLConfig create_ssl_config() const;
     void           set_type();
 };
 

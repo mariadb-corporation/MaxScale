@@ -379,9 +379,9 @@ Listener::Config::Config(const std::string& name, Listener* listener)
 
 bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    mxb_assert(nested_params.size() <=1);
-    mxb_assert(nested_params.size() == 0 ||
-               (nested_params.size() == 1 && nested_params.find(protocol->name) != nested_params.end()));
+    mxb_assert(nested_params.size() <= 1);
+    mxb_assert(nested_params.size() == 0
+               || (nested_params.size() == 1 && nested_params.find(protocol->name) != nested_params.end()));
 
     if (port > 0 && !socket.empty())
     {
@@ -1103,7 +1103,7 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     return rval;
 }
 
-mxb::SSLConfig Listener::create_ssl_config()
+mxb::SSLConfig Listener::create_ssl_config() const
 {
     mxb::SSLConfig cfg;
 

@@ -14,6 +14,8 @@
 #include "internal/http_sql.hh"
 #include "internal/jwt.hh"
 #include "internal/servermanager.hh"
+#include "internal/service.hh"
+#include "internal/listener.hh"
 
 #include <maxbase/json.hh>
 #include <maxscale/json_api.hh>
@@ -398,17 +400,61 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
         return create_error(err);
     }
 
-    if (!json.try_get_string("user", &config.user) || !json.try_get_string("password", &config.password))
+    std::string target;
+
+    if (!json.try_get_string("user", &config.user)
+        || !json.try_get_string("password", &config.password)
+        || !json.try_get_string("target", &target))
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing `user` or `password`."));
+        return create_error("The `target`, `user` and `password` fields are mandatory");
     }
 
-    Server* server = ServerManager::find_by_unique_name(request.uri_part(1));
-    mxb_assert(server);
+    if (Server* server = ServerManager::find_by_unique_name(target))
+    {
+        config.host = server->address();
+        config.port = server->port();
+        config.ssl = server->ssl_config();
+    }
+    else if (Service* service = Service::find(target))
+    {
+        auto listeners = listener_find_by_service(service);
 
-    config.host = server->address();
-    config.port = server->port();
-    config.ssl = server->ssl_config();
+        if (listeners.empty())
+        {
+            return create_error("Service '" + target + "' has no listeners");
+        }
+        else if (listeners.size() > 1)
+        {
+            return create_error("Service '" + target + "' has more than one listener,"
+                                + " connect to a listener directly.");
+        }
+
+        auto listener = listeners.front();
+
+        if (listener->type() == Listener::Type::UNIX_SOCKET)
+        {
+            return create_error("Listener for service '" + target + "' is configured with UNIX socket");
+        }
+
+        config.port = listener->port();
+        config.host = listener->address();
+        config.ssl = listener->ssl_config();
+    }
+    else if (auto listener = listener_find(target))
+    {
+        if (listener->type() == Listener::Type::UNIX_SOCKET)
+        {
+            return create_error("Listener '" + target + "' is configured with UNIX socket");
+        }
+
+        config.port = listener->port();
+        config.host = listener->address();
+        config.ssl = listener->ssl_config();
+    }
+    else
+    {
+        return create_error("Target '" + target + "' not found");
+    }
 
     bool persist = request.get_option("persist") == "yes";
     std::string host = request.host();
