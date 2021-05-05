@@ -190,15 +190,15 @@ then
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
+    if [ $? != 0 ]
+    then
+      sudo zypper -n install libedit-devel
+    fi
+
     if is_arm
     then
        # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
        sudo zypper -n install python3
-    fi
-
-    if [ $? != 0 ]
-    then
-      sudo zypper -n install libedit-devel
     fi
 
     # Install a newer compiler
