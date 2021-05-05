@@ -130,6 +130,7 @@ the [JSON API](http://jsonapi.org/format/) specification.
 - [monitors](Resources-Monitor.md)
 - [sessions](Resources-Session.md)
 - [users](Resources-User.md)
+- [sql](Resources-SQL.md)
 
 In addition to the named resources, the REST API will respond with a HTTP 200 OK
 response to GET requests on the root resource (`/`) as well as the namespace
