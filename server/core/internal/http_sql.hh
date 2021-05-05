@@ -34,6 +34,8 @@ public:
 
     static HttpResponse connect(const HttpRequest& request);
 
+    static HttpResponse show_connection(const HttpRequest& request);
+
     static HttpResponse query(const HttpRequest& request);
 
     static HttpResponse result(const HttpRequest& request);

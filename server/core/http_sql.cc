@@ -29,6 +29,7 @@ const std::string CONN_ID_SIG = "conn_id_sig";
 
 const std::string TOKEN_ISSUER = "mxs-query";
 
+const std::string COLLECTION_NAME = "sql";
 
 HttpResponse create_error(const std::string& err)
 {
@@ -258,22 +259,48 @@ std::unique_ptr<HttpSql::Result> format_result(MYSQL* conn)
     return rval;
 }
 
-HttpResponse create_connect_response(int64_t id, bool persist)
+json_t* connection_json_data(const std::string& host, const std::string& id_str)
+{
+    json_t* data = json_object();
+    json_t* self = mxs_json_self_link(host.c_str(), COLLECTION_NAME.c_str(), id_str.c_str());
+    std::string self_link = json_string_value(json_object_get(self, "self"));
+    std::string query_link = self_link + "queries/";
+    json_object_set_new(self, "related", json_string(query_link.c_str()));
+
+    json_object_set_new(data, CN_TYPE, json_string(COLLECTION_NAME.c_str()));
+    json_object_set_new(data, CN_ID, json_string(id_str.c_str()));
+    json_object_set_new(data, CN_LINKS, self);
+
+    return data;
+}
+
+json_t* one_connection_to_json(const std::string& host, const std::string& id_str)
+{
+    std::string self = COLLECTION_NAME + "/" + id_str;
+    return mxs_json_resource(host.c_str(), self.c_str(), connection_json_data(host, id_str));
+}
+
+HttpResponse create_connect_response(const std::string& host, int64_t id, bool persist)
 {
     // TODO: Figure out how long the connections should be kept valid
     int max_age = 28800;
-    auto token = mxs::jwt::create(TOKEN_ISSUER, std::to_string(id), max_age);
+    std::string id_str = std::to_string(id);
+    auto token = mxs::jwt::create(TOKEN_ISSUER, id_str, max_age);
+
+    json_t* data = one_connection_to_json(host, id_str);
+    HttpResponse response(MHD_HTTP_CREATED, data);
+    response.add_header(MHD_HTTP_HEADER_LOCATION, host + COLLECTION_NAME + "/" + id_str);
 
     if (persist)
     {
-        HttpResponse response(MHD_HTTP_NO_CONTENT);
         response.add_split_cookie(CONN_ID_BODY, CONN_ID_SIG, token, max_age);
-        return response;
     }
     else
     {
-        return HttpResponse(MHD_HTTP_OK, json_pack("{s:{s:s}}", "meta", "token", token.c_str()));
+        json_object_set_new(data, "meta", json_pack("{s:s}", "token", token.c_str()));
     }
+
+    return response;
 }
 
 // An extremely simple implementation of connection management for testing purposes.
@@ -384,14 +411,15 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
     config.ssl = server->ssl_config();
 
     bool persist = request.get_option("persist") == "yes";
+    std::string host = request.host();
 
     return HttpResponse(
-        [config, persist]() {
+        [config, persist, host]() {
             std::string err;
 
             if (int64_t new_id = create_connection(config, &err))
             {
-                return create_connect_response(new_id, persist);
+                return create_connect_response(host, new_id, persist);
             }
             else
             {
@@ -401,12 +429,14 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
 }
 
 // static
+HttpResponse HttpSql::show_connection(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), request.uri_part(1)));
+}
+
+// static
 HttpResponse HttpSql::query(const HttpRequest& request)
 {
-    mxb_assert(request.uri_part_count() == 3);
-    mxb_assert(request.uri_part(0) == "servers");
-    mxb_assert(request.uri_part(2) == "queries");
-
     mxb::Json json(request.get_json());
     std::string sql;
     std::string err;
@@ -433,6 +463,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
                 std::string id_str = std::to_string(id) + "-" + std::to_string(query_id);
                 HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
                 response.set_code(MHD_HTTP_CREATED);
+                response.add_header(MHD_HTTP_HEADER_LOCATION, host + self + "/" + id_str);
                 return response;
             }
             else
