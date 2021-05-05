@@ -36,6 +36,8 @@ public:
 
     static HttpResponse show_connection(const HttpRequest& request);
 
+    static HttpResponse show_all_connections(const HttpRequest& request);
+
     static HttpResponse query(const HttpRequest& request);
 
     static HttpResponse result(const HttpRequest& request);
@@ -43,6 +45,8 @@ public:
     static HttpResponse disconnect(const HttpRequest& request);
 
     static bool is_query(const std::string& id);
+
+    static bool is_connection(const std::string& id);
 
 private:
 
@@ -64,6 +68,8 @@ private:
     //
     // The functions that implement the connection creation and query execution
     //
+
+    static std::vector<int64_t> get_connections();
 
     static int64_t create_connection(const ConnectionConfig& config, std::string* err);
 

@@ -165,6 +165,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
                                       || get_module(target, mxs::ModuleType::UNKNOWN)))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
             || (path == ":listener" && listener_find(target.c_str()))
+            || (path == ":connection_id" && HttpSql::is_connection(target))
             || (path == ":query_id" && HttpSql::is_query(target)))
         {
             rval = true;
@@ -1031,24 +1032,34 @@ HttpResponse cb_create_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
-HttpResponse cb_connect_server(const HttpRequest& request)
+HttpResponse cb_sql_connect(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
     return HttpSql::connect(request);
 }
 
-HttpResponse cb_disconnect_server(const HttpRequest& request)
+HttpResponse cb_sql_get_one(const HttpRequest& request)
+{
+    return HttpSql::show_connection(request);
+}
+
+HttpResponse cb_sql_get_all(const HttpRequest& request)
+{
+    return HttpSql::show_all_connections(request);
+}
+
+HttpResponse cb_sql_disconnect(const HttpRequest& request)
 {
     return HttpSql::disconnect(request);
 }
 
-HttpResponse cb_query_server(const HttpRequest& request)
+HttpResponse cb_sql_query(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
     return HttpSql::query(request);
 }
 
-HttpResponse cb_query_result(const HttpRequest& request)
+HttpResponse cb_sql_query_result(const HttpRequest& request)
 {
     return HttpSql::result(request);
 }
@@ -1344,8 +1355,10 @@ public:
         m_get.emplace_back(cb_all_unix_users, "users", "unix");     // For backward compatibility.
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
 
-        // TODO: Maybe connections should be a separate collection?
-        m_get.emplace_back(cb_query_result, "servers", ":server", "queries", ":query_id");
+        /** SQL connection inspection endpoints */
+        m_get.emplace_back(cb_sql_get_all, "sql");
+        m_get.emplace_back(cb_sql_get_one, "sql", ":connection_id");
+        m_get.emplace_back(cb_sql_query_result, "sql", ":connection_id", "queries", ":query_id");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
@@ -1359,8 +1372,10 @@ public:
         m_post.emplace_back(cb_create_listener, "listeners");
         m_post.emplace_back(cb_create_user, "users", "inet");
         m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
-        m_post.emplace_back(cb_connect_server, "servers", ":server", "connect");
-        m_post.emplace_back(cb_query_server, "servers", ":server", "queries");
+
+        /** SQL connection management endpoints */
+        m_post.emplace_back(cb_sql_connect, "sql");
+        m_post.emplace_back(cb_sql_query, "sql", ":connection_id", "queries");
 
         /** All of the above require a request body */
         for (auto& r : m_post)
@@ -1378,7 +1393,6 @@ public:
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
-        m_post.emplace_back(cb_disconnect_server, "servers", ":server", "disconnect");
 
         /** Update resources */
         m_patch.emplace_back(cb_alter_server, "servers", ":server");
@@ -1440,6 +1454,9 @@ public:
         m_delete.emplace_back(cb_delete_listener, "listeners", ":listener");
 
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
+
+        /** SQL connection destruction */
+        m_delete.emplace_back(cb_sql_disconnect, "sql", ":connection_id");
     }
 
     ~RootResource()
