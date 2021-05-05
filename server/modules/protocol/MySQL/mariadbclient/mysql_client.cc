@@ -453,7 +453,7 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
 
     // Check that we match the old values
-    mxb_assert(mysql_server_capabilities_two[0] == 15);
+    mxb_assert(mysql_server_capabilities_two[0] == (15 | GW_MYSQL_CAPABILITIES_SESSION_TRACK >> 16));
     /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
      *  the value 128 even though there's no such capability. */
 
