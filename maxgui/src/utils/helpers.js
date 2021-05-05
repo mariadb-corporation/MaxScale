@@ -66,6 +66,12 @@ export function getCookie(name) {
 export function deleteCookie(name) {
     document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
 }
+export function deleteAllCookies() {
+    let cookies = document.cookie.split(';')
+    for (const cookie of cookies) {
+        deleteCookie(cookie)
+    }
+}
 
 export function range(start, end) {
     if (isNaN(start) || isNaN(end)) return
@@ -482,12 +488,32 @@ export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }
     return dataset
 }
 
+/**
+ * The function is used to convert plural resource name to singular and capitalize
+ * first letter for UI usage
+ * @param {String} str string to be processed
+ * @return {String} return str that removed last char s and capitalized first char
+ */
+export function resourceTxtTransform(str) {
+    let lowerCaseStr = str.toLowerCase()
+    const suffix = 's'
+    const chars = lowerCaseStr.split('')
+    if (chars[chars.length - 1] === suffix) {
+        lowerCaseStr = strReplaceAt({
+            str: lowerCaseStr,
+            index: chars.length - 1,
+            newChar: '',
+        })
+    }
+    return capitalizeFirstLetter(lowerCaseStr)
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
             return {
                 getCookie,
                 deleteCookie,
+                deleteAllCookies,
                 range,
                 serviceStateIcon,
                 serverStateIcon,
@@ -517,6 +543,7 @@ Object.defineProperties(Vue.prototype, {
                 isUndefined,
                 lodash,
                 immutableUpdate: update,
+                resourceTxtTransform,
             }
         },
     },

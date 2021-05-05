@@ -200,7 +200,7 @@ export default {
                 // use global form_type state to set default form
                 else {
                     let formType = this.form_type.replace('FORM_', '') // remove FORM_ prefix
-                    this.selectedForm = this.textTransform(formType)
+                    this.selectedForm = this.$help.resourceTxtTransform(formType)
                     await this.handleFormSelection(this.selectedForm)
                 }
             } else {
@@ -353,30 +353,12 @@ export default {
          */
         async setFormByRoute(routeName) {
             if (this.matchRoutes.includes(routeName)) {
-                this.selectedForm = this.textTransform(routeName)
+                this.selectedForm = this.$help.resourceTxtTransform(routeName)
                 await this.handleFormSelection(this.selectedForm)
             } else {
                 this.selectedForm = 'Service'
                 await this.handleFormSelection('Service')
             }
-        },
-
-        /**
-         * @param {String} str string to be processed
-         * @return {String} return str that removed last char s and capitalized first char
-         */
-        textTransform(str) {
-            let lowerCaseStr = str.toLowerCase()
-            const suffix = 's'
-            const chars = lowerCaseStr.split('')
-            if (chars[chars.length - 1] === suffix) {
-                lowerCaseStr = this.$help.strReplaceAt({
-                    str: lowerCaseStr,
-                    index: chars.length - 1,
-                    newChar: '',
-                })
-            }
-            return this.$help.capitalizeFirstLetter(lowerCaseStr)
         },
 
         getModuleType(type) {

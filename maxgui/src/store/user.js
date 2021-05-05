@@ -55,9 +55,9 @@ export default {
             cancelAllRequests() // cancel all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            const user = JSON.parse(localStorage.getItem('user'))
-            if (user) localStorage.removeItem('user')
-            this.vue.$help.deleteCookie('token_body')
+            localStorage.clear()
+            sessionStorage.clear()
+            this.vue.$help.deleteAllCookies()
             // hide snackbar snackbar_message if it is on
             if (rootState.snackbar_message.status) {
                 commit(

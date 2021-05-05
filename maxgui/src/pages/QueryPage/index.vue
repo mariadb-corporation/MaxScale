@@ -21,7 +21,7 @@
                 </v-toolbar-title>
 
                 <v-spacer></v-spacer>
-                <connection-manager />
+                <connection-manager :hasActiveConn="hasActiveConn" />
                 <v-btn
                     width="80"
                     outlined
@@ -154,6 +154,9 @@ export default {
             loading_db_tree: state => state.query.loading_db_tree,
             db_completion_list: state => state.query.db_completion_list,
         }),
+        hasActiveConn() {
+            return Boolean(this.$help.getCookie('conn_id_body'))
+        },
         getDbCmplList() {
             // remove duplicated labels
             return this.$help.lodash.uniqBy(this.db_completion_list, 'label')
@@ -174,7 +177,7 @@ export default {
         },
     },
     async mounted() {
-        if (this.checkCurrOpenConn()) await this.loadSchema()
+        if (this.hasActiveConn) await this.loadSchema()
     },
     methods: {
         ...mapActions({
@@ -187,9 +190,6 @@ export default {
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
         }),
-        checkCurrOpenConn() {
-            return Boolean(this.$help.getCookie('conn_id_body'))
-        },
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el

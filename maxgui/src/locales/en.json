@@ -23,6 +23,7 @@
     "not": "Not {action}",
     "users": "Users",
     "connections": "Connection | connections",
+    "connect": "connect",
     "version": "Version",
     "404Error": "404 Error",
     "404ErrorMessage": "Sorry, that page doesn't exist",

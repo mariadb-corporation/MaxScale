@@ -61,3 +61,12 @@
 .no-border {
     border: none !important;
 }
+.label-required::after {
+    content: ' *';
+    color: $error;
+    font-size: 0.75rem;
+    position: relative;
+    font-weight: 500;
+    font-family: $heading-font-family;
+    vertical-align: top;
+}
