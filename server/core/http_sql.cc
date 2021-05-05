@@ -46,31 +46,34 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
     std::string aud;
     std::string err;
     std::string token = request.get_option("token");
+    std::string body = request.get_cookie(CONN_ID_BODY);
+    std::string sig = request.get_cookie(CONN_ID_SIG);
 
     if (!token.empty())
     {
         std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
     }
+    else if (!body.empty() && !sig.empty())
+    {
+        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, body + sig);
+    }
+    else if (!requested_id.empty())
+    {
+        err = "No token provided, expected a token for connection " + requested_id;
+    }
     else
     {
-        auto body = request.get_cookie(CONN_ID_BODY);
-        auto sig = request.get_cookie(CONN_ID_SIG);
-
-        if (!body.empty() && !sig.empty())
-        {
-            std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, body + sig);
-        }
-        else
-        {
-            err = "No token provided";
-        }
+        ok = true;
     }
 
     if (ok)
     {
         if (requested_id.empty() || aud == requested_id)
         {
-            id = strtol(aud.c_str(), nullptr, 10);
+            if (!aud.empty())
+            {
+                id = strtol(aud.c_str(), nullptr, 10);
+            }
         }
         else
         {
@@ -79,7 +82,7 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
     }
     else
     {
-        err = "Invalid connection token";
+        err = "Malformed connection token";
     }
 
     return {id, err};
