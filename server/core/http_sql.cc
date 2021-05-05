@@ -547,6 +547,12 @@ HttpResponse HttpSql::query(const HttpRequest& request)
                 HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
                 response.set_code(MHD_HTTP_CREATED);
                 response.add_header(MHD_HTTP_HEADER_LOCATION, host + self + "/" + id_str);
+
+                // Add the request SQL into the initial response
+                json_t* attr = mxs_json_pointer(response.get_response(), "/data/attributes");
+                mxb_assert(attr);
+                json_object_set_new(attr, "sql", json_string(sql.c_str()));
+
                 return response;
             }
             else

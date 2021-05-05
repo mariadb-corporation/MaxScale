@@ -276,7 +276,8 @@ responses.
                         "id"
                     ]
                 }
-            ]
+            ],
+            "sql": "select * from t1"
         },
         "id": "9-1",
         "type": "queries"
@@ -301,7 +302,8 @@ responses.
                     "message": "You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'table t1' at line 1",
                     "sqlstate": "42000"
                 }
-            ]
+            ],
+            "sql": "select syntax_error from table t1"
         },
         "id": "4-1",
         "type": "queries"
@@ -328,7 +330,8 @@ responses.
                     "last_insert_id": 0,
                     "warnings": 0
                 }
-            ]
+            ],
+            "sql": "drop table t1"
         },
         "id": "6-1",
         "type": "queries"
@@ -368,7 +371,8 @@ Query successfully executed:
                     "last_insert_id": 0,
                     "warnings": 0
                 }
-            ]
+            ],
+            "sql": "drop table t1"
         },
         "id": "6-1",
         "type": "queries"
@@ -414,7 +418,8 @@ Query result read:
                     "last_insert_id": 0,
                     "warnings": 0
                 }
-            ]
+            ],
+            "sql": "drop table t1"
         },
         "id": "6-1",
         "type": "queries"
