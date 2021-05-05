@@ -36,7 +36,7 @@ const std::string COLLECTION_NAME = "sql";
 HttpResponse create_error(const std::string& err)
 {
     mxb_assert(!err.empty());
-    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(err.c_str()));
+    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", err.c_str()));
 }
 
 std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, const std::string& requested_id)
