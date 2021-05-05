@@ -26,7 +26,12 @@
             </v-card-title>
             <v-card-text class="v-card-text_padding">
                 <slot name="body"></slot>
-                <v-form ref="form" v-model="isFormValid" lazy-validation class="mt-4">
+                <v-form
+                    ref="form"
+                    v-model="isFormValid"
+                    :lazy-validation="lazyValidation"
+                    class="mt-4"
+                >
                     <slot name="form-body"></slot>
                 </v-form>
             </v-card-text>
@@ -97,13 +102,18 @@ export default {
         hasChanged: { type: Boolean, default: true },
         // if isForceAccept===true, cancel and close btn won't be rendered
         isForceAccept: { type: Boolean, default: false },
+        lazyValidation: { type: Boolean, default: true },
     },
     data() {
         return {
             isFormValid: true,
         }
     },
-
+    watch: {
+        isFormValid(v) {
+            this.$emit('is-form-valid', v)
+        },
+    },
     methods: {
         ...mapMutations(['SET_OVERLAY_TYPE']),
         closeDialog() {
