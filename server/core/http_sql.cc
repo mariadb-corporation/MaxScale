@@ -29,15 +29,19 @@ const std::string CONN_ID_SIG = "conn_id_sig";
 
 const std::string TOKEN_ISSUER = "mxs-query";
 
-const HttpResponse no_id_error(
-    MHD_HTTP_FORBIDDEN,
-    mxs_json_error("No connection token in cookies or in `connection_id`."));
 
-int64_t get_connection_id(const HttpRequest& request)
+HttpResponse create_error(const std::string& err)
+{
+    mxb_assert(!err.empty());
+    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error(err.c_str()));
+}
+
+std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, const std::string& requested_id)
 {
     bool ok = false;
-    std::string aud;
     int64_t id = 0;
+    std::string aud;
+    std::string err;
     std::string token = request.get_option("token");
 
     if (!token.empty())
@@ -53,14 +57,29 @@ int64_t get_connection_id(const HttpRequest& request)
         {
             std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, body + sig);
         }
+        else
+        {
+            err = "No token provided";
+        }
     }
 
     if (ok)
     {
-        id = strtol(aud.c_str(), nullptr, 10);
+        if (requested_id.empty() || aud == requested_id)
+        {
+            id = strtol(aud.c_str(), nullptr, 10);
+        }
+        else
+        {
+            err = "URL is for connection " + requested_id + ", token is for connection " + aud;
+        }
+    }
+    else
+    {
+        err = "Invalid connection token";
     }
 
-    return id;
+    return {id, err};
 }
 
 int64_t get_page_size(const HttpRequest& request)
@@ -339,10 +358,17 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
     ConnectionConfig config;
     json.try_get_int("timeout", &config.timeout);
     json.try_get_string("db", &config.db);
+    int64_t id;
+    std::string err;
+    std::tie(id, err) = get_connection_id(request, "");
 
-    if (int64_t id = get_connection_id(request))
+    if (id)
     {
         close_connection(id);
+    }
+    else if (!err.empty())
+    {
+        return create_error(err);
     }
 
     if (!json.try_get_string("user", &config.user) || !json.try_get_string("password", &config.password))
@@ -383,15 +409,17 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 
     mxb::Json json(request.get_json());
     std::string sql;
-    int64_t id = get_connection_id(request);
+    std::string err;
+    int64_t id;
+    std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
-    if (!json.try_get_string("sql", &sql))
+    if (!id)
+    {
+        return create_error(err);
+    }
+    else if (!json.try_get_string("sql", &sql))
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
-    }
-    else if (!id)
-    {
-        return no_id_error;
     }
 
     std::string host = request.host();
@@ -409,7 +437,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
             }
             else
             {
-                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("ID %ld not found", id));
+                return create_error("ID " + std::to_string(id) + " not found");
             }
         });
 }
@@ -418,11 +446,13 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 HttpResponse HttpSql::result(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
-    int64_t id = get_connection_id(request);
+    std::string err;
+    int64_t id;
+    std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
     if (!id)
     {
-        return no_id_error;
+        return create_error(err);
     }
 
     std::string host = request.host();
@@ -439,11 +469,13 @@ HttpResponse HttpSql::result(const HttpRequest& request)
 // static
 HttpResponse HttpSql::disconnect(const HttpRequest& request)
 {
-    int64_t id = get_connection_id(request);
+    std::string err;
+    int64_t id;
+    std::tie(id, err) = get_connection_id(request, request.uri_part(1));
 
     if (!id)
     {
-        return no_id_error;
+        return create_error(err);
     }
 
     return HttpResponse(
