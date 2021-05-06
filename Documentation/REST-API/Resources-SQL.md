@@ -134,7 +134,9 @@ The request body must be a JSON object consisting of the following fields:
 
 - `timeout`
 
-  - Connection timeout in seconds. The default connection timeout is 10 seconds.
+  - Connection timeout in seconds. The default connection timeout is 10
+    seconds. This controls how long the SQL connection creation can take before
+    an error is returned.
 
 Here is an example request body:
 
