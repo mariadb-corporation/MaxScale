@@ -15,51 +15,45 @@ const assert = require('assert');
 const test = require('./mongotest')
 const error = test.error;
 
-const name = "mxsCreateDatabase";
+const name = "mxsDiagnose";
 
 describe(name, function () {
     let mxs;
-    let conn;
-
-    var random_db = "db" + Math.random().toString(10).substring(2);
 
     /*
      * MOCHA
      */
     before(async function () {
         mxs = await test.MDB.create(test.MxsMongo);
-        conn = await test.MariaDB.createConnection();
     });
 
-    it('Cannot create a database using non-admin database.', async function () {
-        var rv = await mxs.nothrowCommand({mxsCreateDatabase: random_db});
+    it('Cannot use with non-admin database.', async function () {
+        var rv = await mxs.nothrowCommand({mxsDiagnose: { ping: 1 }});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });
 
-    it('Can create a database using admin database.', async function () {
-        await mxs.close();
-        mxs = undefined;
+    it('Can use with admin database.', async function () {
+        // Valid command.
+        var rv = await mxs.adminCommand({mxsDiagnose: { ping: 1 }});
 
-        await conn.query("DROP DATABASE IF EXISTS " + random_db);
-
-        mxs = await test.MDB.create(test.MxsMongo, "admin");
-
-        var rv = await mxs.runCommand({mxsCreateDatabase: random_db});
         assert.equal(rv.ok, 1);
+        assert.equal(rv.error, undefined);
+        assert.notEqual(rv.kind, undefined);
+        assert.notEqual(rv.response, undefined);
 
-        await conn.query("USE " + random_db);
+        // Invalid command.
+        var rv = await mxs.adminCommand({mxsDiagnose: { pingX: 1 }});
 
-        await conn.query("DROP DATABASE " + random_db);
+        assert.equal(rv.ok, 1);
+        assert.notEqual(rv.error, undefined);
+        assert.equal(rv.kind, undefined);
+        assert.equal(rv.response, undefined);
     });
 
     after(async function () {
         if (mxs) {
             await mxs.close();
-        }
-
-        if (conn) {
-            await conn.end();
         }
     });
 });

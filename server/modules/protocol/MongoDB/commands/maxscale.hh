@@ -44,8 +44,6 @@ public:
     {
         auto command = value_as<bsoncxx::document::view>();
 
-        int32_t ok = 1;
-
         if (!command.empty())
         {
             string name = static_cast<string>(command.begin()->key());
@@ -78,18 +76,16 @@ public:
                 x.create_response(*sCommand, error);
 
                 doc.append(kvp("error", error.extract()));
-                ok = 0;
             }
             catch (const std::exception& x)
             {
                 doc.clear();
 
                 doc.append(kvp("error", x.what()));
-                ok = 0;
             }
         }
 
-        doc.append(kvp("ok", ok));
+        doc.append(kvp("ok", 1));
     }
 };
 

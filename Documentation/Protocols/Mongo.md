@@ -652,8 +652,9 @@ a field `sql` containing the actual statement that would have been sent to the b
 and if the command is _multi_ then there will be a field `sql` containing an array
 of statements that would have been sent to the backend.
 
-If an error occurs while the command is being diagnosed, then `ok` will be `0`
-and there will be a field `error` whose value is an error object.
+If an error occurs while the command is being diagnosed, then there will be no
+`response` field but an `error` field whose value is an error document. Note that
+the value of `ok` will always be 1.
 
 ### mxsGetConfig
 

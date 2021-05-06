@@ -26,6 +26,7 @@ var config = {
 };
 
 var error = {
+    UNAUTHORIZED: 13,
     COMMAND_FAILED: 125
 };
 

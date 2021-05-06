@@ -15,6 +15,7 @@
 
 const assert = require('assert');
 const test = require('./mongotest')
+const error = test.error;
 
 const name = "listDatabases";
 
@@ -36,8 +37,8 @@ describe(name, function () {
         var rv1 = await mng.nothrowCommand({"listDatabases": 1});
         var rv2 = await mxs.nothrowCommand({"listDatabases": 1});
 
-        assert.equal(rv1.code, 13);
-        assert.equal(rv2.code, 13);
+        assert.equal(rv1.code, error.UNAUTHORIZED);
+        assert.equal(rv2.code, error.UNAUTHORIZED);
     });
 
     it('Can list databases using admin.', async function () {
