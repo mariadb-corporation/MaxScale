@@ -389,6 +389,14 @@ Invalid payload or missing connection token:
 
 `Status: 403 Forbidden`
 
+Fatal connection error:
+
+`Status: 503 Service Unavailable`
+
+- If the API returns this response, the connection to the database server was
+  lost. The only valid action to take at this point is to close it with the
+  `DELETE /v1/sql/:id` endpoint.
+
 ### Read result of SQL query
 
 ```

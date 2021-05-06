@@ -22,6 +22,8 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/cn_strings.hh>
 
+#include <errmsg.h>
+
 namespace
 {
 
@@ -33,10 +35,10 @@ const std::string TOKEN_ISSUER = "mxs-query";
 
 const std::string COLLECTION_NAME = "sql";
 
-HttpResponse create_error(const std::string& err)
+HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_FORBIDDEN)
 {
     mxb_assert(!err.empty());
-    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", err.c_str()));
+    return HttpResponse(errcode, mxs_json_error("%s", err.c_str()));
 }
 
 std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, const std::string& requested_id)
@@ -544,7 +546,9 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 
     return HttpResponse(
         [id, sql, host, self, page_size]() {
-            if (int64_t query_id = execute_query(id, sql))
+            std::string err;
+
+            if (int64_t query_id = execute_query(id, sql, &err))
             {
                 std::string id_str = std::to_string(id) + "-" + std::to_string(query_id);
                 HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
@@ -559,7 +563,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
             }
             else
             {
-                return create_error("ID " + std::to_string(id) + " not found");
+                return create_error(err, MHD_HTTP_SERVICE_UNAVAILABLE);
             }
         });
 }
@@ -723,7 +727,7 @@ int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* 
 }
 
 // static
-int64_t HttpSql::execute_query(int64_t id, const std::string& sql)
+int64_t HttpSql::execute_query(int64_t id, const std::string& sql, std::string* err)
 {
     int64_t query_id = 0;
     auto c = manager.get(id);
@@ -731,16 +735,31 @@ int64_t HttpSql::execute_query(int64_t id, const std::string& sql)
     if (c.conn)
     {
         mysql_real_query(c.conn, sql.c_str(), sql.size());
-        c.expecting_result = true;
-        ++c.query_id;
+        int errnum = mysql_errno(c.conn);
 
-        if (c.query_id <= 0)
+        if (errnum >= CR_MIN_ERROR && errnum <= CR_MAX_ERROR)
         {
-            c.query_id = 1;
+            // Connector reported an error, return an error to the client.
+            *err = mysql_error(c.conn);
+        }
+        else
+        {
+            c.expecting_result = true;
+            ++c.query_id;
+
+            if (c.query_id <= 0)
+            {
+                c.query_id = 1;
+            }
+
+            query_id = c.query_id;
         }
 
-        query_id = c.query_id;
         manager.put(id, c);
+    }
+    else
+    {
+        *err = "ID " + std::to_string(id) + " not found.";
     }
 
     return query_id;
