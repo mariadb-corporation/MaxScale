@@ -126,7 +126,6 @@ export default {
                         [body.target]: connId,
                     }
                     sessionStorage.setItem('query_conn_id_map', JSON.stringify(cnctResourceMap))
-
                     sessionStorage.setItem('curr_cnct_resource_name', body.target)
                     commit('SET_CURR_CNCT_RESOURCE_NAME', body.target)
                     commit('SET_QUERY_CNN_ID_MAP', cnctResourceMap)
@@ -140,14 +139,25 @@ export default {
         },
         async disconnect({ state, commit }) {
             try {
-                await this.vue.$axios.delete(
+                let res = await this.vue.$axios.delete(
                     `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}`
                 )
-                sessionStorage.removeItem('query_conn_id_map')
-                this.vue.$help.deleteCookie('conn_id_body')
-                commit('SET_QUERY_CNN_ID_MAP', null)
+                if (res.status === 204) {
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [`Disconnect successful`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    sessionStorage.removeItem('query_conn_id_map')
+                    sessionStorage.removeItem('curr_cnct_resource_name')
+                    this.vue.$help.deleteCookie('conn_id_body')
+                    commit('SET_CURR_CNCT_RESOURCE_NAME', '')
+                    commit('SET_QUERY_CNN_ID_MAP', null)
+                }
             } catch (e) {
-                /* TODO: Show error in snackbar */
                 const logger = this.vue.$logger('store-query-disconnect')
                 logger.error(e)
             }

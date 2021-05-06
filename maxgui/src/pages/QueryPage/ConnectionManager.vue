@@ -24,11 +24,30 @@
                 </div>
             </template>
             <template v-slot:item="{ item, on, attrs }">
-                <div class="v-list-item__title" v-bind="attrs" v-on="on">
-                    <span v-if="item !== newConnOption">{{ item }}</span>
-                    <span v-else class="text-decoration-underline color text-primary">
+                <div class="v-list-item__title d-flex align-center" v-bind="attrs" v-on="on">
+                    <div
+                        v-if="item !== newConnOption"
+                        class="d-flex align-center flex-row flex-grow-1"
+                    >
                         {{ item }}
-                    </span>
+                        <v-tooltip
+                            bottom
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn class="ml-auto" icon v-on="on" @click.prevent="disconnect">
+                                    <v-icon size="20" color="error">
+                                        $vuetify.icons.unlink
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <span>Disconnect</span>
+                        </v-tooltip>
+                    </div>
+                    <div v-else class="text-decoration-underline color text-primary">
+                        {{ item }}
+                    </div>
                 </div>
             </template>
         </v-select>
@@ -85,6 +104,7 @@ export default {
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
+            disconnect: 'query/disconnect',
         }),
         assignActiveConn() {
             this.chosenConn = this.curr_cnct_resource_name

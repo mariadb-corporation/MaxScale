@@ -109,7 +109,7 @@
         :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
         v-model.trim.number="targetItem.value"
         :name="targetItem.id"
-        class="std error--text__bottom error--text__bottom--no-margin"
+        class="std suffix-select-input error--text__bottom error--text__bottom--no-margin"
         :class="targetItem.type"
         single-line
         outlined
@@ -127,7 +127,7 @@
             <v-select
                 v-model="chosenSuffix"
                 :name="targetItem.id"
-                class="suffix-select mariadb-select-input"
+                class="std mariadb-select-input suffix-select"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -539,14 +539,21 @@ export default {
 .std ::v-deep .v-select__selections input {
     display: none;
 }
+.suffix-select-input {
+    ::v-deep .v-input__append-inner {
+        margin-top: 0 !important;
+    }
+}
 .suffix-select {
     border-radius: 0px;
+
     ::v-deep .v-input__control {
         min-width: 60px;
-        margin-top: -8px;
         margin-right: -10px;
+
         .v-input__slot {
             padding: 0 0px 0 9px !important;
+            height: 36px;
             .v-select__slot {
                 .v-select__selection.v-select__selection--comma {
                     text-align: center;
@@ -576,7 +583,4 @@ export default {
         }
     }
 }
-/* ::v-deep .v-list-item__content {
-    overflow: unset;
-} */
 </style>

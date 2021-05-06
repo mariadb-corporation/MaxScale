@@ -232,6 +232,15 @@ input:-webkit-autofill:active {
 
 // vuetify select restyle
 .mariadb-select-input {
+    font-size: 0.875rem;
+    color: $navigation;
+
+    &.v-select--is-menu-active {
+        border-radius: 4px 4px 0 0;
+        fieldset {
+            border: 1px solid $text-subtle;
+        }
+    }
     .v-input__control {
         min-height: 36px;
         .v-select__selection--comma {
@@ -241,24 +250,47 @@ input:-webkit-autofill:active {
         input {
             max-height: 28px !important;
         }
+        .v-input__append-inner {
+            margin-top: 0 !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+        }
     }
 }
-
 .mariadb-select-v-menu {
-    border-radius: 0px !important;
-
+    font-size: 0.875rem;
+    color: $navigation;
+    margin-top: -1px;
+    border: 1px solid $text-subtle;
+    border-radius: 0 0 4px 4px !important;
+    border-top: 0;
+    box-shadow: none !important;
     .v-list {
         padding-top: 0;
         padding-bottom: 0;
         border-radius: 0px;
         &-item {
+            min-height: 36px !important;
+            font-size: 0.875rem;
+            letter-spacing: 0;
+            display: flex;
+            align-items: center;
             &__title {
                 font-weight: 400 !important;
                 font-size: 0.875rem !important;
             }
+            &__content {
+                padding: 5px 0 !important;
+            }
+            &__action {
+                margin: 0px 0;
+                margin-right: 12px !important;
+            }
         }
     }
 }
+
 .v-input__control {
     .v-input__icon--clear {
         .v-icon {
