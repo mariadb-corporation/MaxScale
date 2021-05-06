@@ -1,6 +1,6 @@
 <template>
     <div class="fill-height">
-        <div v-if="isMounted" ref="header" class="pb-2 result-header">
+        <div v-if="showGuide" ref="header" class="pb-2 result-header">
             <span>
                 Click Run button to see query results
             </span>
@@ -73,7 +73,11 @@ export default {
         ...mapState({
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
+            active_conn_state: state => state.query.active_conn_state,
         }),
+        showGuide() {
+            return this.isMounted || !this.active_conn_state
+        },
         tableHeaders() {
             if (!this.query_result.fields) return []
             return this.query_result.fields

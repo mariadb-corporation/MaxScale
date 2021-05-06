@@ -21,7 +21,7 @@
                 </v-toolbar-title>
 
                 <v-spacer></v-spacer>
-                <connection-manager :hasActiveConn="hasActiveConn" />
+                <connection-manager />
                 <v-btn
                     width="80"
                     outlined
@@ -31,7 +31,7 @@
                     depressed
                     small
                     color="accent-dark"
-                    :disabled="!queryTxt"
+                    :disabled="!queryTxt || !active_conn_state"
                     @click="onRun"
                 >
                     {{ $t('run') }}
@@ -57,6 +57,7 @@
                             v-show="!loading_db_tree"
                             class="db-tb-list"
                             :schemaList="db_tree"
+                            :disabled="!active_conn_state"
                             @is-fullscreen="isFullScreen = $event"
                             @is-collapsed="isCollapsed = $event"
                             @reload-schema="loadSchema"
@@ -149,14 +150,12 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            active_conn_state: state => state.query.active_conn_state,
             curr_query_mode: state => state.query.curr_query_mode,
             db_tree: state => state.query.db_tree,
             loading_db_tree: state => state.query.loading_db_tree,
             db_completion_list: state => state.query.db_completion_list,
         }),
-        hasActiveConn() {
-            return Boolean(this.$help.getCookie('conn_id_body'))
-        },
         getDbCmplList() {
             // remove duplicated labels
             return this.$help.lodash.uniqBy(this.db_completion_list, 'label')
@@ -176,11 +175,13 @@ export default {
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
-    async mounted() {
-        if (this.hasActiveConn) await this.loadSchema()
+    async created() {
+        if (this.active_conn_state) await this.loadSchema()
     },
     methods: {
-        ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
+        ...mapMutations({
+            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+        }),
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
             fetchPrvw: 'query/fetchPrvw',

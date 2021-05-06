@@ -68,9 +68,6 @@ export default {
     components: {
         ConnectionDialog,
     },
-    props: {
-        hasActiveConn: { type: Boolean, required: true },
-    },
     data() {
         return {
             isConnDialogOpened: false,
@@ -80,11 +77,12 @@ export default {
     },
     computed: {
         ...mapState({
-            curr_cnct_resource_name: state => state.query.curr_cnct_resource_name,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_conn_state: state => state.query.active_conn_state,
         }),
         connOptions() {
             let options = [this.newConnOption]
-            if (this.curr_cnct_resource_name) options.unshift(this.curr_cnct_resource_name)
+            if (this.curr_cnct_resource) options.unshift(this.curr_cnct_resource.name)
             return options
         },
     },
@@ -92,14 +90,14 @@ export default {
         chosenConn(v) {
             if (v === this.newConnOption) this.openConnDialog()
         },
-        curr_cnct_resource_name(v) {
-            this.chosenConn = v
+        curr_cnct_resource(v) {
+            this.chosenConn = v.name
         },
     },
     mounted() {
         // auto open connection-dialog when there is no active opened connection
-        if (!this.hasActiveConn) this.openConnDialog()
-        if (this.curr_cnct_resource_name) this.assignActiveConn()
+        if (this.active_conn_state) this.assignActiveConn()
+        else this.openConnDialog()
     },
     methods: {
         ...mapActions({
@@ -107,7 +105,7 @@ export default {
             disconnect: 'query/disconnect',
         }),
         assignActiveConn() {
-            this.chosenConn = this.curr_cnct_resource_name
+            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource.name
         },
         openConnDialog() {
             this.isConnDialogOpened = true

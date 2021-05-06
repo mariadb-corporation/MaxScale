@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header">
-            <div v-if="previewDataSchemaId" class="schema-view-title">
+            <div v-if="validConn" class="schema-view-title">
                 <span><b>Table:</b> {{ previewDataSchemaId }}</span>
                 <v-btn-toggle v-model="activeView" class="ml-4" mandatory>
                     <v-btn :value="SQL_QUERY_MODES.PRVW_DATA" x-small text color="primary">
@@ -21,7 +21,7 @@
             </span>
         </div>
 
-        <div v-if="previewDataSchemaId" class="result-table-wrapper">
+        <div v-if="validConn" class="result-table-wrapper">
             <v-skeleton-loader
                 v-if="isPrwDataLoading"
                 :loading="isPrwDataLoading"
@@ -93,7 +93,11 @@ export default {
             loading_prvw_data_details: state => state.query.loading_prvw_data_details,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
+            active_conn_state: state => state.query.active_conn_state,
         }),
+        validConn() {
+            return this.previewDataSchemaId && this.active_conn_state
+        },
         previewDataHeaders() {
             if (!this.prvw_data.fields) return []
             return this.prvw_data.fields
@@ -126,8 +130,7 @@ export default {
     watch: {
         activeView: async function(SQL_QUERY_MODE) {
             // Wait until data is fetched
-            if (!this.isPrwDataLoading && this.previewDataSchemaId)
-                await this.handleFetch(SQL_QUERY_MODE)
+            if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(SQL_QUERY_MODE)
         },
     },
     mounted() {

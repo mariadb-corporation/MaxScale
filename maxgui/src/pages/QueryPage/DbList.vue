@@ -26,7 +26,13 @@
                     >
                         SCHEMAS
                     </span>
-                    <v-btn v-if="!isLeftPaneCollapsed" icon small @click="reloadSchema">
+                    <v-btn
+                        v-if="!isLeftPaneCollapsed"
+                        icon
+                        small
+                        :disabled="disabled"
+                        @click="reloadSchema"
+                    >
                         <v-icon size="12" color="deep-ocean">
                             $vuetify.icons.reload
                         </v-icon>
@@ -44,6 +50,7 @@
                     height="28"
                     class="std filter-objects"
                     placeholder="Filter schema objects"
+                    :disabled="disabled"
                 />
             </div>
             <db-list-tree
@@ -77,6 +84,7 @@ export default {
     },
     props: {
         schemaList: { type: Array, required: true },
+        disabled: { type: Boolean, required: true },
     },
     data() {
         return {

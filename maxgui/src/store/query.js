@@ -10,13 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { getCookie } from 'utils/helpers'
 export default {
     namespaced: true,
     state: {
+        active_conn_state: Boolean(getCookie('conn_id_body')),
         conn_err_state: false,
         rc_target_names_map: {},
-        query_conn_id_map: JSON.parse(sessionStorage.getItem('query_conn_id_map')),
-        curr_cnct_resource_name: sessionStorage.getItem('curr_cnct_resource_name'),
+        curr_cnct_resource: JSON.parse(sessionStorage.getItem('curr_cnct_resource')),
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
@@ -30,14 +31,14 @@ export default {
     },
     mutations: {
         // connection mutations
+        SET_ACTIVE_CONN_STATE(state, payload) {
+            state.active_conn_state = payload
+        },
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
         },
-        SET_CURR_CNCT_RESOURCE_NAME(state, payload) {
-            state.curr_cnct_resource_name = payload
-        },
-        SET_QUERY_CNN_ID_MAP(state, payload) {
-            state.query_conn_id_map = payload
+        SET_CURR_CNCT_RESOURCE(state, payload) {
+            state.curr_cnct_resource = payload
         },
         SET_CONN_ERR_STATE(state, payload) {
             state.conn_err_state = payload
@@ -108,7 +109,7 @@ export default {
                 logger.error(e)
             }
         },
-        async openConnect({ state, dispatch, commit }, body) {
+        async openConnect({ dispatch, commit }, body) {
             try {
                 let res = await this.vue.$axios.post(`/sql?persist=yes`, body)
                 if (res.status === 201) {
@@ -121,14 +122,12 @@ export default {
                         { root: true }
                     )
                     const connId = res.data.data.id
-                    const cnctResourceMap = {
-                        ...state.query_conn_id_map,
-                        [body.target]: connId,
-                    }
-                    sessionStorage.setItem('query_conn_id_map', JSON.stringify(cnctResourceMap))
-                    sessionStorage.setItem('curr_cnct_resource_name', body.target)
-                    commit('SET_CURR_CNCT_RESOURCE_NAME', body.target)
-                    commit('SET_QUERY_CNN_ID_MAP', cnctResourceMap)
+                    const curr_cnct_resource = { id: connId, name: body.target }
+
+                    sessionStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
+                    commit('SET_ACTIVE_CONN_STATE', true)
+                    commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
+
                     await dispatch('fetchDbList')
                 }
             } catch (e) {
@@ -139,9 +138,7 @@ export default {
         },
         async disconnect({ state, commit }) {
             try {
-                let res = await this.vue.$axios.delete(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}`
-                )
+                let res = await this.vue.$axios.delete(`/sql/${state.curr_cnct_resource.id}`)
                 if (res.status === 204) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -151,11 +148,16 @@ export default {
                         },
                         { root: true }
                     )
-                    sessionStorage.removeItem('query_conn_id_map')
-                    sessionStorage.removeItem('curr_cnct_resource_name')
+                    sessionStorage.removeItem('curr_cnct_resource')
                     this.vue.$help.deleteCookie('conn_id_body')
-                    commit('SET_CURR_CNCT_RESOURCE_NAME', '')
-                    commit('SET_QUERY_CNN_ID_MAP', null)
+                    //TODO: store default state and reuse it instead of manually set it
+                    commit('SET_ACTIVE_CONN_STATE', false)
+                    commit('SET_CURR_CNCT_RESOURCE', '')
+                    commit('SET_DB_TREE', [])
+                    commit('CLEAR_DB_CMPL_LIST')
+                    commit('SET_PRVW_DATA', {})
+                    commit('SET_PRVW_DATA_DETAILS', {})
+                    commit('SET_QUERY_RESULT', {})
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
@@ -167,7 +169,7 @@ export default {
             try {
                 commit('SET_LOADING_DB_TREE', true)
                 const res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: 'SHOW DATABASES',
                     }
@@ -207,7 +209,7 @@ export default {
                 //TODO: for testing purpose, replace it with config obj
                 const query = `SHOW TABLES FROM ${db.id};`
                 const res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
@@ -250,7 +252,7 @@ export default {
                 // eslint-disable-next-line vue/max-len
                 const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_NAME = "${tbl.name}";`
                 const res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
@@ -299,21 +301,21 @@ export default {
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */
-        async fetchPrvw({ state, commit }, { tblId, prvwMode }) {
+        async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
                 let sql
                 switch (prvwMode) {
-                    case state.app_config.SQL_QUERY_MODES.PRVW_DATA:
+                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
                         sql = `SELECT * FROM ${tblId};`
                         break
-                    case state.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                         sql = `DESCRIBE ${tblId};`
                         break
                 }
 
                 let res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql }
                 )
                 await this.vue.$help.delay(400)
@@ -332,7 +334,7 @@ export default {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
                 let res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
