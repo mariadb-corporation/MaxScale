@@ -54,7 +54,7 @@
                     />
                     <v-fade-transition>
                         <db-list
-                            v-show="!loading_db_tree"
+                            v-if="!loading_db_tree"
                             class="db-tb-list"
                             :schemaList="db_tree"
                             :disabled="!active_conn_state"

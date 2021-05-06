@@ -106,6 +106,7 @@ export default {
         }),
         assignActiveConn() {
             if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource.name
+            else this.chosenConn = ''
         },
         openConnDialog() {
             this.isConnDialogOpened = true
