@@ -47,6 +47,18 @@ find_package(UBSAN)
 find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_res OUTPUT ipo_out)
+  if(ipo_res)
+    # IPO supported, enable it on all targets.
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    message(STATUS "Link-time optimization enabled")
+  else()
+    message(WARNING "Link-time optimization is not supported: ${ipo_out}")
+  endif()
+endif()
+
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
 include(cmake/BuildPCRE2.cmake)
