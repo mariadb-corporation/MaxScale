@@ -57,13 +57,13 @@ static bool handle_max_slaves(RWSConfig& config, const char* str)
     char* endptr;
     int val = strtol(str, &endptr, 10);
 
-    if (*endptr == '%' && *(endptr + 1) == '\0')
+    if (*endptr == '%' && *(endptr + 1) == '\0' && val >= 0)
     {
         config.rw_max_slave_conn_percent = val;
         config.max_slave_connections = 0;
         MXS_WARNING("Use of percentages in 'max_slave_connections' is deprecated");
     }
-    else if (*endptr == '\0')
+    else if (*endptr == '\0' && val >= 0)
     {
         config.max_slave_connections = val;
         config.rw_max_slave_conn_percent = 0;
