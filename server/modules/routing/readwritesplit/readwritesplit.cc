@@ -183,60 +183,12 @@ int RWSplit::max_slave_count() const
     int conf_max_nslaves = m_config->max_slave_connections > 0 ?
         m_config->max_slave_connections :
         (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
-    return MXS_MAX(1, MXS_MIN(router_nservers, conf_max_nslaves));
+    return MXS_MAX(0, MXS_MIN(router_nservers, conf_max_nslaves));
 }
 
 bool RWSplit::have_enough_servers() const
 {
-    bool succp = true;
-    const int min_nsrv = 1;
-    const int router_nsrv = m_service->get_children().size();
-
-    int n_serv = MXS_MAX(m_config->max_slave_connections,
-                         (router_nsrv * m_config->rw_max_slave_conn_percent) / 100);
-
-    /** With too few servers session is not created */
-    if (router_nsrv < min_nsrv || n_serv < min_nsrv)
-    {
-        if (router_nsrv < min_nsrv)
-        {
-            MXS_ERROR("Unable to start %s service. There are "
-                      "too few backend servers available. Found %d "
-                      "when %d is required.",
-                      m_service->name(),
-                      router_nsrv,
-                      min_nsrv);
-        }
-        else
-        {
-            int pct = m_config->rw_max_slave_conn_percent / 100;
-            int nservers = router_nsrv * pct;
-
-            if (m_config->max_slave_connections < min_nsrv)
-            {
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d when %d is required.",
-                          m_service->name(),
-                          m_config->max_slave_connections,
-                          min_nsrv);
-            }
-            if (nservers < min_nsrv)
-            {
-                double dbgpct = ((double)min_nsrv / (double)router_nsrv) * 100.0;
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d%% when at least %.0f%% "
-                          "would be required.",
-                          m_service->name(),
-                          m_config->rw_max_slave_conn_percent,
-                          dbgpct);
-            }
-        }
-        succp = false;
-    }
-
-    return succp;
+    return !m_service->get_children().empty();
 }
 
 // static

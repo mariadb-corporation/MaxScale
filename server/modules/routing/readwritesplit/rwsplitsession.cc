@@ -75,6 +75,10 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
             }
         }
     }
+    else
+    {
+        MXS_ERROR("Service has no servers.");
+    }
 
     return rses;
 }
