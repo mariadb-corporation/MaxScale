@@ -203,6 +203,18 @@ public:
             }
         }
 
+        const auto& specification = C::specification();
+
+        for (const auto& element : config)
+        {
+            if (!specification.find_param(static_cast<string>(element.key())))
+            {
+                stringstream ss;
+                ss << "Unknown configuration key: '" << element.key() << "'";
+                throw SoftError(ss.str(), error::NO_SUCH_KEY);
+            }
+        }
+
         c.on_unknown_command = on_unknown_command;
         c.auto_create_databases = auto_create_databases;
         c.auto_create_tables = auto_create_tables;

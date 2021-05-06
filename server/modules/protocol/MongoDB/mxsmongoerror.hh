@@ -9,6 +9,7 @@
 
 MXSMONGO_ERROR(OK,                         0, "OK")
 MXSMONGO_ERROR(BAD_VALUE,                  2, "BadValue")
+MXSMONGO_ERROR(NO_SUCH_KEY,                4, "NoSuchKey")
 MXSMONGO_ERROR(FAILED_TO_PARSE,            9, "FailedToParse")
 MXSMONGO_ERROR(UNAUTHORIZED,              13, "Unauthorized")
 MXSMONGO_ERROR(TYPE_MISMATCH,             14, "TypeMismatch")

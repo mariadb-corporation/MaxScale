@@ -14,7 +14,8 @@
 // https://docs.mongodb.com/manual/reference/command/killCursors
 
 const assert = require('assert');
-const test = require('./mongotest')
+const test = require('./mongotest');
+const error = test.error;
 
 const name = "killCursors";
 
@@ -37,8 +38,8 @@ describe(name, function () {
         var rv1 = await mng.ntRunCommand({"killCursors": name, cursors: []});
         var rv2 = await mxs.ntRunCommand({"killCursors": name, cursors: []});
 
-        assert.equal(rv1.code, 2); // Bad value
-        assert.equal(rv2.code, 2); // Bad value
+        assert.equal(rv1.code, error.BAD_VALUE);
+        assert.equal(rv2.code, error.BAD_VALUE);
     });
 
     it('Can kill an existing cursor.', async function () {

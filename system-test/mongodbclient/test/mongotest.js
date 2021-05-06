@@ -26,7 +26,10 @@ var config = {
 };
 
 var error = {
+    BAD_VALUE: 2,
+    NO_SUCH_KEY: 4,
     UNAUTHORIZED: 13,
+    TYPE_MISMATCH: 14,
     COMMAND_FAILED: 125
 };
 
