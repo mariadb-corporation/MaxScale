@@ -77,13 +77,42 @@ second password. See
 for more details. Two-factor mode is incompatible with
 *pam_use_cleartext_plugin*.
 
+### `pam_backend_mapping`
+
+Defines backend authentication mapping, i.e. switch of authentication method
+between client-to-MaxScale and MaxScale-to-backend. Supported values:
+- `none` (default) No mapping
+- `mariadb` Map users to normal MariaDB accounts
+
+```
+authenticator_options=pam_backend_mapping=mariadb
+```
+
+If set to "mariadb", MaxScale will authenticate clients to backends using
+standard MariaDB authentication. Authentication to MaxScale itself still uses
+PAM. MaxScale also asks the local PAM system if the client username was mapped
+to another username during authentication, and use the mapped username when
+logging in to backends. MaxScale does not know the MariaDB-password of the
+mapped user, so no password is sent. Because of this, normal PAM users and
+mapped users cannot be used on the same listener.
+
+To map usernames, the PAM service needs to use a module such as
+*pam_user_map.so*. This module is not a standard Linux component and needs to be
+installed separately. It is included in recent MariaDB Server packages and can
+also be compiled from source. See
+[user mapping](https://mariadb.com/kb/en/library/user-and-group-mapping-with-pam/)
+for more information on how to configure the module. If the goal is to only map
+users from PAM to MariaDB in MaxScale, then configuring user mapping
+on just the machine running MaxScale is enough.
+
 ## Anonymous user mapping
 
-The MaxScale PAM authenticator supports a limited version of
+When backend authenticator mapping is not in use
+(`authenticator_options=pam_backend_mapping=none`), the PAM authenticator
+supports a limited version of
 [user mapping](https://mariadb.com/kb/en/library/user-and-group-mapping-with-pam/).
-It requires less configuration but is also less accurate than the server
-authentication. Anonymous mapping is enabled in MaxScale if the following user
-exists:
+It requires less configuration but is also less accurate than proper mapping.
+Anonymous mapping is enabled in MaxScale if the following user exists:
 - Empty username (e.g. `''@'%'` or `''@'myhost.com'`)
 - `plugin = 'pam'`
 - Proxy grant is on (The query `SHOW GRANTS FOR user@host;` returns at least one
@@ -91,9 +120,9 @@ row with `GRANT PROXY ON ...`)
 
 When the authenticator detects such users, anonymous account mapping is enabled
 for the hosts of the anonymous users. To verify this, enable the info log
-(`log_info=1` in MaxScale config file) and look for messages such as "Found 2
-anonymous PAM user(s) ..." and "Added anonymous PAM user ..." during MaxScale
-startup.
+(`log_info=1` in MaxScale config file). When a client is logging in using the
+anonymous user account, MaxScale will log a message starting with "Found
+matching anonymous user ...".
 
 When mapping is on, the MaxScale PAM authenticator does not require client
 accounts to exist in the `mysql.user`-table received from the backend. MaxScale
