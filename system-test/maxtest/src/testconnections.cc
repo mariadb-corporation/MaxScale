@@ -2190,13 +2190,14 @@ int TestConnections::n_maxscales() const
     return rval;
 }
 
-int TestConnections::run_test(int argc, char* argv[], const std::function<int(TestConnections&)>& testfunc)
+int TestConnections::run_test(int argc, char* argv[], const std::function<void(TestConnections&)>& testfunc)
 {
     int init_rc = prepare_for_test(argc, argv);
     int test_errors = 0;
     if (init_rc == 0)
     {
-        test_errors = testfunc(*this);
+        testfunc(*this);
+        test_errors = global_result;
     }
     int cleanup_rc = cleanup();
 

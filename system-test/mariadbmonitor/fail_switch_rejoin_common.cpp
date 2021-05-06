@@ -1,10 +1,8 @@
 #include <maxtest/testconnections.hh>
 
 int inserts = 0;
-bool interactive = false;
 
 const char LINE[] = "------------------------------------------";
-const char PRINT_ID[] = "Master server id is %d.";
 const char WRONG_SLAVE[] = "Wrong slave was promoted or promotion failed.";
 const char GTID_QUERY[] = "SELECT @@gtid_current_pos;";
 const char GTID_FIELD[] = "@@gtid_current_pos";
@@ -91,28 +89,9 @@ int get_master_server_id(TestConnections& test, int maxscale_ind = 0)
     return id;
 }
 
-void get_input()
-{
-    if (interactive)
-    {
-        printf("--- Press any key to confinue ---\n");
-        getchar();
-    }
-}
-
-void delete_slave_binlogs(TestConnections& test)
-{
-    const char RESET[] = "RESET MASTER;";
-    execute_query(test.repl->nodes[0], "SET GLOBAL gtid_slave_pos='0-1-0';");
-    execute_query(test.repl->nodes[1], RESET);
-    execute_query(test.repl->nodes[2], RESET);
-    execute_query(test.repl->nodes[3], RESET);
-}
-
 void basic_test(TestConnections& test)
 {
     test.tprintf("Creating table and inserting data.");
-    get_input();
     test.maxscales->connect_maxscale(0);
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();

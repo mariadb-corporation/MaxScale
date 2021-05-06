@@ -10,7 +10,7 @@
 #include <maxtest/mariadb_connector.hh>
 
 using IntVector = std::vector<int>;
-int test_main(TestConnections& test);
+void test_main(TestConnections& test);
 
 void check_conn_pool_size(TestConnections& test, const IntVector& expected);
 int  get_server_conn_count(TestConnections& test);
@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     return test.run_test(argc, argv, test_main);
 }
 
-int test_main(TestConnections& test)
+void test_main(TestConnections& test)
 {
     test.set_timeout(300);
     test.add_result(test.create_connections(0, 70, true, true, true, false),
@@ -133,8 +133,6 @@ int test_main(TestConnections& test)
                                                           "expected", increase, expected_increase_max);
         }
     }
-
-    return test.global_result;
 }
 
 void check_conn_pool_size(TestConnections& test, const IntVector& expected)

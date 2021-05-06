@@ -41,7 +41,7 @@ const MonitorInfo* get_primary_monitor(TestConnections& test);
 
 void test_failover(TestConnections& test, mxt::MaxScale& maxscale);
 bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info);
-int test_main(TestConnections& test);
+void test_main(TestConnections& test);
 
 int main(int argc, char* argv[])
 {
@@ -50,12 +50,12 @@ int main(int argc, char* argv[])
     return test.run_test(argc, argv, test_main);
 }
 
-int test_main(TestConnections& test)
+void test_main(TestConnections& test)
 {
     test.expect(test.n_maxscales() >= 2, "At least 2 MaxScales are needed for this test. Exiting");
     if (!test.ok())
     {
-        return test.global_result;
+        return;
     }
 
     auto& mxs1 = test.maxscale();
@@ -137,7 +137,6 @@ int test_main(TestConnections& test)
     {
         cout << "Test successful\n";
     }
-    return test.global_result;
 }
 
 const MonitorInfo* get_primary_monitor(TestConnections& test)

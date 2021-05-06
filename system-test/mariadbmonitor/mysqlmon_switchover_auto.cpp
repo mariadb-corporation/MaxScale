@@ -27,7 +27,6 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.repl->connect();
-    delete_slave_binlogs(test);
     const int N = 4;
 
     // Enable the disks-plugin on all servers. Has to be done before MaxScale is on to prevent disk space

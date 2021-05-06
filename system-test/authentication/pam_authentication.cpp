@@ -27,17 +27,23 @@ bool test_pam_login(TestConnections& test, int port, const string& user, const s
                     const string& database);
 bool test_normal_login(TestConnections& test, int port, const string& user, const string& pass,
                        const string& db = "");
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    return test.run_test(argc, argv, test_main);
+}
+
+void test_main(TestConnections& test)
+{
     test.repl->connect();
 
     const int N = 2;    // Use just two backends so that setup is fast.
     test.expect(test.repl->N >= N, "Test requires at least two backends.");
     if (!test.ok())
     {
-        return test.global_result;
+        return;
     }
 
     const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
@@ -506,7 +512,6 @@ int main(int argc, char** argv)
     }
 
     test.repl->disconnect();
-    return test.global_result;
 }
 
 
