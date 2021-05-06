@@ -25,6 +25,10 @@ var config = {
     password: 'skysql'
 };
 
+var error = {
+    COMMAND_FAILED: 125
+};
+
 const mariadb = require('mariadb');
 const mongodb = require('mongodb')
 const assert = require('assert');
@@ -66,18 +70,23 @@ class MDB {
     constructor(client, db) {
         this.client = client;
         this.db = db;
+        this.admin = this.client.db('admin');
     }
 
-    static async create(m, name) {
+    static async create(m, dbname) {
         var client = await m.createClient();
 
-        if (!name) {
-            name = "test";
+        if (!dbname) {
+            dbname = "test";
         }
 
-        var db = client.db(name);
+        var db = client.db(dbname);
 
         return new MDB(client, db);
+    }
+
+    async set_db(dbname) {
+        this.db = this.client.db(dbname);
     }
 
     async close() {
@@ -150,8 +159,16 @@ class MDB {
         return rv;
     }
 
+    async deleteAll(name) {
+        this.db.command({delete: name, deletes: [{q: {}, limit: 0}]});
+    }
+
     async runCommand(command) {
         return await this.db.command(command);
+    }
+
+    async adminCommand(command) {
+        return await this.admin.command(command);
     }
 
     async nothrowCommand(command) {
@@ -175,5 +192,6 @@ module.exports = {
     MariaDB,
     MxsMongo,
     MngMongo,
-    MDB
+    MDB,
+    error
 };

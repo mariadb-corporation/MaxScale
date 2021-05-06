@@ -454,6 +454,7 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
 
     bsoncxx::builder::basic::document mariadb;
 
+    mariadb.append(bsoncxx::builder::basic::kvp("index", index));
     mariadb.append(bsoncxx::builder::basic::kvp("code", err.code()));
     mariadb.append(bsoncxx::builder::basic::kvp("state", err.state()));
     mariadb.append(bsoncxx::builder::basic::kvp("message", err.message()));

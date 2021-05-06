@@ -65,6 +65,7 @@ public:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
+            m_ok = 1;
             interpret(ComOK(response));
             break;
 
@@ -98,14 +99,13 @@ public:
             DocumentBuilder doc;
 
             auto write_errors = m_write_errors.extract();
-            int32_t ok = write_errors.view().empty();
 
             doc.append(kvp("n", m_n));
-            doc.append(kvp("ok", ok));
+            doc.append(kvp("ok", m_ok));
 
             amend_response(doc);
 
-            if (!ok)
+            if (!write_errors.view().empty())
             {
                 doc.append(kvp("writeErrors", write_errors));
             }
@@ -206,6 +206,7 @@ protected:
     vector<string>                 m_statements;
     vector<string>::iterator       m_it;
     int32_t                        m_n { 0 };
+    int32_t                        m_ok { 0 };
     bsoncxx::builder::basic::array m_write_errors;
 };
 
@@ -595,16 +596,35 @@ public:
 
                     duplicate = s.substr(0, j);
 
-                    // Let's try finding the correct index.
+                    // Let's try finding the correct index. We need to loop through the
+                    // whole thing in case the duplicate is in the same insert statement.
                     index = 0;
+                    vector<int> indexes;
                     for (const auto& element : m_ids)
                     {
                         if (mxsmongo::to_string(element) == duplicate)
                         {
-                            break;
+                            indexes.push_back(index);
+
+                            if (indexes.size() > 1)
+                            {
+                                // We've seen enough. We can break out.
+                                break;
+                            }
                         }
 
                         ++index;
+                    }
+
+                    if (indexes.size() == 1)
+                    {
+                        // If there is just one entry, then the id existed already in the database.
+                        index = indexes[0];
+                    }
+                    else if (indexes.size() > 1)
+                    {
+                        // If there is more than one, then there were duplicates in the server entries.
+                        index = indexes[1];
                     }
                 }
             }
@@ -614,6 +634,7 @@ public:
             // If we did not find the entry, we don't add any details.
             if (index < (int)m_ids.size())
             {
+                error.append(kvp("index", index));
                 DocumentBuilder keyPattern;
                 keyPattern.append(kvp("_id", 1));
                 error.append(kvp("keyPattern", keyPattern.extract()));
