@@ -1897,6 +1897,9 @@ int main(int argc, char** argv)
     mxs_log_set_syslog_enabled(cnf.syslog.get());
     mxs_log_set_maxlog_enabled(cnf.maxlog.get());
 
+    MXB_NOTICE("syslog logging is %s.", cnf.syslog.get() ? "enabled" : "disabled");
+    MXB_NOTICE("maxlog logging is %s.", cnf.maxlog.get() ? "enabled" : "disabled");
+
     // Try to create the persisted configuration directory. This needs to be done before the path validation
     // done by check_paths() to prevent it from failing. The directory wont' exist if it's the first time
     // MaxScale is starting up with this configuration.
