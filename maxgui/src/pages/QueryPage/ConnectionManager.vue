@@ -16,6 +16,7 @@
             hide-details
             :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
             required
+            placeholder="Select connection"
         >
             <template v-slot:selection="{ item }">
                 <div class="v-select__selection v-select__selection--comma">
@@ -63,7 +64,9 @@ export default {
             curr_cnct_resource_name: state => state.query.curr_cnct_resource_name,
         }),
         connOptions() {
-            return [this.curr_cnct_resource_name, this.newConnOption]
+            let options = [this.newConnOption]
+            if (this.curr_cnct_resource_name) options.unshift(this.curr_cnct_resource_name)
+            return options
         },
     },
     watch: {

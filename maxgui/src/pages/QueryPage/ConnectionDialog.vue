@@ -8,6 +8,7 @@
         minBodyWidth="512px"
         :onCancel="onCancel"
         :onClose="onClose"
+        :hasSavingErr="hasSavingErr"
         @is-form-valid="isFormValid = $event"
     >
         <template v-slot:actions="{ cancel, save }">
@@ -195,6 +196,7 @@ export default {
     computed: {
         ...mapState({
             rc_target_names_map: state => state.query.rc_target_names_map,
+            conn_err_state: state => state.query.conn_err_state,
         }),
         isOpened: {
             get() {
@@ -207,6 +209,9 @@ export default {
         },
         resourceItems() {
             return this.rc_target_names_map[this.selectedResourceType] || []
+        },
+        hasSavingErr() {
+            return this.conn_err_state
         },
     },
     watch: {

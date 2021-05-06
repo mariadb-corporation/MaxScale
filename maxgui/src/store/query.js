@@ -13,6 +13,7 @@
 export default {
     namespaced: true,
     state: {
+        conn_err_state: false,
         rc_target_names_map: {},
         query_conn_id_map: JSON.parse(sessionStorage.getItem('query_conn_id_map')),
         curr_cnct_resource_name: sessionStorage.getItem('curr_cnct_resource_name'),
@@ -36,6 +37,9 @@ export default {
         },
         SET_QUERY_CNN_ID_MAP(state, payload) {
             state.query_conn_id_map = payload
+        },
+        SET_CONN_ERR_STATE(state, payload) {
+            state.conn_err_state = payload
         },
         SET_LOADING_DB_TREE(state, payload) {
             state.loading_db_tree = payload
@@ -126,16 +130,9 @@ export default {
                     await dispatch('fetchDbList')
                 }
             } catch (e) {
-                commit(
-                    'SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: [`Connection failed`],
-                        type: 'error',
-                    },
-                    { root: true }
-                )
                 const logger = this.vue.$logger('store-query-openConnect')
                 logger.error(e)
+                commit('SET_CONN_ERR_STATE', true)
             }
         },
         async disconnect({ state, commit }) {
@@ -152,7 +149,7 @@ export default {
                 logger.error(e)
             }
         },
-        async fetchDbList({ dispatch, state, commit }) {
+        async fetchDbList({ state, commit }) {
             try {
                 commit('SET_LOADING_DB_TREE', true)
                 const res = await this.vue.$axios.post(
@@ -183,15 +180,7 @@ export default {
                 commit('UPDATE_DB_CMPL_LIST', dbCmplList)
                 commit('SET_LOADING_DB_TREE', false)
             } catch (e) {
-                commit(
-                    'SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: [`Connection timed out`],
-                        type: 'error',
-                    },
-                    { root: true }
-                )
-                dispatch('disconnect')
+                commit('SET_LOADING_DB_TREE', false)
                 const logger = this.vue.$logger('store-query-fetchDbList')
                 logger.error(e)
             }

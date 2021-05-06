@@ -103,6 +103,7 @@ export default {
         // if isForceAccept===true, cancel and close btn won't be rendered
         isForceAccept: { type: Boolean, default: false },
         lazyValidation: { type: Boolean, default: true },
+        hasSavingErr: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -144,13 +145,15 @@ export default {
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
                 await this.onSave()
-                this.closeDialog()
-                if (this.$refs.form) {
-                    this.$refs.form.reset()
-                    this.$refs.form.resetValidation()
+                if (!this.hasSavingErr) {
+                    this.closeDialog()
+                    if (this.$refs.form) {
+                        this.$refs.form.reset()
+                        this.$refs.form.resetValidation()
+                    }
+                    // wait time out for loading animation
+                    await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
                 }
-                // wait time out for loading animation
-                await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
             }
         },
     },
