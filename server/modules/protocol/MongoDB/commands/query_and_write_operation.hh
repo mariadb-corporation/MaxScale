@@ -73,7 +73,11 @@ public:
             {
                 ComERR err(response);
 
-                if (!is_acceptable_error(err))
+                if (is_acceptable_error(err))
+                {
+                    m_ok = true;
+                }
+                else
                 {
                     if (m_ordered)
                     {
