@@ -578,8 +578,6 @@ bool mxb_log_is_highprecision_enabled()
 void mxb_log_set_syslog_enabled(bool enabled)
 {
     this_unit.do_syslog = enabled;
-
-    MXB_NOTICE("syslog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 bool mxb_log_is_syslog_enabled()
@@ -590,8 +588,6 @@ bool mxb_log_is_syslog_enabled()
 void mxb_log_set_maxlog_enabled(bool enabled)
 {
     this_unit.do_maxlog = enabled;
-
-    MXB_NOTICE("maxlog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 bool mxb_log_is_maxlog_enabled()
