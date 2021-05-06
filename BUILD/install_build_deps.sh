@@ -10,6 +10,10 @@ cd $tmpdir
 
 distro_id=`cat /etc/*-release | grep "^ID_LIKE=" | sed "s/ID=//"`
 
+function is_arm() {
+    [ "$(arch)" == "aarch64" ]
+}
+
 unset packager_type
 
 if [[ ${distro_id} =~ "suse" ]]
@@ -79,6 +83,12 @@ then
   ${apt_cmd} install libsystemd-dev || \
       ${apt_cmd} install libsystemd-daemon-dev
 
+  if is_arm
+  then
+     # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+     ${apt_cmd} install python3
+  fi
+
    ## separate libgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
@@ -105,22 +115,35 @@ then
     sudo yum clean all
     sudo yum update -y
     unset enable_power_tools
-    yum repolist all | grep PowerTools
+    yum repolist all | grep "^PowerTools"
     if [ $? == 0 ]
     then
         enable_power_tools="--enablerepo=PowerTools"
     fi
+    yum repolist all | grep "^powertools"
+    if [ $? == 0 ]
+    then
+        enable_power_tools="--enablerepo=powertools"
+    fi
     sudo yum install -y --nogpgcheck ${enable_power_tools} \
          gcc gcc-c++ ncurses-devel bison glibc-devel \
-         libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
-         libedit-devel systemtap-sdt-devel rpm-sign wget \
+         libgcc perl make libtool openssl-devel libaio libaio-devel  \
+         systemtap-sdt-devel rpm-sign \
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
-         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
+         sqlite sqlite-devel pkgconfig rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
          cyrus-sasl-devel libxml2-devel krb5-devel
 
+    sudo yum install -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
+
     # Attempt to install systemd-devel, doesn't work on CentOS 6
     sudo yum install -y systemd-devel
+
+    if is_arm
+    then
+       # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+       sudo yum -y install python3
+    fi
 
     # Enable the devtoolkit to get a newer compiler
 
@@ -172,6 +195,12 @@ then
       sudo zypper -n install libedit-devel
     fi
 
+    if is_arm
+    then
+       # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
+       sudo zypper -n install python3
+    fi
+
     # Install a newer compiler
     sudo zypper -n install gcc9 gcc9-c++
     echo "export CC=/usr/bin/gcc-9" >> ~/.bashrc
@@ -203,14 +232,24 @@ else
   echo "CMake not found"
 fi
 
-cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
 if [ $cmake_version_ok -eq 0 ] ; then
-  wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
-  if [ $? != 0 ] ; then
-    echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
-    wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
-  fi
-  sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
+
+    if is_arm
+    then
+        cmake_version="3.20.2"
+        cmake_filename="cmake-${cmake_version}-linux-aarch64.tar.gz"
+        wget https://github.com/Kitware/CMake/releases/download/v${cmake_version}/${cmake_filename}
+        sudo tar -axf ${cmake_filename} -C /usr/ --strip-components=1
+    else
+        cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
+        wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
+        if [ $? != 0 ] ; then
+            echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
+            wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
+        fi
+        sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
+    fi
+
   cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
   if verlt $cmake_version $cmake_version_required ; then
     echo "CMake installation failed"
@@ -239,9 +278,16 @@ then
    cd ../../..
 fi
 
+if is_arm
+then
+    node_arch=arm64
+else
+    node_arch=x64
+fi
+
 # NodeJS
-wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-x64.tar.gz
-tar -axf node-v10.20.0-linux-x64.tar.gz
-sudo cp -t /usr -r node-v10.20.0-linux-x64/*
+wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-${node_arch}.tar.gz
+tar -axf node-v10.20.0-linux-${node_arch}.tar.gz
+sudo cp -t /usr -r node-v10.20.0-linux-${node_arch}/*
 
 sudo rm -rf $tmpdir
