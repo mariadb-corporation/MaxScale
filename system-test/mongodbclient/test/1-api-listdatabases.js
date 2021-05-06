@@ -34,8 +34,8 @@ describe(name, function () {
     });
 
     it('Cant list databases using non-admin.', async function () {
-        var rv1 = await mng.nothrowCommand({"listDatabases": 1});
-        var rv2 = await mxs.nothrowCommand({"listDatabases": 1});
+        var rv1 = await mng.ntRunCommand({"listDatabases": 1});
+        var rv2 = await mxs.ntRunCommand({"listDatabases": 1});
 
         assert.equal(rv1.code, error.UNAUTHORIZED);
         assert.equal(rv2.code, error.UNAUTHORIZED);

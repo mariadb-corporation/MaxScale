@@ -32,7 +32,7 @@ describe(name, function () {
     });
 
     it('Cannot create a database using non-admin database.', async function () {
-        var rv = await mxs.nothrowCommand({mxsCreateDatabase: random_db});
+        var rv = await mxs.ntRunCommand({mxsCreateDatabase: random_db});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });

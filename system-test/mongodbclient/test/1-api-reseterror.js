@@ -34,8 +34,8 @@ describe(name, function () {
     });
 
     it('Resets existing error.', async function () {
-        await mng.nothrowCommand({count: 1}); // Wants a collection name.
-        await mxs.nothrowCommand({count: 1});
+        await mng.ntRunCommand({count: 1}); // Wants a collection name.
+        await mxs.ntRunCommand({count: 1});
 
         var rv1;
         var rv2;

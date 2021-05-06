@@ -34,8 +34,8 @@ describe(name, function () {
     });
 
     it('Cant kill when there are no cursors to kill.', async function () {
-        var rv1 = await mng.nothrowCommand({"killCursors": name, cursors: []});
-        var rv2 = await mxs.nothrowCommand({"killCursors": name, cursors: []});
+        var rv1 = await mng.ntRunCommand({"killCursors": name, cursors: []});
+        var rv2 = await mxs.ntRunCommand({"killCursors": name, cursors: []});
 
         assert.equal(rv1.code, 2); // Bad value
         assert.equal(rv2.code, 2); // Bad value
@@ -80,8 +80,8 @@ describe(name, function () {
         assert.equal(rv2.cursorsNotFound.length, 1);
 
         // Try to get another batch, should fail as the cursors were killed.
-        rv1 = await mng.nothrowCommand({getMore: id1, collection: name, batchSize: 10 });
-        rv2 = await mxs.nothrowCommand({getMore: id2, collection: name, batchSize: 10 });
+        rv1 = await mng.ntRunCommand({getMore: id1, collection: name, batchSize: 10 });
+        rv2 = await mxs.ntRunCommand({getMore: id2, collection: name, batchSize: 10 });
 
         assert.equal(rv1.code, 43); // Cursor not found
         assert.equal(rv2.code, 43); // Cursor not found

@@ -172,10 +172,22 @@ class MDB {
         return await this.admin.command(command);
     }
 
-    async nothrowCommand(command) {
+    async ntRunCommand(command) {
         var rv;
         try {
             rv = await this.db.command(command);
+        }
+        catch (x) {
+            rv = x;
+        }
+
+        return rv;
+    }
+
+    async ntAdminCommand(command) {
+        var rv;
+        try {
+            rv = await this.admin.command(command);
         }
         catch (x) {
             rv = x;

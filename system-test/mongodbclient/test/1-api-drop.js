@@ -34,8 +34,8 @@ describe(name, function () {
         await mng.reset(name);
         await mxs.reset(name);
 
-        var rv1 = await mng.nothrowCommand({drop: name});
-        var rv2 = await mxs.nothrowCommand({drop: name});
+        var rv1 = await mng.ntRunCommand({drop: name});
+        var rv2 = await mxs.ntRunCommand({drop: name});
 
         assert.equal(rv1.code, 26); // Namespace not found.
 
@@ -66,8 +66,8 @@ describe(name, function () {
         assert.equal(rv1.cursor.firstBatch.length, n);
         assert.equal(rv2.cursor.firstBatch.length, n);
 
-        rv1 = await mng.nothrowCommand({drop: name});
-        rv2 = await mxs.nothrowCommand({drop: name});
+        rv1 = await mng.ntRunCommand({drop: name});
+        rv2 = await mxs.ntRunCommand({drop: name});
         assert.equal(rv1.ok, 1);
         assert.equal(rv2.ok, 1);
 

@@ -28,7 +28,7 @@ describe(name, function () {
     });
 
     it('Cannot use with non-admin database.', async function () {
-        var rv = await mxs.nothrowCommand({mxsDiagnose: { ping: 1 }});
+        var rv = await mxs.ntRunCommand({mxsDiagnose: { ping: 1 }});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });

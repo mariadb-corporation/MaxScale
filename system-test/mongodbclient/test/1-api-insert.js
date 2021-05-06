@@ -54,7 +54,7 @@ describe(name, function () {
         await conn.query("DROP TABLE IF EXISTS test." + tblname);
         await conn.query("CREATE TABLE test." + tblname + "  (id VARCHAR(80) NOT NULL UNIQUE, doc JSON)");
 
-        await mng.nothrowCommand({drop: tblname});
+        await mng.ntRunCommand({drop: tblname});
 
         var doc = { hello: "world" };
         var command = { insert: tblname, documents: [ doc ] };
@@ -99,7 +99,7 @@ describe(name, function () {
         var doc = { hello: "world" };
         var command = { insert: tblname, documents: [ doc ] };
 
-        var rv = await mxs.nothrowCommand(command);
+        var rv = await mxs.ntRunCommand(command);
         assert.equal(rv.code, error.COMMAND_FAILED);
     });
 
@@ -139,7 +139,7 @@ describe(name, function () {
         var doc = { hello: "world" };
         var command = { insert: tblname, documents: [ doc ] };
 
-        var rv = await mxs.nothrowCommand(command);
+        var rv = await mxs.ntRunCommand(command);
 
         assert.equal(rv.code, error.COMMAND_FAILED);
     });
@@ -235,7 +235,7 @@ describe(name, function () {
 
         var command = {insert: tblname, documents: documents, ordered: true };
 
-        var rv = await mxs.nothrowCommand(command);
+        var rv = await mxs.ntRunCommand(command);
 
         // Insert behaviour is MariaDB and ordered is true, so no documents should be inserted.
         assert.equal(rv.n, 0);

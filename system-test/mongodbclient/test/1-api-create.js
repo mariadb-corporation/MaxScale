@@ -44,8 +44,8 @@ describe(name, function () {
     });
 
     it('Cannot create duplicate collection.', async function () {
-        var rv1 = await mng.nothrowCommand({create: name});
-        var rv2 = await mxs.nothrowCommand({create: name});
+        var rv1 = await mng.ntRunCommand({create: name});
+        var rv2 = await mxs.ntRunCommand({create: name});
 
         assert.equal(rv1.ok, 0);
         assert.equal(rv2.ok, 0);
