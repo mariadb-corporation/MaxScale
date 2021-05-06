@@ -63,14 +63,14 @@
                             @preview-data="
                                 schemaId =>
                                     handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PREVIEW_DATA,
+                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
                                         schemaId,
                                     })
                             "
                             @view-details="
                                 schemaId =>
                                     handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.VIEW_DETAILS,
+                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
                                         schemaId,
                                     })
                             "
@@ -121,7 +121,7 @@
 import QueryEditor from '@/components/QueryEditor'
 import DbList from './DbList'
 import QueryResult from './QueryResult'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapState, mapMutations } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 export default {
     name: 'query-view',
@@ -180,12 +180,11 @@ export default {
         if (this.hasActiveConn) await this.loadSchema()
     },
     methods: {
+        ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
-            fetchPreviewData: 'query/fetchPreviewData',
-            fetchDataDetails: 'query/fetchDataDetails',
+            fetchPrvw: 'query/fetchPrvw',
             fetchQueryResult: 'query/fetchQueryResult',
-            setCurrQueryMode: 'query/setCurrQueryMode',
             clearDataPreview: 'query/clearDataPreview',
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
@@ -226,20 +225,22 @@ export default {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
         },
         async onRun() {
-            this.setCurrQueryMode(this.SQL_QUERY_MODES.QUERY_VIEW)
+            this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             await this.fetchQueryResult(this.queryTxt)
         },
         // For table type only
         async handleFetchPreview({ SQL_QUERY_MODE, schemaId }) {
             this.previewDataSchemaId = schemaId
             this.clearDataPreview()
-            this.setCurrQueryMode(SQL_QUERY_MODE)
+            this.SET_CURR_QUERY_MODE(SQL_QUERY_MODE)
             switch (SQL_QUERY_MODE) {
-                case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                    await this.fetchPreviewData(this.previewDataSchemaId)
+                case this.SQL_QUERY_MODES.PRVW_DATA:
+                case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    await this.fetchPrvw({
+                        tblId: this.previewDataSchemaId,
+                        prvwMode: SQL_QUERY_MODE,
+                    })
                     break
-                case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    await this.fetchDataDetails(this.previewDataSchemaId)
             }
         },
     },

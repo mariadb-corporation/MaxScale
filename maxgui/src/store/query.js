@@ -20,15 +20,16 @@ export default {
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
-        loading_preview_data: false,
-        preview_data: {},
-        loading_data_details: false,
-        data_details: {},
+        loading_prvw_data: false,
+        prvw_data: {},
+        loading_prvw_data_details: false,
+        prvw_data_details: {},
         loading_query_result: false,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
     },
     mutations: {
+        // connection mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
         },
@@ -41,43 +42,14 @@ export default {
         SET_CONN_ERR_STATE(state, payload) {
             state.conn_err_state = payload
         },
+
+        // treeview mutations
         SET_LOADING_DB_TREE(state, payload) {
             state.loading_db_tree = payload
         },
         SET_DB_TREE(state, payload) {
             state.db_tree = payload
         },
-        UPDATE_DB_CMPL_LIST(state, payload) {
-            state.db_completion_list = [...state.db_completion_list, ...payload]
-        },
-        CLEAR_DB_CMPL_LIST(state) {
-            state.db_completion_list = []
-        },
-        SET_LOADING_PREVIEW_DATA(state, payload) {
-            state.loading_preview_data = payload
-        },
-        SET_PREVIEW_DATA(state, payload) {
-            state.preview_data = payload
-        },
-
-        SET_LOADING_DATA_DETAILS(state, payload) {
-            state.loading_data_details = payload
-        },
-        SET_DATA_DETAILS(state, payload) {
-            state.data_details = payload
-        },
-
-        SET_LOADING_QUERY_RESULT(state, payload) {
-            state.loading_query_result = payload
-        },
-        SET_QUERY_RESULT(state, payload) {
-            state.query_result = payload
-        },
-
-        SET_CURR_QUERY_MODE(state, payload) {
-            state.curr_query_mode = payload
-        },
-
         UPDATE_DB_CHILDREN(state, { dbIndex, children }) {
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: { children: { $set: children } },
@@ -87,6 +59,37 @@ export default {
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: { children: { [tableIndex]: { children: { $set: children } } } },
             })
+        },
+
+        // editor mutations
+        UPDATE_DB_CMPL_LIST(state, payload) {
+            state.db_completion_list = [...state.db_completion_list, ...payload]
+        },
+        CLEAR_DB_CMPL_LIST(state) {
+            state.db_completion_list = []
+        },
+
+        // Result tables data mutations
+        SET_CURR_QUERY_MODE(state, payload) {
+            state.curr_query_mode = payload
+        },
+        SET_LOADING_PRVW_DATA(state, payload) {
+            state.loading_prvw_data = payload
+        },
+        SET_PRVW_DATA(state, payload) {
+            state.prvw_data = payload
+        },
+        SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
+            state.loading_prvw_data_details = payload
+        },
+        SET_PRVW_DATA_DETAILS(state, payload) {
+            state.prvw_data_details = payload
+        },
+        SET_LOADING_QUERY_RESULT(state, payload) {
+            state.loading_query_result = payload
+        },
+        SET_QUERY_RESULT(state, payload) {
+            state.query_result = payload
         },
     },
     actions: {
@@ -149,6 +152,7 @@ export default {
                 logger.error(e)
             }
         },
+
         async fetchDbList({ state, commit }) {
             try {
                 commit('SET_LOADING_DB_TREE', true)
@@ -282,44 +286,31 @@ export default {
             }
         },
 
-        //TODO: DRY fetchPreviewData and fetchDataDetails actions
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */
-        async fetchPreviewData({ state, commit }, tblId) {
+        async fetchPrvw({ state, commit }, { tblId, prvwMode }) {
             try {
-                commit('SET_LOADING_PREVIEW_DATA', true)
+                commit(`SET_LOADING_${prvwMode}`, true)
+                let sql
+                switch (prvwMode) {
+                    case state.app_config.SQL_QUERY_MODES.PRVW_DATA:
+                        sql = `SELECT * FROM ${tblId};`
+                        break
+                    case state.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                        sql = `DESCRIBE ${tblId};`
+                        break
+                }
+
                 let res = await this.vue.$axios.post(
                     `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
-                    {
-                        sql: `SELECT * FROM ${tblId};`,
-                    }
+                    { sql }
                 )
                 await this.vue.$help.delay(400)
-                commit('SET_PREVIEW_DATA', Object.freeze(res.data.data.attributes.results[0]))
-                commit('SET_LOADING_PREVIEW_DATA', false)
+                commit(`SET_${prvwMode}`, Object.freeze(res.data.data.attributes.results[0]))
+                commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchPreviewData')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {String} tblId - Table id (database_name.table_name).
-         */
-        async fetchDataDetails({ state, commit }, tblId) {
-            try {
-                commit('SET_LOADING_DATA_DETAILS', true)
-                let res = await this.vue.$axios.post(
-                    `/sql/${state.query_conn_id_map[state.curr_cnct_resource_name]}/queries`,
-                    {
-                        sql: `DESCRIBE ${tblId};`,
-                    }
-                )
-                await this.vue.$help.delay(400)
-                commit('SET_DATA_DETAILS', Object.freeze(res.data.data.attributes.results[0]))
-                commit('SET_LOADING_DATA_DETAILS', false)
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchDataDetails')
+                const logger = this.vue.$logger('store-query-fetchPrvw')
                 logger.error(e)
             }
         },
@@ -346,19 +337,13 @@ export default {
         },
 
         /**
-         * This action clears preview_data and data_details to empty object.
+         * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview({ commit }) {
-            commit('SET_PREVIEW_DATA', {})
-            commit('SET_DATA_DETAILS', {})
-        },
-        /**
-         * @param {String} mode - SQL query mode
-         */
-        setCurrQueryMode({ commit }, mode) {
-            commit('SET_CURR_QUERY_MODE', mode)
+            commit('SET_PRVW_DATA', {})
+            commit('SET_PRVW_DATA_DETAILS', {})
         },
     },
 }

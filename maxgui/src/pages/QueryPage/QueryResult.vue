@@ -3,7 +3,7 @@
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
             <span> Results </span>
         </v-tab>
-        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PREVIEW_DATA}`">
+        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
             <span> Data preview </span>
         </v-tab>
         <v-tabs-items
@@ -22,11 +22,7 @@
                     <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
                 </keep-alive>
             </v-tab-item>
-            <v-tab-item
-                :value="SQL_QUERY_MODES.PREVIEW_DATA"
-                :class="tabItemClass"
-                transition="none"
-            >
+            <v-tab-item :value="SQL_QUERY_MODES.PRVW_DATA" :class="tabItemClass" transition="none">
                 <keep-alive>
                     <preview-data-tab
                         :dynDim="componentDynDim"
@@ -51,7 +47,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
 export default {
@@ -92,26 +88,24 @@ export default {
         },
         activeTab: {
             get() {
-                /* There are only two tab mode in this component. So VIEW_DETAILS will be
-                 * equal to PREVIEW_DATA
+                /* There are only two tab mode in this component. So PRVW_DATA_DETAILS will be
+                 * equal to PRVW_DATA
                  */
                 switch (this.curr_query_mode) {
-                    case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                        return this.SQL_QUERY_MODES.PREVIEW_DATA
+                    case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    case this.SQL_QUERY_MODES.PRVW_DATA:
+                        return this.SQL_QUERY_MODES.PRVW_DATA
                     default:
                         return this.curr_query_mode
                 }
             },
             set(value) {
-                this.setCurrQueryMode(value)
+                this.SET_CURR_QUERY_MODE(value)
             },
         },
     },
     methods: {
-        ...mapActions({
-            setCurrQueryMode: 'query/setCurrQueryMode',
-        }),
+        ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
     },
 }
 </script>

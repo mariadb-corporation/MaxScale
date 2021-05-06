@@ -4,10 +4,10 @@
             <div v-if="previewDataSchemaId" class="schema-view-title">
                 <span><b>Table:</b> {{ previewDataSchemaId }}</span>
                 <v-btn-toggle v-model="activeView" class="ml-4" mandatory>
-                    <v-btn :value="SQL_QUERY_MODES.PREVIEW_DATA" x-small text color="primary">
+                    <v-btn :value="SQL_QUERY_MODES.PRVW_DATA" x-small text color="primary">
                         Data
                     </v-btn>
-                    <v-btn :value="SQL_QUERY_MODES.VIEW_DETAILS" x-small text color="primary">
+                    <v-btn :value="SQL_QUERY_MODES.PRVW_DATA_DETAILS" x-small text color="primary">
                         Details
                     </v-btn>
                 </v-btn-toggle>
@@ -30,8 +30,8 @@
             />
             <template v-else>
                 <result-data-table
-                    v-if="activeView === SQL_QUERY_MODES.PREVIEW_DATA"
-                    :key="SQL_QUERY_MODES.PREVIEW_DATA"
+                    v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
+                    :key="SQL_QUERY_MODES.PRVW_DATA"
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
                     :headers="previewDataHeaders"
@@ -39,7 +39,7 @@
                 />
                 <result-data-table
                     v-else
-                    :key="SQL_QUERY_MODES.VIEW_DETAILS"
+                    :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
                     :headers="detailsDataHeaders"
@@ -63,7 +63,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapMutations } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
     name: 'preview-data-tab',
@@ -87,31 +87,31 @@ export default {
     },
     computed: {
         ...mapState({
-            preview_data: state => state.query.preview_data,
-            loading_preview_data: state => state.query.loading_preview_data,
-            data_details: state => state.query.data_details,
-            loading_data_details: state => state.query.loading_data_details,
+            prvw_data: state => state.query.prvw_data,
+            loading_prvw_data: state => state.query.loading_prvw_data,
+            prvw_data_details: state => state.query.prvw_data_details,
+            loading_prvw_data_details: state => state.query.loading_prvw_data_details,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
         }),
         previewDataHeaders() {
-            if (!this.preview_data.fields) return []
-            return this.preview_data.fields
+            if (!this.prvw_data.fields) return []
+            return this.prvw_data.fields
         },
         previewDataRows() {
-            if (!this.preview_data.data) return []
-            return this.preview_data.data
+            if (!this.prvw_data.data) return []
+            return this.prvw_data.data
         },
         detailsDataHeaders() {
-            if (!this.data_details.fields) return []
-            return this.data_details.fields
+            if (!this.prvw_data_details.fields) return []
+            return this.prvw_data_details.fields
         },
         detailsDataRows() {
-            if (!this.data_details.data) return []
-            return this.data_details.data
+            if (!this.prvw_data_details.data) return []
+            return this.prvw_data_details.data
         },
         isPrwDataLoading() {
-            return this.loading_preview_data || this.loading_data_details
+            return this.loading_prvw_data || this.loading_prvw_data_details
         },
         activeView: {
             get() {
@@ -119,7 +119,7 @@ export default {
             },
             set(value) {
                 if (this.curr_query_mode !== this.SQL_QUERY_MODES.QUERY_VIEW)
-                    this.setCurrQueryMode(value)
+                    this.SET_CURR_QUERY_MODE(value)
             },
         },
     },
@@ -134,10 +134,9 @@ export default {
         this.setHeaderHeight()
     },
     methods: {
+        ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
         ...mapActions({
-            setCurrQueryMode: 'query/setCurrQueryMode',
-            fetchPreviewData: 'query/fetchPreviewData',
-            fetchDataDetails: 'query/fetchDataDetails',
+            fetchPrvw: 'query/fetchPrvw',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
@@ -151,13 +150,19 @@ export default {
          */
         async handleFetch(SQL_QUERY_MODE) {
             switch (SQL_QUERY_MODE) {
-                case this.SQL_QUERY_MODES.PREVIEW_DATA:
-                    if (!this.preview_data.fields)
-                        await this.fetchPreviewData(this.previewDataSchemaId)
+                case this.SQL_QUERY_MODES.PRVW_DATA:
+                    if (!this.prvw_data.fields)
+                        await this.fetchPrvw({
+                            tblId: this.previewDataSchemaId,
+                            prvwMode: SQL_QUERY_MODE,
+                        })
                     break
-                case this.SQL_QUERY_MODES.VIEW_DETAILS:
-                    if (!this.data_details.fields)
-                        await this.fetchDataDetails(this.previewDataSchemaId)
+                case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    if (!this.prvw_data_details.fields)
+                        await this.fetchPrvw({
+                            tblId: this.previewDataSchemaId,
+                            prvwMode: SQL_QUERY_MODE,
+                        })
                     break
             }
         },
