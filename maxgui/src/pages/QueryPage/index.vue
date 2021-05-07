@@ -178,6 +178,9 @@ export default {
     async created() {
         if (this.active_conn_state) await this.loadSchema()
     },
+    async beforeDestroy() {
+        await this.disconnect()
+    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
@@ -189,6 +192,7 @@ export default {
             clearDataPreview: 'query/clearDataPreview',
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
+            disconnect: 'query/disconnect',
         }),
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
