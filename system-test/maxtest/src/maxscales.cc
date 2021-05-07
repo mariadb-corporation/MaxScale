@@ -485,6 +485,7 @@ ServersInfo MaxScale::get_servers()
 
     // Statistics fields
     const string field_pers_conns = "persistent_connections";
+    const string field_connections = "connections";
 
     auto try_get_int = [](const Json& json, const string& key, int64_t failval) {
             int64_t rval = failval;
@@ -536,6 +537,7 @@ ServersInfo MaxScale::get_servers()
 
                 auto stats = attr.get_object(field_statistics);
                 info.pool_conns = try_get_int(stats, field_pers_conns, -1);
+                info.connections = try_get_int(stats, field_connections, 0);
 
                 rval.add(info);
             }
@@ -640,6 +642,20 @@ void ServersInfo::check_pool_connections(const std::vector<int>& expected_conns)
             if (expected != info.pool_conns)
             {
                 m_log->add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
+                                   info.name.c_str(), info.pool_conns, expected);
+            }
+        };
+    check_servers_property(expected_conns.size(), tester);
+}
+
+void ServersInfo::check_connections(const std::vector<int>& expected_conns)
+{
+    auto tester = [&](size_t i) {
+            auto expected = expected_conns[i];
+            auto& info = m_servers[i];
+            if (expected != info.connections)
+            {
+                m_log->add_failure("Wrong number of connections for %s. Got '%li', expected '%i'.",
                                    info.name.c_str(), info.pool_conns, expected);
             }
         };
