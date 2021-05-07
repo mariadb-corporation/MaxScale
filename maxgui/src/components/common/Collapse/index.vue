@@ -14,7 +14,7 @@
             <div class="d-flex align-center" :class="titleWrapperClass">
                 <v-btn icon class="arrow-toggle" @click="toggleOnClick">
                     <v-icon
-                        :class="[!isContentVisible ? 'arrow-down' : 'arrow-up']"
+                        :class="[isContentVisible ? 'arrow-down' : 'arrow-right']"
                         size="32"
                         color="deep-ocean"
                     >
@@ -112,10 +112,3 @@ export default {
     },
 }
 </script>
-<style lang="scss">
-.arrow-toggle {
-    .arrow-up {
-        transform: rotate(-180deg);
-    }
-}
-</style>

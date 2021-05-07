@@ -31,7 +31,7 @@
                 @click="$emit('toggle-node', item)"
             >
                 <v-icon
-                    :class="[item.expanded === true ? 'arrow-up' : 'arrow-down']"
+                    :class="[item.expanded === true ? 'arrow-down' : 'arrow-right']"
                     size="24"
                     color="deep-ocean"
                 >

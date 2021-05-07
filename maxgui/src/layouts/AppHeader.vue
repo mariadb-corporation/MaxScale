@@ -27,7 +27,7 @@
             content-class="mariadb-select-v-menu mariadb-select-v-menu--no-border"
         >
             <template v-slot:activator="{ on }">
-                <v-btn dark class="mr-0" text tile v-on="on">
+                <v-btn dark class="mr-0 arrow-toggle" text tile v-on="on">
                     <v-icon class="mr-1 " size="30">
                         $vuetify.icons.user
                     </v-icon>
@@ -36,7 +36,7 @@
                     </span>
 
                     <v-icon
-                        :class="[!isProfileOpened ? 'arrow-down' : 'arrow-up']"
+                        :class="[isProfileOpened ? 'arrow-up' : 'arrow-down']"
                         size="14"
                         class="mr-0 ml-1 "
                         left
@@ -118,12 +118,6 @@ export default {
 }
 .user-name {
     font-size: 1rem;
-}
-.arrow-up {
-    transform: rotate(-180deg);
-}
-.arrow-down {
-    transform: rotate(0deg);
 }
 .v-btn {
     letter-spacing: normal;
