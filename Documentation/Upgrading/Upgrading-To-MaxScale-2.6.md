@@ -41,6 +41,12 @@ The default value of `threads` was changed to `auto`.
 
 ## Removed Parameters
 
+### Core Parameters
+
+The following deprecated core parameters have been removed:
+
+- `thread_stack_size`
+
 ### Schemarouter
 
 The deprecated aliases for the schemarouter parameters `ignore_databases` and

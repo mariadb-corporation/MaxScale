@@ -1393,7 +1393,6 @@ bool ignored_core_parameters(const char* key)
         CN_MODULE_CONFIGDIR,
         CN_PERSISTDIR,
         CN_PIDDIR,
-        "thread_stack_size",
     };
 
     return params.count(key);

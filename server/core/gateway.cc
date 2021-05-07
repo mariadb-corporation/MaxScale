@@ -2125,10 +2125,7 @@ int main(int argc, char** argv)
                     // Start the routing workers, each in a thread of its own.
                     if (RoutingWorker::start_workers())
                     {
-                        MXS_NOTICE("MaxScale started with %d worker threads, each with a stack "
-                                   "size of %lu bytes.",
-                                   config_threadcount(),
-                                   config_thread_stack_size());
+                        MXS_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
 
                         if (configure_normal_signals())
                         {

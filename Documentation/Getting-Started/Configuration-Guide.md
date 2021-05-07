@@ -130,7 +130,6 @@ The following list of global configuration parameters can **NOT** be changed at
 runtime and can only be defined in a configuration file:
 
 * `threads`
-* `thread_stack_size`
 * `log_to_shm`
 * `log_augmentation`
 * `log_warn_super_user`
@@ -355,13 +354,6 @@ threads=auto
 Additional threads will be created to execute other internal services within
 MariaDB MaxScale. This setting is used to configure the number of threads that
 will be used to manage the user connections.
-
-### `thread_stack_size`
-
-Ignored and deprecated in 2.3.
-
-If you need to explicitly set the stack size, do so using `ulimit -s` before
-starting MaxScale.
 
 ### `rebalance_period`
 

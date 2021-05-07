@@ -476,13 +476,6 @@ inline int config_truth_value(const std::string& value)
  */
 int config_threadcount(void);
 
-/**
- * @brief Get thread stack size
- *
- * @return The configured worker thread stack size.
- */
-size_t config_thread_stack_size(void);
-
 
 /**
  * @brief List all path parameters as JSON

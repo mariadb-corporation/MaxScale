@@ -115,7 +115,6 @@ constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
-constexpr char CN_THREAD_STACK_SIZE[] = "thread_stack_size";
 
 static uint64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
 }
@@ -2671,21 +2670,6 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
 int config_threadcount()
 {
     return mxs::Config::get().n_threads;
-}
-
-size_t config_thread_stack_size()
-{
-    size_t thread_stack_size = 0;
-    pthread_attr_t attr;
-    if (pthread_attr_init(&attr) == 0)
-    {
-        if (pthread_attr_getstacksize(&attr, &thread_stack_size) != 0)
-        {
-            MXS_WARNING("Could not get thread stack size.");
-        }
-    }
-
-    return thread_stack_size;
 }
 
 uint32_t config_writeq_high_water()
