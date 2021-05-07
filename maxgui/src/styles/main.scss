@@ -266,6 +266,15 @@ input:-webkit-autofill:active {
     border-radius: 0 0 4px 4px !important;
     border-top: 0;
     box-shadow: none !important;
+    &--full-border {
+        border-top: 1px solid $text-subtle !important;
+        margin-top: 0px !important;
+    }
+    &--no-border {
+        border: none !important;
+        border-radius: 0 !important;
+        margin-top: 0px !important;
+    }
     .v-list {
         padding-top: 0;
         padding-bottom: 0;

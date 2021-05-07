@@ -59,7 +59,7 @@
                     left
                     nudge-right="12"
                     nudge-bottom="8"
-                    content-class="mariadb-select-v-menu"
+                    content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
                     :position-x="menuCoord.x"
                     :position-y="menuCoord.y"
                 >
