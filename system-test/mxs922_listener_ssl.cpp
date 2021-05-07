@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     test->add_result(execute_query(conn, "select @@server_id"), "SSL query to readconnroute failed");
     mysql_close(conn);
 
-    test->check_maxscale_processes(0, 1);
+    test->maxscales->expect_running_status(true);
     int rval = test->global_result;
     delete test;
     return rval;

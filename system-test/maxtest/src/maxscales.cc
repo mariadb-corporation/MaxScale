@@ -408,6 +408,44 @@ mxt::VMNode& Maxscales::vm_node()
     return *node(0);
 }
 
+void Maxscales::expect_running_status(bool expected)
+{
+    const char* ps_cmd = m_use_valgrind ?
+        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
+        "ps -C maxscale | grep maxscale | wc -l";
+
+    auto cmd_res = ssh_output(ps_cmd, 0, false);
+    if (cmd_res.output.empty() || (cmd_res.rc != 0))
+    {
+        log().add_failure("Can't check MaxScale running status. Command '%s' failed with code %i and "
+                          "output '%s'.", ps_cmd, cmd_res.rc, cmd_res.output.c_str());
+        return;
+    }
+
+    cmd_res.output = mxt::cutoff_string(cmd_res.output, '\n');
+    string expected_str = expected ? "1" : "0";
+
+    if (cmd_res.output != expected_str)
+    {
+        log().log_msgf("%s MaxScale processes detected when %s was expected. Trying again in 5 seconds.",
+                       cmd_res.output.c_str(), expected_str.c_str());
+        sleep(5);
+        cmd_res = ssh_output(ps_cmd, 0, false);
+        cmd_res.output = mxt::cutoff_string(cmd_res.output, '\n');
+
+        if (cmd_res.output != expected_str)
+        {
+            log().add_failure("%s MaxScale processes detected when %s was expected.",
+                              cmd_res.output.c_str(), expected_str.c_str());
+        }
+    }
+}
+
+mxt::TestLogger& Maxscales::log() const
+{
+    return m_shared.log;
+}
+
 namespace maxtest
 {
 

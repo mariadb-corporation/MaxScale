@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
 
     do_query(test, true);
 
-    test->check_maxscale_processes(0, 1);
+    test->maxscales->expect_running_status(true);
     int rval = test->global_result;
     delete test;
     return rval;

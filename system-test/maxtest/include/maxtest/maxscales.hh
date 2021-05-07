@@ -267,6 +267,13 @@ public:
      */
     void wait_for_monitor(int intervals = 2, int m = 0);
 
+    /**
+     * Check if MaxScale process is running or stopped. Wrong status is a test failure.
+     *
+     * @param expected True if expected to be running
+     */
+    void expect_running_status(bool expected);
+
     bool use_valgrind() const;
     bool prepare_for_test();
 
@@ -281,6 +288,8 @@ private:
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
     std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
+
+    mxt::TestLogger& log() const;
 };
 
 class TestConnections;

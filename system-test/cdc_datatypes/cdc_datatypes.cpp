@@ -368,7 +368,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Test failed");
     }
 
-    test.check_maxscale_processes(0, 1);
+    test.maxscales->expect_running_status(true);
 
     return test.global_result;
 }

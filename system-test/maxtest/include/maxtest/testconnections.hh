@@ -324,12 +324,6 @@ public:
      */
     StringSet get_server_status(const std::string& name, int m = 0);
 
-    /**
-     * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
-     * @param expected expected number of Maxscale processes
-     * @return 0 if check is done
-     */
-    int check_maxscale_processes(int m, int expected);
 
     /**
      * @brief Test a bad configuration
@@ -499,6 +493,8 @@ private:
 
     int prepare_for_test(int argc, char* argv[]);
     int cleanup();
+
+    Maxscales* my_maxscale(int m) const;
 };
 
 /**

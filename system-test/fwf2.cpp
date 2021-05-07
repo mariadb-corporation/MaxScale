@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         Test->add_result(local_result, "********** rules%d test FAILED\n", i);
     }
 
-    Test->check_maxscale_processes(0, 1);
+    Test->maxscales->expect_running_status(true);
 
     int rval = Test->global_result;
     delete Test;
