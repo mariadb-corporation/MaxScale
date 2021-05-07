@@ -530,7 +530,11 @@ bool mxb_log_init(const char* ident,
     {
         this_unit.context_provider = context_provider;
         this_unit.in_memory_log = in_memory_log;
-        this_unit.should_log = should_log;
+
+        if (should_log)
+        {
+            this_unit.should_log = should_log;
+        }
 
         openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
     }
