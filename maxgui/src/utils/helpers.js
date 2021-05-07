@@ -507,6 +507,15 @@ export function resourceTxtTransform(str) {
     }
     return capitalizeFirstLetter(lowerCaseStr)
 }
+/**
+ * Case insensitive check if substring is included in source string
+ * @param {String} str source string
+ * @param {String} subStr sub string to be searched
+ * @return {Boolean} Return Boolean
+ */
+export function ciStrIncludes(str, subStr) {
+    return str.toLowerCase().includes(subStr.toLowerCase())
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -544,6 +553,7 @@ Object.defineProperties(Vue.prototype, {
                 lodash,
                 immutableUpdate: update,
                 resourceTxtTransform,
+                ciStrIncludes,
             }
         },
     },

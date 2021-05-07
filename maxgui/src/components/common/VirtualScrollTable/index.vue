@@ -1,50 +1,42 @@
 <template>
     <!-- TODO:Add resizable column feat -->
-    <div v-if="headers.length" class="virtual-table">
+    <div class="virtual-table">
         <div class="virtual-table__header">
             <div class="thead d-inline-block" :style="{ width: headerWidth }">
                 <div class="tr" :style="trStyle">
-                    <div
-                        v-for="(header, i) in tableHeaders"
-                        :key="`${header}_${i}`"
-                        :ref="`header__${i}`"
-                        :style="{ ...headerStyle, minWidth: '100px' }"
-                        class="th px-3 text-no-wrap text-truncate"
-                    >
-                        <!-- TODO: show truncated text in tooltip -->
-                        {{ header }}
-                    </div>
+                    <template>
+                        <div
+                            v-for="(header, i) in headers"
+                            :key="`${header}_${i}`"
+                            :ref="`header__${i}`"
+                            :style="{ ...headerStyle, minWidth: '100px' }"
+                            class="th px-3 text-no-wrap text-truncate"
+                        >
+                            <!-- TODO: show truncated text in tooltip -->
+                            {{ header }}
+                        </div>
+                    </template>
                 </div>
             </div>
             <div :style="{ minWidth: `${getScrollbarWidth()}px` }" class="d-inline-block" />
         </div>
         <v-virtual-scroll
-            v-if="rows.length"
+            v-if="rows.length && headers.length"
             :bench="benched"
             :items="rows"
             :height="height - itemHeight"
             :item-height="itemHeight"
             @scroll.native="scrolling"
         >
-            <template v-slot:default="{ item: row, index }">
+            <template v-slot:default="{ item: row }">
                 <div class="tr" :style="trStyle">
-                    <div
-                        v-if="showRowIndex"
-                        class="td px-3 text-no-wrap"
-                        :style="{
-                            ...tdStyle,
-                            minWidth: `${cellWidthMap[0]}px`,
-                        }"
-                    >
-                        {{ index + 1 }}
-                    </div>
                     <div
                         v-for="(cell, i) in row"
                         :key="`${cell}_${i}`"
                         class="td px-3 text-no-wrap text-truncate"
                         :style="{
                             ...tdStyle,
-                            minWidth: `${cellWidthMap[showRowIndex ? i + 1 : i]}px`,
+                            minWidth: `${cellWidthMap[i]}px`,
                         }"
                     >
                         <!-- TODO: show truncated text in tooltip -->
@@ -53,9 +45,9 @@
                 </div>
             </template>
         </v-virtual-scroll>
-        <div v-else class="tr" :style="trStyle">
-            <!-- TODO: add overflow -->
-            <div class="td px-3 text-center" :style="{ width: '100%' }">
+        <div v-else-if="!rows.length" class="tr" :style="trStyle">
+            <!-- TODO: add overflow and width as header width -->
+            <div class="td px-3 d-flex justify-center flex-grow-1">
                 No data
             </div>
         </div>
@@ -84,7 +76,6 @@ export default {
         itemHeight: { type: Number, require: true },
         width: { type: Number, require: true },
         benched: { type: Number, require: true },
-        showRowIndex: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -93,11 +84,6 @@ export default {
         }
     },
     computed: {
-        tableHeaders() {
-            let headers = this.headers
-            if (this.showRowIndex) headers = ['Row', ...headers]
-            return headers
-        },
         headerWidth() {
             return `calc(100% - ${this.getScrollbarWidth()}px)`
         },
@@ -116,16 +102,16 @@ export default {
         width() {
             this.setCellWidthMap()
         },
-    },
-    mounted() {
-        this.setCellWidthMap()
+        headers() {
+            this.$nextTick(() => this.setCellWidthMap())
+        },
     },
     methods: {
         setCellWidthMap() {
             if (this.$refs[`header__${0}`]) {
                 let cellWidthMap = {}
                 // get width of each header then use it to set same width of corresponding cells
-                for (let i = 0; i < this.tableHeaders.length; i++) {
+                for (let i = 0; i < this.headers.length; i++) {
                     const headerWidth = this.$refs[`header__${i}`][0].clientWidth
                     cellWidthMap = {
                         ...cellWidthMap,
@@ -198,6 +184,7 @@ export default {
     }
 
     &__header {
+        height: 30px;
         overflow: hidden;
         background-color: $table-border;
         .tr {
