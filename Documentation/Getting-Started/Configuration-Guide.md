@@ -603,14 +603,6 @@ where a client interferes with a master server switchover. Super-users bypass
 the *read_only*-flag which switchover uses to block writes to the master. This
 setting cannot be modified during runtime.
 
-### `log_messages`
-
-**Deprecated** Use *log_notice* instead.
-
-### `log_trace`
-
-**Deprecated** Use *log_info* instead.
-
 ### `log_augmentation`
 
 Enable or disable the augmentation of messages. If this is enabled, then each
