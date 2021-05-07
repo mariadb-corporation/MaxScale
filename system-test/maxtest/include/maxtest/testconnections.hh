@@ -88,7 +88,8 @@ public:
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
     GaleraCluster*           galera {nullptr};      /**< Galera cluster */
     XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
-    Maxscales*               maxscales {nullptr};   /**< MaxScale nodes */
+    Maxscales*               maxscales {nullptr};   /**< MaxScale */
+    Maxscales*               maxscales2 {nullptr};  /**< Second MaxScale */
 
     int& global_result;     /**< Result of test, 0 if PASSED */
     bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */

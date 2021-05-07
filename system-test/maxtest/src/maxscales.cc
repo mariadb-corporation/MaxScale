@@ -31,20 +31,7 @@ Maxscales::~Maxscales()
     }
 }
 
-bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
-{
-    bool rval = true;
-    int found = read_nodes_info(nwconfig);
-    if (found < n_min_expected)
-    {
-        m_shared.log.add_failure("Found %i MaxScale(s) in network_config when at least %i was expected.",
-                                 found, n_min_expected);
-        rval = false;
-    }
-    return rval;
-}
-
-int Maxscales::read_nodes_info(const mxt::NetworkConfig& nwconfig)
+bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name)
 {
     auto prefixc = my_prefix.c_str();
     string key_user = mxb::string_printf("%s_user", prefixc);
@@ -53,47 +40,39 @@ int Maxscales::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     string key_pw = mxb::string_printf("%s_password", prefixc);
     password = envvar_get_set(key_pw.c_str(), "skysql");
 
-    clear_vms();
-    int i = 0;
-    while (i < N_MXS)
-    {
-        string node_name = mxb::string_printf("%s_%03d", prefixc, i);
-        if (add_node(nwconfig, node_name))
-        {
-            string key_cnf = node_name + "_cnf";
-            maxscale_cnf[i] = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
-
-            string key_log_dir = node_name + "_log_dir";
-            maxscale_log_dir[i] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
-
-            string key_binlog_dir = node_name + "_binlog_dir";
-            m_binlog_dir[i] = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
-
-            rwsplit_port[i] = 4006;
-            readconn_master_port[i] = 4008;
-            readconn_slave_port[i] = 4009;
-
-            ports[i][0] = rwsplit_port[i];
-            ports[i][1] = readconn_master_port[i];
-            ports[i][2] = readconn_slave_port[i];
-            i++;
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    assert(i == Nodes::n_nodes());
-    N = i;
-
     m_use_valgrind = readenv_bool("use_valgrind", false);
     m_use_callgrind = readenv_bool("use_callgrind", false);
     if (m_use_callgrind)
     {
         m_use_valgrind = true;
     }
-    return i;
+
+    clear_vms();
+    bool rval = false;
+    if (add_node(nwconfig, vm_name))
+    {
+        string key_cnf = vm_name + "_cnf";
+        maxscale_cnf[0] = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
+
+        string key_log_dir = vm_name + "_log_dir";
+        maxscale_log_dir[0] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
+
+        string key_binlog_dir = vm_name + "_binlog_dir";
+        m_binlog_dir[0] = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
+
+        rwsplit_port[0] = 4006;
+        readconn_master_port[0] = 4008;
+        readconn_slave_port[0] = 4009;
+
+        ports[0][0] = rwsplit_port[0];
+        ports[0][1] = readconn_master_port[0];
+        ports[0][2] = readconn_slave_port[0];
+
+        rval = true;
+    }
+
+    N = n_nodes();
+    return rval;
 }
 
 int Maxscales::connect_rwsplit(int m, const std::string& db)
@@ -343,7 +322,7 @@ const char* Maxscales::sshkey(int i) const
     return Nodes::sshkey(i);
 }
 
-const std::string& Maxscales::prefix() const
+const std::string& Maxscales::prefix()
 {
     return my_prefix;
 }

@@ -18,7 +18,7 @@ class MariaDB;
 class Maxscales : public Nodes
 {
 public:
-    static const int N_MXS = 2;
+    static const int N_MXS = 1;
 
     int N {0};
 
@@ -33,7 +33,7 @@ public:
 
     ~Maxscales();
 
-    bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
+    bool setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name);
 
     void set_use_ipv6(bool use_ipv6);
     void set_ssl(bool ssl);
@@ -48,8 +48,8 @@ public:
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
 
-    const std::string& prefix() const;
-    const std::string& node_name(int i) const;
+    static const std::string& prefix();
+    const std::string&        node_name(int i) const;
 
     bool ssl() const;
 
@@ -281,8 +281,6 @@ private:
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
     std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
-
-    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
 };
 
 class TestConnections;
