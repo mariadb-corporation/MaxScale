@@ -116,42 +116,5 @@ EOL
   sudo pip install JayDeBeApi
 fi
 
-# Methods allow to compare software versions according to semantic versioning
-verlte() {
-    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
-}
-
-verlt() {
-    [ "$1" = "$2" ] && return 1 || verlte $1 $2
-}
-
-# cmake
-cmake_vrs_cmd="cmake --version"
-cmake_version_ok=0
-cmake_version_required="3.16.0"
-if command -v ${cmake_vrs_cmd} &> /dev/null ; then
-  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
-  if verlt $cmake_version $cmake_version_required ; then
-    echo "Found CMake ${cmake_version}, which is too old."
-  else
-    cmake_version_ok=1
-    echo "Found CMake ${cmake_version}, which is recent enough."
-  fi
-else
-  echo "CMake not found"
-fi
-
-cmake_filename="cmake-3.16.8-Linux-x86_64.tar.gz"
-if [ $cmake_version_ok -eq 0 ] ; then
-  wget -q http://max-tst-01.mariadb.com/ci-repository/${cmake_filename} --no-check-certificate
-  if [ $? != 0 ] ; then
-    echo "CMake could not be downloaded from Maxscale build server, trying from cmake.org"
-    wget -q https://cmake.org/files/v3.16/${cmake_filename} --no-check-certificate
-  fi
-  sudo tar xzf ${cmake_filename} -C /usr/ --strip-components=1
-  cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
-  if verlt $cmake_version $cmake_version_required ; then
-    echo "CMake installation failed"
-    exit 1
-  fi
-fi
+# Install a recent cmake in case the package manager installed an old version.
+$src_dir/install_cmake.sh
