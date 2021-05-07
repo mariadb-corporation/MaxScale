@@ -416,6 +416,7 @@ module.exports = function () {
   this.host = "localhost:8989/v1";
   this.base_url = "http://" + this.host;
   this.credentials = { username: "admin", password: "mariadb" };
+  this.db_credentials = { user: "maxuser", password: "maxpwd" };
 
   this.doRequest = async function (method, endpoint, opts) {
     var o = opts || {};
