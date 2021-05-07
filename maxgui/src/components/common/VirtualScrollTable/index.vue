@@ -4,21 +4,22 @@
         <div class="virtual-table__header">
             <div class="thead d-inline-block" :style="{ width: headerWidth }">
                 <div class="tr" :style="trStyle">
-                    <template>
-                        <div
-                            v-for="(header, i) in headers"
-                            :key="`${header}_${i}`"
-                            :ref="`header__${i}`"
-                            :style="{ ...headerStyle, minWidth: '100px' }"
-                            class="th px-3 text-no-wrap text-truncate"
-                        >
-                            <!-- TODO: show truncated text in tooltip -->
-                            {{ header }}
-                        </div>
-                    </template>
+                    <div
+                        v-for="(header, i) in headers"
+                        :key="`${header}_${i}`"
+                        :ref="`header__${i}`"
+                        :style="{ ...headerStyle, minWidth: '100px' }"
+                        class="th px-3 text-no-wrap text-truncate"
+                    >
+                        <!-- TODO: show truncated text in tooltip -->
+                        {{ header }}
+                    </div>
                 </div>
             </div>
-            <div :style="{ minWidth: `${getScrollbarWidth()}px` }" class="d-inline-block" />
+            <div
+                :style="{ minWidth: `${getScrollbarWidth()}px` }"
+                class="d-inline-block dummy-header"
+            />
         </div>
         <v-virtual-scroll
             v-if="rows.length && headers.length"
@@ -190,6 +191,7 @@ export default {
         .tr {
             box-shadow: -7px 5px 7px -7px rgb(0 0 0 / 10%);
             .th {
+                z-index: 1;
                 flex: 1;
                 font-weight: bold;
                 font-size: 0.75rem;
@@ -204,6 +206,12 @@ export default {
                     border-radius: 0 5px 0 0;
                 }
             }
+        }
+        .dummy-header {
+            z-index: 2;
+            background-color: $table-border;
+            height: 30px;
+            position: absolute;
         }
     }
     // Always show scrollbar to make table header and table cell align vertically
