@@ -30,7 +30,7 @@ const plugins = store => {
     store.vue = Vue.prototype
 }
 
-export default new Vuex.Store({
+const store = new Vuex.Store({
     plugins: [plugins],
     state: {
         app_config: APP_CONFIG,
@@ -165,3 +165,10 @@ export default new Vuex.Store({
         query,
     },
 })
+export default store
+
+const initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
+/** for state hydration*/
+export function resetState() {
+    store.replaceState(initialState)
+}

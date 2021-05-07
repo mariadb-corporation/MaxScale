@@ -25,7 +25,6 @@ const localStorageMock = (() => {
 // global define
 
 global.localStorage = localStorageMock
-global.sessionStorage = localStorageMock
 // this prevents console from being printed out
 console.error = () => {}
 console.info = () => {}

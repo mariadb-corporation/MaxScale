@@ -12,7 +12,7 @@
  */
 import { OVERLAY_LOGOUT } from 'store/overlayTypes'
 import { cancelAllRequests } from 'plugins/axios'
-
+import { resetState } from 'store/index'
 export default {
     namespaced: true,
     state: {
@@ -56,7 +56,6 @@ export default {
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             localStorage.clear()
-            sessionStorage.clear()
             this.vue.$help.deleteAllCookies()
             // hide snackbar snackbar_message if it is on
             if (rootState.snackbar_message.status) {
@@ -70,11 +69,12 @@ export default {
                     { root: true }
                 )
             }
-
             await this.vue.$help.delay(1500).then(() => {
                 commit('SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
+            // call this at last
+            resetState()
         },
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {

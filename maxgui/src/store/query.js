@@ -17,7 +17,7 @@ export default {
         active_conn_state: Boolean(getCookie('conn_id_body')),
         conn_err_state: false,
         rc_target_names_map: {},
-        curr_cnct_resource: JSON.parse(sessionStorage.getItem('curr_cnct_resource')),
+        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
@@ -124,7 +124,7 @@ export default {
                     const connId = res.data.data.id
                     const curr_cnct_resource = { id: connId, name: body.target }
 
-                    sessionStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
+                    localStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
                     commit('SET_ACTIVE_CONN_STATE', true)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
 
@@ -148,7 +148,7 @@ export default {
                         },
                         { root: true }
                     )
-                    sessionStorage.removeItem('curr_cnct_resource')
+                    localStorage.removeItem('curr_cnct_resource')
                     this.vue.$help.deleteCookie('conn_id_body')
                     //TODO: store default state and reuse it instead of manually set it
                     commit('SET_ACTIVE_CONN_STATE', false)

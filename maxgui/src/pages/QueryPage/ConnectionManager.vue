@@ -91,7 +91,7 @@ export default {
             if (v === this.newConnOption) this.openConnDialog()
         },
         curr_cnct_resource(v) {
-            this.chosenConn = v.name
+            if (v) this.chosenConn = v.name
         },
     },
     mounted() {
