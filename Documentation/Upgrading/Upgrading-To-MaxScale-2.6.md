@@ -33,6 +33,12 @@ an explicit suffix but this behavior is deprecated. The recommended approach is
 to add explicit suffixes to all duration type parameters when upgrading to
 MaxScale 2.6.
 
+## Changed Parameters
+
+### `threads`
+
+The default value of `threads` was changed to `auto`.
+
 ## Removed Parameters
 
 ### Schemarouter

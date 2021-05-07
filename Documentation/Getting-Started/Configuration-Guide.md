@@ -336,23 +336,20 @@ defined in the root configuration file which by default is `/etc/maxscale.cnf`.
 ### `threads`
 
 This parameter controls the number of worker threads that are handling the
-events coming from the kernel. The default is 1 thread. It is recommended that
-you start with one thread and increase the number if you require greater
-performance. Increasing the amount of worker threads beyond the number of
-processor cores does not improve the performance, rather is likely to degrade
-it, and can consume resources needlessly.
+events coming from the kernel. The default is `auto` which uses as many threads
+as there are CPU cores. MaxScale versions older than 2.6 used one thread by
+default.
 
-You can enable automatic configuration of this value by setting the value to
-`auto`. This way MariaDB MaxScale will detect the number of available processors
-and set the amount of threads to be equal to that number. This should only be
-used for systems dedicated for running MariaDB MaxScale.
+You can explicitly enable automatic configuration of this value by setting the
+value to `auto`. This way MariaDB MaxScale will detect the number of available
+processors and set the amount of threads to be equal to that number.
 
 ```
 # Valid options are:
 #       threads=[<number of threads> | auto ]
 
 [MaxScale]
-threads=1
+threads=auto
 ```
 
 Additional threads will be created to execute other internal services within

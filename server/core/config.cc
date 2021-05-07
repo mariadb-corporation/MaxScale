@@ -396,7 +396,7 @@ Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    DEFAULT_NTHREADS,   // TODO: Why not get_processor_count()?
+    get_processor_count(),
     1,
     std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
 
