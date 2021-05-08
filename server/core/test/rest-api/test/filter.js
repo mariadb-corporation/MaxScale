@@ -22,66 +22,64 @@ var rel = {
 describe("Filter", function () {
   before(startMaxScale);
 
-  it("create new filter", function () {
-    return request.post(base_url + "/filters/", { json: filter }).should.be.fulfilled;
-  });
+  describe("Creation", function () {
+    it("create new filter", function () {
+      return request.post(base_url + "/filters/", { json: filter }).should.be.fulfilled;
+    });
 
-  it("request filter", function () {
-    return request.get(base_url + "/filters/" + filter.data.id).should.be.fulfilled;
-  });
+    it("request filter", function () {
+      return request.get(base_url + "/filters/" + filter.data.id).should.be.fulfilled;
+    });
 
-  it("update filter", function () {
-    filter.data.attributes.parameters.separator = "|";
-    return request.patch(base_url + "/filters/" + filter.data.id, { json: filter }).should.be.rejected;
-    // TODO: Change this once the qlafilter supports it
-  });
+    it("update filter", function () {
+      filter.data.attributes.parameters.separator = "|";
+      return request.patch(base_url + "/filters/" + filter.data.id, { json: filter }).should.be.rejected;
+      // TODO: Change this once the qlafilter supports it
+    });
 
-  it("destroy filter", function () {
-    return request.delete(base_url + "/filters/" + filter.data.id).should.be.fulfilled;
-  });
-
-  after(stopMaxScale);
-});
-
-describe("Filter Relationships", function () {
-  before(startMaxScale);
-
-  // We need a deep copy of the original filter
-  var rel_filter = JSON.parse(JSON.stringify(filter));
-  rel_filter.data.relationships = rel;
-
-  it("create new filter with relationships", function () {
-    return request.post(base_url + "/filters/", { json: rel_filter }).should.be.fulfilled;
-  });
-
-  it("request filter", function () {
-    return request.get(base_url + "/filters/" + rel_filter.data.id).then((res) => {
-      // The service-filter relationships can't be modified from filters
-      res.data.relationships.should.not.have.keys("services");
+    it("destroy filter", function () {
+      return request.delete(base_url + "/filters/" + filter.data.id).should.be.fulfilled;
     });
   });
 
-  it("add relationships with `relationships` endpoint", function () {
-    return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services", {
-      json: { data: [{ id: "Read-Connection-Router", type: "services" }] },
-    }).should.be.rejected;
-  });
+  describe("Relationships", function () {
+    // We need a deep copy of the original filter
+    var rel_filter = JSON.parse(JSON.stringify(filter));
+    rel_filter.data.relationships = rel;
 
-  it("bad request body with `relationships` endpoint should be rejected", function () {
-    var body = { data: null };
-    return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services", {
-      json: body,
-    }).should.be.rejected;
-  });
+    it("create new filter with relationships", function () {
+      return request.post(base_url + "/filters/", { json: rel_filter }).should.be.fulfilled;
+    });
 
-  it("remove relationships", function () {
-    rel_filter.data.relationships["services"] = null;
-    return request.patch(base_url + "/filters/" + rel_filter.data.id, { json: rel_filter }).should.be
-      .rejected;
-  });
+    it("request filter", function () {
+      return request.get(base_url + "/filters/" + rel_filter.data.id).then((res) => {
+        // The service-filter relationships can't be modified from filters
+        res.data.relationships.should.not.have.keys("services");
+      });
+    });
 
-  it("destroy filter", function () {
-    return request.delete(base_url + "/filters/" + rel_filter.data.id).should.be.fulfilled;
+    it("add relationships with `relationships` endpoint", function () {
+      return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services", {
+        json: { data: [{ id: "Read-Connection-Router", type: "services" }] },
+      }).should.be.rejected;
+    });
+
+    it("bad request body with `relationships` endpoint should be rejected", function () {
+      var body = { data: null };
+      return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services", {
+        json: body,
+      }).should.be.rejected;
+    });
+
+    it("remove relationships", function () {
+      rel_filter.data.relationships["services"] = null;
+      return request.patch(base_url + "/filters/" + rel_filter.data.id, { json: rel_filter }).should.be
+        .rejected;
+    });
+
+    it("destroy filter", function () {
+      return request.delete(base_url + "/filters/" + rel_filter.data.id).should.be.fulfilled;
+    });
   });
 
   after(stopMaxScale);
