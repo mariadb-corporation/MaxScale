@@ -325,25 +325,24 @@ public:
      * Execute a MaxCtrl command
      *
      * @param cmd  Command to execute, without the `maxctrl` part
-     * @param m    MaxScale node to execute the command on
      * @param sudo Run the command as root
      *
      * @return The exit code and output of MaxCtrl
      */
-    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    mxt::CmdResult maxctrl(const std::string& cmd, bool sudo = true)
     {
-        return maxscales->maxctrl(cmd, m, sudo);
+        return maxscales->maxctrl(cmd, sudo);
     }
 
-    void check_maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    void check_maxctrl(const std::string& cmd, bool sudo = true)
     {
-        auto result = maxctrl(cmd, m, sudo);
+        auto result = maxctrl(cmd, sudo);
         expect(result.rc == 0, "Command '%s' should work: %s", cmd.c_str(), result.output.c_str());
     }
 
-    void print_maxctrl(const std::string& cmd, int m = 0, bool sudo = true)
+    void print_maxctrl(const std::string& cmd, bool sudo = true)
     {
-        tprintf("\n%s", maxctrl(cmd, m, sudo).output.c_str());
+        tprintf("\n%s", maxctrl(cmd, sudo).output.c_str());
     }
 
     void check_current_operations(int m, int value);

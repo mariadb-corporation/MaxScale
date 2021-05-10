@@ -47,7 +47,7 @@ public:
     const char* sshkey(int i = 0) const;
 
     static const std::string& prefix();
-    const std::string&        node_name(int i) const;
+    const std::string&        node_name() const;
 
     bool ssl() const;
 
@@ -227,12 +227,11 @@ public:
      * Execute a MaxCtrl command
      *
      * @param cmd  Command to execute, without the `maxctrl` part
-     * @param m    MaxScale node to execute the command on
      * @param sudo Run the command as root
      *
      * @return The exit code and output of MaxCtrl
      */
-    mxt::CmdResult maxctrl(const std::string& cmd, int m = 0, bool sudo = true);
+    mxt::CmdResult maxctrl(const std::string& cmd, bool sudo = true);
 
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
@@ -247,12 +246,9 @@ public:
      * @brief Get the set of labels that are assigned to server @c name
      *
      * @param name The name of the server
-     *
-     * @param m Number of Maxscale node
-     *
      * @return A set of string labels assigned to this server
      */
-    StringSet get_server_status(const std::string& name, int m = 0);
+    StringSet get_server_status(const std::string& name);
 
     /**
      * Wait until the monitors have performed at least one monitoring operation
@@ -412,7 +408,7 @@ public:
     MaxScale(const MaxScale& rhs) = delete;
     MaxScale& operator=(const MaxScale& rhs) = delete;
 
-    MaxScale(Maxscales* maxscales, SharedData& shared, int node_ind);
+    MaxScale(Maxscales* maxscales, SharedData& shared);
 
     /**
      * Wait for monitors to tick.
@@ -457,7 +453,6 @@ public:
 private:
     Maxscales* const m_maxscales {nullptr};
     SharedData&      m_shared;
-    int              m_node_ind {-1};       /**< Node index of this MaxScale */
 
     std::string m_rest_user {"admin"};
     std::string m_rest_pw {"mariadb"};
