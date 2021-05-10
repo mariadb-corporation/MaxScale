@@ -35,9 +35,7 @@ describe(name, function () {
         };
 
         var rv1 = await mng.ntRunCommand(command);
-        console.log("MNG: ", rv1);
         var rv2 = await mxs.ntRunCommand(command);
-        console.log("MXS: ", rv1);
     }
 
     async function deleteAll()
@@ -65,6 +63,34 @@ describe(name, function () {
         var rv1 = await mng.runCommand(command);
         var rv2 = await mxs.runCommand(command);
 
+        assert.deepEqual(rv1, rv2);
+    });
+
+    it('A replacement update does not nuke the id.', async function () {
+        drop();
+
+        var doc = {
+            _id: "hello",
+            a: 1
+        };
+
+        await mng.runCommand({insert: name, documents: [doc]});
+        await mxs.runCommand({insert: name, documents: [doc]});
+
+        var rv1 = mng.runCommand({find: name});
+        var rv2 = mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1, rv2);
+
+        rv1 = await mng.runCommand({update:name, updates: [{q:{}, u: {b:2}}]});
+        rv2 = await mxs.runCommand({update:name, updates: [{q:{}, u: {b:2}}]});
+
+        assert.deepEqual(rv1, rv2);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.equal(rv1.cursor.firstBatch[0]._id, "hello");
         assert.deepEqual(rv1, rv2);
     });
 

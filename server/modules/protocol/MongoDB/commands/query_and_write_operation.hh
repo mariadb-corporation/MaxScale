@@ -1059,9 +1059,9 @@ private:
             break;
 
         case REPLACEMENT_DOCUMENT:
-            sql << "'"
+            sql << "JSON_INSERT('"
                 << bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()))
-                << "'";
+                << "', '$._id', id)";
             break;
 
         case UPDATE_OPERATORS:
@@ -1082,13 +1082,15 @@ private:
             }
         }
 
+        sql << " ";
+
         sql << query_to_where_clause(q.get_document());
 
         auto multi = update[key::MULTI];
 
         if (!multi || !multi.get_bool())
         {
-            sql << "LIMIT 1";
+            sql << " LIMIT 1";
         }
 
         return sql.str();
