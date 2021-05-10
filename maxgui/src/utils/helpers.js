@@ -516,6 +516,18 @@ export function resourceTxtTransform(str) {
 export function ciStrIncludes(str, subStr) {
     return str.toLowerCase().includes(subStr.toLowerCase())
 }
+
+/**
+ * Vue.nextTick is not enough for rendering large DOM.
+ * This function uses double RAF technique to wait for a browser repaint
+ * @param {Function} callback callback function
+ */
+export function doubleRAF(callback) {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(callback)
+    })
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -554,6 +566,7 @@ Object.defineProperties(Vue.prototype, {
                 immutableUpdate: update,
                 resourceTxtTransform,
                 ciStrIncludes,
+                doubleRAF,
             }
         },
     },

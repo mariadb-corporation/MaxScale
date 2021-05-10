@@ -9,10 +9,9 @@
                         :key="`${header}_${i}`"
                         :ref="`header__${i}`"
                         :style="{ ...headerStyle, minWidth: '100px' }"
-                        class="th px-3 text-no-wrap text-truncate"
+                        class="th px-3"
                     >
-                        <!-- TODO: show truncated text in tooltip -->
-                        {{ header }}
+                        <truncate-string :text="`${header}`" :maxWidth="cellWidthMap[i] - 24" />
                     </div>
                 </div>
             </div>
@@ -34,14 +33,13 @@
                     <div
                         v-for="(cell, i) in row"
                         :key="`${cell}_${i}`"
-                        class="td px-3 text-no-wrap text-truncate"
+                        class="td px-3"
                         :style="{
                             ...tdStyle,
                             minWidth: `${cellWidthMap[i]}px`,
                         }"
                     >
-                        <!-- TODO: show truncated text in tooltip -->
-                        {{ cell }}
+                        <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
                     </div>
                 </div>
             </template>
@@ -171,6 +169,12 @@ export default {
     .tr {
         display: flex;
         flex-direction: row;
+        &:hover {
+            background: $table-row-hover;
+        }
+        &:active {
+            background: #f2fcff;
+        }
         .td {
             font-size: 0.875rem;
             color: $navigation;

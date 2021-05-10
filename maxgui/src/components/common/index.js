@@ -28,6 +28,8 @@ import Parameters from './Parameters'
 import SplitPane from './SplitPane'
 import MTreeVIew from './MTreeView'
 import VirtualScrollTable from './VirtualScrollTable'
+import TruncateString from './TruncateString'
+
 export default {
     'page-wrapper': PageWrapper,
     'global-search': GlobalSearch,
@@ -44,4 +46,5 @@ export default {
     'split-pane': SplitPane,
     'm-treeview': MTreeVIew,
     'virtual-scroll-table': VirtualScrollTable,
+    'truncate-string': TruncateString,
 }

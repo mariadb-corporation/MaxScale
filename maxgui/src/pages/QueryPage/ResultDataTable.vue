@@ -33,7 +33,7 @@
                         Columns
                         <v-icon
                             size="24"
-                            color="navigation"
+                            color="accent-dark"
                             :class="{ 'column-list-toggle--active': value }"
                         >
                             arrow_drop_down
