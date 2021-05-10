@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     //fflush(stdout);
     //Test->check_maxscale_alive(0);
 
-    Test->maxscales->stop_maxscale(0);
+    Test->maxscales->stop();
 
     int rval = Test->global_result;
     delete Test;

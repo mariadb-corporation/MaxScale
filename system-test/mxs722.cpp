@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
     test->stop_timeout();
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
 
     /** Copy original config so we can easily reset the testing environment */
     test->maxscales->ssh_node_f(0, true, "cp /etc/maxscale.cnf /tmp/maxscale.cnf");

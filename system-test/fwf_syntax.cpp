@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    test.maxscales->stop_maxscale(0);
+    test.maxscales->stop();
 
     for (int i = 0; rules_failure[i]; i++)
     {
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 
         test.tprintf("Testing rule: %s\n", rules_failure[i]);
         test.add_result(test.maxscales->start_maxscale(0) == 0, "MaxScale should fail to start");
-        test.maxscales->stop_maxscale(0);
+        test.maxscales->stop();
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */

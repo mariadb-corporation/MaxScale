@@ -179,10 +179,10 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         return rc;
     }
 
-    // Stop MaxScale to prevent it from interfering with the replication setup process
+    // Stop MaxScale to prevent it from interfering with replication setup.
     if (!m_mxs_manual_debug)
     {
-        maxscales->stop_all();
+        stop_all_maxscales();
     }
 
     if (galera && maxscale::restart_galera)
@@ -353,11 +353,6 @@ int TestConnections::cleanup()
     }
 
     copy_all_logs();
-
-    if (maxscales && settings().req_two_maxscales)
-    {
-        maxscales->stop_all();
-    }
     m_cleaned_up = true;
     return 0;
 }
@@ -773,6 +768,9 @@ bool TestConnections::process_template(int m, const string& config_file_path, co
     return rval;
 }
 
+/**
+ * Copy maxscale.cnf and start MaxScale on all Maxscale VMs.
+ */
 void TestConnections::init_maxscales()
 {
     // Always initialize the first MaxScale
@@ -1158,6 +1156,19 @@ int TestConnections::start_maxscale(int m)
     int res = mxs->start_maxscale();
     mxs->expect_running_status(true);
     return res;
+}
+
+bool TestConnections::stop_all_maxscales()
+{
+    bool rval = true;
+    for (int i = 0; i < n_maxscales(); i++)
+    {
+        if (!my_maxscale(i)->stop())
+        {
+            rval = false;
+        }
+    }
+    return rval;
 }
 
 int TestConnections::check_maxscale_alive(int m)

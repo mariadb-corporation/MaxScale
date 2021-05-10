@@ -36,7 +36,7 @@ int create_key(TestConnections* test)
 /** Hash a new password and start MaxScale */
 int hash_password(TestConnections* test)
 {
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
     test->stop_timeout();
 
     test->tprintf("Creating a new encrypted password\n");

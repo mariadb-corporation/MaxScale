@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     sprintf(rules_dir, "%s/fw/", test_dir);
 
     test->tprintf("Creating rules\n");
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
     copy_rules(test, (char*) "rules_logging", rules_dir);
 
     test->maxscales->start_maxscale(0);
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     test->maxscales->expect_running_status(true);
 
     /** Check that MaxScale was terminated successfully */
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
     test->maxscales->expect_running_status(false);
 
     /** Check that the logs contains entries for both matching and

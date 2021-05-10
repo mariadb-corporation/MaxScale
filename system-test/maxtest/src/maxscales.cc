@@ -359,17 +359,9 @@ int Maxscales::start(int m)
     return start_maxscale(m);
 }
 
-void Maxscales::stop_all()
+bool Maxscales::stop()
 {
-    for (int i = 0; i < N; i++)
-    {
-        stop(i);
-    }
-}
-
-int Maxscales::stop(int m)
-{
-    return stop_maxscale(m);
+    return stop_maxscale(0) == 0;
 }
 
 bool Maxscales::prepare_for_test()

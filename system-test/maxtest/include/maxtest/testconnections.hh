@@ -145,17 +145,6 @@ public:
     void add_failure(const char* format, ...) __attribute__ ((format(printf, 2, 3)));
 
     /**
-     * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
-     * @param m Number of Maxscale node
-     */
-    void init_maxscale(int m = 0);
-
-    /**
-     * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale on all Maxscale nodes
-     */
-    void init_maxscales();
-
-    /**
      * @brief Stop binlogrouter replication from master
      */
     void revert_replicate_from_master();
@@ -362,6 +351,7 @@ public:
     void check_current_persistent_connections(int m, const std::string& name, int value);
     int  stop_maxscale(int m = 0);
     int  start_maxscale(int m = 0);
+    bool stop_all_maxscales();
 
     /**
      * Get the current master server id from the cluster, as seen by rwsplit.
@@ -495,6 +485,9 @@ private:
     int cleanup();
 
     Maxscales* my_maxscale(int m) const;
+
+    void init_maxscale(int m = 0);
+    void init_maxscales();
 };
 
 /**

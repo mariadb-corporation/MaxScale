@@ -220,15 +220,10 @@ public:
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
-    int stop_maxscale(int m = 0);
-    int stop(int m = 0);
+    int  stop_maxscale(int m = 0);
+    bool stop();
 
     bool stop_and_check_stopped();
-
-    /**
-     * Helper for stopping all maxscales
-     */
-    void stop_all();
 
     /**
      * Execute a MaxCtrl command
