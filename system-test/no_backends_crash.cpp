@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
-    Test->tprintf("Connecting to Maxscale %s", Test->maxscales->ip4(0));
+    Test->tprintf("Connecting to Maxscale %s", Test->maxscales->ip4());
     Test->maxscales->connect_maxscale(0);
 
     printf("Setup firewall to block mysql on master");

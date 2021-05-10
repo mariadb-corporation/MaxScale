@@ -120,7 +120,7 @@ void* query_thread1(void* ptr)
     MYSQL* conn3 = nullptr;
     int conn_err = 0;
     thread_data* data = (thread_data*) ptr;
-    auto mxs_ip = data->Test->maxscales->ip4(0);
+    auto mxs_ip = data->Test->maxscales->ip4();
 
     conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0], mxs_ip,
                                  "test",
@@ -196,7 +196,7 @@ void* query_thread2(void* ptr)
     MYSQL* conn2;
     MYSQL* conn3;
     thread_data* data = (thread_data*) ptr;
-    auto mxs_ip = data->Test->maxscales->ip4(0);
+    auto mxs_ip = data->Test->maxscales->ip4();
 
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
     conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0], mxs_ip,

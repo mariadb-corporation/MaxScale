@@ -78,7 +78,7 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
 {
     mysql_close(conn_rwsplit[m]);
 
-    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(m), db, user_name, password, m_ssl);
+    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(), db, user_name, password, m_ssl);
     routers[m][0] = conn_rwsplit[m];
 
     int rc = 0;
@@ -100,7 +100,7 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
 {
     mysql_close(conn_master[m]);
 
-    conn_master[m] = open_conn_db(readconn_master_port[m], ip(m), db, user_name, password, m_ssl);
+    conn_master[m] = open_conn_db(readconn_master_port[m], ip(), db, user_name, password, m_ssl);
     routers[m][1] = conn_master[m];
 
     int rc = 0;
@@ -122,7 +122,7 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
 {
     mysql_close(conn_slave[m]);
 
-    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(m), db, user_name, password, m_ssl);
+    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(), db, user_name, password, m_ssl);
     routers[m][2] = conn_slave[m];
 
     int rc = 0;
@@ -281,9 +281,9 @@ void Maxscales::wait_for_monitor(int intervals, int m)
                intervals);
 }
 
-const char* Maxscales::ip(int i) const
+const char* Maxscales::ip() const
 {
-    return m_use_ipv6 ? Nodes::ip6(i) : Nodes::ip4(i);
+    return m_use_ipv6 ? Nodes::ip6(0) : Nodes::ip4(0);
 }
 
 void Maxscales::set_use_ipv6(bool use_ipv6)
@@ -296,29 +296,29 @@ void Maxscales::set_ssl(bool ssl)
     m_ssl = ssl;
 }
 
-const char* Maxscales::hostname(int i) const
+const char* Maxscales::hostname() const
 {
-    return Nodes::hostname(i);
+    return Nodes::hostname(0);
 }
 
-const char* Maxscales::access_user(int i) const
+const char* Maxscales::access_user() const
 {
-    return Nodes::access_user(i);
+    return Nodes::access_user(0);
 }
 
-const char* Maxscales::access_homedir(int i) const
+const char* Maxscales::access_homedir() const
 {
-    return Nodes::access_homedir(i);
+    return Nodes::access_homedir(0);
 }
 
-const char* Maxscales::access_sudo(int i) const
+const char* Maxscales::access_sudo() const
 {
-    return Nodes::access_sudo(i);
+    return Nodes::access_sudo(0);
 }
 
-const char* Maxscales::sshkey(int i) const
+const char* Maxscales::sshkey() const
 {
-    return Nodes::sshkey(i);
+    return Nodes::sshkey(0);
 }
 
 const std::string& Maxscales::prefix()
@@ -326,9 +326,9 @@ const std::string& Maxscales::prefix()
     return my_prefix;
 }
 
-const char* Maxscales::ip4(int i) const
+const char* Maxscales::ip4() const
 {
-    return Nodes::ip4(i);
+    return Nodes::ip4(0);
 }
 
 const std::string& Maxscales::node_name() const
@@ -848,7 +848,7 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
     }
 
-    conn->open(m_maxscales->ip(0), m_maxscales->rwsplit_port[0], db);
+    conn->open(m_maxscales->ip(), m_maxscales->rwsplit_port[0], db);
     return conn;
 }
 

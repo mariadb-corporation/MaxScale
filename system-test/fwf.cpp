@@ -150,8 +150,8 @@ int main(int argc, char* argv[])
                                 "start_time=`date +%%T`;"
                                 "stop_time=` date --date \"now +30 secs\" +%%T`;"
                                 "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
-                                Test->maxscales->access_sudo(0),
-                                Test->maxscales->access_homedir(0));
+                                Test->maxscales->access_sudo(),
+                                Test->maxscales->access_homedir());
 
     Test->maxscales->restart_maxscale(0);
     Test->maxscales->connect_rwsplit(0);

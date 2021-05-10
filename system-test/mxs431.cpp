@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
             sprintf(str, "shard_db%d", i);
             test.set_timeout(60);
             MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port[0],
-                                       test.maxscales->ip4(0),
+                                       test.maxscales->ip4(),
                                        str,
                                        test.maxscales->user_name,
                                        test.maxscales->password,

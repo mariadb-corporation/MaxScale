@@ -36,15 +36,14 @@ public:
     void set_use_ipv6(bool use_ipv6);
     void set_ssl(bool ssl);
 
-    const char* ip4(int i = 0) const;
-    const char* ip(int i = 0) const;
+    const char* ip4() const;
+    const char* ip() const;
+    const char* hostname() const;
 
-    const char* hostname(int i = 0) const;
-
-    const char* access_user(int i = 0) const;
-    const char* access_homedir(int i = 0) const;
-    const char* access_sudo(int i = 0) const;
-    const char* sshkey(int i = 0) const;
+    const char* access_user() const;
+    const char* access_homedir() const;
+    const char* access_sudo() const;
+    const char* sshkey() const;
 
     static const std::string& prefix();
     const std::string&        node_name() const;
@@ -130,7 +129,7 @@ public:
      */
     MYSQL* open_rwsplit_connection(int m = 0, const std::string& db = "test")
     {
-        return open_conn(rwsplit_port[m], ip4(m), user_name, password, m_ssl);
+        return open_conn(rwsplit_port[m], ip4(), user_name, password, m_ssl);
     }
 
     /**
@@ -138,7 +137,7 @@ public:
      */
     Connection rwsplit(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), rwsplit_port[m], user_name, password, db, m_ssl);
+        return Connection(ip4(), rwsplit_port[m], user_name, password, db, m_ssl);
     }
 
     /**
@@ -146,7 +145,7 @@ public:
      */
     Connection get_connection(int port, int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), port, user_name, password, db, m_ssl);
+        return Connection(ip4(), port, user_name, password, db, m_ssl);
     }
 
     /**
@@ -156,7 +155,7 @@ public:
      */
     MYSQL* open_readconn_master_connection(int m = 0)
     {
-        return open_conn(readconn_master_port[m], ip4(m), user_name, password, m_ssl);
+        return open_conn(readconn_master_port[m], ip4(), user_name, password, m_ssl);
     }
 
     /**
@@ -164,7 +163,7 @@ public:
      */
     Connection readconn_master(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), readconn_master_port[m], user_name, password, db, m_ssl);
+        return Connection(ip4(), readconn_master_port[m], user_name, password, db, m_ssl);
     }
 
     /**
@@ -174,7 +173,7 @@ public:
      */
     MYSQL* open_readconn_slave_connection(int m = 0)
     {
-        return open_conn(readconn_slave_port[m], ip4(m), user_name, password, m_ssl);
+        return open_conn(readconn_slave_port[m], ip4(), user_name, password, m_ssl);
     }
 
     /**
@@ -182,7 +181,7 @@ public:
      */
     Connection readconn_slave(int m = 0, const std::string& db = "test")
     {
-        return Connection(ip4(m), readconn_slave_port[m], user_name, password, db, m_ssl);
+        return Connection(ip4(), readconn_slave_port[m], user_name, password, db, m_ssl);
     }
 
     /**

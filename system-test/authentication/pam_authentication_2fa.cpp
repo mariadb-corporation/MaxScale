@@ -200,7 +200,7 @@ R"(\" RATE_LIMIT 3 30
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& pass2)
 {
-    const char* host = test.maxscales->ip4(0);
+    const char* host = test.maxscales->ip4();
 
     test.tprintf("Trying to log in to [%s]:%i as %s, with passwords '%s' and '%s'.\n",
                  host, port, user.c_str(), pass.c_str(), pass2.c_str());

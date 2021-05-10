@@ -456,8 +456,8 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
-            maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir(0));
-            maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(0),
+            maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir());
+            maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(),
                                   verbose() ? "verbose" : "");
         }
     }
@@ -753,11 +753,11 @@ TestConnections::process_template(Maxscales& mxs, const string& config_file_path
         }
 
         string sed_cmd = mxb::string_printf("sed -i \"s/###access_user###/%s/g\" %s",
-                                            mxs.access_user(0), target_file.c_str());
+                                            mxs.access_user(), target_file.c_str());
         run_shell_command(sed_cmd, edit_failed);
 
         sed_cmd = mxb::string_printf("sed -i \"s|###access_homedir###|%s|g\" %s",
-                                     mxs.access_homedir(0), target_file.c_str());
+                                     mxs.access_homedir(), target_file.c_str());
         run_shell_command(sed_cmd, edit_failed);
 
         mxs.vm_node().copy_to_node("maxscale.cnf", dest);
@@ -793,7 +793,7 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     auto mxs = my_maxscale(m);
-    auto homedir = mxs->access_homedir(0);
+    auto homedir = mxs->access_homedir();
     // The config file path can be multivalued when running a test with multiple MaxScales.
     // Select the correct file.
     auto filepaths = mxb::strtok(m_cnf_template_path, ";");
@@ -1080,7 +1080,7 @@ int TestConnections::find_connected_slave1(int m)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(m), maxscales->hostname(m), (char*) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(), maxscales->hostname(), (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
@@ -1254,7 +1254,7 @@ int TestConnections::create_connections(int m,
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscales->ip4(m), maxscales->user_name, maxscales->password, maxscale_ssl);
+                open_conn(4016, maxscales->ip4(), maxscales->user_name, maxscales->password, maxscale_ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;

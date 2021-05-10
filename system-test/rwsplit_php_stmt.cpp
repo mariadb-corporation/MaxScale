@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
     sprintf(str,
             "php %s/rwsplit_php_stmt.php %s %d %s %s",
             test_dir,
-            Test->maxscales->ip4(0),
+            Test->maxscales->ip4(),
             Test->maxscales->rwsplit_port[0],
             Test->maxscales->user_name.c_str(),
             Test->maxscales->password.c_str());

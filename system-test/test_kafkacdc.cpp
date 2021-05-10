@@ -11,7 +11,7 @@ void prepare_consumer(TestConnections& test)
 {
     std::string err;
     auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-    cnf->set("bootstrap.servers", test.maxscales->ip4(0) + ":9092"s, err);
+    cnf->set("bootstrap.servers", test.maxscales->ip4() + ":9092"s, err);
     cnf->set("group.id", "kafkacdc", err);
 
     consumer.reset(RdKafka::KafkaConsumer::create(cnf, err));
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Starting Kafka container");
     auto res = test.maxscales->ssh_output(
-        "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->ip4(0)
+        "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->ip4()
         + " -p 9092:9092 -p 2182:2181 --network=host --name=kafka spotify/kafka");
 
     if (res.rc != 0)

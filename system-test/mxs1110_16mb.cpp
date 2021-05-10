@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
     Test->maxscales->close_maxscale_connections(0);
 
     MYSQL* conn_galera = open_conn(4016,
-                                   Test->maxscales->ip4(0),
+                                   Test->maxscales->ip4(),
                                    Test->maxscales->user_name,
                                    Test->maxscales->password,
                                    Test->maxscale_ssl);

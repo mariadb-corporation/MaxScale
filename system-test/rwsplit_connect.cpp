@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(20);
     Test->repl->connect();
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip(0));
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip());
     Test->maxscales->connect_rwsplit(0);
 
     unsigned int conn_num;
@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
     {
         conn_num =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->ip(0),
-                         Test->maxscales->hostname(0),
+                         Test->maxscales->ip(),
+                         Test->maxscales->hostname(),
                          (char*) "test");
         Test->tprintf("connections: %u\n", conn_num);
         if ((i == 0) && (conn_num != 1))

@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(50);
     Test->repl->sync_slaves();
 
-    const char* mxs_ip = Test->maxscales->ip4(0);
+    const char* mxs_ip = Test->maxscales->ip4();
 
     Test->tprintf("Trying first hostname, expecting failure");
     Test->set_timeout(15);

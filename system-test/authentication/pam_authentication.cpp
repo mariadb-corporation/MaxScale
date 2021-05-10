@@ -76,7 +76,7 @@ void test_main(TestConnections& test)
     const string delete_pam_message_cmd = "rm -f " + pam_msgfile_path_dst;
 
     test.repl->connect();
-    auto mxs_ip = test.maxscales->ip4(0);
+    auto mxs_ip = test.maxscales->ip4();
 
     // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also,
     // make /etc/shadow readable for all so that the server process can access it.
@@ -519,7 +519,7 @@ void test_main(TestConnections& test)
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& database)
 {
-    const char* host = test.maxscales->ip4(0);
+    const char* host = test.maxscales->ip4();
     const char* db = nullptr;
     if (!database.empty())
     {
@@ -565,7 +565,7 @@ bool test_normal_login(TestConnections& test, int port, const string& user, cons
                        const string& db)
 {
     bool rval = false;
-    auto host = test.maxscales->ip4(0);
+    auto host = test.maxscales->ip4();
     MYSQL* maxconn = nullptr;
     if (db.empty())
     {

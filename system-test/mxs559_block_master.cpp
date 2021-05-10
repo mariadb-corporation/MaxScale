@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < load_threads_num; i++)
     {
         data_master[i].exit_flag = 0;
-        data_master[i].ip = test.maxscales->ip4(0);
+        data_master[i].ip = test.maxscales->ip4();
         data_master[i].port = test.maxscales->rwsplit_port[0];
         data_master[i].user = test.maxscales->user_name;
         data_master[i].password = test.maxscales->password;

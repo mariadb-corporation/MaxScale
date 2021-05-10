@@ -40,7 +40,7 @@ void run(TestConnections& test)
     int port = test.maxscales->rwsplit_port[0];
 
     if (mysql_real_connect(pMysql,
-                           test.maxscales->ip4(0),
+                           test.maxscales->ip4(),
                            zUser,
                            zPassword,
                            "test",
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
     std::string src = test_dir;
     src += "/mxs1719.json";
-    std::string dst = std::string(test.maxscales->access_homedir(0)) + "/mxs1719.json";
+    std::string dst = std::string(test.maxscales->access_homedir()) + "/mxs1719.json";
 
     if (test.maxscales->copy_to_node(0, src.c_str(), dst.c_str()) == 0)
     {
