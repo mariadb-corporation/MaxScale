@@ -185,7 +185,7 @@ private:
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
     bool   finish_causal_read();
-    GWBUF* add_prefix_wait_gtid(uint64_t version, GWBUF* origin);
+    GWBUF* add_prefix_wait_gtid(GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
 

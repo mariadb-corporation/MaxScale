@@ -131,12 +131,11 @@ bool RWSplitSession::finish_causal_read()
 /*
  * Add a wait gitd query in front of user's query to achive causal read
  *
- * @param version Server version
  * @param origin  Original buffer
  *
  * @return       A new buffer contains wait statement and origin query
  */
-GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
+GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
 {
     /**
      * Pack wait function and client query into a multistatments will save a round trip latency,
@@ -148,6 +147,8 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
      * an error, and SELECT * FROM `city` will not be executed, then we can retry
      * on master;
      **/
+
+    uint64_t version = m_router->service()->get_version(SERVICE_VERSION_MIN);
 
     GWBUF* rval = origin;
     std::ostringstream ss;
@@ -183,6 +184,8 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
         /* Modify totol length: Prefix sql len + origin sql len + command len */
         size_t new_payload_len = sql.size() + origin_sql_len + 1;
         gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+
+        m_wait_gtid = WAITING_FOR_HEADER;
     }
 
     return rval;

@@ -371,6 +371,9 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
                 ok = true;
                 m_prev_plan = res;
                 m_prev_plan.target = target;
+
+                mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+                m_server_stats[target->target()].inc_total();
             }
         }
     }
@@ -1061,103 +1064,77 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         m_target_node = target;
     }
 
-    mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    mxb_assert(!mxs_mysql_is_ps_command(cmd) || extract_binary_ps_id(buffer.get()) == route_info().stmt_id());
 
-    if (cmd == MXS_COM_QUERY && target->is_slave()
-        && ((m_config.causal_reads == CausalReads::LOCAL && !m_gtid_pos.empty())
-            || m_config.causal_reads == CausalReads::GLOBAL))
+    bool attempting_causal_read = false;
+
+    if (!is_locked_to_master() && !route_info().large_query())
     {
-        // Perform the causal read only when the query is routed to a slave
-        auto tmp = add_prefix_wait_gtid(m_router->service()->get_version(SERVICE_VERSION_MIN),
-                                        buffer.release());
-        buffer.reset(tmp);
-        m_wait_gtid = WAITING_FOR_HEADER;
+        // Attempt a causal read only when the query is routed to a slave
+        attempting_causal_read = target->is_slave()
+            && ((m_config.causal_reads == CausalReads::LOCAL && !m_gtid_pos.empty())
+                || m_config.causal_reads == CausalReads::GLOBAL);
 
-        // The storage for causal reads is done inside add_prefix_wait_gtid
-        store = false;
-    }
-    else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
-    {
-        gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
-    }
-
-    if (route_info().expecting_response())
-    {
-        response = mxs::Backend::EXPECT_RESPONSE;
-    }
-
-    if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !route_info().large_query())
-    {
-        mxb_assert(extract_binary_ps_id(buffer.get()) == route_info().stmt_id());
-
-        if (cmd == MXS_COM_STMT_EXECUTE)
+        if (cmd == MXS_COM_QUERY && attempting_causal_read)
         {
-            // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store it
-            // for later use. If it doesn't, add it if the current target has never gotten it.
-            process_stmt_execute(&buffer, route_info().stmt_id(), target);
+            GWBUF* tmp = buffer.release();
+            buffer = add_prefix_wait_gtid(tmp);
+            store = false;      // The storage for causal reads is done inside add_prefix_wait_gtid
         }
-    }
-
-    /**
-     * If we are starting a new query, we use RWBackend::write, otherwise we use
-     * RWBackend::continue_write to continue an ongoing query. RWBackend::write
-     * will do the replacement of PS IDs which must not be done if we are
-     * continuing an ongoing query.
-     */
-    bool success = target->write(gwbuf_clone(buffer.get()), response);
-
-    if (success)
-    {
-        if (store)
+        else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
         {
-            m_current_query.copy_from(buffer);
+            gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
         }
 
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        m_server_stats[target->target()].inc_total();
-
-        if (TARGET_IS_SLAVE(route_info().target())
-            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
+        if (target->is_slave() && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
         {
             target->select_started();
         }
 
-        if (!route_info().large_query() && response == mxs::Backend::EXPECT_RESPONSE)
+        if (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
         {
-            /** The server will reply to this command */
-            m_expected_responses++;
-        }
+            // Track the targets of the COM_STMT_EXECUTE statements. This information is used to route all
+            // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
+            auto& info = m_exec_map[route_info().stmt_id()];
+            info.target = target;
+            MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
 
-        if (m_config.transaction_replay && trx_is_open())
-        {
-            if (!m_trx.target())
+            if (cmd == MXS_COM_STMT_EXECUTE)
             {
-                MXS_INFO("Transaction starting on '%s'", target->name());
-                m_trx.set_target(target);
-            }
-            else
-            {
-                mxb_assert(m_trx.target() == target);
+                // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store
+                // it for later use. If it doesn't, add it if the current target has never gotten it.
+                process_stmt_execute(&buffer, route_info().stmt_id(), target);
+                info.metadata_sent.insert(target);
             }
         }
     }
-    else
+
+    if (store)
     {
-        MXS_ERROR("Routing query failed.");
+        m_current_query.copy_from(buffer);
     }
 
-    if (success && !is_locked_to_master()
-        && (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA))
+    mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
+
+    if (route_info().expecting_response())
     {
-        /** Track the targets of the COM_STMT_EXECUTE statements. This
-         * information is used to route all COM_STMT_FETCH commands
-         * to the same server where the COM_STMT_EXECUTE was done. */
-        auto& info = m_exec_map[route_info().stmt_id()];
-        info.target = target;
-        info.metadata_sent.insert(target);
-        MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
+        mxb_assert(!route_info().large_query());
+
+        ++m_expected_responses;     // The server will reply to this command
+        response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    return success;
+    if (m_config.transaction_replay && trx_is_open())
+    {
+        mxb_assert(!m_trx.target() || m_trx.target() == target);
+
+        if (!m_trx.target())
+        {
+            MXS_INFO("Transaction starting on '%s'", target->name());
+            m_trx.set_target(target);
+        }
+    }
+
+    return target->write(buffer.release(), response);
 }
