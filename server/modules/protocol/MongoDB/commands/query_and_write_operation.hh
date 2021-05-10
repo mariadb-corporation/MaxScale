@@ -1002,6 +1002,12 @@ public:
     }
 
 private:
+    bool is_acceptable_error(const ComERR& err) const override
+    {
+        // Updating documents in non-existent table should appear to succeed.
+        return err.code() == ER_NO_SUCH_TABLE;
+    }
+
     string convert_document(const bsoncxx::document::view& update)
     {
         stringstream sql;
@@ -1110,6 +1116,8 @@ private:
             {
                 auto doc = static_cast<bsoncxx::document::view>(element.get_document());
 
+                kind = REPLACEMENT_DOCUMENT;
+
                 for (auto field : doc)
                 {
                     const char* pData = field.key().data(); // Not necessarily null-terminated.
@@ -1142,11 +1150,7 @@ private:
                     }
                     else
                     {
-                        if (kind == INVALID)
-                        {
-                            kind = REPLACEMENT_DOCUMENT;
-                        }
-                        else if (kind != REPLACEMENT_DOCUMENT)
+                        if (kind != REPLACEMENT_DOCUMENT)
                         {
                             MXS_ERROR("'%s' contains both fields and update operators.",
                                       bsoncxx::to_json(doc).c_str());
