@@ -159,6 +159,19 @@ one.
 To reduce the risk for confusion, the recommendation is to use a specific
 database for tables that contain documents.
 
+# Operators
+
+## [Update Operators](https://docs.mongodb.com/manual/reference/operator/update/#update-operators)
+
+### [Field Update Operators](https://docs.mongodb.com/manual/reference/operator/update-field/)
+
+Currently, the following operators are supported.
+
+Field | Description
+------|------------
+$set| Sets the value of a field in a document.
+$unset| Removes the specified field from a document.
+
 # Database Commands
 
 The following lists all implemented MongoDB commands and to what extent
@@ -344,11 +357,51 @@ Each document contains the following fields:
 Field | Type | Description
 ------|------|------------
 q | document | The query that matches documents to update.
-u | document | The documents to apply. Currently _only_ a replacement document with only `<field1>: <value1>` pairs are supported.
+u | document | The modifications to apply. See _behavior_ below for details.
 multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false liit the update to one document that meets the query criteria. Defaults to `false`.
 
 All other fields are ignored, with the exception of `upsert` that if present
 with the value of `true` will cause the command to fail.
+
+##### Behavior
+
+Currently only updating using _update operator expressions_ or with a
+_replacement document_ is supported. In particular, updating using an
+_aggregation pipeline_ is not supported.
+
+###### Update with an _Update Operator Expressions_ document
+
+The update statement field `u` can accept a document that only contains
+[update operator](#update-operators) expressions. For example:
+```
+updates: [
+   {
+     q: <query>,
+     u: { $set: { status: "D" } },
+      ...
+   },
+   ...
+]
+```
+In this case, the update command updates only the corresponding fields in the document.
+
+###### Update with a _Replacement Document_
+
+The update statement field `u` field can accept a _replacement document_,
+i.e. the document contains only `field:value` expressions. For example:
+```
+updates: [
+   {
+      q: <query>,
+      u: { status: "D", quantity: 4 },
+      ...
+   },
+   ...
+]
+```
+In this case, the update command replaces the matching document with the update document.
+The update command can only replace a single matching document; i.e. the multi field
+cannot be true. The update command does not replace the `_id` value.
 
 ## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
 
