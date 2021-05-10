@@ -633,8 +633,10 @@ bool TestConnections::read_test_info()
         if (test_labels.count("BACKEND_SSL") > 0)
         {
             backend_ssl = true;
-            // Enable ssl for MaxScale as well.
-            // TODO: think of adding another label for this.
+        }
+
+        if (test_labels.count("LISTENER_SSL") > 0)
+        {
             maxscale_ssl = true;
         }
     }

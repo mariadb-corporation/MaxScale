@@ -656,7 +656,8 @@ add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS sc
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop, client ssl is ON
-add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute BACKEND_SSL REPL_BACKEND)
+add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute BACKEND_SSL LISTENER_SSL
+        REPL_BACKEND)
 
 # Regression case for crash if 'show monitors' command is issued, but no monitor is not running
 add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale REPL_BACKEND)
@@ -674,7 +675,7 @@ add_test_derived(sql_queries_pers1 sql_queries sql_queries_pers1 LABELS maxscale
 add_test_derived(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxscale readwritesplit HEAVY REPL_BACKEND)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, client ssl is ON
-add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
+add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND LISTENER_SSL)
 
 # Testing slaves who have lost their master and how MaxScale works with them
 add_test_executable(stale_slaves.cpp stale_slaves stale_slaves LABELS mysqlmon REPL_BACKEND)
@@ -696,7 +697,8 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 # works only with yum-based distributions
 # TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
 add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL REPL_BACKEND)
+add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL LISTENER_SSL
+        REPL_BACKEND)
 
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
@@ -938,7 +940,7 @@ add_test_executable(mxs3536_rwsplit_no_slaves.cc mxs3536_rwsplit_no_slaves mxs35
 # BEGIN: backend SSL tests                 #
 ############################################
 
-add_test_derived(sql_queries_ssl sql_queries ssl LABELS readwritesplit REPL_BACKEND BACKEND_SSL)
+add_test_derived(sql_queries_ssl sql_queries ssl LABELS readwritesplit REPL_BACKEND BACKEND_SSL LISTENER_SSL)
 
 ############################################
 # END: backend SSL  tests                  #
