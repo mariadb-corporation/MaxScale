@@ -336,8 +336,6 @@ updates | array | An array of documents that describe what to updated.
 
 All other fields are ignored.
 
-**NOTE** Currently the `updates` array can contain exactly one document.
-
 #### Update Statements
 
 Each element of the updates array is an update statement document.
@@ -349,7 +347,8 @@ q | document | The query that matches documents to update.
 u | document | The documents to apply. Currently _only_ a replacement document with only `<field1>: <value1>` pairs are supported.
 multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false liit the update to one document that meets the query criteria. Defaults to `false`.
 
-All other fields are ignored.
+All other fields are ignored, with the exception of `upsert` that if present
+with the value of `true` will cause the command to fail.
 
 ## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
 

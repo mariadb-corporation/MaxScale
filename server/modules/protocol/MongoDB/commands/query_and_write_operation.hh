@@ -1007,6 +1007,30 @@ private:
         stringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
+        auto upsert = false;
+        optional(update, key::UPSERT, &upsert);
+
+        if (upsert)
+        {
+            throw SoftError("'upsert' is not supported.", error::COMMAND_FAILED);
+        }
+
+        auto q = update[key::Q];
+
+        if (!q)
+        {
+            throw SoftError("BSON field 'update.updates.q' is missing but a required field",
+                            error::LOCATION40414);
+        }
+
+        if (q.type() != bsoncxx::type::k_document)
+        {
+            stringstream ss;
+            ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
+               << "', expected type 'object'";
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+
         auto u = update[key::U];
 
         if (!u)
@@ -1050,22 +1074,6 @@ private:
                 MXS_ERROR("%s", message.c_str());
                 throw HardError(message, error::COMMAND_FAILED);
             }
-        }
-
-        auto q = update[key::Q];
-
-        if (!q)
-        {
-            throw SoftError("BSON field 'update.updates.q' is missing but a required field",
-                            error::LOCATION40414);
-        }
-
-        if (q.type() != bsoncxx::type::k_document)
-        {
-            stringstream ss;
-            ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
-               << "', expected type 'object'";
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
         sql << query_to_where_clause(q.get_document());

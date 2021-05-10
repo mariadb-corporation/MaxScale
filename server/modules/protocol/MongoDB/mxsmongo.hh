@@ -340,6 +340,7 @@ const char SORT[]                    = "sort";
 const char U[]                       = "u";
 const char UPDATE[]                  = "update";
 const char UPDATES[]                 = "updates";
+const char UPSERT[]                  = "upsert";
 const char WHATSMYURI[]              = "whatsmyuri";
 
 // MaxScale Commands
