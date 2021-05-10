@@ -243,6 +243,8 @@ public:
      */
     long unsigned get_maxscale_memsize(int m = 0);
 
+    void copy_log(int i, double timestamp, const std::string& test_name);
+
     /**
      * @brief Get the set of labels that are assigned to server @c name
      *

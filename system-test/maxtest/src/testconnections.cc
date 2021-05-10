@@ -927,71 +927,19 @@ int TestConnections::copy_all_logs()
     return rv;
 }
 
-void TestConnections::copy_one_maxscale_log(int i, double timestamp)
-{
-    char log_dir[PATH_MAX + 1024];
-    char log_dir_i[sizeof(log_dir) + 1024];
-    char sys[sizeof(log_dir_i) + 1024];
-    if (timestamp == 0)
-    {
-        sprintf(log_dir, "LOGS/%s", m_test_name.c_str());
-    }
-    else
-    {
-        sprintf(log_dir, "LOGS/%s/%04f", m_test_name.c_str(), timestamp);
-    }
-
-    sprintf(log_dir_i, "%s/%03d", log_dir, i);
-    sprintf(sys, "mkdir -p %s", log_dir_i);
-    call_system(sys);
-
-    if (strcmp(maxscales->ip4(i), "127.0.0.1") != 0)
-    {
-        auto homedir = maxscales->access_homedir(i);
-        int rc = maxscales->ssh_node_f(i, true,
-                                       "rm -rf %s/logs;"
-                                       "mkdir %s/logs;"
-                                       "cp %s/*.log %s/logs/;"
-                                       "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
-                                       "cp %s %s/logs/;"
-                                       "chmod 777 -R %s/logs;"
-                                       "test -e /tmp/core*  && exit 42;",
-                                       homedir,
-                                       homedir,
-                                       maxscales->maxscale_log_dir[i].c_str(), homedir,
-                                       homedir,
-                                       maxscales->maxscale_cnf[i].c_str(), homedir,
-                                       homedir);
-        sprintf(sys, "%s/logs/*", homedir);
-        maxscales->copy_from_node(i, sys, log_dir_i);
-        expect(rc != 42, "Test should not generate core files");
-    }
-    else
-    {
-        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i].c_str(), log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i].c_str(), log_dir_i);
-        maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
-    }
-}
-
 int TestConnections::copy_maxscale_logs(double timestamp)
 {
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < maxscales->N; i++)
+    mxt::BoolFuncArray funcs;
+    for (int i = 0; i < n_maxscales(); i++)
     {
-        threads.emplace_back([this, i, timestamp]() {
-                                 copy_one_maxscale_log(i, timestamp);
-                             });
+        auto mxs = my_maxscale(i);
+        auto func = [this, mxs, i, timestamp]() {
+                mxs->copy_log(i, timestamp, m_test_name);
+                return true;
+            };
+        funcs.push_back(move(func));
     }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return 0;
+    return m_shared.concurrent_run(funcs) ? 0 : 1;
 }
 
 int TestConnections::copy_all_logs_periodic()

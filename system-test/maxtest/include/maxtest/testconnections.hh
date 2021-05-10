@@ -392,7 +392,6 @@ public:
 
 private:
     void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);
-    void copy_one_maxscale_log(int i, double timestamp);
 
     bool read_test_info();
 
