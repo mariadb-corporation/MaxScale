@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     {
         string config_file_path = (string)test_dir + "/cnf/maxscale.cnf.template." + bad_configs[i];
         printf("Testing %s...\n", config_file_path.c_str());
-        if (test->test_bad_config(0, config_file_path))
+        if (test->test_bad_config(config_file_path))
         {
             printf("FAILED\n");
             rval++;

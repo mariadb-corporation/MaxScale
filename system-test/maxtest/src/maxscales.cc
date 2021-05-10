@@ -71,8 +71,6 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
 
         rval = true;
     }
-
-    N = n_nodes();
     return rval;
 }
 
