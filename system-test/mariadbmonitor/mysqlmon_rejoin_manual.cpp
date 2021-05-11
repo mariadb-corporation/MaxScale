@@ -21,7 +21,7 @@ using std::endl;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
     // Set up test table
     basic_test(test);
     auto& mxs = test.maxscale();
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         // Recreate maxscale session
-        maxconn = test.maxscales->open_rwsplit_connection(0);
+        maxconn = test.maxscales->open_rwsplit_connection();
         cout << "Sending more inserts." << endl;
         generate_traffic_and_check(test, maxconn, 5);
         print_gtids(test);

@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
 
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 5);
     test.repl->sync_slaves(0);

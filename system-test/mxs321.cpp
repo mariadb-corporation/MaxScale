@@ -28,15 +28,15 @@ void create_and_check_connections(TestConnections* test, int target)
         switch (target)
         {
         case 1:
-            stmt[i] = test->maxscales->open_rwsplit_connection(0);
+            stmt[i] = test->maxscales->open_rwsplit_connection();
             break;
 
         case 2:
-            stmt[i] = test->maxscales->open_readconn_master_connection(0);
+            stmt[i] = test->maxscales->open_readconn_master_connection();
             break;
 
         case 3:
-            stmt[i] = test->maxscales->open_readconn_master_connection(0);
+            stmt[i] = test->maxscales->open_readconn_master_connection();
             break;
         }
     }

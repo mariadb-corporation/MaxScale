@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
                                       100),
                      "Wrong check_com_insert result\n");
 
-    Test->maxscales->close_rwsplit(0);
+    Test->maxscales->close_rwsplit();
 
     int rval = Test->global_result;
     delete Test;

@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     {
         // Set up test table to ensure queries are going through.
         test.tprintf("Creating table and inserting data.");
-        auto maxconn = test.maxscales->open_rwsplit_connection(0);
+        auto maxconn = test.maxscales->open_rwsplit_connection();
         test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
         test.try_query(maxconn, insert_query, insert_val++);
         mysql_close(maxconn);
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
 
         // Check that writes are working.
-        auto maxconn = test.maxscales->open_rwsplit_connection(0);
+        auto maxconn = test.maxscales->open_rwsplit_connection();
         test.try_query(maxconn, insert_query, insert_val);
         mysql_close(maxconn);
 
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     expect_server_status(server_names[3], slave);
 
     const char drop_query[] = "DROP TABLE test.t1;";
-    auto maxconn = test.maxscales->open_rwsplit_connection(0);
+    auto maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, drop_query);
     mysql_close(maxconn);
 

@@ -552,7 +552,7 @@ int main(int argc, char* argv[])
     compare_expected(Test, "SELECT * FROM long_blob_table limit 2;", 1, exp_rows.data());
     err_check(Test, 0);
 
-    Test->maxscales->close_rwsplit(0);
+    Test->maxscales->close_rwsplit();
 
     Test->maxscales->ssh_node(0,
                               "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf",

@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     test.set_timeout(20);
     test.repl->connect();
 
-    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection();
     execute_query(conn, "USE test;");
     create_t1(conn);
     mysql_close(conn);
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
 
         test.set_timeout(15);
-        conn = test.maxscales->open_rwsplit_connection(0);
+        conn = test.maxscales->open_rwsplit_connection();
         execute_query(conn, "%s", sql);
         mysql_close(conn);
     }

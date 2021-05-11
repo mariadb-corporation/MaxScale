@@ -95,7 +95,7 @@ void* parall_traffic(void* ptr)
 {
     while (exit_flag == 0)
     {
-        MYSQL* conn = Test->maxscales->open_rwsplit_connection(0);
+        MYSQL* conn = Test->maxscales->open_rwsplit_connection();
 
         while (exit_flag == 0 && mysql_query(conn, "DO 1") == 0)
         {

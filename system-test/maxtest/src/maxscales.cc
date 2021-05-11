@@ -509,6 +509,53 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
     }
 }
 
+MYSQL* Maxscales::open_rwsplit_connection(const std::string& db)
+{
+    return open_conn(rwsplit_port[0], ip4(), user_name, password, m_ssl);
+}
+
+Connection Maxscales::rwsplit(const std::string& db)
+{
+    return Connection(ip4(), rwsplit_port[0], user_name, password, db, m_ssl);
+}
+
+Connection Maxscales::get_connection(int port, const std::string& db)
+{
+    return Connection(ip4(), port, user_name, password, db, m_ssl);
+}
+
+MYSQL* Maxscales::open_readconn_master_connection()
+{
+    return open_conn(readconn_master_port[0], ip4(), user_name, password, m_ssl);
+}
+
+Connection Maxscales::readconn_master(const std::string& db)
+{
+    return Connection(ip4(), readconn_master_port[0], user_name, password, db, m_ssl);
+}
+
+MYSQL* Maxscales::open_readconn_slave_connection()
+{
+    return open_conn(readconn_slave_port[0], ip4(), user_name, password, m_ssl);
+}
+
+Connection Maxscales::readconn_slave(const std::string& db)
+{
+    return Connection(ip4(), readconn_slave_port[0], user_name, password, db, m_ssl);
+}
+
+void Maxscales::close_rwsplit()
+{
+    mysql_close(conn_rwsplit[0]);
+    conn_rwsplit[0] = NULL;
+}
+
+void Maxscales::close_readconn_master()
+{
+    mysql_close(conn_master[0]);
+    conn_master[0] = NULL;
+}
+
 namespace maxtest
 {
 

@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     execute_query_check_one(test.maxscales->conn_rwsplit[0],
                             "SELECT @@server_id, a.id FROM t2 as a JOIN db1.t1 as b",
                             server_id[1]);
-    test.maxscales->close_rwsplit(0);
+    test.maxscales->close_rwsplit();
 
     test.tprintf("Run test with a common database as active database");
     test.maxscales->connect_rwsplit(0);
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     execute_query_check_one(test.maxscales->conn_rwsplit[0],
                             "SELECT @@server_id, a.id FROM t1 as a JOIN db1.t1 as b",
                             server_id[0]);
-    test.maxscales->close_rwsplit(0);
+    test.maxscales->close_rwsplit();
 
     //  Cleanup
     execute_query(test.repl->nodes[0], "DROP DATABASE db1");

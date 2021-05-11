@@ -14,7 +14,7 @@ void* async_query(void* data)
 
     while (running && test->global_result == 0)
     {
-        MYSQL* conn = test->maxscales->open_rwsplit_connection(0);
+        MYSQL* conn = test->maxscales->open_rwsplit_connection();
 
         for (int i = 0; i < 50 && running && test->global_result == 0; i++)
         {

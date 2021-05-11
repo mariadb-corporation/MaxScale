@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Reconnecting and trying query to RWSplit\n");
     Test->maxscales->connect_rwsplit(0);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "show processlist;");
-    Test->maxscales->close_rwsplit(0);
+    Test->maxscales->close_rwsplit();
 
     Test->check_maxscale_alive(0);
     int rval = Test->global_result;

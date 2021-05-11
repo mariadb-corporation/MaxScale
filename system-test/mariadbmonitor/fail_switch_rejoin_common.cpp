@@ -31,7 +31,7 @@ void get_output(TestConnections& test)
 
 void check(TestConnections& test)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection();
     const char* query1 = "INSERT INTO test.t1 VALUES (%d)";
     const char* query2 = "SELECT * FROM test.t1";
 
@@ -76,7 +76,7 @@ void check(TestConnections& test)
  */
 int get_master_server_id(TestConnections& test, int maxscale_ind = 0)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection(maxscale_ind);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection();
     int id = -1;
     char str[1024];
 
@@ -163,7 +163,7 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
 
 void print_gtids(TestConnections& test)
 {
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
     if (maxconn)
     {
         char result_tmp[bufsize];

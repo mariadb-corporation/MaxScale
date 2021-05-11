@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     // Router sessions shouldn't work, since MaxScale is sending the proxy header even when
     // server is not expecting it. The connection to MaxScale is created but queries will fail.
-    auto adminconn = test.maxscales->open_rwsplit_connection(0);
+    auto adminconn = test.maxscales->open_rwsplit_connection();
     test.expect(adminconn != NULL, "Connection to MaxScale with user %s failed when success was expected.",
                 test.maxscales->user_name.c_str());
     if (adminconn)
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     const string userpass = "proxy_pwd";
     if (test.global_result == 0)
     {
-        adminconn = test.maxscales->open_rwsplit_connection(0);
+        adminconn = test.maxscales->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
     if (test.global_result == 0)
     {
-        adminconn = test.maxscales->open_rwsplit_connection(0);
+        adminconn = test.maxscales->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
             }
         }
         // Use the superuser to remove the test user.
-        adminconn = test.maxscales->open_rwsplit_connection(0);
+        adminconn = test.maxscales->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
      * https://jira.mariadb.org/browse/MXS-2252
      */
     Connection direct = test.repl->get_connection(0);
-    Connection rwsplit = test.maxscales->rwsplit(0);
+    Connection rwsplit = test.maxscales->rwsplit();
     direct.connect();
     rwsplit.connect();
     auto d = direct.field("SELECT USER()");

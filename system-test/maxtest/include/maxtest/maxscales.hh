@@ -127,80 +127,51 @@ public:
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL* open_rwsplit_connection(int m = 0, const std::string& db = "test")
-    {
-        return open_conn(rwsplit_port[m], ip4(), user_name, password, m_ssl);
-    }
+    MYSQL* open_rwsplit_connection(const std::string& db = "test");
 
     /**
      * Get a readwritesplit Connection
      */
-    Connection rwsplit(int m = 0, const std::string& db = "test")
-    {
-        return Connection(ip4(), rwsplit_port[m], user_name, password, db, m_ssl);
-    }
+    Connection rwsplit(const std::string& db = "test");
 
     /**
      * Get a Connection to a specific port
      */
-    Connection get_connection(int port, int m = 0, const std::string& db = "test")
-    {
-        return Connection(ip4(), port, user_name, password, db, m_ssl);
-    }
+    Connection get_connection(int port, const std::string& db = "test");
 
     /**
      * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL* open_readconn_master_connection(int m = 0)
-    {
-        return open_conn(readconn_master_port[m], ip4(), user_name, password, m_ssl);
-    }
+    MYSQL* open_readconn_master_connection();
 
     /**
      * Get a readconnroute master Connection
      */
-    Connection readconn_master(int m = 0, const std::string& db = "test")
-    {
-        return Connection(ip4(), readconn_master_port[m], user_name, password, db, m_ssl);
-    }
+    Connection readconn_master(const std::string& db = "test");
 
     /**
      * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return  MYSQL struct
      */
-    MYSQL* open_readconn_slave_connection(int m = 0)
-    {
-        return open_conn(readconn_slave_port[m], ip4(), user_name, password, m_ssl);
-    }
+    MYSQL* open_readconn_slave_connection();
 
     /**
      * Get a readconnroute slave Connection
      */
-    Connection readconn_slave(int m = 0, const std::string& db = "test")
-    {
-        return Connection(ip4(), readconn_slave_port[m], user_name, password, db, m_ssl);
-    }
+    Connection readconn_slave(const std::string& db = "test");
 
     /**
      * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
      */
-    void close_rwsplit(int m = 0)
-    {
-        mysql_close(conn_rwsplit[m]);
-        conn_rwsplit[m] = NULL;
-    }
+    void close_rwsplit();
 
     /**
      * @brief CloseReadMaster Closes ReadConn master connections stored in maxscales->conn_master[0]
      */
-    void close_readconn_master(int m = 0)
-    {
-        mysql_close(conn_master[m]);
-        conn_master[m] = NULL;
-    }
+    void close_readconn_master();
 
     /**
      * @brief restart_maxscale Issues 'service maxscale restart' command

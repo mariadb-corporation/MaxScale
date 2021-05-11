@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     Test->tprintf("executing SELECT\n");
     execute_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1;");
 
-    Test->maxscales->close_rwsplit(0);
+    Test->maxscales->close_rwsplit();
 
     /** Sleep for at least one monitor interval */
     Test->tprintf("Waiting for monitor to detect changes\n");

@@ -31,9 +31,9 @@ void query_thread(TestConnections& test, int thread_id)
     // Keep running the test until we exhaust all available ports
     while (run && test.global_result == 0 && errno != EADDRNOTAVAIL)
     {
-        validate(test.maxscales->open_rwsplit_connection(0));
-        validate(test.maxscales->open_readconn_master_connection(0));
-        validate(test.maxscales->open_readconn_slave_connection(0));
+        validate(test.maxscales->open_rwsplit_connection());
+        validate(test.maxscales->open_readconn_master_connection());
+        validate(test.maxscales->open_readconn_slave_connection());
         i++;
     }
 }

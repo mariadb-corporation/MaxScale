@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Creating %d connections to RWSplit router\n", TestConnNum);
     for (i = 0; i < TestConnNum; i++)
     {
-        conn[i] = Test->maxscales->open_rwsplit_connection(0);
+        conn[i] = Test->maxscales->open_rwsplit_connection();
     }
     Test->tprintf("Waiting %d seconds\n", 2 * Test->repl->N);
     Test->stop_timeout();

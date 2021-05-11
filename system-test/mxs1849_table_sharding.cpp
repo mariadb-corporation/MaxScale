@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    conn = test.maxscales->open_rwsplit_connection(0);
+    conn = test.maxscales->open_rwsplit_connection();
     // Check that queries are routed to the right shards
     for (int i = 0; i < test.repl->N; i++)
     {

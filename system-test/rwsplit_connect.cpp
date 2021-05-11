@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
                          all_conn);
     }
 
-    Test->maxscales->close_rwsplit(0);
+    Test->maxscales->close_rwsplit();
     Test->repl->close_connections();
 
     int rval = Test->global_result;
