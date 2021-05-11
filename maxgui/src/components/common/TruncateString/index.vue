@@ -13,13 +13,18 @@
     >
         <!-- TODO: nudge menu list to center -->
         <template v-slot:activator="{ on }">
-            <div ref="string" class="text-truncate" v-on="on">
+            <div
+                ref="string"
+                class="text-truncate d-inline-block"
+                :style="{ maxWidth: `${maxWidth}px` }"
+                v-on="on"
+            >
                 {{ text }}
             </div>
         </template>
         <pre class="py-2 px-4">{{ text }}</pre>
     </v-menu>
-    <div v-else ref="string" class="text-truncate">
+    <div v-else ref="string" class="text-truncate d-inline-block">
         {{ text }}
     </div>
 </template>

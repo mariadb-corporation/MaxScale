@@ -32,13 +32,8 @@
     max-height: 500px;
 }
 
-.no-pointer {
-    cursor: initial !important;
-    user-select: all !important;
-    * {
-        cursor: initial !important;
-        user-select: all !important;
-    }
+.no-userSelect {
+    user-select: none !important;
 }
 .no-pointerEvent {
     pointer-events: none !important;

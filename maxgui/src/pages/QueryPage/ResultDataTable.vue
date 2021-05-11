@@ -97,7 +97,7 @@
             :rows="filteredRows"
             :itemHeight="30"
             :height="tableHeight"
-            :width="width"
+            :boundingWidth="width"
             @scroll-end="fetchMore"
         />
     </div>
