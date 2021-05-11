@@ -136,18 +136,19 @@ export default {
                 commit('SET_CONN_ERR_STATE', true)
             }
         },
-        async disconnect({ state, commit }) {
+        async disconnect({ state, commit }, { showSnackbar } = {}) {
             try {
                 let res = await this.vue.$axios.delete(`/sql/${state.curr_cnct_resource.id}`)
                 if (res.status === 204) {
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [`Disconnect successful`],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
+                    if (showSnackbar)
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [`Disconnect successful`],
+                                type: 'success',
+                            },
+                            { root: true }
+                        )
                     localStorage.removeItem('curr_cnct_resource')
                     this.vue.$help.deleteCookie('conn_id_body')
                     //TODO: store default state and reuse it instead of manually set it

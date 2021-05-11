@@ -1,6 +1,5 @@
 <template>
     <div>
-        <!-- TODO: add delete option to disconnect -->
         <v-select
             v-model="chosenConn"
             :items="connOptions"
@@ -36,7 +35,12 @@
                             content-class="shadow-drop color text-navigation py-1 px-4"
                         >
                             <template v-slot:activator="{ on }">
-                                <v-btn class="ml-auto" icon v-on="on" @click.prevent="disconnect">
+                                <v-btn
+                                    class="ml-auto"
+                                    icon
+                                    v-on="on"
+                                    @click.prevent="() => disconnect({ showSnackbar: true })"
+                                >
                                     <v-icon size="20" color="error">
                                         $vuetify.icons.unlink
                                     </v-icon>

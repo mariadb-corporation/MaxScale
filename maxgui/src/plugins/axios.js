@@ -66,18 +66,23 @@ apiClient.interceptors.response.use(
                         text: ['Lost connection to MaxScale, please check if MaxScale is running'],
                         type: 'error',
                     })
+            case 503: {
+                await store.dispatch('query/disconnect')
+                return store.commit('SET_SNACK_BAR_MESSAGE', {
+                    text: [...getErrorsArr(error), 'Please reconnect'],
+                    type: 'error',
+                })
+            }
             default:
                 store.commit('SET_SNACK_BAR_MESSAGE', {
                     text: getErrorsArr(error),
                     type: 'error',
                 })
-                /*
-                    When request is dispatched in a modal, an overlay_type loading will be set,
-                    Turn it off before returning error
-                */
+                /* When request is dispatched in a modal, an overlay_type loading will be set,
+                 * Turn it off before returning error
+                 */
                 if (store.state.overlay_type !== null)
                     await delay(600).then(() => store.commit('SET_OVERLAY_TYPE', null))
-
                 return Promise.reject(error)
         }
     }
