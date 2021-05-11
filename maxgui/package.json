@@ -49,6 +49,7 @@
         "sql-formatter": "^4.0.2",
         "stacktrace-parser": "^0.1.10",
         "style-resources-loader": "^1.4.1",
+        "typy": "^3.3.0",
         "vue": "^2.6.12",
         "vue-chartjs": "^3.5.1",
         "vue-cli-plugin-i18n": "~1.0.1",
