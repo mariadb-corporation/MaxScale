@@ -65,14 +65,14 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     conn = test.maxscales->conn_rwsplit[0];
 
     test.tprintf("Running text protocol test");
     test_text_protocol(test, conn);
     test.maxscales->disconnect();
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     conn = test.maxscales->conn_rwsplit[0];
 
     test.tprintf("Running binary protocol test");
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 
     test.stop_timeout();
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS shard_db");
     test.repl->execute_query_all_nodes("START SLAVE");
     sleep(1);

@@ -221,7 +221,7 @@ int main(int argc, char** argv)
 {
     TestConnections::require_repl_version("10.2");
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.repl->connect();
 
     test.tprintf("Testing column-wise binding with a direct connection");
@@ -242,6 +242,6 @@ int main(int argc, char** argv)
     test.add_result(bind_by_row(test.maxscales->conn_master[0]),
                     "Bulk inserts with readconnroute should work");
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
     return test.global_result;
 }

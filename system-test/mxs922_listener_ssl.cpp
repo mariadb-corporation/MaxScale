@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     config.reset();
     sleep(1);
 
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->connect_maxscale();
     test->try_query(test->maxscales->conn_rwsplit[0], "select @@server_id");
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 

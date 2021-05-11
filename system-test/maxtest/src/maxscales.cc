@@ -28,7 +28,7 @@ Maxscales::~Maxscales()
 {
     for (int i = 0; i < N_MXS; ++i)
     {
-        close_maxscale_connections(i);
+        close_maxscale_connections();
     }
 }
 
@@ -74,21 +74,21 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
     return rval;
 }
 
-int Maxscales::connect_rwsplit(int m, const std::string& db)
+int Maxscales::connect_rwsplit(const std::string& db)
 {
-    mysql_close(conn_rwsplit[m]);
+    mysql_close(conn_rwsplit[0]);
 
-    conn_rwsplit[m] = open_conn_db(rwsplit_port[m], ip(), db, user_name, password, m_ssl);
-    routers[m][0] = conn_rwsplit[m];
+    conn_rwsplit[0] = open_conn_db(rwsplit_port[0], ip(), db, user_name, password, m_ssl);
+    routers[0][0] = conn_rwsplit[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_rwsplit[m]);
+    int my_errno = mysql_errno(conn_rwsplit[0]);
 
     if (my_errno)
     {
         if (verbose())
         {
-            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[0]));
         }
         rc = my_errno;
     }
@@ -96,21 +96,21 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
     return rc;
 }
 
-int Maxscales::connect_readconn_master(int m, const std::string& db)
+int Maxscales::connect_readconn_master(const std::string& db)
 {
-    mysql_close(conn_master[m]);
+    mysql_close(conn_master[0]);
 
-    conn_master[m] = open_conn_db(readconn_master_port[m], ip(), db, user_name, password, m_ssl);
-    routers[m][1] = conn_master[m];
+    conn_master[0] = open_conn_db(readconn_master_port[0], ip(), db, user_name, password, m_ssl);
+    routers[0][1] = conn_master[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_master[m]);
+    int my_errno = mysql_errno(conn_master[0]);
 
     if (my_errno)
     {
         if (verbose())
         {
-            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_master[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_master[0]));
         }
         rc = my_errno;
     }
@@ -118,21 +118,21 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
     return rc;
 }
 
-int Maxscales::connect_readconn_slave(int m, const std::string& db)
+int Maxscales::connect_readconn_slave(const std::string& db)
 {
-    mysql_close(conn_slave[m]);
+    mysql_close(conn_slave[0]);
 
-    conn_slave[m] = open_conn_db(readconn_slave_port[m], ip(), db, user_name, password, m_ssl);
-    routers[m][2] = conn_slave[m];
+    conn_slave[0] = open_conn_db(readconn_slave_port[0], ip(), db, user_name, password, m_ssl);
+    routers[0][2] = conn_slave[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_slave[m]);
+    int my_errno = mysql_errno(conn_slave[0]);
 
     if (my_errno)
     {
         if (verbose())
         {
-            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_slave[m]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_slave[0]));
         }
         rc = my_errno;
     }
@@ -140,23 +140,31 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
     return rc;
 }
 
-int Maxscales::connect_maxscale(int m, const std::string& db)
+int Maxscales::connect_maxscale(const std::string& db)
 {
-    return connect_rwsplit(m, db)
-           + connect_readconn_master(m, db)
-           + connect_readconn_slave(m, db);
+    return connect_rwsplit(db) + connect_readconn_master(db) + connect_readconn_slave(db);
 }
 
-int Maxscales::close_maxscale_connections(int m)
+int Maxscales::connect(const std::string& db)
 {
-    mysql_close(conn_master[m]);
-    mysql_close(conn_slave[m]);
-    mysql_close(conn_rwsplit[m]);
+    return connect_maxscale(db);
+}
 
-    conn_master[m] = nullptr;
-    conn_slave[m] = nullptr;
-    conn_rwsplit[m] = nullptr;
+int Maxscales::close_maxscale_connections()
+{
+    mysql_close(conn_master[0]);
+    mysql_close(conn_slave[0]);
+    mysql_close(conn_rwsplit[0]);
+
+    conn_master[0] = nullptr;
+    conn_slave[0] = nullptr;
+    conn_rwsplit[0] = nullptr;
     return 0;
+}
+
+int Maxscales::disconnect()
+{
+    return close_maxscale_connections();
 }
 
 int Maxscales::restart_maxscale()

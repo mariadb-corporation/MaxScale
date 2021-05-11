@@ -22,7 +22,7 @@ void test_basic(TestConnections& test)
     int N = 4;
 
     test.repl->connect();
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     create_t1(test.maxscales->conn_rwsplit[0]);
     insert_into_t1(test.maxscales->conn_rwsplit[0], N);
@@ -43,7 +43,7 @@ void test_routing(TestConnections& test)
     test.set_timeout(20 * test.repl->N);
     test.repl->connect();
     int server_id = test.repl->get_server_id(0);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     // Test that reads are routed to slaves
     char buf[1024] = "-1";

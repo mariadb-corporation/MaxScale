@@ -31,7 +31,7 @@ int check_conf(TestConnections& test, int blocked_node)
     test.set_timeout(60);
 
     test.repl->connect();
-    test.maxscales->connect_rwsplit(0);
+    test.maxscales->connect_rwsplit();
     create_t1(test.maxscales->conn_rwsplit[0]);
     global_result += insert_into_t1(test.maxscales->conn_rwsplit[0], 1);
 

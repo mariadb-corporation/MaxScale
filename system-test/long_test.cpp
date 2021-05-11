@@ -74,8 +74,7 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes((char *) "set global expire_logs_days = 1;");
 
 
-
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
 

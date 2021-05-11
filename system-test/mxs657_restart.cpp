@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
     for (i = 0; i < iter; i++)
     {
         Test->tprintf("i= %d\n", i);
-        Test->maxscales->connect_maxscale(0);
+        Test->maxscales->connect_maxscale();
         for (j = 0; j < iter; j++)
         {
             execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT 1");
         }
-        Test->maxscales->close_maxscale_connections(0);
+        Test->maxscales->close_maxscale_connections();
         if (i > iter)
         {
             restart_flag = 1;

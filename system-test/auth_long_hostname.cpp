@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(50);
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     Test->tprintf("Creating user with old style password\n");
     Test->try_query(Test->maxscales->conn_rwsplit[0],
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 
     Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char*) "DROP USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org'");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     Test->check_maxscale_alive(0);
 

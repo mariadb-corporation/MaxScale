@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     test.maxscales->disconnect();
 
     // Test MXS-3366.
-    test.maxscales->connect_rwsplit(0, "");
+    test.maxscales->connect_rwsplit("");
     auto conn = test.maxscales->conn_rwsplit[0];
     test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
                 "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(conn));

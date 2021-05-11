@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
     char str[1024];
     Test->set_timeout(60);
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     Test->repl->connect();
 
     Test->tprintf("Create t1\n");

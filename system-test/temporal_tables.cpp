@@ -19,7 +19,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.tprintf("Create a table and insert two rows into it");
     test.set_timeout(10 * test.repl->N);
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0], "SELECT * FROM t1", 2),
                     "check failed");
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     // MXS-2103
     test.maxscales->connect();

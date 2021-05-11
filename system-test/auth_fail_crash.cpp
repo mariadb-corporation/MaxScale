@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(10);
 
     Test->repl->connect();
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     Test->tprintf("Trying GRANT for with bad IP: RWSplit\n");
     create_drop_bad_user(Test->maxscales->conn_rwsplit[0], Test);

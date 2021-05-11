@@ -85,42 +85,36 @@ public:
      * maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
-    int connect_maxscale(int m = 0, const std::string& db = "test");
-    int connect(int m = 0, const std::string& db = "test")
-    {
-        return connect_maxscale(m, db);
-    }
+    int connect_maxscale(const std::string& db = "test");
+    int connect(const std::string& db = "test");
 
     /**
      * @brief CloseMaxscaleConn Closes connection that were opened by ConnectMaxscale()
      * @return 0
      */
-    int close_maxscale_connections(int m = 0);
-    int disconnect(int m = 0)
-    {
-        return close_maxscale_connections(m);
-    }
+    int close_maxscale_connections();
+    int disconnect();
 
     /**
      * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in
      * maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
-    int connect_rwsplit(int m = 0, const std::string& db = "test");
+    int connect_rwsplit(const std::string& db = "test");
 
     /**
      * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in
      * maxscales->conn_master[0]
      * @return 0 in case of success
      */
-    int connect_readconn_master(int m = 0, const std::string& db = "test");
+    int connect_readconn_master(const std::string& db = "test");
 
     /**
      * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in
      * maxscales->conn_slave[0]
      * @return 0 in case of success
      */
-    int connect_readconn_slave(int m = 0, const std::string& db = "test");
+    int connect_readconn_slave(const std::string& db = "test");
 
     /**
      * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct

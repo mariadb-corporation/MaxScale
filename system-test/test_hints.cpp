@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 {
     TestConnections* test = new TestConnections(argc, argv);
     test->repl->connect();
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->connect_maxscale();
 
     char server_id[test->repl->N][1024];
 

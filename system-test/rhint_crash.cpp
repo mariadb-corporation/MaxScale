@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->add_result(Test->maxscales->connect_maxscale(0), "Can not connect to Maxscale\n");
+    Test->add_result(Test->maxscales->connect_maxscale(), "Can not connect to Maxscale\n");
 
 
     Test->tprintf("Trying queries that caused crashes before fix: bug473\n");
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
                     (char*) "select @@server_id; -- maxscale named begin route to master; select @@server_id;");
 
 
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     Test->tprintf("Checking if Maxscale is alive\n");
     fflush(stdout);

@@ -8,8 +8,8 @@
 
 int check_server_id(TestConnections* test, int idx)
 {
-    test->maxscales->close_maxscale_connections(0);
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->close_maxscale_connections();
+    test->maxscales->connect_maxscale();
 
     int a = test->repl->get_server_id(idx);
     int b = -1;
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     test->check_maxscale_alive(0);
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
     config.alter_server(1, "port", 12345);
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->connect_maxscale();
     test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query with bad address should fail");
 

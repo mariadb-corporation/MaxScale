@@ -16,7 +16,7 @@ int main(int argc, char** argv)
         sprintf(server_id[i], "%d", test.repl->get_server_id(i));
     }
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.set_timeout(20);
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
     mysql_stmt_close(stmt);
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
     test.log_excludes(0, "Closing unknown prepared statement");

@@ -7,7 +7,7 @@
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.tprintf("Waiting one second between queries, all queries should succeed");
 
@@ -18,6 +18,6 @@ int main(int argc, char** argv)
     sleep(1);
     test.try_query(test.maxscales->conn_slave[0], "select 1");
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
     return test.global_result;
 }

@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
     test->maxscales->start_maxscale();
     test->set_timeout(20);
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->connect_maxscale();
 
     test->tprintf("trying first: 'select 1'\n");
     test->set_timeout(20);

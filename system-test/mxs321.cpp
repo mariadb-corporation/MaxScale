@@ -63,9 +63,9 @@ int main(int argc, char* argv[])
     Test->set_timeout(50);
 
     Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     execute_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_connections=100");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->stop_timeout();
 
     /** Create connections to readwritesplit */

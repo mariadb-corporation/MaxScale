@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     Test->repl->execute_query_all_nodes((char*) "set global max_connect_errors=1000;");
     Test->repl->execute_query_all_nodes((char*) "set global max_connections=1000;");
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     Test->tprintf("Creating one user 'user@%%'");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%'");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "CREATE USER user@'%%' identified by 'pass2'");

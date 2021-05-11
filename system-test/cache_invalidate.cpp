@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
         // To be certain that MaxScale has started.
         sleep(3);
 
-        if (maxscales->connect_rwsplit(0) == 0)
+        if (maxscales->connect_rwsplit() == 0)
         {
             test.tprintf("Testing invalidated cache.");
             test.tprintf("Local storage.");

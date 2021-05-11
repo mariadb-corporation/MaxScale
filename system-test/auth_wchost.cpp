@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
         auto userhostc = userhost.c_str();
 
         test.tprintf("Connecting to Maxscale\n");
-        test.add_result(mxs->connect_maxscale(0), "Error connecting to Maxscale\n");
+        test.add_result(mxs->connect_maxscale(), "Error connecting to Maxscale\n");
         test.tprintf("Creating user %s", userhostc);
         test.set_timeout(30);
 

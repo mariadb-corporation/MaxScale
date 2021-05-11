@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(60);
 
     Test->tprintf("Connecting to Maxscale %s", Test->maxscales->ip4());
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     printf("Setup firewall to block mysql on master");
     Test->repl->block_node(0);
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
     execute_query(Test->maxscales->conn_rwsplit[0], "show processlist;");
     execute_query(Test->maxscales->conn_master[0], "show processlist;");
     execute_query(Test->maxscales->conn_slave[0], "show processlist;");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     // Wait three monitor intervals to allow the monitor to detect that the server is up
     Test->repl->unblock_node(0);

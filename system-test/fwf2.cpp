@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
         copy_rules(Test, str, rules_dir);
 
         Test->maxscales->start_maxscale();
-        Test->maxscales->connect_rwsplit(0);
+        Test->maxscales->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw2/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw2/deny%d", test_dir, i);

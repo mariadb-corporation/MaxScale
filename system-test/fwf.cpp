@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
         copy_rules(Test, str, rules_dir);
 
         Test->maxscales->restart_maxscale();
-        Test->maxscales->connect_rwsplit(0);
+        Test->maxscales->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw/deny%d", test_dir, i);
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
                                 Test->maxscales->access_homedir());
 
     Test->maxscales->restart_maxscale();
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     sleep(10);
 
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     copy_rules(Test, (char*) "rules_limit_queries", rules_dir);
 
     Test->maxscales->start_maxscale();
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     Test->tprintf("Trying 10 quries as fast as possible");
     for (i = 0; i < 10; i++)

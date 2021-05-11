@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     Test->repl->connect();
 
     printf("Connecting to RWsplit\n");
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
     Test->set_timeout(30);
     Test->add_result(create_t1(Test->maxscales->conn_rwsplit[0]), "Error creating 't1'\n");
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     sleep(3);
 
     Test->set_timeout(60);
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
     Test->tprintf("Reconnecting and executing SELECT again\n");
     Test->set_timeout(60);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1;");

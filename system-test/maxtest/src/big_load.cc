@@ -40,7 +40,7 @@ void load(long int* new_inserts,
     }
 
     nodes->connect();
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     data.i1 = 0;
     data.i2 = 0;

@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
     Test->repl->connect();
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     char server_id[256];
     char server_id_d[256];
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->repl->close_connections();
 
     Test->check_maxscale_alive(0);

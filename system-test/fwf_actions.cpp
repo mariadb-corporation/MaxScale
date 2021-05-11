@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     test->maxscales->start_maxscale();
 
     test->set_timeout(30);
-    test->maxscales->connect_maxscale(0);
+    test->maxscales->connect_maxscale();
 
     /** Test blacklisting functionality */
     test->tprintf("Trying matching query to blacklisted RWSplit, expecting failure\n");

@@ -90,7 +90,7 @@ public:
 
     void connect_maxscale(int m = 0)
     {
-        if (maxscales->connect_maxscale(m) != 0)
+        if (maxscales->connect_maxscale() != 0)
         {
             ++global_result;
             throw std::runtime_error("Could not connect to MaxScale.");
@@ -240,7 +240,7 @@ void run(XTestConnections& test)
         stop_node(test, master_index);
 
         cout << "\nClosing connection to MaxScale." << endl;
-        test.maxscales->close_maxscale_connections(0);
+        test.maxscales->close_maxscale_connections();
 
         test.maxscales->wait_for_monitor();
 

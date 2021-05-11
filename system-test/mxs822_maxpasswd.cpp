@@ -21,11 +21,11 @@ void try_password(TestConnections* Test, char* pass)
     /**
      * Create the user
      */
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP USER 'test'@'%'");
     execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'test'@'%%' IDENTIFIED BY '%s'", pass);
     execute_query(Test->maxscales->conn_rwsplit[0], "GRANT ALL ON *.* TO 'test'@'%%'");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     /**
      * Encrypt and change the password

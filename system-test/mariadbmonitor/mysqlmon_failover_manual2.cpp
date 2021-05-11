@@ -32,7 +32,7 @@ namespace x
 
 void connect_maxscale(TestConnections& test)
 {
-    if (test.maxscales->connect_maxscale(0) != 0)
+    if (test.maxscales->connect_maxscale() != 0)
     {
         ++test.global_result;
         throw std::runtime_error("Could not connect to MaxScale.");
@@ -143,7 +143,7 @@ void run(TestConnections& test)
     cout << "Failed as expected." << endl;
 
     cout << "\nClosing connection to MaxScale." << endl;
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
     test.maxscales->wait_for_monitor();
 
     cout << "\nConnecting to MaxScale." << endl;
