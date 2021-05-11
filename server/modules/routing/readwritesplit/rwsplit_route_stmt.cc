@@ -1065,7 +1065,11 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
     }
 
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
-    mxb_assert(!mxs_mysql_is_ps_command(cmd) || extract_binary_ps_id(buffer.get()) == route_info().stmt_id());
+
+    MXB_AT_DEBUG(uint32_t ps_id = extract_binary_ps_id(buffer.get()));
+    mxb_assert(!mxs_mysql_is_ps_command(cmd)
+               || ps_id == route_info().stmt_id()
+               || ps_id == MARIADB_PS_DIRECT_EXEC_ID);
 
     bool attempting_causal_read = false;
 

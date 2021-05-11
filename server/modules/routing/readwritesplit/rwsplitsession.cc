@@ -600,7 +600,7 @@ int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down
                 lock_to_master();
             }
 
-            if (reply.command() == MXS_COM_STMT_PREPARE)
+            if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
             {
                 m_qc.ps_store_response(reply.generated_id(), reply.param_count());
             }
