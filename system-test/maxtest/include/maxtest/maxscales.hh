@@ -324,6 +324,7 @@ struct ServerInfo
     int64_t     master_group {GROUP_NONE};
     int64_t     rlag {RLAG_NONE};
     int64_t     pool_conns {0};
+    int64_t     connections {0};
     std::string gtid;
 
     struct SlaveConnection
@@ -383,6 +384,7 @@ public:
 
     void check_master_groups(const std::vector<int>& expected_groups);
     void check_pool_connections(const std::vector<int>& expected_conns);
+    void check_connections(const std::vector<int>& expected_conns);
 
     void print();
 

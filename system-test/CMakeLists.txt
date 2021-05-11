@@ -937,6 +937,12 @@ add_test_executable(mxs3462_sts_update.cc mxs3462_sts_update mxs3462_sts_update 
 # MXS-3472: Transaction replay is not attempted again if session commands fail
 add_test_executable(mxs3472_trx_master_failure.cc mxs3472_trx_master_failure mxs3472_trx_master_failure LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3479: Disabling maxlog doesn't fully prevent it from being written to
+add_test_executable(mxs3479_no_maxlog.cc mxs3479_no_maxlog mxs3479_no_maxlog LABELS REPL_BACKEND readwritesplit)
+
+# MXS-3536: max_slave_connections=0 doesn't work as expected
+add_test_executable(mxs3536_rwsplit_no_slaves.cc mxs3536_rwsplit_no_slaves mxs3536_rwsplit_no_slaves LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

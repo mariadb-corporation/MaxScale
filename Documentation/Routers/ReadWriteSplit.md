@@ -62,6 +62,13 @@ at any moment. The default is to use at most 255 slave connections per client
 connection. In older versions the default was to use all available slaves with
 no limit.
 
+For MaxScale 2.5.12 and newer, the minimum value is 0.
+
+For MaxScale versions 2.5.11 and older, the minimum value is 1. These versions
+suffer from a bug ([MXS-3536](https://jira.mariadb.org/browse/MXS-3536)) that
+causes the parameter to accept any values but only function when a value greated
+than one was given.
+
 Starting with MaxScale 2.5.0, the use of percentage values in
 `max_slave_connections` is deprecated. The support for percentages will be
 removed in a future release.

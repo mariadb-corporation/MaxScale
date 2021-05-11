@@ -1,0 +1,3 @@
+[maxscale]
+threads=###threads###
+maxlog=false

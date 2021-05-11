@@ -65,7 +65,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
     }
     else
     {
-        MXS_ERROR("Unable to start session: not enough backend servers are available.");
+        MXS_ERROR("Service has no servers.");
     }
 
     return rses;

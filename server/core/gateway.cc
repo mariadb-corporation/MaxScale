@@ -3129,21 +3129,13 @@ static bool init_sqlite3()
 
     // Collecting the memstatus introduces locking that, according to customer reports,
     // has a significant impact on the performance.
-    if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int)0) == SQLITE_OK)   // 0 turns off.
-    {
-        MXS_NOTICE("The collection of SQLite memory allocation statistics turned off.");
-    }
-    else
+    if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int)0) != SQLITE_OK)   // 0 turns off.
     {
         MXS_WARNING("Could not turn off the collection of SQLite memory allocation statistics.");
         // Non-fatal, we simply will take a small performance hit.
     }
 
-    if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) == SQLITE_OK)
-    {
-        MXS_NOTICE("Threading mode of SQLite set to Multi-thread.");
-    }
-    else
+    if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) != SQLITE_OK)
     {
         MXS_ERROR("Could not set the threading mode of SQLite to Multi-thread. "
                   "MaxScale will terminate.");
