@@ -781,6 +781,18 @@ private:
     SDatabase          m_sDatabase;
 };
 
+/**
+ * Get SQL statement for creating a document table.
+ *
+ * @param table_name  The name of the table. Will be used verbatim,
+ *                    so all necessary quotes should be provided.
+ * @param id_length   The VARCHAR length of the id column.
+ *
+ * @return An SQL statement for creating the table.
+ */
+std::string table_create_statement(const std::string& table_name,
+                                   int64_t id_length);
+
 }
 
 inline std::ostream& operator << (std::ostream& out, const mxsmongo::Packet& x)

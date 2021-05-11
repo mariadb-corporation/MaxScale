@@ -819,14 +819,9 @@ protected:
 
                 if (action == Worker::Call::EXECUTE)
                 {
-                    stringstream ss;
-                    ss << "CREATE TABLE "
-                       << table()
-                       << " (id VARCHAR("
-                       << m_database.config().id_length
-                       << ") NOT NULL UNIQUE, doc JSON)";
+                    auto sql = mxsmongo::table_create_statement(table(), m_database.config().id_length);
 
-                    send_downstream(ss.str());
+                    send_downstream(sql);
                 }
 
                 return false;

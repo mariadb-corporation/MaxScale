@@ -1873,3 +1873,13 @@ GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
 
     return pResponse;
 }
+
+string mxsmongo::table_create_statement(const std::string& table_name, int64_t id_length)
+{
+    stringstream ss;
+    ss << "CREATE TABLE " << table_name << " ("
+       << "id VARCHAR(" << id_length << ") NOT NULL UNIQUE, "
+       << "doc JSON)";
+
+    return ss.str();
+}
