@@ -71,6 +71,7 @@ MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_s
 bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
 {
     bool rval = true;
+    m_n_req_backends = n_min_expected;
     int found = read_nodes_info(nwconfig);
     if (found < n_min_expected)
     {
@@ -1035,6 +1036,27 @@ bool MariaDBCluster::ssl() const
 void MariaDBCluster::set_use_ssl(bool use_ssl)
 {
     m_ssl = use_ssl;
+}
+
+void MariaDBCluster::remove_extra_backends()
+{
+    if (m_backends.size() > (size_t)m_n_req_backends)
+    {
+        for (size_t i = m_n_req_backends; i < m_backends.size(); i++)
+        {
+            auto srv = m_backends[i].get();
+            if (srv->ping_or_open_admin_connection())
+            {
+                logger().log_msgf("Shutting down MariaDB Server running on '%s', "
+                                  "as it's not required by test.",
+                                  srv->m_vm.m_name.c_str());
+                srv->stop_database();
+            }
+        }
+
+        m_backends.erase(m_backends.begin() + m_n_req_backends, m_backends.end());
+        N = m_backends.size();
+    }
 }
 
 namespace maxtest

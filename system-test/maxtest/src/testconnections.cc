@@ -193,6 +193,13 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     if (m_check_nodes)
     {
+        // The replication cluster has extra backends if too many are configured due to a previously
+        // ran big test. Hide the extra ones.
+        if (repl)
+        {
+            repl->remove_extra_backends();
+        }
+
         auto check_node = [&rc](MariaDBCluster* cluster) {
                 if (cluster)
                 {

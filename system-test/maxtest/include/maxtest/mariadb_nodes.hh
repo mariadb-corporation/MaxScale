@@ -98,7 +98,6 @@ private:
 class MariaDBCluster : public Nodes
 {
 public:
-    using ConnArray = std::vector<std::unique_ptr<mxt::MariaDB>>;
 
     static constexpr int N_MAX = 32;
     virtual ~MariaDBCluster();
@@ -311,6 +310,8 @@ public:
      */
     void close_active_connections();
 
+    void remove_extra_backends();
+
     /**
      * @brief Check and fix replication
      */
@@ -444,6 +445,7 @@ private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl? */
     bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
+    int  m_n_req_backends {0};  /**< Number of backends required by test */
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
