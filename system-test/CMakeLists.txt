@@ -92,6 +92,10 @@ add_test_executable(mxs3416_causal_reads_extra_packet.cpp mxs3416_causal_reads_e
 # https://jira.mariadb.org/browse/MXS-1720
 add_test_executable(mxs1720_fast_causal_reads.cpp mxs1720_fast_causal_reads mxs1720_fast_causal_reads LABELS readwritesplit REPL_BACKEND)
 
+# MXS-3499: Prepared statement support for causal_reads
+# https://jira.mariadb.org/browse/MXS-3499
+add_test_executable(mxs3499_causal_reads_ps.cc mxs3499_causal_reads_ps mxs3499_causal_reads_ps LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1961: Standalone master loses master status
 # https://jira.mariadb.org/browse/MXS-1961
 add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
