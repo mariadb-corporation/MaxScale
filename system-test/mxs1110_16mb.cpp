@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
     copy_rules(Test, "rules2", fw_rules.c_str());
 
-    Test->maxscales->start_maxscale(0);
+    Test->maxscales->start_maxscale();
 
     Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=200000000");
     Test->galera->execute_query_all_nodes((char*) "set global max_allowed_packet=200000000");

@@ -205,19 +205,19 @@ public:
     /**
      * @brief restart_maxscale Issues 'service maxscale restart' command
      */
-    int restart_maxscale(int m = 0);
-    int restart(int m = 0);
+    int restart_maxscale();
+    int restart();
 
     /**
      * Issues 'service maxscale start' command
      */
-    int start_maxscale(int m = 0);
-    int start(int m = 0);
+    int start_maxscale();
+    int start();
 
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
-    int  stop_maxscale(int m = 0);
+    int stop_maxscale();
     bool stop();
 
     bool stop_and_check_stopped();
@@ -255,9 +255,8 @@ public:
      * The function waits until all monitors have performed at least one monitoring cycle.
      *
      * @param intervals The number of monitor intervals to wait
-     * @param m Number of Maxscale node
      */
-    void wait_for_monitor(int intervals = 2, int m = 0);
+    void wait_for_monitor(int intervals = 2);
 
     /**
      * Check if MaxScale process is running or stopped. Wrong status is a test failure.
@@ -281,7 +280,7 @@ private:
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
-    std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
+    std::string m_binlog_dir;    /**< Directory of binlog files (for binlog router) */
 
     mxt::TestLogger& log() const;
 };

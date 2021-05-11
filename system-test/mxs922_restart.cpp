@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 
 
     test->tprintf("Restarting MaxScale");
-    test->maxscales->restart_maxscale(0);
+    test->maxscales->restart_maxscale();
     sleep(2);
 
     do_query(test, false);

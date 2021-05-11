@@ -125,7 +125,7 @@ void* kill_vm_thread(void* ptr)
         }
         else
         {
-            Test->maxscales->restart_maxscale(0);
+            Test->maxscales->restart_maxscale();
         }
     }
 

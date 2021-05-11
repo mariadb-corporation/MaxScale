@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     test.set_timeout(120);
 
     test.tprintf("Restart Maxscale");
-    test.maxscales->restart_maxscale(0);
+    test.maxscales->restart_maxscale();
     test.check_maxscale_alive(0);
 
     test.stop_timeout();

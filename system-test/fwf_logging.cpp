@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     test->maxscales->stop();
     copy_rules(test, (char*) "rules_logging", rules_dir);
 
-    test->maxscales->start_maxscale(0);
+    test->maxscales->start_maxscale();
     test->set_timeout(20);
     test->maxscales->connect_maxscale(0);
 

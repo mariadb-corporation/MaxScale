@@ -55,7 +55,7 @@ int hash_password(TestConnections* test)
                                 enc_pw.c_str());
 
     test->tprintf("Starting MaxScale\n");
-    test->maxscales->start_maxscale(0);
+    test->maxscales->start_maxscale();
 
     test->tprintf("Checking if MaxScale is alive\n");
     return test->check_maxscale_alive(0);

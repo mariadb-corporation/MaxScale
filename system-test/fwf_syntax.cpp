@@ -70,7 +70,7 @@ int main(int argc, char** argv)
         copy_rules(&test, (char*)temp_rules, (char*)getcwd(buf, sizeof(buf)));
 
         test.tprintf("Testing rule: %s\n", rules_failure[i]);
-        test.add_result(test.maxscales->start_maxscale(0) == 0, "MaxScale should fail to start");
+        test.add_result(test.maxscales->start_maxscale() == 0, "MaxScale should fail to start");
         test.maxscales->stop();
 
         /** Check that MaxScale did not start and that the log contains

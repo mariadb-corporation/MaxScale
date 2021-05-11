@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 
     copy_rules(&test, (char*) "rules.txt", (char*) ".");
 
-    test.maxscales->restart_maxscale(0);
+    test.maxscales->restart_maxscale();
     test.maxscales->connect_maxscale(0);
     test.tprintf("Pinging MaxScale, expecting success");
     test.add_result(mysql_ping(test.maxscales->conn_rwsplit[0]),
