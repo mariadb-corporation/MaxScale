@@ -53,7 +53,7 @@ extern const char* DEFAULT_RANK;
 #define SERVER_RELAY (1 << 11)                  /**<< Server is a relay */
 #define SERVER_BLR   (1 << 12)                  /**<< Server is a replicating binlog router */
 // Bits used by other monitors
-#define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
+#define SERVER_JOINED (1 << 20)                 /**<< The server is joined in a Galera cluster */
 
 inline bool status_is_connectable(uint64_t status)
 {
@@ -503,6 +503,8 @@ enum class ReplyState
     RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
     RSET_ROWS,      /**< Resultset response, waiting for rows */
     PREPARE,        /**< COM_STMT_PREPARE response */
+    LOAD_DATA,      /**< Sending data for LOAD DATA LOCAL INFILE */
+    LOAD_DATA_END,  /**< Waiting for LOAD DATA LOCAL INFILE response */
 };
 
 class Reply

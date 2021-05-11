@@ -105,7 +105,7 @@ public:
          */
         bool expecting_response() const
         {
-            return load_data_state() != LOAD_DATA_ACTIVE
+            return load_data_state() == LOAD_DATA_INACTIVE
                    && !large_query()
                    && mxs_mysql_command_will_respond(command());
         }

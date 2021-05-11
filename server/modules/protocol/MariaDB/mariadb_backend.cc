@@ -944,10 +944,19 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             // state of m_large_query must be updated for each routed packet to accurately know whether the
             // command byte is accurate or not.
             bool was_large = m_large_query;
-            m_large_query = mxs_mysql_get_packet_len(queue) == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+            uint32_t packet_len = mxs_mysql_get_packet_len(queue);
+            m_large_query = packet_len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
-            if (was_large || session_is_load_active(m_session))
+            if (was_large || m_reply.state() == ReplyState::LOAD_DATA)
             {
+                if (packet_len == MYSQL_HEADER_LEN && m_reply.state() == ReplyState::LOAD_DATA)
+                {
+                    // An empty packet is sent at the end of the LOAD DATA LOCAL INFILE. Any packets received
+                    // after this but before the server responds with the result should go through the normal
+                    // code paths.
+                    set_reply_state(ReplyState::LOAD_DATA_END);
+                }
+
                 // Not the start of a packet, don't analyze it.
                 return m_dcb->writeq_append(queue);
             }
@@ -1867,6 +1876,40 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         process_reply_start(it, end);
         break;
 
+    case ReplyState::LOAD_DATA:
+        // This should not happen as the server is supposed to wait for the whole LOAD DATA LOCAL INFILE to
+        // complete before sending a response. It is however possible that something else, for example another
+        // MaxScale, causes an error to be sent even if the client hasn't finished sending the data.
+        MXS_ERROR("Response to LOAD DATA LOCAL INFILE read before the upload was complete: "
+                  "cmd: 0x%02hhx, len: %u, server: %s", cmd, len, m_server.name());
+        mxb_assert(!true);
+    /** Fallthrough */
+
+    case ReplyState::LOAD_DATA_END:
+        MXS_INFO("Load data ended on '%s'", m_server.name());
+        session_set_load_active(m_session, false);
+
+        if (cmd == MYSQL_REPLY_ERR)
+        {
+            update_error(++it, end);
+            set_reply_state(ReplyState::DONE);
+        }
+        else if (cmd == MYSQL_REPLY_OK)
+        {
+            m_reply.set_is_ok(true);
+            process_ok_packet(it, end);
+            mxb_assert(m_reply.state() == ReplyState::DONE);
+        }
+        else
+        {
+            MXS_ERROR("Unexpected response to LOAD DATA LOCAL INFILE: cmd: 0x%02hhx, len: %u, server: %s",
+                      cmd, len, m_server.name());
+            session_dump_statements(m_session);
+            session_dump_log(m_session);
+            mxb_assert(!true);
+        }
+        break;
+
     case ReplyState::DONE:
 
         while (!m_track_queue.empty())
@@ -2157,7 +2200,7 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         // The client will send a request after this with the contents of the file which the server will
         // respond to with either an OK or an ERR packet
         session_set_load_active(m_session, true);
-        set_reply_state(ReplyState::DONE);
+        set_reply_state(ReplyState::LOAD_DATA);
         break;
 
     case MYSQL_REPLY_ERR:
@@ -2254,16 +2297,10 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
                || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS
                || m_state == State::SEND_CHANGE_USER);
 
-    if (session_is_load_active(m_session))
-    {
-        if (query.payload_len == 0)
-        {
-            MXS_INFO("Load data ended");
-            session_set_load_active(m_session, false);
-            set_reply_state(ReplyState::START);
-        }
-    }
-    else if (!m_large_query)
+    mxb_assert(!session_is_load_active(m_session) || m_reply.state() == ReplyState::LOAD_DATA_END);
+
+    // TODO: This check should be redundant due to the fast path for the trailing parts of large packets.
+    if (!m_large_query)
     {
         m_reply.clear();
         m_reply.set_command(query.command);
