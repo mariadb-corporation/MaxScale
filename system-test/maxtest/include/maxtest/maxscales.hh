@@ -58,21 +58,20 @@ public:
      * @brief Get port number of a MaxScale service
      *
      * @param type Type of service
-     * @param m    MaxScale instance to use
-     *
      * @return Port number of the service
      */
-    int port(enum service type = RWSPLIT, int m = 0) const;
+    int port(enum service type = RWSPLIT) const;
 
     MYSQL* conn_rwsplit[N_MXS] {nullptr};   /**< Connection to RWSplit */
     MYSQL* conn_master[N_MXS] {nullptr};    /**< Connection to ReadConnection in master mode */
     MYSQL* conn_slave[N_MXS] {nullptr};     /**< Connection to ReadConnection in slave mode */
 
-    MYSQL* routers[N_MXS][3] {{nullptr}};   /**< conn_rwsplit, conn_master, conn_slave */
-    int    ports[N_MXS][3] {{-1}};          /**< rwsplit_port, readconn_master_port, readconn_slave_port */
+    /**< conn_rwsplit, conn_master, conn_slave */
+    MYSQL* routers[3] {nullptr, nullptr, nullptr};
+    int    ports[3] {-1, -1, -1};           /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
-    std::string maxscale_cnf[N_MXS];    /**< full name of Maxscale configuration file */
-    std::string maxscale_log_dir[N_MXS];/**< name of log files directory */
+    std::string maxscale_cnf;       /**< full name of Maxscale configuration file */
+    std::string maxscale_log_dir;   /**< name of log files directory */
 
     std::string user_name;  /**< User name to access backend nodes */
     std::string password;   /**< Password to access backend nodes */
@@ -182,7 +181,7 @@ public:
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
-    int stop_maxscale();
+    int  stop_maxscale();
     bool stop();
 
     bool stop_and_check_stopped();
@@ -245,7 +244,7 @@ private:
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
-    std::string m_binlog_dir;    /**< Directory of binlog files (for binlog router) */
+    std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 
     mxt::TestLogger& log() const;
 };

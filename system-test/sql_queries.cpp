@@ -95,8 +95,8 @@ int main(int argc, char* argv[])
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)
         {
-            execute_query(Test->maxscales->routers[0][j], "DROP DATABASE I EXISTS test1;");
-            execute_query(Test->maxscales->routers[0][j], "CREATE TABLE ");
+            execute_query(Test->maxscales->routers[j], "DROP DATABASE I EXISTS test1;");
+            execute_query(Test->maxscales->routers[j], "CREATE TABLE ");
         }
 
         // close connections

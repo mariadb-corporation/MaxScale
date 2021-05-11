@@ -53,10 +53,10 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
     if (add_node(nwconfig, vm_name))
     {
         string key_cnf = vm_name + "_cnf";
-        maxscale_cnf[0] = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
+        maxscale_cnf = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
         string key_log_dir = vm_name + "_log_dir";
-        maxscale_log_dir[0] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
+        maxscale_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
         string key_binlog_dir = vm_name + "_binlog_dir";
         m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
@@ -65,9 +65,9 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
         readconn_master_port[0] = 4008;
         readconn_slave_port[0] = 4009;
 
-        ports[0][0] = rwsplit_port[0];
-        ports[0][1] = readconn_master_port[0];
-        ports[0][2] = readconn_slave_port[0];
+        ports[0] = rwsplit_port[0];
+        ports[1] = readconn_master_port[0];
+        ports[2] = readconn_slave_port[0];
 
         rval = true;
     }
@@ -79,7 +79,7 @@ int Maxscales::connect_rwsplit(const std::string& db)
     mysql_close(conn_rwsplit[0]);
 
     conn_rwsplit[0] = open_conn_db(rwsplit_port[0], ip(), db, user_name, password, m_ssl);
-    routers[0][0] = conn_rwsplit[0];
+    routers[0] = conn_rwsplit[0];
 
     int rc = 0;
     int my_errno = mysql_errno(conn_rwsplit[0]);
@@ -101,7 +101,7 @@ int Maxscales::connect_readconn_master(const std::string& db)
     mysql_close(conn_master[0]);
 
     conn_master[0] = open_conn_db(readconn_master_port[0], ip(), db, user_name, password, m_ssl);
-    routers[0][1] = conn_master[0];
+    routers[1] = conn_master[0];
 
     int rc = 0;
     int my_errno = mysql_errno(conn_master[0]);
@@ -123,7 +123,7 @@ int Maxscales::connect_readconn_slave(const std::string& db)
     mysql_close(conn_slave[0]);
 
     conn_slave[0] = open_conn_db(readconn_slave_port[0], ip(), db, user_name, password, m_ssl);
-    routers[0][2] = conn_slave[0];
+    routers[2] = conn_slave[0];
 
     int rc = 0;
     int my_errno = mysql_errno(conn_slave[0]);
@@ -187,6 +187,7 @@ int Maxscales::start_maxscale()
     int res;
     if (m_use_valgrind)
     {
+        auto log_dir = maxscale_log_dir.c_str();
         if (m_use_callgrind)
         {
             res = ssh_node_f(0, false,
@@ -194,8 +195,8 @@ int Maxscales::start_maxscale()
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
                              " /usr/bin/maxscale",
-                             maxscale_log_dir[0].c_str(), m_valgrind_log_num,
-                             maxscale_log_dir[0].c_str(), m_valgrind_log_num);
+                             log_dir, m_valgrind_log_num,
+                             log_dir, m_valgrind_log_num);
         }
         else
         {
@@ -203,7 +204,7 @@ int Maxscales::start_maxscale()
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              "--track-origins=yes /usr/bin/maxscale",
-                             maxscale_log_dir[0].c_str(), m_valgrind_log_num);
+                             log_dir, m_valgrind_log_num);
         }
         m_valgrind_log_num++;
     }
@@ -263,18 +264,18 @@ StringSet Maxscales::get_server_status(const std::string& name)
     return rval;
 }
 
-int Maxscales::port(enum service type, int m) const
+int Maxscales::port(enum service type) const
 {
     switch (type)
     {
     case RWSPLIT:
-        return rwsplit_port[m];
+        return rwsplit_port[0];
 
     case READCONN_MASTER:
-        return readconn_master_port[m];
+        return readconn_master_port[0];
 
     case READCONN_SLAVE:
-        return readconn_slave_port[m];
+        return readconn_slave_port[0];
     }
     return -1;
 }
@@ -484,8 +485,8 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
     sprintf(sys, "mkdir -p %s", log_dir_i);
     system(sys);
     auto vm = node(0);
-    auto mxs_logdir = maxscale_log_dir[0].c_str();
-    auto mxs_cnf_file = maxscale_cnf[0].c_str();
+    auto mxs_logdir = maxscale_log_dir.c_str();
+    auto mxs_cnf_file = maxscale_cnf.c_str();
 
     if (vm->is_remote())
     {
