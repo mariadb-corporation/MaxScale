@@ -155,6 +155,7 @@ export default {
             db_tree: state => state.query.db_tree,
             loading_db_tree: state => state.query.loading_db_tree,
             db_completion_list: state => state.query.db_completion_list,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
         }),
         getDbCmplList() {
             // remove duplicated labels
@@ -179,7 +180,7 @@ export default {
         if (this.active_conn_state) await this.loadSchema()
     },
     async beforeDestroy() {
-        await this.disconnect()
+        if (this.curr_cnct_resource) await this.disconnect()
     },
     methods: {
         ...mapMutations({
