@@ -15,7 +15,8 @@
         <template v-slot:activator="{ on }">
             <div
                 ref="string"
-                class="text-truncate d-inline-block"
+                class="d-inline-block"
+                :class="{ 'text-truncate': isTruncated }"
                 :style="{ maxWidth: `${maxWidth}px` }"
                 v-on="on"
             >
@@ -24,7 +25,13 @@
         </template>
         <pre class="py-2 px-4">{{ text }}</pre>
     </v-menu>
-    <div v-else ref="string" class="text-truncate d-inline-block">
+    <div
+        v-else
+        ref="string"
+        class="d-inline-block"
+        :class="{ 'text-truncate': isTruncated }"
+        :style="{ maxWidth: `${maxWidth}px` }"
+    >
         {{ text }}
     </div>
 </template>
@@ -62,10 +69,10 @@ export default {
         }
     },
     watch: {
-        text: function() {
+        text() {
             this.$help.doubleRAF(() => this.checkTruncated())
         },
-        maxWidth: function() {
+        maxWidth() {
             this.$help.doubleRAF(() => this.checkTruncated())
         },
     },

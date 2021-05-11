@@ -9,6 +9,7 @@
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
+                        minWidth: `${headerWidthMap[i]}px`,
                         maxWidth: `${headerWidthMap[i]}px`,
                     }"
                     class="th px-3"
@@ -103,7 +104,9 @@ export default {
             if (this.$refs[`header__${0}`])
                 // set all header maxWidth to unset to get auto width in doubleRAF cb
                 for (let i = 0; i < this.headers.length; i++) {
-                    this.$refs[`header__${i}`][0].style.maxWidth = 'unset'
+                    let headerStyle = this.$refs[`header__${i}`][0].style
+                    headerStyle.maxWidth = 'unset'
+                    headerStyle.minWidth = 'unset'
                 }
         },
         resizerMouseDown(e, i) {
@@ -119,9 +122,13 @@ export default {
             if (this.isResizing) {
                 const diffX = e.pageX - this.currPageX
                 if (this.currColWidth + diffX >= 28) {
-                    this.currCol.style.maxWidth = `${this.currColWidth + diffX}px`
+                    const newCurrColW = `${this.currColWidth + diffX}px`
+                    this.currCol.style.maxWidth = newCurrColW
+                    this.currCol.style.minWidth = newCurrColW
                     if (this.nxtCol && this.nxtColWidth - diffX >= 28) {
-                        this.nxtCol.style.maxWidth = `${this.nxtColWidth - diffX}px`
+                        const newNxtColW = `${this.nxtColWidth - diffX}px`
+                        this.nxtCol.style.maxWidth == newNxtColW
+                        this.nxtCol.style.minWidth = newNxtColW
                     }
                     this.$help.doubleRAF(() => this.assignHeaderWidthMap())
                 }

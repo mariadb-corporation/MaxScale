@@ -138,7 +138,7 @@ export default {
             return res
         },
         tableHeaders() {
-            return ['Row', ...this.headers]
+            return ['#', ...this.headers]
         },
         rowsWithIndex() {
             return this.rows.map((row, i) => [i + 1, ...row])

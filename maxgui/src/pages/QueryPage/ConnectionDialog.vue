@@ -100,6 +100,7 @@
                             :rules="rules.user"
                             class="std error--text__bottom"
                             name="db-user"
+                            autocomplete="new-username"
                             dense
                             outlined
                             required
