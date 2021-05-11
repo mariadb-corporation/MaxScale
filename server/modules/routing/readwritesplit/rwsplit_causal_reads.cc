@@ -190,3 +190,28 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(GWBUF* origin)
 
     return rval;
 }
+
+void RWSplitSession::send_sync_query(mxs::RWBackend* target)
+{
+    // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
+    // has to be retried.
+    GWBUF* buf = m_current_query.release();
+    buf->hint = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
+    m_current_query.reset(buf);
+
+    int64_t timeout = m_config.causal_reads_timeout.count();
+    std::string gtid = m_config.causal_reads == CausalReads::GLOBAL ?
+        m_router->last_gtid() : m_gtid_pos.to_string();
+
+    // The following SQL will wait for the current GTID to be reached. If the GTID is not reached within
+    // the given timeout, the connection will be closed. This will trigger the replaying of the current
+    // statement which, due to the routing hint, will be retried on the current master. It will also abort the
+    // execution of the query sent right after this one.
+    std::ostringstream ss;
+    ss << "IF (MASTER_GTID_WAIT('" << gtid << "', " << timeout << ") <> 0) THEN "
+       << "KILL (SELECT CONNECTION_ID());"
+       << "END IF";
+
+    GWBUF* query = modutil_create_query(ss.str().c_str());
+    target->write(query, mxs::Backend::IGNORE_RESPONSE);
+}

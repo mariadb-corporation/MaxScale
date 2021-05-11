@@ -1136,5 +1136,10 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
     }
 
+    if (attempting_causal_read && cmd == MXS_COM_STMT_EXECUTE)
+    {
+        send_sync_query(target);
+    }
+
     return target->write(buffer.release(), response);
 }

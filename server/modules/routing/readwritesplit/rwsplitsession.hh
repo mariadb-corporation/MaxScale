@@ -188,6 +188,7 @@ private:
     GWBUF* add_prefix_wait_gtid(GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
+    void   send_sync_query(mxs::RWBackend* target);
 
     int get_max_replication_lag();
 
