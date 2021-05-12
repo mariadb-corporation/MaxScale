@@ -88,7 +88,8 @@ public:
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
     GaleraCluster*           galera {nullptr};      /**< Galera cluster */
     XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
-    Maxscales*               maxscales {nullptr};   /**< MaxScale nodes */
+    Maxscales*               maxscales {nullptr};   /**< MaxScale */
+    Maxscales*               maxscales2 {nullptr};  /**< Second MaxScale */
 
     int& global_result;     /**< Result of test, 0 if PASSED */
     bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */
@@ -323,12 +324,6 @@ public:
      */
     StringSet get_server_status(const std::string& name, int m = 0);
 
-    /**
-     * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
-     * @param expected expected number of Maxscale processes
-     * @return 0 if check is done
-     */
-    int check_maxscale_processes(int m, int expected);
 
     /**
      * @brief Test a bad configuration
@@ -498,6 +493,8 @@ private:
 
     int prepare_for_test(int argc, char* argv[]);
     int cleanup();
+
+    Maxscales* my_maxscale(int m) const;
 };
 
 /**

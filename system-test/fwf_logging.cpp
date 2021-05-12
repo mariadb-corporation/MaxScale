@@ -40,12 +40,11 @@ int main(int argc, char** argv)
 
     /** Check that MaxScale is alive */
     test->stop_timeout();
-    test->check_maxscale_processes(0, 1);
+    test->maxscales->expect_running_status(true);
 
     /** Check that MaxScale was terminated successfully */
     test->maxscales->stop_maxscale(0);
-    sleep(10);
-    test->check_maxscale_processes(0, 0);
+    test->maxscales->expect_running_status(false);
 
     /** Check that the logs contains entries for both matching and
      * non-matching queries */

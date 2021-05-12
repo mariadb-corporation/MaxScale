@@ -18,7 +18,7 @@ class MariaDB;
 class Maxscales : public Nodes
 {
 public:
-    static const int N_MXS = 2;
+    static const int N_MXS = 1;
 
     int N {0};
 
@@ -33,7 +33,7 @@ public:
 
     ~Maxscales();
 
-    bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
+    bool setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name);
 
     void set_use_ipv6(bool use_ipv6);
     void set_ssl(bool ssl);
@@ -48,8 +48,8 @@ public:
     const char* access_sudo(int i = 0) const;
     const char* sshkey(int i = 0) const;
 
-    const std::string& prefix() const;
-    const std::string& node_name(int i) const;
+    static const std::string& prefix();
+    const std::string&        node_name(int i) const;
 
     bool ssl() const;
 
@@ -267,6 +267,13 @@ public:
      */
     void wait_for_monitor(int intervals = 2, int m = 0);
 
+    /**
+     * Check if MaxScale process is running or stopped. Wrong status is a test failure.
+     *
+     * @param expected True if expected to be running
+     */
+    void expect_running_status(bool expected);
+
     bool use_valgrind() const;
     bool prepare_for_test();
 
@@ -282,7 +289,7 @@ private:
 
     std::string m_binlog_dir[N_MXS];    /**< Directory of binlog files (for binlog router) */
 
-    int read_nodes_info(const mxt::NetworkConfig& nwconfig);
+    mxt::TestLogger& log() const;
 };
 
 class TestConnections;

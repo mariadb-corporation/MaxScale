@@ -63,12 +63,9 @@ int main(int argc, char** argv)
                      "Non-matching query to ignoring service should succeed.\n");
 
     test->stop_timeout();
-    test->tprintf("Checking if MaxScale is alive\n");
-    test->check_maxscale_processes(0, 1);
+    test->maxscales->expect_running_status(true);
     test->maxscales->stop_maxscale(0);
-    sleep(10);
-    test->tprintf("Checking if MaxScale was succesfully terminated\n");
-    test->check_maxscale_processes(0, 0);
+    test->maxscales->expect_running_status(false);
     int rval = test->global_result;
     delete test;
     return rval;

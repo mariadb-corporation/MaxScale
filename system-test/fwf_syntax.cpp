@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */
-        test.check_maxscale_processes(0, 0);
+        test.maxscales->expect_running_status(false);
         test.log_includes(0, "syntax error");
         test.add_result(truncate_maxscale_logs(test), "Failed to truncate Maxscale logs");
     }

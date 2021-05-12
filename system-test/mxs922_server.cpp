@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     config.destroy_server(1);
     config.destroy_server(1);
     config.check_server_count(0);
-    test->check_maxscale_processes(0, 1);
+    test->maxscales->expect_running_status(true);
 
     test->tprintf("Testing adding of server to service");
 

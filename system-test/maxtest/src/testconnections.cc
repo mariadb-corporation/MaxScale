@@ -1141,49 +1141,19 @@ int TestConnections::find_connected_slave1(int m)
     return current_slave;
 }
 
-int TestConnections::check_maxscale_processes(int m, int expected)
-{
-    const char* ps_cmd = maxscales->use_valgrind() ?
-        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
-        "ps -C maxscale | grep maxscale | wc -l";
-
-    auto maxscale_num = maxscales->ssh_output(ps_cmd, m, false);
-    if (maxscale_num.output.empty() || (maxscale_num.rc != 0))
-    {
-        return -1;
-    }
-
-    maxscale_num.output = mxt::cutoff_string(maxscale_num.output, '\n');
-
-    if (atoi(maxscale_num.output.c_str()) != expected)
-    {
-        tprintf("%s maxscale processes detected, trying again in 5 seconds\n", maxscale_num.output.c_str());
-        sleep(5);
-        maxscale_num = maxscales->ssh_output(ps_cmd, m, false);
-
-        if (atoi(maxscale_num.output.c_str()) != expected)
-        {
-            add_result(1, "Number of MaxScale processes is not %d, it is %s\n",
-                       expected, maxscale_num.output.c_str());
-        }
-    }
-
-    return maxscale_num.rc;
-}
-
 int TestConnections::stop_maxscale(int m)
 {
-    int res = maxscales->stop_maxscale(m);
-    check_maxscale_processes(m, 0);
-    fflush(stdout);
+    auto mxs = my_maxscale(m);
+    int res = mxs->stop_maxscale();
+    mxs->expect_running_status(false);
     return res;
 }
 
 int TestConnections::start_maxscale(int m)
 {
-    int res = maxscales->start_maxscale(m);
-    check_maxscale_processes(m, 1);
-    fflush(stdout);
+    auto mxs = my_maxscale(m);
+    int res = mxs->start_maxscale();
+    mxs->expect_running_status(true);
     return res;
 }
 
@@ -1207,7 +1177,7 @@ int TestConnections::check_maxscale_alive(int m)
     maxscales->close_maxscale_connections(m);
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
-    check_maxscale_processes(m, 1);
+    my_maxscale(m)->expect_running_status(true);
 
     return global_result - gr;
 }
@@ -2040,7 +2010,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
 bool TestConnections::initialize_nodes()
 {
-    const char errmsg[] = "Failed to initialize node group %s.";
+    const char errmsg[] = "Failed to setup node group %s.";
     bool error = false;
     mxt::BoolFuncArray funcs;
 
@@ -2090,28 +2060,46 @@ bool TestConnections::initialize_nodes()
         initialize_cluster(xpand, 4, false, backend_ssl);
     }
 
-    delete maxscales;
-    maxscales = new Maxscales(&m_shared);
-    int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
-    if (maxscales->setup(m_network_config, n_mxs_expected))
-    {
-        maxscales->set_use_ipv6(m_use_ipv6);
-        maxscales->set_ssl(maxscale_ssl);
+    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage,
+                                              std::unique_ptr<mxt::MaxScale>& mxs_storage_b,
+                                              int vm_ind) {
+            delete mxs_storage;
+            mxs_storage = nullptr;
+            string vm_name = mxb::string_printf("%s_%03d", Maxscales::prefix().c_str(), vm_ind);
 
-        m_maxscale = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 0);
-        if (n_mxs_expected > 1)
-        {
-            m_maxscale2 = std::make_unique<mxt::MaxScale>(maxscales, m_shared, 1);
-        }
-        auto prepare_maxscales = [this]() {
-                return maxscales->prepare_for_test();
-            };
-        funcs.push_back(move(prepare_maxscales));
-    }
-    else
+            auto new_maxscale = std::make_unique<Maxscales>(&m_shared);
+            if (new_maxscale->setup(m_network_config, vm_name))
+            {
+                new_maxscale->set_use_ipv6(m_use_ipv6);
+                new_maxscale->set_ssl(maxscale_ssl);
+
+                mxs_storage = new_maxscale.release();
+                mxs_storage_b = std::make_unique<mxt::MaxScale>(mxs_storage, m_shared, 0);
+
+                auto prepare_maxscales = [mxs_storage]() {
+                        return mxs_storage->prepare_for_test();
+                    };
+                funcs.push_back(move(prepare_maxscales));
+            }
+        };
+
+    initialize_maxscale(maxscales, m_maxscale, 0);
+    // Try to setup MaxScale2 even if test does not need it. It could be running and should be
+    // shut down when not used.
+    initialize_maxscale(maxscales2, m_maxscale2, 1);
+
+    int n_mxs_inited = n_maxscales();
+    int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
+    if (n_mxs_inited < n_mxs_expected)
     {
         error = true;
-        add_failure(errmsg, maxscales->prefix().c_str());
+        add_failure("Not enough MaxScales. Test requires %i, found %i.",
+                    n_mxs_expected, n_mxs_inited);
+    }
+    else if (n_mxs_inited > 1 && settings().local_maxscale)
+    {
+        error = true;
+        add_failure("Multiple MaxScales are defined while using a local MaxScale. Not supported.");
     }
 
     return error ? false : m_shared.concurrent_run(funcs);
@@ -2188,11 +2176,11 @@ void TestConnections::write_node_env_vars()
 
 int TestConnections::n_maxscales() const
 {
-    // A maximum of two MaxScales are supported so far. Defining only MaxScale2 is an error.
+    // A maximum of two MaxScales are supported so far. Defining only the second MaxScale is an error.
     int rval = 0;
-    if (m_maxscale)
+    if (maxscales)
     {
-        rval = (m_maxscale2) ? 2 : 1;
+        rval = maxscales2 ? 2 : 1;
     }
     return rval;
 }
@@ -2291,6 +2279,26 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
                 }
             }
         }
+    }
+    return rval;
+}
+
+/**
+ * Helper function for selecting correct MaxScale.
+ *
+ * @param m Index, 0 or 1.
+ * @return MaxScale object
+ */
+Maxscales* TestConnections::my_maxscale(int m) const
+{
+    Maxscales* rval = nullptr;
+    if (m == 0)
+    {
+        rval = maxscales;
+    }
+    else if (m == 1)
+    {
+        rval = maxscales2;
     }
     return rval;
 }

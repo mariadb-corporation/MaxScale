@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     Test->add_result(strcasestr(res.output.c_str(), "Failed") == nullptr,
                      "Reloading rules should fail with syntax errors");
 
-    Test->check_maxscale_processes(0, 1);
+    Test->maxscales->expect_running_status(true);
     int rval = Test->global_result;
     delete Test;
     return rval;
