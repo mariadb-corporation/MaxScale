@@ -5,7 +5,7 @@
                 Click Run button to see query results
             </span>
         </div>
-        <div v-else class="result-table-wrapper">
+        <div v-else class="result-table-wrapper fill-height">
             <div ref="header" class="pb-2 result-header-nav d-flex align-center">
                 <v-menu
                     offset-y
@@ -48,23 +48,26 @@
                 type="table: table-thead, table-tbody"
                 :max-height="`${dynDim.height - headerHeight}px`"
             />
-            <template v-else>
-                <div v-for="(resSet, name) in resultSets" :key="name">
-                    <v-slide-x-transition>
-                        <div v-if="activeResultSet === name">
-                            <result-data-table
-                                v-if="$typy(resSet, 'data').isDefined"
-                                :height="dynDim.height - headerHeight"
-                                :width="dynDim.width"
-                                :headers="resSet.fields"
-                                :rows="resSet.data"
-                            />
-                            <div v-else>
-                                <div v-for="(v, key) in resSet" :key="key">{{ key }}:{{ v }}</div>
-                            </div>
+            <template v-for="(resSet, name) in resultSets" v-else>
+                <v-slide-x-transition :key="name">
+                    <div v-if="activeResultSet === name">
+                        <result-data-table
+                            v-if="$typy(resSet, 'data').isDefined"
+                            :height="dynDim.height - headerHeight"
+                            :width="dynDim.width"
+                            :headers="resSet.fields"
+                            :rows="resSet.data"
+                        />
+                        <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
+                            <template v-for="(v, key) in resSet">
+                                <div :key="key">
+                                    <b>{{ key }}:</b>
+                                    <span class="d-inline-block ml-4">{{ v }}</span>
+                                </div>
+                            </template>
                         </div>
-                    </v-slide-x-transition>
-                </div>
+                    </div>
+                </v-slide-x-transition>
             </template>
         </div>
     </div>

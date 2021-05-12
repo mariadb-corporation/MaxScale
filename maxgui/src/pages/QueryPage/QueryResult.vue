@@ -101,4 +101,10 @@ export default {
 .query-result-fontStyle {
     font-size: 14px;
 }
+
+.tab-navigation-wrapper {
+    .v-window {
+        height: 100%;
+    }
+}
 </style>
