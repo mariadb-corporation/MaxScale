@@ -43,6 +43,8 @@ static void test1()
     parameters.set(CN_PASSWORD, "password");
     parameters.set(CN_ROUTER, "readwritesplit");
 
+    preload_module("readwritesplit", "server/modules/routing/readwritesplit/", mxs::ModuleType::ROUTER);
+
     /* Service tests */
     fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
     auto service = Service::create("MyService", "non-existent", parameters);
