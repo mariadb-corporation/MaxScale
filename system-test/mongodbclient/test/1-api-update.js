@@ -94,6 +94,37 @@ describe(name, function () {
         assert.deepEqual(rv1, rv2);
     });
 
+    it('A replacement update does not overwrite the id.', async function () {
+        await drop();
+
+        var from = {
+            _id: "hello",
+            a: 1
+        };
+
+        await mxs.runCommand({insert: name, documents: [from]});
+
+        var rv = await mxs.runCommand({find: name});
+
+        assert.equal(rv.cursor.firstBatch.length, 1);
+
+        var to = rv.cursor.firstBatch[0];
+
+        assert.deepEqual(from, to);
+
+        // Try to change the id.
+        await mxs.runCommand({update:name, updates: [{q:{}, u: {_id: "world", a: 2}}]});
+
+        var rv = await mxs.runCommand({find: name});
+
+        assert.equal(rv.cursor.firstBatch.length, 1);
+
+        var to = rv.cursor.firstBatch[0];
+
+        assert.equal(to.a, 2);
+        assert.equal(to._id, from._id);
+    });
+
     after(function () {
         if (mxs) {
             mxs.close();

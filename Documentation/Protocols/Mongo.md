@@ -100,8 +100,8 @@ must also be set to `true`.
 
    * Type: count
    * Mandatory: false
-   * Range: `[24, 2048]`
-   * Default: `24`
+   * Range: `[36, 2048]`
+   * Default: `36`
 
 Specifies the length of the id column in tables that are automatically created.
 
@@ -146,9 +146,16 @@ in that case be created.
 
 When _mongodbprotocol_ creates a table, it uses a statement like
 ```
-CREATE TABLE name (id VARCHAR(24) NOT NULL UNIQUE, doc JSON)
+CREATE TABLE name (id VARCHAR(36) AS (JSON_COMPACT(JSON_EXTRACT(doc, "$._id"))) UNIQUE KEY,
+                   doc JSON,
+                   CONSTRAINT id_not_null CHECK(id IS NOT NULL));
 ```
-where the length of the `VARCHAR` is specified by the value of `id_length`.
+where the length of the `VARCHAR` is specified by the value of `id_length`,
+whose default and minimum is 36.
+
+*NOTE* If the tables are created manually, then the `CREATE` statement
+*must* contain a similar `AS`-clause as the one above and *should* contain
+a similar constraint.
 
 Note that _mongodbprotocol_ does not in any way verify that the table
 corresponding to a collection being accessed or modified does indeed
@@ -233,7 +240,7 @@ limit | integer | The number of matching documents to delete. Specify either a 0
 
 ### [find](https://docs.mongodb.com/manual/reference/command/find)
 
-The following fields are acted upon.
+The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
@@ -305,15 +312,13 @@ name is the same as that of the collection. If the option `auto_create_tables`
 is `true`, then the table is created if it does not already exist. If the
 value is `false`, then the insert will fail unless the table already exists.
 
-The following fields are acted upon.
+The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
-insert| string | The name of the target collection/table.
-documents | array | An array of one or more documents to be inserted to the named collection/table.
+insert| string | The name of the target collection (i.e. table).
+documents | array | An array of one or more documents to be inserted to the named collection.
 ordered | boolean | Optional, with default being `true`. See below for description.
-
-All other fields are ignored.
 
 #### `ordered`
 The impact of `ordered` is dependent upon the value of `insert_behavior'.
@@ -340,7 +345,7 @@ resetError | any | Ignored.
 
 ### [update](https://docs.mongodb.com/manual/reference/command/update)
 
-The following fields are acted upon.
+The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
@@ -401,7 +406,12 @@ updates: [
 ```
 In this case, the update command replaces the matching document with the update document.
 The update command can only replace a single matching document; i.e. the multi field
-cannot be true. The update command does not replace the `_id` value.
+cannot be true.
+
+**Note** If the replacement document contains an `_id` field, it will be ignored and the
+document id will remain non-changed while the document otherwise is replaced. This is
+different from MongoDB where the presence of the `_id` field in the replacement document
+causes an error, if the value is not the same as it is in the document being replaced.
 
 ## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
 
@@ -744,7 +754,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
-		"id_length" : 24
+		"id_length" : 36
 	},
 	"ok" : 1
 }
@@ -797,7 +807,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
-		"id_length" : 24
+		"id_length" : 36
 	},
 	"ok" : 1
 }
@@ -806,7 +816,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : false,
-		"id_length" : 24
+		"id_length" : 36
 	},
 	"ok" : 1
 }

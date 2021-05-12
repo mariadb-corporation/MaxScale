@@ -35,8 +35,8 @@ public:
 
     enum
     {
-        ID_LENGTH_DEFAULT = 24,
-        ID_LENGTH_MIN     = 24,
+        ID_LENGTH_DEFAULT = 36,
+        ID_LENGTH_MIN     = 36,
         ID_LENGTH_MAX     = 2048,
     };
 

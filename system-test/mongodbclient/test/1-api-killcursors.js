@@ -31,7 +31,7 @@ describe(name, function () {
         mxs = await test.MDB.create(test.MxsMongo);
 
         await mng.reset(name);
-        await mng.reset(name);
+        await mxs.reset(name);
     });
 
     it('Cant kill when there are no cursors to kill.', async function () {

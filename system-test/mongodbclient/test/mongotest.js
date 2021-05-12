@@ -48,7 +48,11 @@ var MariaDB = {
 
     resetTable: async function (conn) {
         await conn.query("DROP TABLE IF EXISTS test.mongo");
-        await conn.query("CREATE TABLE test.mongo (id TEXT NOT NULL UNIQUE, doc JSON)");
+        await conn.query("CREATE TABLE test.mongo "
+                         + "(id VARCHAR(36) AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))))) "
+                         + "UNIQUE KEY, "
+                         + "doc JSON, "
+                         + "CONSTRAINT id_not_null CHECK(id IS NOT NULL))");
     }
 }
 
@@ -164,7 +168,7 @@ class MDB {
     }
 
     async deleteAll(name) {
-        this.db.command({delete: name, deletes: [{q: {}, limit: 0}]});
+        await this.db.command({delete: name, deletes: [{q: {}, limit: 0}]});
     }
 
     async runCommand(command) {

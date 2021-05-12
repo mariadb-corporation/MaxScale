@@ -34,8 +34,8 @@ describe(name, function () {
      */
     async function reset(dbname, tblname)
     {
-        mng.set_db(dbname);
-        mxs.set_db(dbname);
+        await mng.set_db(dbname);
+        await mxs.set_db(dbname);
 
         await mng.deleteAll(tblname);
         await mxs.deleteAll(tblname);
@@ -51,8 +51,11 @@ describe(name, function () {
     });
 
     it('Can insert in existing collection/table.', async function () {
-        await conn.query("DROP TABLE IF EXISTS test." + tblname);
-        await conn.query("CREATE TABLE test." + tblname + "  (id VARCHAR(80) NOT NULL UNIQUE, doc JSON)");
+        await mng.ntRunCommand({drop: tblname});
+        await mxs.ntRunCommand({drop: tblname});
+
+        await mng.runCommand({create: tblname});
+        await mxs.runCommand({create: tblname});
 
         await mng.ntRunCommand({drop: tblname});
 

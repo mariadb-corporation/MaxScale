@@ -1290,10 +1290,20 @@ string element_to_string(const document_element_or_array_item& x)
     {
     case bsoncxx::type::k_array:
         {
+            bool first = true;
             ss << "[";
             bsoncxx::array::view array = x.get_array();
             for (const auto& item : array)
             {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
                 ss << element_to_string(item);
             }
             ss << "]";
@@ -1337,7 +1347,7 @@ string element_to_string(const document_element_or_array_item& x)
         break;
 
     case bsoncxx::type::k_oid:
-        ss << x.get_oid().value.to_string();
+        ss << "{\"$oid\":\"" << x.get_oid().value.to_string() << "\"}";
         break;
 
     case bsoncxx::type::k_regex:
@@ -1878,8 +1888,10 @@ string mxsmongo::table_create_statement(const std::string& table_name, int64_t i
 {
     stringstream ss;
     ss << "CREATE TABLE " << table_name << " ("
-       << "id VARCHAR(" << id_length << ") NOT NULL UNIQUE, "
-       << "doc JSON)";
+       << "id VARCHAR(" << id_length << ") "
+       << "AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\")))) UNIQUE KEY, "
+       << "doc JSON, "
+       << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
 
     return ss.str();
 }

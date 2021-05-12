@@ -46,7 +46,11 @@ describe('UPDATE', function () {
 
         await conn.query("USE test");
         await conn.query("DROP TABLE IF EXISTS mongo");
-        await conn.query("CREATE TABLE mongo (id TEXT, doc JSON)");
+        await conn.query("CREATE TABLE mongo "
+                         + "(id VARCHAR(36) AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\")))) "
+                         + "UNIQUE KEY, "
+                         + "doc JSON, "
+                         + "CONSTRAINT id_not_null CHECK(id IS NOT NULL))");
 
         // MxsMongo
         var uri = "mongodb://" + host + ":" + mongodb_port;

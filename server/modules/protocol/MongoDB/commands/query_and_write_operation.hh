@@ -859,7 +859,7 @@ protected:
         else
         {
             stringstream sql;
-            sql << "INSERT INTO " << table() << " (id, doc) VALUES ";
+            sql << "INSERT INTO " << table() << " (doc) VALUES ";
 
             bool first = true;
             for (const auto& doc : documents)
@@ -885,7 +885,7 @@ protected:
     string convert_document(const bsoncxx::document::view& doc) override
     {
         stringstream sql;
-        sql << "INSERT INTO " << table() << " (id, doc) VALUES " << convert_document_data(doc);
+        sql << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc);
 
         return sql.str();
     }
@@ -894,14 +894,12 @@ protected:
     {
         stringstream sql;
 
-        string id;
         string json;
 
         auto element = doc["_id"];
 
         if (element)
         {
-            id = get_id(element);
             json = bsoncxx::to_json(doc);
         }
         else
@@ -926,20 +924,14 @@ protected:
             const auto& doc_with_id = m_stashed_documents.back();
 
             element = doc_with_id.view()["_id"];
-            id = "'" + oid.to_string() + "'";
             json = bsoncxx::to_json(doc_with_id);
         }
 
         m_ids.push_back(element);
 
-        sql << "(" << id << ", '" << json << "')";
+        sql << "('" << json << "')";
 
         return sql.str();
-    }
-
-    static string get_id(const bsoncxx::document::element& element)
-    {
-        return "'" + mxsmongo::to_string(element) + "'";
     }
 
     void interpret(const ComOK& response)
@@ -1054,7 +1046,7 @@ private:
             break;
 
         case REPLACEMENT_DOCUMENT:
-            sql << "JSON_INSERT('"
+            sql << "JSON_SET('"
                 << bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()))
                 << "', '$._id', id)";
             break;
@@ -1113,46 +1105,55 @@ private:
             {
                 auto doc = static_cast<bsoncxx::document::view>(element.get_document());
 
-                kind = REPLACEMENT_DOCUMENT;
-
-                for (auto field : doc)
+                if (doc.empty())
                 {
-                    const char* pData = field.key().data(); // Not necessarily null-terminated.
-
-                    if (*pData == '$')
+                    kind = REPLACEMENT_DOCUMENT;
+                }
+                else
+                {
+                    for (auto field : doc)
                     {
-                        string name(pData, field.key().length());
+                        const char* pData = field.key().data(); // Not necessarily null-terminated.
 
-                        if (name != "$set" && name != "$unset")
+                        if (*pData == '$')
                         {
-                            MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
-                                      "operations.", bsoncxx::to_json(doc).c_str());
-                            kind = INVALID;
-                            break;
+                            string name(pData, field.key().length());
+
+                            if (name != "$set" && name != "$unset")
+                            {
+                                MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
+                                          "operations.", bsoncxx::to_json(doc).c_str());
+                                kind = INVALID;
+                                break;
+                            }
+                            else
+                            {
+                                if (kind == INVALID)
+                                {
+                                    kind = UPDATE_OPERATORS;
+                                }
+                                else if (kind != UPDATE_OPERATORS)
+                                {
+                                    MXS_ERROR("'%s' contains both fields and update operators.",
+                                              bsoncxx::to_json(doc).c_str());
+                                    kind = INVALID;
+                                    break;
+                                }
+                            }
                         }
                         else
                         {
                             if (kind == INVALID)
                             {
-                                kind = UPDATE_OPERATORS;
+                                kind = REPLACEMENT_DOCUMENT;
                             }
-                            else if (kind != UPDATE_OPERATORS)
+                            else if (kind != REPLACEMENT_DOCUMENT)
                             {
                                 MXS_ERROR("'%s' contains both fields and update operators.",
                                           bsoncxx::to_json(doc).c_str());
                                 kind = INVALID;
                                 break;
                             }
-                        }
-                    }
-                    else
-                    {
-                        if (kind != REPLACEMENT_DOCUMENT)
-                        {
-                            MXS_ERROR("'%s' contains both fields and update operators.",
-                                      bsoncxx::to_json(doc).c_str());
-                            kind = INVALID;
-                            break;
                         }
                     }
                 }
