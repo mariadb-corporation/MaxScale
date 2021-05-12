@@ -527,9 +527,10 @@ modifications done by the client itself.
   addition to this, the `session_track_system_variables` parameter must be set
   to `last_gtid`.
 
-**Note:** This feature does not work with prepared statements. Only SQL
-  statements executed individually (inside a COM_QUERY packet) can be handled by
-  the causal read mechanism.
+**Note:** Support for binary protocol prepared statements was added in MaxScale
+  2.6.0. When `causal_reads` is used with binary protocol prepared statements,
+  the session command history should be enabled. Refer to the prepared statement
+  [section](#prepared-statements) for an explanation as to why it is needed.
 
 **Note:** This feature does not work with Galera or any other non-standard
   replication mechanisms. As Galera does not update the `gtid_slave_pos`
@@ -589,6 +590,19 @@ parameter. False values translated to `none` and true values translated to
 `local`. The use of boolean parameters is deprecated but still accepted in
 MaxScale 2.5.0.
 
+#### Implementation of `causal_reads`
+
+This feature is based on the `MASTER_GTID_WAIT` function and the tracking of
+server-side status variables. By tracking the latest GTID that each statement
+generates, readwritesplit can then perform a synchronization operation with the
+help of the `MASTER_GTID_WAIT` function.
+
+If the slave has not caught up to the master within the configured time, it will
+be retried on the master. In MaxScale 2.3.0 an error was returned to the client
+when the slave timed out.
+
+##### Normal SQL
+
 A practical example can be given by the following set of SQL commands executed
 with `autocommit=1`.
 
@@ -625,9 +639,45 @@ the replication stream (see
 [MASTER_GTID_WAIT](https://mariadb.com/kb/en/library/master_gtid_wait/)
 for more details).
 
-If the slave has not caught up to the master within the configured time, it will
-be retried on the master. In MaxScale 2.3.0 an error was returned to the client
-when the slave timed out.
+##### Prepared Statements
+
+Binary protocol prepared statements are handled in a different manner. Instead
+of adding the synchronization SQL into the original SQL query, it is sent as a
+separate packet before the prepared statement is executed.
+
+We'll use the same example SQL but use a binary protocol prepared statement for
+the SELECT:
+
+```
+COM_QUERY:         INSERT INTO test.t1 (id) VALUES (1);
+COM_STMT_PREPARE:  SELECT * FROM test.t1 WHERE id = ?;
+COM_STMT_EXECUTE:  ? = 123
+```
+
+The SQL that MaxScale executes will be the following:
+
+```
+COM_QUERY:         INSERT INTO test.t1 (id) VALUES (1);
+COM_STMT_PREPARE:  SELECT * FROM test.t1 WHERE id = ?;
+COM_QUERY:         IF (MASTER_GTID_WAIT('0-3000-8', 10) <> 0) THEN KILL (SELECT CONNECTION_ID()); END IF
+COM_STMT_EXECUTE:  ? = 123
+```
+
+Both the synchronization query and the execution of the prepared statement are
+sent at the same time. This is done to remove the need to wait for the result of
+the synchronization query before routing the execution of the prepared
+statement. This keeps the performance of causal_reads for prepared statements
+the same as it is for normal SQL queries.
+
+As a result of this, each time the the synchronization query times out, the
+connection will be killed by the `KILL` statement and readwritesplit will retry
+the query on the master. This is done to prevent the execution of the prepared
+statement that follows the synchronization query from being processed by the
+MariaDB server.
+
+It is recommend that the session command history is enabled whenever prepared
+statements are used with `causal_reads`. This allows new connections to be
+created whenever a causal read times out.
 
 ### `causal_reads_timeout`
 
