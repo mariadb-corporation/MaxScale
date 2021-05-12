@@ -1,5 +1,5 @@
 <template>
-    <v-tabs v-model="activeTab" class="tab-navigation-wrapper fill-height">
+    <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper fill-height">
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
             <span> Results </span>
         </v-tab>
@@ -100,17 +100,5 @@ export default {
 <style lang="scss" scoped>
 .query-result-fontStyle {
     font-size: 14px;
-}
-$tab-bar-height: 24px;
-::v-deep.tab-navigation-wrapper {
-    .v-tabs-bar {
-        height: $tab-bar-height;
-    }
-}
-::v-deep.tab-items {
-    height: calc(100% - #{$tab-bar-height});
-    .v-window__container {
-        height: 100%;
-    }
 }
 </style>

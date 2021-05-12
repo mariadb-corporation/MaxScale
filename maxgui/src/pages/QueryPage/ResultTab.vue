@@ -24,23 +24,23 @@
                         {{ queryTxt }}
                     </v-sheet>
                 </v-menu>
-                <!-- TODO: add arrow prev & next to navigate instead of showing horizontal scrollbar -->
-                <v-btn-toggle
+                <v-tabs
                     v-model="activeResultSet"
+                    show-arrows
+                    hide-slider
+                    :height="20"
                     class="ml-4 resultset-btn-container"
-                    mandatory
                 >
-                    <v-btn
+                    <v-tab
                         v-for="(resSet, name) in resultSets"
                         :key="name"
-                        :value="name"
-                        x-small
-                        text
-                        color="primary"
+                        :href="`#${name}`"
+                        class="tab-btn px-3 text-uppercase"
+                        active-class="tab-btn--active font-weight-medium"
                     >
                         {{ name }}
-                    </v-btn>
-                </v-btn-toggle>
+                    </v-tab>
+                </v-tabs>
             </div>
             <v-skeleton-loader
                 v-if="loading_query_result"
@@ -48,17 +48,21 @@
                 type="table: table-thead, table-tbody"
                 :max-height="`${dynDim.height - headerHeight}px`"
             />
-            <!-- TODO: show syntax error or affected_rows fields if there is no return rows for the query -->
             <template v-else>
                 <div v-for="(resSet, name) in resultSets" :key="name">
                     <v-slide-x-transition>
-                        <result-data-table
-                            v-if="activeResultSet === name"
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="resSet.fields"
-                            :rows="resSet.data"
-                        />
+                        <div v-if="activeResultSet === name">
+                            <result-data-table
+                                v-if="$typy(resSet, 'data').isDefined"
+                                :height="dynDim.height - headerHeight"
+                                :width="dynDim.width"
+                                :headers="resSet.fields"
+                                :rows="resSet.data"
+                            />
+                            <div v-else>
+                                <div v-for="(v, key) in resSet" :key="key">{{ key }}:{{ v }}</div>
+                            </div>
+                        </div>
                     </v-slide-x-transition>
                 </div>
             </template>
@@ -79,7 +83,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* eslint-disable vue/no-unused-components */
 import { mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
@@ -143,8 +146,26 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.resultset-btn-container {
-    max-width: calc(100% - 90px);
-    overflow-x: auto;
+::v-deep.resultset-btn-container {
+    max-width: calc(100% - 106px);
+    position: absolute;
+    right: 0;
+    .v-slide-group__wrapper {
+        border-bottom: none !important;
+    }
+    .tab-btn {
+        border: thin solid rgba(0, 0, 0, 0.12) !important;
+        border-right: none !important;
+        font-size: 0.75rem;
+        &:last-of-type {
+            border-right: thin solid rgba(0, 0, 0, 0.12) !important;
+        }
+        &--active {
+            color: $primary !important;
+            &::before {
+                opacity: 0.12;
+            }
+        }
+    }
 }
 </style>
