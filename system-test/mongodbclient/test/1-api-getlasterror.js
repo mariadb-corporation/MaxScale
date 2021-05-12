@@ -22,6 +22,8 @@ const mongodb = test.mongodb;
 const assert = test.assert;
 
 describe('getLastError', function () {
+    this.timeout(test.timeout);
+
     let mng;
     let mxs;
     let mngdb;

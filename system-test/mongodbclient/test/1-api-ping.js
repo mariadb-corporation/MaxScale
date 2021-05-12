@@ -19,6 +19,8 @@ const test = require('./mongotest')
 const name = "ping";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mng;
     let mxs;
 

@@ -11,9 +11,22 @@
  * Public License.
  */
 
-if (!process.env.maxscale_000_network) {
+var maxscale_host = process.env.maxscale_000_network;
+
+if (!maxscale_host) {
     console.log("The environment variable 'maxscale_000_network' must be set.");
     process.exit(1);
+}
+
+var timeout;
+
+if (maxscale_host == "127.0.0.1") {
+    // We are debugging, so let's set the timeout to an hour.
+    timeout = 60 * 60 * 1000;
+}
+else {
+    // 2000ms is the default.
+    timeout = 2000;
 }
 
 var config = {
@@ -213,5 +226,6 @@ module.exports = {
     MxsMongo,
     MngMongo,
     MDB,
-    error
+    error,
+    timeout
 };

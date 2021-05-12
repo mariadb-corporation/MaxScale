@@ -146,7 +146,7 @@ in that case be created.
 
 When _mongodbprotocol_ creates a table, it uses a statement like
 ```
-CREATE TABLE name (id VARCHAR(36) AS (JSON_COMPACT(JSON_EXTRACT(doc, "$._id"))) UNIQUE KEY,
+CREATE TABLE name (id VARCHAR(36) AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, "$._id")))) UNIQUE KEY,
                    doc JSON,
                    CONSTRAINT id_not_null CHECK(id IS NOT NULL));
 ```

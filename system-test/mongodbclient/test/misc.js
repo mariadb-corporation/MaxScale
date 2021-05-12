@@ -21,6 +21,8 @@ const assert = test.assert;
 
 
 describe('MISCALLENOUS', function () {
+    this.timeout(test.timeout);
+
     let conn;
     let client;
     let collection;

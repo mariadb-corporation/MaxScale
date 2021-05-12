@@ -20,6 +20,8 @@ const error = test.error;
 const name = "killCursors";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mxs;
     let mng;
 

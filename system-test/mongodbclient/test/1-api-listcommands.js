@@ -19,6 +19,8 @@ const test = require('./mongotest')
 const name = "listCommands";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mxs;
 
     function check_standard_fields(doc) {

@@ -18,6 +18,8 @@ const error = test.error;
 const name = "mxsCreateDatabase";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mxs;
     let conn;
 

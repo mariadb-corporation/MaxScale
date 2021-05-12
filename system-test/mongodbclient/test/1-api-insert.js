@@ -21,7 +21,8 @@ const mongodb = test.mongodb;
 const name = "insert";
 
 describe(name, function () {
-    this.timeout(100000);
+    this.timeout(test.timeout);
+
     let mng;
     let mxs;
     let conn;

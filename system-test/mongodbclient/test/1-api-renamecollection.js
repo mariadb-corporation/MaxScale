@@ -19,6 +19,8 @@ const test = require('./mongotest')
 const name = "renameCollection";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let admin;
     let mxs;
     let conn;

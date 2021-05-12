@@ -19,6 +19,8 @@ const test = require('./mongotest')
 const name = "listCollections";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mxs;
     let mng;
 

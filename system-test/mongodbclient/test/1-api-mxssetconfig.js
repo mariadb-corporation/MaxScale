@@ -18,6 +18,8 @@ const error = test.error;
 const name = "mxsSetConfig";
 
 describe(name, function () {
+    this.timeout(test.timeout);
+
     let mxs;
 
     /*

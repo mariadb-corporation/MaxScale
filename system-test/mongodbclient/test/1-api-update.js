@@ -21,7 +21,8 @@ const mongodb = test.mongodb;
 const name = "update";
 
 describe(name, function () {
-    this.timeout(100000);
+    this.timeout(test.timeout);
+
     let mng;
     let mxs;
 
