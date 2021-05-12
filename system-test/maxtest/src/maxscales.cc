@@ -62,12 +62,12 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
         m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
 
         rwsplit_port = 4006;
-        readconn_master_port[0] = 4008;
-        readconn_slave_port[0] = 4009;
+        readconn_master_port = 4008;
+        readconn_slave_port = 4009;
 
         ports[0] = rwsplit_port;
-        ports[1] = readconn_master_port[0];
-        ports[2] = readconn_slave_port[0];
+        ports[1] = readconn_master_port;
+        ports[2] = readconn_slave_port;
 
         rval = true;
     }
@@ -100,7 +100,7 @@ int Maxscales::connect_readconn_master(const std::string& db)
 {
     mysql_close(conn_master[0]);
 
-    conn_master[0] = open_conn_db(readconn_master_port[0], ip(), db, user_name, password, m_ssl);
+    conn_master[0] = open_conn_db(readconn_master_port, ip(), db, user_name, password, m_ssl);
     routers[1] = conn_master[0];
 
     int rc = 0;
@@ -122,7 +122,7 @@ int Maxscales::connect_readconn_slave(const std::string& db)
 {
     mysql_close(conn_slave[0]);
 
-    conn_slave[0] = open_conn_db(readconn_slave_port[0], ip(), db, user_name, password, m_ssl);
+    conn_slave[0] = open_conn_db(readconn_slave_port, ip(), db, user_name, password, m_ssl);
     routers[2] = conn_slave[0];
 
     int rc = 0;
@@ -272,10 +272,10 @@ int Maxscales::port(enum service type) const
         return rwsplit_port;
 
     case READCONN_MASTER:
-        return readconn_master_port[0];
+        return readconn_master_port;
 
     case READCONN_SLAVE:
-        return readconn_slave_port[0];
+        return readconn_slave_port;
     }
     return -1;
 }
@@ -535,22 +535,22 @@ Connection Maxscales::get_connection(int port, const std::string& db)
 
 MYSQL* Maxscales::open_readconn_master_connection()
 {
-    return open_conn(readconn_master_port[0], ip4(), user_name, password, m_ssl);
+    return open_conn(readconn_master_port, ip4(), user_name, password, m_ssl);
 }
 
 Connection Maxscales::readconn_master(const std::string& db)
 {
-    return Connection(ip4(), readconn_master_port[0], user_name, password, db, m_ssl);
+    return Connection(ip4(), readconn_master_port, user_name, password, db, m_ssl);
 }
 
 MYSQL* Maxscales::open_readconn_slave_connection()
 {
-    return open_conn(readconn_slave_port[0], ip4(), user_name, password, m_ssl);
+    return open_conn(readconn_slave_port, ip4(), user_name, password, m_ssl);
 }
 
 Connection Maxscales::readconn_slave(const std::string& db)
 {
-    return Connection(ip4(), readconn_slave_port[0], user_name, password, db, m_ssl);
+    return Connection(ip4(), readconn_slave_port, user_name, password, db, m_ssl);
 }
 
 void Maxscales::close_rwsplit()

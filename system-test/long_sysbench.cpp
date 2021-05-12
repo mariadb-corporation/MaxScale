@@ -20,8 +20,8 @@ int main(int argc, char* argv[])
     int current_port;
 
     port[0] = Test->maxscales->rwsplit_port;
-    port[1] = Test->maxscales->readconn_master_port[0];
-    port[2] = Test->maxscales->readconn_slave_port[0];
+    port[1] = Test->maxscales->readconn_master_port;
+    port[2] = Test->maxscales->readconn_slave_port;
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
 
