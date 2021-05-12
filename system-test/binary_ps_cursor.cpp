@@ -51,7 +51,7 @@ void test2(TestConnections& test)
 {
     test.set_timeout(20);
 
-    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port,
                                        test.maxscales->ip(),
                                        "test",
                                        test.maxscales->user_name,

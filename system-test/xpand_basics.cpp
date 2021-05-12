@@ -260,7 +260,7 @@ void check_login(TestConnections& test)
     sleep(1);
 
     auto test_login = [&](const char* user, const char* pw, const char* db, bool expect_success) {
-            int port = test.maxscales->rwsplit_port[0];
+            int port = test.maxscales->rwsplit_port;
             auto ip = test.maxscales->ip();
 
             MYSQL* rwsplit_conn = db ? open_conn_db(port, ip, db, user, pw) :

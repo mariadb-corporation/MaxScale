@@ -37,7 +37,7 @@ void run(TestConnections& test)
 
     const char* zUser = test.maxscales->user_name.c_str();
     const char* zPassword = test.maxscales->password.c_str();
-    int port = test.maxscales->rwsplit_port[0];
+    int port = test.maxscales->rwsplit_port;
 
     if (mysql_real_connect(pMysql,
                            test.maxscales->ip4(),

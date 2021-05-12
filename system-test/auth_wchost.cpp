@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
         test.add_result(execute_query(admin_conn, "%s", query.c_str()), "GRANT failed");
 
         auto test_login = [&](const string& db, bool expect_success) {
-                auto conn = open_conn_db(mxs->rwsplit_port[0], mxs->ip4(), db, un, pw, test.maxscale_ssl);
+                auto conn = open_conn_db(mxs->rwsplit_port, mxs->ip4(), db, un, pw, test.maxscale_ssl);
 
                 bool success = (mysql_errno(conn) == 0);
                 const char* success_str = success ? "succeeded" : "failed";

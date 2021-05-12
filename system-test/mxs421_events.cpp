@@ -45,7 +45,7 @@ void connect_as_user(TestConnections& test, const string& user)
     if (pMysql)
     {
         const char* zHost = test.maxscales->ip4();
-        int port = test.maxscales->rwsplit_port[0];
+        int port = test.maxscales->rwsplit_port;
         const char* zUser = user.c_str();
         const char* zPassword = "nonexistent";
 

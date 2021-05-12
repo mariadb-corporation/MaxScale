@@ -18,7 +18,7 @@ void run_test(TestConnections* Test, const char* database)
     Test->set_timeout(20);
     Test->tprintf("Trying to connect using 'table_privilege'@'%%' to database '%s'", database);
 
-    MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port,
                                Test->maxscales->ip4(),
                                database,
                                "table_privilege",

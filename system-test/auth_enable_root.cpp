@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
     MYSQL* conn;
 
     Test->tprintf("Connecting using 'root'@'%%'\n");
-    conn = open_conn(Test->maxscales->rwsplit_port[0],
+    conn = open_conn(Test->maxscales->rwsplit_port,
                      Test->maxscales->ip4(),
                      (char*) "root",
                      (char*)  "skysqlroot",

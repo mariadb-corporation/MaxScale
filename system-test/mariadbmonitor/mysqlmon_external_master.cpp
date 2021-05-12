@@ -28,7 +28,7 @@ void writer_func(TestConnections* test)
 {
     while (is_running)
     {
-        MYSQL* conn = open_conn(test->maxscales->rwsplit_port[0], test->maxscales->ip4(),
+        MYSQL* conn = open_conn(test->maxscales->rwsplit_port, test->maxscales->ip4(),
                                 "test", "test", false);
 
         for (int i = 0; i < 100; i++)

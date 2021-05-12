@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     //threads_num[4] = 4;
 
 
-    port = Test->maxscales->rwsplit_port[0];
+    port = Test->maxscales->rwsplit_port;
     IP = Test->maxscales->ip4();
 
     //port = 3306;
