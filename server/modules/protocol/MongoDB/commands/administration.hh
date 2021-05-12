@@ -44,11 +44,9 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        auto sql = mxsmongo::table_create_statement(table(), m_database.config().id_length);
 
-        sql << "CREATE TABLE " << table() << " (id TEXT NOT NULL UNIQUE, doc JSON)";
-
-        return sql.str();
+        return sql;
     }
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
