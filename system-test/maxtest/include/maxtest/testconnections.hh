@@ -319,7 +319,7 @@ public:
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(int m, const std::string& config);
+    bool test_bad_config(const std::string& config);
 
     /**
      * Execute a MaxCtrl command
@@ -392,7 +392,6 @@ public:
 
 private:
     void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);
-    void copy_one_maxscale_log(int i, double timestamp);
 
     bool read_test_info();
 
@@ -466,7 +465,7 @@ private:
     bool check_create_vm_dir();
     bool read_network_config();
     bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
-    bool process_template(int m, const std::string& config_file_path, const char* dest = "/etc/maxscale.cnf");
+    bool process_template(Maxscales& mxs, const std::string& config_file_path, const char* dest);
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();

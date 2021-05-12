@@ -653,7 +653,8 @@ bool TestConnections::read_test_info()
  * @param dest Destination file name for actual configuration file
  * @return True on success
  */
-bool TestConnections::process_template(int m, const string& config_file_path, const char* dest)
+bool
+TestConnections::process_template(Maxscales& mxs, const string& config_file_path, const char* dest)
 {
     tprintf("Processing MaxScale config file %s\n", config_file_path.c_str());
     std::ifstream config_file(config_file_path);
@@ -750,14 +751,14 @@ bool TestConnections::process_template(int m, const string& config_file_path, co
         }
 
         string sed_cmd = mxb::string_printf("sed -i \"s/###access_user###/%s/g\" %s",
-                                            maxscales->access_user(m), target_file.c_str());
+                                            mxs.access_user(0), target_file.c_str());
         run_shell_command(sed_cmd, edit_failed);
 
         sed_cmd = mxb::string_printf("sed -i \"s|###access_homedir###|%s|g\" %s",
-                                     maxscales->access_homedir(m), target_file.c_str());
+                                     mxs.access_homedir(0), target_file.c_str());
         run_shell_command(sed_cmd, edit_failed);
 
-        maxscales->copy_to_node(m, "maxscale.cnf", dest);
+        mxs.vm_node().copy_to_node("maxscale.cnf", dest);
         rval = true;
     }
     else
@@ -778,16 +779,19 @@ void TestConnections::init_maxscales()
 
     if (settings().req_two_maxscales)
     {
-        for (int i = 1; i < maxscales->N; i++)
-        {
-            init_maxscale(i);
-        }
+        init_maxscale(1);
+    }
+    else if (n_maxscales() > 1)
+    {
+        // Second MaxScale exists but is not required by test.
+        my_maxscale(1)->stop();
     }
 }
 
 void TestConnections::init_maxscale(int m)
 {
-    auto homedir = maxscales->access_homedir(m);
+    auto mxs = my_maxscale(m);
+    auto homedir = mxs->access_homedir(0);
     // The config file path can be multivalued when running a test with multiple MaxScales.
     // Select the correct file.
     auto filepaths = mxb::strtok(m_cnf_template_path, ";");
@@ -795,7 +799,7 @@ void TestConnections::init_maxscale(int m)
     if (m < n_files)
     {
         // Have a separate config file for this MaxScale.
-        process_template(m, filepaths[m], homedir);
+        process_template(*mxs, filepaths[m], homedir);
     }
     else if (n_files >= 1)
     {
@@ -803,46 +807,43 @@ void TestConnections::init_maxscale(int m)
         // happen with the "check_backends"-test.
         tprintf("MaxScale %i does not have a designated config file, only found %i files in test definition. "
                 "Using main MaxScale config file instead.", m, n_files);
-        process_template(m, filepaths[0], homedir);
+        process_template(*mxs, filepaths[0], homedir);
     }
     else
     {
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
-    if (maxscales->ssh_node_f(m, true, "test -d %s/certs", homedir))
+    if (mxs->ssh_node_f(0, true, "test -d %s/certs", homedir))
     {
         tprintf("SSL certificates not found, copying to maxscale");
-        maxscales->ssh_node_f(m, true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
+        mxs->ssh_node_f(0, true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
 
         char str[4096];
         char dtr[4096];
         sprintf(str, "%s/ssl-cert/*", test_dir);
         sprintf(dtr, "%s/certs/", homedir);
-        maxscales->copy_to_node_legacy(str, dtr, m);
+        mxs->copy_to_node(0, str, dtr);
         sprintf(str, "cp %s/ssl-cert/* .", test_dir);
         call_system(str);
-        maxscales->ssh_node_f(m, true, "chmod -R a+rx %s;", homedir);
+        mxs->ssh_node_f(0, true, "chmod -R a+rx %s;", homedir);
     }
 
-    maxscales->ssh_node_f(m,
-                          true,
-                          "cp maxscale.cnf %s;"
-                          "iptables -F INPUT;"
-                          "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
-                          "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                          maxscales->maxscale_cnf[m].c_str(),
-                          maxscales->maxscale_log_dir[m].c_str());
+    mxs->ssh_node_f(0, true,
+                    "cp maxscale.cnf %s;"
+                    "iptables -F INPUT;"
+                    "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
+                    "find /var/*/maxscale -name 'maxscale.lock' -delete;",
+                    mxs->maxscale_cnf[0].c_str(),
+                    mxs->maxscale_log_dir[0].c_str());
     if (maxscale::start)
     {
-        maxscales->restart_maxscale(m);
-        maxscales->ssh_node_f(m,
-                              true,
-                              "maxctrl api get maxscale/debug/monitor_wait");
+        mxs->restart_maxscale(0);
+        mxs->ssh_node_f(0, true, "maxctrl api get maxscale/debug/monitor_wait");
     }
     else
     {
-        maxscales->stop_maxscale(m);
+        mxs->stop_maxscale(0);
     }
 }
 
@@ -927,71 +928,19 @@ int TestConnections::copy_all_logs()
     return rv;
 }
 
-void TestConnections::copy_one_maxscale_log(int i, double timestamp)
-{
-    char log_dir[PATH_MAX + 1024];
-    char log_dir_i[sizeof(log_dir) + 1024];
-    char sys[sizeof(log_dir_i) + 1024];
-    if (timestamp == 0)
-    {
-        sprintf(log_dir, "LOGS/%s", m_test_name.c_str());
-    }
-    else
-    {
-        sprintf(log_dir, "LOGS/%s/%04f", m_test_name.c_str(), timestamp);
-    }
-
-    sprintf(log_dir_i, "%s/%03d", log_dir, i);
-    sprintf(sys, "mkdir -p %s", log_dir_i);
-    call_system(sys);
-
-    if (strcmp(maxscales->ip4(i), "127.0.0.1") != 0)
-    {
-        auto homedir = maxscales->access_homedir(i);
-        int rc = maxscales->ssh_node_f(i, true,
-                                       "rm -rf %s/logs;"
-                                       "mkdir %s/logs;"
-                                       "cp %s/*.log %s/logs/;"
-                                       "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
-                                       "cp %s %s/logs/;"
-                                       "chmod 777 -R %s/logs;"
-                                       "test -e /tmp/core*  && exit 42;",
-                                       homedir,
-                                       homedir,
-                                       maxscales->maxscale_log_dir[i].c_str(), homedir,
-                                       homedir,
-                                       maxscales->maxscale_cnf[i].c_str(), homedir,
-                                       homedir);
-        sprintf(sys, "%s/logs/*", homedir);
-        maxscales->copy_from_node(i, sys, log_dir_i);
-        expect(rc != 42, "Test should not generate core files");
-    }
-    else
-    {
-        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i].c_str(), log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
-        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i].c_str(), log_dir_i);
-        maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
-    }
-}
-
 int TestConnections::copy_maxscale_logs(double timestamp)
 {
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < maxscales->N; i++)
+    mxt::BoolFuncArray funcs;
+    for (int i = 0; i < n_maxscales(); i++)
     {
-        threads.emplace_back([this, i, timestamp]() {
-                                 copy_one_maxscale_log(i, timestamp);
-                             });
+        auto mxs = my_maxscale(i);
+        auto func = [this, mxs, i, timestamp]() {
+                mxs->copy_log(i, timestamp, m_test_name);
+                return true;
+            };
+        funcs.push_back(move(func));
     }
-
-    for (auto& a : threads)
-    {
-        a.join();
-    }
-
-    return 0;
+    return m_shared.concurrent_run(funcs) ? 0 : 1;
 }
 
 int TestConnections::copy_all_logs_periodic()
@@ -1688,14 +1637,14 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
            res.output.c_str(), value, name.c_str());
 }
 
-bool TestConnections::test_bad_config(int m, const string& config)
+bool TestConnections::test_bad_config(const string& config)
 {
-    process_template(m, config, "/tmp/");
+    process_template(*maxscales, config, "/tmp/");
 
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
-    int ssh_rc = maxscales->ssh_node_f(m,
+    int ssh_rc = maxscales->ssh_node_f(0,
                                        true,
                                        "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                        "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");

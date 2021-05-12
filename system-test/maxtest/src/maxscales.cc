@@ -9,6 +9,7 @@
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
 #include <cassert>
+#include <climits>
 
 
 using std::string;
@@ -70,8 +71,6 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
 
         rval = true;
     }
-
-    N = n_nodes();
     return rval;
 }
 
@@ -460,6 +459,57 @@ bool Maxscales::reinstall(const std::string& target, const std::string& mdbci_co
         rval = true;
     }
     return rval;
+}
+
+void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
+{
+    char log_dir[PATH_MAX + 1024];
+    char log_dir_i[sizeof(log_dir) + 1024];
+    char sys[sizeof(log_dir_i) + 1024];
+    if (timestamp == 0)
+    {
+        sprintf(log_dir, "LOGS/%s", test_name.c_str());
+    }
+    else
+    {
+        sprintf(log_dir, "LOGS/%s/%04f", test_name.c_str(), timestamp);
+    }
+
+    sprintf(log_dir_i, "%s/%03d", log_dir, i);
+    sprintf(sys, "mkdir -p %s", log_dir_i);
+    system(sys);
+    auto vm = node(0);
+    auto mxs_logdir = maxscale_log_dir[0].c_str();
+    auto mxs_cnf_file = maxscale_cnf[0].c_str();
+
+    if (vm->is_remote())
+    {
+        auto homedir = vm->access_homedir();
+        int rc = ssh_node_f(0, true,
+                            "rm -rf %s/logs;"
+                            "mkdir %s/logs;"
+                            "cp %s/*.log %s/logs/;"
+                            "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
+                            "cp %s %s/logs/;"
+                            "chmod 777 -R %s/logs;"
+                            "test -e /tmp/core*  && exit 42;",
+                            homedir,
+                            homedir,
+                            mxs_logdir, homedir,
+                            homedir,
+                            mxs_cnf_file, homedir,
+                            homedir);
+        sprintf(sys, "%s/logs/*", homedir);
+        vm->copy_from_node(sys, log_dir_i);
+        log().expect(rc != 42, "Test should not generate core files");
+    }
+    else
+    {
+        ssh_node_f(0, true, "cp %s/*.logs %s/", mxs_logdir, log_dir_i);
+        ssh_node_f(0, true, "cp /tmp/core* %s/", log_dir_i);
+        ssh_node_f(0, true, "cp %s %s/", mxs_cnf_file, log_dir_i);
+        ssh_node_f(0, true, "chmod a+r -R %s", log_dir_i);
+    }
 }
 
 namespace maxtest
