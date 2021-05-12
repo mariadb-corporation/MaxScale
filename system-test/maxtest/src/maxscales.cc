@@ -359,17 +359,9 @@ int Maxscales::start(int m)
     return start_maxscale(m);
 }
 
-void Maxscales::stop_all()
+bool Maxscales::stop()
 {
-    for (int i = 0; i < N; i++)
-    {
-        stop(i);
-    }
-}
-
-int Maxscales::stop(int m)
-{
-    return stop_maxscale(m);
+    return stop_maxscale(0) == 0;
 }
 
 bool Maxscales::prepare_for_test()
@@ -385,13 +377,11 @@ bool Maxscales::prepare_for_test()
     {
         if (m_use_valgrind)
         {
-            for (int i = 0; i < N; i++)
-            {
-                ssh_node_f(i, true, "yum install -y valgrind gdb 2>&1");
-                ssh_node_f(i, true, "apt install -y --force-yes valgrind gdb 2>&1");
-                ssh_node_f(i, true, "zypper -n install valgrind gdb 2>&1");
-                ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
-            }
+            auto vm = node(0);
+            vm->run_cmd_sudo("yum install -y valgrind gdb 2>&1");
+            vm->run_cmd_sudo("apt install -y --force-yes valgrind gdb 2>&1");
+            vm->run_cmd_sudo("zypper -n install valgrind gdb 2>&1");
+            vm->run_cmd_sudo("rm -rf /var/cache/maxscale/maxscale.lock");
         }
         rval = true;
     }
@@ -444,6 +434,32 @@ void Maxscales::expect_running_status(bool expected)
 mxt::TestLogger& Maxscales::log() const
 {
     return m_shared.log;
+}
+
+bool Maxscales::stop_and_check_stopped()
+{
+    int res = stop_maxscale();
+    expect_running_status(false);
+    return res == 0;
+}
+
+bool Maxscales::reinstall(const std::string& target, const std::string& mdbci_config_name)
+{
+    bool rval = false;
+    auto& vm = vm_node();
+    log().log_msgf("Installing MaxScale on node %s.", vm.m_name.c_str());
+    // TODO: make it via MDBCI and compatible with any distro
+    vm.run_cmd_output_sudo("yum remove maxscale -y");
+    vm.run_cmd_output_sudo("yum clean all");
+
+    string install_cmd = mxb::string_printf(
+        "mdbci install_product --product maxscale_ci --product-version %s %s/%s",
+        target.c_str(), mdbci_config_name.c_str(), vm.m_name.c_str());
+    if (m_shared.run_shell_command(install_cmd, "MaxScale install failed."))
+    {
+        rval = true;
+    }
+    return rval;
 }
 
 namespace maxtest

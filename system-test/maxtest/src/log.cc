@@ -153,6 +153,28 @@ bool SharedData::concurrent_run(const BoolFuncArray& funcs)
     return rval;
 }
 
+bool SharedData::run_shell_command(const string& cmd, const string& errmsg)
+{
+    bool rval = true;
+    auto cmdc = cmd.c_str();
+
+    int rc = system(cmdc);
+    if (rc != 0)
+    {
+        rval = false;
+        string msgp2 = mxb::string_printf("Shell command '%s' returned %i.", cmdc, rc);
+        if (errmsg.empty())
+        {
+            log.add_failure("%s", msgp2.c_str());
+        }
+        else
+        {
+            log.add_failure("%s %s", errmsg.c_str(), msgp2.c_str());
+        }
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);

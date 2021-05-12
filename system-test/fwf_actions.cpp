@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     test->stop_timeout();
 
     test->tprintf("Creating rules\n");
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
 
     sprintf(rules_dir, "%s/fw/", test_dir);
     copy_rules(test, (char*) "rules_actions", rules_dir);
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     test->stop_timeout();
     test->maxscales->expect_running_status(true);
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
     test->maxscales->expect_running_status(false);
     int rval = test->global_result;
     delete test;

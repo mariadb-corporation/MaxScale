@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->maxscales->stop_maxscale(0);
+    Test->maxscales->stop();
     Test->set_timeout(60);
     int chunk_size = 2500000;
     int chunk_num = 5;

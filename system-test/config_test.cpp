@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     TestConnections* test = new TestConnections(argc, argv);
     int rval = 0;
 
-    test->maxscales->stop_maxscale(0);
+    test->maxscales->stop();
 
     for (int i = 0; bad_configs[i]; i++)
     {

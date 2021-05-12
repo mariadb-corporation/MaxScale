@@ -220,13 +220,10 @@ public:
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
-    int stop_maxscale(int m = 0);
-    int stop(int m = 0);
+    int  stop_maxscale(int m = 0);
+    bool stop();
 
-    /**
-     * Helper for stopping all maxscales
-     */
-    void stop_all();
+    bool stop_and_check_stopped();
 
     /**
      * Execute a MaxCtrl command
@@ -273,6 +270,8 @@ public:
      * @param expected True if expected to be running
      */
     void expect_running_status(bool expected);
+
+    bool reinstall(const std::string& target, const std::string& mdbci_config_name);
 
     bool use_valgrind() const;
     bool prepare_for_test();

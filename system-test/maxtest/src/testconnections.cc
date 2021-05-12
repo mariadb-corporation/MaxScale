@@ -179,10 +179,10 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         return rc;
     }
 
-    // Stop MaxScale to prevent it from interfering with the replication setup process
+    // Stop MaxScale to prevent it from interfering with replication setup.
     if (!m_mxs_manual_debug)
     {
-        maxscales->stop_all();
+        stop_all_maxscales();
     }
 
     if (galera && maxscale::restart_galera)
@@ -296,22 +296,25 @@ int TestConnections::cleanup()
         printf("%s\n", logger().all_errors_to_string().c_str());
     }
 
-    // Because cleanup is called even when system test init fails, we need to check various fields before
+    // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
     if (!settings().local_maxscale)
     {
-        if (maxscales)
+        // Stop all MaxScales to detect crashes on exit.
+        bool sleep_more = false;
+        for (int i = 0; i < n_maxscales(); i++)
         {
-            // stop all Maxscales to detect crashes on exit
-            for (int i = 0; i < maxscales->N; i++)
+            auto mxs = my_maxscale(i);
+            mxs->stop_and_check_stopped();
+            if (mxs->use_valgrind())
             {
-                stop_maxscale(i);
+                sleep_more = true;
             }
+        }
 
-            if (maxscales->use_valgrind())
-            {
-                sleep(15);      // sleep to let logs be written do disks
-            }
+        if (sleep_more)
+        {
+            sleep(15);      // Sleep to allow more time for log writing. TODO: Really need 15s?
         }
     }
 
@@ -350,11 +353,6 @@ int TestConnections::cleanup()
     }
 
     copy_all_logs();
-
-    if (maxscales && settings().req_two_maxscales)
-    {
-        maxscales->stop_all();
-    }
     m_cleaned_up = true;
     return 0;
 }
@@ -770,6 +768,9 @@ bool TestConnections::process_template(int m, const string& config_file_path, co
     return rval;
 }
 
+/**
+ * Copy maxscale.cnf and start MaxScale on all Maxscale VMs.
+ */
 void TestConnections::init_maxscales()
 {
     // Always initialize the first MaxScale
@@ -1155,6 +1156,19 @@ int TestConnections::start_maxscale(int m)
     int res = mxs->start_maxscale();
     mxs->expect_running_status(true);
     return res;
+}
+
+bool TestConnections::stop_all_maxscales()
+{
+    bool rval = true;
+    for (int i = 0; i < n_maxscales(); i++)
+    {
+        if (!my_maxscale(i)->stop())
+        {
+            rval = false;
+        }
+    }
+    return rval;
 }
 
 int TestConnections::check_maxscale_alive(int m)
@@ -1820,17 +1834,9 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
 bool TestConnections::reinstall_maxscales()
 {
     bool rval = true;
-    for (int i = 0; i < maxscales->N; i++)
+    for (int i = 0; i < n_maxscales(); i++)
     {
-        printf("Installing Maxscale on node %d\n", i);
-        // TODO: make it via MDBCI and compatible with any distro
-        maxscales->ssh_node(i, "yum remove maxscale -y", true);
-        maxscales->ssh_node(i, "yum clean all", true);
-
-        string install_cmd = mxb::string_printf(
-            "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
-            m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix().c_str(), i);
-        if (!run_shell_command(install_cmd, "MaxScale install failed."))
+        if (!my_maxscale(i)->reinstall(m_target, m_mdbci_config_name))
         {
             rval = false;
         }
@@ -2237,24 +2243,7 @@ bool TestConnections::check_create_vm_dir()
 
 bool TestConnections::run_shell_command(const string& cmd, const string& errmsg)
 {
-    bool rval = true;
-    auto cmdc = cmd.c_str();
-
-    int rc = system(cmdc);
-    if (rc != 0)
-    {
-        rval = false;
-        string msgp2 = mxb::string_printf("Shell command '%s' returned %i.", cmdc, rc);
-        if (errmsg.empty())
-        {
-            add_failure("%s", msgp2.c_str());
-        }
-        else
-        {
-            add_failure("%s %s", errmsg.c_str(), msgp2.c_str());
-        }
-    }
-    return rval;
+    return m_shared.run_shell_command(cmd, errmsg);
 }
 
 mxt::MariaDBServer* TestConnections::get_repl_master()

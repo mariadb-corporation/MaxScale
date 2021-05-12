@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(180);
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
-    Test->maxscales->stop_maxscale(0);
+    Test->maxscales->stop();
 
     Test->tprintf("Trying limit_queries clause");
     Test->tprintf("Copying rules to Maxscale machine: %s", str);
