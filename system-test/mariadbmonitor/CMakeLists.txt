@@ -114,7 +114,7 @@ add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_swit
 add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc
         CONFIG master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
-# Two MaxScales with cooperative monitoring. TODO: enable again
-#add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
-#        CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
-#        LABELS mysqlmon)
+# Two MaxScales with cooperative monitoring.
+add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
+        CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
+        LABELS mysqlmon)
