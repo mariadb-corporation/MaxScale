@@ -6,23 +6,13 @@
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
             <span> Data preview </span>
         </v-tab>
-        <v-tabs-items
-            v-model="activeTab"
-            :class="
-                `tab-items ${
-                    activeTab === SQL_QUERY_MODES.QUERY_VIEW
-                        ? 'v-window-item--active--slide-in-left'
-                        : 'v-window-item--active--slide-in-right'
-                }`
-            "
-            active-class="v-window-item--active"
-        >
-            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass" transition="none">
+        <v-tabs-items v-model="activeTab" class="tab-items">
+            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
                 <keep-alive>
-                    <result-tab :dynDim="componentDynDim" :queryTxt="queryTxt" />
+                    <result-tab :dynDim="componentDynDim" />
                 </keep-alive>
             </v-tab-item>
-            <v-tab-item :value="SQL_QUERY_MODES.PRVW_DATA" :class="tabItemClass" transition="none">
+            <v-tab-item :value="SQL_QUERY_MODES.PRVW_DATA" :class="tabItemClass">
                 <keep-alive>
                     <preview-data-tab
                         :dynDim="componentDynDim"
@@ -58,7 +48,6 @@ export default {
     },
     props: {
         previewDataSchemaId: { type: String, require: true },
-        queryTxt: { type: String, require: true },
         dynDim: {
             type: Object,
             validator(obj) {
@@ -74,8 +63,6 @@ export default {
     },
     computed: {
         ...mapState({
-            query_result: state => state.query.query_result,
-            loading_query_result: state => state.query.loading_query_result,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
         }),
@@ -124,39 +111,6 @@ $tab-bar-height: 24px;
     height: calc(100% - #{$tab-bar-height});
     .v-window__container {
         height: 100%;
-    }
-}
-@keyframes slide-in-right {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0%);
-    }
-}
-@keyframes slide-in-left {
-    from {
-        transform: translateX(-100%);
-    }
-    to {
-        transform: translateX(0%);
-    }
-}
-
-::v-deep.v-window-item {
-    display: block !important; // override display: none; set by v-tab-items
-    position: absolute;
-    width: 100%;
-    visibility: hidden;
-    &--active {
-        position: relative;
-        visibility: visible;
-        &--slide-in-right {
-            animation: slide-in-right 0.3s;
-        }
-        &--slide-in-left {
-            animation: slide-in-left 0.3s;
-        }
     }
 }
 </style>

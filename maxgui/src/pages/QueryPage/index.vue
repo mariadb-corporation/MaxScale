@@ -96,7 +96,6 @@
                                 :dynDim="resultPaneDim"
                                 class="query-result"
                                 :previewDataSchemaId="previewDataSchemaId"
-                                :queryTxt="queryTxt"
                             />
                         </template>
                     </split-pane>

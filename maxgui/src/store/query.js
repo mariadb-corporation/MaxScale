@@ -341,7 +341,7 @@ export default {
                     }
                 )
                 await this.vue.$help.delay(400)
-                commit('SET_QUERY_RESULT', Object.freeze(res.data.data.attributes.results[0]))
+                commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
                 commit('SET_LOADING_QUERY_RESULT', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')

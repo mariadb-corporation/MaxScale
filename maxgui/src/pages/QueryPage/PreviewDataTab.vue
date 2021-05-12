@@ -29,22 +29,30 @@
                 :max-height="`${dynDim.height - headerHeight}px`"
             />
             <template v-else>
-                <result-data-table
-                    v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
-                    :key="SQL_QUERY_MODES.PRVW_DATA"
-                    :height="dynDim.height - headerHeight"
-                    :width="dynDim.width"
-                    :headers="previewDataHeaders"
-                    :rows="previewDataRows"
-                />
-                <result-data-table
-                    v-else
-                    :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                    :height="dynDim.height - headerHeight"
-                    :width="dynDim.width"
-                    :headers="detailsDataHeaders"
-                    :rows="detailsDataRows"
-                />
+                <v-slide-x-transition>
+                    <div
+                        v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
+                        :key="SQL_QUERY_MODES.PRVW_DATA"
+                    >
+                        <result-data-table
+                            :height="dynDim.height - headerHeight"
+                            :width="dynDim.width"
+                            :headers="prvw_data.fields"
+                            :rows="prvw_data.data"
+                        />
+                    </div>
+                    <div
+                        v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                        :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                    >
+                        <result-data-table
+                            :height="dynDim.height - headerHeight"
+                            :width="dynDim.width"
+                            :headers="prvw_data_details.fields"
+                            :rows="prvw_data_details.data"
+                        />
+                    </div>
+                </v-slide-x-transition>
             </template>
         </div>
     </div>
@@ -97,22 +105,6 @@ export default {
         }),
         validConn() {
             return this.previewDataSchemaId && this.active_conn_state
-        },
-        previewDataHeaders() {
-            if (!this.prvw_data.fields) return []
-            return this.prvw_data.fields
-        },
-        previewDataRows() {
-            if (!this.prvw_data.data) return []
-            return this.prvw_data.data
-        },
-        detailsDataHeaders() {
-            if (!this.prvw_data_details.fields) return []
-            return this.prvw_data_details.fields
-        },
-        detailsDataRows() {
-            if (!this.prvw_data_details.data) return []
-            return this.prvw_data_details.data
         },
         isPrwDataLoading() {
             return this.loading_prvw_data || this.loading_prvw_data_details
