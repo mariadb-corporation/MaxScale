@@ -24,12 +24,13 @@
         <v-list max-width="220px" class="export-file-list">
             <v-list-item
                 v-for="format in fileFormats"
-                :key="format"
+                :key="format.extension"
                 dense
                 link
-                @click.native="() => onDownload(format)"
+                :href="`${format.href},${encodeURIComponent(getData(format.extension))}`"
+                :download="getFileName(format.extension)"
             >
-                {{ format }}
+                {{ format.extension }}
             </v-list-item>
         </v-list>
     </v-menu>
@@ -56,23 +57,53 @@ export default {
     },
     data() {
         return {
-            fileFormats: ['csv', 'xlsx', 'json'],
+            fileFormats: [
+                {
+                    href: 'data:application/json;charset=utf-8;',
+                    extension: 'json',
+                },
+                {
+                    href: 'data:application/csv;charset=utf-8;',
+                    extension: 'csv',
+                },
+            ],
         }
     },
-    methods: {
-        onDownload(format) {
-            // TODO: convert result data to diffrent formats
-            switch (format) {
-                case 'csv':
-                    break
-                case 'xlsx':
-                    break
-                case 'json':
-                    break
+    computed: {
+        jsonData() {
+            let arr = []
+            for (let i = 0; i < this.rows.length; ++i) {
+                let obj = {}
+                for (const [n, header] of this.headers.entries()) {
+                    obj[`${header}`] = this.rows[i][n]
+                }
+                arr.push(obj)
             }
+            return JSON.stringify(arr)
+        },
+        csvData() {
+            let str = `${this.headers.join(',')}\n`
+            for (let i = 0; i < this.rows.length; ++i) {
+                str += `${this.rows[i].join(',')}\n`
+            }
+            return str
+        },
+    },
+    methods: {
+        getData(fileExtension) {
+            switch (fileExtension) {
+                case 'json':
+                    return this.jsonData
+                case 'csv':
+                    return this.csvData
+            }
+        },
+        getFileName(fileExtension) {
+            return `MaxScale Query Results - ${this.$help.dateFormat({
+                value: new Date(),
+                formatType: 'DATE_RFC2822',
+            })}.${fileExtension}`
         },
     },
 }
 </script>
-
-<style lang="scss" scoped></style>
