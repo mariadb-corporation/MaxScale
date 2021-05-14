@@ -11,9 +11,8 @@
  * Public License.
  */
 import { getCookie } from 'utils/helpers'
-export default {
-    namespaced: true,
-    state: {
+function initialState() {
+    return {
         active_conn_state: Boolean(getCookie('conn_id_body')),
         conn_err_state: false,
         rc_target_names_map: {},
@@ -28,7 +27,11 @@ export default {
         loading_query_result: false,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
-    },
+    }
+}
+export default {
+    namespaced: true,
+    state: initialState,
     mutations: {
         // connection mutations
         SET_ACTIVE_CONN_STATE(state, payload) {
@@ -92,6 +95,12 @@ export default {
         SET_QUERY_RESULT(state, payload) {
             state.query_result = payload
         },
+        RESET_STATE(state) {
+            const initState = initialState()
+            Object.keys(initState).forEach(key => {
+                state[key] = initState[key]
+            })
+        },
     },
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
@@ -152,13 +161,7 @@ export default {
                     localStorage.removeItem('curr_cnct_resource')
                     this.vue.$help.deleteCookie('conn_id_body')
                     //TODO: store default state and reuse it instead of manually set it
-                    commit('SET_ACTIVE_CONN_STATE', false)
-                    commit('SET_CURR_CNCT_RESOURCE', '')
-                    commit('SET_DB_TREE', [])
-                    commit('CLEAR_DB_CMPL_LIST')
-                    commit('SET_PRVW_DATA', {})
-                    commit('SET_PRVW_DATA_DETAILS', {})
-                    commit('SET_QUERY_RESULT', {})
+                    commit('RESET_STATE')
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
@@ -207,7 +210,6 @@ export default {
          */
         async fetchTables({ state, commit }, db) {
             try {
-                //TODO: for testing purpose, replace it with config obj
                 const query = `SHOW TABLES FROM ${db.id};`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
@@ -239,7 +241,6 @@ export default {
                     children: dbChilren,
                 })
             } catch (e) {
-                /* TODO: Show error in snackbar */
                 const logger = this.vue.$logger('store-query-fetchTables')
                 logger.error(e)
             }
@@ -293,7 +294,6 @@ export default {
                     )
                 }
             } catch (e) {
-                /* TODO: Show error in snackbar */
                 const logger = this.vue.$logger('store-query-fetchCols')
                 logger.error(e)
             }
