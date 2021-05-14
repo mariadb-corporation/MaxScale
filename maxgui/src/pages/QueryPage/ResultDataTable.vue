@@ -11,6 +11,7 @@
                 placeholder="Filter result"
                 hide-details
             />
+            <result-export :rows="rows" :headers="headers" />
             <v-menu
                 allow-overflow
                 transition="slide-y-transition"
@@ -22,10 +23,9 @@
                 <template v-slot:activator="{ on, attrs, value }">
                     <v-btn
                         x-small
-                        class="text-capitalize font-weight-medium arrow-toggle"
+                        class="text-capitalize font-weight-medium"
                         outlined
                         depressed
-                        small
                         color="accent-dark"
                         v-bind="attrs"
                         v-on="on"
@@ -115,8 +115,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import ResultExport from './ResultExport'
 export default {
     name: 'result-data-table',
+    components: {
+        'result-export': ResultExport,
+    },
     props: {
         headers: { type: Array, require: true },
         rows: { type: Array, require: true },
