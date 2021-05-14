@@ -38,7 +38,6 @@
             class="tr"
             :style="{ lineHeight, height: `${height - itemHeight}px` }"
         >
-            <!-- TODO: add overflow and width as header width -->
             <div class="td px-3 d-flex justify-center flex-grow-1">
                 No data
             </div>

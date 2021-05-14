@@ -17,7 +17,7 @@
                 ref="string"
                 class="d-inline-block"
                 :class="{ 'text-truncate': isTruncated }"
-                :style="{ maxWidth: `${maxWidth}px` }"
+                :style="{ maxWidth: `${getMaxWidth}px` }"
                 v-on="on"
             >
                 {{ text }}
@@ -30,7 +30,7 @@
         ref="string"
         class="d-inline-block"
         :class="{ 'text-truncate': isTruncated }"
-        :style="{ maxWidth: `${maxWidth}px` }"
+        :style="{ maxWidth: `${getMaxWidth}px` }"
     >
         {{ text }}
     </div>
@@ -53,20 +53,25 @@ export default {
     name: 'truncate-string',
     props: {
         text: { type: String, required: true },
-        maxWidth: {
-            validator(value) {
-                if (!value) return true
-                return typeof value === 'number'
-            },
-        },
-
+        /* if maxWidth isn't provided, eleMaxWidth will be used.
+         * Notice, eleMaxWidth gets parent width by using clientWidth.
+         * That means when box-sizing: border-box, eleMaxWidth will account
+         * for any border and padding.
+         */
+        maxWidth: { type: Number },
         menuMaxHeight: { type: Number, default: 600 },
         menuMaxWidth: { type: Number, default: 600 },
     },
     data() {
         return {
             isTruncated: true,
+            eleMaxWidth: null,
         }
+    },
+    computed: {
+        getMaxWidth() {
+            return this.maxWidth || this.eleMaxWidth
+        },
     },
     watch: {
         text() {
@@ -77,11 +82,13 @@ export default {
         },
     },
     mounted() {
+        // wait for DOM to render completely
         this.$help.doubleRAF(() => this.checkTruncated())
     },
     methods: {
         checkTruncated() {
             if (!this.$refs.string) return false
+            this.eleMaxWidth = this.$refs.string.parentElement.clientWidth
             this.isTruncated = this.$refs.string.scrollWidth > this.$refs.string.clientWidth
         },
     },

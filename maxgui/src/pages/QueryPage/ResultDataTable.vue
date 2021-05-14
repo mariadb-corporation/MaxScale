@@ -82,8 +82,7 @@
                             hide-details
                         >
                             <template v-slot:label>
-                                <!-- TODO: show tooltip if it's truncated -->
-                                <span> {{ item.name }}</span>
+                                <truncate-string :text="item.name" />
                             </template>
                         </v-checkbox>
                     </v-list-item>
