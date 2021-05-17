@@ -1048,7 +1048,7 @@ private:
         case REPLACEMENT_DOCUMENT:
             sql << "JSON_SET('"
                 << bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()))
-                << "', '$._id', id)";
+                << "', '$._id', JSON_EXTRACT(id, '$'))";
             break;
 
         case UPDATE_OPERATORS:
