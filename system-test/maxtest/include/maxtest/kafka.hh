@@ -79,11 +79,22 @@ private:
 
     bool install_kafka()
     {
+        // Download the package locally, wget isn't always installed on the MaxScale VM.
+        std::string download =
+            R"EOF(
+wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
+)EOF";
+
+        if (system(download.c_str()) != 0
+            || m_test.maxscales->copy_to_node(0, "./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
+        {
+            return false;
+        }
+
         // The link can be updated by getting the closest mirror link from the Kafka download page and
         // changing `file` to `filename` and adding `action=download` (these are options to closer.cgi).
         std::string command =
             R"EOF(
-wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
 tar -axf kafka_2.13-2.7.0.tgz;
 rm kafka_2.13-2.7.0.tgz;
 mv kafka_2.13-2.7.0 kafka;
