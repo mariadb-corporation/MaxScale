@@ -62,7 +62,7 @@ var MariaDB = {
     resetTable: async function (conn) {
         await conn.query("DROP TABLE IF EXISTS test.mongo");
         await conn.query("CREATE TABLE test.mongo "
-                         + "(id VARCHAR(36) AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))))) "
+                         + "(id VARCHAR(36) AS (TRIM('\"' FROM JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))))) "
                          + "UNIQUE KEY, "
                          + "doc JSON, "
                          + "CONSTRAINT id_not_null CHECK(id IS NOT NULL))");

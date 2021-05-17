@@ -100,8 +100,8 @@ must also be set to `true`.
 
    * Type: count
    * Mandatory: false
-   * Range: `[36, 2048]`
-   * Default: `36`
+   * Range: `[35, 2048]`
+   * Default: `35`
 
 Specifies the length of the id column in tables that are automatically created.
 
@@ -146,12 +146,12 @@ in that case be created.
 
 When _mongodbprotocol_ creates a table, it uses a statement like
 ```
-CREATE TABLE name (id VARCHAR(36) AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, "$._id")))) UNIQUE KEY,
+CREATE TABLE name (id VARCHAR(35) AS (TRIM('"' FROM JSON_COMPACT(JSON_EXTRACT(doc, "$._id")))) UNIQUE KEY,
                    doc JSON,
                    CONSTRAINT id_not_null CHECK(id IS NOT NULL));
 ```
 where the length of the `VARCHAR` is specified by the value of `id_length`,
-whose default and minimum is 36.
+whose default and minimum is 35.
 
 *NOTE* If the tables are created manually, then the `CREATE` statement
 *must* contain a similar `AS`-clause as the one above and *should* contain
@@ -754,7 +754,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
-		"id_length" : 36
+		"id_length" : 35
 	},
 	"ok" : 1
 }
@@ -807,7 +807,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
-		"id_length" : 36
+		"id_length" : 35
 	},
 	"ok" : 1
 }
@@ -816,7 +816,7 @@ the session. For example:
 	"config" : {
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : false,
-		"id_length" : 36
+		"id_length" : 35
 	},
 	"ok" : 1
 }

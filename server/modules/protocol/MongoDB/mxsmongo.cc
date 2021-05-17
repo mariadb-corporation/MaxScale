@@ -1889,7 +1889,7 @@ string mxsmongo::table_create_statement(const std::string& table_name, int64_t i
     stringstream ss;
     ss << "CREATE TABLE " << table_name << " ("
        << "id VARCHAR(" << id_length << ") "
-       << "AS (JSON_UNQUOTE(JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\")))) UNIQUE KEY, "
+       << "AS (TRIM('\"' FROM JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\")))) UNIQUE KEY, "
        << "doc JSON, "
        << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
 
