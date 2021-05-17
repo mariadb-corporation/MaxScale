@@ -1,39 +1,154 @@
 <template>
-    <v-menu
-        allow-overflow
-        transition="slide-y-transition"
-        offset-y
-        left
-        content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
-    >
-        <template v-slot:activator="{ on, attrs }">
-            <v-btn
-                x-small
-                class="mr-2"
-                outlined
-                depressed
-                color="accent-dark"
-                v-bind="attrs"
-                v-on="on"
-            >
-                <v-icon size="14" color="accent-dark">
-                    file_download
-                </v-icon>
-            </v-btn>
-        </template>
-        <v-list max-width="220px" class="export-file-list">
-            <v-list-item
-                v-for="format in fileFormats"
-                :key="format.extension"
-                dense
-                link
-                :href="`${format.href},${encodeURIComponent(getData(format.extension))}`"
-                :download="getFileName(format.extension)"
-            >
-                {{ format.extension }}
-            </v-list-item>
-        </v-list>
-    </v-menu>
+    <div>
+        <v-btn
+            x-small
+            class="mr-2"
+            outlined
+            depressed
+            color="accent-dark"
+            @click="openConfigDialog"
+        >
+            <v-icon size="14" color="accent-dark">
+                file_download
+            </v-icon>
+        </v-btn>
+        <base-dialog
+            v-model="isConfigDialogOpened"
+            :onSave="onExport"
+            title="Export Results"
+            saveText="export"
+            minBodyWidth="512px"
+            :lazyValidation="false"
+            @is-form-valid="isFormValid = $event"
+        >
+            <template v-slot:form-body>
+                <v-container class="pa-1">
+                    <v-row class="mx-n1">
+                        <v-col cols="12" md="12" class="pa-1">
+                            <label class="field__label color text-small-text label-required">
+                                File name
+                            </label>
+                            <v-text-field
+                                v-model="fileName"
+                                class="std error--text__bottom"
+                                name="file-name"
+                                dense
+                                outlined
+                                :height="36"
+                                :rules="[
+                                    val =>
+                                        !!val ||
+                                        $t('errors.requiredInput', { inputName: 'File name' }),
+                                ]"
+                                required
+                                hide-details="auto"
+                            />
+                        </v-col>
+
+                        <v-col cols="12" md="12" class="pa-1">
+                            <label class="field__label color text-small-text label-required">
+                                File format
+                            </label>
+                            <v-select
+                                v-model="selectedFormat"
+                                :items="fileFormats"
+                                outlined
+                                dense
+                                class="std mariadb-select-input error--text__bottom"
+                                :menu-props="{
+                                    contentClass: 'mariadb-select-v-menu',
+                                    bottom: true,
+                                    offsetY: true,
+                                }"
+                                return-object
+                                item-text="extension"
+                                item-value="contentType"
+                                :rules="[
+                                    v =>
+                                        !!v ||
+                                        $t('errors.requiredInput', { inputName: 'File format' }),
+                                ]"
+                                hide-details="auto"
+                                required
+                            />
+                        </v-col>
+                    </v-row>
+                    <v-row
+                        v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
+                        class="mx-n1"
+                    >
+                        <v-col cols="12" md="12" class="pa-1 mt-1">
+                            <v-radio-group
+                                v-model="hasHeaders"
+                                hide-details="auto"
+                                row
+                                dense
+                                class="ma-0 pt-0"
+                            >
+                                <v-radio label="With headers" :value="true" class="field__label" />
+                                <v-radio
+                                    label="Without headers"
+                                    :value="false"
+                                    class="field__label"
+                                />
+                            </v-radio-group>
+                        </v-col>
+
+                        <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
+                            <label class="field__label color text-small-text">
+                                Delimiter
+                            </label>
+                            <v-select
+                                v-model="chosenDelimiter"
+                                return-object
+                                :items="delimiters"
+                                item-text="txt"
+                                item-value="val"
+                                outlined
+                                dense
+                                class="std mariadb-select-input error--text__bottom"
+                                :menu-props="{
+                                    contentClass: 'mariadb-select-v-menu',
+                                    bottom: true,
+                                    offsetY: true,
+                                }"
+                                :rules="[
+                                    v =>
+                                        !!v ||
+                                        $t('errors.requiredInput', {
+                                            inputName: 'Delimiter',
+                                        }),
+                                ]"
+                                hide-details="auto"
+                                required
+                            />
+                        </v-col>
+                        <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
+                            <label class="field__label color text-small-text">
+                                Custom delimiter
+                            </label>
+                            <v-text-field
+                                v-model="custDelimiter"
+                                class="std error--text__bottom"
+                                dense
+                                outlined
+                                :height="36"
+                                :rules="[
+                                    v =>
+                                        !!v ||
+                                        $t('errors.requiredInput', {
+                                            inputName: 'Custom delimiter',
+                                        }),
+                                ]"
+                                hide-details="auto"
+                                required
+                            />
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </template>
+        </base-dialog>
+    </div>
 </template>
 
 <script>
@@ -57,16 +172,28 @@ export default {
     },
     data() {
         return {
+            isFormValid: false,
+            isConfigDialogOpened: false,
             fileFormats: [
                 {
-                    href: 'data:application/json;charset=utf-8;',
+                    contentType: 'data:application/json;charset=utf-8;',
                     extension: 'json',
                 },
                 {
-                    href: 'data:application/csv;charset=utf-8;',
+                    contentType: 'data:application/csv;charset=utf-8;',
                     extension: 'csv',
                 },
             ],
+            selectedFormat: null,
+            fileName: '',
+            delimiters: [
+                { txt: 'Comma', val: ',' },
+                { txt: 'Tab', val: '\t' },
+                { txt: 'Custom', val: '' },
+            ],
+            chosenDelimiter: { txt: 'Comma', val: ',' },
+            custDelimiter: '',
+            hasHeaders: true,
         }
     },
     computed: {
@@ -82,14 +209,38 @@ export default {
             return JSON.stringify(arr)
         },
         csvData() {
-            let str = `${this.headers.join(',')}\n`
-            for (let i = 0; i < this.rows.length; ++i) {
-                str += `${this.rows[i].join(',')}\n`
+            let delimiter = ''
+            if (this.chosenDelimiter.val) delimiter = this.chosenDelimiter.val
+            else delimiter = this.custDelimiter
+            let str = ''
+            if (this.hasHeaders) {
+                let headers = this.headers.map(header => this.escapeCsv(header))
+                str = `${headers.join(delimiter)}\r\n`
             }
+            str += this.rows
+                .map(row => row.map(cell => this.escapeCsv(cell)).join(delimiter))
+                .join('\r\n')
+
             return str
         },
     },
+    watch: {
+        isConfigDialogOpened(v) {
+            if (!v) Object.assign(this.$data, this.$options.data())
+        },
+    },
     methods: {
+        /**
+         * This function escapes value by adding double quotes
+         * if value contains whitespace, comma, single quote or double quote
+         * @param {(String|Number)} v cell value
+         * @returns {(String|Number)} returns escape value
+         */
+        escapeCsv(v) {
+            // remove blanks before checking
+            if (`${v}`.replace(/ /g, '').match(/[\s,',"]/)) return '"' + v.replace(/"/g, '""') + '"'
+            return v
+        },
         getData(fileExtension) {
             switch (fileExtension) {
                 case 'json':
@@ -98,12 +249,37 @@ export default {
                     return this.csvData
             }
         },
-        getFileName(fileExtension) {
+        getDefFileName() {
             return `MaxScale Query Results - ${this.$help.dateFormat({
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
-            })}.${fileExtension}`
+            })}`
+        },
+        openConfigDialog() {
+            this.isConfigDialogOpened = !this.isConfigDialogOpened
+            this.fileName = this.getDefFileName()
+        },
+        onExport() {
+            const { contentType, extension } = this.selectedFormat
+            let a = document.createElement('a')
+            a.href = `${contentType}, ${encodeURIComponent(this.getData(extension))}`
+            a.download = `${this.fileName}.${extension}`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
         },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+$label-size: 0.625rem;
+$input-size: 0.875rem;
+.field__label {
+    font-size: $label-size;
+    ::v-deep.v-label {
+        color: $small-text;
+        font-size: $input-size;
+    }
+}
+</style>

@@ -11,7 +11,7 @@
                 placeholder="Filter result"
                 hide-details
             />
-            <result-export :rows="rows" :headers="headers" />
+            <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
             <v-menu
                 allow-overflow
                 transition="slide-y-transition"
@@ -153,6 +153,12 @@ export default {
             return list.filter(obj =>
                 this.$help.ciStrIncludes(`${obj.name}`, this.searchHeaderKeyword)
             )
+        },
+        filteredRows_wo_idx() {
+            return this.filteredRows.map(row => row.filter((cell, i) => i !== 0))
+        },
+        visHeaders_wo_idx() {
+            return this.visibleHeaders.filter(header => header !== '#')
         },
         filteredRows() {
             const rows = this.rowsWithIndex.map(row =>
