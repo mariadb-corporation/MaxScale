@@ -40,8 +40,8 @@
         </template>
 
         <template v-slot:form-body>
-            <v-container>
-                <v-row>
+            <v-container class="pa-1">
+                <v-row class="mx-n1">
                     <v-col cols="12" md="12" class="pa-1">
                         <label class="field__label color text-small-text label-required">
                             Target resource
@@ -51,14 +51,15 @@
                             :items="resourceTypes"
                             name="resourceName"
                             outlined
-                            dense
                             class="std mariadb-select-input error--text__bottom"
                             :menu-props="{
                                 contentClass: 'mariadb-select-v-menu',
                                 bottom: true,
                                 offsetY: true,
                             }"
-                            hide-details
+                            dense
+                            :height="36"
+                            hide-details="auto"
                             :rules="[
                                 v => !!v || $t('errors.requiredInput', { inputName: 'This field' }),
                             ]"
@@ -102,6 +103,8 @@
                             name="db-user"
                             autocomplete="new-username"
                             dense
+                            :height="36"
+                            hide-details="auto"
                             outlined
                             required
                         />
@@ -120,6 +123,8 @@
                             name="db-password"
                             autocomplete="new-password"
                             dense
+                            :height="36"
+                            hide-details="auto"
                             outlined
                             required
                         >
@@ -137,6 +142,8 @@
                             class="std error--text__bottom"
                             name="db"
                             dense
+                            :height="36"
+                            hide-details="auto"
                             outlined
                             required
                         />
@@ -151,6 +158,8 @@
                             class="std error--text__bottom"
                             name="timeout"
                             dense
+                            :height="36"
+                            hide-details="auto"
                             outlined
                             required
                         />
