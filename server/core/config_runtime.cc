@@ -1569,15 +1569,22 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
         }
         parameters.set(CN_PORT, std::to_string(port));
 
-        if (Server* server = ServerManager::create_server(name.c_str(), parameters))
-        {
-            rval = true;
-            MXS_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(), server->port());
-        }
-        else
-        {
-            MXS_ERROR("Failed to create server '%s', see error log for more details", name.c_str());
-        }
+        auto worker = mxs::MainWorker::get();
+
+        worker->call(
+            [&]() {
+                if (Server* server = ServerManager::create_server(name.c_str(), parameters))
+                {
+                    rval = true;
+                    MXS_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(),
+                               server->port());
+                }
+                else
+                {
+                    MXS_ERROR("Failed to create server '%s', see error log for more details",
+                              name.c_str());
+                }
+            }, mxb::Worker::EXECUTE_AUTO);
     }
     else
     {
