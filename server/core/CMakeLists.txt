@@ -45,6 +45,7 @@ add_library(maxscale-common SHARED
   service.cc
   session.cc
   session_stats.cc
+  sql_conn_manager.cc
   ssl.cc
   target.cc
   test.cc

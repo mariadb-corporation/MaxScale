@@ -13,9 +13,10 @@
 
 #include "internal/http_sql.hh"
 #include "internal/jwt.hh"
+#include "internal/listener.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
+#include "internal/sql_conn_manager.hh"
 
 #include <maxbase/json.hh>
 #include <maxscale/json_api.hh>
@@ -322,102 +323,18 @@ HttpResponse create_connect_response(const std::string& host, int64_t id, bool p
     return response;
 }
 
-// An extremely simple implementation of connection management for testing purposes.
-class Manager
-{
-public:
 
-    struct Connection
-    {
-        MYSQL*  conn {nullptr};
-        bool    expecting_result {false};
-        int64_t query_id {0};
-    };
 
-    Connection get(int64_t id)
-    {
-        Connection conn;
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        auto it = m_connections.find(id);
-
-        if (it != m_connections.end())
-        {
-            conn = it->second;
-            m_connections.erase(it);
-        }
-
-        return conn;
-    }
-
-    int64_t add(MYSQL* conn)
-    {
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        int64_t id = m_id_gen++;
-        Connection c {conn, false};
-        m_connections.emplace(id, c);
-
-        if (m_id_gen <= 0)
-        {
-            m_id_gen = 1;
-        }
-
-        return id;
-    }
-
-    void put(int64_t id, Connection conn)
-    {
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        m_connections.emplace(id, conn);
-    }
-
-    bool is_query(int64_t conn_id, int64_t query_id) const
-    {
-        bool rval = false;
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        auto it = m_connections.find(conn_id);
-
-        if (it != m_connections.end())
-        {
-            rval = query_id == it->second.query_id;
-        }
-
-        return rval;
-    }
-
-    bool is_connection(int64_t conn_id) const
-    {
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        return m_connections.find(conn_id) != m_connections.end();
-    }
-
-    std::vector<int64_t> get_connections()
-    {
-        std::lock_guard<std::mutex> guard(m_connection_lock);
-        std::vector<int64_t> conns;
-
-        for (const auto& kv : m_connections)
-        {
-            conns.push_back(kv.first);
-        }
-
-        return conns;
-    }
-
-private:
-    std::map<int64_t, Connection> m_connections;
-    mutable std::mutex            m_connection_lock;
-    int64_t                       m_id_gen {1};
-};
-
-Manager manager;
+HttpSql::ConnectionManager manager;
 }
 
 //
 // Public API functions
 //
 
-// static
-HttpResponse HttpSql::connect(const HttpRequest& request)
+namespace HttpSql
+{
+HttpResponse connect(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
     ConnectionConfig config;
@@ -511,19 +428,19 @@ HttpResponse HttpSql::connect(const HttpRequest& request)
 }
 
 // static
-HttpResponse HttpSql::show_connection(const HttpRequest& request)
+HttpResponse show_connection(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), request.uri_part(1)));
 }
 
 // static
-HttpResponse HttpSql::show_all_connections(const HttpRequest& request)
+HttpResponse show_all_connections(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, all_connections_to_json(request.host(), get_connections()));
 }
 
 // static
-HttpResponse HttpSql::query(const HttpRequest& request)
+HttpResponse query(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
     std::string sql;
@@ -569,7 +486,7 @@ HttpResponse HttpSql::query(const HttpRequest& request)
 }
 
 // static
-HttpResponse HttpSql::result(const HttpRequest& request)
+HttpResponse result(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());
     std::string err;
@@ -593,7 +510,7 @@ HttpResponse HttpSql::result(const HttpRequest& request)
 }
 
 // static
-HttpResponse HttpSql::disconnect(const HttpRequest& request)
+HttpResponse disconnect(const HttpRequest& request)
 {
     std::string err;
     int64_t id;
@@ -614,7 +531,7 @@ HttpResponse HttpSql::disconnect(const HttpRequest& request)
 }
 
 // static
-HttpResponse HttpSql::read_query_result(int64_t id, const std::string& host, const std::string& self,
+HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
                                         const std::string& query_id, int64_t page_size)
 {
     bool more_results = false;
@@ -665,7 +582,7 @@ HttpResponse HttpSql::read_query_result(int64_t id, const std::string& host, con
 //
 
 // static
-bool HttpSql::is_query(const std::string& id)
+bool is_query(const std::string& id)
 {
     bool rval = false;
     auto pos = id.find('-');
@@ -681,19 +598,19 @@ bool HttpSql::is_query(const std::string& id)
 }
 
 // static
-bool HttpSql::is_connection(const std::string& id)
+bool is_connection(const std::string& id)
 {
     return manager.is_connection(strtol(id.c_str(), nullptr, 10));
 }
 
 // static
-std::vector<int64_t> HttpSql::get_connections()
+std::vector<int64_t> get_connections()
 {
     return manager.get_connections();
 }
 
 // static
-int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* err)
+int64_t create_connection(const ConnectionConfig& config, std::string* err)
 {
     int64_t id = 0;
     MYSQL* conn = mysql_init(nullptr);
@@ -727,7 +644,7 @@ int64_t HttpSql::create_connection(const ConnectionConfig& config, std::string* 
 }
 
 // static
-int64_t HttpSql::execute_query(int64_t id, const std::string& sql, std::string* err)
+int64_t execute_query(int64_t id, const std::string& sql, std::string* err)
 {
     int64_t query_id = 0;
     auto c = manager.get(id);
@@ -767,7 +684,7 @@ int64_t HttpSql::execute_query(int64_t id, const std::string& sql, std::string* 
 
 // static
 std::vector<std::unique_ptr<HttpSql::Result>>
-HttpSql::read_result(int64_t id, int64_t rows_max, bool* more_results)
+read_result(int64_t id, int64_t rows_max, bool* more_results)
 {
     std::vector<std::unique_ptr<HttpSql::Result>> results;
     auto c = manager.get(id);
@@ -793,9 +710,9 @@ HttpSql::read_result(int64_t id, int64_t rows_max, bool* more_results)
     return results;
 }
 
-// static
-void HttpSql::close_connection(int64_t id)
+void close_connection(int64_t id)
 {
     auto c = manager.get(id);
     mysql_close(c.conn);
+}
 }

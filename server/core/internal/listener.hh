@@ -14,6 +14,9 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/listener.hh>
+
+#include <set>
+#include <maxscale/config2.hh>
 #include <maxscale/workerlocal.hh>
 
 class Service;

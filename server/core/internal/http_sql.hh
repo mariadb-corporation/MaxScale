@@ -21,61 +21,57 @@
 
 #include <maxscale/server.hh>
 
-class HttpSql
+namespace HttpSql
 {
-public:
+struct Result
+{
+    virtual ~Result() = default;
 
-    struct Result
-    {
-        virtual ~Result() = default;
-
-        virtual json_t* to_json() const = 0;
-    };
-
-    static HttpResponse connect(const HttpRequest& request);
-
-    static HttpResponse show_connection(const HttpRequest& request);
-
-    static HttpResponse show_all_connections(const HttpRequest& request);
-
-    static HttpResponse query(const HttpRequest& request);
-
-    static HttpResponse result(const HttpRequest& request);
-
-    static HttpResponse disconnect(const HttpRequest& request);
-
-    static bool is_query(const std::string& id);
-
-    static bool is_connection(const std::string& id);
-
-private:
-
-    struct ConnectionConfig
-    {
-        std::string    host;
-        int            port;
-        std::string    user;
-        std::string    password;
-        std::string    db;
-        int64_t        timeout = 10;
-        mxb::SSLConfig ssl;
-    };
-
-    // Helper for reading query results
-    static HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
-                                          const std::string& query_id, int64_t page_size);
-
-    //
-    // The functions that implement the connection creation and query execution
-    //
-
-    static std::vector<int64_t> get_connections();
-
-    static int64_t create_connection(const ConnectionConfig& config, std::string* err);
-
-    static int64_t execute_query(int64_t id, const std::string& sql, std::string* err);
-
-    static std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max, bool* more_results);
-
-    static void close_connection(int64_t id);
+    virtual json_t* to_json() const = 0;
 };
+
+HttpResponse connect(const HttpRequest& request);
+
+HttpResponse show_connection(const HttpRequest& request);
+
+HttpResponse show_all_connections(const HttpRequest& request);
+
+HttpResponse query(const HttpRequest& request);
+
+HttpResponse result(const HttpRequest& request);
+
+HttpResponse disconnect(const HttpRequest& request);
+
+bool is_query(const std::string& id);
+
+bool is_connection(const std::string& id);
+
+struct ConnectionConfig
+{
+    std::string    host;
+    int            port;
+    std::string    user;
+    std::string    password;
+    std::string    db;
+    int64_t        timeout = 10;
+    mxb::SSLConfig ssl;
+};
+
+// Helper for reading query results
+HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
+                               const std::string& query_id, int64_t page_size);
+
+//
+// The functions that implement the connection creation and query execution
+//
+
+std::vector<int64_t> get_connections();
+
+int64_t create_connection(const ConnectionConfig& config, std::string* err);
+
+int64_t execute_query(int64_t id, const std::string& sql, std::string* err);
+
+std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max, bool* more_results);
+
+void close_connection(int64_t id);
+}
