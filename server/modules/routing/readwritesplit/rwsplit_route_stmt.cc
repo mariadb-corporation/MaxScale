@@ -171,11 +171,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
 
         // If the current master connection is still open, we must close it to prevent the transaction from
         // being accidentally committed whenever a new transaction is started on it.
-        if (m_current_master && m_current_master->in_use())
-        {
-            m_current_master->close();
-            m_current_master->set_close_reason("Closed due to transaction migration");
-        }
+        discard_master_connection("Closed due to transaction migration");
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
@@ -187,12 +183,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         MXS_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
         send_readonly_error();
-
-        if (m_current_master && m_current_master->in_use())
-        {
-            m_current_master->close();
-            m_current_master->set_close_reason("The original master is not available");
-        }
+        discard_master_connection("The original master is not available");
     }
     else if (res.route_target == TARGET_MASTER
              && (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count()))
@@ -915,11 +906,20 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            !is_locked_to_master();
 }
 
+void RWSplitSession::discard_master_connection(const std::string& error)
+{
+    if (m_current_master && m_current_master->in_use())
+    {
+        m_current_master->close();
+        m_current_master->set_close_reason(error);
+        m_qc.master_replaced();
+    }
+}
+
 void RWSplitSession::replace_master(RWBackend* target)
 {
+    discard_master_connection("The original master is not available");
     m_current_master = target;
-
-    m_qc.master_replaced();
 }
 
 bool RWSplitSession::should_migrate_trx(RWBackend* target)

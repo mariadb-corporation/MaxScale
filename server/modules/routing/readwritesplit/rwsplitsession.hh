@@ -174,6 +174,7 @@ private:
     bool is_valid_for_master(const mxs::RWBackend* master);
     bool should_replace_master(mxs::RWBackend* target);
     void replace_master(mxs::RWBackend* target);
+    void discard_master_connection(const std::string& error);
     bool should_migrate_trx(mxs::RWBackend* target);
     bool start_trx_migration(mxs::RWBackend* target, GWBUF* querybuf);
     void log_master_routing_failure(bool found,
