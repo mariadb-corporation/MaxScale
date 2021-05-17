@@ -665,6 +665,10 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 
         MXS_FREE(qtypestr);
     }
+    else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
+    {
+        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
+    }
     else
     {
         MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", m_route_info.load_data_sent());
@@ -981,8 +985,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         {
             /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
             m_route_info.set_load_data_state(QueryClassifier::LOAD_DATA_END);
-            MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                     m_route_info.load_data_sent());
         }
     }
     else if (len > MYSQL_HEADER_LEN)

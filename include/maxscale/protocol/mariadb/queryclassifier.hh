@@ -119,6 +119,14 @@ public:
         }
 
         /**
+         * Check if a LOAD DATA LOCAL INFILE is in progress
+         */
+        bool loading_data() const
+        {
+            return m_load_data_state != LOAD_DATA_INACTIVE;
+        }
+
+        /**
          * Get number of bytes send in the LOAD DATA LOCAL INFILE
          */
         uint64_t load_data_sent() const

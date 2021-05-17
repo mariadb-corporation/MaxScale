@@ -1066,15 +1066,19 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
-    MXB_AT_DEBUG(uint32_t ps_id = extract_binary_ps_id(buffer.get()));
-    mxb_assert(!mxs_mysql_is_ps_command(cmd)
-               || ps_id == route_info().stmt_id()
-               || ps_id == MARIADB_PS_DIRECT_EXEC_ID);
-
     bool attempting_causal_read = false;
 
-    if (!is_locked_to_master() && !route_info().large_query())
+    if (route_info().large_query() || route_info().loading_data())
     {
+        // Never store multi-packet queries or data sent during LOAD DATA LOCAL INFILE
+        store = false;
+    }
+    else if (!is_locked_to_master())
+    {
+        mxb_assert(!mxs_mysql_is_ps_command(cmd)
+                   || extract_binary_ps_id(buffer.get()) == route_info().stmt_id()
+                   || extract_binary_ps_id(buffer.get()) == MARIADB_PS_DIRECT_EXEC_ID);
+
         // Attempt a causal read only when the query is routed to a slave
         attempting_causal_read = target->is_slave()
             && ((m_config.causal_reads == CausalReads::LOCAL && !m_gtid_pos.empty())
