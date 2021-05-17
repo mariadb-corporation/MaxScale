@@ -1,9 +1,7 @@
 <template>
     <div class="fill-height">
         <div v-if="showGuide" ref="header" class="pb-2 result-header">
-            <span>
-                Click Run button to see query results
-            </span>
+            <span> Click Run button to see query results </span>
         </div>
         <div v-else class="result-table-wrapper fill-height">
             <div ref="header" class="pb-2 result-header-nav d-flex align-center">
@@ -36,6 +34,7 @@
                         :key="name"
                         :href="`#${name}`"
                         class="tab-btn px-3 text-uppercase"
+                        :class="{ 'tab-btn--err-tab': getErrTabName() === name }"
                         active-class="tab-btn--active font-weight-medium"
                     >
                         {{ name }}
@@ -46,7 +45,7 @@
                 v-if="loading_query_result"
                 :loading="loading_query_result"
                 type="table: table-thead, table-tbody"
-                :max-height="`${dynDim.height - headerHeight}px`"
+                :height="dynDim.height - headerHeight"
             />
             <template v-for="(resSet, name) in resultSets" v-else>
                 <v-slide-x-transition :key="name">
@@ -136,11 +135,26 @@ export default {
             // After user clicks Run to send query, set isMounted to false to show skeleton-loader
             if (v && this.isMounted) this.isMounted = false
         },
+        resultSets: {
+            deep: true,
+            handler() {
+                if (this.getErrTabName()) this.activeResultSet = this.getErrTabName()
+            },
+        },
     },
     mounted() {
         this.setHeaderHeight()
     },
     methods: {
+        /**
+         * This function checks for result set having syntax error or error message
+         * @returns {String} Return resultSets key tab name. e.g. Result_set_0
+         */
+        getErrTabName() {
+            for (const key in this.resultSets) {
+                if (this.$typy(this.resultSets[key], 'errno').isDefined) return key
+            }
+        },
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
@@ -167,6 +181,12 @@ export default {
             color: $primary !important;
             &::before {
                 opacity: 0.12;
+            }
+        }
+        &--err-tab {
+            color: $error !important;
+            &:last-of-type {
+                border-color: $error !important;
             }
         }
     }
