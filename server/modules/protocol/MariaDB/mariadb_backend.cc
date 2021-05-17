@@ -2299,29 +2299,25 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 
     mxb_assert(!session_is_load_active(m_session) || m_reply.state() == ReplyState::LOAD_DATA_END);
 
-    // TODO: This check should be redundant due to the fast path for the trailing parts of large packets.
-    if (!m_large_query)
+    m_reply.clear();
+    m_reply.set_command(query.command);
+
+    // Track the ID that the client protocol assigned to this query. It is used to verify that the result
+    // from this backend matches the one that was sent upstream.
+    m_current_id = query.id;
+
+    if (mxs_mysql_command_will_respond(m_reply.command()))
     {
-        m_reply.clear();
-        m_reply.set_command(query.command);
+        set_reply_state(ReplyState::START);
+    }
 
-        // Track the ID that the client protocol assigned to this query. It is used to verify that the result
-        // from this backend matches the one that was sent upstream.
-        m_current_id = query.id;
-
-        if (mxs_mysql_command_will_respond(m_reply.command()))
-        {
-            set_reply_state(ReplyState::START);
-        }
-
-        if (m_reply.command() == MXS_COM_STMT_EXECUTE)
-        {
-            m_opening_cursor = query.opening_cursor;
-        }
-        else if (m_reply.command() == MXS_COM_STMT_FETCH)
-        {
-            set_reply_state(ReplyState::RSET_ROWS);
-        }
+    if (m_reply.command() == MXS_COM_STMT_EXECUTE)
+    {
+        m_opening_cursor = query.opening_cursor;
+    }
+    else if (m_reply.command() == MXS_COM_STMT_FETCH)
+    {
+        set_reply_state(ReplyState::RSET_ROWS);
     }
 }
 
