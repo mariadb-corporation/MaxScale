@@ -1898,7 +1898,13 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             m_reply.set_is_ok(true);
             process_ok_packet(it, end);
-            mxb_assert(m_reply.state() == ReplyState::DONE);
+
+            if (m_reply.state() != ReplyState::DONE)
+            {
+                // The LOAD DATA LOCAL INFILE completed but we're expecting more results. Go back to the START
+                // state in order to process the next result.
+                set_reply_state(ReplyState::START);
+            }
         }
         else
         {
