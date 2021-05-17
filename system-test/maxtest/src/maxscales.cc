@@ -240,10 +240,10 @@ long unsigned Maxscales::get_maxscale_memsize(int m)
     return mem;
 }
 
-StringSet Maxscales::get_server_status(const std::string& name, int m)
+StringSet Maxscales::get_server_status(const std::string& name)
 {
     StringSet rval;
-    auto res = maxctrl("api get servers/" + name + " data.attributes.state", m);
+    auto res = maxctrl("api get servers/" + name + " data.attributes.state");
 
     if (res.rc == 0 && res.output.length() > 2)
     {
@@ -331,15 +331,15 @@ const char* Maxscales::ip4(int i) const
     return Nodes::ip4(i);
 }
 
-const std::string& Maxscales::node_name(int i) const
+const std::string& Maxscales::node_name() const
 {
-    return node(i)->m_name;
+    return node(0)->m_name;
 }
 
-mxt::CmdResult Maxscales::maxctrl(const string& cmd, int m, bool sudo)
+mxt::CmdResult Maxscales::maxctrl(const std::string& cmd, bool sudo)
 {
     using CmdPriv = mxt::VMNode::CmdPriv;
-    return node(m)->run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return node(0)->run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Maxscales::use_valgrind() const
@@ -534,14 +534,13 @@ mxt::CmdResult MaxScale::curl_rest_api(const std::string& path)
                                     m_rest_user.c_str(), m_rest_pw.c_str(),
                                     m_rest_ip.c_str(), m_rest_port.c_str(),
                                     path.c_str());
-    auto res = m_maxscales->ssh_output(cmd, m_node_ind, true);
+    auto res = m_maxscales->ssh_output(cmd, 0, true);
     return res;
 }
 
-MaxScale::MaxScale(Maxscales* maxscales, SharedData& shared, int node_ind)
+MaxScale::MaxScale(Maxscales* maxscales, SharedData& shared)
     : m_maxscales(maxscales)
     , m_shared(shared)
-    , m_node_ind(node_ind)
 {
 }
 
@@ -821,13 +820,13 @@ void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& exp
 
 void MaxScale::start()
 {
-    auto res = m_maxscales->start_maxscale(m_node_ind);
+    auto res = m_maxscales->start_maxscale(0);
     logger().expect(res == 0, "MaxScale start failed, error %i.", res);
 }
 
 void MaxScale::stop()
 {
-    auto res = m_maxscales->stop_maxscale(m_node_ind);
+    auto res = m_maxscales->stop_maxscale(0);
     logger().expect(res == 0, "MaxScale stop failed, error %i.", res);
 }
 
@@ -851,7 +850,7 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
     }
 
-    conn->open(m_maxscales->ip(m_node_ind), m_maxscales->rwsplit_port[m_node_ind], db);
+    conn->open(m_maxscales->ip(0), m_maxscales->rwsplit_port[0], db);
     return conn;
 }
 
@@ -870,12 +869,12 @@ TestLogger& MaxScale::logger()
 
 mxt::CmdResult MaxScale::maxctrl(const string& cmd)
 {
-    return m_maxscales->maxctrl(cmd, m_node_ind);
+    return m_maxscales->maxctrl(cmd);
 }
 
 const std::string& MaxScale::name() const
 {
-    return m_maxscales->node_name(m_node_ind);
+    return m_maxscales->node_name();
 }
 
 void MaxScale::alter_service(const string& svc_name, const string& setting, const string& value)

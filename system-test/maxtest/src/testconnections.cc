@@ -633,8 +633,10 @@ bool TestConnections::read_test_info()
         if (test_labels.count("BACKEND_SSL") > 0)
         {
             backend_ssl = true;
-            // Enable ssl for MaxScale as well.
-            // TODO: think of adding another label for this.
+        }
+
+        if (test_labels.count("LISTENER_SSL") > 0)
+        {
             maxscale_ssl = true;
         }
     }
@@ -1598,7 +1600,7 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
 
 StringSet TestConnections::get_server_status(const std::string& name, int m)
 {
-    return maxscales->get_server_status(name, m);
+    return maxscales->get_server_status(name);
 }
 
 void TestConnections::check_current_operations(int m, int value)
@@ -1607,7 +1609,7 @@ void TestConnections::check_current_operations(int m, int value)
     {
         auto res = maxctrl("api get servers/server"
                            + std::to_string(i + 1)
-                           + " data.attributes.statistics.active_operations", m);
+                           + " data.attributes.statistics.active_operations");
 
         expect(std::stoi(res.output) == value,
                "Current no. of operations is not %d for server%d", value, i + 1);
@@ -1620,7 +1622,7 @@ void TestConnections::check_current_connections(int m, int value)
     {
         auto res = maxctrl("api get servers/server"
                            + std::to_string(i + 1)
-                           + " data.attributes.statistics.connections", m);
+                           + " data.attributes.statistics.connections");
 
         expect(std::stoi(res.output) == value,
                "Current no. of conns is not %d for server%d", value, i + 1);
@@ -1630,7 +1632,7 @@ void TestConnections::check_current_connections(int m, int value)
 void TestConnections::check_current_persistent_connections(int m, const std::string& name, int value)
 {
     auto res = maxctrl("api get servers/" + name
-                       + " data.attributes.statistics.persistent_connections", m);
+                       + " data.attributes.statistics.persistent_connections");
 
     expect(atoi(res.output.c_str()) == value,
            "Current no. of persistent conns is '%s' not '%d' for %s",
@@ -2029,7 +2031,7 @@ bool TestConnections::initialize_nodes()
                 new_maxscale->set_ssl(maxscale_ssl);
 
                 mxs_storage = new_maxscale.release();
-                mxs_storage_b = std::make_unique<mxt::MaxScale>(mxs_storage, m_shared, 0);
+                mxs_storage_b = std::make_unique<mxt::MaxScale>(mxs_storage, m_shared);
 
                 auto prepare_maxscales = [mxs_storage]() {
                         return mxs_storage->prepare_for_test();
