@@ -1121,10 +1121,9 @@ private:
 
                             if (name != "$set" && name != "$unset")
                             {
-                                MXS_ERROR("'%s' contains other than the supported '$set' and '$unset' "
-                                          "operations.", bsoncxx::to_json(doc).c_str());
-                                kind = INVALID;
-                                break;
+                                stringstream ss;
+                                ss << "Currently the only supported update operators are $set and $unset.";
+                                throw SoftError(ss.str(), error::COMMAND_FAILED);
                             }
                             else
                             {
@@ -1178,6 +1177,8 @@ private:
                 rv += ", ";
             }
 
+            bool add_value = true;
+
             if (element.key().compare("$set") == 0)
             {
                 rv += "JSON_SET(doc, ";
@@ -1185,6 +1186,7 @@ private:
             else if (element.key().compare("$unset") == 0)
             {
                 rv += "JSON_REMOVE(doc, ";
+                add_value = false;
             }
             else
             {
@@ -1203,8 +1205,13 @@ private:
 
                 s += "'$.";
                 s += field.key().data();
-                s += "', ";
-                s += mxsmongo::to_value(field);
+                s += "'";
+
+                if (add_value)
+                {
+                    s += ", ";
+                    s += mxsmongo::to_value(field);
+                }
             }
 
             rv += s;

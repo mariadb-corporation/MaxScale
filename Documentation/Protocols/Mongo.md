@@ -363,7 +363,10 @@ Field | Type | Description
 ------|------|------------
 q | document | The query that matches documents to update.
 u | document | The modifications to apply. See _behavior_ below for details.
-multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false liit the update to one document that meets the query criteria. Defaults to `false`.
+multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false` limit the update to one document that meets the query criteria. Defaults to `false`.
+
+Note that currently it is possible to set `multi` to `true` in conjunction
+with a _replacement-style_ update, even though MongoDB rejects that.
 
 All other fields are ignored, with the exception of `upsert` that if present
 with the value of `true` will cause the command to fail.

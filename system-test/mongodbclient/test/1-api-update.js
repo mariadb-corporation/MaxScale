@@ -11,7 +11,7 @@
  * Public License.
  */
 
-// https://docs.mongodb.com/manual/reference/command/insert/
+// https://docs.mongodb.com/manual/reference/command/update/
 
 const assert = require('assert');
 const test = require('./mongotest');
@@ -96,6 +96,14 @@ describe(name, function () {
     });
 
     it('A replacement update does not overwrite the id.', async function () {
+        // MongoDB considers it an error if you try to change the '_id' with
+        // a replacement document. To detect that we would have to check whether
+        // a replacement document has the '_id' field (trivial) but the error
+        // must be generated only at clientReply() time, so that 'ordered' works
+        // as expected. That would be somewhat messy and as it surely must be
+        // an edge-case to rely upon that to cause an error, we will just ignore
+        // an '_id' field.
+
         await drop();
 
         var from = {
@@ -124,6 +132,187 @@ describe(name, function () {
 
         assert.equal(to.a, 2);
         assert.equal(to._id, from._id);
+    });
+
+    it('Handles $set.', async function () {
+        await deleteAll();
+
+        var original = {
+            a: 1,
+            b: 2,
+            c: 3,
+            nested: {
+                d: 4
+            },
+            _id: mongodb.ObjectId()
+        };
+
+        var command = {insert: name, documents: [original]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        // Single value.
+        command = {update: name, updates: [{q: {}, u: { $set: { a: 11 }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Multiple values.
+        command = {update: name, updates: [{q: {}, u: { $set: { b: 21, c: 22 }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Nested value
+        command = {update: name, updates: [{q: {}, u: { $set: { "nested.d": 34 }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+    it('Handles $unset.', async function () {
+        await deleteAll();
+
+        var original = {
+            a: 1,
+            b: 2,
+            c: 3,
+            nested: {
+                d: 4
+            },
+            _id: mongodb.ObjectId()
+        };
+
+        var command = {insert: name, documents: [original]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        // Single value.
+        command = {update: name, updates: [{q: {}, u: { $unset: { a: "" }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Multiple values.
+        command = {update: name, updates: [{q: {}, u: { $unset: { b: "", c: "" }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Nested value
+        command = {update: name, updates: [{q: {}, u: { $unset: { "nested.d": "" }}}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+    it('Errors on unsupported operator.', async function () {
+        var command = {update: name, updates: [{q: {}, u: { $inc: { a: 1 }}}]};
+        var rv = await mxs.ntRunCommand(command);
+
+        assert.equal(rv.code, error.COMMAND_FAILED);
+    });
+    it('Errors on upsert.', async function () {
+        var command = {update: name, updates: [{q: {}, u: { }, upsert: true}]};
+        var rv = await mxs.ntRunCommand(command);
+
+        assert.equal(rv.code, error.COMMAND_FAILED);
+    });
+
+    it('Can update multiple documents.', async function () {
+        deleteAll();
+
+        var originals = [
+            {
+                a: 1,
+                b: 2,
+                _id: mongodb.ObjectId()
+            },
+            {
+                a: 1,
+                b: 3,
+                _id: mongodb.ObjectId()
+            }
+        ];
+
+        var command = {insert: name, documents: originals};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var command = {update: name, updates: [{q: {}, u: { "$set": { b: 4 }}, multi: true }]};
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        console.log(JSON.stringify(rv1));
+        console.log(JSON.stringify(rv2));
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.equal(rv1.cursor.firstBatch[0].b, 4);
+        assert.equal(rv1.cursor.firstBatch[1].b, 4);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+    it('Can update with query.', async function () {
+        deleteAll();
+
+        var originals = [
+            {
+                a: 1,
+                b: 1,
+                _id: mongodb.ObjectId()
+            },
+            {
+                a: 2,
+                b: 1,
+                _id: mongodb.ObjectId()
+            },
+            {
+                a: 3,
+                b: 1,
+                _id: mongodb.ObjectId()
+            }
+        ];
+
+        var command = {insert: name, documents: originals};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var command = {update: name, updates: [{q: {a: 2}, u: { b: 4 }}]};
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var rv1 = await mng.runCommand({find: name});
+        var rv2 = await mxs.runCommand({find: name});
+
+        assert.notEqual(rv1.cursor.firstBatch[0].b, 4);
+        assert.equal(rv1.cursor.firstBatch[1].b, 4);
+        assert.notEqual(rv1.cursor.firstBatch[2].b, 4);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
     });
 
     after(function () {
