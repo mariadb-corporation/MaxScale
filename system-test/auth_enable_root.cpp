@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Connecting using 'root'@'%%'\n");
     conn = open_conn(Test->maxscales->rwsplit_port[0],
-                     Test->maxscales->ip4(0),
+                     Test->maxscales->ip4(),
                      (char*) "root",
                      (char*)  "skysqlroot",
                      Test->maxscale_ssl);

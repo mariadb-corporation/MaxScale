@@ -248,7 +248,7 @@ void test_connecting(TestConnections& test,
                      const char* zHost,
                      bool should_be_able_to)
 {
-    bool could_connect = can_connect_to_maxscale(test.maxscales->ip4(0),
+    bool could_connect = can_connect_to_maxscale(test.maxscales->ip4(),
                                                  test.maxscales->rwsplit_port[0],
                                                  zUser,
                                                  zPassword);

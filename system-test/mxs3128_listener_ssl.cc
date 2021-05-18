@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     test.expect(conn.connect(), "Connection without SSL should work: %s", conn.error());
     test.expect(conn.query("select 1"), "Query should work: %s", conn.error());
 
-    std::string home = test.maxscales->access_homedir(0);
+    std::string home = test.maxscales->access_homedir();
     std::string ssl_key = home + "/certs/server-key.pem";
     std::string ssl_cert = home + "/certs/server-cert.pem";
     std::string ssl_ca = home + "/certs/ca.pem";

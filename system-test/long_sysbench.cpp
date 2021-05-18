@@ -23,9 +23,9 @@ int main(int argc, char* argv[])
     port[1] = Test->maxscales->readconn_master_port[0];
     port[2] = Test->maxscales->readconn_slave_port[0];
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4(0));
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
 
-    auto mxs_ip = Test->maxscales->ip4(0);
+    auto mxs_ip = Test->maxscales->ip4();
     sprintf(&sys1[0], SYSBENCH_PREPARE, mxs_ip);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);

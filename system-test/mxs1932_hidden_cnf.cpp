@@ -33,7 +33,7 @@ int main(int argc, char** argv)
                                "mkdir -p /etc/maxscale.cnf.d/;"
                                "mv %s/hidden.cnf /etc/maxscale.cnf.d/.hidden.cnf;"
                                "chown -R maxscale:maxscale /etc/maxscale.cnf.d/",
-                               test.maxscales->access_homedir(0));
+                               test.maxscales->access_homedir());
 
     // Make sure the hidden configuration is not read and that MaxScale starts up
     test.expect(test.maxscales->restart_maxscale() == 0, "Starting MaxScale should succeed");

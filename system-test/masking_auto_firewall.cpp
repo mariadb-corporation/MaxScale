@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
 
     std::string json_file("/masking_auto_firewall.json");
     std::string from = test_dir + json_file;
-    std::string to = test.maxscales->access_homedir(0) + json_file;
+    std::string to = test.maxscales->access_homedir() + json_file;
 
     if (test.maxscales->copy_to_node(0, from.c_str(), to.c_str()) == 0)
     {

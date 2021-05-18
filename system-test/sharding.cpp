@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     test.repl->close_connections();
     test.stop_timeout();
     sleep(6); // The router is configured to refresh the shard map if older than 5 seconds.
-    auto mxs_ip = test.maxscales->ip4(0);
+    auto mxs_ip = test.maxscales->ip4();
 
     // Generate a table for each user on the common db. The tables should be on different backends since
     // each user only has access to one node.

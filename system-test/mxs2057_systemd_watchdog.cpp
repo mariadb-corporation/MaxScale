@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
     std::string lua_file("/infinite_loop.lua");
     std::string from = test_dir + lua_file;
-    std::string to = test.maxscales->access_homedir(0) + lua_file;
+    std::string to = test.maxscales->access_homedir() + lua_file;
 
     test.maxscales->copy_to_node(0, from.c_str(), to.c_str());
     test.maxscales->ssh_node(0, (std::string("chmod a+r ") + to).c_str(), true);

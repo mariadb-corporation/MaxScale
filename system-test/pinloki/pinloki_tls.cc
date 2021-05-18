@@ -20,14 +20,14 @@ public:
 
         auto change_master = change_master_sql(test.repl->ip(0), test.repl->port[0]);
         change_master += ", MASTER_SSL=1, MASTER_SSL_CA='"s
-            + test.maxscales->access_homedir(0)
+            + test.maxscales->access_homedir()
             + "/certs/ca.pem'";
 
         test.expect(maxscale.query(change_master), "CHANGE MASTER failed: %s", maxscale.error());
         test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
         sync(master, maxscale);
 
-        slave.query(change_master_sql(test.maxscales->ip(0), test.maxscales->rwsplit_port[0]));
+        slave.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port[0]));
         slave.query("START SLAVE");
         sync(maxscale, slave);
     }

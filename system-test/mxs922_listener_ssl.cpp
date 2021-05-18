@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 
     MYSQL* conn = open_conn(test->maxscales->readconn_master_port[0],
-                            test->maxscales->ip4(0),
+                            test->maxscales->ip4(),
                             test->maxscales->user_name,
                             test->maxscales->password,
                             true);

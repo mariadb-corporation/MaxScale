@@ -7,7 +7,7 @@
 
 bool try_connect(TestConnections& test)
 {
-    const char* ip = test.maxscales->ip4(0);
+    const char* ip = test.maxscales->ip4();
     const char* user = test.maxscales->user_name.c_str();
     const char* pw = test.maxscales->password.c_str();
     const char* db = "test_db";
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Connecting to RWSplit again to recreate 'test_db' db");
     MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
-                           test.maxscales->ip4(0),
+                                  test.maxscales->ip4(),
                            test.maxscales->user_name,
                            test.maxscales->password,
                            test.maxscale_ssl);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Trying simple operations with t1 ");
     conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
-                           test.maxscales->ip4(0),
+                           test.maxscales->ip4(),
                            test.maxscales->user_name,
                            test.maxscales->password,
                            test.maxscale_ssl);

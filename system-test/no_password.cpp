@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto mxs_ip = test.maxscales->ip4(0);
+    auto mxs_ip = test.maxscales->ip4();
     MYSQL* mysql = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "testuser", "", false);
     test.add_result(mysql_errno(mysql) == 0, "Connecting to MaxScale should fail");
     test.add_result(strstr(mysql_error(mysql), "using password: NO") == NULL,

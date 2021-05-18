@@ -82,7 +82,7 @@ void Config::destroy_server(int num)
 void Config::create_server(int num)
 {
     test_->set_timeout(120);
-    auto homedir = test_->maxscales->access_homedir(0);
+    auto homedir = test_->maxscales->access_homedir();
     char ssl_line[200 + 3 * strlen(homedir)] = "";
     if (test_->backend_ssl)
     {
@@ -187,7 +187,7 @@ void Config::create_ssl_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
 
-    auto homedir = test_->maxscales->access_homedir(0);
+    auto homedir = test_->maxscales->access_homedir();
     test_->set_timeout(120);
     test_->maxscales->ssh_node_f(0,
                                  true,

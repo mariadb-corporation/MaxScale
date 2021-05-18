@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
 
     port = Test->maxscales->rwsplit_port[0];
-    IP = Test->maxscales->ip4(0);
+    IP = Test->maxscales->ip4();
 
     //port = 3306;
     //IP = Test->repl->IP[0];

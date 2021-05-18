@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->ip4(i), i);
         fprintf(f, "%s node_%03d\n", Test->repl->ip4(i), i);
     }
-    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->ip4(0));
-    fprintf(f, "%s maxscale\n", Test->maxscales->ip4(0));
+    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->ip4());
+    fprintf(f, "%s maxscale\n", Test->maxscales->ip4());
     fclose(f);
 
     Test->tprintf(
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
-    auto mxs_homedir = Test->maxscales->access_homedir(0);
+    auto mxs_homedir = Test->maxscales->access_homedir();
     Test->maxscales->copy_to_node_legacy("hosts", mxs_homedir, 0);
     Test->maxscales->ssh_node_f(0, true, "cp %s/hosts /etc/", mxs_homedir);
 

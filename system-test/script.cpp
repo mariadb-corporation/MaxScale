@@ -40,7 +40,7 @@
 void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* expected_filename)
 {
     Test->set_timeout(200);
-    auto homedir = Test->maxscales->access_homedir(0);
+    auto homedir = Test->maxscales->access_homedir();
     Test->maxscales->ssh_node_f(0,
                                 true,
                                 "cd %s; truncate -s 0 script_output; \
@@ -102,8 +102,8 @@ int main(int argc, char* argv[])
     auto gal_ip2 = Test->galera->ip_private(2);
     auto gal_ip3 = Test->galera->ip_private(3);
 
-    auto homedir = Test->maxscales->access_homedir(0);
-    auto sudo = Test->maxscales->access_sudo(0);
+    auto homedir = Test->maxscales->access_homedir();
+    auto sudo = Test->maxscales->access_sudo();
 
     Test->tprintf("Creating script on Maxscale machine");
     Test->maxscales->ssh_node_f(0, false,
@@ -206,9 +206,9 @@ int main(int argc, char* argv[])
     char str[4096 + 2048];
     sprintf(str,
             "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
-            Test->maxscales->sshkey(0),
-            Test->maxscales->access_user(0),
-            Test->maxscales->ip4(0),
+            Test->maxscales->sshkey(),
+            Test->maxscales->access_user(),
+            Test->maxscales->ip4(),
             homedir);
     Test->add_result(system(str), "Error copying script to VM");
 

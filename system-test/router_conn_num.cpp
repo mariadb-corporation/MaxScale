@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
     mysql_close(conn);
     Test->tprintf("Table t1 is created\n");
     const char* mxs_ip = Test->maxscales->ip_private(0);
-    const char* mxs_host = Test->maxscales->hostname(0);
+    const char* mxs_host = Test->maxscales->hostname();
 
     for (i = 0; i < conn_N; i++)
     {

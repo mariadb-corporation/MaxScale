@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto mxs_ip = test.maxscales->ip4(0);
+    auto mxs_ip = test.maxscales->ip4();
     auto node_ip = test.repl->ip4(0);
 
     cout << "Non-existent database" << endl;

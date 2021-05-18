@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     int i, j;
 
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4(0));
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
 
     Test->set_timeout(2000);
 

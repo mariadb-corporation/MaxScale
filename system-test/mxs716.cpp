@@ -19,7 +19,7 @@ void run_test(TestConnections* Test, const char* database)
     Test->tprintf("Trying to connect using 'table_privilege'@'%%' to database '%s'", database);
 
     MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port[0],
-                               Test->maxscales->ip4(0),
+                               Test->maxscales->ip4(),
                                database,
                                "table_privilege",
                                "pass",

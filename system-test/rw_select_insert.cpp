@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(120);
     Test->repl->connect();
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4(0));
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
     Test->maxscales->connect_rwsplit(0);
     Test->maxctrl("stop monitor MySQL-Monitor");
 

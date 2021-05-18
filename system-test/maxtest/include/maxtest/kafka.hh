@@ -43,7 +43,7 @@ private:
             " -daemon kafka/config/server.properties"
             " --override listeners=PLAINTEXT://0.0.0.0:9092"
             " --override advertised.listeners=PLAINTEXT://%s:9092;",
-            m_test.maxscales->ip4(0));
+            m_test.maxscales->ip4());
 
         std::string check =
             "kafka/bin/zookeeper-shell.sh localhost:2181"
@@ -134,7 +134,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + std::string(":9092"), err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":9092"), err);
         cnf->set("group.id", "kafkacdc", err);
         cnf->set("enable.auto.commit", "false", err);
         cnf->set("enable.auto.offset.store", "true", err);
@@ -225,7 +225,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4(0) + std::string(":9092"), err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":9092"), err);
         cnf->set("event_cb", &m_logger, err);
         m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
     }

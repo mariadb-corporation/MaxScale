@@ -193,14 +193,14 @@ protected:
 
     Nodes(mxt::SharedData* shared);
 
-    const char* ip4(int i = 0) const;
-    const char* ip6(int i = 0) const;
+    const char* ip4(int i) const;
+    const char* ip6(int i) const;
+    const char* hostname(int i) const;
 
-    const char* hostname(int i = 0) const;
-    const char* access_user(int i = 0) const;
-    const char* access_homedir(int i = 0) const;
-    const char* access_sudo(int i = 0) const;
-    const char* sshkey(int i = 0) const;
+    const char* access_user(int i) const;
+    const char* access_homedir(int i) const;
+    const char* access_sudo(int i) const;
+    const char* sshkey(int i) const;
 
     virtual bool init_ssh_masters();
 

@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
 
     MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0],
-                            test.maxscales->ip4(0),
+                            test.maxscales->ip4(),
                             "insert_only",
                             "insert_only",
                             false);
