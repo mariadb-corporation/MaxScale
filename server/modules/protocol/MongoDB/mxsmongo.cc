@@ -1036,6 +1036,31 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         ss << x.get_date();
         break;
 
+    case bsoncxx::type::k_array:
+        {
+            ss << "JSON_ARRAY(";
+
+            bsoncxx::array::view a = x.get_array();
+
+            bool first = true;
+            for (auto element : a)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
+                ss << element_to_value(element, op);
+            }
+
+            ss << ")";
+        }
+        break;
+
     default:
         {
             // TODO: Mongo deals gracefully with this.

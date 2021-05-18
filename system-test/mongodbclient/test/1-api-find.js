@@ -229,6 +229,33 @@ describe(name, function () {
         assert.equal(rv2.code, error.BAD_VALUE);
     });
 
+    it('Can use arrays as values.', async function () {
+        var documents = [
+            { a: [ 1, 2, 3 ] },
+            { a: [ 2, 3, 4 ] },
+            { a: [ 5, 6, 7 ] },
+        ];
+
+        var n = name + "_array";
+
+        await mng.runCommand({insert: n, documents: documents});
+        await mxs.runCommand({insert: n, documents: documents});
+
+        var filter = {
+            a: {
+                "$eq": [1, 2, 3]
+            }
+        };
+
+        var rv1 = await mng.runCommand({find: n, filter: filter});
+        assert.equal(rv1.cursor.firstBatch.length, 1);
+        var rv2 = await mxs.runCommand({find: n, filter: filter});
+        assert.equal(rv2.cursor.firstBatch.length, 1);
+
+        mng.runCommand({drop: n});
+        mxs.runCommand({drop: n});
+    });
+
     after(function () {
         if (mxs) {
             mxs.close();
