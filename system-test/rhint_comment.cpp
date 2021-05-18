@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char*) "select /* maxscale hintname prepare route to master */ @@server_id;");

@@ -92,7 +92,7 @@ int get_master_server_id(TestConnections& test, int maxscale_ind = 0)
 void basic_test(TestConnections& test)
 {
     test.tprintf("Creating table and inserting data.");
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
 

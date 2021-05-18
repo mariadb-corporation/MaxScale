@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
     }
 
     // Test accessing all databases as the admin.
-    test.maxscales->connect_rwsplit(0);
+    test.maxscales->connect_rwsplit();
     auto conn = test.maxscales->conn_rwsplit[0]; // Is a schemarouter connection.
     test.try_query(conn, "USE %s", common_db);
     for (int i = 0; i < N; i++)

@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     test.set_timeout(200);
 
     test.tprintf("Open session, wait %d seconds and execute a query", first_sleep);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     sleep(first_sleep);
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
 
@@ -34,10 +34,10 @@ int main(int argc, char* argv[])
     test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                     "Session was not closed after %d seconds",
                     second_sleep);
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.tprintf("Open session and execute 10 session commands");
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     for (int i = 0; i < 10; i++)
     {
         test.try_query(test.maxscales->conn_rwsplit[0],
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Execute one more session command");
     execute_query(test.maxscales->conn_rwsplit[0], "set @test=11");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     return test.global_result;
 }

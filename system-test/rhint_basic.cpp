@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(10);
 
     Test->repl->connect();
-    Test->add_result(Test->maxscales->connect_maxscale(0), "Failed to connect to MaxScale\n");
+    Test->add_result(Test->maxscales->connect_maxscale(), "Failed to connect to MaxScale\n");
 
     char server_id[256];
     char server_id_d[256];
@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
 
     Test->set_timeout(10);
 
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->repl->close_connections();
 
     Test->check_maxscale_alive(0);

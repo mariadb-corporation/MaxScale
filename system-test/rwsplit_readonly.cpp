@@ -45,7 +45,7 @@ void test_all_ok(TestConnections* Test)
 void test_basic(TestConnections* Test)
 {
     /** Check that everything is OK before blocking the master */
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     test_all_ok(Test);
 
     /** Block master */
@@ -97,13 +97,13 @@ void test_basic(TestConnections* Test)
 
     /** Close connections and try to create new ones */
     Test->set_timeout(30);
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->tprintf("Opening connections while master is blocked\n");
-    Test->add_result(Test->maxscales->connect_rwsplit(0) == 0,
+    Test->add_result(Test->maxscales->connect_rwsplit() == 0,
                      "Connection to 'fail_instantly' service should fail\n");
-    Test->add_result(Test->maxscales->connect_readconn_master(0) != 0,
+    Test->add_result(Test->maxscales->connect_readconn_master() != 0,
                      "Connection to 'fail_on_write' service should succeed\n");
-    Test->add_result(Test->maxscales->connect_readconn_slave(0) != 0,
+    Test->add_result(Test->maxscales->connect_readconn_slave() != 0,
                      "Connection to 'error_on_write' service should succeed\n");
 
 
@@ -119,21 +119,21 @@ void test_basic(TestConnections* Test)
                                           "SELECT * FROM test.readonly -- error_on_write"),
                      "SELECT to service with 'error_on_write' should succeed\n");
 
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->stop_timeout();
     Test->repl->unblock_node(0);
     sleep(10);
 
     /** Check that everything is OK after unblocking */
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     test_all_ok(Test);
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 }
 
 void test_complex(TestConnections* Test)
 {
     /** Check that everything works before test */
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     test_all_ok(Test);
 
     /** Block master */
@@ -178,7 +178,7 @@ void test_complex(TestConnections* Test)
 
     /** Block slaves */
     Test->stop_timeout();
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->repl->block_node(1);
     Test->repl->block_node(2);
     Test->repl->block_node(3);
@@ -186,7 +186,7 @@ void test_complex(TestConnections* Test)
 
     /** Reconnect to MaxScale */
     Test->set_timeout(30);
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     Test->set_timeout(30);
     Test->tprintf("SELECT to 'fail_on_write'\n");
@@ -244,10 +244,10 @@ void test_complex(TestConnections* Test)
     sleep(10);
 
     /** Reconnect and check that everything works after the test */
-    Test->maxscales->close_maxscale_connections(0);
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->close_maxscale_connections();
+    Test->maxscales->connect_maxscale();
     test_all_ok(Test);
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 }
 
 int main(int argc, char* argv[])
@@ -257,10 +257,10 @@ int main(int argc, char* argv[])
 
     /** Prepare for tests */
     Test->stop_timeout();
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.readonly");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.readonly(id int)");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     Test->repl->connect();
     Test->repl->sync_slaves();

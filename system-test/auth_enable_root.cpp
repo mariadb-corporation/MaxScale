@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     Test->tprintf("Creating 'root'@'%%'\n");
     // global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER 'root'@'%'; SET
@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Dropping 'root'@'%%'\n");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER 'root'@'%%';");
 
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     Test->log_excludes(0, "Failed to add user skysql");
     Test->log_excludes(0, "getaddrinfo failed");

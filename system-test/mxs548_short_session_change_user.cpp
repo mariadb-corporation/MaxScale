@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     test.set_timeout(20);
 
     test.repl->connect();
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     create_t1(test.maxscales->conn_rwsplit[0]);
     test.repl->execute_query_all_nodes("set global max_connections = 2000;");
     test.repl->sync_slaves();
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     test.set_timeout(60);
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1;");
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP USER user@'%%'");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.set_timeout(160);
     test.check_maxscale_alive(0);

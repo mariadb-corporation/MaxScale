@@ -72,7 +72,7 @@ void create_event(TestConnections& test)
 {
     // Create table, enable scheduler and add an event
     test.tprintf("Creating table, inserting data and scheduling an event.");
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     MYSQL* conn = test.maxscales->conn_rwsplit[0];
     const char create_event_query[] = "CREATE EVENT %s ON SCHEDULE EVERY 1 SECOND "
                                       "DO UPDATE test.t1 SET c1 = c1 + 1;";
@@ -93,7 +93,7 @@ void create_event(TestConnections& test)
 
 void delete_event(TestConnections& test)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     MYSQL* conn = test.maxscales->conn_rwsplit[0];
 
     if ((test.try_query(conn, EVENT_SHCEDULER, "OFF") == 0)
@@ -109,7 +109,7 @@ void delete_event(TestConnections& test)
 
 void try_delete_event(TestConnections& test)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     MYSQL* conn = test.maxscales->conn_rwsplit[0];
 
     execute_query(conn, EVENT_SHCEDULER, "OFF");
@@ -159,7 +159,7 @@ bool check_event_status(TestConnections& test, int node,
 void set_event_state(TestConnections& test, const string& event_name, const string& new_state)
 {
     bool success = false;
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     MYSQL* conn = test.maxscales->conn_rwsplit[0];
     const char query_fmt[] = "ALTER EVENT %s %s;";
 

@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        test.maxscales->connect_maxscale(0);
+        test.maxscales->connect_maxscale();
 
         std::cout << "Create table\n";
         test.set_timeout(TIMEOUT);
@@ -217,8 +217,8 @@ int main(int argc, char* argv[])
         test.set_timeout(TIMEOUT);
         verify_throttling_performace(test);
 
-        test.maxscales->close_maxscale_connections(0);
-        test.maxscales->connect_maxscale(0);
+        test.maxscales->close_maxscale_connections();
+        test.maxscales->connect_maxscale();
 
         test.set_timeout(TIMEOUT);
         verify_throttling_disconnect(test);

@@ -16,7 +16,7 @@ void list_servers(TestConnections& test)
 
 void do_test(TestConnections& test, int master, int slave)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (id int)");
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
@@ -34,14 +34,14 @@ void do_test(TestConnections& test, int master, int slave)
     list_servers(test);
 
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.tprintf("Stop the master node and perform an insert");
     test.galera->block_node(master);
     test.maxscales->wait_for_monitor();
     list_servers(test);
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the master node and perform another insert (expecting failure)");
@@ -52,9 +52,9 @@ void do_test(TestConnections& test, int master, int slave)
     test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0],
                                          "INSERT INTO test.t1 VALUES (1)") == 0,
                     "Query should fail");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 }
 

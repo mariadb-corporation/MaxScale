@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 
     test.add_result(test.maxscales->restart_maxscale(), "Restarting MaxScale failed");
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     execute_query_silent(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(a INT, b INT, c INT)");

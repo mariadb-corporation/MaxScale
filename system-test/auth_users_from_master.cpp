@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
     int i;
 
     test.repl->connect();
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     for (i = 1; i < test.repl->N; i++)
     {
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
     execute_query(test.maxscales->conn_rwsplit[0], (char*) "DROP USER 'test_user'@'%%'");
 
     test.repl->close_connections();
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     mysql_close(conn);
 

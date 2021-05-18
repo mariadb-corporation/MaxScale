@@ -14,9 +14,9 @@ int main(int argc, char* argv[])
     test.maxscales->restart_maxscale();
 
     test.tprintf("Connecting to MaxScale and executing a query");
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.repl->execute_query_all_nodes("SET GLOBAL SQL_MODE=DEFAULT");
     return test.global_result;

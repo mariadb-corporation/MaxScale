@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     char first_rule[] = "rules1";
     copy_rules(Test, first_rule, rules_dir);
     Test->maxscales->start_maxscale();
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
 
     for (i = 1; i <= N; i++)

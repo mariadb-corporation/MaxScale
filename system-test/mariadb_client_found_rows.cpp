@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
 
     test.repl->connect();
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     conn_found_rows = open_conn_db_flags(test.maxscales->rwsplit_port[0],
                                          test.maxscales->ip4(),
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Affected rows is not 2\n");
     }
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     mysql_close(conn_found_rows);
 

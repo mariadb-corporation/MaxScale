@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
     Test->repl->connect();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
     Test->maxctrl("stop monitor MySQL-Monitor");
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);

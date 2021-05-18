@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     }
 
     test.set_timeout(20);
-    test.add_result(test.maxscales->connect_maxscale(0), "Failed to connect to MaxScale");
+    test.add_result(test.maxscales->connect_maxscale(), "Failed to connect to MaxScale");
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.set_timeout(240);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
                     "t1 is wrong");
 
     test.set_timeout(20);
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
     test.check_maxscale_alive(0);
 
     return test.global_result;

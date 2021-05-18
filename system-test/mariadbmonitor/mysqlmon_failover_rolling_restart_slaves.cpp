@@ -163,7 +163,7 @@ void run(TestConnections& test)
     check_server_status(test, N);
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     cout << "\nCreating table." << endl;
     create_table(test);

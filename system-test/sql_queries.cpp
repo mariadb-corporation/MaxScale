@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
         Test->tprintf("Connection to backend\n");
         Test->repl->connect();
         Test->tprintf("Connection to Maxscale\n");
-        if (Test->maxscales->connect_maxscale(0) != 0)
+        if (Test->maxscales->connect_maxscale() != 0)
         {
             Test->add_result(1, "Error connecting to MaxScale");
             break;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         }
 
         // close connections
-        Test->maxscales->close_maxscale_connections(0);
+        Test->maxscales->close_maxscale_connections();
         Test->repl->close_connections();
     }
 

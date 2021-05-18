@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("CREATE DATABASE duplicate;");
     test.repl->execute_query_all_nodes("CREATE TABLE duplicate.duplicate (a int, b int);");
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                     "Query should fail when duplicate table is found.");
     test.stop_timeout();

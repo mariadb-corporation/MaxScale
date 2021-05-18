@@ -70,7 +70,7 @@ int main(int argc, char** argv)
         pthread_join(a, NULL);
     }
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.mxs1585");
     test.check_maxscale_alive();
 

@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
 
     for (int i = 0; i < Test->repl->N; i++)
     {

@@ -9,7 +9,7 @@ using std::endl;
 
 void test1(TestConnections& test)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.set_timeout(20);
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
@@ -44,7 +44,7 @@ void test1(TestConnections& test)
 
     cout << "Close statement" << endl;
     mysql_stmt_close(stmt);
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 }
 
 void test2(TestConnections& test)
@@ -130,7 +130,7 @@ void test2(TestConnections& test)
 
 void test3(TestConnections& test)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.set_timeout(20);
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
@@ -172,7 +172,7 @@ void test3(TestConnections& test)
                     mysql_error(test.maxscales->conn_rwsplit[0]));
 
     mysql_stmt_close(stmt);
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     char server_id[1024];
     test.repl->connect();
@@ -184,7 +184,7 @@ void test3(TestConnections& test)
 
 void test4(TestConnections& test)
 {
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.set_timeout(20);
 
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id VARCHAR(200))");
@@ -231,7 +231,7 @@ void test4(TestConnections& test)
 
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 }
 
 int main(int argc, char** argv)

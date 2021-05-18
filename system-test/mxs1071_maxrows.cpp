@@ -306,9 +306,9 @@ int main(int argc, char* argv[])
 
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
     Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     create_t1(Test->maxscales->conn_rwsplit[0]);
     insert_into_t1(Test->maxscales->conn_rwsplit[0], 1);
@@ -560,7 +560,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(100);
     Test->maxscales->restart_maxscale();
 
-    Test->maxscales->connect_rwsplit(0);
+    Test->maxscales->connect_rwsplit();
 
     Test->tprintf("**** Test 21 ****\n");
     exp_rows[0] = 0;

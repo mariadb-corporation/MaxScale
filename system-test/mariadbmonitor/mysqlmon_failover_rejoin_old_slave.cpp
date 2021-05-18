@@ -113,7 +113,7 @@ void run(TestConnections& test)
     expect(test, "server4", "Slave", "Running");
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     cout << "\nCreating table." << endl;
     create_table(test);
@@ -137,10 +137,10 @@ void run(TestConnections& test)
     expect(test, "server4", "Down");
 
     cout << "\nClosing connection to MaxScale." << endl;
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     cout << "\nInserting data." << endl;
     insert_data(test);

@@ -1127,7 +1127,7 @@ int TestConnections::check_maxscale_alive(int m)
     int gr = global_result;
     set_timeout(10);
     tprintf("Connecting to Maxscale\n");
-    add_result(maxscales->connect_maxscale(m), "Can not connect to Maxscale\n");
+    add_result(maxscales->connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
@@ -1139,7 +1139,7 @@ int TestConnections::check_maxscale_alive(int m)
     set_timeout(10);
     try_query(maxscales->conn_slave[m], "show databases;");
     set_timeout(10);
-    maxscales->close_maxscale_connections(m);
+    maxscales->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
     my_maxscale(m)->expect_running_status(true);

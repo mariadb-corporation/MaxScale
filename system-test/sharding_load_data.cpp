@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE DATABASE db1");
     execute_query(test.repl->nodes[0], "CREATE TABLE db1.t1(id INT)");
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.tprintf("Loading local data file");
 
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     long total = execute_query_count_rows(test.maxscales->conn_rwsplit[0], "SELECT * FROM db1.t1");
     test.add_result(total != 100, "Expected 100 rows, got %ld", total);
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.repl->execute_query_all_nodes("DROP DATABASE db1");
 

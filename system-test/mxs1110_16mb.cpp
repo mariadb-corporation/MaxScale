@@ -36,22 +36,22 @@ int main(int argc, char* argv[])
     Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=200000000");
     Test->galera->execute_query_all_nodes((char*) "set global max_allowed_packet=200000000");
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
     test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char*) "LONGBLOB", chunk_size, chunk_num, 2);
     Test->repl->close_connections();
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     Test->repl->sync_slaves();
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     Test->tprintf("Checking data via RWSplit\n");
     check_longblob_data(Test, Test->maxscales->conn_rwsplit[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn master\n");
     check_longblob_data(Test, Test->maxscales->conn_master[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");
     check_longblob_data(Test, Test->maxscales->conn_slave[0], chunk_size, chunk_num, 2);
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
 
     MYSQL* conn_galera = open_conn(4016,
                                    Test->maxscales->ip4(),

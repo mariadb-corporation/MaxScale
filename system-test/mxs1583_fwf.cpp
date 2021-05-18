@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     test.maxscales->start_maxscale();
 
     test.set_timeout(30);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.try_query(test.maxscales->conn_rwsplit[0], "drop table if exists t");
     test.try_query(test.maxscales->conn_rwsplit[0], "create table t (a text, b text)");

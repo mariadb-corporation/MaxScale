@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
     std::stringstream ss;
 
     ss << "CREATE OR REPLACE TABLE test.t1 (id INT)";
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
 
     ss.str("");
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     }
     test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
 
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     if (test.global_result)
     {

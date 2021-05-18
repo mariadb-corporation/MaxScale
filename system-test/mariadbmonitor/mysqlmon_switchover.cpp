@@ -70,7 +70,7 @@ void run(TestConnections& test)
     mxs.check_servers_status(normal_status);
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     cout << "\nCreating table." << endl;
     create_table(test);

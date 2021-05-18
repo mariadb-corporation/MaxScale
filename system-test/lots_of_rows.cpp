@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     char sql[10240];
 
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     create_t1(Test->maxscales->conn_rwsplit[0]);
 
     Test->tprintf("INSERTing data");

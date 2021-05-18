@@ -35,10 +35,10 @@ int main(int argc, char* argv[])
                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.set_timeout(60);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     create_t1(test.maxscales->conn_rwsplit[0]);
     execute_query(test.maxscales->conn_rwsplit[0], "set global max_connections=1000");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.tprintf("Create query load");
     int load_threads_num = 10;
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     {
         test.set_timeout(60);
         test.set_verbose(true);
-        int rc = test.maxscales->connect_maxscale(0);
+        int rc = test.maxscales->connect_maxscale();
         test.set_verbose(false);
 
         if (rc == 0)
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     }
 
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.maxscales->wait_for_monitor();
     test.check_maxscale_alive(0);

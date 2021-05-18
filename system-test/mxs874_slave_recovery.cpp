@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
     test.set_timeout(10);
 
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.set_timeout(10);
     test.try_query(test.maxscales->conn_rwsplit[0], (char*) "SET @a=1");

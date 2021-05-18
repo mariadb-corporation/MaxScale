@@ -23,12 +23,12 @@ int main(int argc, char** argv)
     copy_rules(&test, (char*) "rules.txt", (char*) ".");
 
     test.maxscales->restart_maxscale();
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
     test.tprintf("Pinging MaxScale, expecting success");
     test.add_result(mysql_ping(test.maxscales->conn_rwsplit[0]),
                     "Ping should not fail: %s",
                     mysql_error(test.maxscales->conn_rwsplit[0]));
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     return test.global_result;
 }

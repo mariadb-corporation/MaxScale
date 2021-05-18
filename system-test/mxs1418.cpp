@@ -35,7 +35,7 @@ void* thr(void* data)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale(0);
+    test.maxscales->connect_maxscale();
 
     test.tprintf("Connect to MaxScale and continuously execute queries");
     pthread_t thread;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     test.tprintf("Stop queries and close the connections");
     running = false;
     pthread_join(thread, NULL);
-    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->close_maxscale_connections();
 
     test.tprintf("Add all servers to all services");
 

@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);
 
     Test->tprintf("Connecting to Maxscale maxscales->routers[0] with Master/Slave backend\n");
-    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->connect_maxscale();
     Test->tprintf("Testing connections\n");
 
     Test->add_result(Test->test_maxscale_connections(0, true, true, true), "Can't connect to backend\n");
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     }
 
     Test->tprintf("Closing connections\n");
-    Test->maxscales->close_maxscale_connections(0);
+    Test->maxscales->close_maxscale_connections();
     Test->check_maxscale_alive(0);
 
     auto ver = Test->maxscales->ssh_output("maxscale --version-full", 0, false);
