@@ -32,7 +32,7 @@ else {
 var config = {
     host: process.env.maxscale_000_network,
     mariadb_port: 4008,
-    mxsmongodb_port: 4711,
+    mxsmongodb_port: 17017,
     mngmongodb_port: 27017,
     user: 'maxskysql',
     password: 'skysql'

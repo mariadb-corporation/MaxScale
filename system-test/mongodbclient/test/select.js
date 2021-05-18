@@ -18,7 +18,7 @@ const assert = require('assert');
 
 var host = process.env.maxscale_000_network;
 var mariadb_port = 4008;
-var mongodb_port = 4711;
+var mongodb_port = 17017;
 var user = 'maxskysql';
 var password = 'skysql';
 
