@@ -19,6 +19,7 @@ const error = test.error;
 const mongodb = test.mongodb;
 
 const name = "find";
+const misc = "misc";
 
 describe(name, function () {
     this.timeout(test.timeout);
@@ -35,9 +36,13 @@ describe(name, function () {
     /*
      * HELPERS
      */
-    async function drop() {
+    async function drop(n) {
+        if (!n) {
+            n = name;
+        }
+
         var command = {
-            drop: name
+            drop: n
         };
 
         await mng.ntRunCommand(command);
@@ -236,26 +241,26 @@ describe(name, function () {
             { a: [ 5, 6, 7 ] },
         ];
 
-        var n = name + "_array";
-        await mng.ntRunCommand({drop: n});
-        await mxs.ntRunCommand({drop: n});
+        await drop(misc);
 
-        await mng.runCommand({insert: n, documents: documents});
-        await mxs.runCommand({insert: n, documents: documents});
+        await mng.runCommand({insert: misc, documents: documents});
+        await mxs.runCommand({insert: misc, documents: documents});
 
         var filter = {
             a: {
-                "$eq": [1, 2, 3]
+                "$eq": [2, 3, 4]
             }
         };
 
-        var rv1 = await mng.runCommand({find: n, filter: filter});
+        var rv1 = await mng.runCommand({find: misc, filter: filter});
         assert.equal(rv1.cursor.firstBatch.length, 1);
-        var rv2 = await mxs.runCommand({find: n, filter: filter});
-        assert.equal(rv2.cursor.firstBatch.length, 1);
+        assert.equal(rv1.cursor.firstBatch[0].a[0], 2);
 
-        await mng.runCommand({drop: n});
-        await mxs.runCommand({drop: n});
+        var rv2 = await mxs.runCommand({find: misc, filter: filter});
+        assert.equal(rv2.cursor.firstBatch.length, 1);
+        assert.equal(rv2.cursor.firstBatch[0].a[0], 2);
+
+        await drop(misc);
     });
 
     it('Can use objects as values.', async function () {
@@ -265,12 +270,10 @@ describe(name, function () {
             { a: { b: 3 }}
         ];
 
-        var n = name + "_object";
-        await mng.ntRunCommand({drop: n});
-        await mxs.ntRunCommand({drop: n});
+        await drop(misc);
 
-        await mng.runCommand({insert: n, documents: documents});
-        await mxs.runCommand({insert: n, documents: documents});
+        await mng.runCommand({insert: misc, documents: documents});
+        await mxs.runCommand({insert: misc, documents: documents});
 
         var filter = {
             a: {
@@ -278,15 +281,15 @@ describe(name, function () {
             }
         };
 
-        var rv1 = await mng.runCommand({find: n, filter: filter});
+        var rv1 = await mng.runCommand({find: misc, filter: filter});
         assert.equal(rv1.cursor.firstBatch.length, 1);
         assert.equal(rv1.cursor.firstBatch[0].a.b, 2);
-        var rv2 = await mxs.runCommand({find: n, filter: filter});
+
+        var rv2 = await mxs.runCommand({find: misc, filter: filter});
         assert.equal(rv2.cursor.firstBatch.length, 1);
         assert.equal(rv2.cursor.firstBatch[0].a.b, 2);
 
-        mng.runCommand({drop: n});
-        mxs.runCommand({drop: n});
+        await drop(misc);
     });
 
     after(function () {
