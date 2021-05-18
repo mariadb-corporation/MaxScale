@@ -1,21 +1,32 @@
 <template>
     <div>
-        <v-btn
-            x-small
-            class="mr-2"
-            outlined
-            depressed
-            color="accent-dark"
-            @click="openConfigDialog"
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
         >
-            <v-icon size="14" color="accent-dark">
-                file_download
-            </v-icon>
-        </v-btn>
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    x-small
+                    class="mr-2"
+                    outlined
+                    depressed
+                    color="accent-dark"
+                    v-on="on"
+                    @click="openConfigDialog"
+                >
+                    <v-icon size="14" color="accent-dark">
+                        file_download
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span>{{ $t('exportResults') }}</span>
+        </v-tooltip>
+
         <base-dialog
             v-model="isConfigDialogOpened"
             :onSave="onExport"
-            title="Export Results"
+            :title="$t('exportResults')"
             saveText="export"
             minBodyWidth="512px"
             :lazyValidation="false"
@@ -26,7 +37,7 @@
                     <v-row class="mx-n1">
                         <v-col cols="12" md="12" class="pa-1">
                             <label class="field__label color text-small-text label-required">
-                                File name
+                                {{ $t('fileName') }}
                             </label>
                             <v-text-field
                                 v-model="fileName"
@@ -47,7 +58,7 @@
 
                         <v-col cols="12" md="12" class="pa-1">
                             <label class="field__label color text-small-text label-required">
-                                File format
+                                {{ $t('fileFormat') }}
                             </label>
                             <v-select
                                 v-model="selectedFormat"
@@ -85,9 +96,13 @@
                                 dense
                                 class="ma-0 pt-0"
                             >
-                                <v-radio label="With headers" :value="true" class="field__label" />
                                 <v-radio
-                                    label="Without headers"
+                                    :label="$t('withHeaders')"
+                                    :value="true"
+                                    class="field__label"
+                                />
+                                <v-radio
+                                    :label="$t('withoutHeaders')"
                                     :value="false"
                                     class="field__label"
                                 />
@@ -96,7 +111,7 @@
 
                         <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
                             <label class="field__label color text-small-text">
-                                Delimiter
+                                {{ $t('delimiter') }}
                             </label>
                             <v-select
                                 v-model="chosenDelimiter"
@@ -125,7 +140,7 @@
                         </v-col>
                         <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
                             <label class="field__label color text-small-text">
-                                Custom delimiter
+                                {{ $t('custdelimiter') }}
                             </label>
                             <v-text-field
                                 v-model="custDelimiter"
@@ -137,7 +152,7 @@
                                     v =>
                                         !!v ||
                                         $t('errors.requiredInput', {
-                                            inputName: 'Custom delimiter',
+                                            inputName: $t('custdelimiter'),
                                         }),
                                 ]"
                                 hide-details="auto"

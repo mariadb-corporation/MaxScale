@@ -26,6 +26,7 @@
             </v-card-title>
             <v-card-text class="v-card-text_padding">
                 <slot name="body"></slot>
+                <v-divider v-if="hasFormDivider" class="divider" />
                 <v-form
                     ref="form"
                     v-model="isFormValid"
@@ -104,6 +105,7 @@ export default {
         isForceAccept: { type: Boolean, default: false },
         lazyValidation: { type: Boolean, default: true },
         hasSavingErr: { type: Boolean, default: false },
+        hasFormDivider: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -176,6 +178,12 @@ export default {
     }
     .v-card-actions_padding {
         padding: 30px $paddingLeft 36px;
+    }
+    .divider {
+        max-width: calc(100% + 124px);
+        width: calc(100% + 124px);
+
+        margin: 24px 0px 24px -62px;
     }
 }
 </style>

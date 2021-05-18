@@ -67,6 +67,7 @@ module.exports = {
         'vue/require-default-prop': 0,
         'vue/no-template-shadow': 0,
         'vue/name-property-casing': ['error', 'kebab-case'],
+        'vue/no-v-html': 0,
     },
     overrides: [
         {

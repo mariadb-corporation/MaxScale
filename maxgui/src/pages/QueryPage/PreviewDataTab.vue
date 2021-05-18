@@ -5,20 +5,14 @@
                 <span><b>Table:</b> {{ previewDataSchemaId }}</span>
                 <v-btn-toggle v-model="activeView" class="ml-4" mandatory>
                     <v-btn :value="SQL_QUERY_MODES.PRVW_DATA" x-small text color="primary">
-                        Data
+                        {{ $t('data') }}
                     </v-btn>
                     <v-btn :value="SQL_QUERY_MODES.PRVW_DATA_DETAILS" x-small text color="primary">
-                        Details
+                        {{ $t('details') }}
                     </v-btn>
                 </v-btn-toggle>
             </div>
-            <span v-else>
-                On the left sidebar, hover on the table name then click option icon (
-                <v-icon size="12" color="deep-ocean">more_horiz</v-icon> ) and choose either
-                <b>Preview Data</b> or
-                <b>View Details</b>
-                to generate data
-            </span>
+            <span v-else v-html="$t('prvwTabGuide')" />
         </div>
 
         <div v-if="validConn" class="result-table-wrapper">

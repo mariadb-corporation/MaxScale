@@ -19,6 +19,7 @@
             :onSave="onSave"
             :title="`${$t('createANew')}...`"
             isDynamicWidth
+            hasFormDivider
         >
             <template v-slot:body>
                 <v-select
@@ -41,7 +42,6 @@
                 />
             </template>
             <template v-if="selectedForm" v-slot:form-body>
-                <v-divider class="divider" />
                 <div class="mb-0">
                     <label class="label color text-small-text d-block">
                         {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
@@ -412,18 +412,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.divider {
-    max-width: calc(100% + 124px);
-    width: calc(100% + 124px);
-
-    margin: 24px 0px 24px -62px;
-}
 .mariadb-select-input {
     ::v-deep .v-select__selection--comma {
         font-weight: bold;
     }
 }
-::v-deep .label {
+.label {
     font-size: 0.625rem;
 }
 </style>

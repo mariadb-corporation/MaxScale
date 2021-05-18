@@ -1,7 +1,7 @@
 <template>
     <div class="fill-height">
         <div v-if="showGuide" ref="header" class="pb-2 result-header">
-            <span> Click Run button to see query results </span>
+            <span v-html="$t('resultTabGuide')" />
         </div>
         <div v-else class="result-table-wrapper fill-height">
             <div ref="header" class="pb-2 result-header-nav d-flex align-center">
@@ -15,7 +15,7 @@
                 >
                     <template v-slot:activator="{ on }">
                         <span class="d-inline-block pointer color text-links " v-on="on">
-                            Query text
+                            {{ $t('queryTxt') }}
                         </span>
                     </template>
                     <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">

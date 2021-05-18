@@ -39,7 +39,7 @@
             :style="{ lineHeight, height: `${height - itemHeight}px` }"
         >
             <div class="td px-3 d-flex justify-center flex-grow-1">
-                No data
+                {{ $t('$vuetify.noDataText') }}
             </div>
         </div>
     </div>

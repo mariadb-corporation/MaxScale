@@ -1,42 +1,64 @@
 <template>
     <div :class="[isLeftPaneCollapsed ? 'pa-1' : 'pa-3']">
         <portal to="toggle-pane">
-            <v-btn icon small @click="toggleFullScreen">
-                <v-icon size="18" color="deep-ocean">
-                    fullscreen{{ isFullscreen ? '_exit' : '' }}
-                </v-icon>
-            </v-btn>
-            <v-btn icon small @click="toggleExpand">
-                <v-icon
-                    size="16"
-                    color="deep-ocean"
-                    class="collapse-icon"
-                    :class="{ 'collapse-icon--active': isLeftPaneCollapsed }"
-                >
-                    double_arrow
-                </v-icon>
-            </v-btn>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small v-on="on" @click="toggleFullScreen">
+                        <v-icon size="18" color="deep-ocean">
+                            fullscreen{{ isFullscreen ? '_exit' : '' }}
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
+            </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small v-on="on" @click="toggleExpand">
+                        <v-icon
+                            size="16"
+                            color="deep-ocean"
+                            class="collapse-icon"
+                            :class="{ 'collapse-icon--active': isLeftPaneCollapsed }"
+                        >
+                            double_arrow
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ isLeftPaneCollapsed ? $t('expand') : $t('collapse') }}</span>
+            </v-tooltip>
         </portal>
         <div class="visible-when-expand fill-height">
             <div class="schema-list-tools">
                 <div class="d-flex align-center justify-end">
                     <span
                         v-if="!isLeftPaneCollapsed"
-                        class="color text-small-text db-tb-list__title d-inline-block text-truncate"
+                        class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
                     >
-                        SCHEMAS
+                        {{ $t('schemas') }}
                     </span>
-                    <v-btn
+                    <v-tooltip
                         v-if="!isLeftPaneCollapsed"
-                        icon
-                        small
-                        :disabled="disabled"
-                        @click="reloadSchema"
+                        top
+                        transition="slide-y-transition"
+                        content-class="shadow-drop color text-navigation py-1 px-4"
                     >
-                        <v-icon size="12" color="deep-ocean">
-                            $vuetify.icons.reload
-                        </v-icon>
-                    </v-btn>
+                        <template v-slot:activator="{ on }">
+                            <v-btn icon small :disabled="disabled" v-on="on" @click="reloadSchema">
+                                <v-icon size="12" color="deep-ocean">
+                                    $vuetify.icons.reload
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                        <span>{{ $t('reload') }}</span>
+                    </v-tooltip>
                     <portal-target name="toggle-pane" />
                 </div>
                 <v-text-field
@@ -49,7 +71,7 @@
                     outlined
                     height="28"
                     class="std filter-objects"
-                    placeholder="Filter schema objects"
+                    :placeholder="$t('filterSchemaObjects')"
                     :disabled="disabled"
                 />
             </div>

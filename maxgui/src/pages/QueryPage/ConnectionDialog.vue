@@ -2,13 +2,14 @@
     <base-dialog
         v-model="isOpened"
         :onSave="onSave"
-        title="Open connection"
+        :title="`${$t('connectTo')}...`"
         :hasChanged="hasChanged"
         :lazyValidation="false"
         minBodyWidth="512px"
         :onCancel="onCancel"
         :onClose="onClose"
         :hasSavingErr="hasSavingErr"
+        hasFormDivider
         @is-form-valid="isFormValid = $event"
     >
         <template v-slot:actions="{ cancel, save }">
@@ -38,48 +39,46 @@
                 {{ $t('connect') }}
             </v-btn>
         </template>
-
+        <template v-slot:body>
+            <v-select
+                v-model="selectedResourceType"
+                :items="resourceTypes"
+                name="resourceName"
+                outlined
+                class="mt-4 std mariadb-select-input error--text__bottom"
+                :menu-props="{
+                    contentClass: 'mariadb-select-v-menu',
+                    bottom: true,
+                    offsetY: true,
+                }"
+                dense
+                :height="36"
+                hide-details="auto"
+                :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
+                required
+            >
+                <template v-slot:selection="{ item }">
+                    <div class="v-select__selection v-select__selection--comma">
+                        {{ $help.resourceTxtTransform(item) }}
+                    </div>
+                </template>
+                <template v-slot:item="{ item, on, attrs }">
+                    <div class="v-list-item__title" v-bind="attrs" v-on="on">
+                        {{ $help.resourceTxtTransform(item) }}
+                    </div>
+                </template>
+            </v-select>
+        </template>
         <template v-slot:form-body>
             <v-container class="pa-1">
                 <v-row class="mx-n1">
-                    <v-col cols="12" md="12" class="pa-1">
-                        <label class="field__label color text-small-text label-required">
-                            Target resource
-                        </label>
-                        <v-select
-                            v-model="selectedResourceType"
-                            :items="resourceTypes"
-                            name="resourceName"
-                            outlined
-                            class="std mariadb-select-input error--text__bottom"
-                            :menu-props="{
-                                contentClass: 'mariadb-select-v-menu',
-                                bottom: true,
-                                offsetY: true,
-                            }"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                            :rules="[
-                                v => !!v || $t('errors.requiredInput', { inputName: 'This field' }),
-                            ]"
-                            required
-                        >
-                            <template v-slot:selection="{ item }">
-                                <div class="v-select__selection v-select__selection--comma">
-                                    {{ $help.resourceTxtTransform(item) }}
-                                </div>
-                            </template>
-                            <template v-slot:item="{ item, on, attrs }">
-                                <div class="v-list-item__title" v-bind="attrs" v-on="on">
-                                    {{ $help.resourceTxtTransform(item) }}
-                                </div>
-                            </template>
-                        </v-select>
-                    </v-col>
                     <v-col v-if="selectedResourceType" cols="12" md="12" class="pa-1">
                         <label class="field__label color text-small-text label-required">
-                            Resource name
+                            {{
+                                $t('resourceLabelName', {
+                                    resourceName: $help.resourceTxtTransform(selectedResourceType),
+                                })
+                            }}
                         </label>
                         <select-dropdown
                             class="mt-2"
@@ -93,7 +92,7 @@
 
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label color text-small-text label-required">
-                            Username
+                            {{ $t('username') }}
                         </label>
                         <v-text-field
                             id="db-user"
@@ -112,7 +111,7 @@
 
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label color text-small-text label-required">
-                            Password
+                            {{ $t('password') }}
                         </label>
                         <v-text-field
                             id="db-password"
@@ -135,7 +134,7 @@
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label color text-small-text">
-                            Database
+                            {{ $t('database') }}
                         </label>
                         <v-text-field
                             v-model="body.db"
@@ -150,7 +149,7 @@
                     </v-col>
                     <v-col cols="12" md="6" class="pa-1">
                         <label class="field__label color text-small-text">
-                            Timeout
+                            {{ $t('timeout') }}
                         </label>
                         <v-text-field
                             v-model="body.timeout"

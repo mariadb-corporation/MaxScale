@@ -8,7 +8,7 @@
                 outlined
                 height="28"
                 class="std filter-result mr-auto"
-                placeholder="Filter result"
+                :placeholder="$t('filterResult')"
                 hide-details
             />
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
@@ -30,7 +30,7 @@
                         v-bind="attrs"
                         v-on="on"
                     >
-                        Columns
+                        {{ $t('columns') }}
                         <v-icon
                             size="24"
                             color="accent-dark"
@@ -48,7 +48,7 @@
                             outlined
                             height="36"
                             class="std column-list__search"
-                            placeholder="Search"
+                            :placeholder="$t('search')"
                             hide-details
                         />
                     </v-list-item>
@@ -60,7 +60,7 @@
                             color="primary"
                             class="pa-0 ma-0 checkbox d-flex align-center"
                             hide-details
-                            label="Select all"
+                            :label="$t('selectAll')"
                             :input-value="isAllHeaderChecked"
                             @change="toggleAllHeaders"
                         />

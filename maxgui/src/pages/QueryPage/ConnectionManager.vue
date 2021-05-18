@@ -15,7 +15,7 @@
             hide-details
             :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
             required
-            placeholder="Select connection"
+            :placeholder="$t('selectConnection')"
         >
             <template v-slot:selection="{ item }">
                 <div class="v-select__selection v-select__selection--comma">
@@ -46,7 +46,7 @@
                                     </v-icon>
                                 </v-btn>
                             </template>
-                            <span>Disconnect</span>
+                            <span>{{ $t('disconnect') }}</span>
                         </v-tooltip>
                     </div>
                     <div v-else class="text-decoration-underline color text-primary">
@@ -76,7 +76,7 @@ export default {
         return {
             isConnDialogOpened: false,
             chosenConn: [],
-            newConnOption: 'New Connection',
+            newConnOption: this.$t('newConnection'),
         }
     },
     computed: {

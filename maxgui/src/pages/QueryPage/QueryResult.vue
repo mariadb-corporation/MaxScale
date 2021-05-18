@@ -1,10 +1,10 @@
 <template>
     <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper fill-height">
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
-            <span> Results </span>
+            <span> {{ $t('results') }} </span>
         </v-tab>
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
-            <span> Data preview </span>
+            <span>{{ $t('dataPrvw') }} </span>
         </v-tab>
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
