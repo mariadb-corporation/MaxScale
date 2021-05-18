@@ -171,6 +171,7 @@ void MariaDBBackendConnection::finish_connection()
     {
         MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
         data->history_response_cbs.erase(this);
+        data->history_position.erase(this);
     }
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
@@ -688,6 +689,8 @@ void MariaDBBackendConnection::send_history()
             m_dcb->writeq_append(buffer.release());
             m_history_responses.push_back(a.id());
         }
+
+        client_data->history_position[this] = m_history_responses.front();
     }
 }
 
@@ -717,11 +720,13 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
             if (m_reply.is_complete())
             {
                 MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
-                auto it = client_data->history_responses.find(m_history_responses.front());
+                uint32_t id = m_history_responses.front();
+                auto it = client_data->history_responses.find(id);
                 mxb_assert(it != client_data->history_responses.end());
 
                 if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
+                    client_data->history_position[this] = id;
                     m_history_responses.pop_front();
                 }
                 else
@@ -780,6 +785,8 @@ bool MariaDBBackendConnection::compare_responses()
 
         if (response_it != data->history_responses.end())
         {
+            data->history_position[this] = it->first;
+
             if (it->second != response_it->second)
             {
                 ok = false;
@@ -2767,6 +2774,7 @@ void MariaDBBackendConnection::set_to_pooled()
 {
     MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
     data->history_response_cbs.erase(this);
+    data->history_position.erase(this);
 
     m_session = nullptr;
     m_upstream = nullptr;

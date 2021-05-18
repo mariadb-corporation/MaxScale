@@ -146,6 +146,7 @@ private:
     bool route_statement(mxs::Buffer&& buffer);
     void finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply);
     bool record_for_history(mxs::Buffer& buffer, uint8_t cmd);
+    void prune_history();
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();

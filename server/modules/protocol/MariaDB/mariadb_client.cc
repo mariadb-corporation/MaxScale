@@ -1090,10 +1090,27 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 
         if (m_session_data->history.size() > m_max_sescmd_history)
         {
-            m_session_data->history.pop_front();
-            m_session_data->history_pruned = true;
+            prune_history();
         }
     }
+}
+
+void MariaDBClientConnection::prune_history()
+{
+    // Using the about-to-be-pruned command as the minimum ID prevents the removal of responses that are still
+    // needed when the ID overflows. If only the stored positions were used, the whole history would be
+    // cleared.
+    uint32_t min_id = m_session_data->history.front().id();
+
+    for (const auto& kv : m_session_data->history_position)
+    {
+        min_id = std::min(min_id, kv.second);
+    }
+
+    m_session_data->history_responses.erase(m_session_data->history_responses.begin(),
+                                            m_session_data->history_responses.lower_bound(min_id));
+    m_session_data->history.pop_front();
+    m_session_data->history_pruned = true;
 }
 
 /**

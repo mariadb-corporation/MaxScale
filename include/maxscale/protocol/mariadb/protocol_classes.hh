@@ -145,7 +145,7 @@ public:
     std::deque<mxs::Buffer> history;
 
     // The responses to the executed commands, contains the ID and the result
-    std::unordered_map<uint32_t, bool> history_responses;
+    std::map<uint32_t, bool> history_responses;
 
     // Whether the history has been pruned of old commands. If true, reconnection should only take place if it
     // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
@@ -153,6 +153,9 @@ public:
 
     // Callbacks that will be called once when the response to the latest session command completes.
     std::unordered_map<mxs::BackendConnection*, std::function<void ()>> history_response_cbs;
+
+    // The position in history of each backend. Used to prune unused responses from history_responses.
+    std::unordered_map<mxs::BackendConnection*, uint32_t> history_position;
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value
