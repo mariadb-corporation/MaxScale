@@ -60,3 +60,7 @@ type=monitor
 password=some-monitor-password
 ...
 ```
+
+## `authenticator_options` for servers is ignored
+
+Authenticator options are now only used with listeners.
