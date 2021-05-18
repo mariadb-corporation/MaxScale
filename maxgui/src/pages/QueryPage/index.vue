@@ -9,34 +9,7 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': isFullScreen }"
         >
-            <v-toolbar
-                outlined
-                elevation="0"
-                height="50"
-                class="query-page__header border-bottom-none"
-                :class="{ 'query-page__header--fullscreen': isFullScreen }"
-            >
-                <v-toolbar-title class="color text-navigation text-capitalize">
-                    {{ $route.name }}
-                </v-toolbar-title>
-
-                <v-spacer></v-spacer>
-                <connection-manager />
-                <v-btn
-                    width="80"
-                    outlined
-                    height="36"
-                    rounded
-                    class="ml-4 text-capitalize px-8 font-weight-medium"
-                    depressed
-                    small
-                    color="accent-dark"
-                    :disabled="!queryTxt || !active_conn_state"
-                    @click="onRun"
-                >
-                    {{ $t('run') }}
-                </v-btn>
-            </v-toolbar>
+            <toolbar-container :queryTxt="queryTxt" :isFullScreen="isFullScreen" />
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -45,40 +18,13 @@
                 split="vert"
                 :disable="!isFullScreen || isCollapsed"
             >
-                <!-- sidebar panel -->
                 <template slot="pane-left">
-                    <v-card
-                        v-if="loading_db_tree"
-                        class="fill-height db-tb-list"
-                        :loading="loading_db_tree"
+                    <sidebar-container
+                        @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
+                        @is-fullscreen="isFullScreen = $event"
+                        @is-collapsed="isCollapsed = $event"
+                        @place-to-editor="placeToEditor"
                     />
-                    <v-fade-transition>
-                        <db-list
-                            v-if="!loading_db_tree"
-                            class="db-tb-list"
-                            :schemaList="db_tree"
-                            :disabled="!active_conn_state"
-                            @is-fullscreen="isFullScreen = $event"
-                            @is-collapsed="isCollapsed = $event"
-                            @reload-schema="loadSchema"
-                            @preview-data="
-                                schemaId =>
-                                    handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
-                                        schemaId,
-                                    })
-                            "
-                            @view-details="
-                                schemaId =>
-                                    handleFetchPreview({
-                                        SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                                        schemaId,
-                                    })
-                            "
-                            @place-to-editor="placeToEditor"
-                            @load-children="handleLoadChildren"
-                        />
-                    </v-fade-transition>
                 </template>
                 <template slot="pane-right">
                     <!-- Main panel -->
@@ -119,47 +65,40 @@
  * Public License.
  */
 import QueryEditor from '@/components/QueryEditor'
-import DbList from './DbList'
+import SidebarContainer from './SidebarContainer'
 import QueryResult from './QueryResult'
-import { mapActions, mapState, mapMutations } from 'vuex'
-import ConnectionManager from './ConnectionManager'
+import { mapActions, mapState, mapGetters } from 'vuex'
+import ToolbarContainer from './ToolbarContainer'
 export default {
     name: 'query-view',
     components: {
         'query-editor': QueryEditor,
-        DbList,
+        SidebarContainer,
         QueryResult,
-        ConnectionManager,
+        ToolbarContainer,
     },
     data() {
         return {
-            queryTxt: '',
             minSidebarPct: 0,
             sidebarPct: 0,
             editorPanePct: 60,
             isFullScreen: false,
             isCollapsed: false,
-            previewDataSchemaId: '',
             resultPaneDim: {
                 height: 0,
                 width: 0,
             },
+            queryTxt: '',
+            previewDataSchemaId: '',
         }
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            active_conn_state: state => state.query.active_conn_state,
-            curr_query_mode: state => state.query.curr_query_mode,
-            db_tree: state => state.query.db_tree,
-            loading_db_tree: state => state.query.loading_db_tree,
-            db_completion_list: state => state.query.db_completion_list,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
         }),
-        getDbCmplList() {
-            // remove duplicated labels
-            return this.$help.lodash.uniqBy(this.db_completion_list, 'label')
-        },
+        ...mapGetters({
+            getDbCmplList: 'query/getDbCmplList',
+        }),
     },
     watch: {
         isFullScreen() {
@@ -175,25 +114,16 @@ export default {
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
-    async created() {
-        if (this.active_conn_state) await this.loadSchema()
-    },
     async beforeDestroy() {
         if (this.curr_cnct_resource) await this.disconnect()
     },
     methods: {
-        ...mapMutations({
-            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
-        }),
         ...mapActions({
-            fetchDbList: 'query/fetchDbList',
-            fetchPrvw: 'query/fetchPrvw',
-            fetchQueryResult: 'query/fetchQueryResult',
-            clearDataPreview: 'query/clearDataPreview',
-            fetchTables: 'query/fetchTables',
-            fetchCols: 'query/fetchCols',
             disconnect: 'query/disconnect',
         }),
+        onResize() {
+            this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+        },
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el
@@ -203,14 +133,11 @@ export default {
                 }
             }
         },
-        async loadSchema() {
-            await this.fetchDbList()
+        handleSetSidebarPct({ isCollapsed }) {
+            this.minSidebarPct = this.getSidebarBoundingPct({ isMin: true })
+            if (isCollapsed) this.sidebarPct = this.minSidebarPct
+            else this.sidebarPct = this.getSidebarBoundingPct({ isMin: false })
         },
-        async handleLoadChildren(item) {
-            if (!item.id.includes('.')) await this.fetchTables(item)
-            else await this.fetchCols(item)
-        },
-        //TODO: move all bounding pct calculation to another component
         getSidebarBoundingPct({ isMin }) {
             const maxContainerWidth = this.$refs.wrapperContainer.clientWidth
             let minWidth = isMin ? 200 : 273 // sidebar width in px
@@ -218,35 +145,8 @@ export default {
             const minPercent = (minWidth / maxContainerWidth) * 100
             return minPercent
         },
-        handleSetSidebarPct({ isCollapsed }) {
-            this.minSidebarPct = this.getSidebarBoundingPct({ isMin: true })
-            if (isCollapsed) this.sidebarPct = this.minSidebarPct
-            else this.sidebarPct = this.getSidebarBoundingPct({ isMin: false })
-        },
         placeToEditor(schemaId) {
             this.queryTxt = `${this.queryTxt} ${schemaId}`
-        },
-        onResize() {
-            this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
-        },
-        async onRun() {
-            this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
-            await this.fetchQueryResult(this.queryTxt)
-        },
-        // For table type only
-        async handleFetchPreview({ SQL_QUERY_MODE, schemaId }) {
-            this.previewDataSchemaId = schemaId
-            this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE(SQL_QUERY_MODE)
-            switch (SQL_QUERY_MODE) {
-                case this.SQL_QUERY_MODES.PRVW_DATA:
-                case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    await this.fetchPrvw({
-                        tblId: this.previewDataSchemaId,
-                        prvwMode: SQL_QUERY_MODE,
-                    })
-                    break
-            }
         },
     },
 }
@@ -254,7 +154,6 @@ export default {
 
 <style lang="scss" scoped>
 .editor,
-.db-tb-list,
 .query-result {
     border: 1px solid $table-border;
     width: 100%;
@@ -276,11 +175,6 @@ $header-height: 50px;
         z-index: 7;
         position: fixed;
         overflow: hidden;
-    }
-    &__header {
-        &--fullscreen {
-            margin-left: 0px !important;
-        }
     }
 }
 </style>

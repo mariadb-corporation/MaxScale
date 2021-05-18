@@ -20,7 +20,7 @@
                 v-if="isPrwDataLoading"
                 :loading="isPrwDataLoading"
                 type="table: table-thead, table-tbody"
-                :max-height="`${dynDim.height - headerHeight}px`"
+                :height="dynDim.height - headerHeight"
             />
             <template v-else>
                 <v-slide-x-transition>

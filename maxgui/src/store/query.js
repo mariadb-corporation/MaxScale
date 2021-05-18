@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie } from 'utils/helpers'
+import { getCookie, uniqBy } from 'utils/helpers'
 function initialState() {
     return {
         active_conn_state: Boolean(getCookie('conn_id_body')),
@@ -357,6 +357,12 @@ export default {
         clearDataPreview({ commit }) {
             commit('SET_PRVW_DATA', {})
             commit('SET_PRVW_DATA_DETAILS', {})
+        },
+    },
+    getters: {
+        getDbCmplList: state => {
+            // remove duplicated labels
+            return uniqBy(state.db_completion_list, 'label')
         },
     },
 }
