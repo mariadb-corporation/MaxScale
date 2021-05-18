@@ -7,39 +7,85 @@ TBW
 
 [TOC]
 
-# Client Library
+# Configuring
 
-Currently the only supported client library is version 3.6 of
-[MongoDB Node.JS Driver](http://mongodb.github.io/node-mongodb-native/).
+There are a number of [parameters](#parameters) with which the behavior
+of _mongodbprotocol_ can be adjusted. A minimal configuration looks
+like:
+```
+[TheService]
+type=service
+...
 
-# Authentication
+[MongoDB-Listener]
+type=listener
+service=TheService
+protocol=mongodbprotocol
+mongodbprotocol.user=the_user
+mongodbprotocol.password=the_password
+port=17017
+```
+`mongodbprotocol.user` and `mongodbprotocol.password` specify the
+credentials that will be used when accessing the backend database or
+cluster. Note that the same credentials will be used for _all_ connecting
+MongoDB clients.
+
+Since mongodbprotocol is a _listener_ there must be a _service_ to which
+the client requests will be sent. Mongodbprotocol places no limitations
+on what filters, routers or backends can be used.
+
+# Client Authentication
 
 Currently no authentication is supported in the communication between
-the MongoDB application and MaxScale. That is, the connection string
-should look like
+the MongoDB client application and MaxScale. That is, when connecting only
+the host and port should be provided, but neither username nor password.
+For instance, if the
+(MongoDB Node.JS Driver)[https://mongodb.github.io/node-mongodb-native/]
+is used, then the connection string should look like:
 ```
-const uri = "mongodb://127.0.0.1:4711"
+const uri = "mongodb://127.0.0.1:17017"
 ```
-without a username and password.
 
-The credentials to be used when MaxScale connects to the database on behalf
-of the MongoDB application must be specified in the configuration as `user`
-and `password` parameters to the MongoDB protocol module.
+Similarly, if the (mongo Shell)[https://docs.mongodb.com/manual/mongo/]
+is used, only the host and port should be provided:
+```
+$ mongo --host 127.0.0.1 --port 17017
+MongoDB shell version v4.4.1
+...
+>
+```
+
+# Client Library
+
+As the goal of _mongodbprotocol_ is to implement, to the extent that it
+is feasible, the
+(MongoDB Wire Protocol)[https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/]
+and the
+(Database Commands)[https://docs.mongodb.com/manual/reference/command/]
+the way MongoDB implements them, it should be possible to use
+any language specific (driver)[https://docs.mongodb.com/drivers/].
+
+However, during the development of mongodbprotocol, the _only_ client library
+that has been verified to work is version 3.6 of
+[MongoDB Node.JS Driver](http://mongodb.github.io/node-mongodb-native/).
+
+# Parameters
+
+Using the following parameters, the behavior of _mongodbprotocol_ can be
+adjusted. As they are not generic listener parameters, but specific to
+_mongodbprotocol_ they must be qualified with the `mongodbprotocol`-prefix.
+
+For instance:
 ```
 [MongoDB-Listener]
 type=listener
-protocol=mongodbclient
-mongodbclient.user=the_username
-mongodbclient.password=the_password
-port=4711
+service=TheService
+protocol=mongodbprotocol
+mongodbprotocol.user=the_user
+mongodbprotocol.password=the_password
+mongodbprotocol.on_unknown_command=return_error
 ...
 ```
-Note that all MongoDB applications connecting to the MongoDB listener
-port will use the same credentials when the MariaDB database is accessed;
-in that respect it is not possible to distinguish one MongoDB application
-from another.
-
-# Parameters
 
 ## `user`
 
