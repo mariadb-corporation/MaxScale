@@ -113,7 +113,7 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         cout << "PAM-plugin installed and users created on all servers. Starting MaxScale.\n";
-        test.maxscales->restart(0);
+        test.maxscales->restart();
     }
     else
     {

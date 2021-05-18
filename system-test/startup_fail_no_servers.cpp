@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
     Test->set_timeout(200);
     Test->tprintf("Restarting MaxScale");
-    Test->maxscales->restart_maxscale(0);
+    Test->maxscales->restart_maxscale();
 
     Test->tprintf("Checking if MaxScale is alive by connecting to with maxctrl\n");
     Test->check_maxctrl("show servers");

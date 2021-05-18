@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
     test.tprintf("Changing SQL_MODE to PAD_CHAR_TO_FULL_LENGTH and restarting MaxScale");
     test.repl->connect();
     test.repl->execute_query_all_nodes("SET GLOBAL SQL_MODE='PAD_CHAR_TO_FULL_LENGTH'");
-    test.maxscales->restart_maxscale(0);
+    test.maxscales->restart_maxscale();
 
     test.tprintf("Connecting to MaxScale and executing a query");
     test.maxscales->connect_maxscale(0);

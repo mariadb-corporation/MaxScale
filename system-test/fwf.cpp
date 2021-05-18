@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
         sprintf(str, "rules%d", i);
         copy_rules(Test, str, rules_dir);
 
-        Test->maxscales->restart_maxscale(0);
+        Test->maxscales->restart_maxscale();
         Test->maxscales->connect_rwsplit(0);
 
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
                                 Test->maxscales->access_sudo(),
                                 Test->maxscales->access_homedir());
 
-    Test->maxscales->restart_maxscale(0);
+    Test->maxscales->restart_maxscale();
     Test->maxscales->connect_rwsplit(0);
 
     sleep(10);
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Copying rules to Maxscale machine: %s", str);
     copy_rules(Test, (char*) "rules_limit_queries", rules_dir);
 
-    Test->maxscales->start_maxscale(0);
+    Test->maxscales->start_maxscale();
     Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("Trying 10 quries as fast as possible");

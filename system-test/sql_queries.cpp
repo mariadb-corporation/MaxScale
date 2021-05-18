@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 
     Test->check_maxscale_alive(0);
 
-    Test->maxscales->restart_maxscale(0);
+    Test->maxscales->restart_maxscale();
     Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;

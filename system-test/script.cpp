@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
                                 homedir, homedir,
                                 sudo, homedir);
 
-    Test->maxscales->restart_maxscale(0);
+    Test->maxscales->restart_maxscale();
 
     FILE* f = fopen("script_output_expected", "w");
     fprintf(f,

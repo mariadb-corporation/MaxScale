@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 
     copy_rules(&test, (char*) "rules.txt", (char*) ".");
 
-    test.add_result(test.maxscales->restart_maxscale(0), "Restarting MaxScale failed");
+    test.add_result(test.maxscales->restart_maxscale(), "Restarting MaxScale failed");
 
     test.maxscales->connect_maxscale(0);
     execute_query_silent(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");

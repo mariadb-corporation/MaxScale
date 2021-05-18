@@ -73,7 +73,7 @@ int main(int argc, char** argv)
                                "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=2/priority=1/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
-    test.maxscales->restart_maxscale(0);
+    test.maxscales->restart_maxscale();
 
     // Give the Galera nodes some time to stabilize
     sleep(5);

@@ -840,12 +840,12 @@ void TestConnections::init_maxscale(int m)
                     mxs->maxscale_log_dir[0].c_str());
     if (maxscale::start)
     {
-        mxs->restart_maxscale(0);
+        mxs->restart_maxscale();
         mxs->ssh_node_f(0, true, "maxctrl api get maxscale/debug/monitor_wait");
     }
     else
     {
-        mxs->stop_maxscale(0);
+        mxs->stop_maxscale();
     }
 }
 
@@ -970,7 +970,7 @@ void TestConnections::revert_replicate_from_master()
 int TestConnections::start_mm(int m)
 {
     tprintf("Stopping maxscale\n");
-    int rval = maxscales->stop_maxscale(m);
+    int rval = maxscales->stop_maxscale();
 
     tprintf("Stopping all backend nodes\n");
     rval += repl->stop_nodes() ? 0 : 1;
@@ -996,7 +996,7 @@ int TestConnections::start_mm(int m)
     repl->close_connections();
 
     tprintf("Starting back Maxscale\n");
-    rval += maxscales->start_maxscale(m);
+    rval += maxscales->start_maxscale();
 
     return rval;
 }

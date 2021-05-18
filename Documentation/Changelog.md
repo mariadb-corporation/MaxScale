@@ -132,6 +132,8 @@ For more details, please refer to:
   when replicating from a Galera cluster in case the primary master
   goes down.
 * MaxScale now has a systemd compatible watchdog.
+* Server setting `authenticator_options` is no longer used and any value is
+  ignored.
 
 For more details, please refer to:
 

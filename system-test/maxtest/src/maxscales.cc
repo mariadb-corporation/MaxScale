@@ -59,7 +59,7 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
         maxscale_log_dir[0] = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
         string key_binlog_dir = vm_name + "_binlog_dir";
-        m_binlog_dir[0] = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
+        m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
 
         rwsplit_port[0] = 4006;
         readconn_master_port[0] = 4008;
@@ -159,75 +159,72 @@ int Maxscales::close_maxscale_connections(int m)
     return 0;
 }
 
-int Maxscales::restart_maxscale(int m)
+int Maxscales::restart_maxscale()
 {
     int res;
     if (m_use_valgrind)
     {
-        res = stop_maxscale(m);
-        res += start_maxscale(m);
+        res = stop_maxscale();
+        res += start_maxscale();
     }
     else
     {
-        res = ssh_node(m, "service maxscale restart", true);
+        res = ssh_node(0, "service maxscale restart", true);
     }
-    fflush(stdout);
     return res;
 }
 
-int Maxscales::start_maxscale(int m)
+int Maxscales::start_maxscale()
 {
     int res;
     if (m_use_valgrind)
     {
         if (m_use_callgrind)
         {
-            res = ssh_node_f(m, false,
+            res = ssh_node_f(0, false,
                              "sudo --user=maxscale valgrind -d "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
                              " /usr/bin/maxscale",
-                             maxscale_log_dir[m].c_str(), m_valgrind_log_num,
-                             maxscale_log_dir[m].c_str(), m_valgrind_log_num);
+                             maxscale_log_dir[0].c_str(), m_valgrind_log_num,
+                             maxscale_log_dir[0].c_str(), m_valgrind_log_num);
         }
         else
         {
-            res = ssh_node_f(m, false,
+            res = ssh_node_f(0, false,
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              "--track-origins=yes /usr/bin/maxscale",
-                             maxscale_log_dir[m].c_str(), m_valgrind_log_num);
+                             maxscale_log_dir[0].c_str(), m_valgrind_log_num);
         }
         m_valgrind_log_num++;
     }
     else
     {
-        res = ssh_node(m, "service maxscale restart", true);
+        res = ssh_node(0, "service maxscale restart", true);
     }
-    fflush(stdout);
     return res;
 }
 
-int Maxscales::stop_maxscale(int m)
+int Maxscales::stop_maxscale()
 {
     int res;
     if (m_use_valgrind)
     {
         const char kill_vgrind[] = "kill $(pidof valgrind) 2>&1 > /dev/null";
-        res = ssh_node(m, kill_vgrind, true);
-        auto vgrind_pid = ssh_output("pidof valgrind", m);
+        res = ssh_node(0, kill_vgrind, true);
+        auto vgrind_pid = ssh_output("pidof valgrind", 0);
         bool still_running = (atoi(vgrind_pid.output.c_str()) > 0);
         if ((res != 0) || still_running)
         {
             // Try again, maybe it will work.
-            res = ssh_node(m, kill_vgrind, true);
+            res = ssh_node(0, kill_vgrind, true);
         }
     }
     else
     {
-        res = ssh_node(m, "service maxscale stop", true);
+        res = ssh_node(0, "service maxscale stop", true);
     }
-    fflush(stdout);
     return res;
 }
 
@@ -274,9 +271,9 @@ int Maxscales::port(enum service type, int m) const
     return -1;
 }
 
-void Maxscales::wait_for_monitor(int intervals, int m)
+void Maxscales::wait_for_monitor(int intervals)
 {
-    ssh_node_f(m, false,
+    ssh_node_f(0, false,
                "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
                intervals);
 }
@@ -347,20 +344,20 @@ bool Maxscales::use_valgrind() const
     return m_use_valgrind;
 }
 
-int Maxscales::restart(int m)
+int Maxscales::restart()
 {
-    return restart_maxscale(m);
+    return restart_maxscale();
 }
 
 
-int Maxscales::start(int m)
+int Maxscales::start()
 {
-    return start_maxscale(m);
+    return start_maxscale();
 }
 
 bool Maxscales::stop()
 {
-    return stop_maxscale(0) == 0;
+    return stop_maxscale() == 0;
 }
 
 bool Maxscales::prepare_for_test()
@@ -820,13 +817,13 @@ void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& exp
 
 void MaxScale::start()
 {
-    auto res = m_maxscales->start_maxscale(0);
+    auto res = m_maxscales->start_maxscale();
     logger().expect(res == 0, "MaxScale start failed, error %i.", res);
 }
 
 void MaxScale::stop()
 {
-    auto res = m_maxscales->stop_maxscale(0);
+    auto res = m_maxscales->stop_maxscale();
     logger().expect(res == 0, "MaxScale stop failed, error %i.", res);
 }
 

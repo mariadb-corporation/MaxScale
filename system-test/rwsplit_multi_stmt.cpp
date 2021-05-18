@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     test.maxscales->ssh_node(0,
                              "sed -i 's/strict_multi_stmt=true/strict_multi_stmt=false/' /etc/maxscale.cnf",
                              true);
-    test.maxscales->restart_maxscale(0);
+    test.maxscales->restart_maxscale();
 
     test.maxscales->connect_rwsplit();
     test.tprintf("Configuration: strict_multi_stmt=false");

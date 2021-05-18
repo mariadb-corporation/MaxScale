@@ -123,7 +123,7 @@ void prepare_test_3(TestConnections& test)
             " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
             " master failure." << "\n" << LINE << endl;
     get_output(test);
-    test.maxscales->stop_maxscale(0);
+    test.maxscales->stop_maxscale();
     test.repl->stop_node(1);
     test.repl->stop_node(2);
     test.repl->stop_node(3);
@@ -142,7 +142,7 @@ void prepare_test_3(TestConnections& test)
     test.repl->start_node(1, (char*) "");
     test.repl->start_node(2, (char*) "");
     test.repl->start_node(3, (char*) "");
-    test.maxscales->start_maxscale(0);
+    test.maxscales->start_maxscale();
     test.maxscales->wait_for_monitor(2);
 
     test.repl->connect();
@@ -176,7 +176,7 @@ void check_test_3(TestConnections& test)
     // Restore server 2 and 4 settings. Because server 1 is now the master, shutting it down causes
     // another failover. Prevent this by stopping maxscale.
     test.tprintf("Restoring server settings.");
-    test.maxscales->stop_maxscale(0);
+    test.maxscales->stop_maxscale();
     test.repl->stop_node(1);
     test.repl->stop_node(2);
     test.repl->stop_node(3);
@@ -188,5 +188,5 @@ void check_test_3(TestConnections& test)
     test.repl->start_node(1, (char*) "");
     test.repl->start_node(2, (char*) "");
     test.repl->start_node(3, (char*) "");
-    test.maxscales->start_maxscale(0);
+    test.maxscales->start_maxscale();
 }

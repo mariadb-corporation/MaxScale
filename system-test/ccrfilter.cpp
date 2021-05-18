@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/time.*/time=0/' /etc/maxscale.cnf", true);
     test->maxscales->ssh_node(0, "sed -i -e 's/###count/count/' /etc/maxscale.cnf", true);
-    test->maxscales->restart_maxscale(0);
+    test->maxscales->restart_maxscale();
     test->maxscales->connect_maxscale(0);
 
     test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 
     test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/###match/match/' /etc/maxscale.cnf", true);
-    test->maxscales->restart_maxscale(0);
+    test->maxscales->restart_maxscale();
     test->maxscales->connect_maxscale(0);
 
 
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
     test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/match/###match/' /etc/maxscale.cnf", true);
     test->maxscales->ssh_node(0, "sed -i -e 's/###ignore/ignore/' /etc/maxscale.cnf", true);
-    test->maxscales->restart_maxscale(0);
+    test->maxscales->restart_maxscale();
     test->maxscales->connect_maxscale(0);
 
     test->tprintf("t1 first, should be ignored");

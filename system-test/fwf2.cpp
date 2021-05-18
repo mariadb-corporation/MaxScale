@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         sprintf(str, "rules%d", i);
         copy_rules(Test, str, rules_dir);
 
-        Test->maxscales->start_maxscale(0);
+        Test->maxscales->start_maxscale();
         Test->maxscales->connect_rwsplit(0);
 
         sprintf(pass_file, "%s/fw2/pass%d", test_dir, i);
