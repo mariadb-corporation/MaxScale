@@ -994,7 +994,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
     return condition;
 }
 
-using ElementValueToString = string (*)(const bsoncxx::document::element&);
+using ElementValueToString = string (*)(const bsoncxx::document::element& element, const string& op);
 
 struct ElementValueInfo
 {
@@ -1003,7 +1003,7 @@ struct ElementValueInfo
 };
 
 template<class document_element_or_array_item>
-string element_to_value(const document_element_or_array_item& x)
+string element_to_value(const document_element_or_array_item& x, const string& op = "")
 {
     stringstream ss;
 
@@ -1048,7 +1048,7 @@ string element_to_value(const document_element_or_array_item& x)
     return ss.str();
 }
 
-string element_to_array(const bsoncxx::document::element& element)
+string element_to_array(const bsoncxx::document::element& element, const string& op = "")
 {
     vector<string> values;
 
@@ -1060,7 +1060,7 @@ string element_to_array(const bsoncxx::document::element& element)
         {
             const auto& item = *it;
 
-            string value = element_to_value(item);
+            string value = element_to_value(item, op);
             mxb_assert(!value.empty());
 
             values.push_back(value);
@@ -1068,7 +1068,10 @@ string element_to_array(const bsoncxx::document::element& element)
     }
     else
     {
-        MXS_ERROR("The value of an $in/$nin element is not an array.");
+        stringstream ss;
+        ss << op << " needs an array";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
     }
 
     string rv;
@@ -1081,7 +1084,7 @@ string element_to_array(const bsoncxx::document::element& element)
     return rv;
 }
 
-string element_to_null(const bsoncxx::document::element& element)
+string element_to_null(const bsoncxx::document::element& element, const string& = "")
 {
     bool b = mxsmongo::element_as<bool>("maxscale", "internal", element, mxsmongo::Conversion::RELAXED);
 
@@ -1131,7 +1134,7 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
         }
 
         condition = "(JSON_CONTAINS(doc, "
-            + element_to_value(elemMatch) + ", '$." + field + "') = " + value
+            + element_to_value(elemMatch, "$elemMatch") + ", '$." + field + "') = " + value
             + ")";
     }
 
@@ -1171,7 +1174,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         if (jt != converters.end())
         {
             rv = "( JSON_EXTRACT(doc, '$." + field + "') "
-                + jt->second.op + " " + jt->second.converter(element) + ")";
+                + jt->second.op + " " + jt->second.converter(element, op) + ")";
         }
         else if (op == "$elemMatch")
         {
