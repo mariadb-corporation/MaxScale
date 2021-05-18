@@ -131,8 +131,9 @@ private:
     StateMachineRes read_history_response();
     bool            compare_responses();
 
-    bool   send_change_user_to_backend();
-    int    read_change_user();
+    bool            send_change_user_to_backend();
+    StateMachineRes read_change_user();
+
     bool   send_proxy_protocol_header();
     GWBUF* create_change_user_packet();
     void   read_com_ping_response();

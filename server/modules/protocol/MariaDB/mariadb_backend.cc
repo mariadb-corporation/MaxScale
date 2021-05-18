@@ -374,7 +374,23 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 
         case State::RESET_CONNECTION:
         case State::READ_CHANGE_USER:
-            read_change_user();
+            {
+                auto res = read_change_user();
+
+                switch (res)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case StateMachineRes::DONE:
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
             break;
 
         case State::SEND_CHANGE_USER:
@@ -797,26 +813,30 @@ bool MariaDBBackendConnection::compare_responses()
     return ok;
 }
 
-int MariaDBBackendConnection::read_change_user()
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_user()
 {
     DCB::ReadResult read_res = mariadb::read_protocol_packet(m_dcb);
 
     if (read_res.error())
     {
         do_handle_error(m_dcb, "Read from backend failed");
-        return 0;
+        return StateMachineRes::ERROR;
     }
 
-    int rc = 1;
+    StateMachineRes rv = StateMachineRes::ERROR;
     mxs::Buffer buffer = std::move(read_res.data);
 
-    if (!buffer.empty())
+    if (buffer.empty())
+    {
+        rv = StateMachineRes::IN_PROGRESS;
+    }
+    else
     {
         buffer.make_contiguous();
 
         if (auth_change_requested(buffer.get()) && handle_auth_change_response(buffer.get(), m_dcb))
         {
-            rc = 0;
+            rv = StateMachineRes::IN_PROGRESS;
         }
         else
         {
@@ -831,11 +851,18 @@ int MariaDBBackendConnection::read_change_user()
                 buffer.data()[3] = client_data->next_sequence;
 
                 mxs::ReplyRoute route;
-                rc = m_upstream->clientReply(buffer.release(), route, m_reply);
 
-                // If packets were received from the router while the COM_CHANGE_USER was in progress,
-                // they are stored in the same delayed queue that is used for the initial connection.
-                m_state = State::SEND_DELAYQ;
+                if (m_upstream->clientReply(buffer.release(), route, m_reply))
+                {
+                    // If packets were received from the router while the COM_CHANGE_USER was in progress,
+                    // they are stored in the same delayed queue that is used for the initial connection.
+                    m_state = State::SEND_DELAYQ;
+                    rv = StateMachineRes::DONE;
+                }
+                else
+                {
+                    rv = StateMachineRes::ERROR;
+                }
             }
             else if (m_state == State::RESET_CONNECTION)
             {
@@ -843,11 +870,13 @@ int MariaDBBackendConnection::read_change_user()
                 {
                     std::string errmsg = "Failed to reuse connection: " + mxs::extract_error(buffer.get());
                     do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+                    rv = StateMachineRes::ERROR;
                 }
                 else
                 {
                     // Connection is being attached to a new session, so all initializations must be redone.
                     m_state = State::CONNECTION_INIT;
+                    rv = StateMachineRes::DONE;
                 }
             }
             else
@@ -857,7 +886,7 @@ int MariaDBBackendConnection::read_change_user()
         }
     }
 
-    return rc;
+    return rv;
 }
 
 void MariaDBBackendConnection::read_com_ping_response()
