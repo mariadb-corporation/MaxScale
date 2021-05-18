@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
         }
 
         Test->tprintf("Filling t1 with data\n");
-        Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");
+        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
         Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
@@ -86,11 +86,11 @@ int main(int argc, char* argv[])
 
         Test->set_timeout(30);
         Test->tprintf("Testing with database 'test1'\n");
-        Test->add_result(Test->use_db(0, (char*) "test1"), "use_db failed\n");
-        Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");
+        Test->add_result(Test->use_db((char*)"test1"), "use_db failed\n");
+        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
-        Test->add_result(Test->check_t1_table(0, false, (char*) "test"), "t1 is found in 'test'\n");
-        Test->add_result(Test->check_t1_table(0, true, (char*) "test1"), "t1 is not found in 'test1'\n");
+        Test->add_result(Test->check_t1_table(false, (char*)"test"), "t1 is found in 'test'\n");
+        Test->add_result(Test->check_t1_table(true, (char*)"test1"), "t1 is not found in 'test1'\n");
 
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)

@@ -98,7 +98,7 @@ void* kill_vm_thread()
     sleep(20);
     printf("Checking current slave\n");
     fflush(stdout);
-    old_slave = Test->find_connected_slave1(0);
+    old_slave = Test->find_connected_slave1();
 
     if ((old_slave >= 1) && (old_slave <= Test->repl->N))
     {

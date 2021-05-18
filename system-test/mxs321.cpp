@@ -53,7 +53,7 @@ void create_and_check_connections(TestConnections* test, int target)
     test->stop_timeout();
     sleep(10);
 
-    test->check_current_connections(0, 0);
+    test->check_current_connections(0);
 }
 
 int main(int argc, char* argv[])
