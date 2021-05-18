@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 {
     char result_tmp[bufsize];
     TestConnections test(argc, argv);
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
 
     // Set up test table
     basic_test(test);

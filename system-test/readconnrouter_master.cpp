@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     auto master = get_row(test.repl->nodes[0], "SELECT @@server_id");
     auto maxscale = get_row(test.maxscales->conn_master[0], "SELECT @@server_id");
     test.expect(master == maxscale, "Connection did not go to the master: %s", maxscale[0].c_str());
-    test.maxscales->close_readconn_master(0);
+    test.maxscales->close_readconn_master();
 
     test.tprintf("Changing master to node 1");
     test.set_timeout(20 * test.repl->N);
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     master = get_row(test.repl->nodes[1], "SELECT @@server_id");
     maxscale = get_row(test.maxscales->conn_master[0], "SELECT @@server_id");
     test.expect(master == maxscale, "Connection did not go to the master: %s", maxscale[0].c_str());
-    test.maxscales->close_readconn_master(0);
+    test.maxscales->close_readconn_master();
 
     test.repl->change_master(0, 1);
     test.log_excludes(0, "The service 'CLI' is missing a definition of the servers");

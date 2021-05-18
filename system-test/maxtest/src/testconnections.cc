@@ -1211,7 +1211,7 @@ int TestConnections::create_connections(int m,
                 printf("RWSplit \t");
             }
 
-            rwsplit_conn[i] = maxscales->open_rwsplit_connection(m);
+            rwsplit_conn[i] = maxscales->open_rwsplit_connection();
             if (!rwsplit_conn[i])
             {
                 local_result++;
@@ -1225,7 +1225,7 @@ int TestConnections::create_connections(int m,
                 printf("ReadConn master \t");
             }
 
-            master_conn[i] = maxscales->open_readconn_master_connection(m);
+            master_conn[i] = maxscales->open_readconn_master_connection();
             if (mysql_errno(master_conn[i]) != 0)
             {
                 local_result++;
@@ -1239,7 +1239,7 @@ int TestConnections::create_connections(int m,
                 printf("ReadConn slave \t");
             }
 
-            slave_conn[i] = maxscales->open_readconn_slave_connection(m);
+            slave_conn[i] = maxscales->open_readconn_slave_connection();
             if (mysql_errno(slave_conn[i]) != 0)
             {
                 local_result++;
@@ -1392,7 +1392,7 @@ void TestConnections::log_printf(const char* format, ...)
 int TestConnections::get_master_server_id(int m)
 {
     int master_id = -1;
-    MYSQL* conn = maxscales->open_rwsplit_connection(m);
+    MYSQL* conn = maxscales->open_rwsplit_connection();
     char str[100];
     if (find_field(conn, "SELECT @@server_id, @@last_insert_id;", "@@server_id", str) == 0)
     {

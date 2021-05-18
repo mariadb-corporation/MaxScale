@@ -20,7 +20,7 @@ using std::cout;
 
 int get_master_server_id(TestConnections& test)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection();
     int id = -1;
     char str[1024];
 

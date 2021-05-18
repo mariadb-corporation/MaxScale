@@ -42,7 +42,7 @@ void sleep(int s)
 
 int get_server_id(Maxscales& maxscales)
 {
-    MYSQL* conn = maxscales.open_rwsplit_connection(0);
+    MYSQL* conn = maxscales.open_rwsplit_connection();
     int id = -1;
     char str[1024];
 
@@ -173,7 +173,7 @@ void insert_data(XTestConnections& test)
 
 void check(XTestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* pConn = test.maxscales->open_rwsplit_connection();
     const char* zQuery = "SELECT * FROM test.t1";
 
     test.try_query(pConn, "BEGIN");

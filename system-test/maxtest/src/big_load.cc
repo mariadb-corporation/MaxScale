@@ -68,7 +68,7 @@ void load(long int* new_inserts,
             Test->add_result(1, "Query %s failed\n", sql);
         }
         // close connections
-        Test->maxscales->close_rwsplit(0);
+        Test->maxscales->close_rwsplit();
 
         if (nodes == Test->repl)
         {

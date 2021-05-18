@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < TestConnNum; i++)
     {
         Test->set_timeout(10 * Test->repl->N);
-        conn[i] = Test->maxscales->open_readconn_slave_connection(0);
+        conn[i] = Test->maxscales->open_readconn_slave_connection();
     }
     Test->set_timeout(25 * Test->repl->N);
     Test->tprintf("Waiting 5 seconds\n");

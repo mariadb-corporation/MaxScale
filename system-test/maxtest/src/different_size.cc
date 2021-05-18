@@ -38,7 +38,7 @@ MYSQL* connect_to_serv(TestConnections* Test, bool binlog)
     }
     else
     {
-        conn = Test->maxscales->open_rwsplit_connection(0);
+        conn = Test->maxscales->open_rwsplit_connection();
     }
     return conn;
 }

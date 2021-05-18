@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
     {
         test.tprintf("%s", "All databases are present.");
     }
-    test.maxscales->close_rwsplit(0);
+    test.maxscales->close_rwsplit();
 
     test.tprintf("Test connecting with empty database name for all users.\n");
     for (int i = 0; i < N; i++)

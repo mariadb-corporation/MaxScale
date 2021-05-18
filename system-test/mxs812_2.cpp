@@ -46,7 +46,7 @@ void* test_thr(void* data)
 
     while (running)
     {
-        MYSQL* mysql = Test->maxscales->open_rwsplit_connection(0);
+        MYSQL* mysql = Test->maxscales->open_rwsplit_connection();
 
         for (int i = 0; i < 3; i++)
         {

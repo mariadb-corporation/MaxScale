@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     string slave = "Slave";
 
     // Set up test table
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
     test.tprintf("Creating table and inserting data.");
     test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
     int insert_val = 1;
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
         test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server2");
         test.maxscales->wait_for_monitor(1);
         // Add another event to force gtid forward.
-        maxconn = test.maxscales->open_rwsplit_connection(0);
+        maxconn = test.maxscales->open_rwsplit_connection();
         test.try_query(maxconn, "FLUSH TABLES;");
         test.try_query(maxconn, insert_query, insert_val);
         mysql_close(maxconn);
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
     }
 
-    maxconn = test.maxscales->open_rwsplit_connection(0);
+    maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, strict_mode, 0);
     test.try_query(maxconn, drop_query);
     mysql_close(maxconn);

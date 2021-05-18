@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     }
     cout << ".\n";
 
-    auto maxconn = test.maxscales->open_rwsplit_connection(0);
+    auto maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "SELECT 1;");
     if (test.ok())
     {
