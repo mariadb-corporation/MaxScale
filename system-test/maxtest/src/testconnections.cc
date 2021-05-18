@@ -1148,7 +1148,7 @@ int TestConnections::check_maxscale_alive(int m)
     try_query(maxscales->conn_master[m], "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
-    try_query(maxscales->conn_slave[m], "show databases;");
+    try_query(maxscales->conn_slave, "show databases;");
     set_timeout(10);
     maxscales->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
@@ -1180,7 +1180,7 @@ int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_mas
     }
 
     tprintf("Testing ReadConnRoute Slave, expecting %s\n", (rc_slave ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_slave[m], "select 1");
+    rc = execute_query(maxscales->conn_slave, "select 1");
     if ((rc == 0) != rc_slave)
     {
         tprintf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
@@ -1483,7 +1483,7 @@ int TestConnections::insert_select(int m, int N)
 
     tprintf("SELECT: slave\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_slave[m], N);
+    result += select_from_t1(maxscales->conn_slave, N);
 
     return result;
 }
@@ -1498,7 +1498,7 @@ int TestConnections::use_db(int m, char* db)
     tprintf("selecting DB '%s' for rwsplit\n", db);
     local_result += execute_query(maxscales->conn_rwsplit[m], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    local_result += execute_query(maxscales->conn_slave[m], "%s", sql);
+    local_result += execute_query(maxscales->conn_slave, "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
     local_result += execute_query(maxscales->conn_master[m], "%s", sql);
     for (int i = 0; i < repl->N; i++)
@@ -1548,7 +1548,7 @@ int TestConnections::check_t1_table(int m, bool presence, char* db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(maxscales->conn_slave[m]);
+    exists = check_if_t1_exists(maxscales->conn_slave);
 
     if (exists == presence)
     {

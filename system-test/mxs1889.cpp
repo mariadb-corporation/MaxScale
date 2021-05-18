@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     test.maxscales->connect();
 
     // All slaves down, so we expect a connection to the master.
-    string master_id = get_server_id(test, test.maxscales->conn_slave[0]);
+    string master_id = get_server_id(test, test.maxscales->conn_slave);
     test.tprintf("Master id: %s", master_id.c_str());
 
     test.maxscales->disconnect();
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
     test.maxscales->connect();
 
-    string slave_id = get_server_id(test, test.maxscales->conn_slave[0]);
+    string slave_id = get_server_id(test, test.maxscales->conn_slave);
     test.tprintf("Server id: %s", slave_id.c_str());
     test.expect(slave_id != master_id, "Expected something else but %s", master_id.c_str());
 

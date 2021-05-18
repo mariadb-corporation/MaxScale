@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
                     "Current connection should show one row");
     test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], "SELECT * FROM t1", 2),
                     "New connection should show two rows");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0], "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
                     "New connection should show two rows");
 
     printf("Drop temporary table and check that the real table has two rows");
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
                     "check failed");
     test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], "SELECT * FROM t1", 2),
                     "check failed");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0], "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
                     "check failed");
 
     test.maxscales->close_maxscale_connections();

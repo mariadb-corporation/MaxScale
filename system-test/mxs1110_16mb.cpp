@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking data via ReadConn master\n");
     check_longblob_data(Test, Test->maxscales->conn_master[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");
-    check_longblob_data(Test, Test->maxscales->conn_slave[0], chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_slave, chunk_size, chunk_num, 2);
     Test->maxscales->close_maxscale_connections();
 
     MYSQL* conn_galera = open_conn(4016,

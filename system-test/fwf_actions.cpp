@@ -45,11 +45,11 @@ int main(int argc, char** argv)
     /** Test whitelisting functionality */
     test->tprintf("Trying matching query to whitelisted Conn slave, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->maxscales->conn_slave[0], "select 1"),
+    test->add_result(execute_query_silent(test->maxscales->conn_slave, "select 1"),
                      "Query to whitelist service should succeed.\n");
     test->tprintf("Trying non-matching query to whitelisted Conn slave, expecting failure\n");
     test->set_timeout(30);
-    test->add_result(!execute_query_silent(test->maxscales->conn_slave[0], "show status"),
+    test->add_result(!execute_query_silent(test->maxscales->conn_slave, "show status"),
                      "Non-matching query to blacklist service should fail.\n");
 
     /** Testing NO OP mode */

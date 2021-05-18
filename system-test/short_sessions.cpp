@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Checking t1 table using ReadConn router in slave mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0],
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
