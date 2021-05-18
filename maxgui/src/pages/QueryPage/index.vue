@@ -9,7 +9,12 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': isFullScreen }"
         >
-            <toolbar-container :queryTxt="queryTxt" :isFullScreen="isFullScreen" />
+            <toolbar-container
+                ref="toolbarContainer"
+                :queryTxt="queryTxt"
+                :selectedQueryTxt="selectedQueryTxt"
+                :isFullScreen="isFullScreen"
+            />
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -31,9 +36,13 @@
                     <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
                         <template slot="pane-left">
                             <query-editor
+                                ref="queryEditor"
                                 v-model="queryTxt"
                                 class="editor pt-2 pl-2"
-                                :tableDist="getDbCmplList"
+                                :cmplList="getDbCmplList"
+                                @on-selection="selectedQueryTxt = $event"
+                                @onCtrlEnter="() => $refs.toolbarContainer.onRun('all')"
+                                @onCtrlShiftEnter="() => $refs.toolbarContainer.onRun('selected')"
                             />
                         </template>
                         <template slot="pane-right">
@@ -90,6 +99,7 @@ export default {
             },
             queryTxt: '',
             previewDataSchemaId: '',
+            selectedQueryTxt: '',
         }
     },
     computed: {
@@ -146,7 +156,7 @@ export default {
             return minPercent
         },
         placeToEditor(schemaId) {
-            this.queryTxt = `${this.queryTxt} ${schemaId}`
+            this.$refs.queryEditor.insertAtCursor(schemaId)
         },
     },
 }

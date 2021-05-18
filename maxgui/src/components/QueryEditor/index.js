@@ -17,7 +17,7 @@ export default {
     name: 'query-editor',
     props: {
         value: { type: String, required: true },
-        tableDist: { type: Array, default: () => [] },
+        cmplList: { type: Array, default: () => [] },
     },
 
     model: {
@@ -35,7 +35,7 @@ export default {
         value(v) {
             if (this.editor && v !== this.getEditorValue()) this.setEditorValue(v)
         },
-        tableDist: {
+        cmplList: {
             deep: true,
             handler() {
                 this.createCompletionList()
@@ -47,10 +47,12 @@ export default {
             return this.completionList.map(item => item.label)
         },
     },
-    mounted() {
+    created() {
         this.monaco = require('monaco-editor')
         this.createCompletionList()
-        this.$nextTick(() => this.initMonaco(this.monaco))
+    },
+    mounted() {
+        this.initMonaco(this.monaco)
     },
 
     beforeDestroy() {
@@ -66,7 +68,7 @@ export default {
                 insertText: w.keyword,
             }))
 
-            const dist = this.$help.lodash.cloneDeep(this.tableDist)
+            const dist = this.$help.lodash.cloneDeep(this.cmplList)
             for (const item of dist) {
                 switch (item.type) {
                     case 'table':
@@ -178,6 +180,35 @@ export default {
                 const editorValue = this.getEditorValue()
                 if (this.value !== editorValue) this.$emit('change', editorValue, event)
             })
+            this.editor.onDidChangeCursorSelection(event => {
+                this.$emit('on-selection', this.getSelectedTxt(event.selection))
+            })
+
+            // Add custom commands to palette list
+            const actionDescriptors = [
+                {
+                    label: 'Execute all statements',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+                    run: () => this.$emit('onCtrlEnter'),
+                },
+                {
+                    label: 'Execute selected statements',
+                    keybindings: [
+                        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+                    ],
+                    run: () => this.$emit('onCtrlShiftEnter'),
+                },
+            ]
+            for (const item of actionDescriptors) {
+                this.editor.addAction({
+                    id: this.$help.lodash.uniqueId('monaco_action_id_'),
+                    precondition: null,
+                    keybindingContext: null,
+                    contextMenuGroupId: 'navigation',
+                    contextMenuOrder: 1.5,
+                    ...item,
+                })
+            }
         },
         createCompleters(range) {
             return this.completionList.map(item => ({ ...item, range }))
@@ -187,6 +218,25 @@ export default {
         },
         setEditorValue(value) {
             if (this.editor) return this.editor.setValue(value)
+        },
+        insertAtCursor(value) {
+            if (this.editor) {
+                const p = this.editor.getPosition()
+                this.editor.executeEdits('', [
+                    {
+                        range: new this.monaco.Range(
+                            p.lineNumber,
+                            p.column,
+                            p.lineNumber,
+                            p.column
+                        ),
+                        text: value,
+                    },
+                ])
+            }
+        },
+        getSelectedTxt(selection) {
+            return this.editor.getModel().getValueInRange(selection)
         },
     },
 

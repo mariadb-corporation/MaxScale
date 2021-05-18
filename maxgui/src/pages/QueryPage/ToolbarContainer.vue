@@ -12,20 +12,32 @@
 
         <v-spacer></v-spacer>
         <connection-manager />
-        <v-btn
-            width="80"
-            outlined
-            height="36"
-            rounded
-            class="ml-4 text-capitalize px-8 font-weight-medium"
-            depressed
-            small
-            color="accent-dark"
-            :disabled="!queryTxt || !active_conn_state"
-            @click="onRun"
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
         >
-            {{ $t('run') }}
-        </v-btn>
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    width="80"
+                    outlined
+                    height="36"
+                    rounded
+                    class="ml-4 text-capitalize px-8 font-weight-medium"
+                    depressed
+                    small
+                    color="accent-dark"
+                    :disabled="!queryTxt || !active_conn_state"
+                    v-on="on"
+                    @click="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
+                >
+                    {{ $t('run') }}
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
+            </span>
+        </v-tooltip>
     </v-toolbar>
 </template>
 
@@ -53,6 +65,7 @@ export default {
     props: {
         isFullScreen: { type: Boolean, required: true },
         queryTxt: { type: String, required: true },
+        selectedQueryTxt: { type: String, required: true },
     },
     computed: {
         ...mapState({
@@ -67,9 +80,19 @@ export default {
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
         }),
-        async onRun() {
+        /**
+         * @param {String} mode Mode to execute query: All or selected
+         */
+        async onRun(mode) {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
-            await this.fetchQueryResult(this.queryTxt)
+            switch (mode) {
+                case 'all':
+                    if (this.queryTxt) await this.fetchQueryResult(this.queryTxt)
+                    break
+                case 'selected':
+                    if (this.selectedQueryTxt) await this.fetchQueryResult(this.selectedQueryTxt)
+                    break
+            }
         },
     },
 }
