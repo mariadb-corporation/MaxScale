@@ -771,7 +771,10 @@ bool MariaDBBackendConnection::compare_responses()
         }
     }
 
-    if (!found && !m_ids_to_check.empty())
+    mxb_assert_message(ok || data->history_response_cbs.count(this) == 0,
+                       "History response callback must not be installed on failure");
+
+    if (ok && !found && !m_ids_to_check.empty())
     {
         data->history_response_cbs.emplace(
             this, [this]() {
