@@ -78,6 +78,8 @@ describe(name, function () {
                 k = 0;
             }
 
+            doc._id = k;
+
             documents.push(doc);
         }
 
@@ -290,6 +292,68 @@ describe(name, function () {
         assert.equal(rv2.cursor.firstBatch[0].a.b, 2);
 
         await drop(misc);
+    });
+
+    // In the case of the logical operators, we do not figure out what we actually
+    // expect, but trust that MongoDB does the right thing and expect MxsMongo to do
+    // the same. We do ensure that something must be returned.
+
+    it('Supports $and', async function () {
+        var filter = {
+            $and: [
+                { i: { $eq: 2 }},
+                { j: { $gt: 10 }},
+                { k: { $lt: 90 }}
+            ]
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+    });
+
+    it('Supports $not', async function () {
+        var filter = {
+            i: { $not: { $gt: 3 }}
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+
+        var filter = {
+            l: { $not: { $gt: 3 }} // Note: 'l' does not exist, so we should get all.
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.equal(rv1.cursor.firstBatch.length, N);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+    });
+
+    it('Supports $or', async function () {
+        var filter = {
+            $or: [
+                { i: { $eq: 3 }},
+                { j: 5 },
+                { k: { $gt: 37 }}
+            ]
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
     });
 
     after(function () {

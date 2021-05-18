@@ -214,6 +214,16 @@ database for tables that contain documents.
 
 # Operators
 
+## [Query and Projection Operators](https://docs.mongodb.com/manual/reference/operator/query/)
+
+### [Comparison Query Operators](https://docs.mongodb.com/manual/reference/operator/query-comparison/)
+
+All operators are supported.
+
+### [Logical Query Operators](https://docs.mongodb.com/manual/reference/operator/query-logical/)
+
+Currently all but the `$nor` operator are supported.
+
 ## [Update Operators](https://docs.mongodb.com/manual/reference/operator/update/#update-operators)
 
 ### [Field Update Operators](https://docs.mongodb.com/manual/reference/operator/update-field/)

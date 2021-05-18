@@ -875,30 +875,6 @@ string get_nor_condition(const bsoncxx::document::element& element)
     return condition;
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/not/#op._S_not
-string get_not_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$not") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_document)
-    {
-        string sub_condition = get_condition(element.get_document());
-
-        if (!sub_condition.empty())
-        {
-            condition += "NOT " + sub_condition;
-        }
-    }
-    else
-    {
-        MXS_ERROR("The value of a $not element is not a document.");
-    }
-
-    return condition;
-}
-
 // https://docs.mongodb.com/manual/reference/operator/query/or/#op._S_or
 string get_or_condition(const bsoncxx::array::view& array)
 {
@@ -974,10 +950,6 @@ string get_logical_condition(const bsoncxx::document::element& element)
     else if (key.compare("$nor") == 0)
     {
         condition = get_nor_condition(element);
-    }
-    else if (key.compare("$not") == 0)
-    {
-        condition = get_not_condition(element);
     }
     else if (key.compare("$or") == 0)
     {
@@ -1203,6 +1175,38 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$exists", { "IS",     &element_to_null } }
 };
 
+string get_op_and_value(const bsoncxx::document::view& doc)
+{
+    string rv;
+
+    for (auto it = doc.begin(); it != doc.end(); ++it)
+    {
+        if (!rv.empty())
+        {
+            MXS_WARNING("Comparison object '%s' has more fields than one, only "
+                        "the last one will be applied.", bsoncxx::to_json(doc).c_str());
+        }
+
+        const auto& element = *it;
+        const auto op = static_cast<string>(element.key());
+
+        auto jt = converters.find(op);
+
+        if (jt != converters.end())
+        {
+            rv = jt->second.op + " " + jt->second.converter(element, op);
+        }
+        else
+        {
+            stringstream ss;
+            ss << "unknown operator: " << op;
+            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+        }
+    }
+
+    return rv;
+}
+
 string get_comparison_condition(const string& field, const bsoncxx::document::view& doc)
 {
     string rv;
@@ -1222,8 +1226,25 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 
         if (jt != converters.end())
         {
-            rv = "( JSON_EXTRACT(doc, '$." + field + "') "
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') "
                 + jt->second.op + " " + jt->second.converter(element, op) + ")";
+        }
+        else if (op == "$not")
+        {
+            if (element.type() != bsoncxx::type::k_document)
+            {
+                stringstream ss;
+                ss << "$not needs a document (regex not yet supported)";
+
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            auto doc = element.get_document();
+
+            // According to the documentation, an absent field will always match. That's
+            // what the 'IS NULL' takes care of.
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
+                + "OR NOT JSON_EXTRACT(doc, '$." + field + "') " + get_op_and_value(doc) + ")";
         }
         else if (op == "$elemMatch")
         {
