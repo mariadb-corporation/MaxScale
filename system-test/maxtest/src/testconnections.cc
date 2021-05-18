@@ -836,8 +836,8 @@ void TestConnections::init_maxscale(int m)
                     "iptables -F INPUT;"
                     "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                     "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                    mxs->maxscale_cnf[0].c_str(),
-                    mxs->maxscale_log_dir[0].c_str());
+                    mxs->maxscale_cnf.c_str(),
+                    mxs->maxscale_log_dir.c_str());
     if (maxscale::start)
     {
         mxs->restart_maxscale();
