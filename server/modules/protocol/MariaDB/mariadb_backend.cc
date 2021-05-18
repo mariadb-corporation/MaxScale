@@ -399,8 +399,13 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             // was executed before it.
             if (m_reply.is_complete() && m_track_queue.empty())
             {
-                m_state = State::ROUTING;
-                send_delayed_packets();
+                // The state can change inside do_handle_error() as a result of a failed network read from the
+                // DCB or a mismatch in the result of a command stored in the history.
+                if (m_state != State::FAILED)
+                {
+                    m_state = State::ROUTING;
+                    send_delayed_packets();
+                }
             }
 
             state_machine_continue = false;
@@ -449,8 +454,11 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
         mxb_assert(m_session->state() == MXS_SESSION::State::STOPPING);
-        m_state = State::FAILED;
     }
+
+    // The DCB must not be open after the handleError call.
+    mxb_assert(!dcb->is_open());
+    m_state = State::FAILED;
 
     gwbuf_free(errbuf);
 }
