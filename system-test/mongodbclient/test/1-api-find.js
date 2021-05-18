@@ -237,6 +237,8 @@ describe(name, function () {
         ];
 
         var n = name + "_array";
+        await mng.ntRunCommand({drop: n});
+        await mxs.ntRunCommand({drop: n});
 
         await mng.runCommand({insert: n, documents: documents});
         await mxs.runCommand({insert: n, documents: documents});
@@ -251,6 +253,37 @@ describe(name, function () {
         assert.equal(rv1.cursor.firstBatch.length, 1);
         var rv2 = await mxs.runCommand({find: n, filter: filter});
         assert.equal(rv2.cursor.firstBatch.length, 1);
+
+        await mng.runCommand({drop: n});
+        await mxs.runCommand({drop: n});
+    });
+
+    it('Can use objects as values.', async function () {
+        var documents = [
+            { a: { b: 1 }},
+            { a: { b: 2 }},
+            { a: { b: 3 }}
+        ];
+
+        var n = name + "_object";
+        await mng.ntRunCommand({drop: n});
+        await mxs.ntRunCommand({drop: n});
+
+        await mng.runCommand({insert: n, documents: documents});
+        await mxs.runCommand({insert: n, documents: documents});
+
+        var filter = {
+            a: {
+                "$eq": { b: 2 }
+            }
+        };
+
+        var rv1 = await mng.runCommand({find: n, filter: filter});
+        assert.equal(rv1.cursor.firstBatch.length, 1);
+        assert.equal(rv1.cursor.firstBatch[0].a.b, 2);
+        var rv2 = await mxs.runCommand({find: n, filter: filter});
+        assert.equal(rv2.cursor.firstBatch.length, 1);
+        assert.equal(rv2.cursor.firstBatch[0].a.b, 2);
 
         mng.runCommand({drop: n});
         mxs.runCommand({drop: n});

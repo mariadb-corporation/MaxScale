@@ -1061,9 +1061,33 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         }
         break;
 
+    case bsoncxx::type::k_document:
+        {
+            ss << "JSON_OBJECT(";
+
+            bsoncxx::document::view d = x.get_document();
+
+            bool first = true;
+            for (auto element : d)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
+                ss << "\"" << element.key() << "\", " << element_to_value(element, op);
+            }
+
+            ss << ")";
+        }
+        break;
+
     default:
         {
-            // TODO: Mongo deals gracefully with this.
             ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
 
             throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
