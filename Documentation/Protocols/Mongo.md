@@ -379,6 +379,27 @@ with the exception of the `_id` field:
 if other fields are explicitly included.
 *NOTE* Currently exclusion of other fields but `_id` is not supported.
 
+#### Filtering by `_id`
+
+Note that there is a significant difference between
+```
+> db.runCommand({find: "collection", filter: { _id: 4711 }});
+```
+and
+```
+> db.runCommand({find: "collection", filter: { _id: { $eq: 4711 }}});
+```
+In the former case the generated `WHERE` clause will be
+```
+... WHERE (id = '4711')
+```
+and in the latter
+```
+... WHERE (JSON_EXTRACT(doc, '$._id') = 4711)
+```
+That is, in the former case the _indexed_ column `id` will be used, in the
+latter it will not.
+
 ### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 
 The following fields are relevant.
