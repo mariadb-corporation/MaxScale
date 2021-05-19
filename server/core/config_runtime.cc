@@ -1558,6 +1558,7 @@ json_t* runtime_get_json_error()
 
 bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port)
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
     bool rval = false;
     if (ServerManager::find_by_unique_name(name) == nullptr)
     {
@@ -1569,22 +1570,17 @@ bool runtime_create_volatile_server(const std::string& name, const std::string& 
         }
         parameters.set(CN_PORT, std::to_string(port));
 
-        auto worker = mxs::MainWorker::get();
-
-        worker->call(
-            [&]() {
-                if (Server* server = ServerManager::create_server(name.c_str(), parameters))
-                {
-                    rval = true;
-                    MXS_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(),
-                               server->port());
-                }
-                else
-                {
-                    MXS_ERROR("Failed to create server '%s', see error log for more details",
-                              name.c_str());
-                }
-            }, mxb::Worker::EXECUTE_AUTO);
+        if (Server* server = ServerManager::create_server(name.c_str(), parameters))
+        {
+            rval = true;
+            MXS_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(),
+                       server->port());
+        }
+        else
+        {
+            MXS_ERROR("Failed to create server '%s', see error log for more details",
+                      name.c_str());
+        }
     }
     else
     {

@@ -197,7 +197,7 @@ void run_in_mainworker(const function<void(void)>& func)
 {
     auto mw = mxs::MainWorker::get();
     // Using the semaphore-version of 'execute' to wait until completion causes deadlock. Reason unclear.
-    mw->execute(func, mxb::Worker::EXECUTE_AUTO);
+    mw->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
 }
 
@@ -292,6 +292,19 @@ bool XpandMonitor::configure(const mxs::ConfigParameters* pParams)
     MXB_AT_DEBUG(bool configured = ) m_config.configure(*pParams);
     mxb_assert(configured);
 
+    if (m_config.dynamic_node_detection())
+    {
+        // At startup we accept softfailed nodes in an attempt to be able to
+        // connect at any cost. It'll be replaced once there is an alternative.
+        check_cluster(xpand::Softfailed::ACCEPT);
+    }
+    else
+    {
+        populate_from_bootstrap_servers();
+    }
+
+    make_health_check();
+
     return true;
 }
 
@@ -363,18 +376,6 @@ void XpandMonitor::server_removed(SERVER* pServer)
 void XpandMonitor::pre_loop()
 {
     read_journal();
-    if (m_config.dynamic_node_detection())
-    {
-        // At startup we accept softfailed nodes in an attempt to be able to
-        // connect at any cost. It'll be replaced once there is an alternative.
-        check_cluster(xpand::Softfailed::ACCEPT);
-    }
-    else
-    {
-        populate_from_bootstrap_servers();
-    }
-
-    make_health_check();
 }
 
 void XpandMonitor::post_loop()

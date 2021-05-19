@@ -261,7 +261,7 @@ void run_in_mainworker(const function<void(void)>& func)
     auto* pMw = mxs::MainWorker::get();
     mxb_assert(pMw);
 
-    pMw->execute(func, mxb::Worker::EXECUTE_AUTO);
+    pMw->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
 
 int get_status_mask(const cs::Status& status, size_t nServers)
@@ -714,6 +714,22 @@ bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
             // bootstrap servers. If disabled we are going to use them directly
             // as the servers to be monitored.
             rv = check_bootstrap_servers();
+        }
+    }
+
+    if (rv)
+    {
+        if (m_context.config().dynamic_node_detection)
+        {
+            m_obsolete_bootstraps.clear();
+            m_probe_cluster = true;
+            m_last_probe = mxb::SteadyClock::now() - m_context.config().cluster_monitor_interval;
+
+            probe_cluster();
+        }
+        else
+        {
+            populate_from_bootstrap_servers();
         }
     }
 
@@ -1491,19 +1507,6 @@ void CsMonitor::server_removed(SERVER* pServer)
 void CsMonitor::pre_loop()
 {
     MonitorWorkerSimple::pre_loop();
-
-    if (m_context.config().dynamic_node_detection)
-    {
-        m_obsolete_bootstraps.clear();
-        m_probe_cluster = true;
-        m_last_probe = mxb::SteadyClock::now() - m_context.config().cluster_monitor_interval;
-
-        probe_cluster();
-    }
-    else
-    {
-        populate_from_bootstrap_servers();
-    }
 }
 
 void CsMonitor::pre_tick()
