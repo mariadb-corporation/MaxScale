@@ -329,6 +329,22 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor, rv2.cursor);
     });
 
+    it('Supports $nor', async function () {
+        var filter = {
+            $nor: [
+                { i: 2, },
+                { j: 10 },
+                { k: 90 }
+            ]
+        };
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+    });
+
     it('Supports $not', async function () {
         var filter = {
             i: { $not: { $gt: 3 }}

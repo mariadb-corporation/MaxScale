@@ -222,7 +222,7 @@ All operators are supported.
 
 ### [Logical Query Operators](https://docs.mongodb.com/manual/reference/operator/query-logical/)
 
-All but the `$nor` operator are supported.
+All operators are supported.
 
 ### [Element Query Operators](https://docs.mongodb.com/manual/reference/operator/query-element/)
 
