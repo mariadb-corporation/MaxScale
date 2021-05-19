@@ -1273,42 +1273,46 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     {
         condition = get_comparison_condition(field, element.get_document());
     }
+    else if (field == "_id")
+    {
+        condition = "( id = '";
+
+        if (type == bsoncxx::type::k_utf8)
+        {
+            condition += "\"";
+        }
+
+        condition += to_string(element);
+
+        if (type == bsoncxx::type::k_utf8)
+        {
+            condition += "\"";
+        }
+
+        condition += "')";
+    }
     else
     {
-        string value;
+        auto i = field.find_last_of('.');
 
-        if (type == bsoncxx::type::k_oid && field == "_id")
+        if (i != string::npos)
         {
-            // If the value is an Oid and the field is _id, then we assume that
-            // _id is an ObjectID like '{ $oid: "..." }'.
-            field += ".$oid";
-            value = "'" + element.get_oid().value.to_string() + "'";
-        }
-        else
-        {
-            auto i = field.find_last_of('.');
+            // Dot notation used, let's check whether it is a number.
+            auto tail = field.substr(i + 1);
 
-            if (i != string::npos)
+            char* zEnd;
+            auto l = strtol(tail.c_str(), &zEnd, 10);
+
+            if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
             {
-                // Dot notation used, let's check whether it is a number.
-                auto tail = field.substr(i + 1);
-
-                char* zEnd;
-                auto l = strtol(tail.c_str(), &zEnd, 10);
-
-                if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
-                {
-                    // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is Mongo,
-                    // latter is MariaDB JSON.
-                    field = field.substr(0, i);
-                    field += "[" + tail + "]";
-                }
+                // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is Mongo,
+                // latter is MariaDB JSON.
+                field = field.substr(0, i);
+                field += "[" + tail + "]";
             }
-
-            value = element_to_value(element);
         }
 
-        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + value + ")";
+        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + element_to_value(element) + ")";
     }
 
     return condition;

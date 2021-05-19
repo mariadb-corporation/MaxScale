@@ -476,6 +476,36 @@ describe(name, function () {
         assert.equal(rv2.cursor.id, 0);
     });
 
+    it('Can fetch with _id', async function () {
+        drop(misc);
+
+        var documents = [
+            { _id: 4711 },
+            { _id: "hello" },
+            { _id: mongodb.ObjectId() }
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        for (var i in documents) {
+            var doc = documents[i];
+
+            var rv1 = await mng.runCommand({find: misc, filter: doc});
+            assert.equal(rv1.cursor.firstBatch.length, 1);
+            assert.deepEqual(rv1.cursor.firstBatch[0], doc);
+
+            var rv2 = await mxs.runCommand({find: misc, filter: doc});
+            assert.equal(rv2.cursor.firstBatch.length, 1);
+            assert.deepEqual(rv2.cursor.firstBatch[0], doc);
+        }
+    });
+
     after(function () {
         drop(misc);
         drop(name);
