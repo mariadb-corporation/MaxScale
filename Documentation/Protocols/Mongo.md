@@ -222,7 +222,36 @@ All operators are supported.
 
 ### [Logical Query Operators](https://docs.mongodb.com/manual/reference/operator/query-logical/)
 
-Currently all but the `$nor` operator are supported.
+All but the `$nor` operator are supported.
+
+### [Element Query Operators](https://docs.mongodb.com/manual/reference/operator/query-element/)
+
+`$exists` is, but `$type` is not supported.
+
+### [Evaluation Query Operators](https://docs.mongodb.com/manual/reference/operator/query-evaluation/)
+
+No operators are supported.
+
+### [Geospatial Query Operators](https://docs.mongodb.com/manual/reference/operator/query-geospatial/)
+
+No operators are supported.
+
+### [Array Query Operators](https://docs.mongodb.com/manual/reference/operator/query-array/)
+
+Only `$elemMatch` is supported. Further, in conjunction with `$elemMatch`, only the operators
+`$eq` and `$ne` are supported.
+
+### [Bitwise Query Operators](https://docs.mongodb.com/manual/reference/operator/query-bitwise/)
+
+No operators are supported.
+
+### [Projection Operators](https://docs.mongodb.com/manual/reference/operator/projection/)
+
+No operators are supported.
+
+### [Miscallenous Operators](https://docs.mongodb.com/manual/reference/operator/query-miscellaneous/)
+
+No operators are supported.
 
 ## [Update Operators](https://docs.mongodb.com/manual/reference/operator/update/#update-operators)
 
@@ -301,7 +330,12 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 find| string | The name of the target table.
+filter| document | Optional. The query predicate. If unspecified, then all documents in the collection will match the predicate.
+sort | document | Optional. The sort specification for the ordering of the results.
 projection | document | Optional. The projection specification to determine which fields to includein the returned documents.
+skip | Positive integer | Optional. Number of documents to skip. Defaults to 0.
+limit | Non-negative integer | Optional. The maximum number of documents to return. If unspecified, then defaults to no limit. A limit of 0 is equivalent to setting no limit.
+batchSize | Non-negative integer | Optional. The number of documents to return in the first batch. Defaults to 101.
 
 All other fields are ignored.
 
@@ -326,7 +360,8 @@ For fields in an embedded documents, the field can be specified using:
 
    * _dot notation_; e.g. `"field.nestedfield": <value>`
 
-Specifying fields in embedded documents using nested form is not supported.
+In particular, specifying fields in embedded documents using nested form
+is not supported.
 
 ##### `_id` Field Projection
 The `_id` field is included in the returned documents by default unless you

@@ -356,6 +356,30 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor, rv2.cursor);
     });
 
+    it('Supports $exists', async function () {
+        var filter = {
+            i: { $exists: true }
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+
+        var filter = {
+            i: { $exists: true, $gt: 3 }
+        };
+
+        var rv1 = await mng.runCommand({find: name, filter: filter });
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mxs.runCommand({find: name, filter: filter });
+
+        assert.deepEqual(rv1.cursor, rv2.cursor);
+    });
+
     after(function () {
         if (mxs) {
             mxs.close();

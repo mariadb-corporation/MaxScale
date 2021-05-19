@@ -244,7 +244,7 @@ describe(name, function () {
     });
 
     it('Can update multiple documents.', async function () {
-        deleteAll();
+        await deleteAll();
 
         var originals = [
             {
@@ -266,8 +266,6 @@ describe(name, function () {
         var command = {update: name, updates: [{q: {}, u: { "$set": { b: 4 }}, multi: true }]};
         var rv1 = await mng.runCommand(command);
         var rv2 = await mxs.runCommand(command);
-        console.log(JSON.stringify(rv1));
-        console.log(JSON.stringify(rv2));
 
         var rv1 = await mng.runCommand({find: name});
         var rv2 = await mxs.runCommand({find: name});
@@ -278,7 +276,7 @@ describe(name, function () {
     });
 
     it('Can update with query.', async function () {
-        deleteAll();
+        await deleteAll();
 
         var originals = [
             {
