@@ -2400,6 +2400,8 @@ public:
                 update_names(pList->a[i].zDatabase, pList->a[i].zName, pList->a[i].zAlias, nullptr);
             }
         }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pList);
     }
 
     void maxscaleExplain(Parse* pParse)
