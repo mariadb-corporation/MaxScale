@@ -462,6 +462,8 @@ static void sigfatal_handler(int i)
         {
             session_dump_statements(dcb->session());
             session_dump_log(dcb->session());
+            MXS_ALERT("DCB: %p Session: %lu Service: %s",
+                      dcb, dcb->session()->id(), dcb->session()->service->name());
         }
     }
 

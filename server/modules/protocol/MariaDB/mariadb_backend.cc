@@ -467,13 +467,13 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
     mxb_assert(!dcb->hanged_up());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, ER_CONNECTION_KILLED, ss.str().c_str());
 
-    if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
-    {
-        mxb_assert(m_session->state() == MXS_SESSION::State::STOPPING);
-    }
+    MXB_AT_DEBUG(bool res = ) m_upstream->handleError(type, errbuf, nullptr, m_reply);
 
-    // The DCB must not be open after the handleError call.
-    mxb_assert(!dcb->is_open());
+    mxb_assert_message(res || m_session->state() == MXS_SESSION::State::STOPPING,
+                       "The session should be stopping when handleError fails");
+    mxb_assert_message(!res || !dcb->is_open(),
+                       "The DCB must not be open after a successful handleError call");
+
     m_state = State::FAILED;
 
     gwbuf_free(errbuf);
