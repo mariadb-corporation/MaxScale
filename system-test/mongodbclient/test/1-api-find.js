@@ -410,6 +410,56 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor, rv2.cursor);
     });
 
+    it('Supports projection', async function () {
+        var projection = {
+            i: 1
+        };
+
+        var command = {
+            find: name,
+            projection: projection
+        };
+
+        var rv1 = await mng.runCommand(command);
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+        assert.notEqual(rv1.cursor.firstBatch[0].i, undefined);
+        assert.equal(rv1.cursor.firstBatch[0].j, undefined);
+        assert.equal(rv1.cursor.firstBatch[0].k, undefined);
+
+        var rv2 = await mng.runCommand(command);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+    it('Supports skip and limit', async function () {
+        var command = {
+            find: name,
+            skip: 7
+        };
+
+        // Supports skip
+        var rv1 = await mng.runCommand(command);
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        var rv2 = await mng.runCommand(command);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Supports skip and limit
+        command.limit = 13;
+        rv1 = await mng.runCommand(command);
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        rv2 = await mng.runCommand(command);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Support limit
+        delete command.skip;
+        rv1 = await mng.runCommand(command);
+        assert.notEqual(rv1.cursor.firstBatch.length, 0);
+
+        rv2 = await mng.runCommand(command);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
     after(function () {
         drop(misc);
         drop(name);
