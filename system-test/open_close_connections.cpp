@@ -75,6 +75,6 @@ int main(int argc, char* argv[])
         a.join();
     }
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     return test.global_result;
 }

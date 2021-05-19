@@ -170,7 +170,7 @@ void test_main(TestConnections& test)
         {
             cout << "Testing normal PAM user.\n";
             try_log_in(pam_user, pam_pw, "");
-            test.log_includes(0, pam_message_contents.c_str());
+            test.log_includes(pam_message_contents.c_str());
         }
 
         // Remove the created user.
@@ -205,7 +205,7 @@ void test_main(TestConnections& test)
             // Again, try logging in with the same user.
             cout << "Testing anonymous proxy user.\n";
             try_log_in(pam_user, pam_pw, "");
-            test.log_includes(0, pam_message_contents.c_str());
+            test.log_includes(pam_message_contents.c_str());
         }
 
         // Remove the created users.
@@ -245,7 +245,7 @@ void test_main(TestConnections& test)
         {
             cout << "Testing normal PAM user with role-based privileges.\n";
             try_log_in(pam_user, pam_pw, dbname);
-            test.log_includes(0, pam_message_contents.c_str());
+            test.log_includes(pam_message_contents.c_str());
         }
 
         // Remove the created items.
@@ -406,7 +406,7 @@ void test_main(TestConnections& test)
             // Check that log_password_mismatch works.
             login_success = test_normal_login(test, caseless_port, user, "wrong_pw");
             test.expect(!login_success, "Login using wrong password worked when it should not have.");
-            test.log_includes(0, "Client gave wrong password. Got hash");
+            test.log_includes("Client gave wrong password. Got hash");
             if (test.ok())
             {
                 cout << "log_password_mismatch works.\n";

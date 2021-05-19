@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     test.maxscales->close_maxscale_connections();
 
     // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
-    test.log_excludes(0, "Closing unknown prepared statement");
+    test.log_excludes("Closing unknown prepared statement");
 
     return test.global_result;
 }

@@ -14,6 +14,6 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.check_maxctrl("show monitors");
-    test.log_includes(0, "Auth Error, Down");
+    test.log_includes("Auth Error, Down");
     return test.global_result;
 }

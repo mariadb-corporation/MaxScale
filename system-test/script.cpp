@@ -236,10 +236,10 @@ int main(int argc, char* argv[])
     sleep(15);
 
     Test->tprintf("Cheching Maxscale logs");
-    Test->log_includes(0, "Cannot execute file");
+    Test->log_includes("Cannot execute file");
 
     Test->tprintf("checking if Maxscale is alive");
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

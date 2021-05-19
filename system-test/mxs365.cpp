@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
                      "Reading data failed.");
     test->maxscales->close_maxscale_connections();
     test->tprintf("Cecking if Maxscale alive\n");
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
     int rval = test->global_result;
 
     test->maxscales->connect();

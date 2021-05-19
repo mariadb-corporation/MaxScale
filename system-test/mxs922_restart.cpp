@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 
     do_query(test, false);
 
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     int rval = test->global_result;
     delete test;

@@ -72,6 +72,6 @@ int main(int argc, char* argv[])
     test.tprintf("Unblocking second slave\n");
     test.repl->unblock_node(2);
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     return test.global_result;
 }

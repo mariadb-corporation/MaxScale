@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Restarting MaxScale");
     test.add_result(test.maxscales->restart_maxscale(), "Restart should succeed");
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
 
     return test.global_result;
 }

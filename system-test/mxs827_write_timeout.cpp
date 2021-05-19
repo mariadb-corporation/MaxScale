@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Doing one write");
     Test->try_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO t1 VALUES (1, 1)");
 
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

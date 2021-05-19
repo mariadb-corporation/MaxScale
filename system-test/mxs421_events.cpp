@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
     connect_as_user(test, user);
     sleep(2);
     // There should be an error in maxscale.log
-    test.log_includes(0, user.c_str());
+    test.log_includes(user.c_str());
     // But not in the authentication log.
     test.expect(!found_in_file(test, secure_log.c_str(), user),
                 "Unexpectedly found %s in %s",
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     sleep(2);
 
     // There should be an error in maxscale.log, as maxlog is not affected by the syslog setting.
-    test.log_includes(0, user.c_str());
+    test.log_includes(user.c_str());
     // And in the authentication log as that's where authentication errors now should go.
     test.expect(found_in_file(test, secure_log.c_str(), user),
                 "Unexpectedly NOT found %s in %s",

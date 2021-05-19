@@ -1012,7 +1012,7 @@ int TestConnections::start_mm()
     return rval;
 }
 
-bool TestConnections::log_matches(int m, const char* pattern)
+bool TestConnections::log_matches(const char* pattern)
 {
 
     // Replace single quotes with wildcard characters, should solve most problems
@@ -1025,17 +1025,17 @@ bool TestConnections::log_matches(int m, const char* pattern)
         }
     }
 
-    return maxscales->ssh_node_f(m, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
+    return maxscales->ssh_node_f(0, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
 }
 
-void TestConnections::log_includes(int m, const char* pattern)
+void TestConnections::log_includes(const char* pattern)
 {
-    add_result(!log_matches(m, pattern), "Log does not match pattern '%s'", pattern);
+    add_result(!log_matches(pattern), "Log does not match pattern '%s'", pattern);
 }
 
-void TestConnections::log_excludes(int m, const char* pattern)
+void TestConnections::log_excludes(const char* pattern)
 {
-    add_result(log_matches(m, pattern), "Log matches pattern '%s'", pattern);
+    add_result(log_matches(pattern), "Log matches pattern '%s'", pattern);
 }
 
 static int read_log(const char* name, char** err_log_content_p)
@@ -1133,7 +1133,7 @@ bool TestConnections::stop_all_maxscales()
     return rval;
 }
 
-int TestConnections::check_maxscale_alive(int m)
+int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
     set_timeout(10);
@@ -1142,10 +1142,10 @@ int TestConnections::check_maxscale_alive(int m)
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
-    try_query(maxscales->conn_rwsplit[m], "show databases;");
+    try_query(maxscales->conn_rwsplit[0], "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(maxscales->conn_master[m], "show databases;");
+    try_query(maxscales->conn_master[0], "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
     try_query(maxscales->conn_slave, "show databases;");
@@ -1153,7 +1153,7 @@ int TestConnections::check_maxscale_alive(int m)
     maxscales->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
-    my_maxscale(m)->expect_running_status(true);
+    my_maxscale(0)->expect_running_status(true);
 
     return global_result - gr;
 }

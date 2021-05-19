@@ -157,7 +157,7 @@ int main(int argc, char** argv)
                     {
                         string pat = "Could not connect with normal port to server '" + server_name
                             + "', using extra_port";
-                        test.log_includes(0, pat.c_str());
+                        test.log_includes(pat.c_str());
                     }
                 }
 

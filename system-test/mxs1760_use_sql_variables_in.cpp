@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     }
 
     test.maxscales->disconnect();
-    test.log_excludes(0, "unknown prepared statement");
+    test.log_excludes("unknown prepared statement");
 
     return test.global_result;
 }

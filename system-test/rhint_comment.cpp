@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char*) "select /* maxscale route to master*/ @@server_id;");
 
-    Test->log_excludes(0, "Syntax error in hint");
-    Test->check_maxscale_alive(0);
+    Test->log_excludes("Syntax error in hint");
+    Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;
     return rval;

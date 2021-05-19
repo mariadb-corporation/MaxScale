@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
         test.add_failure("get_my_ip() failed");
     }
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     test.repl->disconnect();
     return test.global_result;
 }

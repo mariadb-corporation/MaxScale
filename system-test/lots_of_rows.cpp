@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(60);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * FROM t1");
 
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;
     return rval;

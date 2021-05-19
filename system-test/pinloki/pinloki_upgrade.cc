@@ -90,7 +90,7 @@ private:
         test.tprintf("Check for ReplSYNC.");
 
         // The slave should be connected and Reader waiting for Writer to sync
-        test.log_includes(0, "ReplSYNC: Reader waiting for primary to sync.");
+        test.log_includes("ReplSYNC: Reader waiting for primary to sync.");
 
         // Maxscale should not receive any binlog data yet
         int zero_count = maxscale.rows("SHOW BINARY LOGS").size();

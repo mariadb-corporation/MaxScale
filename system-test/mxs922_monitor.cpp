@@ -18,12 +18,12 @@ int main(int argc, char* argv[])
 
     test->maxscales->wait_for_monitor();
 
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     test->maxscales->ssh_node(0, "maxctrl unlink monitor mysql-monitor server{0,1,2,3}", true);
     config.destroy_monitor("mysql-monitor");
 
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     config.add_created_servers("mysql-monitor2");
 
     test->maxscales->wait_for_monitor();
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     /** Try to alter the monitor user */
     test->maxscales->connect_maxscale();
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     config.alter_monitor("mysql-monitor2", "password", "test");
 
     test->maxscales->wait_for_monitor();
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     /** Remove the user */
     test->maxscales->connect_maxscale();
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
     config.restart_monitors();
     test->maxscales->wait_for_monitor();
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
 
     int rval = test->global_result;
     delete test;

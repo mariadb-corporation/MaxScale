@@ -35,6 +35,6 @@ int main(int argc, char* argv[])
     test.add_result(test.create_connections(70, true, true, true, false),
                     "Connections creation error \n");
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     return test.global_result;
 }

@@ -46,7 +46,7 @@ int main(int argc, char** argv)
             if (test.ok())
             {
                 test.tprintf("Logged in and queried successfully.\n");
-                test.log_includes(0, "is using an unsupported authenticator plugin 'mysql_clear_password'.");
+                test.log_includes("is using an unsupported authenticator plugin 'mysql_clear_password'.");
             }
             else
             {

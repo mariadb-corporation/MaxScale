@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     test.maxscales->close_readconn_master();
 
     test.repl->change_master(0, 1);
-    test.log_excludes(0, "The service 'CLI' is missing a definition of the servers");
+    test.log_excludes("The service 'CLI' is missing a definition of the servers");
 
     return test.global_result;
 }

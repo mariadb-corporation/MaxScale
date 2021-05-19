@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     // Wait for the avrorouter to process the data
     test.maxscales->start();
     sleep(10);
-    test.log_includes(0, "Possible STATEMENT or MIXED");
+    test.log_includes("Possible STATEMENT or MIXED");
 
     return test.global_result;
 }

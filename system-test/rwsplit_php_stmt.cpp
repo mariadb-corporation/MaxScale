@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");
 
-    Test->log_excludes(0, "Can't route MYSQL_COM_STMT_PREPARE");
+    Test->log_excludes("Can't route MYSQL_COM_STMT_PREPARE");
 
     int rval = Test->global_result;
     delete Test;

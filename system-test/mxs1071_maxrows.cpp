@@ -567,7 +567,7 @@ int main(int argc, char* argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     compare_expected(Test, "SELECT * FROM long_blob_table limit 1;", 1, exp_rows.data());
 
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;
 
