@@ -1,9 +1,9 @@
 <template>
-    <div class="virtual-table__header">
+    <div class="virtual-table__header" :style="{ cursor: isResizing ? 'col-resize' : '' }">
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div
-                    v-for="(header, i) in headers"
+                    v-for="(header, i) in tableHeaders"
                     :key="`${header}_${i}`"
                     :ref="`header__${i}`"
                     :style="{
@@ -19,7 +19,7 @@
                         :maxWidth="headerWidthMap[i] - 24"
                     />
                     <div
-                        v-if="i !== headers.length - 1"
+                        v-if="i !== tableHeaders.length - 1"
                         class="header__resizer d-inline-block fill-height"
                         @mousedown="e => resizerMouseDown(e, i)"
                     />
@@ -52,6 +52,7 @@ export default {
         headers: { type: Array, require: true },
         boundingWidth: { type: Number, require: true },
         headerStyle: { type: Object, require: true },
+        isVertTable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -69,9 +70,12 @@ export default {
         headerWidth() {
             return `calc(100% - ${this.getScrollbarWidth()}px)`
         },
+        tableHeaders() {
+            return this.isVertTable ? ['COLUMN', 'VALUE'] : this.headers
+        },
     },
     watch: {
-        headers() {
+        tableHeaders() {
             // reset width to unset then get width and assign
             this.$help.doubleRAF(() => this.resetHeaderWidth())
             this.$help.doubleRAF(() => this.assignHeaderWidthMap())
@@ -90,7 +94,6 @@ export default {
             this.$emit('is-resizing', v)
         },
     },
-
     created() {
         window.addEventListener('mousemove', this.resizerMouseMove)
         window.addEventListener('mouseup', this.resizerMouseUp)
@@ -103,7 +106,7 @@ export default {
         resetHeaderWidth() {
             if (this.$refs[`header__${0}`])
                 // set all header maxWidth to unset to get auto width in doubleRAF cb
-                for (let i = 0; i < this.headers.length; i++) {
+                for (let i = 0; i < this.tableHeaders.length; i++) {
                     let headerStyle = this.$refs[`header__${i}`][0].style
                     headerStyle.maxWidth = 'unset'
                     headerStyle.minWidth = 'unset'
@@ -147,7 +150,7 @@ export default {
             if (this.$refs[`header__${0}`]) {
                 let headerWidthMap = {}
                 // get width of each header then use it to set same width of corresponding cells
-                for (let i = 0; i < this.headers.length; i++) {
+                for (let i = 0; i < this.tableHeaders.length; i++) {
                     const headerWidth = this.$refs[`header__${i}`][0].clientWidth
                     headerWidthMap = {
                         ...headerWidthMap,

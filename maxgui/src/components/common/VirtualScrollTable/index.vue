@@ -1,6 +1,7 @@
 <template>
-    <div class="virtual-table" :class="{ 'no-pointerEvent no-userSelect': isResizing }">
+    <div class="virtual-table" :class="{ 'no-userSelect': isResizing }">
         <table-header
+            :isVertTable="isVertTable"
             :headers="headers"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
@@ -9,15 +10,15 @@
         />
         <v-virtual-scroll
             v-if="rows.length && headers.length"
-            :bench="benched"
+            :bench="isVertTable ? 1 : benched"
             :items="rows"
-            :height="height - itemHeight"
-            :item-height="itemHeight"
+            :height="tbodyHeight"
+            :item-height="rowHeight"
             class="tbody"
             @scroll.native="scrolling"
         >
             <template v-slot:default="{ item: row }">
-                <div class="tr" :style="{ lineHeight }">
+                <div v-if="!isVertTable" class="tr" :style="{ lineHeight }">
                     <!-- dependency keys to force a rerender -->
                     <div
                         v-for="(cell, i) in row"
@@ -31,6 +32,40 @@
                         <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
                     </div>
                 </div>
+                <div v-else class="tr-vertical-group d-flex flex-column">
+                    <template v-for="(cell, i) in row">
+                        <div
+                            :key="`${cell}_${i}`"
+                            class="tr align-center"
+                            :style="{ height: lineHeight }"
+                        >
+                            <div
+                                :key="`${cell}_${cellWidthMap[0]}_0`"
+                                class="td fill-height d-flex align-center border-bottom-none px-3"
+                                :style="{
+                                    minWidth: `${cellWidthMap[0]}px`,
+                                }"
+                            >
+                                <truncate-string
+                                    :text="`${headers[i]}`.toUpperCase()"
+                                    :maxWidth="cellWidthMap[0] - 24"
+                                />
+                            </div>
+                            <div
+                                :key="`${cell}_${cellWidthMap[1]}_1`"
+                                class="td fill-height d-flex align-center no-border px-3"
+                                :style="{
+                                    minWidth: `${cellWidthMap[1]}px`,
+                                }"
+                            >
+                                <truncate-string
+                                    :text="`${cell}`"
+                                    :maxWidth="cellWidthMap[1] - 24"
+                                />
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </template>
         </v-virtual-scroll>
         <div
@@ -42,6 +77,7 @@
                 {{ $t('$vuetify.noDataText') }}
             </div>
         </div>
+        <div v-if="isResizing" class="resizing-mask" />
     </div>
 </template>
 
@@ -71,6 +107,7 @@ export default {
         itemHeight: { type: Number, require: true },
         boundingWidth: { type: Number, require: true },
         benched: { type: Number, require: true },
+        isVertTable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -82,6 +119,12 @@ export default {
     computed: {
         lineHeight() {
             return `${this.itemHeight}px`
+        },
+        tbodyHeight() {
+            return this.height - this.itemHeight
+        },
+        rowHeight() {
+            return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
     },
     methods: {
@@ -108,7 +151,6 @@ export default {
         overflow: scroll;
         .tr {
             display: flex;
-            flex-direction: row;
             .td {
                 font-size: 0.875rem;
                 color: $navigation;
@@ -130,6 +172,13 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
+                }
+            }
+        }
+        .tr-vertical-group {
+            .tr {
+                &:last-of-type {
+                    border-bottom: thin solid $table-border;
                 }
             }
         }

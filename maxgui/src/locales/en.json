@@ -137,6 +137,8 @@
     "custdelimiter": "Custom delimiter",
     "runSelectedStatements": "Run selected statements \nCmd/Ctrl + Shift + Enter",
     "runAllStatements": "Run all statements \nCmd/Ctrl + Enter",
+    "switchToVertTable": "Switch to vertical table",
+    "switchToHorizTable": "Switch to horizontal table",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
