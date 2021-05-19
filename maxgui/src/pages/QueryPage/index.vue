@@ -1,11 +1,7 @@
 <template>
-    <div
-        ref="wrapperContainer"
-        v-resize="onResize"
-        class="fill-height"
-        :class="{ 'wrapper-container': !isFullScreen }"
-    >
+    <div v-resize="onResize" class="fill-height" :class="{ 'wrapper-container': !isFullScreen }">
         <div
+            ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': isFullScreen }"
         >
@@ -21,7 +17,7 @@
                 class="query-page__content"
                 :minPercent="minSidebarPct"
                 split="vert"
-                :disable="!isFullScreen || isCollapsed"
+                :disable="isCollapsed"
             >
                 <template slot="pane-left">
                     <sidebar-container
@@ -33,7 +29,7 @@
                 </template>
                 <template slot="pane-right">
                     <!-- Main panel -->
-                    <split-pane v-model="editorPanePct" split="horiz" :minPercent="10">
+                    <split-pane v-model="editorPct" split="horiz" :minPercent="minEditorPct">
                         <template slot="pane-left">
                             <query-editor
                                 ref="queryEditor"
@@ -90,7 +86,8 @@ export default {
         return {
             minSidebarPct: 0,
             sidebarPct: 0,
-            editorPanePct: 60,
+            editorPct: 60,
+            minEditorPct: 0,
             isFullScreen: false,
             isCollapsed: false,
             resultPaneDim: {
@@ -112,7 +109,10 @@ export default {
     },
     watch: {
         isFullScreen() {
-            this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: this.isCollapsed }))
+            this.$nextTick(() => {
+                this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+                this.handleSetMinEditorPct()
+            })
         },
         isCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: v }))
@@ -120,7 +120,7 @@ export default {
         sidebarPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
-        editorPanePct() {
+        editorPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
@@ -133,6 +133,7 @@ export default {
         }),
         onResize() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+            this.handleSetMinEditorPct()
         },
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
@@ -143,18 +144,21 @@ export default {
                 }
             }
         },
+        handleSetMinEditorPct() {
+            const containerHeight = this.$refs.paneContainer.clientHeight
+            this.minEditorPct = this.pxToPct({ px: 26, containerPx: containerHeight })
+        },
         handleSetSidebarPct({ isCollapsed }) {
-            this.minSidebarPct = this.getSidebarBoundingPct({ isMin: true })
-            if (isCollapsed) this.sidebarPct = this.minSidebarPct
-            else this.sidebarPct = this.getSidebarBoundingPct({ isMin: false })
+            const containerWidth = this.$refs.paneContainer.clientWidth
+            if (isCollapsed) {
+                this.minSidebarPct = this.pxToPct({ px: 40, containerPx: containerWidth })
+                this.sidebarPct = this.minSidebarPct
+            } else {
+                this.minSidebarPct = this.pxToPct({ px: 200, containerPx: containerWidth })
+                this.sidebarPct = this.pxToPct({ px: 240, containerPx: containerWidth })
+            }
         },
-        getSidebarBoundingPct({ isMin }) {
-            const maxContainerWidth = this.$refs.wrapperContainer.clientWidth
-            let minWidth = isMin ? 200 : 273 // sidebar width in px
-            if (this.isCollapsed) minWidth = 40
-            const minPercent = (minWidth / maxContainerWidth) * 100
-            return minPercent
-        },
+        pxToPct: ({ px, containerPx }) => (px / containerPx) * 100,
         placeToEditor(schemaId) {
             this.$refs.queryEditor.insertAtCursor(schemaId)
         },
@@ -172,10 +176,6 @@ export default {
 $header-height: 50px;
 .query-page {
     background: #ffffff;
-    /* TODO: transition time affects the process of getting dim through ref
-     * Add delay when calculating dim
-     */
-    /*   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); */
     &--fullscreen {
         padding: 0px !important;
         width: 100%;

@@ -101,4 +101,7 @@ export default {
 .query-result-fontStyle {
     font-size: 14px;
 }
+.tab-items {
+    background-color: transparent;
+}
 </style>
