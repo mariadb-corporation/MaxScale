@@ -326,7 +326,7 @@ public:
         if (m_batch_size < 0)
         {
             stringstream ss;
-            ss << "BatchSize value must be non-negative, bit received: " << m_batch_size;
+            ss << "BatchSize value must be non-negative, but received: " << m_batch_size;
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
     }

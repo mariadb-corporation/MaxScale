@@ -1286,6 +1286,25 @@ string get_comparison_condition(const bsoncxx::document::element& element)
         }
         else
         {
+            auto i = field.find_last_of('.');
+
+            if (i != string::npos)
+            {
+                // Dot notation used, let's check whether it is a number.
+                auto tail = field.substr(i + 1);
+
+                char* zEnd;
+                auto l = strtol(tail.c_str(), &zEnd, 10);
+
+                if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+                {
+                    // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is Mongo,
+                    // latter is MariaDB JSON.
+                    field = field.substr(0, i);
+                    field += "[" + tail + "]";
+                }
+            }
+
             value = element_to_value(element);
         }
 

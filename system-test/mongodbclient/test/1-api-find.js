@@ -107,12 +107,6 @@ describe(name, function () {
         var rv1 = await mng.runCommand(command);
         var rv2 = await mxs.runCommand(command);
 
-        if (rv1.cursor.firstBatch.length != rv2.cursor.firstBatch.length) {
-            console.log("Xpt: ", expected);
-            console.log("Mng: ", rv1.cursor.firstBatch.length);
-            console.log("Mxs: ", rv2.cursor.firstBatch.length);
-        }
-
         assert.equal(rv1.cursor.firstBatch.length, expected);
         assert.equal(rv2.cursor.firstBatch.length, expected);
     }
@@ -237,13 +231,13 @@ describe(name, function () {
     });
 
     it('Can use arrays as values.', async function () {
+        await drop(misc);
+
         var documents = [
             { a: [ 1, 2, 3 ] },
             { a: [ 2, 3, 4 ] },
             { a: [ 5, 6, 7 ] },
         ];
-
-        await drop(misc);
 
         await mng.runCommand({insert: misc, documents: documents});
         await mxs.runCommand({insert: misc, documents: documents});
@@ -261,18 +255,16 @@ describe(name, function () {
         var rv2 = await mxs.runCommand({find: misc, filter: filter});
         assert.equal(rv2.cursor.firstBatch.length, 1);
         assert.equal(rv2.cursor.firstBatch[0].a[0], 2);
-
-        await drop(misc);
     });
 
     it('Can use objects as values.', async function () {
+        await drop(misc);
+
         var documents = [
             { a: { b: 1 }},
             { a: { b: 2 }},
             { a: { b: 3 }}
         ];
-
-        await drop(misc);
 
         await mng.runCommand({insert: misc, documents: documents});
         await mxs.runCommand({insert: misc, documents: documents});
@@ -290,8 +282,30 @@ describe(name, function () {
         var rv2 = await mxs.runCommand({find: misc, filter: filter});
         assert.equal(rv2.cursor.firstBatch.length, 1);
         assert.equal(rv2.cursor.firstBatch[0].a.b, 2);
+    });
 
+    it('Supports array dot notation', async function () {
         await drop(misc);
+
+        var documents = [
+            { a: [ 1, 2, 3 ] , _id: 1 },
+            { a: [ 2, 3, 4 ] , _id: 2 },
+            { a: [ 5, 6, 7 ] , _id: 3 }
+        ];
+
+        await mng.runCommand({insert: misc, documents: documents});
+        await mxs.runCommand({insert: misc, documents: documents});
+
+        var filter = {
+            "a.1" : 3
+        }
+
+        var rv1 = await mng.runCommand({find: misc, filter: filter});
+        assert.equal(rv1.cursor.firstBatch.length, 1);
+        assert.equal(rv1.cursor.firstBatch[0].a[1], 3);
+
+        var rv2 = await mxs.runCommand({find: misc, filter: filter});
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
     });
 
     // In the case of the logical operators, we do not figure out what we actually
@@ -381,12 +395,10 @@ describe(name, function () {
     });
 
     after(function () {
-        if (mxs) {
-            mxs.close();
-        }
+        drop(misc);
+        drop(name);
 
-        if (mng) {
-            mng.close();
-        }
+        mng.close();
+        mxs.close();
     });
 });
