@@ -1,7 +1,8 @@
 <template>
     <div
         class="split-pane-container"
-        :style="{ userSelect: active ? 'none' : '' }"
+        :class="{ 'no-userSelect': active }"
+        :style="{ cursor }"
         @mouseup="onMouseUp"
         @mousemove="onMouseMove"
     >
@@ -18,7 +19,7 @@
         <pane :split="split" :style="rightPanelPos">
             <slot name="pane-right" />
         </pane>
-        <div v-if="active" class="split-pane-container__mask" />
+        <div v-if="active" class="resizing-mask" />
     </div>
 </template>
 
@@ -79,6 +80,9 @@ export default {
                 ...(this.disable && { cursor: 'unset', pointerEvents: 'none' }),
             }
         },
+        cursor() {
+            return this.active ? (this.split === 'vert' ? 'col-resize' : 'row-resize') : ''
+        },
     },
     watch: {
         active(v, oV) {
@@ -135,13 +139,5 @@ export default {
 .split-pane-container {
     height: 100%;
     position: relative;
-    &__mask {
-        z-index: 9999;
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
 }
 </style>
