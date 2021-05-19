@@ -11,805 +11,271 @@
  * Public License.
  */
 export default [
-    {
-        keyword: 'ACCESSIBLE',
-    },
-    {
-        keyword: 'ADD',
-    },
-    {
-        keyword: 'ALL',
-    },
-    {
-        keyword: 'ALTER',
-    },
-    {
-        keyword: 'ANALYZE',
-    },
-    {
-        keyword: 'AND',
-    },
-    {
-        keyword: 'AS',
-    },
-    {
-        keyword: 'ASC',
-    },
-    {
-        keyword: 'ASENSITIVE',
-    },
-    {
-        keyword: 'BEFORE',
-    },
-    {
-        keyword: 'BETWEEN',
-    },
-    {
-        keyword: 'BIGINT',
-    },
-    {
-        keyword: 'BINARY',
-    },
-    {
-        keyword: 'BLOB',
-    },
-    {
-        keyword: 'BOTH',
-    },
-    {
-        keyword: 'BY',
-    },
-    {
-        keyword: 'CALL',
-    },
-    {
-        keyword: 'CASCADE',
-    },
-    {
-        keyword: 'CASE',
-    },
-    {
-        keyword: 'CHANGE',
-    },
-    {
-        keyword: 'CHAR',
-    },
-    {
-        keyword: 'CHARACTER',
-    },
-    {
-        keyword: 'CHECK',
-    },
-    {
-        keyword: 'COLLATE',
-    },
-    {
-        keyword: 'COLUMN',
-    },
-    {
-        keyword: 'CONDITION',
-    },
-    {
-        keyword: 'CONSTRAINT',
-    },
-    {
-        keyword: 'CONTINUE',
-    },
-    {
-        keyword: 'CONVERT',
-    },
-    {
-        keyword: 'CREATE',
-    },
-    {
-        keyword: 'CROSS',
-    },
-    {
-        keyword: 'CURRENT_DATE',
-    },
-    {
-        keyword: 'CURRENT_ROLE',
-    },
-    {
-        keyword: 'CURRENT_TIME',
-    },
-    {
-        keyword: 'CURRENT_TIMESTAMP',
-    },
-    {
-        keyword: 'CURRENT_USER',
-    },
-    {
-        keyword: 'CURSOR',
-    },
-    {
-        keyword: 'DATABASE',
-    },
-    {
-        keyword: 'DATABASES',
-    },
-    {
-        keyword: 'DAY_HOUR',
-    },
-    {
-        keyword: 'DAY_MICROSECOND',
-    },
-    {
-        keyword: 'DAY_MINUTE',
-    },
-    {
-        keyword: 'DAY_SECOND',
-    },
-    {
-        keyword: 'DEC',
-    },
-    {
-        keyword: 'DECIMAL',
-    },
-    {
-        keyword: 'DECLARE',
-    },
-    {
-        keyword: 'DEFAULT',
-    },
-    {
-        keyword: 'DELAYED',
-    },
-    {
-        keyword: 'DELETE',
-    },
-    {
-        keyword: 'DESC',
-    },
-    {
-        keyword: 'DESCRIBE',
-    },
-    {
-        keyword: 'DETERMINISTIC',
-    },
-    {
-        keyword: 'DISTINCT',
-    },
-    {
-        keyword: 'DISTINCTROW',
-    },
-    {
-        keyword: 'DIV',
-    },
-    {
-        keyword: 'DO_DOMAIN_IDS',
-    },
-    {
-        keyword: 'DOUBLE',
-    },
-    {
-        keyword: 'DROP',
-    },
-    {
-        keyword: 'DUAL',
-    },
-    {
-        keyword: 'EACH',
-    },
-    {
-        keyword: 'ELSE',
-    },
-    {
-        keyword: 'ELSEIF',
-    },
-    {
-        keyword: 'ENCLOSED',
-    },
-    {
-        keyword: 'ESCAPED',
-    },
-    {
-        keyword: 'EXCEPT',
-    },
-    {
-        keyword: 'EXISTS',
-    },
-    {
-        keyword: 'EXIT',
-    },
-    {
-        keyword: 'EXPLAIN',
-    },
-    {
-        keyword: 'FALSE',
-    },
-    {
-        keyword: 'FETCH',
-    },
-    {
-        keyword: 'FLOAT',
-    },
-    {
-        keyword: 'FLOAT4',
-    },
-    {
-        keyword: 'FLOAT8',
-    },
-    {
-        keyword: 'FOR',
-    },
-    {
-        keyword: 'FORCE',
-    },
-    {
-        keyword: 'FOREIGN',
-    },
-    {
-        keyword: 'FROM',
-    },
-    {
-        keyword: 'FULLTEXT',
-    },
-    {
-        keyword: 'GENERAL',
-    },
-    {
-        keyword: 'GRANT',
-    },
-    {
-        keyword: 'GROUP',
-    },
-    {
-        keyword: 'HAVING',
-    },
-    {
-        keyword: 'HIGH_PRIORITY',
-    },
-    {
-        keyword: 'HOUR_MICROSECOND',
-    },
-    {
-        keyword: 'HOUR_MINUTE',
-    },
-    {
-        keyword: 'HOUR_SECOND',
-    },
-    {
-        keyword: 'IF',
-    },
-    {
-        keyword: 'IGNORE',
-    },
-    {
-        keyword: 'IGNORE_DOMAIN_IDS',
-    },
-    {
-        keyword: 'IGNORE_SERVER_IDS',
-    },
-    {
-        keyword: 'IN',
-    },
-    {
-        keyword: 'INDEX',
-    },
-    {
-        keyword: 'INFILE',
-    },
-    {
-        keyword: 'INNER',
-    },
-    {
-        keyword: 'INOUT',
-    },
-    {
-        keyword: 'INSENSITIVE',
-    },
-    {
-        keyword: 'INSERT',
-    },
-    {
-        keyword: 'INT',
-    },
-    {
-        keyword: 'INT1',
-    },
-    {
-        keyword: 'INT2',
-    },
-    {
-        keyword: 'INT3',
-    },
-    {
-        keyword: 'INT4',
-    },
-    {
-        keyword: 'INT8',
-    },
-    {
-        keyword: 'INTEGER',
-    },
-    {
-        keyword: 'INTERSECT',
-    },
-    {
-        keyword: 'INTERVAL',
-    },
-    {
-        keyword: 'INTO',
-    },
-    {
-        keyword: 'IS',
-    },
-    {
-        keyword: 'ITERATE',
-    },
-    {
-        keyword: 'JOIN',
-    },
-    {
-        keyword: 'KEY',
-    },
-    {
-        keyword: 'KEYS',
-    },
-    {
-        keyword: 'KILL',
-    },
-    {
-        keyword: 'LEADING',
-    },
-    {
-        keyword: 'LEAVE',
-    },
-    {
-        keyword: 'LEFT',
-    },
-    {
-        keyword: 'LIKE',
-    },
-    {
-        keyword: 'LIMIT',
-    },
-    {
-        keyword: 'LINEAR',
-    },
-    {
-        keyword: 'LINES',
-    },
-    {
-        keyword: 'LOAD',
-    },
-    {
-        keyword: 'LOCALTIME',
-    },
-    {
-        keyword: 'LOCALTIMESTAMP',
-    },
-    {
-        keyword: 'LOCK',
-    },
-    {
-        keyword: 'LONG',
-    },
-    {
-        keyword: 'LONGBLOB',
-    },
-    {
-        keyword: 'LONGTEXT',
-    },
-    {
-        keyword: 'LOOP',
-    },
-    {
-        keyword: 'LOW_PRIORITY',
-    },
-    {
-        keyword: 'MASTER_HEARTBEAT_PERIOD',
-    },
-    {
-        keyword: 'MASTER_SSL_VERIFY_SERVER_CERT',
-    },
-    {
-        keyword: 'MATCH',
-    },
-    {
-        keyword: 'MAXVALUE',
-    },
-    {
-        keyword: 'MEDIUMBLOB',
-    },
-    {
-        keyword: 'MEDIUMINT',
-    },
-    {
-        keyword: 'MEDIUMTEXT',
-    },
-    {
-        keyword: 'MIDDLEINT',
-    },
-    {
-        keyword: 'MINUTE_MICROSECOND',
-    },
-    {
-        keyword: 'MINUTE_SECOND',
-    },
-    {
-        keyword: 'MOD',
-    },
-    {
-        keyword: 'MODIFIES',
-    },
-    {
-        keyword: 'NATURAL',
-    },
-    {
-        keyword: 'NOT',
-    },
-    {
-        keyword: 'NO_WRITE_TO_BINLOG',
-    },
-    {
-        keyword: 'NULL',
-    },
-    {
-        keyword: 'NUMERIC',
-    },
-    {
-        keyword: 'ON',
-    },
-    {
-        keyword: 'OPTIMIZE',
-    },
-    {
-        keyword: 'OPTION',
-    },
-    {
-        keyword: 'OPTIONALLY',
-    },
-    {
-        keyword: 'OR',
-    },
-    {
-        keyword: 'ORDER',
-    },
-    {
-        keyword: 'OUT',
-    },
-    {
-        keyword: 'OUTER',
-    },
-    {
-        keyword: 'OUTFILE',
-    },
-    {
-        keyword: 'OVER',
-    },
-    {
-        keyword: 'PAGE_CHECKSUM',
-    },
-    {
-        keyword: 'PARSE_VCOL_EXPR',
-    },
-    {
-        keyword: 'PARTITION',
-    },
-    {
-        keyword: 'POSITION',
-    },
-    {
-        keyword: 'PRECISION',
-    },
-    {
-        keyword: 'PRIMARY',
-    },
-    {
-        keyword: 'PROCEDURE',
-    },
-    {
-        keyword: 'PURGE',
-    },
-    {
-        keyword: 'RANGE',
-    },
-    {
-        keyword: 'READ',
-    },
-    {
-        keyword: 'READS',
-    },
-    {
-        keyword: 'READ_WRITE',
-    },
-    {
-        keyword: 'REAL',
-    },
-    {
-        keyword: 'RECURSIVE',
-    },
-    {
-        keyword: 'REF_SYSTEM_ID',
-    },
-    {
-        keyword: 'REFERENCES',
-    },
-    {
-        keyword: 'REGEXP',
-    },
-    {
-        keyword: 'RELEASE',
-    },
-    {
-        keyword: 'RENAME',
-    },
-    {
-        keyword: 'REPEAT',
-    },
-    {
-        keyword: 'REPLACE',
-    },
-    {
-        keyword: 'REQUIRE',
-    },
-    {
-        keyword: 'RESIGNAL',
-    },
-    {
-        keyword: 'RESTRICT',
-    },
-    {
-        keyword: 'RETURN',
-    },
-    {
-        keyword: 'RETURNING',
-    },
-    {
-        keyword: 'REVOKE',
-    },
-    {
-        keyword: 'RIGHT',
-    },
-    {
-        keyword: 'RLIKE',
-    },
-    {
-        keyword: 'ROWS',
-    },
-    {
-        keyword: 'SCHEMA',
-    },
-    {
-        keyword: 'SCHEMAS',
-    },
-    {
-        keyword: 'SECOND_MICROSECOND',
-    },
-    {
-        keyword: 'SELECT',
-    },
-    {
-        keyword: 'SENSITIVE',
-    },
-    {
-        keyword: 'SEPARATOR',
-    },
-    {
-        keyword: 'SET',
-    },
-    {
-        keyword: 'SHOW',
-    },
-    {
-        keyword: 'SIGNAL',
-    },
-    {
-        keyword: 'SLOW',
-    },
-    {
-        keyword: 'SMALLINT',
-    },
-    {
-        keyword: 'SPATIAL',
-    },
-    {
-        keyword: 'SPECIFIC',
-    },
-    {
-        keyword: 'SQL',
-    },
-    {
-        keyword: 'SQLEXCEPTION',
-    },
-    {
-        keyword: 'SQLSTATE',
-    },
-    {
-        keyword: 'SQLWARNING',
-    },
-    {
-        keyword: 'SQL_BIG_RESULT',
-    },
-    {
-        keyword: 'SQL_CALC_FOUND_ROWS',
-    },
-    {
-        keyword: 'SQL_SMALL_RESULT',
-    },
-    {
-        keyword: 'SSL',
-    },
-    {
-        keyword: 'STARTING',
-    },
-    {
-        keyword: 'STATS_AUTO_RECALC',
-    },
-    {
-        keyword: 'STATS_PERSISTENT',
-    },
-    {
-        keyword: 'STATS_SAMPLE_PAGES',
-    },
-    {
-        keyword: 'STRAIGHT_JOIN',
-    },
-    {
-        keyword: 'TABLE',
-    },
-    {
-        keyword: 'TERMINATED',
-    },
-    {
-        keyword: 'THEN',
-    },
-    {
-        keyword: 'TINYBLOB',
-    },
-    {
-        keyword: 'TINYINT',
-    },
-    {
-        keyword: 'TINYTEXT',
-    },
-    {
-        keyword: 'TO',
-    },
-    {
-        keyword: 'TRAILING',
-    },
-    {
-        keyword: 'TRIGGER',
-    },
-    {
-        keyword: 'TRUE',
-    },
-    {
-        keyword: 'UNDO',
-    },
-    {
-        keyword: 'UNION',
-    },
-    {
-        keyword: 'UNIQUE',
-    },
-    {
-        keyword: 'UNLOCK',
-    },
-    {
-        keyword: 'UNSIGNED',
-    },
-    {
-        keyword: 'UPDATE',
-    },
-    {
-        keyword: 'USAGE',
-    },
-    {
-        keyword: 'USE',
-    },
-    {
-        keyword: 'USING',
-    },
-    {
-        keyword: 'UTC_DATE',
-    },
-    {
-        keyword: 'UTC_TIME',
-    },
-    {
-        keyword: 'UTC_TIMESTAMP',
-    },
-    {
-        keyword: 'VALUES',
-    },
-    {
-        keyword: 'VARBINARY',
-    },
-    {
-        keyword: 'VARCHAR',
-    },
-    {
-        keyword: 'VARCHARACTER',
-    },
-    {
-        keyword: 'VARYING',
-    },
-    {
-        keyword: 'WHEN',
-    },
-    {
-        keyword: 'WHERE',
-    },
-    {
-        keyword: 'WHILE',
-    },
-    {
-        keyword: 'WINDOW',
-    },
-    {
-        keyword: 'WITH',
-    },
-    {
-        keyword: 'WRITE',
-    },
-    {
-        keyword: 'XOR',
-    },
-    {
-        keyword: 'YEAR_MONTH',
-    },
-    {
-        keyword: 'ZEROFILL',
-    },
-    {
-        keyword: 'BIT',
-    },
-    {
-        keyword: 'DATE',
-    },
-    {
-        keyword: 'ENUM',
-    },
-    {
-        keyword: 'NO',
-    },
-    {
-        keyword: 'TEXT',
-    },
-    {
-        keyword: 'TIME',
-    },
-    {
-        keyword: 'TIMESTAMP',
-    },
-    {
-        keyword: 'BODY',
-    },
-    {
-        keyword: 'GOTO',
-    },
-    {
-        keyword: 'HISTORY',
-    },
-    {
-        keyword: 'OTHERS',
-    },
-    {
-        keyword: 'PACKAGE',
-    },
-    {
-        keyword: 'PERIOD',
-    },
-    {
-        keyword: 'RAISE',
-    },
-    {
-        keyword: 'ROWTYPE',
-    },
-    {
-        keyword: 'SYSTEM',
-    },
-    {
-        keyword: 'SYSTEM_TIME',
-    },
-    {
-        keyword: 'VERSIONING',
-    },
-    {
-        keyword: 'WITHOUT',
-    },
+    'ACCESSIBLE',
+    'ADD',
+    'ALL',
+    'ALTER',
+    'ANALYZE',
+    'AND',
+    'AS',
+    'ASC',
+    'ASENSITIVE',
+    'BEFORE',
+    'BETWEEN',
+    'BIGINT',
+    'BINARY',
+    'BLOB',
+    'BOTH',
+    'BY',
+    'CALL',
+    'CASCADE',
+    'CASE',
+    'CHANGE',
+    'CHAR',
+    'CHARACTER',
+    'CHECK',
+    'COLLATE',
+    'COLUMN',
+    'CONDITION',
+    'CONSTRAINT',
+    'CONTINUE',
+    'CONVERT',
+    'CREATE',
+    'CROSS',
+    'CURRENT_DATE',
+    'CURRENT_ROLE',
+    'CURRENT_TIME',
+    'CURRENT_TIMESTAMP',
+    'CURRENT_USER',
+    'CURSOR',
+    'DATABASE',
+    'DATABASES',
+    'DAY_HOUR',
+    'DAY_MICROSECOND',
+    'DAY_MINUTE',
+    'DAY_SECOND',
+    'DEC',
+    'DECIMAL',
+    'DECLARE',
+    'DEFAULT',
+    'DELAYED',
+    'DELETE',
+    'DESC',
+    'DESCRIBE',
+    'DETERMINISTIC',
+    'DISTINCT',
+    'DISTINCTROW',
+    'DIV',
+    'DO_DOMAIN_IDS',
+    'DOUBLE',
+    'DROP',
+    'DUAL',
+    'EACH',
+    'ELSE',
+    'ELSEIF',
+    'ENCLOSED',
+    'ESCAPED',
+    'EXCEPT',
+    'EXISTS',
+    'EXIT',
+    'EXPLAIN',
+    'FALSE',
+    'FETCH',
+    'FLOAT',
+    'FLOAT4',
+    'FLOAT8',
+    'FOR',
+    'FORCE',
+    'FOREIGN',
+    'FROM',
+    'FULLTEXT',
+    'GENERAL',
+    'GRANT',
+    'GROUP',
+    'HAVING',
+    'HIGH_PRIORITY',
+    'HOUR_MICROSECOND',
+    'HOUR_MINUTE',
+    'HOUR_SECOND',
+    'IF',
+    'IGNORE',
+    'IGNORE_DOMAIN_IDS',
+    'IGNORE_SERVER_IDS',
+    'IN',
+    'INDEX',
+    'INFILE',
+    'INNER',
+    'INOUT',
+    'INSENSITIVE',
+    'INSERT',
+    'INT',
+    'INT1',
+    'INT2',
+    'INT3',
+    'INT4',
+    'INT8',
+    'INTEGER',
+    'INTERSECT',
+    'INTERVAL',
+    'INTO',
+    'IS',
+    'ITERATE',
+    'JOIN',
+    'KEY',
+    'KEYS',
+    'KILL',
+    'LEADING',
+    'LEAVE',
+    'LEFT',
+    'LIKE',
+    'LIMIT',
+    'LINEAR',
+    'LINES',
+    'LOAD',
+    'LOCALTIME',
+    'LOCALTIMESTAMP',
+    'LOCK',
+    'LONG',
+    'LONGBLOB',
+    'LONGTEXT',
+    'LOOP',
+    'LOW_PRIORITY',
+    'MASTER_HEARTBEAT_PERIOD',
+    'MASTER_SSL_VERIFY_SERVER_CERT',
+    'MATCH',
+    'MAXVALUE',
+    'MEDIUMBLOB',
+    'MEDIUMINT',
+    'MEDIUMTEXT',
+    'MIDDLEINT',
+    'MINUTE_MICROSECOND',
+    'MINUTE_SECOND',
+    'MOD',
+    'MODIFIES',
+    'NATURAL',
+    'NOT',
+    'NO_WRITE_TO_BINLOG',
+    'NULL',
+    'NUMERIC',
+    'ON',
+    'OPTIMIZE',
+    'OPTION',
+    'OPTIONALLY',
+    'OR',
+    'ORDER',
+    'OUT',
+    'OUTER',
+    'OUTFILE',
+    'OVER',
+    'PAGE_CHECKSUM',
+    'PARSE_VCOL_EXPR',
+    'PARTITION',
+    'POSITION',
+    'PRECISION',
+    'PRIMARY',
+    'PROCEDURE',
+    'PURGE',
+    'RANGE',
+    'READ',
+    'READS',
+    'READ_WRITE',
+    'REAL',
+    'RECURSIVE',
+    'REF_SYSTEM_ID',
+    'REFERENCES',
+    'REGEXP',
+    'RELEASE',
+    'RENAME',
+    'REPEAT',
+    'REPLACE',
+    'REQUIRE',
+    'RESIGNAL',
+    'RESTRICT',
+    'RETURN',
+    'RETURNING',
+    'REVOKE',
+    'RIGHT',
+    'RLIKE',
+    'ROWS',
+    'SCHEMA',
+    'SCHEMAS',
+    'SECOND_MICROSECOND',
+    'SELECT',
+    'SENSITIVE',
+    'SEPARATOR',
+    'SET',
+    'SHOW',
+    'SIGNAL',
+    'SLOW',
+    'SMALLINT',
+    'SPATIAL',
+    'SPECIFIC',
+    'SQL',
+    'SQLEXCEPTION',
+    'SQLSTATE',
+    'SQLWARNING',
+    'SQL_BIG_RESULT',
+    'SQL_CALC_FOUND_ROWS',
+    'SQL_SMALL_RESULT',
+    'SSL',
+    'STARTING',
+    'STATS_AUTO_RECALC',
+    'STATS_PERSISTENT',
+    'STATS_SAMPLE_PAGES',
+    'STRAIGHT_JOIN',
+    'TABLE',
+    'TERMINATED',
+    'THEN',
+    'TINYBLOB',
+    'TINYINT',
+    'TINYTEXT',
+    'TO',
+    'TRAILING',
+    'TRIGGER',
+    'TRUE',
+    'UNDO',
+    'UNION',
+    'UNIQUE',
+    'UNLOCK',
+    'UNSIGNED',
+    'UPDATE',
+    'USAGE',
+    'USE',
+    'USING',
+    'UTC_DATE',
+    'UTC_TIME',
+    'UTC_TIMESTAMP',
+    'VALUES',
+    'VARBINARY',
+    'VARCHAR',
+    'VARCHARACTER',
+    'VARYING',
+    'WHEN',
+    'WHERE',
+    'WHILE',
+    'WINDOW',
+    'WITH',
+    'WRITE',
+    'XOR',
+    'YEAR_MONTH',
+    'ZEROFILL',
+    'BIT',
+    'DATE',
+    'ENUM',
+    'NO',
+    'TEXT',
+    'TIME',
+    'TIMESTAMP',
+    'BODY',
+    'GOTO',
+    'HISTORY',
+    'OTHERS',
+    'PACKAGE',
+    'PERIOD',
+    'RAISE',
+    'ROWTYPE',
+    'SYSTEM',
+    'SYSTEM_TIME',
+    'VERSIONING',
+    'WITHOUT',
 ]

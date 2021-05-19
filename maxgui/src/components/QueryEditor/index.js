@@ -12,7 +12,6 @@
  */
 import { format } from 'sql-formatter'
 import { languageConfiguration, languageTokens } from './mariadbLang'
-import reservedWords from './reservedWords.js'
 /**
  * Monaco features
  * https://github.com/microsoft/monaco-editor-webpack-plugin/blob/main/src/features.ts
@@ -78,7 +77,6 @@ export default {
 
     data() {
         return {
-            completionList: [],
             language: 'mariadb',
         }
     },
@@ -86,43 +84,24 @@ export default {
         value(v) {
             if (this.editor && v !== this.getEditorValue()) this.setEditorValue(v)
         },
-        cmplList: {
-            deep: true,
-            handler() {
-                this.createCompletionList()
-            },
-        },
     },
     computed: {
-        completionListLabels() {
-            return this.completionList.map(item => item.label)
-        },
-    },
-    created() {
-        this.monaco = monaco
-        this.createCompletionList()
-    },
-    mounted() {
-        this.initMonaco(this.monaco)
-    },
-
-    beforeDestroy() {
-        if (this.editor) this.editor.dispose()
-    },
-
-    methods: {
-        createCompletionList() {
-            /**
-             * TODO: filtered out builtinFunctions in reservedWords and use languageTokens.builtinFunctions
-             * to create list with this.monaco.languages.CompletionItemKind.Function
-             */
-            const keywordList = reservedWords.map(w => ({
-                label: w.keyword,
+        builtInCmplItems() {
+            const keywordCmplItems = languageTokens.keywords.map(s => ({
+                label: s,
                 detail: 'KEYWORD',
                 kind: this.monaco.languages.CompletionItemKind.Keyword,
-                insertText: w.keyword,
+                insertText: s,
             }))
-
+            const builtinFunctionCmplItems = languageTokens.builtinFunctions.map(s => ({
+                label: s,
+                detail: 'FUNCTION',
+                kind: this.monaco.languages.CompletionItemKind.Function,
+                insertText: s,
+            }))
+            return [...keywordCmplItems, ...builtinFunctionCmplItems]
+        },
+        custCmplList() {
             const dist = this.$help.lodash.cloneDeep(this.cmplList)
             for (const item of dist) {
                 switch (item.type) {
@@ -132,9 +111,25 @@ export default {
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }
-
-            this.completionList = [...dist, ...keywordList]
+            return dist
         },
+        completionItems() {
+            return [...this.custCmplList, ...this.builtInCmplItems]
+        },
+        completionItemLabels() {
+            return this.completionItems.map(item => item.label)
+        },
+    },
+    beforeCreate() {
+        this.monaco = monaco
+    },
+    mounted() {
+        this.initMonaco(this.monaco)
+    },
+    beforeDestroy() {
+        if (this.editor) this.editor.dispose()
+    },
+    methods: {
         codeFormatter(v) {
             return format(v, {
                 language: this.language,
@@ -230,7 +225,7 @@ export default {
                         endColumn: wordObj.endColumn,
                     }
 
-                    const match = scope.completionListLabels.find(label =>
+                    const match = scope.completionItemLabels.find(label =>
                         label.includes(wordObj.word)
                     )
 
@@ -283,7 +278,7 @@ export default {
             }
         },
         createCompleters(range) {
-            return this.completionList.map(item => ({ ...item, range }))
+            return this.completionItems.map(item => ({ ...item, range }))
         },
         getEditorValue() {
             return this.editor.getValue()
