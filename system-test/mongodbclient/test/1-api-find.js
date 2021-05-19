@@ -460,6 +460,22 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
     });
 
+    it('Supports singleBatch', async function () {
+        var command = {
+            find: name,
+            batchSize: 5,
+            singleBatch: true
+        };
+
+        var rv1 = await mng.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, command.batchSize);
+        assert.equal(rv1.cursor.id, 0);
+
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv2.cursor.firstBatch.length, command.batchSize);
+        assert.equal(rv2.cursor.id, 0);
+    });
+
     after(function () {
         drop(misc);
         drop(name);

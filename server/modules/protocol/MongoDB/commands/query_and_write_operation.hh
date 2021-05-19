@@ -329,6 +329,8 @@ public:
             ss << "BatchSize value must be non-negative, but received: " << m_batch_size;
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
+
+        optional(key::SINGLEBATCH, &m_single_batch);
     }
 
     string generate_sql() override
@@ -439,7 +441,7 @@ public:
                 MongoCursor cursor(table(Quoted::NO), m_extractions, std::move(mariadb_response));
 
                 DocumentBuilder doc;
-                cursor.create_first_batch(doc, m_batch_size);
+                cursor.create_first_batch(doc, m_batch_size, m_single_batch);
 
                 pResponse = create_response(doc.extract());
 
@@ -456,6 +458,7 @@ public:
 
 private:
     int32_t        m_batch_size { 101 }; // Documented to be that.
+    bool           m_single_batch { false };
     vector<string> m_extractions;
 };
 

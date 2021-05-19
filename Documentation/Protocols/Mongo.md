@@ -335,7 +335,8 @@ sort | document | Optional. The sort specification for the ordering of the resul
 projection | document | Optional. The projection specification to determine which fields to includein the returned documents.
 skip | Positive integer | Optional. Number of documents to skip. Defaults to 0.
 limit | Non-negative integer | Optional. The maximum number of documents to return. If unspecified, then defaults to no limit. A limit of 0 is equivalent to setting no limit.
-batchSize | Non-negative integer | Optional. The number of documents to return in the first batch. Defaults to 101.
+batchSize | Non-negative integer | Optional. The number of documents to return in the first batch. Defaults to 101. A batchSize of 0 means that the cursor will be established, but no documents will be returned in the first batch.
+singleBatch | boolean | Optional. Determines whether to close the cursor after the first batch. Defaults to false.
 
 All other fields are ignored.
 
@@ -376,7 +377,7 @@ with the exception of the `_id` field:
 
 *NOTE* Currently `_id` is the only field that can be excluded, and _only_
 if other fields are explicitly included.
-*NOTE* Currently exclusion of other fields but `_id` is currently not supported.
+*NOTE* Currently exclusion of other fields but `_id` is not supported.
 
 ### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
 

@@ -335,6 +335,7 @@ const char QUERY[]                   = "query";
 const char REPLSETGETSTATUS[]        = "replSetGetStatus";
 const char RENAMECOLLECTION[]        = "renameCollection";
 const char RESETERROR[]              = "resetError";
+const char SINGLEBATCH[]             = "singleBatch";
 const char SKIP[]                    = "skip";
 const char SORT[]                    = "sort";
 const char U[]                       = "u";

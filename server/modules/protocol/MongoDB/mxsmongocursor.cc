@@ -109,14 +109,16 @@ MongoCursor::MongoCursor(const std::string& ns,
     touch();
 }
 
-void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
+void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
+                                     int32_t nBatch,
+                                     bool single_batch)
 {
-    create_batch(doc, key::FIRSTBATCH, nBatch);
+    create_batch(doc, key::FIRSTBATCH, nBatch, single_batch);
 }
 
 void MongoCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
-    create_batch(doc, key::NEXTBATCH, nBatch);
+    create_batch(doc, key::NEXTBATCH, nBatch, false);
 }
 
 //static
@@ -138,7 +140,8 @@ void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
 
 void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
                                const string& which_batch,
-                               int32_t nBatch)
+                               int32_t nBatch,
+                               bool single_batch)
 {
     mxb_assert(!m_exhausted);
 
@@ -156,6 +159,12 @@ void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
     else
     {
         m_exhausted = true;
+    }
+
+    if (single_batch)
+    {
+        m_exhausted = true;
+        id = 0;
     }
 
     DocumentBuilder cursor;

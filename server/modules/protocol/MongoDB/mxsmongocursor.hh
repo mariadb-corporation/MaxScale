@@ -48,7 +48,7 @@ public:
         return m_exhausted;
     }
 
-    void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
+    void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch, bool single_batch);
     void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
 
     static void create_first_batch(bsoncxx::builder::basic::document& doc,
@@ -70,7 +70,10 @@ private:
         COMPLETE
     };
 
-    void create_batch(bsoncxx::builder::basic::document& doc, const std::string& which_batch, int32_t nBatch);
+    void create_batch(bsoncxx::builder::basic::document& doc,
+                      const std::string& which_batch,
+                      int32_t nBatch,
+                      bool single_batch);
     Result create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch);
 
     std::string                   m_ns;
