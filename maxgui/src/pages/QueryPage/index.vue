@@ -1,5 +1,5 @@
 <template>
-    <div v-resize="onResize" class="fill-height" :class="{ 'wrapper-container': !isFullScreen }">
+    <div v-resize.quiet="setPanelsPct" class="fill-height">
         <div
             ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
@@ -127,11 +127,14 @@ export default {
     async beforeDestroy() {
         if (this.curr_cnct_resource) await this.disconnect()
     },
+    mounted() {
+        this.$help.doubleRAF(() => this.setPanelsPct())
+    },
     methods: {
         ...mapActions({
             disconnect: 'query/disconnect',
         }),
-        onResize() {
+        setPanelsPct() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
             this.handleSetMinEditorPct()
         },
