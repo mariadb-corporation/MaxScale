@@ -101,6 +101,17 @@ public:
         uint16_t m_charset {0};
     };
 
+    // The struct used to communicate information from the backend protocol to the client protocol.
+    struct HistoryInfo
+    {
+        // Callback to call when the current command being recorded completes. Used to verify the responses
+        // from backends that arrived before the accepted answer arrived.
+        std::function<void ()> response_cb;
+
+        // Current position in history. Used to track the responses that are still needed.
+        uint32_t position {0};
+    };
+
     bool     ssl_capable() const;
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
@@ -151,11 +162,8 @@ public:
     // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
     bool history_pruned {false};
 
-    // Callbacks that will be called once when the response to the latest session command completes.
-    std::unordered_map<mxs::BackendConnection*, std::function<void ()>> history_response_cbs;
-
-    // The position in history of each backend. Used to prune unused responses from history_responses.
-    std::unordered_map<mxs::BackendConnection*, uint32_t> history_position;
+    // History information for all open backend connections
+    std::unordered_map<mxs::BackendConnection*, HistoryInfo> history_info;
 
     /**
      * Tells whether autocommit is ON or not. The value effectively only tells the last value

@@ -170,8 +170,7 @@ void MariaDBBackendConnection::finish_connection()
     if (m_state != State::POOLED)
     {
         MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-        data->history_response_cbs.erase(this);
-        data->history_position.erase(this);
+        data->history_info.erase(this);
     }
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
@@ -690,7 +689,7 @@ void MariaDBBackendConnection::send_history()
             m_history_responses.push_back(a.id());
         }
 
-        client_data->history_position[this] = m_history_responses.front();
+        client_data->history_info[this].position = m_history_responses.front();
     }
 }
 
@@ -726,7 +725,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
                 if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
-                    client_data->history_position[this] = id;
+                    client_data->history_info[this].position = id;
                     m_history_responses.pop_front();
                 }
                 else
@@ -785,7 +784,7 @@ bool MariaDBBackendConnection::compare_responses()
 
         if (response_it != data->history_responses.end())
         {
-            data->history_position[this] = it->first;
+            data->history_info[this].position = it->first;
 
             if (it->second != response_it->second)
             {
@@ -802,19 +801,18 @@ bool MariaDBBackendConnection::compare_responses()
         }
     }
 
-    mxb_assert_message(ok || data->history_response_cbs.count(this) == 0,
+    mxb_assert_message(ok || !data->history_info[this].response_cb,
                        "History response callback must not be installed on failure");
 
     if (ok && !found && !m_ids_to_check.empty())
     {
-        data->history_response_cbs.emplace(
-            this, [this]() {
+        data->history_info[this].response_cb = [this]() {
                 if (!compare_responses())
                 {
                     do_handle_error(m_dcb, create_response_mismatch_error(),
                                     mxs::ErrorType::PERMANENT);
                 }
-            });
+            };
     }
 
     return ok;
@@ -2773,8 +2771,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
 void MariaDBBackendConnection::set_to_pooled()
 {
     MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-    data->history_response_cbs.erase(this);
-    data->history_position.erase(this);
+    data->history_info.erase(this);
 
     m_session = nullptr;
     m_upstream = nullptr;

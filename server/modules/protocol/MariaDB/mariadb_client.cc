@@ -1102,9 +1102,12 @@ void MariaDBClientConnection::prune_history()
     // cleared.
     uint32_t min_id = m_session_data->history.front().id();
 
-    for (const auto& kv : m_session_data->history_position)
+    for (const auto& kv : m_session_data->history_info)
     {
-        min_id = std::min(min_id, kv.second);
+        if (kv.second.position > 0 && kv.second.position < min_id)
+        {
+            min_id = kv.second.position;
+        }
     }
 
     m_session_data->history_responses.erase(m_session_data->history_responses.begin(),
@@ -1149,12 +1152,13 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     {
         // A session command that was recorded was just processed. Call the installed callbacks for any
         // backends that responded before the accepted response was received.
-        auto callbacks = std::move(m_session_data->history_response_cbs);
-        m_session_data->history_response_cbs.clear();
-
-        for (const auto& a : callbacks)
+        for (auto& kv : m_session_data->history_info)
         {
-            a.second();
+            if (auto cb = kv.second.response_cb)
+            {
+                kv.second.response_cb = nullptr;
+                cb();
+            }
         }
 
         m_routing_state = RoutingState::PACKET_START;
