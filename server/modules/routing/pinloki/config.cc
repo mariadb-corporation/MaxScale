@@ -157,7 +157,15 @@ std::string gen_uuid()
 
 bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    return m_cb();
+    bool ok = false;
+
+    // This is a workaround to the fact that the datadir is not created if the default value is used.
+    if (mxs_mkdir_all(m_binlog_dir.c_str(), S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP))
+    {
+        ok = m_cb();
+    }
+
+    return ok;
 }
 
 Config::Config(const std::string& name, std::function<bool()> callback)
