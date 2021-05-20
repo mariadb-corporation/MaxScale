@@ -207,6 +207,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
     Kafka kafka(test);
+    kafka.create_topic("mirror-topic");
 
     test.tprintf("Testing exporter=file, report=always");
     test.check_maxctrl("alter service Mirror-Router report always");

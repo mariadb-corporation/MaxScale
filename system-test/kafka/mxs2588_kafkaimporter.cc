@@ -110,6 +110,8 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
     Kafka kafka(test);
+    kafka.create_topic("test.t1");
+    kafka.create_topic("second_topic");
     test.maxscales->start();
 
     test_table_in_topic(test);

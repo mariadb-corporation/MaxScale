@@ -24,6 +24,15 @@ public:
         }
     }
 
+    void create_topic(const std::string& topic)
+    {
+        std::string cmd = "kafka/bin/kafka-topics.sh --create --topic " + topic
+            + " --bootstrap-server 127.0.0.1:9092";
+
+        m_test.expect(m_test.maxscales->ssh_node_f(0, false, "%s", cmd.c_str()) == 0,
+                      "Failed to create topic '%s'", topic.c_str());
+    }
+
     ~Kafka()
     {
         stop_kafka();

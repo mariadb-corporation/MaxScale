@@ -14,6 +14,7 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
     Kafka kafka(test);
+    kafka.create_topic("kafkacdc");
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
