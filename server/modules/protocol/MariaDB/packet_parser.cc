@@ -121,7 +121,7 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
         if (db_res.success && plugin_res.success)
         {
             rval.db = std::move(db_res.result_str);
-            rval.plugin = std::move(plugin_res.result_str);
+            rval.plugin = mxb::tolower(plugin_res.result_str);
             rval.success = true;
 
             rval.attr_res = parse_attributes(data, client_caps);

@@ -570,7 +570,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
             // Require SSL if the entry is not empty.
             new_entry.ssl = !users->get_string(ind_ssl).empty();
 
-            new_entry.plugin = users->get_string(ind_plugin);
+            new_entry.plugin = mxb::tolower(users->get_string(ind_plugin));
             new_entry.password = have_pw_column ? users->get_string(ind_pw) : users->get_string(ind_auth_str);
 
             // Hex-form passwords have a '*' at the beginning, remove it.

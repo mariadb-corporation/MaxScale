@@ -792,7 +792,7 @@ void ServersInfo::check_connections(const std::vector<int>& expected_conns)
             if (expected != info.connections)
             {
                 m_log->add_failure("Wrong number of connections for %s. Got '%li', expected '%i'.",
-                                   info.name.c_str(), info.pool_conns, expected);
+                                   info.name.c_str(), info.connections, expected);
             }
         };
     check_servers_property(expected_conns.size(), tester);

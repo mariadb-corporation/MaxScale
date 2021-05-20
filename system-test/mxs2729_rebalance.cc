@@ -114,21 +114,15 @@ void move_connections_to_thread(TestConnections& test,
 
 void start_rebalancing(TestConnections& test, int rebalance_period, int rebalance_threshold)
 {
-    test.maxctrl("alter maxscale rebalance_window 2");
+    std::ostringstream ss;
 
-    string cmd;
+    ss << "alter maxscale"
+       << " rebalance_window " << rebalance_period * 2
+       << " rebalance_threshold " << rebalance_threshold
+       << " rebalance_period " << rebalance_period << "s";
 
-    cmd = "alter maxscale rebalance_threshold ";
-    cmd += std::to_string(rebalance_threshold);
-    cmd += "s";
-    test.maxctrl(cmd);
-
-    cmd = "alter maxscale rebalance_period ";
-    cmd += std::to_string(rebalance_period);
-    cmd += "s";
-    test.maxctrl(cmd);
+    test.check_maxctrl(ss.str());
 }
-
 }
 
 void run(TestConnections* pTest, mxb::Semaphore* pSem_ready, mxb::Semaphore* pSem_exit)
