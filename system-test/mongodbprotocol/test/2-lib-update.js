@@ -13,53 +13,23 @@
 
 // https://docs.mongodb.com/drivers/node/usage-examples/updateOne/
 
-const mariadb = require('mariadb');
-const { MongoClient } = require('mongodb');
-
 const assert = require('assert');
+const test = require('./mongotest');
 
-var host = process.env.maxscale_000_network;
-var mariadb_port = 4008;
-var mongodb_port = 17017;
-var user = 'maxskysql';
-var password = 'skysql';
+const name = 'lib-update';
 
-before(async function () {
-    if (!process.env.maxscale_000_network) {
-        throw new Error("The environment variable 'maxscale_000_network' must be set.");
-    }
-});
+describe(name, function () {
+    this.timeout(test.timeout);
 
-describe('UPDATE', function () {
-    let conn;
-    let client;
+    let mxs;
     let collection;
     const N = 20;
 
     before(async function () {
-        // MariaDB
-        conn = await mariadb.createConnection({
-            host: host,
-            port: mariadb_port,
-            user: user,
-            password: password });
+        mxs = await test.MDB.create(test.MxsMongo);
 
-        await conn.query("USE test");
-        await conn.query("DROP TABLE IF EXISTS mongo");
-        await conn.query("CREATE TABLE mongo "
-                         + "(id VARCHAR(35) AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) "
-                         + "UNIQUE KEY, "
-                         + "doc JSON, "
-                         + "CONSTRAINT id_not_null CHECK(id IS NOT NULL))");
-
-        // MxsMongo
-        var uri = "mongodb://" + host + ":" + mongodb_port;
-
-        client = new MongoClient(uri, { useUnifiedTopology: true });
-        await client.connect();
-
-        const database = client.db("test");
-        collection = database.collection("mongo");
+        const database = mxs.db;
+        collection = database.collection(name);
 
         var documents = [];
 
@@ -107,12 +77,8 @@ describe('UPDATE', function () {
     });
 
     after(function () {
-        if (client) {
-            client.close();
-        }
-
-        if (conn) {
-            conn.end();
+        if (mxs) {
+            mxs.close();
         }
     });
 });
