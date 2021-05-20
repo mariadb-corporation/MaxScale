@@ -28,11 +28,12 @@ namespace
 struct ThreadInfo
 {
     ThreadInfo()
-    {}
+    {
+    }
 
     ThreadInfo(int nConnections, int nLoad)
-       : nConnections(nConnections)
-       , nLoad(nLoad)
+        : nConnections(nConnections)
+        , nLoad(nLoad)
     {
     }
 
@@ -40,13 +41,13 @@ struct ThreadInfo
     int nLoad = 0;
 };
 
-ostream& operator << (ostream& out, const ThreadInfo& ti)
+ostream& operator<<(ostream& out, const ThreadInfo& ti)
 {
     out << "load=" << ti.nLoad << ", connections=" << ti.nConnections;
     return out;
 }
 
-ostream& operator << (ostream& out, const std::map<int, ThreadInfo>& m)
+ostream& operator<<(ostream& out, const std::map<int, ThreadInfo>& m)
 {
     for (auto kv : m)
     {
@@ -55,9 +56,9 @@ ostream& operator << (ostream& out, const std::map<int, ThreadInfo>& m)
     return out;
 }
 
-map<int,ThreadInfo> get_thread_info(TestConnections& test)
+map<int, ThreadInfo> get_thread_info(TestConnections& test)
 {
-    map<int,ThreadInfo> rv;
+    map<int, ThreadInfo> rv;
     auto result = test.maxctrl("api get maxscale/threads");
     mxb_assert(result.rc == 0);
 
@@ -91,13 +92,13 @@ map<int,ThreadInfo> get_thread_info(TestConnections& test)
 
 void move_connections_to_thread(TestConnections& test,
                                 int tid,
-                                const map<int,ThreadInfo>& connections_by_thread)
+                                const map<int, ThreadInfo>& connections_by_thread)
 {
     for (auto kv : connections_by_thread)
     {
         if (kv.first != tid)
         {
-            string curl { "curl -u admin:mariadb -X POST http://127.0.0.1:8989/v1/maxscale/threads/" };
+            string curl {"curl -s -u admin:mariadb -X POST http://127.0.0.1:8989/v1/maxscale/threads/"};
 
             curl += std::to_string(kv.first);
             curl += "/rebalance?";
@@ -154,7 +155,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     // cbt = connections by thread
-    map<int,ThreadInfo> cbt1 = get_thread_info(test);
+    map<int, ThreadInfo> cbt1 = get_thread_info(test);
     cout << "Connection distribution at startup:\n" << cbt1 << endl;
 
     int nMaxscale_threads = cbt1.size();
@@ -187,7 +188,7 @@ int main(int argc, char* argv[])
 
     cout << "Threads ready." << endl;
 
-    map<int,ThreadInfo> cbt2 = get_thread_info(test);
+    map<int, ThreadInfo> cbt2 = get_thread_info(test);
     cout << "Connection distribution after thread start:\n" << cbt2 << endl;
     mxb_assert(cbt2.size() == cbt1.size());
 
@@ -201,9 +202,9 @@ int main(int argc, char* argv[])
     int nConn_per_session = (nConn_total2 - nConn_total1) / nThreads;
 
     move_connections_to_thread(test, 0, cbt2);
-    sleep(2); // To allow some time for the explicit moving to have time to finish.
+    sleep(2);   // To allow some time for the explicit moving to have time to finish.
 
-    map<int,ThreadInfo> cbt3 = get_thread_info(test);
+    map<int, ThreadInfo> cbt3 = get_thread_info(test);
     cout << "Connection distribution after explicit rebalance to thread 0:\n" << cbt3 << endl;
     mxb_assert(cbt3.size() == cbt2.size());
 
@@ -229,7 +230,7 @@ int main(int argc, char* argv[])
 
     int nConn_max = cbt3[0].nConnections;
     int nConn_to_move = (nMaxscale_threads - 1) * (nConn_max - nConn_default) / nMaxscale_threads;
-    int nMax_rounds = nConn_to_move / nConn_per_session; // Should be worst case.
+    int nMax_rounds = nConn_to_move / nConn_per_session;    // Should be worst case.
 
     int rebalance_period = 1;
     int rebalance_threshold = 10;
@@ -241,7 +242,7 @@ int main(int argc, char* argv[])
     {
         sleep(rebalance_period * 2);
 
-        map<int,ThreadInfo> cbt4 = get_thread_info(test);
+        map<int, ThreadInfo> cbt4 = get_thread_info(test);
 
         int avg = 0;
         int min = std::numeric_limits<int>::max();
