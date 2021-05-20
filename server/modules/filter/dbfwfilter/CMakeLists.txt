@@ -1,12 +1,12 @@
 find_package(FLEX)
 find_package(BISON)
 if(BISON_FOUND AND FLEX_FOUND)
-  bison_target(ruleparser ruleparser.y ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c COMPILE_FLAGS "--defines=${CMAKE_CURRENT_BINARY_DIR}/ruleparser.yy.h")
-  flex_target(token token.l ${CMAKE_CURRENT_BINARY_DIR}/token.c COMPILE_FLAGS "--header-file=${CMAKE_CURRENT_BINARY_DIR}/lex.yy.h")
+  bison_target(ruleparser ruleparser.y ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.yy.h)
+  flex_target(token token.l ${CMAKE_CURRENT_BINARY_DIR}/token.c DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.h)
   add_flex_bison_dependency(token ruleparser)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-  add_library(dbfwfilter-core STATIC ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS} rules.cc user.cc dbfwconfig.cc)
+  add_library(dbfwfilter-core STATIC ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c ${CMAKE_CURRENT_BINARY_DIR}/token.c rules.cc user.cc dbfwconfig.cc)
 
   # Depends on PCRE2
   add_dependencies(dbfwfilter-core pcre2 connector-c)
