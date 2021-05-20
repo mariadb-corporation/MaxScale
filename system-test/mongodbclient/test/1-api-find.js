@@ -506,6 +506,126 @@ describe(name, function () {
         }
     });
 
+    it('Supports $exists', async function () {
+        await drop(misc);
+
+        var documents = [
+            { _id: 1, name: "bob", addresses: [ "Helsinki", "Turku" ] },
+            { _id: 2, name: "alice", addresses: [ "Kotka", ] },
+            { _id: 3, name: "cecil", addresses: [ "Oulu", "Kemi" ] }
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        command = {
+            find: misc,
+            filter: { "addresses.1": { $exists: true }}
+        };
+
+        var rv1 = await mng.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 2);
+        assert.equal(rv1.cursor.firstBatch[0]._id, 1);
+        assert.equal(rv1.cursor.firstBatch[1]._id, 3);
+
+        var rv2 = await mxs.runCommand(command);
+        assert.deepEqual(rv2.cursor.firstBatch, rv1.cursor.firstBatch);
+    });
+
+    it('Supports simple $elemMatch', async function () {
+        await drop(misc);
+
+        var documents = [
+            { _id: 1, a: [1, 2, 3] },
+            { _id: 2, a: [2, 3, 4] },
+            { _id: 3, a: [3, 4, 5] },
+            { _id: 4, a: [4, 5, 6] },
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        command = {
+            find: misc
+        };
+
+        // Fetch all documents whose 'a' array contains 1 => 1
+        command.filter = { a: { $elemMatch: { $eq: 1 }}}
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 1);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Fetch all documents whose 'a' array contains 4 => 3
+        command.filter = { a: { $elemMatch: { $eq: 4 }}}
+        rv1 = await mng.runCommand(command);
+        rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 3);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Fetch all documents whose 'a' array contains 7 => 0
+        command.filter = { a: { $elemMatch: { $eq: 7 }}}
+        rv1 = await mng.runCommand(command);
+        rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 0);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+    it('Supports nested $elemMatch', async function () {
+        await drop(misc);
+
+        var documents = [
+            { _id: 1, a: [{b: 1}, {b: 2}, {b: 3}] },
+            { _id: 2, a: [{b: 2}, {b: 3}, {b: 4}] },
+            { _id: 3, a: [{b: 3}, {b: 4}, {b: 5}] },
+            { _id: 4, a: [{b: 4}, {b: 5}, {b: 6}] },
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        command = {
+            find: misc
+        };
+
+        // Fetch all documents whose 'a' array contains a document with b == 1 => 1
+        command.filter = { a: { $elemMatch: { b: { $eq: 1} }}};
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 1);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Fetch all documents whose 'a' array contains a document with b == 4 => 3
+        command.filter = { a: { $elemMatch: { b: { $eq: 4 }}}};
+        rv1 = await mng.runCommand(command);
+        rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 3);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        // Fetch all documents whose 'a' array contains a document with b == 7 => 0
+        command.filter = { a: { $elemMatch: { b: { $eq: 7 }}}};
+        rv1 = await mng.runCommand(command);
+        rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 0);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
+
+
     after(function () {
         drop(misc);
         drop(name);

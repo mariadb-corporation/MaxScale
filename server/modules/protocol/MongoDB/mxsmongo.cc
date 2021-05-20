@@ -1119,6 +1119,120 @@ string element_to_null(const bsoncxx::document::element& element, const string& 
     }
 }
 
+string elemMatch_to_json_contain(const string& subfield,
+                                 const string& field,
+                                 const bsoncxx::document::element& elemMatch)
+{
+    auto key = elemMatch.key();
+
+    string value;
+    if (key.compare("$eq") == 0)
+    {
+        value = "1";
+    }
+    else if (key.compare("$ne") == 0)
+    {
+        value = "0";
+    }
+    else
+    {
+        throw SoftError("$elemMatch supports only operators $eq and $ne (MaxScale)",
+                        error::BAD_VALUE);
+    }
+
+    return "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + subfield + "\", "
+        + element_to_value(elemMatch, "$elemMatch") + "), '$." + field + "') = " + value
+        + ")";
+}
+
+string elemMatch_to_json_contain(const string& subfield,
+                                 const string& field,
+                                 const bsoncxx::document::view& elemMatch)
+{
+    string rv;
+
+    if (elemMatch.empty())
+    {
+        rv = "false";
+    }
+    else
+    {
+        for (const auto& element : elemMatch)
+        {
+            rv = elemMatch_to_json_contain(subfield, field, element);
+        }
+    }
+
+    return rv;
+}
+
+string elemMatch_to_json_contain(const string& field, const bsoncxx::document::element& elemMatch)
+{
+    string rv;
+
+    auto key = elemMatch.key();
+
+    if (key.find("$") == 0)
+    {
+        string value;
+
+        if (key.compare("$eq") == 0)
+        {
+            value = "1";
+        }
+        else if (key.compare("$ne") == 0)
+        {
+            value = "0";
+        }
+        else
+        {
+            throw SoftError("$elemMatch supports only operators $eq and $ne (MaxScale)",
+                            error::BAD_VALUE);
+        }
+
+        rv = "(JSON_CONTAINS(doc, "
+            + element_to_value(elemMatch, "$elemMatch") + ", '$." + field + "') = " + value
+            + ")";
+    }
+    else
+    {
+        if (elemMatch.type() == bsoncxx::type::k_document)
+        {
+            bsoncxx::document::view doc = elemMatch.get_document();
+            rv = elemMatch_to_json_contain((string)key, field, doc);
+        }
+        else
+        {
+            rv = "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + (string)key + "\", "
+                + element_to_value(elemMatch, "$elemMatch") + "), '$." + field + "') = 1)";
+        }
+    }
+
+    return rv;
+}
+
+string elemMatch_to_json_contains(const string& field, const bsoncxx::document::view& doc)
+{
+    string condition;
+
+    for (const auto& elemMatch : doc)
+    {
+        if (!condition.empty())
+        {
+            condition += " AND ";
+        }
+
+        condition += elemMatch_to_json_contain(field, elemMatch);
+    }
+
+    if (!condition.empty())
+    {
+        condition = "(" + condition + ")";
+    }
+
+    return condition;
+}
+
 string elemMatch_to_condition(const string& field, const bsoncxx::document::element& element)
 {
     string condition;
@@ -1136,27 +1250,7 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
     }
     else
     {
-        auto elemMatch = *doc.begin();
-        auto key = elemMatch.key();
-        string value;
-
-        if (key.compare("$eq") == 0)
-        {
-            value = "1";
-        }
-        else if (key.compare("$ne") == 0)
-        {
-            value = "0";
-        }
-        else
-        {
-            throw SoftError("$elemMatch supports only operators $eq and $ne (MaxScale)",
-                            error::BAD_VALUE);
-        }
-
-        condition = "(JSON_CONTAINS(doc, "
-            + element_to_value(elemMatch, "$elemMatch") + ", '$." + field + "') = " + value
-            + ")";
+        condition = elemMatch_to_json_contains(field, doc);
     }
 
     return condition;
@@ -1269,11 +1363,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     string field = static_cast<string>(element.key());
     auto type = element.type();
 
-    if (type == bsoncxx::type::k_document)
-    {
-        condition = get_comparison_condition(field, element.get_document());
-    }
-    else if (field == "_id")
+    if (field == "_id")
     {
         condition = "( id = '";
 
@@ -1312,7 +1402,14 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             }
         }
 
-        condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + element_to_value(element) + ")";
+        if (type == bsoncxx::type::k_document)
+        {
+            condition = get_comparison_condition(field, element.get_document());
+        }
+        else
+        {
+            condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + element_to_value(element) + ")";
+        }
     }
 
     return condition;
