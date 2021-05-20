@@ -71,8 +71,9 @@ exports.builder = function (yargs) {
           .usage("Usage: post <resource> <value>");
       },
       function (argv) {
-        maxctrl(argv, function (host) {
-          return doRequest(host, argv.resource, { method: "POST", data: JSON.parse(argv.value) });
+        maxctrl(argv, async function (host) {
+          var res = await doRequest(host, argv.resource, { method: "POST", data: JSON.parse(argv.value) });
+          return JSON.stringify(res, null, argv.pretty ? 4 : 0);
         });
       }
     )
@@ -88,8 +89,9 @@ exports.builder = function (yargs) {
           .usage("Usage: patch <resource> [path]");
       },
       function (argv) {
-        maxctrl(argv, function (host) {
-          return doRequest(host, argv.resource, { method: "PATCH", data: JSON.parse(argv.value) });
+        maxctrl(argv, async function (host) {
+          var res = await doRequest(host, argv.resource, { method: "PATCH", data: JSON.parse(argv.value) });
+          return JSON.stringify(res, null, argv.pretty ? 4 : 0);
         });
       }
     )
