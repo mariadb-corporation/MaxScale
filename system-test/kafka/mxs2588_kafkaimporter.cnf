@@ -18,5 +18,5 @@ router=kafkaimporter
 cluster=Monitor
 user=maxskysql
 password=skysql
-bootstrap_servers=127.0.0.1:9092
+bootstrap_servers=127.0.0.1:4008
 topics=test.t1

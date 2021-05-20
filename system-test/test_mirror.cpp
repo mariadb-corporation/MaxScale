@@ -175,7 +175,7 @@ void test_kafka(TestConnections& test, Mode mode)
 {
     test.check_maxctrl("alter service Mirror-Router"
                        " exporter kafka"
-                       " kafka_broker 127.0.0.1:9092"
+                       " kafka_broker 127.0.0.1:4008"
                        " kafka_topic mirror-topic");
 
     run_sql(test);

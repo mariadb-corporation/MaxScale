@@ -18,5 +18,5 @@ router=kafkacdc
 servers=###server_line###
 user=maxskysql
 password=skysql
-bootstrap_servers=127.0.0.1:9092
+bootstrap_servers=127.0.0.1:4008
 topic=kafkacdc

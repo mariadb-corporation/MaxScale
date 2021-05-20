@@ -27,7 +27,7 @@ public:
     void create_topic(const std::string& topic)
     {
         std::string cmd = "kafka/bin/kafka-topics.sh --create --topic " + topic
-            + " --bootstrap-server 127.0.0.1:9092";
+            + " --bootstrap-server 127.0.0.1:4008";
 
         m_test.expect(m_test.maxscales->ssh_node_f(0, false, "%s", cmd.c_str()) == 0,
                       "Failed to create topic '%s'", topic.c_str());
@@ -50,8 +50,8 @@ private:
         std::string kafka = mxb::string_printf(
             "kafka/bin/kafka-server-start.sh"
             " -daemon kafka/config/server.properties"
-            " --override listeners=PLAINTEXT://0.0.0.0:9092"
-            " --override advertised.listeners=PLAINTEXT://%s:9092;",
+            " --override listeners=PLAINTEXT://0.0.0.0:4008"
+            " --override advertised.listeners=PLAINTEXT://%s:4008;",
             m_test.maxscales->ip4());
 
         std::string check =
@@ -160,7 +160,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":9092"), err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":4008"), err);
         cnf->set("group.id", "kafkacdc", err);
         cnf->set("enable.auto.commit", "false", err);
         cnf->set("enable.auto.offset.store", "true", err);
@@ -251,7 +251,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":9092"), err);
+        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":4008"), err);
         cnf->set("event_cb", &m_logger, err);
         m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
     }
