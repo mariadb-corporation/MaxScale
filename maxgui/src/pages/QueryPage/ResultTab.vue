@@ -1,10 +1,8 @@
 <template>
     <div class="fill-height">
-        <div v-if="showGuide" ref="header" class="pb-2 result-header">
-            <span v-html="$t('resultTabGuide')" />
-        </div>
-        <div v-else class="result-table-wrapper fill-height">
-            <div ref="header" class="pb-2 result-header-nav d-flex align-center">
+        <div ref="header" class="pb-2 result-header d-flex align-center">
+            <span v-if="showGuide" v-html="$t('resultTabGuide')" />
+            <template v-else>
                 <v-menu
                     offset-y
                     top
@@ -14,7 +12,7 @@
                     open-on-hover
                 >
                     <template v-slot:activator="{ on }">
-                        <span class="d-inline-block pointer color text-links " v-on="on">
+                        <span class="mr-4 pointer color text-links " v-on="on">
                             {{ $t('queryTxt') }}
                         </span>
                     </template>
@@ -22,12 +20,13 @@
                         {{ queryTxt }}
                     </v-sheet>
                 </v-menu>
+
                 <v-tabs
                     v-model="activeResultSet"
                     show-arrows
                     hide-slider
                     :height="20"
-                    class="ml-4 resultset-btn-container"
+                    class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
                 >
                     <v-tab
                         v-for="(resSet, name) in resultSets"
@@ -40,7 +39,9 @@
                         {{ name }}
                     </v-tab>
                 </v-tabs>
-            </div>
+            </template>
+        </div>
+        <template v-if="!showGuide">
             <v-skeleton-loader
                 v-if="loading_query_result"
                 :loading="loading_query_result"
@@ -68,7 +69,7 @@
                     </div>
                 </v-slide-x-transition>
             </template>
-        </div>
+        </template>
     </div>
 </template>
 
@@ -142,6 +143,7 @@ export default {
             },
         },
     },
+
     mounted() {
         this.setHeaderHeight()
     },
@@ -162,33 +164,9 @@ export default {
     },
 }
 </script>
+
 <style lang="scss" scoped>
-::v-deep.resultset-btn-container {
-    max-width: calc(100% - 106px);
-    position: absolute;
-    right: 0;
-    .v-slide-group__wrapper {
-        border-bottom: none !important;
-    }
-    .tab-btn {
-        border: thin solid rgba(0, 0, 0, 0.12) !important;
-        border-right: none !important;
-        font-size: 0.75rem;
-        &:last-of-type {
-            border-right: thin solid rgba(0, 0, 0, 0.12) !important;
-        }
-        &--active {
-            color: $primary !important;
-            &::before {
-                opacity: 0.12;
-            }
-        }
-        &--err-tab {
-            color: $error !important;
-            &:last-of-type {
-                border-color: $error !important;
-            }
-        }
-    }
+.tab-navigation--btn-style--custom-max-width {
+    max-width: calc(100% - 90px);
 }
 </style>

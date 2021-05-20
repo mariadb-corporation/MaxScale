@@ -1,21 +1,35 @@
 <template>
     <div class="fill-height">
-        <div ref="header" class="pb-2 result-header">
-            <div v-if="validConn" class="schema-view-title">
-                <span><b>Table:</b> {{ previewDataSchemaId }}</span>
-                <v-btn-toggle v-model="activeView" class="ml-4" mandatory>
-                    <v-btn :value="SQL_QUERY_MODES.PRVW_DATA" x-small text color="primary">
+        <div ref="header" class="pb-2 result-header d-flex align-center">
+            <template v-if="validConn">
+                <div class="mr-4"><b class="mr-1">Table:</b> {{ previewDataSchemaId }}</div>
+                <v-tabs
+                    v-model="activeView"
+                    hide-slider
+                    :height="20"
+                    class="tab-navigation--btn-style"
+                >
+                    <v-tab
+                        :key="SQL_QUERY_MODES.PRVW_DATA"
+                        :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
+                        class="tab-btn px-3 text-uppercase"
+                        active-class="tab-btn--active font-weight-medium"
+                    >
                         {{ $t('data') }}
-                    </v-btn>
-                    <v-btn :value="SQL_QUERY_MODES.PRVW_DATA_DETAILS" x-small text color="primary">
+                    </v-tab>
+                    <v-tab
+                        :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                        :href="`#${SQL_QUERY_MODES.PRVW_DATA_DETAILS}`"
+                        class="tab-btn px-3 text-uppercase"
+                        active-class="tab-btn--active font-weight-medium"
+                    >
                         {{ $t('details') }}
-                    </v-btn>
-                </v-btn-toggle>
-            </div>
+                    </v-tab>
+                </v-tabs>
+            </template>
             <span v-else v-html="$t('prvwTabGuide')" />
         </div>
-
-        <div v-if="validConn" class="result-table-wrapper">
+        <template v-if="validConn">
             <v-skeleton-loader
                 v-if="isPrwDataLoading"
                 :loading="isPrwDataLoading"
@@ -23,32 +37,26 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <v-slide-x-transition>
-                    <div
+                <keep-alive>
+                    <result-data-table
                         v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
                         :key="SQL_QUERY_MODES.PRVW_DATA"
-                    >
-                        <result-data-table
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="prvw_data.fields"
-                            :rows="prvw_data.data"
-                        />
-                    </div>
-                    <div
+                        :height="dynDim.height - headerHeight"
+                        :width="dynDim.width"
+                        :headers="prvw_data.fields"
+                        :rows="prvw_data.data"
+                    />
+                    <result-data-table
                         v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
                         :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                    >
-                        <result-data-table
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="prvw_data_details.fields"
-                            :rows="prvw_data_details.data"
-                        />
-                    </div>
-                </v-slide-x-transition>
+                        :height="dynDim.height - headerHeight"
+                        :width="dynDim.width"
+                        :headers="prvw_data_details.fields"
+                        :rows="prvw_data_details.data"
+                    />
+                </keep-alive>
             </template>
-        </div>
+        </template>
     </div>
 </template>
 
@@ -114,9 +122,9 @@ export default {
         },
     },
     watch: {
-        activeView: async function(SQL_QUERY_MODE) {
+        activeView: async function(activeView) {
             // Wait until data is fetched
-            if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(SQL_QUERY_MODE)
+            if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(activeView)
         },
     },
     mounted() {

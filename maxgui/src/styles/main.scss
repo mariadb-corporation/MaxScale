@@ -144,6 +144,32 @@ html {
     }
 }
 
+.tab-navigation--btn-style {
+    width: unset !important;
+    .v-slide-group__wrapper {
+        border-bottom: none !important;
+    }
+    .tab-btn {
+        border: thin solid rgba(0, 0, 0, 0.12) !important;
+        border-right: none !important;
+        font-size: 0.75rem;
+        &:last-of-type {
+            border-right: thin solid rgba(0, 0, 0, 0.12) !important;
+        }
+        &--active {
+            color: $primary !important;
+            &::before {
+                opacity: 0.12 !important;
+            }
+        }
+        &--err-tab {
+            color: $error !important;
+            &:last-of-type {
+                border-color: $error !important;
+            }
+        }
+    }
+}
 .v-card.v-card-custom {
     box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
     border: 1px solid #e3e6ea !important;

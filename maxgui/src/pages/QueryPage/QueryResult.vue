@@ -6,19 +6,16 @@
         <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
             <span>{{ $t('dataPrvw') }} </span>
         </v-tab>
+        <!-- TODO: keepalive tab component is not working -->
         <v-tabs-items v-model="activeTab" class="tab-items">
             <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
-                <keep-alive>
-                    <result-tab :dynDim="componentDynDim" />
-                </keep-alive>
+                <result-tab :dynDim="componentDynDim" />
             </v-tab-item>
             <v-tab-item :value="SQL_QUERY_MODES.PRVW_DATA" :class="tabItemClass">
-                <keep-alive>
-                    <preview-data-tab
-                        :dynDim="componentDynDim"
-                        :previewDataSchemaId="previewDataSchemaId"
-                    />
-                </keep-alive>
+                <preview-data-tab
+                    :dynDim="componentDynDim"
+                    :previewDataSchemaId="previewDataSchemaId"
+                />
             </v-tab-item>
         </v-tabs-items>
     </v-tabs>
