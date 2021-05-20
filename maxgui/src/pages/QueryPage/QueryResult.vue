@@ -1,24 +1,31 @@
 <template>
-    <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper fill-height">
-        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
-            <span> {{ $t('results') }} </span>
-        </v-tab>
-        <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
-            <span>{{ $t('dataPrvw') }} </span>
-        </v-tab>
-        <!-- TODO: keepalive tab component is not working -->
-        <v-tabs-items v-model="activeTab" class="tab-items">
-            <v-tab-item :value="SQL_QUERY_MODES.QUERY_VIEW" :class="tabItemClass">
-                <result-tab :dynDim="componentDynDim" />
-            </v-tab-item>
-            <v-tab-item :value="SQL_QUERY_MODES.PRVW_DATA" :class="tabItemClass">
+    <div class="fill-height">
+        <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
+            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
+                <span> {{ $t('results') }} </span>
+            </v-tab>
+            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
+                <span>{{ $t('dataPrvw') }} </span>
+            </v-tab>
+        </v-tabs>
+
+        <!-- TODO: use vanila vuejs transtion to have similar reverse v-tab-item transtion -->
+        <v-slide-x-transition>
+            <keep-alive>
+                <result-tab
+                    v-if="activeTab === SQL_QUERY_MODES.QUERY_VIEW"
+                    :class="tabItemClass"
+                    :dynDim="componentDynDim"
+                />
                 <preview-data-tab
+                    v-else
+                    :class="tabItemClass"
                     :dynDim="componentDynDim"
                     :previewDataSchemaId="previewDataSchemaId"
                 />
-            </v-tab-item>
-        </v-tabs-items>
-    </v-tabs>
+            </keep-alive>
+        </v-slide-x-transition>
+    </div>
 </template>
 
 <script>
@@ -97,8 +104,5 @@ export default {
 <style lang="scss" scoped>
 .query-result-fontStyle {
     font-size: 14px;
-}
-.tab-items {
-    background-color: transparent;
 }
 </style>

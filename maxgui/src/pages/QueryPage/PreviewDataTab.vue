@@ -37,24 +37,26 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <keep-alive>
-                    <result-data-table
-                        v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
-                        :key="SQL_QUERY_MODES.PRVW_DATA"
-                        :height="dynDim.height - headerHeight"
-                        :width="dynDim.width"
-                        :headers="prvw_data.fields"
-                        :rows="prvw_data.data"
-                    />
-                    <result-data-table
-                        v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                        :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                        :height="dynDim.height - headerHeight"
-                        :width="dynDim.width"
-                        :headers="prvw_data_details.fields"
-                        :rows="prvw_data_details.data"
-                    />
-                </keep-alive>
+                <v-slide-x-transition>
+                    <keep-alive>
+                        <result-data-table
+                            v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
+                            :key="SQL_QUERY_MODES.PRVW_DATA"
+                            :height="dynDim.height - headerHeight"
+                            :width="dynDim.width"
+                            :headers="prvw_data.fields"
+                            :rows="prvw_data.data"
+                        />
+                        <result-data-table
+                            v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                            :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                            :height="dynDim.height - headerHeight"
+                            :width="dynDim.width"
+                            :headers="prvw_data_details.fields"
+                            :rows="prvw_data_details.data"
+                        />
+                    </keep-alive>
+                </v-slide-x-transition>
             </template>
         </template>
     </div>

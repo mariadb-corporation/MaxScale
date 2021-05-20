@@ -22,7 +22,7 @@
                 </v-menu>
 
                 <v-tabs
-                    v-model="activeResultSet"
+                    v-model="activeResSet"
                     show-arrows
                     hide-slider
                     :height="20"
@@ -48,26 +48,33 @@
                 type="table: table-thead, table-tbody"
                 :height="dynDim.height - headerHeight"
             />
-            <template v-for="(resSet, name) in resultSets" v-else>
-                <v-slide-x-transition :key="name">
-                    <div v-if="activeResultSet === name">
-                        <result-data-table
-                            v-if="$typy(resSet, 'data').isDefined"
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="resSet.fields"
-                            :rows="resSet.data"
-                        />
-                        <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
-                            <template v-for="(v, key) in resSet">
-                                <div :key="key">
-                                    <b>{{ key }}:</b>
-                                    <span class="d-inline-block ml-4">{{ v }}</span>
+            <template v-else>
+                <template v-for="(resSet, name) in resultSets">
+                    <v-slide-x-transition :key="name">
+                        <keep-alive>
+                            <template v-if="activeResSet === name">
+                                <result-data-table
+                                    v-if="$typy(resSet, 'data').isDefined"
+                                    :height="dynDim.height - headerHeight"
+                                    :width="dynDim.width"
+                                    :headers="resSet.fields"
+                                    :rows="resSet.data"
+                                />
+                                <div
+                                    v-else
+                                    :style="{ height: `${dynDim.height - headerHeight}px` }"
+                                >
+                                    <template v-for="(v, key) in resSet">
+                                        <div :key="key">
+                                            <b>{{ key }}:</b>
+                                            <span class="d-inline-block ml-4">{{ v }}</span>
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
-                        </div>
-                    </div>
-                </v-slide-x-transition>
+                        </keep-alive>
+                    </v-slide-x-transition>
+                </template>
             </template>
         </template>
     </div>
@@ -106,7 +113,7 @@ export default {
         return {
             headerHeight: 0,
             isMounted: true,
-            activeResultSet: '',
+            activeResSet: '',
         }
     },
     computed: {
@@ -139,7 +146,7 @@ export default {
         resultSets: {
             deep: true,
             handler() {
-                if (this.getErrTabName()) this.activeResultSet = this.getErrTabName()
+                if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
             },
         },
     },

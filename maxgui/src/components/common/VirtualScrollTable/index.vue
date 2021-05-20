@@ -10,6 +10,7 @@
         />
         <v-virtual-scroll
             v-if="rows.length && headers.length"
+            ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
             :items="rows"
             :height="tbodyHeight"
@@ -114,6 +115,7 @@ export default {
             cellWidthMap: {},
             headerStyle: {},
             isResizing: false,
+            lastScrollTop: 0,
         }
     },
     computed: {
@@ -127,6 +129,17 @@ export default {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
     },
+    activated() {
+        /**
+         * activated hook is triggered when this component is placed
+         * as a children component or nested component of keep-alive.
+         * For some reason, the last scrollTop position isn't preserved in
+         * v-virtual-scroll component. This is a workaround to manually
+         * scroll the content to lastScrollTop value
+         */
+        this.$refs.vVirtualScroll.$el.scrollTop = 1 // in case lastScrollTop === 0
+        this.$refs.vVirtualScroll.$el.scrollTop = this.lastScrollTop
+    },
     methods: {
         scrolling(event) {
             const ele = event.currentTarget || event.target
@@ -136,6 +149,7 @@ export default {
                 position: 'relative',
                 left: `-${ele.scrollLeft}px`,
             }
+            this.lastScrollTop = ele.scrollTop
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
