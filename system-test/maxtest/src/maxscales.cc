@@ -474,11 +474,11 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
     char sys[sizeof(log_dir_i) + 1024];
     if (timestamp == 0)
     {
-        sprintf(log_dir, "LOGS/%s", test_name.c_str());
+        sprintf(log_dir, "%s/LOGS/%s", mxt::test_build_dir, test_name.c_str());
     }
     else
     {
-        sprintf(log_dir, "LOGS/%s/%04f", test_name.c_str(), timestamp);
+        sprintf(log_dir, "%s/LOGS/%s/%04f", mxt::test_build_dir, test_name.c_str(), timestamp);
     }
 
     sprintf(log_dir_i, "%s/%03d", log_dir, i);
