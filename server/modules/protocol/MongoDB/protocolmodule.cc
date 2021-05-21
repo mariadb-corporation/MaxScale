@@ -106,7 +106,7 @@ ProtocolModule::AuthenticatorList ProtocolModule::create_authenticators(const mx
     }
     else
     {
-        MXS_ERROR("Failed to initialize authenticator module '%s'.", auth_name.c_str());
+        MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_name.c_str());
     }
 
     return authenticators;

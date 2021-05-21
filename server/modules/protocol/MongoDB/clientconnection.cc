@@ -121,8 +121,8 @@ void ClientConnection::ready_for_reading(DCB* dcb)
     }
     else
     {
-        MXS_NOTICE("%d bytes received, still need %d bytes for the package.",
-                   buffer_len, pHeader->msg_len - buffer_len);
+        MXB_INFO("%d bytes received, still need %d bytes for the package.",
+                 buffer_len, pHeader->msg_len - buffer_len);
         m_pDcb->readq_prepend(pBuffer);
     }
 }
@@ -242,7 +242,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
         }
         else
         {
-            MXS_ERROR("Could not start session, closing client connection.");
+            MXB_ERROR("Could not start session, closing client connection.");
             gwbuf_free(pPacket);
             m_session.kill();
         }
@@ -276,16 +276,16 @@ int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, con
 
         if (mxs_mysql_is_ok_packet(pBuffer))
         {
-            MXS_WARNING("Unexpected OK packet received when none was expected.");
+            MXB_WARNING("Unexpected OK packet received when none was expected.");
         }
         else if (mxs_mysql_is_err_packet(pBuffer))
         {
-            MXS_ERROR("Error received from backend, session is likely to be closed: %s",
+            MXB_ERROR("Error received from backend, session is likely to be closed: %s",
                       mxs::extract_error(pBuffer).c_str());
         }
         else
         {
-            MXS_WARNING("Unexpected response received.");
+            MXB_WARNING("Unexpected response received.");
         }
 
         gwbuf_free(pBuffer);

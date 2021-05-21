@@ -72,13 +72,13 @@ public:
         {
         case GlobalConfig::RETURN_ERROR:
             {
-                MXS_ERROR("%s", s.c_str());
+                MXS_INFO("%s", s.c_str());
                 throw mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND);
             }
             break;
 
         case GlobalConfig::RETURN_EMPTY:
-            MXS_WARNING("%s", s.c_str());
+            MXS_INFO("%s", s.c_str());
             break;
         }
     }
@@ -418,7 +418,7 @@ void Command::free_request()
 
 void Command::send_downstream(const string& sql)
 {
-    MXS_NOTICE("SQL: %s", sql.c_str());
+    MXB_INFO("SQL: %s", sql.c_str());
 
     m_last_statement = sql;
 
@@ -450,7 +450,7 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
 
 void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
-    MXS_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
+    MXB_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
 
     bsoncxx::builder::basic::document mariadb;
 
@@ -542,7 +542,7 @@ GWBUF* Command::create_reply_response(size_t size_of_documents,
 
 GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
 {
-    MXS_NOTICE("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
+    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
 
     auto doc_view = doc.view();
     size_t doc_len = doc_view.length();
@@ -559,7 +559,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
 
 GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 {
-    MXS_NOTICE("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
+    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
 
     uint32_t flag_bits = 0;
     uint8_t kind = 0;

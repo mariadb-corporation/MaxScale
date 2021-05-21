@@ -233,7 +233,7 @@ MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& ba
         {
             stringstream ss;
             ss << "Could not convert assumed JSON data to BSON: " << x.what();
-            MXS_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
+            MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
             throw SoftError(ss.str(), error::COMMAND_FAILED);
         }
     }

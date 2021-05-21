@@ -747,7 +747,7 @@ protected:
                 }
                 else
                 {
-                    MXS_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
+                    MXB_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
                     throw MariaDBError(err);
                 }
             }
@@ -755,7 +755,7 @@ protected:
 
         default:
             mxb_assert(!true);
-            MXS_ERROR("Expected OK or ERR packet, received something else.");
+            MXB_ERROR("Expected OK or ERR packet, received something else.");
 
             throw HardError("Unexpected response received from backend.",
                             error::COMMAND_FAILED).create_response(*this);
@@ -794,7 +794,7 @@ protected:
                 }
                 else
                 {
-                    MXS_ERROR("Could not create database: (%d), %s", err.code(), err.message().c_str());
+                    MXB_ERROR("Could not create database: (%d), %s", err.code(), err.message().c_str());
                     throw MariaDBError(err);
                 }
             }
@@ -802,7 +802,7 @@ protected:
 
         default:
             mxb_assert(!true);
-            MXS_ERROR("Expected OK or ERR packet, received something else.");
+            MXB_ERROR("Expected OK or ERR packet, received something else.");
 
             throw HardError("Unexpected response received from backend.",
                             error::COMMAND_FAILED).create_response(*this);
@@ -1043,7 +1043,7 @@ private:
                 message += bsoncxx::to_json(update);
                 message += "'.";
 
-                MXS_ERROR("%s", message.c_str());
+                MXB_ERROR("%s", message.c_str());
                 throw HardError(message, error::COMMAND_FAILED);
             }
             break;
@@ -1067,7 +1067,6 @@ private:
                 message += bsoncxx::to_json(update);
                 message += "'.";
 
-                MXS_ERROR("%s", message.c_str());
                 throw HardError(message, error::COMMAND_FAILED);
             }
         }

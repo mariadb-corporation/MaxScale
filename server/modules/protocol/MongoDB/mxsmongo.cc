@@ -440,8 +440,6 @@ mxsmongo::Msg::Msg(const Packet& packet)
 
                 if (pData != pEnd)
                 {
-                    MXB_NOTICE("zIdentifier: %s", zIdentifier);
-
                     ++pData; // NULL-terminator
 
                     auto& documents = m_arguments[zIdentifier];
@@ -454,7 +452,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
                         if (pData + size <= pEnd)
                         {
                             bsoncxx::document::view doc { pData, size };
-                            MXB_NOTICE("DOC: %s", bsoncxx::to_json(doc).c_str());
+                            MXB_INFO("DOC: %s", bsoncxx::to_json(doc).c_str());
                             documents.push_back(doc);
                             pData += size;
                         }
@@ -1273,14 +1271,12 @@ string get_op_and_value(const bsoncxx::document::view& doc)
 {
     string rv;
 
+    // We will ignore all but the last field. That's what Mongo does
+    // but as it is unlikely that there will be more fields than one,
+    // explicitly ignoring fields at the beginning would just make
+    // things messier without adding much benefit.
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
-        if (!rv.empty())
-        {
-            MXS_WARNING("Comparison object '%s' has more fields than one, only "
-                        "the last one will be applied.", bsoncxx::to_json(doc).c_str());
-        }
-
         const auto& element = *it;
         const auto op = static_cast<string>(element.key());
 
@@ -1305,14 +1301,12 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 {
     string rv;
 
+    // We will ignore all but the last field. That's what Mongo does
+    // but as it is unlikely that there will be more fields than one,
+    // explicitly ignoring fields at the beginning would just make
+    // things messier without adding much benefit.
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
-        if (!rv.empty())
-        {
-            MXS_WARNING("Comparison object '%s' has more fields than one, only "
-                        "the last one will be applied.", bsoncxx::to_json(doc).c_str());
-        }
-
         const auto& element = *it;
         const auto op = static_cast<string>(element.key());
 
@@ -1945,7 +1939,7 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
         }
         catch (const std::exception& x)
         {
-            MXS_ERROR("%s. Closing client connection.", x.what());
+            MXB_ERROR("Closing client connection: %s", x.what());
             kill_client();
         }
 
@@ -2019,7 +2013,7 @@ void mxsmongo::Mongo::kill_client()
 
 GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
 {
-    MXB_NOTICE("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
+    MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
     auto sDatabase = Database::create(req.collection(), &m_context, &m_config);
 
@@ -2036,7 +2030,7 @@ GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req
 
 GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
 {
-    MXB_NOTICE("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
+    MXB_INFO("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
 
     GWBUF* pResponse = nullptr;
 
@@ -2063,15 +2057,16 @@ GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
         }
         else
         {
-            MXS_ERROR("Key '$db' found, but value is not utf8.");
-            mxb_assert(!true);
+            MXB_ERROR("Closing client connection; key '$db' found, but value is not utf8.");
+            kill_client();
         }
     }
     else
     {
-        MXS_ERROR("Document did not contain the expected key '$db': %s",
+        MXB_ERROR("Closing client connection; document did not "
+                  "contain the expected key '$db': %s",
                   req.to_string().c_str());
-        mxb_assert(!true);
+        kill_client();
     }
 
     return pResponse;
