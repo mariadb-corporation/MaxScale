@@ -165,7 +165,6 @@ public:
         cnf->set("enable.auto.commit", "false", err);
         cnf->set("enable.auto.offset.store", "true", err);
         cnf->set("auto.offset.reset", "smallest", err);
-        cnf->set("allow.auto.create.topics", "true", err);
         cnf->set("topic.metadata.refresh.interval.ms", "10000", err);
         cnf->set("event_cb", &m_logger, err);
 

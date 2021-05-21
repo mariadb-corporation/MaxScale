@@ -17,7 +17,6 @@ std::unique_ptr<RdKafka::Conf> create_config(const Config& config)
     values["enable.auto.commit"] = "false";
     values["enable.auto.offset.store"] = "true";
     values["auto.offset.reset"] = "smallest";
-    values["allow.auto.create.topics"] = "true";
     values["topic.metadata.refresh.interval.ms"] = "10000";
 
     if (config.ssl.get())
