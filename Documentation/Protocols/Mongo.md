@@ -1,9 +1,16 @@
 # MongoDB Protocol
 
-The MongoDB protocol module provides access, subject to a number
-limitations, to MariaDB databases for unalterered MongoDB applications.
+The _mongodbprotocol_ module allows a MariaDB server or cluster to be
+used as the backend of an application using some MongoDB client library.
+Internally, all documents are stored in a table containing two columns;
+an _id_ column for the object id and a _doc_ column for the document itself.
 
-TBW
+When the MongoDB client application issues MongoDB
+[commands](https://docs.mongodb.com/manual/reference/command/),
+either directly or indirectly via the client library, they are transparently
+converted into the equivalent SQL and executed against the MariaDB backend.
+The responses are then in turn converted into the format expected by the
+MongoDB client library and application.
 
 [TOC]
 
@@ -40,13 +47,13 @@ Currently no authentication is supported in the communication between
 the MongoDB client application and MaxScale. That is, when connecting only
 the host and port should be provided, but neither username nor password.
 For instance, if the
-(MongoDB Node.JS Driver)[https://mongodb.github.io/node-mongodb-native/]
+[MongoDB Node.JS Driver](https://mongodb.github.io/node-mongodb-native/)
 is used, then the connection string should look like:
 ```
 const uri = "mongodb://127.0.0.1:17017"
 ```
 
-Similarly, if the (mongo Shell)[https://docs.mongodb.com/manual/mongo/]
+Similarly, if the [mongo Shell](https://docs.mongodb.com/manual/mongo/)
 is used, only the host and port should be provided:
 ```
 $ mongo --host 127.0.0.1 --port 17017
@@ -59,11 +66,11 @@ MongoDB shell version v4.4.1
 
 As the goal of _mongodbprotocol_ is to implement, to the extent that it
 is feasible, the
-(MongoDB Wire Protocol)[https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/]
+[MongoDB Wire Protocol](https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/)
 and the
-(Database Commands)[https://docs.mongodb.com/manual/reference/command/]
+[Database Commands](https://docs.mongodb.com/manual/reference/command/)
 the way MongoDB implements them, it should be possible to use
-any language specific (driver)[https://docs.mongodb.com/drivers/].
+any language specific [driver](https://docs.mongodb.com/drivers/).
 
 However, during the development of mongodbprotocol, the _only_ client library
 that has been verified to work is version 3.6 of
