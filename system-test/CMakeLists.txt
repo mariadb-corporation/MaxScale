@@ -881,6 +881,7 @@ add_test_executable(connection_keepalive.cpp connection_keepalive connection_kee
 add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS REPL_BACKEND)
 
 # MXS-2750: Test COM_STMT_EXECUTE metadata addition
+# MXS-3565: Target selection for COM_STMT_EXECUTION without metadata isn't done correctly
 add_test_executable(mxs2750_com_stmt_exec.cc mxs2750_com_stmt_exec replication LABELS readwritesplit REPL_BACKEND)
 
 # MXS-2793: Schemarouter multi-table joins
