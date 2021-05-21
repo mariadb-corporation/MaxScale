@@ -381,10 +381,6 @@ public:
         {
             string order_by = sort_to_order_by(sort);
 
-            MXS_NOTICE("Sort '%s' converted to 'ORDER BY %s'.",
-                       bsoncxx::to_json(sort).c_str(),
-                       order_by.c_str());
-
             if (!order_by.empty())
             {
                 sql << "ORDER BY " << order_by << " ";
@@ -713,7 +709,7 @@ protected:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            MXS_NOTICE("Table created, now executing statment.");
+            MXS_INFO("Table created, now executing statment.");
             m_action = Action::INSERTING_DATA;
             execute_one_statement();
             break;
@@ -726,7 +722,7 @@ protected:
 
                 if (code == ER_TABLE_EXISTS_ERROR)
                 {
-                    MXS_NOTICE("Table created by someone else, now executing statment.");
+                    MXS_INFO("Table created by someone else, now executing statment.");
                     m_action = Action::INSERTING_DATA;
                     execute_one_statement();
                 }
@@ -777,7 +773,7 @@ protected:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            MXS_NOTICE("Database created, now creating table.");
+            MXS_INFO("Database created, now creating table.");
             create_table();
             break;
 
@@ -789,7 +785,7 @@ protected:
 
                 if (code == ER_DB_CREATE_EXISTS)
                 {
-                    MXS_NOTICE("Database created by someone else, now creating table.");
+                    MXS_INFO("Database created by someone else, now creating table.");
                     create_table();
                 }
                 else
