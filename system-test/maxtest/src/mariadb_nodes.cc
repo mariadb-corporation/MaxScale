@@ -1121,6 +1121,7 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
         sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
+        sett.ssl.enabled = true;
     }
     sett.timeout = 10;
     auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
