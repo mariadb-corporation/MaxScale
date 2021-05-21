@@ -676,7 +676,7 @@ Config::Config(int argc, char** argv)
 // static
 Config& Config::init(int argc, char** argv)
 {
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
     static bool inited;
     mxb_assert((!inited && argc && argv) || (inited && !argc && !argv));
     inited = true;
@@ -1857,25 +1857,33 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
 
 bool is_valid_module(const CONFIG_CONTEXT* obj)
 {
+    bool rval = true;
     std::string type = obj->m_parameters.get_string(CN_TYPE);
+    std::string name;
 
     if (type == CN_SERVICE)
     {
-        auto name = obj->m_parameters.get_string(CN_ROUTER);
-        return get_module(name, mxs::ModuleType::ROUTER);
+        name = obj->m_parameters.get_string(CN_ROUTER);
+        rval = get_module(name, mxs::ModuleType::ROUTER);
     }
     else if (type == CN_MONITOR)
     {
-        auto name = obj->m_parameters.get_string(CN_MODULE);
-        return get_module(name, mxs::ModuleType::MONITOR);
+        name = obj->m_parameters.get_string(CN_MODULE);
+        rval = get_module(name, mxs::ModuleType::MONITOR);
     }
     else if (type == CN_FILTER)
     {
-        auto name = obj->m_parameters.get_string(CN_MODULE);
-        return get_module(name, mxs::ModuleType::FILTER);
+        name = obj->m_parameters.get_string(CN_MODULE);
+        rval = get_module(name, mxs::ModuleType::FILTER);
     }
 
-    return true;
+    if (!rval)
+    {
+        MXS_ERROR("Module '%s' is not a valid module name for %s '%s'",
+                  name.c_str(), type.c_str(), obj->m_name.c_str());
+    }
+
+    return rval;
 }
 
 std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const CONFIG_CONTEXT* obj)
@@ -1975,6 +1983,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
     const MXS_MODULE_PARAM* common_params = nullptr;
     const MXS_MODULE* module;
     std::tie(common_params, module) = get_module_details(obj);
+    mxb_assert(module);
 
     for (const auto* p : {common_params, module->parameters})
     {
@@ -2918,15 +2927,16 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
         if (!is_valid_module(obj))
         {
+            rval = false;
             continue;
         }
 
         if (type == CN_SERVER || type == CN_LISTENER || type == CN_FILTER || type == CN_SERVICE)
         {
             // Servers are a special case as they don't have a module and the validation is done as a part of
-            // the creation process. Filters, services and listeners validate the parameters when they are being
-            // constructed. This is done after the dependency order of the modules is resolved which allows
-            // parameters that refer to other objects to be validated.
+            // the creation process. Filters, services and listeners validate the parameters when they are
+            // being constructed. This is done after the dependency order of the modules is resolved which
+            // allows parameters that refer to other objects to be validated.
             continue;
         }
 
