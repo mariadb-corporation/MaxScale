@@ -530,7 +530,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             break;
 
         case AuthState::NO_PLUGIN:
-            send_authetication_error(AuthErrorType::NO_PLUGIN);
+            send_authentication_error(AuthErrorType::NO_PLUGIN);
             m_auth_state = AuthState::FAIL;
             break;
 
@@ -2033,7 +2033,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     }
                     else if (parse_handshake_response_packet(buffer))
                     {
-                        send_authetication_error(AuthErrorType::ACCESS_DENIED);
+                        send_authentication_error(AuthErrorType::ACCESS_DENIED);
                         m_handshake_state = HSState::FAIL;
                     }
                     else
@@ -2126,7 +2126,7 @@ void MariaDBClientConnection::update_sequence(GWBUF* buf)
     gwbuf_copy_data(buf, MYSQL_SEQ_OFFSET, 1, &m_sequence);
 }
 
-void MariaDBClientConnection::send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg)
+void MariaDBClientConnection::send_authentication_error(AuthErrorType error, const std::string& auth_mod_msg)
 {
     auto ses = m_session_data;
     string mariadb_msg;
@@ -2255,7 +2255,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 
     if (entrytype == UserEntryType::USER_NOT_FOUND)
     {
-        send_authetication_error(AuthErrorType::ACCESS_DENIED);
+        send_authentication_error(AuthErrorType::ACCESS_DENIED);
         m_auth_state = AuthState::FAIL;
     }
     else
@@ -2316,7 +2316,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
                 default:
                     mxb_assert(!true);
                 }
-                send_authetication_error(error, auth_val.msg);
+                send_authentication_error(error, auth_val.msg);
                 m_auth_state = AuthState::FAIL;
             }
         }
@@ -2329,7 +2329,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
                 m_session->service->request_user_account_update();
             }
             // This is also sent if the auth module fails.
-            send_authetication_error(AuthErrorType::ACCESS_DENIED, auth_val.msg);
+            send_authentication_error(AuthErrorType::ACCESS_DENIED, auth_val.msg);
             m_auth_state = AuthState::FAIL;
         }
     }

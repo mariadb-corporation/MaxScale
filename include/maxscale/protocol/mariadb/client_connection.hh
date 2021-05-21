@@ -181,7 +181,7 @@ private:
         NO_PLUGIN,
     };
 
-    void   send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
+    void   send_authentication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
     void   send_misc_error(const std::string& msg);
     int    send_auth_error(int packet_number, const char* mysql_message);
     int    send_standard_error(int packet_number, int error_number, const char* error_message);

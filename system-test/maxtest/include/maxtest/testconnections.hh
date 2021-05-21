@@ -451,6 +451,7 @@ private:
     bool m_mdbci_called {false};    /**< Was mdbci called when setting up test system? */
 
     bool m_cleaned_up {false};      /**< Cleanup done? */
+    bool m_init_done {false};
 
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);

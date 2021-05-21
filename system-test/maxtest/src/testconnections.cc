@@ -152,6 +152,14 @@ TestConnections::TestConnections(int argc, char* argv[])
 
 int TestConnections::prepare_for_test(int argc, char* argv[])
 {
+    if (m_init_done)
+    {
+        tprintf("ERROR: prepare_for_test called more than once.");
+        return 1;
+    }
+
+    m_init_done = true;
+
     std::ios::sync_with_stdio(true);
     set_signal_handlers();
     gettimeofday(&m_start_time, nullptr);
