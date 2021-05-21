@@ -116,17 +116,20 @@
                 <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
         </div>
-
-        <virtual-scroll-table
-            :benched="0"
-            :headers="visibleHeaders"
-            :rows="filteredRows"
-            :itemHeight="30"
-            :height="tableHeight"
-            :boundingWidth="width"
-            :isVertTable="isVertTable"
-            @scroll-end="fetchMore"
-        />
+        <!-- Keep it in memory, negative height crashes v-virtual-scroll -->
+        <keep-alive>
+            <virtual-scroll-table
+                v-if="tableHeight > 0"
+                :benched="0"
+                :headers="visibleHeaders"
+                :rows="filteredRows"
+                :itemHeight="30"
+                :height="tableHeight"
+                :boundingWidth="width"
+                :isVertTable="isVertTable"
+                @scroll-end="fetchMore"
+            />
+        </keep-alive>
     </div>
 </template>
 

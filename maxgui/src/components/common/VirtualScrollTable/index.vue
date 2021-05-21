@@ -117,7 +117,8 @@ export default {
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
-            tableRows: this.rows,
+            idxOfSortingCol: null,
+            isDesc: false,
         }
     },
     computed: {
@@ -130,15 +131,20 @@ export default {
         rowHeight() {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
-    },
-    watch: {
-        rows: {
-            deep: true,
-            handler(v) {
-                this.tableRows = v
-            },
+        tableRows() {
+            if (this.idxOfSortingCol === null) return this.rows
+            /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
+             * Though it comes with pitfalls and should be used for ajax data
+             */
+            let rows = JSON.parse(JSON.stringify(this.rows))
+            rows.sort((a, b) => {
+                if (this.isDesc) return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
+                else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
+            })
+            return rows
         },
     },
+
     activated() {
         /**
          * activated hook is triggered when this component is placed
@@ -166,12 +172,8 @@ export default {
                 this.$emit('scroll-end')
         },
         onSorting({ sortBy, isDesc }) {
-            const indexOfSortingCol = this.headers.indexOf(sortBy)
-            //TODO: use merge sort
-            this.tableRows.sort((a, b) => {
-                if (isDesc) return b[indexOfSortingCol] < a[indexOfSortingCol] ? -1 : 1
-                else return a[indexOfSortingCol] < b[indexOfSortingCol] ? -1 : 1
-            })
+            this.idxOfSortingCol = this.headers.indexOf(sortBy)
+            this.isDesc = isDesc
         },
     },
 }
