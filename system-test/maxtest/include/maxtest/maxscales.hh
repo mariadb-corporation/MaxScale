@@ -50,7 +50,7 @@ public:
 
     bool ssl() const;
 
-    int rwsplit_port[N_MXS] {-1};           /**< RWSplit port */
+    int rwsplit_port {-1};           /**< RWSplit port */
     int readconn_master_port[N_MXS] {-1};   /**< ReadConnection in master mode port */
     int readconn_slave_port[N_MXS] {-1};    /**< ReadConnection in slave mode port */
 

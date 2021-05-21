@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     sleep(10);
 
     Test->tprintf("Trying to connect using user with old style password\n");
-    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port,
                             Test->maxscales->ip4(),
                             (char*) "user_long_host11",
                             (char*)  "old",

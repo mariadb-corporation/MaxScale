@@ -22,7 +22,7 @@ int main(int argc, char** argv)
            "GRANT SELECT ON *.* TO test",
            "SET PASSWORD FOR 'test' = PASSWORD('test')"});
 
-    MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0], test.maxscales->ip4(), "test", "test");
+    MYSQL* conn = open_conn(test.maxscales->rwsplit_port, test.maxscales->ip4(), "test", "test");
     test.try_query(conn, "SELECT 1");
     mysql_close(conn);
 

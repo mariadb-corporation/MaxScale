@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     execute_query(test.maxscales->conn_rwsplit[0],
                   (char*) "CREATE USER 'test_user'@'%%' IDENTIFIED BY 'pass'");
 
-    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port,
                                   test.maxscales->ip4(),
                                   (char*) "test_user",
                                   (char*) "pass",

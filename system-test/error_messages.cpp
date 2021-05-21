@@ -62,8 +62,8 @@ int main(int argc, char** argv)
 
     cout << "Non-existent user" << endl;
     auto conn_direct = open_conn(test.repl->port[0], node_ip, "not-a-user", "not-a-password", false);
-    auto conn_rwsplit = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "not-a-user", "not-a-password", false);
-    auto conn_rconn = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "not-a-user", "not-a-password", false);
+    auto conn_rwsplit = open_conn(test.maxscales->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
+    auto conn_rconn = open_conn(test.maxscales->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");
@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 
     cout << "Wrong password" << endl;
     conn_direct = open_conn(test.repl->port[0], node_ip, "skysql", "not-a-password", false);
-    conn_rwsplit = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "skysql", "not-a-password", false);
-    conn_rconn = open_conn(test.maxscales->rwsplit_port[0], mxs_ip, "skysql", "not-a-password", false);
+    conn_rwsplit = open_conn(test.maxscales->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
+    conn_rconn = open_conn(test.maxscales->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");
@@ -93,8 +93,8 @@ int main(int argc, char** argv)
 
     cout << "No permissions on database" << endl;
     conn_direct = open_conn_db(test.repl->port[0], node_ip, "error_messages", "bob", "s3cret", false);
-    conn_rwsplit = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip, "error_messages", "bob", "s3cret", false);
-    conn_rconn = open_conn_db(test.maxscales->rwsplit_port[0], mxs_ip, "error_messages", "bob", "s3cret", false);
+    conn_rwsplit = open_conn_db(test.maxscales->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
+    conn_rconn = open_conn_db(test.maxscales->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");

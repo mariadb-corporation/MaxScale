@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     char sys1[4096];
     int port[3];
 
-    port[0] = Test->maxscales->rwsplit_port[0];
+    port[0] = Test->maxscales->rwsplit_port;
     port[1] = Test->maxscales->readconn_master_port[0];
 
     auto mxs_ip = Test->maxscales->ip4();

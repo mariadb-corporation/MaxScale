@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     test.repl->connect();
 
     const string maxscale_ip = test.maxscales->ip4();
-    const int maxscale_port = test.maxscales->rwsplit_port[0];
+    const int maxscale_port = test.maxscales->rwsplit_port;
 
     // Router sessions shouldn't work, since MaxScale is sending the proxy header even when
     // server is not expecting it. The connection to MaxScale is created but queries will fail.

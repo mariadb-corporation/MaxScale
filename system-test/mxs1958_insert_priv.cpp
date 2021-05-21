@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[0], "GRANT INSERT ON insert_db.t1 TO 'insert_only'@'%%'");
     test.repl->sync_slaves();
 
-    MYSQL* conn = open_conn(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn(test.maxscales->rwsplit_port,
                             test.maxscales->ip4(),
                             "insert_only",
                             "insert_only",

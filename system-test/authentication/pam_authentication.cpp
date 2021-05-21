@@ -131,7 +131,7 @@ void test_main(TestConnections& test)
 
     // Helper function for checking PAM-login. If db is empty, log to null database.
     auto try_log_in = [&test](const string& user, const string& pass, const string& database) {
-            int port = test.maxscales->rwsplit_port[0];
+            int port = test.maxscales->rwsplit_port;
             if (!test_pam_login(test, port, user, pass, database))
             {
                 test.expect(false, "PAM login failed.");
@@ -266,7 +266,7 @@ void test_main(TestConnections& test)
     {
         // Test that normal authentication on the same port works. This tests MXS-2497.
         auto maxconn = test.maxscales->open_rwsplit_connection();
-        int port = test.maxscales->rwsplit_port[0];
+        int port = test.maxscales->rwsplit_port;
         test.try_query(maxconn, "SELECT rand();");
         cout << "Normal mariadb-authentication on port " << port << (test.ok() ? " works.\n" : " failed.\n");
         mysql_close(maxconn);
@@ -275,7 +275,7 @@ void test_main(TestConnections& test)
     // Remove the linux user from the MaxScale node. Required for next test cases.
     test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
 
-    int normal_port = test.maxscales->rwsplit_port[0];
+    int normal_port = test.maxscales->rwsplit_port;
     int skip_auth_port = 4007;
     int nomatch_port = 4008;
     int caseless_port = 4009;

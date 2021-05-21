@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     test.repl->close_connections();
 
     test.set_timeout(60);
-    MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port,
                                test.maxscales->ip(),
                                "test",
                                "auth_test",
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     mysql_close(conn);
 
     test.maxctrl("unlink service RW-Split-Router server1");
-    conn = open_conn_db(test.maxscales->rwsplit_port[0],
+    conn = open_conn_db(test.maxscales->rwsplit_port,
                         test.maxscales->ip(),
                         "test",
                         "auth_test",

@@ -90,7 +90,7 @@ protected:
 
         // Configure the slave to replicate from MaxScale and sync it
         test.set_timeout(60);
-        slave.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port[0]));
+        slave.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port));
         slave.query("START SLAVE");
         sync(maxscale, slave);
         test.stop_timeout();

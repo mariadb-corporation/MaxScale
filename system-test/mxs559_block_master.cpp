@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     {
         data_master[i].exit_flag = 0;
         data_master[i].ip = test.maxscales->ip4();
-        data_master[i].port = test.maxscales->rwsplit_port[0];
+        data_master[i].port = test.maxscales->rwsplit_port;
         data_master[i].user = test.maxscales->user_name;
         data_master[i].password = test.maxscales->password;
         data_master[i].ssl = test.maxscale_ssl;

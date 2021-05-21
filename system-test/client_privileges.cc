@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 void test_logins(TestConnections& test, bool expect_success)
 {
     int successes = 0;
-    int port = test.maxscales->rwsplit_port[0];
+    int port = test.maxscales->rwsplit_port;
     auto ip = test.maxscales->ip4();
 
     auto test_user = [&](const string& user, const string& pass, const string& query) {

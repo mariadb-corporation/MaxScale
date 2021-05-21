@@ -12,7 +12,7 @@ bool try_connect(TestConnections& test)
     const char* pw = test.maxscales->password.c_str();
     const char* db = "test_db";
 
-    MYSQL* rwsplit = open_conn_db(test.maxscales->rwsplit_port[0], ip, db, user, pw, false);
+    MYSQL* rwsplit = open_conn_db(test.maxscales->rwsplit_port, ip, db, user, pw, false);
     MYSQL* master = open_conn_db(test.maxscales->readconn_master_port[0], ip, db, user, pw, false);
     MYSQL* slave = open_conn_db(test.maxscales->readconn_slave_port[0], ip, db, user, pw, false);
     bool rval = false;
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     test.add_result(try_connect(test), "Connection with dropped database should fail");
 
     test.tprintf("Connecting to RWSplit again to recreate 'test_db' db");
-    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
+    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port,
                                   test.maxscales->ip4(),
                            test.maxscales->user_name,
                            test.maxscales->password,
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 
 
     test.tprintf("Trying simple operations with t1 ");
-    conn = open_conn_no_db(test.maxscales->rwsplit_port[0],
+    conn = open_conn_no_db(test.maxscales->rwsplit_port,
                            test.maxscales->ip4(),
                            test.maxscales->user_name,
                            test.maxscales->password,

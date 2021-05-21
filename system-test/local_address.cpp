@@ -249,7 +249,7 @@ void test_connecting(TestConnections& test,
                      bool should_be_able_to)
 {
     bool could_connect = can_connect_to_maxscale(test.maxscales->ip4(),
-                                                 test.maxscales->rwsplit_port[0],
+                                                 test.maxscales->rwsplit_port,
                                                  zUser,
                                                  zPassword);
 

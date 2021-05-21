@@ -61,11 +61,11 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
         string key_binlog_dir = vm_name + "_binlog_dir";
         m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
 
-        rwsplit_port[0] = 4006;
+        rwsplit_port = 4006;
         readconn_master_port[0] = 4008;
         readconn_slave_port[0] = 4009;
 
-        ports[0] = rwsplit_port[0];
+        ports[0] = rwsplit_port;
         ports[1] = readconn_master_port[0];
         ports[2] = readconn_slave_port[0];
 
@@ -78,7 +78,7 @@ int Maxscales::connect_rwsplit(const std::string& db)
 {
     mysql_close(conn_rwsplit[0]);
 
-    conn_rwsplit[0] = open_conn_db(rwsplit_port[0], ip(), db, user_name, password, m_ssl);
+    conn_rwsplit[0] = open_conn_db(rwsplit_port, ip(), db, user_name, password, m_ssl);
     routers[0] = conn_rwsplit[0];
 
     int rc = 0;
@@ -269,7 +269,7 @@ int Maxscales::port(enum service type) const
     switch (type)
     {
     case RWSPLIT:
-        return rwsplit_port[0];
+        return rwsplit_port;
 
     case READCONN_MASTER:
         return readconn_master_port[0];
@@ -520,12 +520,12 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
 
 MYSQL* Maxscales::open_rwsplit_connection(const std::string& db)
 {
-    return open_conn(rwsplit_port[0], ip4(), user_name, password, m_ssl);
+    return open_conn(rwsplit_port, ip4(), user_name, password, m_ssl);
 }
 
 Connection Maxscales::rwsplit(const std::string& db)
 {
-    return Connection(ip4(), rwsplit_port[0], user_name, password, db, m_ssl);
+    return Connection(ip4(), rwsplit_port, user_name, password, db, m_ssl);
 }
 
 Connection Maxscales::get_connection(int port, const std::string& db)
@@ -903,7 +903,7 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
     }
 
-    conn->open(m_maxscales->ip(), m_maxscales->rwsplit_port[0], db);
+    conn->open(m_maxscales->ip(), m_maxscales->rwsplit_port, db);
     return conn;
 }
 
