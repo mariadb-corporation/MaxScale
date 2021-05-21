@@ -27,7 +27,7 @@ then
        libssl-dev mariadb-client php perl \
        coreutils libjansson-dev zlib1g-dev \
        libsqlite3-dev libcurl4-gnutls-dev \
-       mariadb-test python python-pip cmake libpam0g-dev oathtool \
+       mariadb-test cmake libpam0g-dev oathtool \
        libatomic1 \
        libsasl2-dev libxml2-dev libkrb5-dev
 
@@ -55,8 +55,6 @@ then
   then
       ${apt_cmd} install openjdk-7-jdk
   fi
-  pip install --upgrade pip
-  pip install JayDeBeApi
 else
   ## RPM-based distro
   install_libdir=/usr/lib64
@@ -77,8 +75,8 @@ EOL
     sudo zypper -n refresh
     sudo zypper -n install gcc gcc-c++ \
                  libopenssl-devel libgcrypt-devel MariaDB-devel MariaDB-test \
-                 php perl coreutils libjansson-devel python python-pip \
-                 cmake pam-devel openssl-devel python-devel libjansson-devel oath-toolkit \
+                 php perl coreutils libjansson-devel \
+                 cmake pam-devel openssl-devel libjansson-devel oath-toolkit \
                  sqlite3 sqlite3-devel libcurl-devel \
                  gnutls-devel \
                  libatomic1 \
@@ -100,8 +98,8 @@ EOL
     sudo yum install -y --nogpgcheck git wget gcc gcc-c++ \
                  libgcrypt-devel \
                  openssl-devel mariadb-devel mariadb-test \
-                 php perl coreutils python python-pip \
-                 cmake pam-devel python-devel jansson-devel oathtool \
+                 php perl coreutils  \
+                 cmake pam-devel jansson-devel oathtool \
                  sqlite sqlite-devel libcurl-devel \
                  gnutls-devel \
                  libatomic \
@@ -112,8 +110,6 @@ EOL
     sudo yum install -y --nogpgcheck php-mysql
     echo "please run 'scl enable devtoolset-7 bash' to enable new gcc!!"
   fi
-  sudo pip install --upgrade pip
-  sudo pip install JayDeBeApi
 fi
 
 # Install a recent cmake in case the package manager installed an old version.
