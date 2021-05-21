@@ -251,7 +251,9 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
             }
         }
 
-        string create_logdir_cmd = "mkdir -p LOGS/" + m_test_name;
+        string create_logdir_cmd = "mkdir -p ";
+        create_logdir_cmd += mxt::test_build_dir;
+        create_logdir_cmd += "/LOGS/" + m_test_name;
         if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
         {
             m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
@@ -890,7 +892,8 @@ int TestConnections::copy_mariadb_logs(MariaDBCluster* nrepl,
             if (strcmp(nrepl->ip4(i), "127.0.0.1") != 0)
             {
                 char str[4096];
-                sprintf(str, "LOGS/%s/%s%d_mariadb_log", m_test_name.c_str(), prefix, i);
+                sprintf(str, "%s/LOGS/%s/%s%d_mariadb_log",
+                        mxt::test_build_dir, m_test_name.c_str(), prefix, i);
                 threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, string(str));
             }
         }
@@ -904,7 +907,7 @@ int TestConnections::copy_all_logs()
     set_timeout(300);
 
     char str[PATH_MAX + 1];
-    sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
+    sprintf(str, "mkdir -p %s/LOGS/%s", mxt::test_build_dir, m_test_name.c_str());
     call_system(str);
 
     std::vector<std::thread> threads;
