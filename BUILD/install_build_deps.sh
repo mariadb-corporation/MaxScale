@@ -225,7 +225,7 @@ if verlt "$system_tcl_version" "8.6.5"
 then
    mkdir tcl
    cd tcl
-   wget -q --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
+   wget --quiet --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
 
    if [ $? != 0 ]
    then

@@ -41,7 +41,7 @@ if [ $cmake_version_ok -eq 0 ] ; then
   fi
   cmake_remotepath="v${cmake_version_install}/${cmake_filename}"
 
-  wget https://github.com/Kitware/CMake/releases/download/${cmake_remotepath}
+  wget --quiet https://github.com/Kitware/CMake/releases/download/${cmake_remotepath}
   sudo tar -axf ${cmake_filename} -C /usr/ --strip-components=1
 
   cmake_version=`${cmake_vrs_cmd} | grep "cmake version" | awk '{ print $3 }'`
