@@ -7,33 +7,20 @@
             :headerStyle="headerStyle"
             @get-header-width-map="cellWidthMap = $event"
             @is-resizing="isResizing = $event"
+            @on-sorting="onSorting"
         />
         <v-virtual-scroll
-            v-if="rows.length && headers.length"
+            v-if="tableRows.length && headers.length"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
-            :items="rows"
+            :items="tableRows"
             :height="tbodyHeight"
             :item-height="rowHeight"
             class="tbody"
             @scroll.native="scrolling"
         >
             <template v-slot:default="{ item: row }">
-                <div v-if="!isVertTable" class="tr" :style="{ lineHeight }">
-                    <!-- dependency keys to force a rerender -->
-                    <div
-                        v-for="(cell, i) in row"
-                        :key="`${cell}_${cellWidthMap[i]}_${i}`"
-                        class="td px-3"
-                        :style="{
-                            height: lineHeight,
-                            minWidth: `${cellWidthMap[i]}px`,
-                        }"
-                    >
-                        <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
-                    </div>
-                </div>
-                <div v-else class="tr-vertical-group d-flex flex-column">
+                <div v-if="isVertTable" class="tr-vertical-group d-flex flex-column">
                     <template v-for="(cell, i) in row">
                         <div
                             :key="`${cell}_${i}`"
@@ -67,10 +54,24 @@
                         </div>
                     </template>
                 </div>
+                <div v-else class="tr" :style="{ lineHeight }">
+                    <!-- dependency keys to force a rerender -->
+                    <div
+                        v-for="(cell, i) in row"
+                        :key="`${cell}_${cellWidthMap[i]}_${i}`"
+                        class="td px-3"
+                        :style="{
+                            height: lineHeight,
+                            minWidth: `${cellWidthMap[i]}px`,
+                        }"
+                    >
+                        <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
+                    </div>
+                </div>
             </template>
         </v-virtual-scroll>
         <div
-            v-else-if="!rows.length"
+            v-else-if="!tableRows.length"
             class="tr"
             :style="{ lineHeight, height: `${height - itemHeight}px` }"
         >
@@ -116,6 +117,7 @@ export default {
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
+            tableRows: this.rows,
         }
     },
     computed: {
@@ -129,6 +131,14 @@ export default {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
     },
+    watch: {
+        rows: {
+            deep: true,
+            handler(v) {
+                this.tableRows = v
+            },
+        },
+    },
     activated() {
         /**
          * activated hook is triggered when this component is placed
@@ -137,8 +147,10 @@ export default {
          * v-virtual-scroll component. This is a workaround to manually
          * scroll the content to lastScrollTop value
          */
-        this.$refs.vVirtualScroll.$el.scrollTop = 1 // in case lastScrollTop === 0
-        this.$refs.vVirtualScroll.$el.scrollTop = this.lastScrollTop
+        if (this.$refs.vVirtualScroll) {
+            this.$refs.vVirtualScroll.$el.scrollTop = 1 // in case lastScrollTop === 0
+            this.$refs.vVirtualScroll.$el.scrollTop = this.lastScrollTop
+        }
     },
     methods: {
         scrolling(event) {
@@ -152,6 +164,14 @@ export default {
             this.lastScrollTop = ele.scrollTop
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
+        },
+        onSorting({ sortBy, isDesc }) {
+            const indexOfSortingCol = this.headers.indexOf(sortBy)
+            //TODO: use merge sort
+            this.tableRows.sort((a, b) => {
+                if (isDesc) return b[indexOfSortingCol] < a[indexOfSortingCol] ? -1 : 1
+                else return a[indexOfSortingCol] < b[indexOfSortingCol] ? -1 : 1
+            })
         },
     },
 }

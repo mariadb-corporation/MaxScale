@@ -12,12 +12,18 @@
                         minWidth: `${headerWidthMap[i]}px`,
                         maxWidth: `${headerWidthMap[i]}px`,
                     }"
-                    class="th px-3"
+                    class="th d-flex align-center px-3 pointer"
+                    :class="{ [`sort--active ${sortOrder}`]: activeSort === header }"
+                    @click="() => (isVertTable ? null : handleSort(header))"
                 >
+                    <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
                         :text="`${header}`.toUpperCase()"
-                        :maxWidth="headerWidthMap[i] - 24"
+                        :maxWidth="headerWidthMap[i] - 46"
                     />
+                    <v-icon v-if="!isVertTable" size="14" class="sort-icon ml-2">
+                        $vuetify.icons.arrowDown
+                    </v-icon>
                     <div
                         v-if="i !== tableHeaders.length - 1"
                         class="header__resizer d-inline-block fill-height"
@@ -32,7 +38,6 @@
         />
     </div>
 </template>
-
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -64,6 +69,9 @@ export default {
             nxtColWidth: 0,
             currColWidth: 0,
             currColIndex: 0,
+            minHeaderWidth: 67, //threshold, user cannot resize header smaller than this
+            sortOrder: 'asc',
+            activeSort: null,
         }
     },
     computed: {
@@ -124,11 +132,11 @@ export default {
         resizerMouseMove(e) {
             if (this.isResizing) {
                 const diffX = e.pageX - this.currPageX
-                if (this.currColWidth + diffX >= 28) {
+                if (this.currColWidth + diffX >= this.minHeaderWidth) {
                     const newCurrColW = `${this.currColWidth + diffX}px`
                     this.currCol.style.maxWidth = newCurrColW
                     this.currCol.style.minWidth = newCurrColW
-                    if (this.nxtCol && this.nxtColWidth - diffX >= 28) {
+                    if (this.nxtCol && this.nxtColWidth - diffX >= this.minHeaderWidth) {
                         const newNxtColW = `${this.nxtColWidth - diffX}px`
                         this.nxtCol.style.maxWidth == newNxtColW
                         this.nxtCol.style.minWidth = newNxtColW
@@ -138,13 +146,15 @@ export default {
             }
         },
         resizerMouseUp() {
-            this.isResizing = false
-            this.currPageX = 0
-            this.currCol = null
-            this.nxtCol = null
-            this.nxtColWidth = 0
-            this.currColWidth = 0
-            this.currColIndex = 0
+            if (this.isResizing) {
+                this.isResizing = false
+                this.currPageX = 0
+                this.currCol = null
+                this.nxtCol = null
+                this.nxtColWidth = 0
+                this.currColWidth = 0
+                this.currColIndex = 0
+            }
         },
         assignHeaderWidthMap() {
             if (this.$refs[`header__${0}`]) {
@@ -160,7 +170,6 @@ export default {
                 this.headerWidthMap = headerWidthMap
             }
         },
-
         /**
          * This function is not working on macOs as the scrollbar is only showed when scrolling.
          * However, on Macos, scrollbar is placed above the content (overlay) instead of taking up space
@@ -187,10 +196,28 @@ export default {
 
             return scrollbarWidth
         },
+        handleSort(h) {
+            if (this.activeSort === h)
+                switch (this.sortOrder) {
+                    case 'asc':
+                        this.sortOrder = 'desc'
+                        break
+                    case 'desc':
+                        this.sortOrder = 'asc'
+                        break
+                }
+            else {
+                this.activeSort = h
+                this.sortOrder = 'asc'
+            }
+            this.$emit('on-sorting', {
+                sortBy: this.activeSort,
+                isDesc: this.sortOrder !== 'asc',
+            })
+        },
     },
 }
 </script>
-
 <style lang="scss" scoped>
 .virtual-table__header {
     height: 30px;
@@ -217,6 +244,27 @@ export default {
             }
             &:last-child {
                 border-radius: 0 5px 0 0;
+            }
+            .sort-icon {
+                transform: none;
+                visibility: hidden;
+            }
+            &.sort--active {
+                color: $black;
+                .sort-icon {
+                    color: inherit;
+                    visibility: visible;
+                }
+            }
+            &.desc {
+                .sort-icon {
+                    transform: rotate(-180deg);
+                }
+            }
+            &:hover {
+                .sort-icon {
+                    visibility: visible;
+                }
             }
             .header__resizer {
                 position: absolute;
