@@ -2016,6 +2016,11 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
 
 void Service::set_cluster(mxs::Monitor* monitor)
 {
+    for (auto a : monitor->servers())
+    {
+        m_data->targets.push_back(a->server);
+    }
+
     m_monitor = monitor;
 }
 
@@ -2025,13 +2030,8 @@ bool Service::change_cluster(mxs::Monitor* monitor)
 
     if (m_monitor == nullptr && m_data->targets.empty())
     {
-        for (auto a : monitor->servers())
-        {
-            m_data->targets.push_back(a->server);
-        }
-
+        set_cluster(monitor);
         targets_updated();
-        m_monitor = monitor;
         rval = true;
     }
 
