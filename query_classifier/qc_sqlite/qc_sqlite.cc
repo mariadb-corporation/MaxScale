@@ -1303,6 +1303,11 @@ public:
                                                    pExclude);
                 }
 
+                if (pSrc->a[i].pOn)
+                {
+                    update_field_infos(&aliases, context, 0, pSrc->a[i].pOn, QC_TOKEN_MIDDLE, pExclude);
+                }
+
 #ifdef QC_COLLECT_NAMES_FROM_USING
                 // With this enabled, the affected fields of
                 //    select * from (t1 as t2 left join t1 as t3 using (a)), t1;
@@ -1435,6 +1440,11 @@ public:
                 if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
                 {
                     update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+                }
+
+                if (pSrc->a[i].pOn)
+                {
+                    update_field_infos(pAliases, 0, 0, pSrc->a[i].pOn, QC_TOKEN_MIDDLE, NULL);
                 }
             }
         }

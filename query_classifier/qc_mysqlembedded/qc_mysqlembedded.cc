@@ -71,6 +71,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <set>
+
+using std::set;
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
@@ -3434,6 +3437,51 @@ static void update_field_infos(parsing_info_t* pi,
     }
 }
 
+namespace
+{
+
+void collect_from_list(set<TABLE_LIST*>& seen, parsing_info_t* pi, SELECT_LEX* select_lex, TABLE_LIST* pList)
+{
+    if (seen.find(pList) != seen.end())
+    {
+        return;
+    }
+
+    seen.insert(pList);
+
+    if (pList->on_expr)
+    {
+        update_field_infos(pi, select_lex, COLLECT_SELECT, pList->on_expr, NULL);
+    }
+
+    if (pList->next_global)
+    {
+        collect_from_list(seen, pi, select_lex, pList->next_global);
+    }
+
+    if (pList->next_local)
+    {
+        collect_from_list(seen, pi, select_lex, pList->next_local);
+    }
+
+    st_nested_join* pJoin = pList->nested_join;
+
+    if (pJoin)
+    {
+        List_iterator<TABLE_LIST> it(pJoin->join_list);
+
+        TABLE_LIST* pList2 = it++;
+
+        while (pList2)
+        {
+            collect_from_list(seen, pi, select_lex, pList2);
+            pList2 = it++;
+        }
+    }
+}
+
+}
+
 int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
     *infos = NULL;
@@ -3473,6 +3521,33 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         lex->current_select = select_lex;
 
         update_field_infos(pi, lex, select_lex, NULL);
+
+        set<TABLE_LIST*> seen;
+
+        if (lex->query_tables)
+        {
+            collect_from_list(seen, pi, select_lex, lex->query_tables);
+        }
+
+        List_iterator<TABLE_LIST> it1(select_lex->top_join_list);
+
+        TABLE_LIST* pList = it1++;
+
+        while (pList)
+        {
+            collect_from_list(seen, pi, select_lex, pList);
+            pList = it1++;
+        }
+
+        List_iterator<TABLE_LIST> it2(select_lex->sj_nests);
+
+        /*TABLE_LIST**/ pList = it2++;
+
+        while (pList)
+        {
+            collect_from_list(seen, pi, select_lex, pList);
+            pList = it2++;
+        }
 
         QC_FUNCTION_INFO* fi = NULL;
 
