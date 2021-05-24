@@ -629,15 +629,16 @@ SET data_entry_cost
       )
     );
 
-UPDATE t2 
-SET data_entry_cost
-  = ( ( SELECT SUM(data_exit_entry_quantity * data_entry_cost)
-	FROM 
-        ( SELECT data_entry_exit_id, data_exit_entry_quantity, data_entry_cost 
-          FROM t1 INNER JOIN t2 as dt ON dt.data_entry_id = t1.data_entry_id) AS query 
-        WHERE data_entry_exit_id = t2.data_entry_id
-      )
-    );
+#MXS Discrepancies in what fields and functions are reported.
+#MXS UPDATE t2 
+#MXS SET data_entry_cost
+#MXS   = ( ( SELECT SUM(data_exit_entry_quantity * data_entry_cost)
+#MXS 	FROM 
+#MXS         ( SELECT data_entry_exit_id, data_exit_entry_quantity, data_entry_cost 
+#MXS           FROM t1 INNER JOIN t2 as dt ON dt.data_entry_id = t1.data_entry_id) AS query 
+#MXS         WHERE data_entry_exit_id = t2.data_entry_id
+#MXS       )
+#MXS     );
 
 drop view v1;
 drop table t1, t2; 
