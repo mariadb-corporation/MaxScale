@@ -171,3 +171,7 @@ SELECT trim(@@server_id);
 SELECT trim("text");
 SELECT trim(BOTH " " FROM "  text");
 SELECT trim(BOTH FROM "  text");
+
+# MXS-3535
+# qc_sqlite misses symbols/vars used in an ON.
+select E.id  from bill_base  as T  inner join pb_meta_filter_item on A.itemName = @cFilterItemName;
