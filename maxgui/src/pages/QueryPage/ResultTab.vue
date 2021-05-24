@@ -29,7 +29,7 @@
                     class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
                 >
                     <v-tab
-                        v-for="(resSet, name) in resultSets"
+                        v-for="(resSet, name) in resultData"
                         :key="name"
                         :href="`#${name}`"
                         class="tab-btn px-3 text-uppercase"
@@ -49,7 +49,7 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <template v-for="(resSet, name) in resultSets">
+                <template v-for="(resSet, name) in resultData">
                     <v-slide-x-transition :key="name">
                         <keep-alive>
                             <template v-if="activeResSet === name">
@@ -128,13 +128,23 @@ export default {
         queryTxt() {
             return this.$typy(this.query_result, 'attributes.sql').safeObject
         },
-        resultSets() {
+        resultData() {
             if (this.$typy(this.query_result, 'attributes.results').isDefined) {
-                let resultSets = {}
-                for (const [i, resSet] of this.query_result.attributes.results.entries()) {
-                    resultSets[`Result_set_${i + 1}`] = resSet
+                let resultData = {}
+                let resSetCount = 0
+                let resCount = 0
+                for (const res of this.query_result.attributes.results) {
+                    if (this.$typy(res, 'data').isDefined) {
+                        ++resSetCount
+                        resultData[`Result set ${resSetCount}`] = res
+                    } else if (this.$typy(res, 'errno').isDefined) {
+                        resultData[`Error`] = res
+                    } else {
+                        ++resCount
+                        resultData[`Result ${resCount}`] = res
+                    }
                 }
-                return resultSets
+                return resultData
             } else return {}
         },
     },
@@ -143,7 +153,7 @@ export default {
             // After user clicks Run to send query, set isMounted to false to show skeleton-loader
             if (v && this.isMounted) this.isMounted = false
         },
-        resultSets: {
+        resultData: {
             deep: true,
             handler() {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
@@ -157,11 +167,11 @@ export default {
     methods: {
         /**
          * This function checks for result set having syntax error or error message
-         * @returns {String} Return resultSets key tab name. e.g. Result_set_0
+         * @returns {String} Return resultData key tab name. e.g. Result_set_0
          */
         getErrTabName() {
-            for (const key in this.resultSets) {
-                if (this.$typy(this.resultSets[key], 'errno').isDefined) return key
+            for (const key in this.resultData) {
+                if (this.$typy(this.resultData[key], 'errno').isDefined) return key
             }
         },
         setHeaderHeight() {
