@@ -2574,7 +2574,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
     }
     else
     {
-        if (reply.is_complete())
+        if (reply.is_complete() && !reply.error().is_unexpected_error())
         {
             --m_num_responses;
             mxb_assert(m_num_responses >= 0);
