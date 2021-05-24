@@ -176,3 +176,7 @@ SELECT trim(BOTH FROM "  text");
 SET DEFAULT ROLE 'MBK';
 SET DEFAULT ROLE NONE;
 SET DEFAULT ROLE 'MBK' FOR 'user'@'host';
+
+# MXS-3535
+# qc_sqlite misses symbols/vars used in an ON.
+select E.id  from bill_base  as T  inner join pb_meta_filter_item on A.itemName = @cFilterItemName;

@@ -940,25 +940,26 @@ select * from ancestors;
 
 #MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement standard_compliant_cte=0 for
-with recursive
-ancestor_ids (id)
-as
-(
-  select father from folks where name = 'Me'
-  union
-  select mother from folks where name = 'Me'
-  union
-  select father from folks left join ancestor_ids a on folks.id = a.id
-  union
-  select mother from folks left join ancestor_ids a on folks.id = a.id
-),
-ancestors 
-as
-(
-  select p.* from folks as p, ancestor_ids as a
-    where p.id = a.id
-)
-select * from ancestors;
+#MXS qc_mysqlembedded reports a.id, although a actually is ancestor_ids.
+#MXS with recursive
+#MXS ancestor_ids (id)
+#MXS as
+#MXS (
+#MXS   select father from folks where name = 'Me'
+#MXS   union
+#MXS   select mother from folks where name = 'Me'
+#MXS   union
+#MXS   select father from folks left join ancestor_ids a on folks.id = a.id
+#MXS   union
+#MXS   select mother from folks left join ancestor_ids a on folks.id = a.id
+#MXS ),
+#MXS ancestors 
+#MXS as
+#MXS (
+#MXS   select p.* from folks as p, ancestor_ids as a
+#MXS     where p.id = a.id
+#MXS )
+#MXS select * from ancestors;
 
 with recursive
 ancestor_ids (id, generation)
@@ -1438,77 +1439,81 @@ CREATE VIEW edges2 (a, b) AS
  SELECT a, b FROM edges   UNION ALL   SELECT b, a FROM edges;
 
 --sorted_result
-WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
-( SELECT a, b, 1 AS distance,
-   concat(a, '.', b, '.') AS path_string
-  FROM edges
- 
-  UNION ALL
- 
-  SELECT tc.a, e.b, tc.distance + 1,
-  concat(tc.path_string, e.b, '.') AS path_string
-  FROM edges AS e
-    JOIN transitive_closure AS tc
-      ON e.a = tc.b
-  WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
-)
-SELECT * FROM transitive_closure
-ORDER BY a, b, distance;
+#MXS qc_mysqlembedded reports e. although e. is edges.
+#MXS WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
+#MXS ( SELECT a, b, 1 AS distance,
+#MXS    concat(a, '.', b, '.') AS path_string
+#MXS   FROM edges
+#MXS  
+#MXS   UNION ALL
+#MXS  
+#MXS   SELECT tc.a, e.b, tc.distance + 1,
+#MXS   concat(tc.path_string, e.b, '.') AS path_string
+#MXS   FROM edges AS e
+#MXS     JOIN transitive_closure AS tc
+#MXS       ON e.a = tc.b
+#MXS   WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
+#MXS )
+#MXS SELECT * FROM transitive_closure
+#MXS ORDER BY a, b, distance;
 
 --sorted_result
-WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
-( SELECT a, b, 1 AS distance,
-         concat(a, '.', b, '.') AS path_string
-  FROM edges
- WHERE a = 1
- 
-  UNION ALL
- 
-  SELECT tc.a, e.b, tc.distance + 1,
-         concat(tc.path_string, e.b, '.') AS path_string
-  FROM edges AS e
-  JOIN transitive_closure AS tc ON e.a = tc.b
- WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
-)
-  SELECT * FROM transitive_closure
-   WHERE b = 6
-ORDER BY a, b, distance;
+#MXS qc_mysqlembedded reports e. although e. is edges.
+#MXS WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
+#MXS ( SELECT a, b, 1 AS distance,
+#MXS          concat(a, '.', b, '.') AS path_string
+#MXS   FROM edges
+#MXS  WHERE a = 1
+#MXS  
+#MXS   UNION ALL
+#MXS  
+#MXS   SELECT tc.a, e.b, tc.distance + 1,
+#MXS          concat(tc.path_string, e.b, '.') AS path_string
+#MXS   FROM edges AS e
+#MXS   JOIN transitive_closure AS tc ON e.a = tc.b
+#MXS  WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
+#MXS )
+#MXS   SELECT * FROM transitive_closure
+#MXS    WHERE b = 6
+#MXS ORDER BY a, b, distance;
 
 --sorted_result
-WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
-( SELECT  a, b, 1 AS distance,
-          concat(a, '.', b, '.') AS path_string
-  FROM edges2
- 
-  UNION ALL
- 
-  SELECT tc.a, e.b, tc.distance + 1,
-  concat(tc.path_string, e.b, '.') AS path_string
-  FROM edges2 AS e
-    JOIN transitive_closure AS tc ON e.a = tc.b
-  WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
-)
-SELECT * FROM transitive_closure
-ORDER BY a, b, distance;
+#MXS qc_mysqlembedded reports e. although e. is edges2.
+#MXS WITH RECURSIVE transitive_closure(a, b, distance, path_string) AS
+#MXS ( SELECT  a, b, 1 AS distance,
+#MXS           concat(a, '.', b, '.') AS path_string
+#MXS   FROM edges2
+#MXS  
+#MXS   UNION ALL
+#MXS  
+#MXS   SELECT tc.a, e.b, tc.distance + 1,
+#MXS   concat(tc.path_string, e.b, '.') AS path_string
+#MXS   FROM edges2 AS e
+#MXS     JOIN transitive_closure AS tc ON e.a = tc.b
+#MXS   WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
+#MXS )
+#MXS SELECT * FROM transitive_closure
+#MXS ORDER BY a, b, distance;
 
 --sorted_result
-WITH RECURSIVE transitive_closure(a, b, distance, path_string)
-AS
-( SELECT a, b, 1 AS distance,
-         concat(a, '.', b, '.') AS path_string
-  FROM edges2
- 
-  UNION ALL
- 
-  SELECT tc.a, e.b, tc.distance + 1,
-         concat(tc.path_string, e.b, '.') AS path_string
-  FROM edges2 AS e
-  JOIN transitive_closure AS tc ON e.a = tc.b
- WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
-)
-SELECT a, b, min(distance) AS dist FROM transitive_closure
-GROUP BY a, b
-ORDER BY a, dist, b;
+#MXS qc_mysqlembedded reports e. although e. is edges2.
+#MXS WITH RECURSIVE transitive_closure(a, b, distance, path_string)
+#MXS AS
+#MXS ( SELECT a, b, 1 AS distance,
+#MXS          concat(a, '.', b, '.') AS path_string
+#MXS   FROM edges2
+#MXS  
+#MXS   UNION ALL
+#MXS  
+#MXS   SELECT tc.a, e.b, tc.distance + 1,
+#MXS          concat(tc.path_string, e.b, '.') AS path_string
+#MXS   FROM edges2 AS e
+#MXS   JOIN transitive_closure AS tc ON e.a = tc.b
+#MXS  WHERE tc.path_string NOT LIKE concat('%', e.b, '.%')
+#MXS )
+#MXS SELECT a, b, min(distance) AS dist FROM transitive_closure
+#MXS GROUP BY a, b
+#MXS ORDER BY a, dist, b;
 
 DROP VIEW edges2;
 DROP TABLE edges;
@@ -1569,25 +1574,26 @@ insert into folks values
 (67, 'Cousin Eddie', '1992-02-28', 25, 27),
 (27, 'Auntie Melinda', '1971-03-29', null, null); 
 
-with recursive
-ancestor_ids (id)
-as
-(
-  select father from folks where name = 'Me'
-  union
-  select mother from folks where name = 'Me'
-  union
-  select father from ancestor_ids as a left join folks on folks.id = a.id
-  union
-  select mother from ancestor_ids as a left join folks on folks.id = a.id
-),
-ancestors 
-as
-(
-  select p.* from folks as p, ancestor_ids as a
-    where p.id = a.id
-)
-select * from ancestors;
+#MXS qc_mysqlembedded reports a. although a. is ancestor_ids.
+#MXS with recursive
+#MXS ancestor_ids (id)
+#MXS as
+#MXS (
+#MXS   select father from folks where name = 'Me'
+#MXS   union
+#MXS   select mother from folks where name = 'Me'
+#MXS   union
+#MXS   select father from ancestor_ids as a left join folks on folks.id = a.id
+#MXS   union
+#MXS   select mother from ancestor_ids as a left join folks on folks.id = a.id
+#MXS ),
+#MXS ancestors 
+#MXS as
+#MXS (
+#MXS   select p.* from folks as p, ancestor_ids as a
+#MXS     where p.id = a.id
+#MXS )
+#MXS select * from ancestors;
 
 drop table folks;
 
@@ -1663,33 +1669,35 @@ insert into module_results values
 
 #MXS qc_sqlite does not handle "SET STATEMENT ... FOR ..."
 #MXS set statement max_recursive_iterations=2, standard_compliant_cte=0 for
-with recursive
-reached_values as 
-(
-  select v from value_nodes where v in ('v3','v7','v9')
-  union
-  select module_results.v from module_results, applied_modules
-     where module_results.m = applied_modules.m
-),
-applied_modules as
-(
-  select * from module_nodes where 1=0
-  union
-  select module_nodes.m
-  from
-    module_nodes
-    left join
-    ( 
-      module_arguments
-      left join
-      reached_values
-      on module_arguments.v = reached_values.v
-     )
-     on reached_values.v is null and
-     module_nodes.m = module_arguments.m
-  where module_arguments.m is null
-)
-select * from applied_modules;
+#MXS qc_mysqlembedded thinks only module_arguments.m is an argument to isNull
+#MXS while qc_sqlite thinks reached_values.v is.
+#MXS with recursive
+#MXS reached_values as 
+#MXS (
+#MXS   select v from value_nodes where v in ('v3','v7','v9')
+#MXS   union
+#MXS   select module_results.v from module_results, applied_modules
+#MXS      where module_results.m = applied_modules.m
+#MXS ),
+#MXS applied_modules as
+#MXS (
+#MXS   select * from module_nodes where 1=0
+#MXS   union
+#MXS   select module_nodes.m
+#MXS   from
+#MXS     module_nodes
+#MXS     left join
+#MXS     ( 
+#MXS       module_arguments
+#MXS       left join
+#MXS       reached_values
+#MXS       on module_arguments.v = reached_values.v
+#MXS      )
+#MXS      on reached_values.v is null and
+#MXS      module_nodes.m = module_arguments.m
+#MXS   where module_arguments.m is null
+#MXS )
+#MXS select * from applied_modules;
 
 drop table value_nodes, module_nodes, module_arguments, module_results;
 

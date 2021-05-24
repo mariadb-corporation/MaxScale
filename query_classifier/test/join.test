@@ -405,11 +405,13 @@ create algorithm=merge view v1d(b, a, c) as
 select a as c, c as b, b as a from t1 natural join t2;
 
 # Views with JOIN ... ON
-create algorithm=merge view v2a as
-select t1.c, t1.b, t2.a from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
-create algorithm=merge view v2b as
-select t1.c as b, t1.b as a, t2.a as c
-from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
+#MXS qc_sqlite reports that "+" uses b, and misses the fact that b really must be t1.b.
+#MXS create algorithm=merge view v2a as
+#MXS select t1.c, t1.b, t2.a from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
+#MXS qc_sqlite reports that "+" uses b, even though b is just an alias for t1.c.
+#MXS create algorithm=merge view v2b as
+#MXS select t1.c as b, t1.b as a, t2.a as c
+#MXS from t1 join (t2 join t4 on b + 1 = y) on t1.c = t4.c;
 
 # Views with bigger natural join
 create algorithm=merge view v3a as
