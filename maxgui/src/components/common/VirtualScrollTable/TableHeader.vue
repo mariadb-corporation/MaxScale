@@ -12,16 +12,19 @@
                         minWidth: `${headerWidthMap[i]}px`,
                         maxWidth: `${headerWidthMap[i]}px`,
                     }"
-                    class="th d-flex align-center px-3 pointer"
-                    :class="{ [`sort--active ${sortOrder}`]: activeSort === header }"
-                    @click="() => (isVertTable ? null : handleSort(header))"
+                    class="th d-flex align-center px-3"
+                    :class="{
+                        pointer: enableSorting,
+                        [`sort--active ${sortOrder}`]: activeSort === header,
+                    }"
+                    @click="() => (enableSorting ? handleSort(header) : null)"
                 >
                     <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
                         :text="`${header}`.toUpperCase()"
                         :maxWidth="headerWidthMap[i] - 46"
                     />
-                    <v-icon v-if="!isVertTable" size="14" class="sort-icon ml-2">
+                    <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
                         $vuetify.icons.arrowDown
                     </v-icon>
                     <div
@@ -58,6 +61,7 @@ export default {
         boundingWidth: { type: Number, require: true },
         headerStyle: { type: Object, require: true },
         isVertTable: { type: Boolean, default: false },
+        rowsLength: { type: Number, require: true },
     },
     data() {
         return {
@@ -80,6 +84,9 @@ export default {
         },
         tableHeaders() {
             return this.isVertTable ? ['COLUMN', 'VALUE'] : this.headers
+        },
+        enableSorting() {
+            return this.rowsLength <= 10000 && !this.isVertTable
         },
     },
     watch: {

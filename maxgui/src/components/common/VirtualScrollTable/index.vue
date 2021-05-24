@@ -5,6 +5,7 @@
             :headers="headers"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
+            :rowsLength="tableRows.length"
             @get-header-width-map="cellWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
