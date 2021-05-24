@@ -13,43 +13,53 @@
 
 #include "internal/sql_conn_manager.hh"
 
+using std::move;
+
 namespace HttpSql
 {
 
-ConnectionManager::Connection ConnectionManager::get(int64_t id)
+ConnectionManager::Connection* ConnectionManager::get(int64_t id)
 {
-    Connection conn;
+    Connection* rval = nullptr;
     std::lock_guard<std::mutex> guard(m_connection_lock);
     auto it = m_connections.find(id);
-
     if (it != m_connections.end())
     {
-        conn = it->second;
-        m_connections.erase(it);
+        auto elem = it->second.get();
+        if (!elem->busy)
+        {
+            rval = elem;
+            elem->busy = true;
+        }
     }
-
-    return conn;
+    return rval;
 }
 
-int64_t ConnectionManager::add(MYSQL* conn)
+int64_t ConnectionManager::add(mxq::MariaDB&& conn)
 {
+    auto elem = std::make_unique<Connection>();
+    elem->conn = move(conn);
+
     std::lock_guard<std::mutex> guard(m_connection_lock);
     int64_t id = m_id_gen++;
-    Connection c {conn, false};
-    m_connections.emplace(id, c);
-
-    if (m_id_gen <= 0)
-    {
-        m_id_gen = 1;
-    }
-
+    m_connections.emplace(id, std::move(elem));
     return id;
 }
 
-void ConnectionManager::put(int64_t id, ConnectionManager::Connection conn)
+void ConnectionManager::put(int64_t id)
 {
     std::lock_guard<std::mutex> guard(m_connection_lock);
-    m_connections.emplace(id, conn);
+    auto it = m_connections.find(id);
+    if (it != m_connections.end())
+    {
+        it->second->busy = false;
+    }
+}
+
+void ConnectionManager::erase(int64_t id)
+{
+    std::lock_guard<std::mutex> guard(m_connection_lock);
+    m_connections.erase(id);
 }
 
 bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
@@ -60,7 +70,7 @@ bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
 
     if (it != m_connections.end())
     {
-        rval = query_id == it->second.query_id;
+        rval = query_id == it->second->query_id;
     }
 
     return rval;

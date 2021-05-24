@@ -19,6 +19,7 @@
 #include "httprequest.hh"
 #include "httpresponse.hh"
 
+#include <maxsql/mariadb_connector.hh>
 #include <maxscale/server.hh>
 
 namespace HttpSql
@@ -57,10 +58,6 @@ struct ConnectionConfig
     mxb::SSLConfig ssl;
 };
 
-// Helper for reading query results
-HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
-                               const std::string& query_id, int64_t page_size);
-
 //
 // The functions that implement the connection creation and query execution
 //
@@ -69,7 +66,12 @@ std::vector<int64_t> get_connections();
 
 int64_t create_connection(const ConnectionConfig& config, std::string* err);
 
-int64_t execute_query(int64_t id, const std::string& sql, std::string* err);
+struct ExecQueryResult
+{
+    int64_t query_id {0};
+    json_t* result {nullptr};
+};
+ExecQueryResult execute_query(int64_t id, const std::string& sql);
 
 std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max, bool* more_results);
 

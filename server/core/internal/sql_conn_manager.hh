@@ -13,10 +13,13 @@
 
 #pragma once
 
+#include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <vector>
 #include <mysql.h>
+#include <maxsql/mariadb_connector.hh>
 
 namespace HttpSql
 {
@@ -30,14 +33,17 @@ public:
 
     struct Connection
     {
-        MYSQL*  conn {nullptr};
-        bool    expecting_result {false};
-        int64_t query_id {0};
+        mxq::MariaDB conn;
+
+        bool             expecting_result {false};
+        int64_t          query_id {1};
+        std::atomic_bool busy {false};
     };
 
-    Connection get(int64_t id);
-    int64_t    add(MYSQL* conn);
-    void       put(int64_t id, Connection conn);
+    Connection* get(int64_t id);
+    int64_t     add(mxq::MariaDB&& conn);
+    void        put(int64_t id);
+    void        erase(int64_t id);
 
     bool is_query(int64_t conn_id, int64_t query_id) const;
     bool is_connection(int64_t conn_id) const;
@@ -45,8 +51,9 @@ public:
     std::vector<int64_t> get_connections();
 
 private:
-    std::map<int64_t, Connection> m_connections;
-    mutable std::mutex            m_connection_lock;
-    int64_t                       m_id_gen {1};
+    std::map<int64_t, std::unique_ptr<Connection>> m_connections;
+
+    mutable std::mutex m_connection_lock;
+    int64_t            m_id_gen {1};
 };
 }

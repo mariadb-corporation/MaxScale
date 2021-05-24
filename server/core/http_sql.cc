@@ -24,6 +24,10 @@
 #include <maxscale/cn_strings.hh>
 
 #include <errmsg.h>
+#include <maxbase/format.hh>
+
+using std::string;
+using std::move;
 
 namespace
 {
@@ -102,6 +106,158 @@ int64_t get_page_size(const HttpRequest& request)
     }
 
     return page_size;
+}
+
+json_t* generate_column_info(const mxq::MariaDBQueryResult::FieldInfo& field_info)
+{
+    json_t* rval = json_array();
+    int n = field_info.n;
+    for (int i = 0; i < n; i++)
+    {
+        json_array_append_new(rval, json_string(field_info.fields[i].name));
+    }
+    return rval;
+}
+
+json_t* generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
+                                const mxq::MariaDBQueryResult::FieldInfo& field_info)
+{
+    json_t* rval = json_array();
+    auto n = field_info.n;
+    auto fields = field_info.fields;
+    auto rowdata = resultset->rowdata();
+
+    for (int i = 0; i < n; i++)
+    {
+        json_t* value = nullptr;
+
+        if (rowdata[i])
+        {
+            switch (fields[i].type)
+            {
+            case MYSQL_TYPE_DECIMAL:
+            case MYSQL_TYPE_TINY:
+            case MYSQL_TYPE_SHORT:
+            case MYSQL_TYPE_LONG:
+            case MYSQL_TYPE_LONGLONG:
+            case MYSQL_TYPE_INT24:
+                value = json_integer(strtol(rowdata[i], nullptr, 10));
+                break;
+
+            case MYSQL_TYPE_FLOAT:
+            case MYSQL_TYPE_DOUBLE:
+                value = json_real(strtod(rowdata[i], nullptr));
+                break;
+
+            case MYSQL_TYPE_NULL:
+                value = json_null();
+                break;
+
+            default:
+                value = json_string(rowdata[i]);
+                break;
+            }
+
+            if (!value)
+            {
+                value = json_null();
+            }
+        }
+        else
+        {
+            value = json_null();
+        }
+
+        json_array_append_new(rval, value);
+    }
+    return rval;
+}
+
+json_t* generate_json_representation(mxq::MariaDB& conn)
+{
+    using ResultType = mxq::MariaDB::ResultType;
+    json_t* resultset_arr = json_array();
+
+    auto current_type = conn.current_result_type();
+    while (current_type != ResultType::NONE)
+    {
+        switch (current_type)
+        {
+        case ResultType::OK:
+            {
+                auto res = conn.get_ok_result();
+                json_t* ok = json_object();
+                json_object_set_new(ok, "last_insert_id", json_integer(res->insert_id));
+                json_object_set_new(ok, "warnings", json_integer(res->warnings));
+                json_object_set_new(ok, "affected_rows", json_integer(res->affected_rows));
+                json_array_append_new(resultset_arr, ok);
+            }
+            break;
+
+        case ResultType::ERROR:
+            {
+                auto res = conn.get_error_result();
+                json_t* err = json_object();
+                json_object_set_new(err, "errno", json_integer(res->error_num));
+                json_object_set_new(err, "message", json_string(res->error_msg.c_str()));
+                json_object_set_new(err, "sqlstate", json_string(res->sqlstate.c_str()));
+                json_array_append_new(resultset_arr, err);
+            }
+            break;
+
+        case ResultType::RESULTSET:
+            {
+                // A resultset may be sent in multiple parts if it doesn't fit in one page.
+                // TODO: When continuing a previous resultset, do not add the header information. Also
+                // add page support.
+                auto res = conn.get_resultset();
+                auto fields = res->field_info();
+                json_t* resultset = json_object();
+                json_object_set_new(resultset, "fields", generate_column_info(fields));
+                json_t* rows = json_array();
+                while (res->next_row())
+                {
+                    json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
+                }
+                json_object_set_new(resultset, "data", rows);
+                json_array_append_new(resultset_arr, resultset);
+            }
+            break;
+
+        case ResultType::NONE:
+            break;
+        }
+        current_type = conn.next_result();
+    }
+
+    return resultset_arr;
+}
+
+HttpResponse construct_result_response(json_t* resultdata, bool more_data, int64_t page_size,
+                                       const string& host, const std::string& self,
+                                       const string& query_id)
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
+    json_object_set_new(obj, CN_TYPE, json_string("queries"));
+    json_t* attr = json_object();
+    json_object_set_new(attr, "results", resultdata);
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
+
+    // Create pagination links
+    json_t* links = json_object_get(rval, CN_LINKS);
+    string base = json_string_value(json_object_get(links, "self"));
+    HttpResponse response(MHD_HTTP_OK, rval);
+
+    if (more_data)
+    {
+        auto next = base + "?page[size]=" + std::to_string(page_size);
+        json_object_set_new(links, "next", json_string(next.c_str()));
+        response.add_header(MHD_HTTP_HEADER_LOCATION, base);
+    }
+
+    return response;
 }
 }
 
@@ -461,14 +617,22 @@ HttpResponse query(const HttpRequest& request)
     std::string self = request.get_uri();
     int64_t page_size = get_page_size(request);
 
-    return HttpResponse(
-        [id, sql, host, self, page_size]() {
-            std::string err;
+    auto exec_query_cb = [id, sql, host, self, page_size]() {
+            int64_t query_id = 0;
+            json_t* result_data = nullptr;
 
-            if (int64_t query_id = execute_query(id, sql, &err))
+            auto c = manager.get(id);
+            if (c)
             {
-                std::string id_str = std::to_string(id) + "-" + std::to_string(query_id);
-                HttpResponse response = read_query_result(id, host, self + "/" + id_str, id_str, page_size);
+                c->conn.streamed_query(sql);
+                query_id = c->query_id++;
+                result_data = generate_json_representation(c->conn);
+                manager.put(id);
+
+                string id_str = std::to_string(id) + "-" + std::to_string(query_id);
+                string self_id = self + "/" + id_str;
+                HttpResponse response = construct_result_response(result_data, false, page_size,
+                                                                  host, self_id, id_str);
                 response.set_code(MHD_HTTP_CREATED);
 
                 // Add the request SQL into the initial response
@@ -480,9 +644,11 @@ HttpResponse query(const HttpRequest& request)
             }
             else
             {
-                return create_error(err, MHD_HTTP_SERVICE_UNAVAILABLE);
+                string errmsg = mxb::string_printf("ID %li not found.", id);
+                return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
             }
-        });
+        };
+    return HttpResponse(std::move(exec_query_cb));
 }
 
 // static
@@ -502,10 +668,12 @@ HttpResponse result(const HttpRequest& request)
     std::string self = request.get_uri();
     std::string query_id = request.uri_part(request.uri_part_count() - 1);
     int64_t page_size = get_page_size(request);
+    auto conn_data = manager.get(id);
 
     return HttpResponse(
-        [id, host, self, query_id, page_size]() {
-            return read_query_result(id, host, self, query_id, page_size);
+        [conn_data, id, host, self, query_id, page_size]() {
+            HttpResponse rval(MHD_HTTP_NOT_FOUND);
+            return rval;
         });
 }
 
@@ -528,53 +696,6 @@ HttpResponse disconnect(const HttpRequest& request)
             response.remove_split_cookie(CONN_ID_BODY, CONN_ID_SIG);
             return response;
         });
-}
-
-// static
-HttpResponse read_query_result(int64_t id, const std::string& host, const std::string& self,
-                                        const std::string& query_id, int64_t page_size)
-{
-    bool more_results = false;
-    std::vector<std::unique_ptr<Result>> results = read_result(id, page_size, &more_results);
-
-    if (!results.empty())
-    {
-        json_t* arr = json_array();
-
-        for (const auto& r : results)
-        {
-            json_array_append_new(arr, r->to_json());
-        }
-
-        json_t* attr = json_object();
-        json_object_set_new(attr, "results", arr);
-
-        json_t* obj = json_object();
-        json_object_set_new(obj, CN_ID, json_string(query_id.c_str()));
-        json_object_set_new(obj, CN_TYPE, json_string("queries"));
-        json_object_set_new(obj, CN_ATTRIBUTES, attr);
-
-        json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
-
-        // Create pagination links
-        json_t* links = json_object_get(rval, CN_LINKS);
-        std::string base = json_string_value(json_object_get(links, "self"));
-        HttpResponse response(MHD_HTTP_OK, rval);
-
-        if (more_results)
-        {
-            mxb_assert_message(page_size, "page_size must be defined if result is paginated");
-            auto next = base + "?page[size]=" + std::to_string(page_size);
-            json_object_set_new(links, "next", json_string(next.c_str()));
-            response.add_header(MHD_HTTP_HEADER_LOCATION, base);
-        }
-
-        return response;
-    }
-    else
-    {
-        return HttpResponse(MHD_HTTP_NOT_FOUND);
-    }
 }
 
 //
@@ -613,73 +734,23 @@ std::vector<int64_t> get_connections()
 int64_t create_connection(const ConnectionConfig& config, std::string* err)
 {
     int64_t id = 0;
-    MYSQL* conn = mysql_init(nullptr);
+    mxq::MariaDB conn;
+    auto& sett = conn.connection_settings();
+    sett.user = config.user;
+    sett.password = config.password;
+    sett.timeout = config.timeout;
+    sett.ssl = config.ssl;
 
-    unsigned int timeout = config.timeout;
-    mysql_optionsv(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
-    mysql_optionsv(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-    mysql_optionsv(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-
-    if (mxs_mysql_real_connect(conn, config.host.c_str(), config.port, config.user.c_str(),
-                               config.password.c_str(), config.ssl,
-                               CLIENT_MULTI_RESULTS | CLIENT_MULTI_STATEMENTS))
+    if (conn.open(config.host, config.port, config.db))
     {
-        if (config.db.empty() || mysql_query(conn, ("USE `" + config.db + "`").c_str()) == 0)
-        {
-            id = manager.add(conn);
-        }
-        else
-        {
-            *err = mysql_error(conn);
-            mysql_close(conn);
-        }
+        id = manager.add(move(conn));
     }
     else
     {
-        *err = mysql_error(conn);
-        mysql_close(conn);
+        *err = conn.error();
     }
 
     return id;
-}
-
-// static
-int64_t execute_query(int64_t id, const std::string& sql, std::string* err)
-{
-    int64_t query_id = 0;
-    auto c = manager.get(id);
-
-    if (c.conn)
-    {
-        mysql_real_query(c.conn, sql.c_str(), sql.size());
-        int errnum = mysql_errno(c.conn);
-
-        if (errnum >= CR_MIN_ERROR && errnum <= CR_MAX_ERROR)
-        {
-            // Connector reported an error, return an error to the client.
-            *err = mysql_error(c.conn);
-        }
-        else
-        {
-            c.expecting_result = true;
-            ++c.query_id;
-
-            if (c.query_id <= 0)
-            {
-                c.query_id = 1;
-            }
-
-            query_id = c.query_id;
-        }
-
-        manager.put(id, c);
-    }
-    else
-    {
-        *err = "ID " + std::to_string(id) + " not found.";
-    }
-
-    return query_id;
 }
 
 // static
@@ -689,22 +760,23 @@ read_result(int64_t id, int64_t rows_max, bool* more_results)
     std::vector<std::unique_ptr<HttpSql::Result>> results;
     auto c = manager.get(id);
 
-    if (c.conn)
+    if (c->conn.is_open())
     {
-        if (c.expecting_result)
+        if (c->expecting_result)
         {
-            results.push_back(format_result(c.conn));
-
-            while (mysql_more_results(c.conn))
-            {
-                mysql_next_result(c.conn);
-                results.push_back(format_result(c.conn));
-            }
-
-            c.expecting_result = false;
+            /*
+             *  results.push_back(format_result(c.conn));
+             *
+             *  while (mysql_more_results(c.conn))
+             *  {
+             *   mysql_next_result(c.conn);
+             *   results.push_back(format_result(c.conn));
+             *  }
+             *
+             *  c.expecting_result = false; */
         }
 
-        manager.put(id, c);
+        manager.put(id);
     }
 
     return results;
@@ -712,7 +784,6 @@ read_result(int64_t id, int64_t rows_max, bool* more_results)
 
 void close_connection(int64_t id)
 {
-    auto c = manager.get(id);
-    mysql_close(c.conn);
+    manager.erase(id);
 }
 }
