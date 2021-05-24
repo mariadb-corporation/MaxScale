@@ -902,25 +902,6 @@ bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* b
         // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
         rval = true;
     }
-    else if (cmd == MXS_COM_STMT_EXECUTE)
-    {
-        if (auto params = m_sPs_manager->param_count(stmt_id))
-        {
-            size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
-            uint8_t have_types = 0;
-
-            if (gwbuf_copy_data(buffer, types_offset, 1, &have_types))
-            {
-                if (have_types == 0)
-                {
-                    // A previous COM_STMT_EXECUTE provided the field types, and this one relies on the
-                    // previous one. This means that this query must be routed to the same server where the
-                    // previous COM_STMT_EXECUTE was routed.
-                    rval = true;
-                }
-            }
-        }
-    }
 
     return rval;
 }
