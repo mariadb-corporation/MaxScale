@@ -86,6 +86,7 @@
                             :items="resourceItems"
                             clearable
                             showPlaceHolder
+                            required
                             @get-selected-items="selectedResource = $event"
                         />
                     </v-col>
