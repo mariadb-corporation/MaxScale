@@ -17,6 +17,7 @@ function initialState() {
         conn_err_state: false,
         rc_target_names_map: {},
         curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
+        active_db: JSON.parse(localStorage.getItem('active_db')),
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
@@ -95,6 +96,9 @@ export default {
         SET_QUERY_RESULT(state, payload) {
             state.query_result = payload
         },
+        SET_ACTIVE_DB(state, payload) {
+            state.active_db = payload
+        },
         RESET_STATE(state) {
             const initState = initialState()
             Object.keys(initState).forEach(key => {
@@ -132,11 +136,10 @@ export default {
                     )
                     const connId = res.data.data.id
                     const curr_cnct_resource = { id: connId, name: body.target }
-
                     localStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
                     commit('SET_ACTIVE_CONN_STATE', true)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
-
+                    await dispatch('useDb', body.db)
                     await dispatch('fetchDbList')
                 }
             } catch (e) {
@@ -159,8 +162,8 @@ export default {
                             { root: true }
                         )
                     localStorage.removeItem('curr_cnct_resource')
+                    localStorage.removeItem('active_db')
                     this.vue.$help.deleteCookie('conn_id_body')
-                    //TODO: store default state and reuse it instead of manually set it
                     commit('RESET_STATE')
                 }
             } catch (e) {
@@ -348,7 +351,21 @@ export default {
                 logger.error(e)
             }
         },
-
+        /**
+         * @param {String} db - db
+         */
+        async useDb({ state, commit }, db) {
+            try {
+                await this.vue.$axios.post(`/sql/${state.curr_cnct_resource.id}/queries`, {
+                    sql: `USE ${db};`,
+                })
+                commit('SET_ACTIVE_DB', db)
+                localStorage.setItem('active_db', JSON.stringify(db))
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-useDb')
+                logger.error(e)
+            }
+        },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.

@@ -12,6 +12,56 @@
 
         <v-spacer></v-spacer>
         <connection-manager />
+
+        <v-btn
+            id="active-db"
+            outlined
+            height="36"
+            max-width="160"
+            text
+            class="ml-4 text-none px-2 font-weight-medium"
+            depressed
+            small
+            color="accent-dark"
+            :disabled="!active_conn_state"
+        >
+            <v-icon class="mr-1" size="12" color="deep-ocean">
+                $vuetify.icons.database
+            </v-icon>
+            <div class="d-inline-block text-truncate" :style="{ maxWidth: `126px` }">
+                {{ active_db ? active_db : $t('selectDb') }}
+            </div>
+        </v-btn>
+        <v-menu
+            transition="slide-y-transition"
+            offset-y
+            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+            activator="#active-db"
+        >
+            <v-list>
+                <v-list-item
+                    v-for="db in db_tree"
+                    :key="db.id"
+                    dense
+                    link
+                    @click="() => handleSelectDb(db.id)"
+                >
+                    <v-list-item-title class="color text-text">
+                        <truncate-string :text="db.name" />
+                    </v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
+        <v-tooltip
+            v-if="active_db"
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+            activator="#active-db"
+        >
+            <span>Use database: {{ active_db }} </span>
+        </v-tooltip>
+
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -71,6 +121,8 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             active_conn_state: state => state.query.active_conn_state,
+            active_db: state => state.query.active_db,
+            db_tree: state => state.query.db_tree,
         }),
     },
     methods: {
@@ -79,7 +131,11 @@ export default {
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
+            useDb: 'query/useDb',
         }),
+        async handleSelectDb(db) {
+            await this.useDb(db)
+        },
         /**
          * @param {String} mode Mode to execute query: All or selected
          */

@@ -139,6 +139,7 @@
     "runAllStatements": "Run all statements \nCmd/Ctrl + Enter",
     "switchToVertTable": "Switch to vertical table",
     "switchToHorizTable": "Switch to horizontal table",
+    "selectDb": "Select database",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
