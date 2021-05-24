@@ -24,6 +24,9 @@
                         :text="`${header}`.toUpperCase()"
                         :maxWidth="headerWidthMap[i] - 46"
                     />
+                    <span v-if="header === '#'" class="ml-1 color text-field-text">
+                        ({{ rowsLength }})
+                    </span>
                     <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
                         $vuetify.icons.arrowDown
                     </v-icon>
@@ -256,12 +259,12 @@ export default {
                 transform: none;
                 visibility: hidden;
             }
-            &.sort--active {
-                color: $black;
-                .sort-icon {
-                    color: inherit;
-                    visibility: visible;
-                }
+            &.sort--active * {
+                color: $black !important;
+            }
+            &.sort--active .sort-icon {
+                color: inherit;
+                visibility: visible;
             }
             &.desc {
                 .sort-icon {
