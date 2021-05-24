@@ -1,7 +1,8 @@
 {
   "name": "mongodbprotocol",
   "version": "1.0.0",
-  "description": "",
+  "description": "MongoDB protocol tests",
+  "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
