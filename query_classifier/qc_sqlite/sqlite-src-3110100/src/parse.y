@@ -1615,12 +1615,16 @@ table_reference(A) ::= join_table(X). {
 join_opt ::= .
 join_opt ::= JOIN_KW.
 
-join_table(A) ::= table_reference(X) join_opt JOIN table_reference(Y) join_condition. {
+%type join_condition {ExprSpan}
+%destructor join_condition {sqlite3ExprDelete(pParse->db, $$.pExpr);}
+
+join_table(A) ::= table_reference(X) join_opt JOIN table_reference(Y) join_condition(Z). {
+  Y->a[Y->nSrc - 1].pOn = Z.pExpr;
   A = sqlite3SrcListCat(pParse->db, X, Y);
 }
 
-join_condition ::= ON expr(X). {
-    sqlite3ExprDelete(pParse->db, X.pExpr);
+join_condition(A) ::= ON expr(X). {
+  A = X;
 }
 
 %type escaped_table_reference {SrcList*}

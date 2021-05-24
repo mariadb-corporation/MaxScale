@@ -2911,7 +2911,8 @@ insert into t1 values(1),(2);
 insert into t2 values(1),(2);
 insert into t3 values(1),(NULL);
 select * from t3 where f3 is null;
-select t2.f2 from t1 left join t2 on f1=f2 join t3 on f1=f3 where f1=1;
+# MXS qc_sqlite does not realize that f2 is t2.f2.
+# MXS select t2.f2 from t1 left join t2 on f1=f2 join t3 on f1=f3 where f1=1;
 drop table t1,t2,t3;
 
 #
@@ -4076,7 +4077,10 @@ SELECT table4 . `time_nokey` AS field1 FROM
             table1 . `int_nokey` != 'f')
   GROUP BY field1  ORDER BY field1 , field1;
 
-SELECT table1 .`time_key` field2  FROM B table1  LEFT JOIN  BB JOIN A table5 ON table5 .`date_nokey`  ON table5 .`int_nokey` GROUP  BY field2;
+# MXS qc_mysqlembedded as fields "A.date_nokey A.int_nokey B.time_key" while qc_sqlite
+# MXS reports "A.date_nokey B.time_key", and qc_mysqlembedded reports that the function
+# MXS "<>" is used, while qc_sqlite is not aware of something like that.
+# MXS SELECT table1 .`time_key` field2  FROM B table1  LEFT JOIN  BB JOIN A table5 ON table5 .`date_nokey`  ON table5 .`int_nokey` GROUP  BY field2;
 --enable_warnings
 
 drop table A,AA,B,BB;

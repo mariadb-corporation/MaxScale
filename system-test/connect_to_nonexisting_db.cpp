@@ -13,8 +13,8 @@ bool try_connect(TestConnections& test)
     const char* db = "test_db";
 
     MYSQL* rwsplit = open_conn_db(test.maxscales->rwsplit_port, ip, db, user, pw, false);
-    MYSQL* master = open_conn_db(test.maxscales->readconn_master_port[0], ip, db, user, pw, false);
-    MYSQL* slave = open_conn_db(test.maxscales->readconn_slave_port[0], ip, db, user, pw, false);
+    MYSQL* master = open_conn_db(test.maxscales->readconn_master_port, ip, db, user, pw, false);
+    MYSQL* slave = open_conn_db(test.maxscales->readconn_slave_port, ip, db, user, pw, false);
     bool rval = false;
 
     if (rwsplit && master && slave

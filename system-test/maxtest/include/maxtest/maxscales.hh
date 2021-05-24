@@ -51,8 +51,8 @@ public:
     bool ssl() const;
 
     int rwsplit_port {-1};           /**< RWSplit port */
-    int readconn_master_port[N_MXS] {-1};   /**< ReadConnection in master mode port */
-    int readconn_slave_port[N_MXS] {-1};    /**< ReadConnection in slave mode port */
+    int readconn_master_port {-1};   /**< ReadConnection in master mode port */
+    int readconn_slave_port {-1};    /**< ReadConnection in slave mode port */
 
     /**
      * @brief Get port number of a MaxScale service

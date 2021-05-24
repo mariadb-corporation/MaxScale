@@ -136,7 +136,7 @@ void* query_thread1(void* ptr)
     if (data->rwsplit_only == 0)
     {
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0], mxs_ip,
+        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port, mxs_ip,
                                      "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
@@ -147,7 +147,7 @@ void* query_thread1(void* ptr)
             conn_err++;
         }
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0], mxs_ip,
+        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port, mxs_ip,
                                      "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
@@ -210,14 +210,14 @@ void* query_thread2(void* ptr)
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
 
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0], mxs_ip,
+        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port, mxs_ip,
                                      "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
                                      20,
                                      data->Test->maxscale_ssl);
         // if (mysql_errno(conn2) != 0) { conn_err++; }
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0], mxs_ip,
+        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port, mxs_ip,
                                      "test",
                                      data->Test->maxscales->user_name,
                                      data->Test->maxscales->password,
