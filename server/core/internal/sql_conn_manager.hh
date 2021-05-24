@@ -33,17 +33,38 @@ public:
 
     struct Connection
     {
-        mxq::MariaDB conn;
-
-        bool             expecting_result {false};
-        int64_t          query_id {1};
         std::atomic_bool busy {false};
+        mxq::MariaDB     conn;
+        int64_t          current_query_id {0};
+
+        ~Connection();
     };
 
-    Connection* get(int64_t id);
-    int64_t     add(mxq::MariaDB&& conn);
-    void        put(int64_t id);
-    void        erase(int64_t id);
+    /**
+     * Get a connection by id and set the connection state to busy. Once the caller is done with
+     * the connection, they should manually set the 'busy'-field to false, allowing the connection
+     * to be used again.
+     *
+     * @param id Connection id
+     * @return Pointer to connection when id found and connection is not busy, null otherwise.
+     */
+    Connection* get_connection(int64_t id);
+
+    /**
+     * Add a connection to the map.
+     *
+     * @param conn Existing Connector-C connection
+     * @return Id of added connection
+     */
+    int64_t add(mxq::MariaDB&& conn);
+
+    /**
+     * Erase a connection from the map.
+     *
+     * @param id Id of connection to erase
+     * @return True if erased. False if id not found or was busy.
+     */
+    bool erase(int64_t id);
 
     bool is_query(int64_t conn_id, int64_t query_id) const;
     bool is_connection(int64_t conn_id) const;
@@ -51,9 +72,9 @@ public:
     std::vector<int64_t> get_connections();
 
 private:
-    std::map<int64_t, std::unique_ptr<Connection>> m_connections;
+    mutable std::mutex m_connection_lock;   /**< Protects access to connections map and next id */
 
-    mutable std::mutex m_connection_lock;
-    int64_t            m_id_gen {1};
+    std::map<int64_t, std::unique_ptr<Connection>> m_connections;   /**< Connections by id */
+    int64_t                                        m_next_id {1};   /**< Id of next connection */
 };
 }

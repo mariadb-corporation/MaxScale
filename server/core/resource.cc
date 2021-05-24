@@ -1064,11 +1064,6 @@ HttpResponse cb_sql_query(const HttpRequest& request)
     return HttpSql::query(request);
 }
 
-HttpResponse cb_sql_query_result(const HttpRequest& request)
-{
-    return HttpSql::result(request);
-}
-
 HttpResponse cb_alter_user(const HttpRequest& request)
 {
     auto user = request.last_uri_part();
@@ -1363,7 +1358,6 @@ public:
         /** SQL connection inspection endpoints */
         m_get.emplace_back(cb_sql_get_all, "sql");
         m_get.emplace_back(cb_sql_get_one, "sql", ":connection_id");
-        m_get.emplace_back(cb_sql_query_result, "sql", ":connection_id", "queries", ":query_id");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");

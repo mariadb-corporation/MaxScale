@@ -12,13 +12,14 @@
  */
 
 #include "internal/sql_conn_manager.hh"
+#include <maxbase/assert.h>
 
 using std::move;
 
 namespace HttpSql
 {
 
-ConnectionManager::Connection* ConnectionManager::get(int64_t id)
+ConnectionManager::Connection* ConnectionManager::get_connection(int64_t id)
 {
     Connection* rval = nullptr;
     std::lock_guard<std::mutex> guard(m_connection_lock);
@@ -26,10 +27,10 @@ ConnectionManager::Connection* ConnectionManager::get(int64_t id)
     if (it != m_connections.end())
     {
         auto elem = it->second.get();
-        if (!elem->busy)
+        if (!elem->busy.load(std::memory_order_acquire))
         {
             rval = elem;
-            elem->busy = true;
+            elem->busy.store(true, std::memory_order_release);
         }
     }
     return rval;
@@ -41,25 +42,25 @@ int64_t ConnectionManager::add(mxq::MariaDB&& conn)
     elem->conn = move(conn);
 
     std::lock_guard<std::mutex> guard(m_connection_lock);
-    int64_t id = m_id_gen++;
+    int64_t id = m_next_id++;
     m_connections.emplace(id, std::move(elem));
     return id;
 }
 
-void ConnectionManager::put(int64_t id)
+bool ConnectionManager::erase(int64_t id)
 {
+    bool rval = false;
     std::lock_guard<std::mutex> guard(m_connection_lock);
     auto it = m_connections.find(id);
     if (it != m_connections.end())
     {
-        it->second->busy = false;
+        if (!it->second->busy.load(std::memory_order_acquire))
+        {
+            m_connections.erase(it);
+            rval = true;
+        }
     }
-}
-
-void ConnectionManager::erase(int64_t id)
-{
-    std::lock_guard<std::mutex> guard(m_connection_lock);
-    m_connections.erase(id);
+    return rval;
 }
 
 bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
@@ -70,7 +71,7 @@ bool ConnectionManager::is_query(int64_t conn_id, int64_t query_id) const
 
     if (it != m_connections.end())
     {
-        rval = query_id == it->second->query_id;
+        rval = query_id == it->second->current_query_id;
     }
 
     return rval;
@@ -93,5 +94,11 @@ std::vector<int64_t> ConnectionManager::get_connections()
     }
 
     return conns;
+}
+
+ConnectionManager::Connection::~Connection()
+{
+    // Should only delete idle connections. If this condition cannot be guaranteed, use shared_ptr.
+    mxb_assert(!busy);
 }
 }

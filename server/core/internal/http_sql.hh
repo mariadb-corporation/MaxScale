@@ -24,28 +24,21 @@
 
 namespace HttpSql
 {
-struct Result
-{
-    virtual ~Result() = default;
-
-    virtual json_t* to_json() const = 0;
-};
 
 HttpResponse connect(const HttpRequest& request);
-
 HttpResponse show_connection(const HttpRequest& request);
-
 HttpResponse show_all_connections(const HttpRequest& request);
-
 HttpResponse query(const HttpRequest& request);
-
-HttpResponse result(const HttpRequest& request);
-
 HttpResponse disconnect(const HttpRequest& request);
 
 bool is_query(const std::string& id);
-
 bool is_connection(const std::string& id);
+
+//
+// The functions that implement the connection creation and query execution
+//
+
+std::vector<int64_t> get_connections();
 
 struct ConnectionConfig
 {
@@ -58,22 +51,5 @@ struct ConnectionConfig
     mxb::SSLConfig ssl;
 };
 
-//
-// The functions that implement the connection creation and query execution
-//
-
-std::vector<int64_t> get_connections();
-
 int64_t create_connection(const ConnectionConfig& config, std::string* err);
-
-struct ExecQueryResult
-{
-    int64_t query_id {0};
-    json_t* result {nullptr};
-};
-ExecQueryResult execute_query(int64_t id, const std::string& sql);
-
-std::vector<std::unique_ptr<Result>> read_result(int64_t id, int64_t rows_max, bool* more_results);
-
-void close_connection(int64_t id);
 }
