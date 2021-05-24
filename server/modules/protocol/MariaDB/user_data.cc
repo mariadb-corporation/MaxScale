@@ -291,7 +291,6 @@ bool MariaDBUserManager::update_users()
     lock.unlock();
 
     sett.password = mxs::decrypt_password(sett.password);
-    sett.multiquery = true;
     sett.clear_sql_mode = true;
     sett.charset = "latin1";
     sett.plugin_dir = mxs::connector_plugindir();

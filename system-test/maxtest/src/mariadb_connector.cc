@@ -23,7 +23,6 @@ maxtest::MariaDB::MariaDB(TestLogger& log)
     // The test connector tries to automatically reconnect if a query fails.
     auto& sett = connection_settings();
     sett.auto_reconnect = true;
-    sett.multiquery = true;
 }
 
 bool maxtest::MariaDB::open(const std::string& host, int port, const std::string& db)

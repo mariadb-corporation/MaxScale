@@ -21,9 +21,14 @@
 
 struct st_mysql;
 struct st_mysql_res;
+struct st_mysql_field;
 
 namespace maxsql
 {
+
+class MariaDBQueryResult;
+struct MariaDBOkResult;
+struct MariaDBErrorResult;
 
 /**
  * Convenience class for working with Connector-C.
@@ -35,6 +40,7 @@ public:
     virtual ~MariaDB();
     MariaDB(const MariaDB& rhs) = delete;
     MariaDB& operator=(const MariaDB& rhs) = delete;
+    MariaDB& operator=(MariaDB&& rhs);
 
     struct ConnectionSettings
     {
@@ -48,7 +54,7 @@ public:
         std::string    ssl_version;
 
         int  timeout {0};
-        bool multiquery {false};
+        bool multiquery {true};
         bool auto_reconnect {false};
 
         bool        clear_sql_mode {false};
@@ -96,10 +102,10 @@ public:
     /**
      * Run a query which returns no data.
      *
-     * @param sql SQL to run
+     * @param query SQL to run
      * @return True on success
      */
-    bool cmd(const std::string& sql);
+    bool cmd(const std::string& query);
 
     /**
      * Run a query which may return data.
@@ -118,6 +124,18 @@ public:
      * @return Results from every query. If any kind of error occurs, returns an empty vector.
      */
     std::vector<std::unique_ptr<mxq::QueryResult>> multiquery(const std::vector<std::string>& queries);
+
+    enum class ResultType
+    {
+        OK, ERROR, RESULTSET, NONE
+    };
+    ResultType streamed_query(const std::string& query);
+    ResultType next_result();
+    ResultType current_result_type();
+
+    std::unique_ptr<mxq::MariaDBQueryResult> get_resultset();
+    std::unique_ptr<mxq::MariaDBOkResult>    get_ok_result();
+    std::unique_ptr<mxq::MariaDBErrorResult> get_error_result();
 
     /**
      * Ping the server.
@@ -152,8 +170,14 @@ public:
 
 private:
     void clear_errors();
+    bool run_query(const std::string& query, const std::function<bool()>& result_handler);
+    void update_multiq_result_type();
 
-    st_mysql*   m_conn {nullptr};
+    st_mysql* m_conn {nullptr};
+
+    ResultType    m_current_result_type {ResultType::NONE};
+    st_mysql_res* m_current_result {nullptr};
+
     std::string m_errormsg;
     int64_t     m_errornum {0};
 
@@ -199,6 +223,15 @@ public:
      */
     int64_t get_row_count() const override;
 
+    const char* const* rowdata() const;
+
+    struct FieldInfo
+    {
+        int             n {0};
+        st_mysql_field* fields {nullptr};
+    };
+    FieldInfo field_info() const;
+
 private:
     const char* row_elem(int64_t column_ind) const override;
     bool        advance_row() override;
@@ -207,5 +240,19 @@ private:
 
     st_mysql_res*      m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
     const char* const* m_rowdata {nullptr};     /**< Data for current row */
+};
+
+struct MariaDBOkResult
+{
+    uint64_t insert_id {0};
+    uint32_t warnings {0};
+    uint64_t affected_rows {0};
+};
+
+struct MariaDBErrorResult
+{
+    uint32_t    error_num {0};
+    std::string error_msg;
+    std::string sqlstate;
 };
 }
