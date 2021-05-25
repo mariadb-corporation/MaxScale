@@ -25,10 +25,10 @@
             color="accent-dark"
             :disabled="!active_conn_state"
         >
-            <v-icon class="mr-1" size="12" color="deep-ocean">
+            <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
             </v-icon>
-            <div class="d-inline-block text-truncate" :style="{ maxWidth: `126px` }">
+            <div class="d-inline-block text-truncate" :style="{ maxWidth: `122px` }">
                 {{ active_db ? active_db : $t('useDb') }}
             </div>
         </v-btn>
@@ -37,6 +37,8 @@
             offset-y
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
             activator="#active-db"
+            :max-width="200"
+            :menuMaxWidth="400"
         >
             <v-list>
                 <v-list-item
@@ -47,7 +49,7 @@
                     @click="() => handleSelectDb(db.id)"
                 >
                     <v-list-item-title class="color text-text">
-                        <truncate-string :text="db.name" />
+                        <truncate-string :text="db.name" :maxWidth="166" :nudgeLeft="16" />
                     </v-list-item-title>
                 </v-list-item>
             </v-list>
@@ -59,7 +61,7 @@
             content-class="shadow-drop color text-navigation py-1 px-4"
             activator="#active-db"
         >
-            <span>Use database: {{ active_db }} </span>
+            <span>{{ $t('useDb') }}: {{ active_db }} </span>
         </v-tooltip>
 
         <v-tooltip
@@ -125,6 +127,9 @@ export default {
             db_tree: state => state.query.db_tree,
         }),
     },
+    async created() {
+        await this.checkActiveDb()
+    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
@@ -132,6 +137,7 @@ export default {
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
             useDb: 'query/useDb',
+            checkActiveDb: 'query/checkActiveDb',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)

@@ -98,6 +98,7 @@ export default {
         },
         SET_ACTIVE_DB(state, payload) {
             state.active_db = payload
+            localStorage.setItem('active_db', JSON.stringify(payload))
         },
         RESET_STATE(state) {
             const initState = initialState()
@@ -139,7 +140,7 @@ export default {
                     localStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
                     commit('SET_ACTIVE_CONN_STATE', true)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
-                    await dispatch('useDb', body.db)
+                    if (body.db) await dispatch('useDb', body.db)
                     await dispatch('fetchDbList')
                 }
             } catch (e) {
@@ -335,7 +336,7 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ state, commit }, query) {
+        async fetchQueryResult({ state, commit, dispatch }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
                 let res = await this.vue.$axios.post(
@@ -347,23 +348,53 @@ export default {
                 await this.vue.$help.delay(400)
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
                 commit('SET_LOADING_QUERY_RESULT', false)
+                //TODO: Detect if query contains USE database Statement instead of hard-coding dispatch
+                await dispatch('checkActiveDb')
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
             }
         },
         /**
-         * @param {String} db - databse name
+         * @param {String} db - database name
          */
         async useDb({ state, commit }, db) {
             try {
-                await this.vue.$axios.post(`/sql/${state.curr_cnct_resource.id}/queries`, {
-                    sql: `USE ${this.vue.$help.escapeIdentifiers(db)};`,
-                })
-                commit('SET_ACTIVE_DB', db)
-                localStorage.setItem('active_db', JSON.stringify(db))
+                let res = await this.vue.$axios.post(
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
+                    {
+                        sql: `USE ${this.vue.$help.escapeIdentifiers(db)};`,
+                    }
+                )
+                if (res.data.data.attributes.results[0].errno) {
+                    const errObj = res.data.data.attributes.results[0]
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                } else commit('SET_ACTIVE_DB', db)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-useDb')
+                logger.error(e)
+            }
+        },
+        async checkActiveDb({ state, commit }) {
+            try {
+                let res = await this.vue.$axios.post(
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
+                    {
+                        sql: 'SELECT DATABASE()',
+                    }
+                )
+                const resActiveDb = res.data.data.attributes.results[0].data.flat()[0]
+                if (!resActiveDb) commit('SET_ACTIVE_DB', '')
+                else if (state.active_db !== resActiveDb) commit('SET_ACTIVE_DB', resActiveDb)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-checkActiveDb')
                 logger.error(e)
             }
         },
