@@ -40,6 +40,25 @@ For more information about the MaxScale REST API, refer to the
 
 [TOC]
 
+# .maxctrl.cnf
+
+If the file \`~/.maxctrl.cnf\` exists, maxctrl will use any values in the
+section \`[maxctrl]\` as defaults for command line arguments. For instance,
+to avoid having to specify the user and password on the command line,
+create the file \`.maxctrl.cnf\` in your home directory, with the following
+content:
+\`\`\`
+[maxctrl]
+u = my-name
+p = my-password
+\`\`\`
+Note that all access rights to the file must be removed from everybody else
+but the owner. MaxCtrl refuses to use the file unless the rights have been
+removed.
+
+Another file from which to read the defaults can be specified with the \`-c\`
+flag.
+
 # Commands
 
 $COMMANDS

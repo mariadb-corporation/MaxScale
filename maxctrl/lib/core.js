@@ -12,6 +12,8 @@
  */
 
 var fs = require("fs");
+var ini = require("ini");
+var os = require("os");
 var program = require("yargs");
 var inquirer = require("inquirer");
 var readlineSync = require("readline-sync");
@@ -23,12 +25,62 @@ const maxctrl_version = require("./version.js").version;
 // Global options given at startup
 var base_opts = [];
 
+const default_filename = os.homedir() + "/.maxctrl.cnf";
+
+function configParser(filename) {
+  // We require a .cnf suffix because 1) it makes the format clear and
+  // 2) it makes it easy to introduce other formats.
+  if (filename.slice(-4) != ".cnf") {
+    throw Error("EINVAL: " + filename + " does not have a '.cnf' suffix");
+  }
+
+  var stats;
+  try {
+    stats = fs.statSync(filename);
+  }
+  catch (x) {
+    if (filename == default_filename) {
+      // We do not require the presence of the default config file.
+      return {}
+    }
+    else {
+      // But if a different has been specified, we do.
+      throw x;
+    }
+  }
+
+  // As the file may contain a password, we are picky about the bits.
+  if ((stats.mode & 31) != 0) {
+    throw Error("EACCESS: " + filename + " exists, "
+                + "but can be accessed by group and world. "
+                + "Remove all rights from everyone else but owner");
+  }
+
+  var content = fs.readFileSync(filename, 'utf-8');
+  var config = ini.parse(content);
+
+  if (!config.maxctrl) {
+    throw Error("EINVAL: " + filename + " does not have a [maxctrl] section");
+  }
+
+  return config.maxctrl;
+}
+
 program
   .version(maxctrl_version)
   .strict()
   .exitProcess(false)
   .showHelpOnFail(false)
-  .group(["u", "p", "h", "t", "q", "tsv"], "Global Options:")
+  .group(["c", "u", "p", "h", "t", "q", "tsv"], "Global Options:")
+  .option("c", {
+    alias: "config",
+    global: true,
+    default: default_filename,
+    describe: "MaxCtrl configuration file",
+    type: "string",
+    config: true,
+    configParser: configParser
+  })
   .option("u", {
     alias: "user",
     global: true,

@@ -23,6 +23,7 @@
     "colors": "^1.4.0",
     "flat": "^5.0.0",
     "globby": "^8.0.2",
+    "ini": "^2.0.0",
     "inquirer": "^6.2.1",
     "inquirer-command-prompt": "0.0.26",
     "js-beautify": "^1.11.0",

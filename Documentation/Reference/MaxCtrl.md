@@ -16,6 +16,25 @@ For more information about the MaxScale REST API, refer to the
 
 [TOC]
 
+# .maxctrl.cnf
+
+If the file `~/.maxctrl.cnf` exists, maxctrl will use any values in the
+section `[maxctrl]` as defaults for command line arguments. For instance,
+to avoid having to specify the user and password on the command line,
+create the file `.maxctrl.cnf` in your home directory, with the following
+content:
+```
+[maxctrl]
+u = my-name
+p = my-password
+```
+Note that all access rights to the file must be removed from everybody else
+but the owner. MaxCtrl refuses to use the file unless the rights have been
+removed.
+
+Another file from which to read the defaults can be specified with the `-c`
+flag.
+
 # Commands
 
 ## list
@@ -26,10 +45,11 @@ For more information about the MaxScale REST API, refer to the
 Usage: list servers
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -64,10 +84,11 @@ List all servers in MaxScale.
 Usage: list services
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -101,10 +122,11 @@ List all services and the servers they use.
 Usage: list listeners [service]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -138,10 +160,11 @@ List listeners of all services. If a service is given, only listeners for that s
 Usage: list monitors
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -178,10 +201,11 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -212,10 +236,11 @@ List all client sessions.
 Usage: list filters
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -247,10 +272,11 @@ List all filters in MaxScale.
 Usage: list modules
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -282,10 +308,11 @@ List all currently loaded modules.
 Usage: list threads
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -320,10 +347,11 @@ List all worker threads.
 Usage: list users
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -355,10 +383,11 @@ List network the users that can be used to connect to the MaxScale REST API.
 Usage: list commands
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -391,10 +420,11 @@ List all available module commands.
 Usage: show server <server>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -440,10 +470,11 @@ Show detailed information about a server. The `Parameters` field contains the cu
 Usage: show servers
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -489,10 +520,11 @@ Show detailed information about all servers.
 Usage: show service <service>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -534,10 +566,11 @@ Show detailed information about a service. The `Parameters` field contains the c
 Usage: show services
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -579,10 +612,11 @@ Show detailed information about all services.
 Usage: show monitor <monitor>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -604,6 +638,7 @@ Show detailed information about a monitor. The `Parameters` field contains the c
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
   Parameters          | Monitor parameters
@@ -616,10 +651,11 @@ Show detailed information about a monitor. The `Parameters` field contains the c
 Usage: show monitors
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -641,6 +677,7 @@ Show detailed information about all monitors.
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
   Parameters          | Monitor parameters
@@ -658,10 +695,11 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -678,20 +716,22 @@ Show detailed information about a single session. The list of sessions can be re
 The `Connections` field lists the servers to which the session is connected and the `Connection IDs` field lists the IDs for those connections.
 
 
-  Field          | Description
-  -----          | -----------
-  Id             | Session ID
-  Service        | The service where the session connected
-  State          | Session state
-  User           | Username
-  Host           | Client host address
-  Database       | Current default database of the connection
-  Connected      | Time when the session started
-  Idle           | How long the session has been idle, in seconds
-  Connections    | Ordered list of backend connections
-  Connection IDs | Thread IDs for the backend connections
-  Queries        | Query history
-  Log            | Per-session log messages
+  Field             | Description
+  -----             | -----------
+  Id                | Session ID
+  Service           | The service where the session connected
+  State             | Session state
+  User              | Username
+  Host              | Client host address
+  Database          | Current default database of the connection
+  Connected         | Time when the session started
+  Idle              | How long the session has been idle, in seconds
+  Parameters        | Session parameters
+  Client TLS Cipher | Client TLS cipher
+  Connections       | Ordered list of backend connections
+  Connection IDs    | Thread IDs for the backend connections
+  Queries           | Query history
+  Log               | Per-session log messages
 ```
 
 ### show sessions
@@ -705,10 +745,11 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -723,20 +764,22 @@ HTTPS/TLS Options:
 Show detailed information about all sessions. See `--help show session` for more details.
 
 
-  Field          | Description
-  -----          | -----------
-  Id             | Session ID
-  Service        | The service where the session connected
-  State          | Session state
-  User           | Username
-  Host           | Client host address
-  Database       | Current default database of the connection
-  Connected      | Time when the session started
-  Idle           | How long the session has been idle, in seconds
-  Connections    | Ordered list of backend connections
-  Connection IDs | Thread IDs for the backend connections
-  Queries        | Query history
-  Log            | Per-session log messages
+  Field             | Description
+  -----             | -----------
+  Id                | Session ID
+  Service           | The service where the session connected
+  State             | Session state
+  User              | Username
+  Host              | Client host address
+  Database          | Current default database of the connection
+  Connected         | Time when the session started
+  Idle              | How long the session has been idle, in seconds
+  Parameters        | Session parameters
+  Client TLS Cipher | Client TLS cipher
+  Connections       | Ordered list of backend connections
+  Connection IDs    | Thread IDs for the backend connections
+  Queries           | Query history
+  Log               | Per-session log messages
 ```
 
 ### show filter
@@ -745,10 +788,11 @@ Show detailed information about all sessions. See `--help show session` for more
 Usage: show filter <filter>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -781,10 +825,11 @@ The list of services that use this filter is show in the `Services` field.
 Usage: show filters
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -817,10 +862,11 @@ Show detailed information of all filters.
 Usage: show listener <listener>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -852,10 +898,11 @@ Options:
 Usage: show filters
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -888,10 +935,11 @@ Show detailed information of all filters.
 Usage: show module <module>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -927,10 +975,11 @@ This command shows all available parameters as well as detailed version informat
 Usage: show modules
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -966,10 +1015,11 @@ Displays detailed information about all modules.
 Usage: show maxscale
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1004,10 +1054,11 @@ See `--help alter maxscale` for more details about altering MaxScale parameters.
 Usage: show thread <thread>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1056,10 +1107,11 @@ Show detailed information about a worker thread.
 Usage: show threads
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1108,10 +1160,11 @@ Show detailed information about all worker threads.
 Usage: show logging
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1143,10 +1196,11 @@ See `--help alter logging` for more details about altering logging parameters.
 Usage: show commands <module>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1178,10 +1232,11 @@ This command shows the parameters the command expects with the parameter descrip
 Usage: show qc_cache
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1206,10 +1261,11 @@ Show contents (statement and hits) of query classifier cache.
 Usage: show dbusers <service>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1236,10 +1292,11 @@ Show information about the database users of the service
 Usage: set server <server> <state>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1269,10 +1326,11 @@ If <server> is monitored by a monitor, this command should only be used to set t
 Usage: clear server <server> <state>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1299,10 +1357,11 @@ This command clears a server state set by the `set server <server> <state>` comm
 Usage: drain server <server>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1322,6 +1381,8 @@ Options:
   --help     Show help  [boolean]
 
 This command drains the server of connections by first removing it from all services after which it waits until all connections are closed. When all connections are closed, the server is put into the `maintenance` state and added back to all the services where it was removed from. To take the server back into use, execute `clear server <server> maintenance`.
+
+Warning: This command is not safe to interrupt. If interrupted, the servers might not be added back to the service. For a better alternative, use `set server <server> drain`. This command has been deprecated in MaxScale 2.6.0.
 ```
 
 ## enable
@@ -1332,10 +1393,11 @@ This command drains the server of connections by first removing it from all serv
 Usage: enable log-priority <log>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1362,10 +1424,11 @@ The `debug` log priority is only available for debug builds of MaxScale.
 Usage: disable log-priority <log>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1407,10 +1470,11 @@ Create server options:
   --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1435,15 +1499,16 @@ The created server will not be used by any services or monitors unless the --ser
 Usage: create monitor <name> <module> [params...]
 
 Create monitor options:
-  --servers           Link the created monitor to these servers  [array]
+  --servers           Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
   --monitor-user      Username for the monitor user  [string]
   --monitor-password  Password for the monitor user  [string]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1468,16 +1533,17 @@ The list of servers given with the --servers option should not contain any serve
 Usage: service <name> <router> <params...>
 
 Create service options:
-  --servers   Link the created service to these servers  [array]
-  --filters   Link the created service to these filters  [array]
-  --services  Link the created service to these services  [array]
+  --servers   Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
+  --filters   Link the created service to these filters. All non-option arguments after --filters are interpreted as filter names e.g. `--filters f1 f2 f3`.  [array]
+  --services  Link the created service to these services. All non-option arguments after --services are interpreted as service names e.g. `--services svc1 svc2 svc3`.  [array]
   --cluster   Link the created service to this cluster (i.e. a monitor)  [string]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1504,10 +1570,11 @@ Note that the `user` and `password` parameters must be defined.
 Usage: filter <name> <module> [params...]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1546,10 +1613,11 @@ Create listener options:
   --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1577,10 +1645,11 @@ Create user options:
   --type  Type of user to create  [string] [choices: "admin", "basic"] [default: "basic"]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1606,11 +1675,15 @@ By default the created user will have read-only privileges. To make the user an 
 ```
 Usage: destroy server <name>
 
+Destroy options:
+  --force  Remove the server from monitors and services before destroying it  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1625,7 +1698,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove the server from monitors and services before destroying it  [boolean] [default: false]
 
 The server must be unlinked from all services and monitor before it can be destroyed.
 ```
@@ -1635,11 +1707,15 @@ The server must be unlinked from all services and monitor before it can be destr
 ```
 Usage: destroy monitor <name>
 
+Destroy options:
+  --force  Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1654,7 +1730,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
 
 The monitor must be unlinked from all servers before it can be destroyed.
 ```
@@ -1665,10 +1740,11 @@ The monitor must be unlinked from all servers before it can be destroyed.
 Usage: destroy listener <service> <name>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1692,11 +1768,15 @@ Destroying a listener closes the listening socket, opening it up for reuse.
 ```
 Usage: destroy service <name>
 
+Destroy options:
+  --force  Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1711,7 +1791,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
 
 The service must be unlinked from all servers and filters. All listeners for the service must be destroyed before the service itself can be destroyed.
 ```
@@ -1721,11 +1800,15 @@ The service must be unlinked from all servers and filters. All listeners for the
 ```
 Usage: destroy filter <name>
 
+Destroy options:
+  --force  Automatically remove the filter from all services before destroying it  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1740,7 +1823,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Automatically remove the filter from all services before destroying it  [boolean] [default: false]
 
 The filter must not be used by any service when it is destroyed.
 ```
@@ -1751,10 +1833,11 @@ The filter must not be used by any service when it is destroyed.
 Usage: destroy user <name>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1781,10 +1864,11 @@ The last remaining administrative user cannot be removed. Create a replacement a
 Usage: link service <name> <target...>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1809,10 +1893,11 @@ This command links targets to a service, making them available for any connectio
 Usage: link monitor <name> <server...>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1839,10 +1924,11 @@ Linking a server to a monitor will add it to the list of servers that are monito
 Usage: unlink service <name> <target...>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1867,10 +1953,11 @@ This command unlinks targets from a service, removing them from the list of avai
 Usage: unlink monitor <name> <server...>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1897,10 +1984,11 @@ This command unlinks servers from a monitor, removing them from the list of moni
 Usage: start service <name>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1919,16 +2007,46 @@ Options:
 This starts a service stopped by `stop service <name>`
 ```
 
+### start listener
+
+```
+Usage: start listener <name>
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+This starts a listener stopped by `stop listener <name>`
+```
+
 ### start monitor
 
 ```
 Usage: start monitor <name>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1953,10 +2071,11 @@ This starts a monitor stopped by `stop monitor <name>`
 Usage: start [services|maxscale]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1982,11 +2101,15 @@ This command will execute the `start service` command for all services in MaxSca
 ```
 Usage: stop service <name>
 
+Stop options:
+  --force  Close existing connections after stopping the service  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2005,16 +2128,49 @@ Options:
 Stopping a service will prevent all the listeners for that service from accepting new connections. Existing connections will still be handled normally until they are closed.
 ```
 
+### stop listener
+
+```
+Usage: stop listener <name>
+
+Stop options:
+  --force  Close existing connections after stopping the listener  [boolean] [default: false]
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+Stopping a listener will prevent it from accepting new connections. Existing connections will still be handled normally until they are closed.
+```
+
 ### stop monitor
 
 ```
 Usage: stop monitor <name>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2038,11 +2194,15 @@ Stopping a monitor will pause the monitoring of the servers. This can be used to
 ```
 Usage: stop [services|maxscale]
 
+Stop options:
+  --force  Close existing connections after stopping all services  [boolean] [default: false]
+
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2069,10 +2229,11 @@ This command will execute the `stop service` command for all services in MaxScal
 Usage: alter server <server> <key> <value> ...
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2097,10 +2258,11 @@ To display the server parameters, execute `show server <server>`.
 Usage: alter monitor <monitor> <key> <value> ...
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2125,10 +2287,11 @@ To display the monitor parameters, execute `show monitor <monitor>`
 Usage: alter service <service> <key> <value> ...
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2167,10 +2330,11 @@ To display the service parameters, execute `show service <service>`. Some router
 Usage: alter service-filters <service> [filters...]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2191,16 +2355,75 @@ The order of the filters given as the second parameter will also be the order in
 For example, the command `maxctrl alter service filters my-service A B C` will set the filter chain for the service `my-service` so that A gets the query first after which it is passed to B and finally to C. This behavior is the same as if the `filters=A|B|C` parameter was defined for the service.
 ```
 
+### alter filter
+
+```
+Usage: alter service <service> <key> <value> ...
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+To display the filter parameters, execute `show filter <filter>`. Some filters support runtime configuration changes to all parameters. Refer to the filter documentation for details on whether it supports runtime configuration changes and which parameters can be altered.
+```
+
+### alter listener
+
+```
+Usage: alter listener <listener> <key> <value> ...
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+To display the listener parameters, execute `show listener <listener>`
+```
+
 ### alter logging
 
 ```
 Usage: alter logging <key> <value> ...
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2225,10 +2448,11 @@ To display the logging parameters, execute `show logging`
 Usage: alter maxscale <key> <value> ...
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2268,10 +2492,11 @@ To display the MaxScale parameters, execute `show maxscale`. The following list 
 Usage: alter user <name> <password>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2290,6 +2515,64 @@ Options:
 Changes the password for a user. To change the user type, destroy the user and then create it again.
 ```
 
+### alter session
+
+```
+Usage: alter session <session> <key> <value> ...
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+Alter parameters of a session. To get the list of modifiable parameters, use `show session <session>`
+```
+
+### alter session-filters
+
+```
+Usage: alter session-filters <session> [filters...]
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+The order of the filters given as the second parameter will also be the order in which queries pass through the filter chain. If no filters are given, all existing filters are removed from the session. The syntax is similar to `alter service-filters`.
+```
+
 ## rotate
 
 ### rotate logs
@@ -2298,10 +2581,11 @@ Changes the password for a user. To change the user type, destroy the user and t
 Usage: rotate logs
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2328,14 +2612,17 @@ This command is intended to be used with the `logrotate` command.
 Usage: reload service <service>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file
+                                 [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p
-                  as the last argument or use --password=''
-                                                   [string] [default: "mariadb"]
+  -p, --password  Password for the user. To input the password manually, use -p
+                  '' or --password=''              [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
-                                            [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
+                                            [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
+                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
+                                                     [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.
                                                       [boolean] [default: false]
   --tsv           Print tab separated output          [boolean] [default: false]
@@ -2364,14 +2651,17 @@ Commands:
   maxctrl reload                    the default command                [default]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file
+                                 [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p
-                  as the last argument or use --password=''
-                                                   [string] [default: "mariadb"]
+  -p, --password  Password for the user. To input the password manually, use -p
+                  '' or --password=''              [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
-                                            [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
+                                            [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
+                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
+                                                     [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.
                                                       [boolean] [default: false]
   --tsv           Print tab separated output          [boolean] [default: false]
@@ -2398,10 +2688,11 @@ Options:
 Usage: call command <module> <command> [params...]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2428,10 +2719,11 @@ To inspect the list of module commands, execute `list commands`
 Usage: cluster diff <target>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2456,10 +2748,11 @@ The list of host servers is controlled with the --hosts option. The target serve
 Usage: cluster sync <target>
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2488,10 +2781,11 @@ Note: New objects created by `cluster sync` will have a placeholder value and mu
 Usage: get <resource> [path]
 
 Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2512,6 +2806,72 @@ Options:
   --help     Show help  [boolean]
 
 Perform a raw REST API call. The path definition uses JavaScript syntax to extract values. For example, the following command extracts all server states as an array of JSON values: maxctrl api get servers data[].attributes.state
+```
+
+### api post
+
+```
+Usage: post <resource> <value>
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+API options:
+  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+  --pretty  Pretty-print output.  [boolean] [default: false]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+Perform a raw REST API call. The provided value is passed as-is to the REST API after building it with JSON.parse
+```
+
+### api patch
+
+```
+Usage: patch <resource> [path]
+
+Global Options:
+  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+API options:
+  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+  --pretty  Pretty-print output.  [boolean] [default: false]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+Perform a raw REST API call. The provided value is passed as-is to the REST API after building it with JSON.parse
 ```
 
 ## classify
