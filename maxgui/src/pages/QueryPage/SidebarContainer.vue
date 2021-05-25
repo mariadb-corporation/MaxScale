@@ -24,6 +24,7 @@
                         })
                 "
                 @load-children="handleLoadChildren"
+                @use-db="useDb"
             />
         </v-fade-transition>
     </div>
@@ -70,6 +71,7 @@ export default {
             fetchPrvw: 'query/fetchPrvw',
             fetchTables: 'query/fetchTables',
             fetchCols: 'query/fetchCols',
+            useDb: 'query/useDb',
         }),
         async loadSchema() {
             await this.fetchDbList()

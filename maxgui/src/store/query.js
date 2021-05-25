@@ -209,7 +209,7 @@ export default {
             }
         },
         /**
-         * @param {Object} db - Database object.
+         * @param {Object} db - Database node object.
          */
         async fetchTables({ state, commit }, db) {
             try {
@@ -249,7 +249,7 @@ export default {
             }
         },
         /**
-         * @param {Object} tbl - Table object.
+         * @param {Object} tbl - Table node object.
          */
         async fetchCols({ state, commit }, tbl) {
             try {
@@ -353,7 +353,7 @@ export default {
             }
         },
         /**
-         * @param {String} db - db
+         * @param {String} db - databse name
          */
         async useDb({ state, commit }, db) {
             try {

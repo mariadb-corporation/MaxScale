@@ -19,7 +19,7 @@
             height="36"
             max-width="160"
             text
-            class="ml-4 text-none px-2 font-weight-medium"
+            class="ml-4 text-none px-2 font-weight-regular"
             depressed
             small
             color="accent-dark"
@@ -29,7 +29,7 @@
                 $vuetify.icons.database
             </v-icon>
             <div class="d-inline-block text-truncate" :style="{ maxWidth: `126px` }">
-                {{ active_db ? active_db : $t('selectDb') }}
+                {{ active_db ? active_db : $t('useDb') }}
             </div>
         </v-btn>
         <v-menu

@@ -93,7 +93,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
 
 export default {
     name: 'db-list-tree',
@@ -107,7 +106,7 @@ export default {
                 this.$t('viewDetails'),
                 this.$t('placeSchemaInEditor'),
             ],
-            schemaOptions: [this.$t('placeSchemaInEditor')],
+            schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
             columnOptions: [this.$t('placeColumnNameInEditor')],
             menuCoord: {
                 x: 0,
@@ -131,10 +130,6 @@ export default {
         },
     },
     methods: {
-        ...mapActions({
-            fetchTables: 'query/fetchTables',
-            fetchCols: 'query/fetchCols',
-        }),
         async handleLoadChildren(item) {
             await this.emitPromise('load-children', item)
         },
@@ -170,6 +165,9 @@ export default {
                     break
                 case this.$t('placeColumnNameInEditor'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
+                    break
+                case this.$t('useDb'):
+                    this.$emit('use-db', schema)
                     break
             }
         },
