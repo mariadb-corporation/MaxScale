@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         local_result = 0;
 
-        Test->stop_maxscale(0);
+        Test->maxscales->stop_and_check_stopped();
 
         sprintf(str, "rules%d", i);
         copy_rules(Test, str, rules_dir);

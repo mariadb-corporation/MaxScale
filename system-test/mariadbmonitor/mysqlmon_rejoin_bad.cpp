@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Stopping MaxScale...");
     // Mess with the slaves to fix situation such that only one slave can be rejoined. Stop maxscale.
-    if (test.stop_maxscale(0) != 0)
+    if (!test.maxscales->stop_and_check_stopped())
     {
         test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Restarting MaxScale. Server 4 should not rejoin the cluster.");
     test.tprintf(LINE);
-    if (test.start_maxscale(0) != 0)
+    if (!test.maxscales->start_and_check_started())
     {
         test.expect(false, "Could not start MaxScale.");
         return test.global_result;

@@ -59,7 +59,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(last_slave_ind);
 
     test.tprintf("Starting MaxScale");
-    test.start_maxscale(0);
+    test.maxscales->start_and_check_started();
 
     sleep(3);
     test.maxscales->wait_for_monitor(3);

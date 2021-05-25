@@ -182,6 +182,7 @@ public:
     int  stop_maxscale();
     bool stop();
 
+    bool start_and_check_started();
     bool stop_and_check_stopped();
 
     /**

@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 
     cout << "Stopping MaxScale for a moment.\n";
     // Stop maxscale to prevent an unintended rejoin.
-    if (test.stop_maxscale(0))
+    if (!test.maxscales->stop_and_check_stopped())
     {
         test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 
     cout << "Starting MaxScale, node 0 should not be able to join because it has extra events.\n";
     // Restart maxscale. Should not rejoin old master.
-    if (test.start_maxscale(0))
+    if (!test.maxscales->start_and_check_started())
     {
         test.expect(false, "Could not start MaxScale.");
         return test.global_result;

@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.stop_timeout();
-    test.stop_maxscale();
+    test.maxscales->stop_and_check_stopped();
 
     auto repl = test.repl;
     auto N = repl->N;
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 
     repl->stop_nodes();
     repl->start_nodes();
-    test.start_maxscale();
+    test.maxscales->start_and_check_started();
     test.maxscales->wait_for_monitor(1);
 
     test.tprintf("Set utf8mb4 for backend");
