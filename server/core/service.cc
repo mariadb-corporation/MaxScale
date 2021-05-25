@@ -1243,8 +1243,23 @@ json_t* Service::json_relationships(const char* host) const
             }
         }
 
-        json_object_set_new(rel, CN_SERVERS, servers);
-        json_object_set_new(rel, CN_SERVICES, services);
+        if (json_array_size(json_object_get(servers, CN_DATA)))
+        {
+            json_object_set_new(rel, CN_SERVERS, servers);
+        }
+        else
+        {
+            json_decref(servers);
+        }
+
+        if (json_array_size(json_object_get(services, CN_DATA)))
+        {
+            json_object_set_new(rel, CN_SERVICES, services);
+        }
+        else
+        {
+            json_decref(services);
+        }
     }
 
     auto listeners = listener_find_by_service(this);
