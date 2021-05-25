@@ -47,8 +47,8 @@ int main(int argc, char *argv[])
     test.set_timeout(60);
     test.maxscales->connect();
     check_val(test.maxscales->conn_rwsplit[0], test);
-    check_val(test.maxscales->conn_master[0], test);
-    check_val(test.maxscales->conn_slave[0], test);
+    check_val(test.maxscales->conn_master, test);
+    check_val(test.maxscales->conn_slave, test);
     test.maxscales->disconnect();
 
     nodes->connect();

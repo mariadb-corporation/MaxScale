@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
     test.try_query(test.maxscales->conn_rwsplit[0], "select 'rwsplit' from t1");
-    test.try_query(test.maxscales->conn_master[0], "select 'rconn master' from t1");
+    test.try_query(test.maxscales->conn_master, "select 'rconn master' from t1");
     test.try_query(test.maxscales->conn_slave, "select 'rconn slave' from t1 ");
 
     test.set_timeout(10);

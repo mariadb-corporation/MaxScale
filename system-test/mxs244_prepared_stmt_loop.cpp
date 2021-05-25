@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     Test->maxscales->connect_maxscale();
     MYSQL* router[3];
     router[0] = Test->maxscales->conn_rwsplit[0];
-    router[1] = Test->maxscales->conn_master[0];
+    router[1] = Test->maxscales->conn_master;
     router[2] = Test->maxscales->conn_slave;
 
     for (int ir = 0; ir < r; ir++)

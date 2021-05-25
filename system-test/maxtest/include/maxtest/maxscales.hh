@@ -18,8 +18,6 @@ class MariaDB;
 class Maxscales : public Nodes
 {
 public:
-    static const int N_MXS = 1;
-
     enum service
     {
         RWSPLIT,
@@ -62,9 +60,9 @@ public:
      */
     int port(enum service type = RWSPLIT) const;
 
-    MYSQL* conn_rwsplit[N_MXS] {nullptr};   /**< Connection to RWSplit */
-    MYSQL* conn_master[N_MXS] {nullptr};    /**< Connection to ReadConnection in master mode */
-    MYSQL* conn_slave {nullptr};     /**< Connection to ReadConnection in slave mode */
+    MYSQL* conn_rwsplit[1] {nullptr};   /**< Connection to RWSplit */
+    MYSQL* conn_master {nullptr};       /**< Connection to ReadConnection in master mode */
+    MYSQL* conn_slave {nullptr};        /**< Connection to ReadConnection in slave mode */
 
     /**< conn_rwsplit, conn_master, conn_slave */
     MYSQL* routers[3] {nullptr, nullptr, nullptr};

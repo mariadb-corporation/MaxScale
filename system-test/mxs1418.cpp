@@ -17,7 +17,7 @@ void* thr(void* data)
         {
             test->tprintf("Failed to select via readwritesplit");
         }
-        if (test->try_query(test->maxscales->conn_master[0], "SELECT 1"))
+        if (test->try_query(test->maxscales->conn_master, "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute master");
         }

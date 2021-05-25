@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Trying query to ReadConn master\n");
-    Test->try_query(Test->maxscales->conn_master[0], "show processlist;");
+    Test->try_query(Test->maxscales->conn_master, "show processlist;");
     Test->tprintf("Trying query to ReadConn slave\n");
     Test->try_query(Test->maxscales->conn_slave, "show processlist;");
 

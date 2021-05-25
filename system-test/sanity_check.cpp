@@ -130,7 +130,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < 10; i++)
         {
             test.try_query(test.maxscales->conn_rwsplit[0], "%s", a);
-            test.try_query(test.maxscales->conn_master[0], "%s", a);
+            test.try_query(test.maxscales->conn_master, "%s", a);
         }
     }
     test.maxscales->disconnect();

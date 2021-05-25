@@ -1145,7 +1145,7 @@ int TestConnections::check_maxscale_alive()
     try_query(maxscales->conn_rwsplit[0], "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(maxscales->conn_master[0], "show databases;");
+    try_query(maxscales->conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
     try_query(maxscales->conn_slave, "show databases;");
@@ -1172,7 +1172,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     }
 
     tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_master[0], "select 1");
+    rc = execute_query(maxscales->conn_master, "select 1");
     if ((rc == 0) != rc_master)
     {
         tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
@@ -1475,7 +1475,7 @@ int TestConnections::insert_select(int N)
 
     tprintf("SELECT: master\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_master[0], N);
+    result += select_from_t1(maxscales->conn_master, N);
 
     tprintf("SELECT: slave\n");
     set_timeout(30);
@@ -1494,9 +1494,9 @@ int TestConnections::use_db(char* db)
     tprintf("selecting DB '%s' for rwsplit\n", db);
     local_result += execute_query(maxscales->conn_rwsplit[0], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    local_result += execute_query(maxscales->conn_slave, "%s", sql);
+    local_result += execute_query(maxscales->conn_master, "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    local_result += execute_query(maxscales->conn_master[0], "%s", sql);
+    local_result += execute_query(maxscales->conn_slave, "%s", sql);
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
@@ -1529,7 +1529,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(maxscales->conn_master[0]);
+    exists = check_if_t1_exists(maxscales->conn_master);
 
     if (exists == presence)
     {
