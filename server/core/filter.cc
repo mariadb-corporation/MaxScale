@@ -154,6 +154,37 @@ SFilterDef filter_find(const char* name)
     return SFilterDef();
 }
 
+std::vector<SFilterDef> filter_depends_on_target(const mxs::Target* target)
+{
+    std::vector<SFilterDef> rval;
+    Guard guard(this_unit.lock);
+
+    for (const auto& filter : this_unit.filters)
+    {
+        auto mod = get_module(filter->module.c_str(), MODULE_FILTER);
+
+        for (const MXS_MODULE_PARAM* p = mod->parameters; p && p->name; p++)
+        {
+            switch (p->type)
+            {
+            case MXS_MODULE_PARAM_SERVICE:
+            case MXS_MODULE_PARAM_SERVER:
+            case MXS_MODULE_PARAM_TARGET:
+                if (filter->parameters.get_target(p->name) == target)
+                {
+                    rval.push_back(filter);
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
 bool filter_can_be_destroyed(const SFilterDef& filter)
 {
     mxb_assert(filter);

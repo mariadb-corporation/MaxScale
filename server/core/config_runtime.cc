@@ -1746,10 +1746,24 @@ bool runtime_destroy_server(Server* server, bool force)
         prepare_for_destruction(server);
     }
 
-    if (!service_server_in_use(server).empty() || MonitorManager::server_is_monitored(server))
+    std::vector<std::string> names;
+    auto services = service_server_in_use(server);
+    std::transform(services.begin(), services.end(), std::back_inserter(names),
+                   std::mem_fn(&Service::name));
+
+    auto filters = filter_depends_on_target(server);
+    std::transform(filters.begin(), filters.end(), std::back_inserter(names),
+                   std::mem_fn(&FilterDef::name));
+
+    if (auto mon = MonitorManager::server_is_monitored(server))
     {
-        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one service or monitor",
-                  server->name());
+        names.push_back(mon->name());
+    }
+
+    if (!names.empty())
+    {
+        MXS_ERROR("Cannot destroy server '%s' as it is used by: %s",
+                  server->name(), mxb::join(names, ", ").c_str());
     }
     else if (runtime_remove_config(server->name()))
     {
@@ -1821,11 +1835,6 @@ bool runtime_destroy_service(Service* service, bool force)
             Service::destroy(service);
             rval = true;
         }
-    }
-    else
-    {
-        MXS_ERROR("Service '%s' cannot be destroyed: Remove all servers and destroy all listeners first",
-                  service->name());
     }
 
     return rval;
