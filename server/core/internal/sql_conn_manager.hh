@@ -18,7 +18,6 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-#include <mysql.h>
 #include <maxsql/mariadb_connector.hh>
 
 namespace HttpSql

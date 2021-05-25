@@ -204,6 +204,9 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
 
 void MariaDB::close()
 {
+    mysql_free_result(m_current_result);
+    m_current_result = nullptr;
+
     if (m_conn)
     {
         mysql_close(m_conn);
@@ -483,7 +486,6 @@ MariaDB& MariaDB::operator=(MariaDB&& rhs)
     m_conn = rhs.m_conn;
     rhs.m_conn = nullptr;
 
-    mysql_free_result(m_current_result);
     m_current_result = rhs.m_current_result;
     rhs.m_current_result = nullptr;
     m_current_result_type = rhs.m_current_result_type;
@@ -576,6 +578,7 @@ MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
     : QueryResult(column_names(resultset))
     , m_resultset(resultset)
 {
+    prepare_fields_info();
 }
 
 MariaDBQueryResult::~MariaDBQueryResult()
@@ -617,16 +620,55 @@ std::vector<std::string> MariaDBQueryResult::column_names(MYSQL_RES* resultset)
     return rval;
 }
 
-MariaDBQueryResult::FieldInfo MariaDBQueryResult::field_info() const
+const MariaDBQueryResult::Fields& MariaDBQueryResult::fields() const
 {
-    FieldInfo rval;
-    rval.n = mysql_num_fields(m_resultset);
-    rval.fields = mysql_fetch_fields(m_resultset);
-    return rval;
+    return m_fields_info;
 }
 
 const char* const* MariaDBQueryResult::rowdata() const
 {
     return m_rowdata;
+}
+
+void MariaDBQueryResult::prepare_fields_info()
+{
+    using Type = Field::Type;
+    auto n = mysql_num_fields(m_resultset);
+    auto fields = mysql_fetch_fields(m_resultset);
+    m_fields_info.reserve(n);
+
+    for (unsigned int i = 0; i < n; i++)
+    {
+        auto resolved_type = Type::OTHER;
+        auto field = fields[i];
+
+        // Not set in stone, add more if needed.
+        switch (field.type)
+        {
+        case MYSQL_TYPE_DECIMAL:
+        case MYSQL_TYPE_TINY:
+        case MYSQL_TYPE_SHORT:
+        case MYSQL_TYPE_LONG:
+        case MYSQL_TYPE_LONGLONG:
+        case MYSQL_TYPE_INT24:
+            resolved_type = Type::INTEGER;
+            break;
+
+        case MYSQL_TYPE_FLOAT:
+        case MYSQL_TYPE_DOUBLE:
+            resolved_type = Type::FLOAT;
+            break;
+
+        case MYSQL_TYPE_NULL:
+            resolved_type = Type::NUL;
+            break;
+
+        default:
+            break;
+        }
+
+        Field new_elem = {field.name, resolved_type};
+        m_fields_info.push_back(std::move(new_elem));
+    }
 }
 }

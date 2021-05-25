@@ -21,7 +21,6 @@
 
 struct st_mysql;
 struct st_mysql_res;
-struct st_mysql_field;
 
 namespace maxsql
 {
@@ -225,21 +224,26 @@ public:
 
     const char* const* rowdata() const;
 
-    struct FieldInfo
+    struct Field
     {
-        int             n {0};
-        st_mysql_field* fields {nullptr};
+        enum class Type {STRING, INTEGER, FLOAT, NUL, OTHER};
+
+        std::string name;
+        Type        type;
     };
-    FieldInfo field_info() const;
+    using Fields = std::vector<Field>;
+    const Fields& fields() const;
 
 private:
     const char* row_elem(int64_t column_ind) const override;
     bool        advance_row() override;
+    void        prepare_fields_info();
 
     static std::vector<std::string> column_names(st_mysql_res* results);
 
     st_mysql_res*      m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
     const char* const* m_rowdata {nullptr};     /**< Data for current row */
+    Fields             m_fields_info;           /**< Field names and types */
 };
 
 struct MariaDBOkResult

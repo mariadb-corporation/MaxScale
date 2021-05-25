@@ -20,10 +20,8 @@
 
 #include <maxbase/json.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/cn_strings.hh>
 
-#include <errmsg.h>
 #include <maxbase/format.hh>
 
 using std::string;
@@ -95,48 +93,41 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
     return {id, err};
 }
 
-json_t* generate_column_info(const mxq::MariaDBQueryResult::FieldInfo& field_info)
+json_t* generate_column_info(const mxq::MariaDBQueryResult::Fields& fields_info)
 {
     json_t* rval = json_array();
-    int n = field_info.n;
-    for (int i = 0; i < n; i++)
+    for (auto& elem : fields_info)
     {
-        json_array_append_new(rval, json_string(field_info.fields[i].name));
+        json_array_append_new(rval, json_string(elem.name.c_str()));
     }
     return rval;
 }
 
 json_t* generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
-                                const mxq::MariaDBQueryResult::FieldInfo& field_info)
+                                const mxq::MariaDBQueryResult::Fields& field_info)
 {
+    using Type = mxq::MariaDBQueryResult::Field::Type;
     json_t* rval = json_array();
-    auto n = field_info.n;
-    auto fields = field_info.fields;
+    auto n = field_info.size();
     auto rowdata = resultset->rowdata();
 
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {
         json_t* value = nullptr;
 
         if (rowdata[i])
         {
-            switch (fields[i].type)
+            switch (field_info[i].type)
             {
-            case MYSQL_TYPE_DECIMAL:
-            case MYSQL_TYPE_TINY:
-            case MYSQL_TYPE_SHORT:
-            case MYSQL_TYPE_LONG:
-            case MYSQL_TYPE_LONGLONG:
-            case MYSQL_TYPE_INT24:
+            case Type::INTEGER:
                 value = json_integer(strtol(rowdata[i], nullptr, 10));
                 break;
 
-            case MYSQL_TYPE_FLOAT:
-            case MYSQL_TYPE_DOUBLE:
+            case Type::FLOAT:
                 value = json_real(strtod(rowdata[i], nullptr));
                 break;
 
-            case MYSQL_TYPE_NULL:
+            case Type::NUL:
                 value = json_null();
                 break;
 
@@ -197,7 +188,7 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int max_rows)
                 // Only send a maximum of 1000 rows per resultset.
                 int64_t rows_read = 0;
                 auto res = conn.get_resultset();
-                auto fields = res->field_info();
+                auto fields = res->fields();
                 json_t* resultset = json_object();
                 json_object_set_new(resultset, "fields", generate_column_info(fields));
                 json_t* rows = json_array();
