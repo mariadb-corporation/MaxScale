@@ -194,7 +194,7 @@ export default {
                     dbCmplList.push({
                         label: db,
                         detail: 'SCHEMA',
-                        insertText: db,
+                        insertText: `\`${db}\``,
                         type: 'schema',
                     })
                 })
@@ -213,7 +213,7 @@ export default {
          */
         async fetchTables({ state, commit }, db) {
             try {
-                const query = `SHOW TABLES FROM ${db.id};`
+                const query = `SHOW TABLES FROM ${this.vue.$help.escapeIdentifiers(db.id)};`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -234,7 +234,7 @@ export default {
                     dbCmplList.push({
                         label: tbl,
                         detail: 'TABLE',
-                        insertText: tbl,
+                        insertText: `\`${tbl}\``,
                         type: 'table',
                     })
                 })
@@ -255,7 +255,7 @@ export default {
             try {
                 const dbId = tbl.id.split('.')[0]
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_NAME = "${tbl.name}";`
+                const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbId}" AND TABLE_NAME = "${tbl.name}";`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -279,7 +279,7 @@ export default {
                         })
                         dbCmplList.push({
                             label: colName,
-                            insertText: colName,
+                            insertText: `\`${colName}\``,
                             detail: 'COLUMN',
                             type: 'column',
                         })
@@ -309,12 +309,13 @@ export default {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
                 let sql
+                const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
                 switch (prvwMode) {
                     case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
-                        sql = `SELECT * FROM ${tblId};`
+                        sql = `SELECT * FROM ${escapedTblId};`
                         break
                     case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                        sql = `DESCRIBE ${tblId};`
+                        sql = `DESCRIBE ${escapedTblId};`
                         break
                 }
 
@@ -357,7 +358,7 @@ export default {
         async useDb({ state, commit }, db) {
             try {
                 await this.vue.$axios.post(`/sql/${state.curr_cnct_resource.id}/queries`, {
-                    sql: `USE ${db};`,
+                    sql: `USE ${this.vue.$help.escapeIdentifiers(db)};`,
                 })
                 commit('SET_ACTIVE_DB', db)
                 localStorage.setItem('active_db', JSON.stringify(db))

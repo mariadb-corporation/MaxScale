@@ -528,6 +528,16 @@ export function doubleRAF(callback) {
     })
 }
 
+/**
+ * @param {String} str plain identifier string. e.g. db_name.tbl_name
+ * @return {String} Return escaped identifier string. e.g.  \`db_name\`.\`tbl_name\`
+ */
+export function escapeIdentifiers(str) {
+    return str
+        .split('.')
+        .map(identifier => `\`${identifier}\``)
+        .join('.')
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -567,6 +577,7 @@ Object.defineProperties(Vue.prototype, {
                 resourceTxtTransform,
                 ciStrIncludes,
                 doubleRAF,
+                escapeIdentifiers,
             }
         },
     },

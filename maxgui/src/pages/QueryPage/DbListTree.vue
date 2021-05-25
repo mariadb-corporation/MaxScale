@@ -166,10 +166,10 @@ export default {
                     this.$emit('view-details', schema)
                     break
                 case this.$t('placeSchemaInEditor'):
-                    this.$emit('place-to-editor', schema)
+                    this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
                 case this.$t('placeColumnNameInEditor'):
-                    this.$emit('place-to-editor', item.name)
+                    this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
                     break
             }
         },

@@ -151,11 +151,16 @@ export default {
                 inherit: true, // false to completely replace the builtin rules
                 rules: [
                     { token: '', foreground: '#333333', background: '#ffffff' },
+
                     { token: 'comment.mariadb', foreground: '#60a0b0' },
+                    { token: 'comment.quote.mariadb', foreground: '#60a0b0' },
+
                     { token: 'number.mariadb', foreground: '#40a070' },
                     { token: 'delimiter.mariadb', foreground: '#000000' },
+
                     { token: 'string.mariadb', foreground: '#4070a0' },
                     { token: 'string.double.mariadb', foreground: '#4070a0' },
+
                     { token: 'keyword.mariadb', foreground: '#007020', fontStyle: 'bold' },
                     { token: 'operator.mariadb', foreground: '#666666' },
                     { token: 'predefined.mariadb', foreground: '#FF00FF' },
