@@ -111,7 +111,7 @@
     "timeout": "Timeout",
     "disconnect": "Disconnect",
     "selectConnection": "Select connection",
-    "newConnection": "New connection",
+    "openConnection": "Open connection",
     "minimize": "Minimize",
     "maximize": "Maximize",
     "expand": "Expand",
@@ -140,6 +140,7 @@
     "switchToVertTable": "Switch to vertical table",
     "switchToHorizTable": "Switch to horizontal table",
     "useDb": "Use database",
+    "connectedTo": "Connected to",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

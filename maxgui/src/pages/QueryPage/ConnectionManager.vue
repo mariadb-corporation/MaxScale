@@ -1,66 +1,59 @@
 <template>
     <div>
-        <v-select
-            v-model="chosenConn"
-            :items="connOptions"
-            name="resourceName"
+        <v-btn
             outlined
-            dense
-            class="std mariadb-select-input error--text__bottom"
-            :menu-props="{
-                contentClass: 'mariadb-select-v-menu',
-                bottom: true,
-                offsetY: true,
-            }"
-            hide-details
-            :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
-            required
-            :placeholder="$t('selectConnection')"
+            height="36"
+            max-width="160"
+            text
+            class="ml-4 text-none px-2 font-weight-regular"
+            depressed
+            small
+            color="accent-dark"
+            @click="curr_cnct_resource ? null : openConnDialog()"
         >
-            <template v-slot:selection="{ item }">
-                <div class="v-select__selection v-select__selection--comma">
-                    {{ item }}
-                </div>
-            </template>
-            <template v-slot:item="{ item, on, attrs }">
-                <div class="v-list-item__title d-flex align-center" v-bind="attrs" v-on="on">
-                    <div
-                        v-if="item !== newConnOption"
-                        class="d-flex align-center flex-row flex-grow-1"
+            <div
+                id="curr_cnct_resource"
+                class="d-inline-block text-truncate"
+                :style="{ maxWidth: `${curr_cnct_resource ? 102 : 138}px` }"
+            >
+                <v-icon v-if="curr_cnct_resource" class="mr-2" size="16" color="accent-dark">
+                    $vuetify.icons.server
+                </v-icon>
+                {{ curr_cnct_resource ? curr_cnct_resource.name : $t('openConnection') }}
+            </div>
+            <v-tooltip
+                v-if="curr_cnct_resource"
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        class="ml-2"
+                        icon
+                        small
+                        v-on="on"
+                        @click.prevent="() => disconnect({ showSnackbar: true })"
                     >
-                        {{ item }}
-                        <v-tooltip
-                            bottom
-                            transition="slide-y-transition"
-                            content-class="shadow-drop color text-navigation py-1 px-4"
-                        >
-                            <template v-slot:activator="{ on }">
-                                <v-btn
-                                    class="ml-auto"
-                                    icon
-                                    v-on="on"
-                                    @click.prevent="() => disconnect({ showSnackbar: true })"
-                                >
-                                    <v-icon size="20" color="error">
-                                        $vuetify.icons.unlink
-                                    </v-icon>
-                                </v-btn>
-                            </template>
-                            <span>{{ $t('disconnect') }}</span>
-                        </v-tooltip>
-                    </div>
-                    <div v-else class="text-decoration-underline color text-primary">
-                        {{ item }}
-                    </div>
-                </div>
-            </template>
-        </v-select>
-        <connection-dialog
-            v-model="isConnDialogOpened"
-            :handleSave="handleOpenConn"
-            :onCancel="assignActiveConn"
-            :onClose="assignActiveConn"
-        />
+                        <v-icon size="18" color="error">
+                            $vuetify.icons.unlink
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('disconnect') }}</span>
+            </v-tooltip>
+        </v-btn>
+        <v-tooltip
+            v-if="curr_cnct_resource"
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+            activator="#curr_cnct_resource"
+        >
+            <span>{{ $t('connectedTo') }}: {{ curr_cnct_resource.name }} </span>
+        </v-tooltip>
+
+        <connection-dialog v-model="isConnDialogOpened" :handleSave="handleOpenConn" />
     </div>
 </template>
 
@@ -75,8 +68,6 @@ export default {
     data() {
         return {
             isConnDialogOpened: false,
-            chosenConn: [],
-            newConnOption: this.$t('newConnection'),
         }
     },
     computed: {
@@ -84,34 +75,16 @@ export default {
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
         }),
-        connOptions() {
-            let options = [this.newConnOption]
-            if (this.curr_cnct_resource) options.unshift(this.curr_cnct_resource.name)
-            return options
-        },
-    },
-    watch: {
-        chosenConn(v) {
-            if (v === this.newConnOption) this.openConnDialog()
-        },
-        curr_cnct_resource(v) {
-            if (v) this.chosenConn = v.name
-        },
     },
     mounted() {
         // auto open connection-dialog when there is no active opened connection
-        if (this.active_conn_state) this.assignActiveConn()
-        else this.openConnDialog()
+        if (!this.active_conn_state) this.openConnDialog()
     },
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
         }),
-        assignActiveConn() {
-            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource.name
-            else this.chosenConn = ''
-        },
         openConnDialog() {
             this.isConnDialogOpened = true
         },

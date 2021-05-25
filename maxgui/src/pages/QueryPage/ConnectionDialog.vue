@@ -6,8 +6,6 @@
         :hasChanged="hasChanged"
         :lazyValidation="false"
         minBodyWidth="512px"
-        :onCancel="onCancel"
-        :onClose="onClose"
         :hasSavingErr="hasSavingErr"
         hasFormDivider
         @is-form-valid="isFormValid = $event"
@@ -178,8 +176,6 @@ export default {
     props: {
         value: { type: Boolean, required: true },
         handleSave: { type: Function, required: true },
-        onCancel: { type: Function, required: true },
-        onClose: { type: Function, required: true },
     },
     data() {
         return {

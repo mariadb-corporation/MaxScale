@@ -8,6 +8,7 @@
         content-class="shadow-drop color text-navigation truncate-text-menu"
         open-on-hover
         allow-overflow
+        :nudge-left="nudgeLeft"
         :max-width="menuMaxWidth"
         :max-height="menuMaxHeight"
     >
@@ -61,6 +62,7 @@ export default {
         maxWidth: { type: Number },
         menuMaxHeight: { type: Number, default: 600 },
         menuMaxWidth: { type: Number, default: 600 },
+        nudgeLeft: { type: Number, default: 0 },
     },
     data() {
         return {

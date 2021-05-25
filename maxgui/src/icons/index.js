@@ -27,6 +27,7 @@ import Restart from 'icons/Restart'
 import Reload from 'icons/Reload'
 import Running from 'icons/Running'
 import Search from 'icons/Search'
+import Server from 'icons/Server'
 import Settings from 'icons/Settings'
 import StatusError from 'icons/StatusError'
 import StatusInfo from 'icons/StatusInfo'
@@ -89,6 +90,9 @@ export default {
     },
     search: {
         component: Search,
+    },
+    server: {
+        component: Server,
     },
     settings: {
         component: Settings,
