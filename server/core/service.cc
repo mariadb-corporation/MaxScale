@@ -517,7 +517,8 @@ bool service_has_named_listener(Service* service, const char* name)
 bool Service::can_be_destroyed() const
 {
     const auto& data = *m_data;
-    return listener_find_by_service(this).empty() && data.targets.empty() && data.filters.empty();
+    return listener_find_by_service(this).empty() && data.targets.empty() && data.filters.empty()
+           && m_parents.empty();
 }
 
 /**

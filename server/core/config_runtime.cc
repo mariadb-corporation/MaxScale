@@ -1653,6 +1653,11 @@ void prepare_for_destruction(const SFilterDef& filter)
 
 void prepare_for_destruction(Service* service)
 {
+    for (Service* s : service->get_parents())
+    {
+        runtime_unlink_target(s->name(), service->name());
+    }
+
     // Destroy listeners that point to the service. They are separate objects and are not managed by the
     // service which means we can't simply ignore them.
     for (const auto& l : listener_find_by_service(service))
