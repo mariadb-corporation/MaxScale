@@ -95,19 +95,6 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
     return {id, err};
 }
 
-int64_t get_page_size(const HttpRequest& request)
-{
-    int64_t page_size = 0;
-    auto opt = request.get_option("page[size]");
-
-    if (!opt.empty())
-    {
-        page_size = strtol(opt.c_str(), nullptr, 10);
-    }
-
-    return page_size;
-}
-
 json_t* generate_column_info(const mxq::MariaDBQueryResult::FieldInfo& field_info)
 {
     json_t* rval = json_array();
@@ -173,7 +160,7 @@ json_t* generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
     return rval;
 }
 
-json_t* generate_json_representation(mxq::MariaDB& conn)
+json_t* generate_json_representation(mxq::MariaDB& conn, int max_rows)
 {
     using ResultType = mxq::MariaDB::ResultType;
     json_t* resultset_arr = json_array();
@@ -214,7 +201,7 @@ json_t* generate_json_representation(mxq::MariaDB& conn)
                 json_t* resultset = json_object();
                 json_object_set_new(resultset, "fields", generate_column_info(fields));
                 json_t* rows = json_array();
-                while (res->next_row() && rows_read < 1000)
+                while (res->next_row() && rows_read < max_rows)
                 {
                     json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
                     rows_read++;
@@ -451,10 +438,18 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
     }
 
+    // Optional row limit.
+    int64_t max_rows = 1000;    // default
+    json.try_get_int("max_rows", &max_rows);
+    if (max_rows < 0 || max_rows > 10000)
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("`max_rows` must be between 0 and 10000."));
+    }
+
     string host = request.host();
     string self = request.get_uri();
 
-    auto exec_query_cb = [id, sql = move(sql), host = move(host), self = move(self)]() {
+    auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self)]() {
             auto managed_conn = this_unit.manager.get_connection(id);
             if (managed_conn)
             {
@@ -463,7 +458,7 @@ HttpResponse query(const HttpRequest& request)
                 managed_conn->conn.streamed_query(sql);
                 auto exec_time = timer.split();
 
-                json_t* result_data = generate_json_representation(managed_conn->conn);
+                json_t* result_data = generate_json_representation(managed_conn->conn, max_rows);
                 managed_conn->busy.store(false, std::memory_order_release);
                 // 'managed_conn' is now effectively back in storage and should not be used.
 
