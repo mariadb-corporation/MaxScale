@@ -2,30 +2,121 @@
     <div class="fill-height">
         <v-card v-if="loading_db_tree" class="fill-height db-tb-list" :loading="loading_db_tree" />
         <v-fade-transition>
-            <db-list
+            <div
                 v-if="!loading_db_tree"
                 class="db-tb-list"
-                :schemaList="db_tree"
-                :disabled="!active_conn_state"
-                v-on="$listeners"
-                @reload-schema="loadSchema"
-                @preview-data="
-                    schemaId =>
-                        handleFetchPreview({
-                            SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
-                            schemaId,
-                        })
-                "
-                @view-details="
-                    schemaId =>
-                        handleFetchPreview({
-                            SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                            schemaId,
-                        })
-                "
-                @load-children="handleLoadChildren"
-                @use-db="useDb"
-            />
+                :class="[isLeftPaneCollapsed ? 'pa-1' : 'pa-3']"
+            >
+                <portal to="toggle-pane">
+                    <v-tooltip
+                        top
+                        transition="slide-y-transition"
+                        content-class="shadow-drop color text-navigation py-1 px-4"
+                    >
+                        <template v-slot:activator="{ on }">
+                            <v-btn icon small v-on="on" @click="isFullscreen = !isFullscreen">
+                                <v-icon size="18" color="deep-ocean">
+                                    fullscreen{{ isFullscreen ? '_exit' : '' }}
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                        <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
+                    </v-tooltip>
+                    <v-tooltip
+                        top
+                        transition="slide-y-transition"
+                        content-class="shadow-drop color text-navigation py-1 px-4"
+                    >
+                        <template v-slot:activator="{ on }">
+                            <v-btn
+                                icon
+                                small
+                                v-on="on"
+                                @click="isLeftPaneCollapsed = !isLeftPaneCollapsed"
+                            >
+                                <v-icon
+                                    size="16"
+                                    color="deep-ocean"
+                                    class="collapse-icon"
+                                    :class="{ 'collapse-icon--active': isLeftPaneCollapsed }"
+                                >
+                                    double_arrow
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                        <span>{{ isLeftPaneCollapsed ? $t('expand') : $t('collapse') }}</span>
+                    </v-tooltip>
+                </portal>
+                <div class="visible-when-expand fill-height">
+                    <div class="schema-list-tools">
+                        <div class="d-flex align-center justify-end">
+                            <span
+                                v-if="!isLeftPaneCollapsed"
+                                class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
+                            >
+                                {{ $t('schemas') }}
+                            </span>
+                            <v-tooltip
+                                v-if="!isLeftPaneCollapsed"
+                                top
+                                transition="slide-y-transition"
+                                content-class="shadow-drop color text-navigation py-1 px-4"
+                            >
+                                <template v-slot:activator="{ on }">
+                                    <v-btn
+                                        icon
+                                        small
+                                        :disabled="!active_conn_state"
+                                        v-on="on"
+                                        @click="loadSchema"
+                                    >
+                                        <v-icon size="12" color="deep-ocean">
+                                            $vuetify.icons.reload
+                                        </v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>{{ $t('reload') }}</span>
+                            </v-tooltip>
+                            <portal-target name="toggle-pane" />
+                        </div>
+                        <v-text-field
+                            v-if="!isLeftPaneCollapsed"
+                            id="searchSchema"
+                            v-model="searchSchema"
+                            name="searchSchema"
+                            required
+                            dense
+                            outlined
+                            height="28"
+                            class="std filter-objects"
+                            :placeholder="$t('filterSchemaObjects')"
+                            :disabled="!active_conn_state"
+                        />
+                    </div>
+                    <db-list-tree
+                        v-if="!isLeftPaneCollapsed"
+                        :schemaList="db_tree"
+                        class="schema-list-wrapper"
+                        @preview-data="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
+                                    schemaId,
+                                })
+                        "
+                        @view-details="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+                                    schemaId,
+                                })
+                        "
+                        @load-children="handleLoadChildren"
+                        @use-db="useDb"
+                        v-on="$listeners"
+                    />
+                </div>
+            </div>
         </v-fade-transition>
     </div>
 </template>
@@ -43,12 +134,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import DbList from './DbList'
+import DbListTree from './DbListTree'
 import { mapState, mapActions, mapMutations } from 'vuex'
 export default {
     name: 'sidebar-container',
     components: {
-        DbList,
+        DbListTree,
+    },
+    data() {
+        return {
+            searchSchema: '',
+            isLeftPaneCollapsed: false,
+            isFullscreen: false,
+        }
     },
     computed: {
         ...mapState({
@@ -60,6 +158,12 @@ export default {
         }),
     },
     watch: {
+        isLeftPaneCollapsed(v) {
+            this.$emit('is-collapsed', v)
+        },
+        isFullscreen(v) {
+            this.$emit('is-fullscreen', v)
+        },
         checking_active_conn: async function(v) {
             // after finish checking active connection
             if (!v && this.active_conn_state)
@@ -109,5 +213,30 @@ export default {
     border: 1px solid $table-border;
     width: 100%;
     height: 100%;
+    .db-tb-list__title {
+        font-size: 12px;
+        margin-right: auto;
+    }
+    .collapse-icon {
+        transform: rotate(-180deg);
+        &--active {
+            transform: rotate(0deg);
+        }
+    }
+    ::v-deep .std.filter-objects {
+        input {
+            font-size: 12px;
+        }
+    }
+    $tools-height: 60px;
+    .schema-list-tools {
+        height: $tools-height;
+    }
+    .schema-list-wrapper {
+        font-size: 12px;
+        max-height: calc(100% - #{$tools-height});
+        overflow-y: auto;
+        z-index: 1;
+    }
 }
 </style>

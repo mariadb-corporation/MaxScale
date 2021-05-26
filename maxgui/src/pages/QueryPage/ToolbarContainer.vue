@@ -14,10 +14,11 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     outlined
-                    class="text-capitalize px-2 font-weight-medium"
+                    class="run-btn text-capitalize px-2 font-weight-medium"
                     depressed
                     small
                     color="accent-dark"
+                    :loading="loading_query_result"
                     :disabled="!queryTxt || !active_conn_state"
                     v-on="on"
                     @click="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
@@ -117,6 +118,7 @@ export default {
             active_conn_state: state => state.query.active_conn_state,
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
+            loading_query_result: state => state.query.loading_query_result,
         }),
     },
 
@@ -148,3 +150,12 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+::v-deep.run-btn {
+    .v-progress-circular {
+        height: 16px !important;
+        width: 16px !important;
+    }
+}
+</style>
