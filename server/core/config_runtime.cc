@@ -1922,6 +1922,7 @@ bool runtime_create_filter_from_json(json_t* json)
             // construction behave uniformly across all parameter types.
             parameters = parameters ? json_incref(parameters) : json_object();
             json_object_set(parameters, CN_MODULE, json_string(module));
+            mxs::json_remove_nulls(parameters);
 
             if (auto filter = filter_alloc(name, parameters))
             {
@@ -2114,6 +2115,7 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
 
     if (validate_filter_json(new_json))
     {
+        rval = true;
         auto& config = filter->configuration();
 
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
@@ -2132,10 +2134,6 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
             }
 
             json_decref(params);
-        }
-        else
-        {
-            MXS_ERROR("No parameters defined");
         }
     }
 
