@@ -1,7 +1,7 @@
 # MongoDB Protocol
 
 The _mongodbprotocol_ module allows a MariaDB server or cluster to be
-used as the backend of an application using some MongoDB client library.
+used as the backend of an application using a MongoDB client library.
 Internally, all documents are stored in a table containing two columns;
 an _id_ column for the object id and a _doc_ column for the document itself.
 
