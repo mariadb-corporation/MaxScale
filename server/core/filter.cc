@@ -171,13 +171,16 @@ std::vector<SFilterDef> filter_depends_on_target(const mxs::Target* target)
 
     for (const auto& filter : this_unit.filters)
     {
-        for (const auto& kv : *filter->specification())
+        for (const auto& kv : filter->configuration())
         {
-            auto t = kv.second->type();
+            auto t = kv.second->parameter().type();
 
             if (t == "service" || t == "server" || t == "target")
             {
-                rval.push_back(filter);
+                if (kv.second->to_string() == target->name())
+                {
+                    rval.push_back(filter);
+                }
             }
         }
     }
