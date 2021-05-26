@@ -22,6 +22,16 @@ namespace maxbase
 {
 
 /**
+ * @brief Convenience function for dumping JSON into a string
+ *
+ * @param json  JSON to dump
+ * @param flags Optional flags passed to the jansson json_dump function
+ *
+ * @return The JSON in string format
+ */
+std::string json_dump(const json_t* json, int flags = 0);
+
+/**
  * Wrapper class for Jansson json-objects.
  */
 class Json
@@ -88,6 +98,21 @@ public:
     bool load(const std::string& filepath);
 
     bool ok() const;
+
+    /**
+     * Get underlying JSON pointer
+     *
+     * @return Pointer to the managed JSON object
+     */
+    json_t* get_json() const;
+
+    /**
+     * Return contents as a string
+     *
+     * @return The JSON as a string
+     */
+    std::string to_string() const;
+
 private:
     json_t*             m_obj{nullptr}; /**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */

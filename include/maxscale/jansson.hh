@@ -20,6 +20,7 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/jansson.h>
+#include <maxbase/json.hh>
 #include <maxbase/alloc.h>
 
 namespace std
@@ -47,16 +48,7 @@ namespace maxscale
  */
 static inline std::string json_dump(const json_t* json, int flags = 0)
 {
-    std::string rval;
-    char* js = json_dumps(json, flags);
-
-    if (js)
-    {
-        rval = js;
-        MXS_FREE(js);
-    }
-
-    return rval;
+    return mxb::json_dump(json, flags);
 }
 
 /**
@@ -142,5 +134,4 @@ static inline const char* json_type_to_string(const json_t* json)
 
     return "unknown";
 }
-
 }
