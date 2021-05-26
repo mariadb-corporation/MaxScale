@@ -127,9 +127,7 @@ export default {
             db_tree: state => state.query.db_tree,
         }),
     },
-    async created() {
-        await this.checkActiveDb()
-    },
+
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
@@ -137,7 +135,6 @@ export default {
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
             useDb: 'query/useDb',
-            checkActiveDb: 'query/checkActiveDb',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)

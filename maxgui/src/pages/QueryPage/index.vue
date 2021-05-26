@@ -101,7 +101,9 @@ export default {
     },
     computed: {
         ...mapState({
+            checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_conn_state: state => state.query.active_conn_state,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -124,6 +126,10 @@ export default {
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
+    async created() {
+        await this.checkActiveConn()
+        if (this.active_conn_state) await this.checkActiveDb()
+    },
     async beforeDestroy() {
         if (this.curr_cnct_resource) await this.disconnect()
     },
@@ -133,6 +139,8 @@ export default {
     methods: {
         ...mapActions({
             disconnect: 'query/disconnect',
+            checkActiveConn: 'query/checkActiveConn',
+            checkActiveDb: 'query/checkActiveDb',
         }),
         setPanelsPct() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })

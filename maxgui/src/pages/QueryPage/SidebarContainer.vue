@@ -52,14 +52,20 @@ export default {
     },
     computed: {
         ...mapState({
+            checking_active_conn: state => state.query.checking_active_conn,
             loading_db_tree: state => state.query.loading_db_tree,
             db_tree: state => state.query.db_tree,
             active_conn_state: state => state.query.active_conn_state,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
         }),
     },
-    async created() {
-        if (this.active_conn_state) await this.loadSchema()
+    watch: {
+        checking_active_conn: async function(v) {
+            // after finish checking active connection
+            if (!v && this.active_conn_state)
+                // auto load schema when there is active connection
+                await this.loadSchema()
+        },
     },
     methods: {
         ...mapMutations({

@@ -13,7 +13,8 @@
 import { getCookie, uniqBy } from 'utils/helpers'
 function initialState() {
     return {
-        active_conn_state: Boolean(getCookie('conn_id_body')),
+        checking_active_conn: true,
+        active_conn_state: false,
         conn_err_state: false,
         rc_target_names_map: {},
         curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
@@ -34,6 +35,9 @@ export default {
     namespaced: true,
     state: initialState,
     mutations: {
+        SET_CHECKING_ACTIVE_CONN(state, payload) {
+            state.checking_active_conn = payload
+        },
         // connection mutations
         SET_ACTIVE_CONN_STATE(state, payload) {
             state.active_conn_state = payload
@@ -43,6 +47,7 @@ export default {
         },
         SET_CURR_CNCT_RESOURCE(state, payload) {
             state.curr_cnct_resource = payload
+            localStorage.setItem('curr_cnct_resource', JSON.stringify(payload))
         },
         SET_CONN_ERR_STATE(state, payload) {
             state.conn_err_state = payload
@@ -137,11 +142,11 @@ export default {
                     )
                     const connId = res.data.data.id
                     const curr_cnct_resource = { id: connId, name: body.target }
-                    localStorage.setItem('curr_cnct_resource', JSON.stringify(curr_cnct_resource))
                     commit('SET_ACTIVE_CONN_STATE', true)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
                     await dispatch('fetchDbList')
+                    commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-openConnect')
@@ -169,6 +174,35 @@ export default {
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
+                logger.error(e)
+            }
+        },
+
+        async checkActiveConn({ state, commit }) {
+            try {
+                commit('SET_CHECKING_ACTIVE_CONN', true)
+                const res = await this.vue.$axios.get(`/sql/`)
+                const hasToken = Boolean(getCookie('conn_id_body'))
+                const hasCurrCnctResource = this.vue.$typy(state.curr_cnct_resource, 'id').isDefined
+                let isValidToken = false
+                if (hasToken && hasCurrCnctResource) {
+                    for (const conn of res.data.data) {
+                        if (conn.id === state.curr_cnct_resource.id) {
+                            isValidToken = true
+                            break
+                        }
+                    }
+                }
+                commit('SET_ACTIVE_CONN_STATE', isValidToken)
+                if (!isValidToken) {
+                    localStorage.removeItem('curr_cnct_resource')
+                    localStorage.removeItem('active_db')
+                    this.vue.$help.deleteCookie('conn_id_body')
+                    commit('RESET_STATE')
+                }
+                commit('SET_CHECKING_ACTIVE_CONN', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-checkActiveConn')
                 logger.error(e)
             }
         },

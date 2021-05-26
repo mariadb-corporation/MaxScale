@@ -72,13 +72,18 @@ export default {
     },
     computed: {
         ...mapState({
+            checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
         }),
     },
-    mounted() {
-        // auto open connection-dialog when there is no active opened connection
-        if (!this.active_conn_state) this.openConnDialog()
+    watch: {
+        checking_active_conn(v) {
+            // after finish checking active connection
+            if (!v && !this.active_conn_state)
+                // auto open connection-dialog when there is no active opened connection
+                this.openConnDialog()
+        },
     },
     methods: {
         ...mapActions({
