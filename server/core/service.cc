@@ -769,7 +769,40 @@ bool service_has_named_listener(Service* service, const char* name)
 bool Service::can_be_destroyed() const
 {
     const auto& data = *m_data;
-    return listener_find_by_service(this).empty() && data.targets.empty() && data.filters.empty();
+    std::vector<std::string> names;
+
+    std::transform(data.targets.begin(), data.targets.end(), std::back_inserter(names),
+                   std::mem_fn(&mxs::Target::name));
+
+    std::transform(data.filters.begin(), data.filters.end(), std::back_inserter(names),
+                   std::mem_fn(&FilterDef::name));
+
+    if (!names.empty())
+    {
+        MXS_ERROR("Cannot destroy service '%s', it uses the following objects: %s",
+                  name(), mxb::join(names, ", ").c_str());
+    }
+    else
+    {
+        std::transform(m_parents.begin(), m_parents.end(), std::back_inserter(names),
+                       std::mem_fn(&Service::name));
+
+        auto filters = filter_depends_on_target(this);
+        std::transform(filters.begin(), filters.end(), std::back_inserter(names),
+                       std::mem_fn(&FilterDef::name));
+
+        auto listeners = listener_find_by_service(this);
+        std::transform(listeners.begin(), listeners.end(), std::back_inserter(names),
+                       std::mem_fn(&Listener::name));
+
+        if (!names.empty())
+        {
+            MXS_ERROR("Cannot destroy service '%s', the following objects depend on it: %s",
+                      name(), mxb::join(names, ", ").c_str());
+        }
+    }
+
+    return names.empty();
 }
 
 /**
@@ -940,11 +973,17 @@ std::vector<Service*> service_server_in_use(const SERVER* server)
     for (Service* service : this_unit.services)
     {
         LockGuard guard(service->lock);
-        auto targets = service->get_children();
 
-        if (std::find(targets.begin(), targets.end(), server) != targets.end())
+        // Only check the dependency if the service doesn't use a cluster. If it uses a cluster, the
+        // dependency isn't on this service but on the monitor that monitors the cluster.
+        if (!service->cluster())
         {
-            rval.push_back(service);
+            auto targets = service->get_children();
+
+            if (std::find(targets.begin(), targets.end(), server) != targets.end())
+            {
+                rval.push_back(service);
+            }
         }
     }
 

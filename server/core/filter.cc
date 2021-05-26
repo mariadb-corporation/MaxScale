@@ -164,6 +164,27 @@ SFilterDef filter_find(const std::string& name)
     return SFilterDef();
 }
 
+std::vector<SFilterDef> filter_depends_on_target(const mxs::Target* target)
+{
+    std::vector<SFilterDef> rval;
+    Guard guard(this_unit.lock);
+
+    for (const auto& filter : this_unit.filters)
+    {
+        for (const auto& kv : *filter->specification())
+        {
+            auto t = kv.second->type();
+
+            if (t == "service" || t == "server" || t == "target")
+            {
+                rval.push_back(filter);
+            }
+        }
+    }
+
+    return rval;
+}
+
 bool filter_can_be_destroyed(const SFilterDef& filter)
 {
     mxb_assert(filter);

@@ -194,6 +194,11 @@ public:
         return m_data->servers;
     }
 
+    std::vector<Service*> get_parents()
+    {
+        return m_parents;
+    }
+
     /**
      * Check whether a service can be destroyed
      *

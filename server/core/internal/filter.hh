@@ -87,6 +87,15 @@ void filter_free(const SFilterDef& filter);
 SFilterDef filter_find(const std::string& name);
 
 /**
+ * Check if a filter uses a server or a service
+ *
+ * @param target The target to check
+ *
+ * @return The list of filters that depend on the given target
+ */
+std::vector<SFilterDef> filter_depends_on_target(const mxs::Target* target);
+
+/**
  * Check if filter can be destroyed
  *
  * A filter can be destroyed if no service uses it.

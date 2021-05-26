@@ -262,5 +262,37 @@ describe("Create/Destroy Commands", function () {
     ).then(() => doCommand("destroy filter test-filter")).should.be.fulfilled;
   });
 
+  it("detects filter->service dependency", async function () {
+    await doCommand(
+      "create service tee-target readconnroute router_options=master user=maxuser password=maxpwd"
+    );
+    await doCommand("create filter tee-filter tee target=tee-target");
+    await doCommand("destroy service tee-target").should.be.rejected;
+    await doCommand("destroy filter tee-filter");
+    await doCommand("destroy service tee-target");
+  });
+
+  it("detects filter->server dependency", async function () {
+    await doCommand("create server tee-target 127.0.0.1 3006");
+    await doCommand("create filter tee-filter tee target=tee-target");
+    await doCommand("destroy server tee-target").should.be.rejected;
+    await doCommand("destroy filter tee-filter");
+    await doCommand("destroy server tee-target");
+  });
+
+  it("detects service->service dependency", async function () {
+    await doCommand(
+      "create service child-service readconnroute router_options=master user=maxuser password=maxpwd"
+    );
+    await doCommand(
+      "create service parent-service readconnroute router_options=master user=maxuser password=maxpwd"
+    );
+    await doCommand("link service parent-service child-service");
+    await doCommand("destroy service child-service").should.be.rejected;
+    await doCommand("unlink service parent-service child-service");
+    await doCommand("destroy service parent-service");
+    await doCommand("destroy service child-service");
+  });
+
   after(stopMaxScale);
 });
