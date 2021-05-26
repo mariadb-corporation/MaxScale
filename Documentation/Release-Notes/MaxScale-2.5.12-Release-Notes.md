@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.5.12 Release Notes
+# MariaDB MaxScale 2.5.12 Release Notes -- 2021-05-26
 
 Release 2.5.12 is a GA release.
 
