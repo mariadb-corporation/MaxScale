@@ -1297,6 +1297,49 @@ string get_op_and_value(const bsoncxx::document::view& doc)
     return rv;
 }
 
+string all_to_condition(const string& field, const bsoncxx::document::element& element)
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("$all needs an array", error::BAD_VALUE);
+    }
+
+    stringstream ss;
+
+    bsoncxx::array::view all_elements = element.get_array();
+
+    if (all_elements.empty())
+    {
+        ss << "(true = false)";
+    }
+    else
+    {
+        ss << "(";
+
+        bool first = true;
+        for (const auto& one_element : all_elements)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                ss << " AND ";
+            }
+
+            ss << "(JSON_SEARCH(doc, 'all', "
+               << element_to_value(one_element, "$all")
+               << ", NULL, '$." << field
+               << "') IS NOT NULL)";
+        }
+
+        ss << ")";
+    }
+
+    return ss.str();
+}
+
 string get_comparison_condition(const string& field, const bsoncxx::document::view& doc)
 {
     string rv;
@@ -1341,6 +1384,10 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         else if (op == "$size")
         {
             rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, op) + ")";
+        }
+        else if (op == "$all")
+        {
+            rv = all_to_condition(field, element);
         }
         else
         {

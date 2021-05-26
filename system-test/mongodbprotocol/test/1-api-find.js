@@ -654,6 +654,69 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
     });
 
+    it('Supports $all', async function () {
+        drop(misc);
+        var documents = [
+            {
+                _id: 1,
+                code: "xyz",
+                tags: [ "school", "book", "bag", "headphone", "appliance" ],
+                qty: [
+                    { size: "S", num: 10, color: "blue" },
+                    { size: "M", num: 45, color: "blue" },
+                    { size: "L", num: 100, color: "green" }
+                ]
+            },
+            {
+                _id: 2,
+                code: "abc",
+                tags: [ "appliance", "school", "book" ],
+                qty: [
+                    { size: "6", num: 100, color: "green" },
+                    { size: "6", num: 50, color: "blue" },
+                    { size: "8", num: 100, color: "brown" }
+                ]
+            },
+            {
+                _id: 3,
+                code: "efg",
+                tags: [ "school", "book" ],
+                qty: [
+                    { size: "S", num: 10, color: "blue" },
+                    { size: "M", num: 100, color: "blue" },
+                    { size: "L", num: 100, color: "green" }
+                ]
+            },
+            {
+                _id: 4,
+                code: "ijk",
+                tags: [ "electronics", "school" ],
+                qty: [
+                    { size: "M", num: 100, color: "green" }
+                ]
+            }
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        command = {
+            find: misc,
+            filter: { tags: { $all: [ "appliance", "school", "book" ] } }
+        };
+
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 2);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+    });
+
     after(function () {
         drop(misc);
         drop(name);
