@@ -625,6 +625,34 @@ describe(name, function () {
         assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
     });
 
+    it('Supports $size', async function () {
+        drop(misc);
+        var documents = [
+            { _id: 1, f: [ 1, 2 ] },
+            { _id: 2, f: [ 1, 2, 3 ] },
+            { _id: 3, f: [ 1, 2 ] },
+            { _id: 4, f: [ 1, 2, 3 ] },
+            { _id: 5, f: [ 1, 2 ] }
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        command = {
+            find: misc,
+            filter: { f: { $size: 3 }}
+        };
+
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 2);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+    });
 
     after(function () {
         drop(misc);

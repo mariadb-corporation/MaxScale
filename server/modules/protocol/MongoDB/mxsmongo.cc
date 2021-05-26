@@ -1338,6 +1338,10 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         {
             rv = elemMatch_to_condition(field, element);
         }
+        else if (op == "$size")
+        {
+            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, op) + ")";
+        }
         else
         {
             stringstream ss;
