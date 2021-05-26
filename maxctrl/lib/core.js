@@ -26,6 +26,7 @@ const maxctrl_version = require("./version.js").version;
 var base_opts = [];
 
 const default_filename = "~/.maxctrl.cnf";
+const expanded_default_filename = os.homedir() + "/.maxctrl.cnf";
 
 function configParser(filename) {
   // Yargs does not understand ~ and unless the default filename starts
@@ -48,7 +49,7 @@ function configParser(filename) {
     stats = fs.statSync(filename);
   }
   catch (x) {
-    if (filename == default_filename) {
+    if (filename == expanded_default_filename) {
       // We do not require the presence of the default config file.
       return {}
     }
