@@ -5,7 +5,7 @@
 
 #include <maxtest/testconnections.hh>
 
-void do_test(TestConnections& test, MYSQL* conn)
+void do_test(TestConnections& test, MYSQL* conn, bool direct)
 {
     auto stmt = mysql_stmt_init(conn);
     std::string sql = "select a, @@server_id from double_execute where a = ?";
@@ -58,9 +58,20 @@ void do_test(TestConnections& test, MYSQL* conn)
 
     test.expect(mysql_stmt_fetch(stmt) == 0, "First fetch of second execute should work");
     test.expect(data_in[0] == 123, "Query should return one row with value 123: `%d`", data_in[0]);
-    test.expect(data_in[1] == first_server,
-                "The query should be routed to the server with server_id %d, not %d",
-                first_server, data_in[1]);
+
+    if (direct)
+    {
+        test.expect(data_in[1] == first_server,
+                    "The query should be routed to the server with server_id %d, not %d",
+                    first_server, data_in[1]);
+    }
+    else
+    {
+        test.expect(data_in[1] != first_server,
+                    "The query should be routed to the server with server_id %d",
+                    first_server);
+    }
+
     test.expect(mysql_stmt_fetch(stmt) != 0, "Second fetch of second execute should NOT work");
 
     mysql_stmt_close(stmt);
@@ -80,10 +91,10 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
 
     test.tprintf("Running test with a direct connection");
-    do_test(test, test.repl->nodes[0]);
+    do_test(test, test.repl->nodes[0], true);
 
     test.tprintf("Running test through readwritesplit");
-    do_test(test, test.maxscales->conn_rwsplit[0]);
+    do_test(test, test.maxscales->conn_rwsplit[0], false);
 
     test.try_query(test.repl->nodes[0], "DROP TABLE IF EXISTS double_execute;");
 
