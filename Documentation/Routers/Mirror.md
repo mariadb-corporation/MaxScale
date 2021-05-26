@@ -1,8 +1,5 @@
 # Mirror
 
-*Note:* This module is a part of the experimental module package,
- `maxscale-experimental`.
-
 [TOC]
 
 ## Overview
