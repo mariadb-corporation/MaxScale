@@ -40,6 +40,7 @@
 #include "internal/session.hh"
 #include "internal/listener.hh"
 #include "internal/http_sql.hh"
+#include "internal/configmanager.hh"
 
 using std::map;
 using std::string;
@@ -1694,6 +1695,7 @@ static HttpResponse handle_request(const HttpRequest& request)
             case MHD_HTTP_NO_CONTENT:
             case MHD_HTTP_CREATED:
                 watcher.modify(request.get_uri());
+                mxs::save_dynamic_config();
                 break;
 
             default:

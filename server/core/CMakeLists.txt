@@ -6,6 +6,7 @@ add_library(maxscale-common SHARED
   config.cc
   config2.cc
   config_runtime.cc
+  configmanager.cc
   dcb.cc
   encryption.cc
   event.cc

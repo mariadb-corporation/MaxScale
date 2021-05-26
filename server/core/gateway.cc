@@ -80,6 +80,7 @@
 #include "internal/listener.hh"
 #include "internal/secrets.hh"
 #include "internal/servermanager.hh"
+#include "internal/configmanager.hh"
 
 #if !defined (OPENSSL_THREADS)
 #error OpenSSL library does not support multi-threading.
@@ -2039,7 +2040,18 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
-            if (!config_load(cnf_file_path.c_str()))
+
+            if (mxs::have_dynamic_config())
+            {
+                if (!mxs::load_dynamic_config())
+                {
+                    MXS_ALERT("Failed to apply dynamic configuration, cannot continue.");
+                    rc = MAXSCALE_BADCONFIG;
+                    maxscale_shutdown();
+                    return;
+                }
+            }
+            else if (!config_load(cnf_file_path.c_str()))
             {
                 print_alert("Failed to open, read or process the MaxScale configuration "
                             "file. See the error log for details.");
