@@ -2119,6 +2119,8 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
 
         if (json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
+            rval = false;
+
             // The new parameters are merged with the old parameters to get a complete filter definition.
             json_t* params = config.to_json();
             mxs::json_merge(params, new_params);
