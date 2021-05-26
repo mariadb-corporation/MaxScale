@@ -1971,15 +1971,13 @@ bool runtime_create_service_from_json(json_t* json)
         {
             MXS_ERROR("Can't create service '%s', a %s with that name already exists", name, other);
         }
-        else
+        else if (json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
         {
-            const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
-            bool ok;
-            mxs::ConfigParameters params = extract_parameters(json);
-            params.set(CN_ROUTER, router);
-            params.set(CN_TYPE, CN_SERVICE);
+            json_t* router = mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
+            json_object_set(params, CN_ROUTER, router);
+            mxs::json_remove_nulls(params);
 
-            if (auto service = Service::create(name, router, params))
+            if (auto service = Service::create(name, params))
             {
                 if (update_service_relationships(service, json))
                 {
@@ -2000,7 +1998,7 @@ bool runtime_create_service_from_json(json_t* json)
             }
             else
             {
-                MXS_ERROR("Could not create service '%s' with module '%s'", name, router);
+                MXS_ERROR("Could not create service '%s' with module '%s'", name, json_string_value(router));
             }
         }
     }

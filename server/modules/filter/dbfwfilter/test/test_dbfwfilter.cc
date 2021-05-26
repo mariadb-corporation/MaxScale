@@ -774,7 +774,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             parameters.set(CN_USER, "user");
             parameters.set(CN_PASSWORD, "password");
             parameters.set(CN_ROUTER, "readconnroute");
-            auto service = Service::create("service", "readconnroute", parameters);
+            auto service = Service::create("service", parameters);
 
             static int port = 3306;
 

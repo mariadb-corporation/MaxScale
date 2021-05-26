@@ -41,17 +41,18 @@ static void test1()
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     parameters.set(CN_USER, "user");
     parameters.set(CN_PASSWORD, "password");
-    parameters.set(CN_ROUTER, "readwritesplit");
+    parameters.set(CN_ROUTER, "non-existent");
 
     preload_module("readwritesplit", "server/modules/routing/readwritesplit/", mxs::ModuleType::ROUTER);
 
     /* Service tests */
     fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
-    auto service = Service::create("MyService", "non-existent", parameters);
+    auto service = Service::create("MyService", parameters);
     mxb_assert_message(NULL == service, "New service with invalid router should be null");
     mxb_assert_message(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     fprintf(stderr, "\t..done\nValid service creation, router testroute.");
-    service = Service::create("MyService", "readconnroute", parameters);
+    parameters.set(CN_ROUTER, "readconnroute");
+    service = Service::create("MyService", parameters);
 
     mxb_assert_message(NULL != service, "New service with valid router must not be null");
     mxb_assert_message(0 != service_isvalid(service), "Service must be valid after creation");

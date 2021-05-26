@@ -3501,7 +3501,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
     auto router = obj->m_parameters.get_string(CN_ROUTER);
     int error_count = 0;
 
-    if (!Service::create(obj->name(), router.c_str(), obj->m_parameters))
+    if (!Service::create(obj->name(), obj->m_parameters))
     {
         MXS_ERROR("Service '%s' creation failed.", obj->name());
         error_count++;

@@ -61,12 +61,12 @@ public:
      * @brief Allocate a new service
      *
      * @param name   The service name
-     * @param router The router module this service uses
      * @param params Service parameters
      *
      * @return The newly created service or NULL if an error occurred
      */
-    static Service* create(const char* name, const char* router, const mxs::ConfigParameters& params);
+    static Service* create(const char* name, const mxs::ConfigParameters& params);
+    static Service* create(const char* name, json_t* params);
 
     /**
      * Destroy a service
@@ -253,6 +253,9 @@ private:
         // Combined capabilities of all of the services that this service connects to
         uint64_t target_capabilities {0};
     };
+
+    template<class Params, class Unknown>
+    static Service* create(const std::string& name, Params params, Unknown unknown);
 
     Service(const std::string& name, const std::string& router);
 

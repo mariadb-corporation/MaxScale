@@ -289,18 +289,17 @@ mxs::config::Specification* Service::specification()
     return &s_spec;
 }
 
-Service* Service::create(const char* name, const char* router, const mxs::ConfigParameters& params)
+// static
+template<class Params, class Unknown>
+Service* Service::create(const std::string& name, Params params, Unknown unknown)
 {
-    mxs::ConfigParameters unknown;
-
-    if (!s_spec.validate(params, &unknown)
-        // TODO: Remove this check once the `router` parameter is removed
-        || !get_module(router, mxs::ModuleType::ROUTER))
+    if (!s_spec.validate(params, &unknown))
     {
         return nullptr;
     }
 
     auto module = s_router.get(params);
+    const char* router = module->name;
 
     if (module->specification && !module->specification->validate(params))
     {
@@ -392,6 +391,18 @@ Service* Service::create(const char* name, const char* router, const mxs::Config
     this_unit.services.push_back(service_ptr);
 
     return service_ptr;
+}
+
+Service* Service::create(const char* name, const mxs::ConfigParameters& params)
+{
+    mxs::ConfigParameters unknown;
+    return create(name, params, unknown);
+}
+
+Service* Service::create(const char* name, json_t* params)
+{
+    std::set<std::string> unknown;
+    return create(name, params, unknown);
 }
 
 static std::string get_version_string(const mxs::ConfigParameters& params)

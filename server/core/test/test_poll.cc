@@ -44,7 +44,7 @@ static void test1()
     parameters.set(CN_USER, "user");
     parameters.set(CN_PASSWORD, "password");
     parameters.set(CN_ROUTER, "readconnroute");
-    auto service = Service::create("service", "readconnroute", parameters);
+    auto service = Service::create("service", parameters);
 
     mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");
