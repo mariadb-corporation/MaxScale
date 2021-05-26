@@ -128,7 +128,7 @@ export default {
     },
     async created() {
         await this.checkActiveConn()
-        if (this.active_conn_state) await this.checkActiveDb()
+        if (this.active_conn_state) await this.updateActiveDb()
     },
     async beforeDestroy() {
         if (this.curr_cnct_resource) await this.disconnect()
@@ -140,7 +140,7 @@ export default {
         ...mapActions({
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',
-            checkActiveDb: 'query/checkActiveDb',
+            updateActiveDb: 'query/updateActiveDb',
         }),
         setPanelsPct() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })

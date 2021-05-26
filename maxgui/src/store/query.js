@@ -382,8 +382,8 @@ export default {
                 await this.vue.$help.delay(400)
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
                 commit('SET_LOADING_QUERY_RESULT', false)
-                //TODO: Detect if query contains USE database Statement instead of hard-coding dispatch
-                await dispatch('checkActiveDb')
+                const USE_REG = /(use|drop database)\s/i
+                if (query.match(USE_REG)) await dispatch('updateActiveDb')
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
@@ -416,7 +416,7 @@ export default {
                 logger.error(e)
             }
         },
-        async checkActiveDb({ state, commit }) {
+        async updateActiveDb({ state, commit }) {
             try {
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
@@ -428,7 +428,7 @@ export default {
                 if (!resActiveDb) commit('SET_ACTIVE_DB', '')
                 else if (state.active_db !== resActiveDb) commit('SET_ACTIVE_DB', resActiveDb)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-checkActiveDb')
+                const logger = this.vue.$logger('store-query-updateActiveDb')
                 logger.error(e)
             }
         },
