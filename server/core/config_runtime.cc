@@ -1633,18 +1633,17 @@ bool runtime_destroy_server(Server* server, bool force)
     return rval;
 }
 
-bool runtime_destroy_listener(Service* service, const char* name)
+bool runtime_destroy_listener(const ListenerManager::SListener& listener)
 {
     bool rval = false;
+    std::string name = listener->name();
+    std::string service = listener->service()->name();
+    Listener::destroy(listener);
 
-    if (!service_remove_listener(service, name))
-    {
-        MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name());
-    }
-    else if (runtime_remove_config(name))
+    if (runtime_remove_config(name.c_str()))
     {
         rval = true;
-        MXS_NOTICE("Destroyed listener '%s' for service '%s'.", name, service->name());
+        MXS_NOTICE("Destroyed listener '%s' for service '%s'.", name.c_str(), service.c_str());
     }
 
     return rval;

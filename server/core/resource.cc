@@ -608,12 +608,17 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
 
 HttpResponse cb_delete_service_listener(const HttpRequest& request)
 {
-
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service);
-    std::string listener = request.uri_part(3);
+    auto listener = listener_find(request.uri_part(3));
+    mxb_assert(listener);
 
-    if (!runtime_destroy_listener(service, listener.c_str()))
+    if (listener->service() != service)
+    {
+        // Both the listener and the service exist but the listener doesn't point to the given service.
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
+    }
+    else if (!runtime_destroy_listener(listener))
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
@@ -626,7 +631,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
     auto listener = listener_find(request.uri_part(1).c_str());
     mxb_assert(listener);
 
-    if (!runtime_destroy_listener(static_cast<Service*>(listener->service()), listener->name()))
+    if (!runtime_destroy_listener(listener))
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }

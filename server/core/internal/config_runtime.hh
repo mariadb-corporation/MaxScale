@@ -23,6 +23,7 @@
 
 #include "service.hh"
 #include "filter.hh"
+#include "listener.hh"
 
 class Server;
 
@@ -76,7 +77,7 @@ bool runtime_destroy_server(Server* server, bool force);
  *
  * @return True if the listener was successfully destroyed
  */
-bool runtime_destroy_listener(Service* service, const char* name);
+bool runtime_destroy_listener(const ListenerManager::SListener& listener);
 
 /**
  * Destroy a filter
