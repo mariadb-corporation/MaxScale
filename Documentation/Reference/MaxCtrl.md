@@ -45,7 +45,7 @@ flag.
 Usage: list servers
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -84,7 +84,7 @@ List all servers in MaxScale.
 Usage: list services
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -122,7 +122,7 @@ List all services and the servers they use.
 Usage: list listeners [service]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -160,7 +160,7 @@ List listeners of all services. If a service is given, only listeners for that s
 Usage: list monitors
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -201,7 +201,7 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -236,7 +236,7 @@ List all client sessions.
 Usage: list filters
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -272,7 +272,7 @@ List all filters in MaxScale.
 Usage: list modules
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -308,7 +308,7 @@ List all currently loaded modules.
 Usage: list threads
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -347,7 +347,7 @@ List all worker threads.
 Usage: list users
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -383,7 +383,7 @@ List network the users that can be used to connect to the MaxScale REST API.
 Usage: list commands
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -420,7 +420,7 @@ List all available module commands.
 Usage: show server <server>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -470,7 +470,7 @@ Show detailed information about a server. The `Parameters` field contains the cu
 Usage: show servers
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -520,7 +520,7 @@ Show detailed information about all servers.
 Usage: show service <service>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -566,7 +566,7 @@ Show detailed information about a service. The `Parameters` field contains the c
 Usage: show services
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -612,7 +612,7 @@ Show detailed information about all services.
 Usage: show monitor <monitor>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -651,7 +651,7 @@ Show detailed information about a monitor. The `Parameters` field contains the c
 Usage: show monitors
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -695,7 +695,7 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -745,7 +745,7 @@ Options:
   --help     Show help  [boolean]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -788,7 +788,7 @@ Show detailed information about all sessions. See `--help show session` for more
 Usage: show filter <filter>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -825,7 +825,7 @@ The list of services that use this filter is show in the `Services` field.
 Usage: show filters
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -862,7 +862,7 @@ Show detailed information of all filters.
 Usage: show listener <listener>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -898,7 +898,7 @@ Options:
 Usage: show filters
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -935,7 +935,7 @@ Show detailed information of all filters.
 Usage: show module <module>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -975,7 +975,7 @@ This command shows all available parameters as well as detailed version informat
 Usage: show modules
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1015,7 +1015,7 @@ Displays detailed information about all modules.
 Usage: show maxscale
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1054,7 +1054,7 @@ See `--help alter maxscale` for more details about altering MaxScale parameters.
 Usage: show thread <thread>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1107,7 +1107,7 @@ Show detailed information about a worker thread.
 Usage: show threads
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1160,7 +1160,7 @@ Show detailed information about all worker threads.
 Usage: show logging
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1196,7 +1196,7 @@ See `--help alter logging` for more details about altering logging parameters.
 Usage: show commands <module>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1232,7 +1232,7 @@ This command shows the parameters the command expects with the parameter descrip
 Usage: show qc_cache
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1261,7 +1261,7 @@ Show contents (statement and hits) of query classifier cache.
 Usage: show dbusers <service>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1292,7 +1292,7 @@ Show information about the database users of the service
 Usage: set server <server> <state>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1326,7 +1326,7 @@ If <server> is monitored by a monitor, this command should only be used to set t
 Usage: clear server <server> <state>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1357,7 +1357,7 @@ This command clears a server state set by the `set server <server> <state>` comm
 Usage: drain server <server>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1393,7 +1393,7 @@ Warning: This command is not safe to interrupt. If interrupted, the servers migh
 Usage: enable log-priority <log>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1424,7 +1424,7 @@ The `debug` log priority is only available for debug builds of MaxScale.
 Usage: disable log-priority <log>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1470,7 +1470,7 @@ Create server options:
   --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1504,7 +1504,7 @@ Create monitor options:
   --monitor-password  Password for the monitor user  [string]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1539,7 +1539,7 @@ Create service options:
   --cluster   Link the created service to this cluster (i.e. a monitor)  [string]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1570,7 +1570,7 @@ Note that the `user` and `password` parameters must be defined.
 Usage: filter <name> <module> [params...]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1613,7 +1613,7 @@ Create listener options:
   --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1645,7 +1645,7 @@ Create user options:
   --type  Type of user to create  [string] [choices: "admin", "basic"] [default: "basic"]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1679,7 +1679,7 @@ Destroy options:
   --force  Remove the server from monitors and services before destroying it  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1711,7 +1711,7 @@ Destroy options:
   --force  Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1740,7 +1740,7 @@ The monitor must be unlinked from all servers before it can be destroyed.
 Usage: destroy listener <service> <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1772,7 +1772,7 @@ Destroy options:
   --force  Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1804,7 +1804,7 @@ Destroy options:
   --force  Automatically remove the filter from all services before destroying it  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1833,7 +1833,7 @@ The filter must not be used by any service when it is destroyed.
 Usage: destroy user <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1864,7 +1864,7 @@ The last remaining administrative user cannot be removed. Create a replacement a
 Usage: link service <name> <target...>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1893,7 +1893,7 @@ This command links targets to a service, making them available for any connectio
 Usage: link monitor <name> <server...>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1924,7 +1924,7 @@ Linking a server to a monitor will add it to the list of servers that are monito
 Usage: unlink service <name> <target...>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1953,7 +1953,7 @@ This command unlinks targets from a service, removing them from the list of avai
 Usage: unlink monitor <name> <server...>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -1984,7 +1984,7 @@ This command unlinks servers from a monitor, removing them from the list of moni
 Usage: start service <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2013,7 +2013,7 @@ This starts a service stopped by `stop service <name>`
 Usage: start listener <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2042,7 +2042,7 @@ This starts a listener stopped by `stop listener <name>`
 Usage: start monitor <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2071,7 +2071,7 @@ This starts a monitor stopped by `stop monitor <name>`
 Usage: start [services|maxscale]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2105,7 +2105,7 @@ Stop options:
   --force  Close existing connections after stopping the service  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2137,7 +2137,7 @@ Stop options:
   --force  Close existing connections after stopping the listener  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2166,7 +2166,7 @@ Stopping a listener will prevent it from accepting new connections. Existing con
 Usage: stop monitor <name>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2198,7 +2198,7 @@ Stop options:
   --force  Close existing connections after stopping all services  [boolean] [default: false]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2229,7 +2229,7 @@ This command will execute the `stop service` command for all services in MaxScal
 Usage: alter server <server> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2258,7 +2258,7 @@ To display the server parameters, execute `show server <server>`.
 Usage: alter monitor <monitor> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2287,7 +2287,7 @@ To display the monitor parameters, execute `show monitor <monitor>`
 Usage: alter service <service> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2330,7 +2330,7 @@ To display the service parameters, execute `show service <service>`. Some router
 Usage: alter service-filters <service> [filters...]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2361,7 +2361,7 @@ For example, the command `maxctrl alter service filters my-service A B C` will s
 Usage: alter service <service> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2390,7 +2390,7 @@ To display the filter parameters, execute `show filter <filter>`. Some filters s
 Usage: alter listener <listener> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2419,7 +2419,7 @@ To display the listener parameters, execute `show listener <listener>`
 Usage: alter logging <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2448,7 +2448,7 @@ To display the logging parameters, execute `show logging`
 Usage: alter maxscale <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2492,7 +2492,7 @@ To display the MaxScale parameters, execute `show maxscale`. The following list 
 Usage: alter user <name> <password>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2521,7 +2521,7 @@ Changes the password for a user. To change the user type, destroy the user and t
 Usage: alter session <session> <key> <value> ...
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2550,7 +2550,7 @@ Alter parameters of a session. To get the list of modifiable parameters, use `sh
 Usage: alter session-filters <session> [filters...]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2581,7 +2581,7 @@ The order of the filters given as the second parameter will also be the order in
 Usage: rotate logs
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2612,8 +2612,7 @@ This command is intended to be used with the `logrotate` command.
 Usage: reload service <service>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file
-                                 [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file[string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use                    [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p
                   '' or --password=''              [string] [default: "mariadb"]
@@ -2651,8 +2650,7 @@ Commands:
   maxctrl reload                    the default command                [default]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file
-                                 [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file[string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use                    [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p
                   '' or --password=''              [string] [default: "mariadb"]
@@ -2688,7 +2686,7 @@ Options:
 Usage: call command <module> <command> [params...]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2719,7 +2717,7 @@ To inspect the list of module commands, execute `list commands`
 Usage: cluster diff <target>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2748,7 +2746,7 @@ The list of host servers is controlled with the --hosts option. The target serve
 Usage: cluster sync <target>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2781,7 +2779,7 @@ Note: New objects created by `cluster sync` will have a placeholder value and mu
 Usage: get <resource> [path]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2814,7 +2812,7 @@ Perform a raw REST API call. The path definition uses JavaScript syntax to extra
 Usage: post <resource> <value>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
@@ -2847,7 +2845,7 @@ Perform a raw REST API call. The provided value is passed as-is to the REST API 
 Usage: patch <resource> [path]
 
 Global Options:
-  -c, --config    MaxCtrl configuration file  [string] [default: "/home/wikman/.maxctrl.cnf"]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
   -u, --user      Username to use  [string] [default: "admin"]
   -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]

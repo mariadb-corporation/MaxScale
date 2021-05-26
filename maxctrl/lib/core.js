@@ -25,9 +25,18 @@ const maxctrl_version = require("./version.js").version;
 // Global options given at startup
 var base_opts = [];
 
-const default_filename = os.homedir() + "/.maxctrl.cnf";
+const default_filename = "~/.maxctrl.cnf";
 
 function configParser(filename) {
+  // Yargs does not understand ~ and unless the default filename starts
+  // with a /, Yargs prepends it with the CWD, so some work is needed to
+  // figure out whether the filename is the default.
+  var prefix = process.cwd() + "/~/";
+  if (filename.indexOf(prefix) == 0) {
+    // Replace "${CWD}/~/" with "${HOME}/"
+    filename = os.homedir() + "/" + filename.slice(-(filename.length - prefix.length));
+  }
+
   // We require a .cnf suffix because 1) it makes the format clear and
   // 2) it makes it easy to introduce other formats.
   if (filename.slice(-4) != ".cnf") {
