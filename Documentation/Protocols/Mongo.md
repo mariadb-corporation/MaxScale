@@ -245,7 +245,7 @@ No operators are supported.
 
 ### [Array Query Operators](https://docs.mongodb.com/manual/reference/operator/query-array/)
 
-Only `$elemMatch` is supported. Further, in conjunction with `$elemMatch`, only the operators
+All operators are supported. In conjunction with `$elemMatch`, only the operators
 `$eq` and `$ne` are supported.
 
 ### [Bitwise Query Operators](https://docs.mongodb.com/manual/reference/operator/query-bitwise/)
