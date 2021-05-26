@@ -2,24 +2,43 @@
     <v-toolbar
         outlined
         elevation="0"
-        height="50"
-        class="query-toolbar border-bottom-none"
+        height="45"
+        class="query-toolbar"
         :class="{ 'ml-0': isFullScreen }"
     >
-        <v-toolbar-title class="color text-navigation text-capitalize">
-            {{ $route.name }}
-        </v-toolbar-title>
-
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    outlined
+                    class="text-capitalize px-2 font-weight-medium"
+                    depressed
+                    small
+                    color="accent-dark"
+                    :disabled="!queryTxt || !active_conn_state"
+                    v-on="on"
+                    @click="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
+                >
+                    <v-icon size="16" class="mr-2">
+                        $vuetify.icons.running
+                    </v-icon>
+                    {{ $t('run') }}
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
+            </span>
+        </v-tooltip>
         <v-spacer></v-spacer>
         <connection-manager />
-
         <v-btn
             id="active-db"
             outlined
-            height="36"
             max-width="160"
-            text
-            class="ml-4 text-none px-2 font-weight-regular"
+            class="ml-2 text-none px-2 font-weight-regular"
             depressed
             small
             color="accent-dark"
@@ -62,33 +81,6 @@
             activator="#active-db"
         >
             <span>{{ $t('useDb') }}: {{ active_db }} </span>
-        </v-tooltip>
-
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    width="80"
-                    outlined
-                    height="36"
-                    rounded
-                    class="ml-4 text-capitalize px-8 font-weight-medium"
-                    depressed
-                    small
-                    color="accent-dark"
-                    :disabled="!queryTxt || !active_conn_state"
-                    v-on="on"
-                    @click="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
-                >
-                    {{ $t('run') }}
-                </v-btn>
-            </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
-            </span>
         </v-tooltip>
     </v-toolbar>
 </template>

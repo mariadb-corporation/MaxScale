@@ -2,10 +2,8 @@
     <div>
         <v-btn
             outlined
-            height="36"
             max-width="160"
-            text
-            class="ml-4 text-none px-2 font-weight-regular"
+            class="text-none px-2 font-weight-regular"
             depressed
             small
             color="accent-dark"
@@ -13,13 +11,15 @@
         >
             <div
                 id="curr_cnct_resource"
-                class="d-inline-block text-truncate"
+                class="d-flex align-center"
                 :style="{ maxWidth: `${curr_cnct_resource ? 102 : 138}px` }"
             >
                 <v-icon v-if="curr_cnct_resource" class="mr-2" size="16" color="accent-dark">
                     $vuetify.icons.server
                 </v-icon>
-                {{ curr_cnct_resource ? curr_cnct_resource.name : $t('openConnection') }}
+                <div class="text-truncate">
+                    {{ curr_cnct_resource ? curr_cnct_resource.name : $t('openConnection') }}
+                </div>
             </div>
             <v-tooltip
                 v-if="curr_cnct_resource"
@@ -30,10 +30,13 @@
                 <template v-slot:activator="{ on }">
                     <v-btn
                         class="ml-2"
+                        height="24"
+                        width="24"
+                        fab
                         icon
                         small
                         v-on="on"
-                        @click.prevent="() => disconnect({ showSnackbar: true })"
+                        @click.prevent="() => $refs.confirmDialog.open()"
                     >
                         <v-icon size="18" color="error">
                             $vuetify.icons.unlink
@@ -48,12 +51,21 @@
             top
             transition="slide-y-transition"
             content-class="shadow-drop color text-navigation py-1 px-4"
+            nudge-right="20px"
             activator="#curr_cnct_resource"
         >
             <span>{{ $t('connectedTo') }}: {{ curr_cnct_resource.name }} </span>
         </v-tooltip>
 
         <connection-dialog v-model="isConnDialogOpened" :handleSave="handleOpenConn" />
+        <confirm-dialog
+            v-if="curr_cnct_resource"
+            ref="confirmDialog"
+            :title="$t('disconnectConn')"
+            type="disconnect"
+            :item="{ id: curr_cnct_resource.name }"
+            :onSave="() => disconnect({ showSnackbar: true })"
+        />
     </div>
 </template>
 

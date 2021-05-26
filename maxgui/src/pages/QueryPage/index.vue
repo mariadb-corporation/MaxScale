@@ -5,12 +5,6 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': isFullScreen }"
         >
-            <toolbar-container
-                ref="toolbarContainer"
-                :queryTxt="queryTxt"
-                :selectedQueryTxt="selectedQueryTxt"
-                :isFullScreen="isFullScreen"
-            />
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -31,6 +25,12 @@
                     <!-- Main panel -->
                     <split-pane v-model="editorPct" split="horiz" :minPercent="minEditorPct">
                         <template slot="pane-left">
+                            <toolbar-container
+                                ref="toolbarContainer"
+                                :queryTxt="queryTxt"
+                                :selectedQueryTxt="selectedQueryTxt"
+                                :isFullScreen="isFullScreen"
+                            />
                             <query-editor
                                 ref="queryEditor"
                                 v-model="queryTxt"
