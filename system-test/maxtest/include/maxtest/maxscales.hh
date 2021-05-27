@@ -64,7 +64,7 @@ public:
 
     MYSQL* conn_rwsplit[N_MXS] {nullptr};   /**< Connection to RWSplit */
     MYSQL* conn_master[N_MXS] {nullptr};    /**< Connection to ReadConnection in master mode */
-    MYSQL* conn_slave[N_MXS] {nullptr};     /**< Connection to ReadConnection in slave mode */
+    MYSQL* conn_slave {nullptr};     /**< Connection to ReadConnection in slave mode */
 
     /**< conn_rwsplit, conn_master, conn_slave */
     MYSQL* routers[3] {nullptr, nullptr, nullptr};

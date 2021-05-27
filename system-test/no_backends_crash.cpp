@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
         "Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
     execute_query(Test->maxscales->conn_rwsplit[0], "show processlist;");
     execute_query(Test->maxscales->conn_master[0], "show processlist;");
-    execute_query(Test->maxscales->conn_slave[0], "show processlist;");
+    execute_query(Test->maxscales->conn_slave, "show processlist;");
     Test->maxscales->close_maxscale_connections();
 
     // Wait three monitor intervals to allow the monitor to detect that the server is up

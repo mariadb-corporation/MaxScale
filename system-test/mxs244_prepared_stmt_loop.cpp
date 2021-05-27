@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     MYSQL* router[3];
     router[0] = Test->maxscales->conn_rwsplit[0];
     router[1] = Test->maxscales->conn_master[0];
-    router[2] = Test->maxscales->conn_slave[0];
+    router[2] = Test->maxscales->conn_slave;
 
     for (int ir = 0; ir < r; ir++)
     {

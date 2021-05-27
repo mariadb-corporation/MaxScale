@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
     Test->tprintf("using ReadConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
     Test->try_query(Test->maxscales->conn_master[0], (char*) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
     Test->tprintf("using ReadConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
-    Test->try_query(Test->maxscales->conn_slave[0], (char*) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_slave, (char*) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     Test->tprintf("Copying t1.cvs from Maxscale machine:\n");
     Test->repl->copy_from_node_legacy("/tmp/t1.csv", "./t1.csv", 0);
@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
         Test->tprintf("SELECT: master\n");
         Test->add_result(select_from_t1(Test->maxscales->conn_master[0], N), "Wrong data in 't1'");
         Test->tprintf("SELECT: slave\n");
-        Test->add_result(select_from_t1(Test->maxscales->conn_slave[0], N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(Test->maxscales->conn_slave, N), "Wrong data in 't1'");
     }
 
     Test->repl->close_connections();

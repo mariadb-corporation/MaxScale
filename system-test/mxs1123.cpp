@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     sleep(1);
     test.try_query(test.maxscales->conn_master[0], "select 1");
     sleep(1);
-    test.try_query(test.maxscales->conn_slave[0], "select 1");
+    test.try_query(test.maxscales->conn_slave, "select 1");
 
     test.maxscales->close_maxscale_connections();
     return test.global_result;

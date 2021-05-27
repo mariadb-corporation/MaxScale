@@ -21,7 +21,7 @@ void* thr(void* data)
         {
             test->tprintf("Failed to select via readconnroute master");
         }
-        if (test->try_query(test->maxscales->conn_slave[0], "SELECT 1"))
+        if (test->try_query(test->maxscales->conn_slave, "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute slave");
         }
