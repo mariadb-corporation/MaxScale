@@ -42,10 +42,17 @@ public:
     {
         OBJECT,     /**< Json object */
         ARRAY,      /**< Json array */
-        JS_NULL     /**< Json null */
+        JS_NULL,    /**< Json null */
+        NONE        /**< No object */
     };
 
+    /**
+     * Construct a new Json wrapper object.
+     *
+     * @param obj The type of the object to create
+     */
     explicit Json(Type type = Type::OBJECT);
+
     ~Json();
 
     /**
@@ -65,38 +72,183 @@ public:
      * Load data from json string. Removes any currently held object.
      *
      * @param source Source string
+     *
      * @return True on success
      */
     bool load_string(const std::string& source);
 
+    /**
+     * Load data from a file.
+     *
+     * @param filepath Path to a JSON file that is loaded
+     *
+     * @return True on success
+     */
+    bool load(const std::string& filepath);
+
+    /**
+     * Save data to a file.
+     *
+     * @param filepath Path to where the JSON file is stored
+     *
+     * @return True on success
+     */
+    bool save(const std::string& filepath);
+
+    /**
+     * Check if object contains a field
+     *
+     * @param key The name of the field
+     *
+     * @return True if the object has the field
+     */
     bool contains(const std::string& key) const;
+
+    /**
+     * Check if a field in a object is a JSON null
+     *
+     * @param key The name of the field
+     *
+     * @return True if the field exists and is a JSON null
+     */
     bool is_null(const std::string& key) const;
 
+    /**
+     * Get JSON object from a field
+     *
+     * @param key The name of the field
+     *
+     * @return The JSON object or an empty Json if it doesn't exist (i.e. valid() returns false)
+     */
     Json get_object(const char* key) const;
     Json get_object(const std::string& key) const;
 
+    /**
+     * Get JSON string from a field
+     *
+     * @param key The name of the field
+     *
+     * @return The string if it was found or an empty string if it wasn't. Use try_get_string() if you need to
+     *         reliably extract empty strings or strings that aren't guaranteed to exist.
+     */
     std::string get_string(const char* key) const;
     std::string get_string(const std::string& key) const;
 
+    /**
+     * Get JSON integer from a field
+     *
+     * @param key The name of the field
+     *
+     * @return The integer value or 0 if the field did not exist. Use try_get_int() if you need to
+     *         reliably extract integers that aren't guaranteed to exist.
+     */
     int64_t get_int(const char* key) const;
     int64_t get_int(const std::string& key) const;
 
+    /**
+     * Try to get a JSON integer from a field
+     *
+     * @param key The name of the field
+     * @param out The value where the result is stored
+     *
+     * @return True if the field was found and it was an integer
+     */
     bool try_get_int(const std::string& key, int64_t* out) const;
+
+    /**
+     * Try to get a JSON string from a field
+     *
+     * @param key The name of the field
+     * @param out The value where the result is stored
+     *
+     * @return True if the field was found and it was a string
+     */
     bool try_get_string(const std::string& key, std::string* out) const;
 
+    /**
+     * Get JSON array elements
+     *
+     * @param key The name of the field
+     *
+     * @return A vector of mxb::Json objects. If the field is not an array, an empty vector is returned.
+     */
     std::vector<Json> get_array_elems(const std::string& key) const;
 
+    /**
+     * Get latest error message
+     *
+     * @return The latest error message or an empty string if no errors have occurreed
+     */
     const std::string& error_msg() const;
 
+    /**
+     * Check if this mxb::Json is valid
+     *
+     * @return True if this instance is managing an object
+     */
     bool valid() const;
 
+    /**
+     * Store a JSON object in a field
+     *
+     * @param key   The name of the field to store the value in
+     * @param value The value to store
+     */
+    void set_object(const char* key, const Json& value);
     void set_object(const char* key, Json&& value);
-    void set_string(const char* key, const char* value);
-    void set_int(const char* key, int64_t value);
-    void add_array_elem(Json&& elem);
-    bool save(const std::string& filepath);
-    bool load(const std::string& filepath);
 
+    /**
+     * Store a JSON string in a field
+     *
+     * @param key   The name of the field to store the value in
+     * @param value The value to store
+     */
+    void set_string(const char* key, const char* value);
+    void set_string(const char* key, const std::string& value);
+
+    /**
+     * Store a JSON integer in a field
+     *
+     * Note that JavaScript does not have a concept of integers and only has floating point numbers. Jansson
+     * does support integers in JSON and handles their conversion correctly. The values stored with this
+     * aren't the same as the they would be if stored in JavaScript but this is only a problem with large
+     * numbers.
+     *
+     * @param key   The name of the field to store the value in
+     * @param value The value to store
+     */
+    void set_int(const char* key, int64_t value);
+
+    /**
+     * Store a JSON number in a field
+     *
+     * @param key   The name of the field to store the value in
+     * @param value The value to store
+     */
+    void set_float(const char* key, double value);
+
+    /**
+     * Apend an element to an array
+     *
+     * @param value The value to append
+     */
+    void add_array_elem(const Json& elem);
+    void add_array_elem(Json&& elem);
+
+    /**
+     * Remove a field from a JSON object
+     *
+     * @param key The field to remove
+     */
+    void erase(const char* key);
+    void erase(const std::string& key);
+
+    /**
+     * Check if the object is OK
+     *
+     * @return True if there have been no errors. This does not mean the contents are valid if it was
+     *         constructed with Type::NONE.
+     */
     bool ok() const;
 
     /**

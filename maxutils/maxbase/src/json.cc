@@ -261,9 +261,25 @@ void Json::set_string(const char* key, const char* value)
     json_object_set_new(m_obj, key, json_string(value));
 }
 
+void Json::set_string(const char* key, const std::string& value)
+{
+    set_string(key, value.c_str());
+}
+
 void Json::set_int(const char* key, int64_t value)
 {
     json_object_set_new(m_obj, key, json_integer(value));
+}
+
+void Json::set_float(const char* key, double value)
+{
+    json_object_set_new(m_obj, key, json_real(value));
+}
+
+void Json::add_array_elem(const Json& elem)
+{
+    mxb_assert(json_is_array(m_obj));
+    json_array_append(m_obj, elem.m_obj);
 }
 
 void Json::add_array_elem(Json&& elem)
@@ -271,6 +287,11 @@ void Json::add_array_elem(Json&& elem)
     mxb_assert(json_is_array(m_obj));
     json_array_append_new(m_obj, elem.m_obj);
     elem.m_obj = nullptr;
+}
+
+void Json::set_object(const char* key, const Json& value)
+{
+    json_object_set(m_obj, key, value.m_obj);
 }
 
 void Json::set_object(const char* key, Json&& value)
@@ -311,6 +332,9 @@ Json::Json(Type type)
     case Type::JS_NULL:
         m_obj = json_null();
         break;
+
+    case Type::NONE:
+        break;
     }
 }
 
@@ -330,6 +354,16 @@ bool Json::load(const string& filepath)
         m_errormsg = mxb::string_printf("Json read from file '%s' failed: %s", filepathc, err.text);
     }
     return rval;
+}
+
+void Json::erase(const char* key)
+{
+    json_object_del(m_obj, key);
+}
+
+void Json::erase(const std::string& key)
+{
+    erase(key.c_str());
 }
 
 void Json::reset(json_t* obj)
