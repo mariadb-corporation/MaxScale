@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 function check_resultset(res, sql) {
   expect(res.data.id).to.be.a("string");
   expect(res.data.type).to.be.a("string").that.equals("queries");
-  expect(res.data.attributes).to.be.an("object").that.has.keys("results", "sql");
+  expect(res.data.attributes).to.be.an("object").that.has.keys("results", "sql", "execution_time");
   expect(res.data.attributes.sql).to.equal(sql);
   expect(res.data.attributes.results).to.be.an("array").that.is.not.empty;
 
