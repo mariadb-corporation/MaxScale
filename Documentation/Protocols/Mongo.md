@@ -225,17 +225,34 @@ database for tables that contain documents.
 
 ### [Comparison Query Operators](https://docs.mongodb.com/manual/reference/operator/query-comparison/)
 
-All operators are supported.
+Name | Status
+-----|-------
+[$eq](https://docs.mongodb.com/manual/reference/operator/query/eq/) | Supported
+[$gt](https://docs.mongodb.com/manual/reference/operator/query/gt/) | Supported
+[$gte](https://docs.mongodb.com/manual/reference/operator/query/gte/) | Supported
+[$in](https://docs.mongodb.com/manual/reference/operator/query/in/) | Supported
+[$lt](https://docs.mongodb.com/manual/reference/operator/query/lt/) | Supported
+[$lte](https://docs.mongodb.com/manual/reference/operator/query/lte/) | Supported
+[$ne](https://docs.mongodb.com/manual/reference/operator/query/ne/) | Supported
+[$nin](https://docs.mongodb.com/manual/reference/operator/query/nin/) | Supported
 
 ### [Logical Query Operators](https://docs.mongodb.com/manual/reference/operator/query-logical/)
 
-All operators are supported.
+Name | Status
+-----|-------
+[$and](https://docs.mongodb.com/manual/reference/operator/query/and/) | Supported
+[$not](https://docs.mongodb.com/manual/reference/operator/query/not/) | Supported
+[$nor](https://docs.mongodb.com/manual/reference/operator/query/nor/) | Supported
+[$or](https://docs.mongodb.com/manual/reference/operator/query/or/) | Supported
 
 ### [Element Query Operators](https://docs.mongodb.com/manual/reference/operator/query-element/)
 
-All operators are supported.
+Name | Status
+-----|-------
+[$exists](https://docs.mongodb.com/manual/reference/operator/query/exists/) | Supported
+[$type](https://docs.mongodb.com/manual/reference/operator/query/type/) | Supported
 
-#### [$type](https://docs.mongodb.com/manual/reference/operator/query/type/#mongodb-query-op.-type)
+#### `$type`
 
 When `$type` is used, it will be converted into a condition involving one or more
 [JSON_TYPE](https://mariadb.com/kb/en/json_type/) comparisons. The following subset
@@ -255,39 +272,117 @@ The _"number"_ alias is supported and will match values whose MariaDB type is
 
 ### [Evaluation Query Operators](https://docs.mongodb.com/manual/reference/operator/query-evaluation/)
 
-No operators are supported.
+Name | Status
+-----|-------
+[$expr](https://docs.mongodb.com/manual/reference/operator/query/expr/) | Not supported
+[$jsonSchema](https://docs.mongodb.com/manual/reference/operator/query/jsonSchema/) | Not supported
+[$mod](https://docs.mongodb.com/manual/reference/operator/query/mod/) | Not supported
+[$regex](https://docs.mongodb.com/manual/reference/operator/query/regex/) | Not supported
+[$text](https://docs.mongodb.com/manual/reference/operator/query/text/) | Not supported
+[$where](https://docs.mongodb.com/manual/reference/operator/query/where/) | Not supported
 
 ### [Geospatial Query Operators](https://docs.mongodb.com/manual/reference/operator/query-geospatial/)
 
-No operators are supported.
+Name | Status
+-----|-------
+[$geoIntersects](https://docs.mongodb.com/manual/reference/operator/query/geoIntersects/) | Not supported
+[$geoWithin](https://docs.mongodb.com/manual/reference/operator/query/geoWithin/) | Not supported
+[$near](https://docs.mongodb.com/manual/reference/operator/query/near/) | Not supported
+[$nearSphere](https://docs.mongodb.com/manual/reference/operator/query/nearSphere/) | Not supported
+[$box](https://docs.mongodb.com/manual/reference/operator/query/box/) | Not supported
+[$center](https://docs.mongodb.com/manual/reference/operator/query/center/) | Not supported
+[$centerSphere](https://docs.mongodb.com/manual/reference/operator/query/centerSphere/) | Not supported
+[$geometry](https://docs.mongodb.com/manual/reference/operator/query/geometry/) | Not supported
+[$maxDistance](https://docs.mongodb.com/manual/reference/operator/query/maxDistance/) | Not supported
+[$minDistance](https://docs.mongodb.com/manual/reference/operator/query/minDistance/) | Not supported
+[$polygon](https://docs.mongodb.com/manual/reference/operator/query/polygon/) | Not supported
+[$uniqueDocs](https://docs.mongodb.com/manual/reference/operator/query/uniqueDocs/) | Not supported
 
 ### [Array Query Operators](https://docs.mongodb.com/manual/reference/operator/query-array/)
 
-All operators are supported. In conjunction with `$elemMatch`, only the operators
-`$eq` and `$ne` are supported.
+Name | Status
+-----|-------
+[$all](https://docs.mongodb.com/manual/reference/operator/query/all/) | Supported
+[$elemMatch](https://docs.mongodb.com/manual/reference/operator/query//) | Supported
+[$size](https://docs.mongodb.com/manual/reference/operator/query//) | Supported
+
+#### `$elemMatch`
+As arguments, only the operators `$eq` and `$ne` are supported.
 
 ### [Bitwise Query Operators](https://docs.mongodb.com/manual/reference/operator/query-bitwise/)
 
-No operators are supported.
+Name | Status
+-----|-------
+[$bitsAllClear](https://docs.mongodb.com/manual/reference/operator/query/bitsAllClear/) | Not supported
+[$bitsAllSet](https://docs.mongodb.com/manual/reference/operator/query/bitsAllSet/) | Not supported
+[$bitsAnyClear](https://docs.mongodb.com/manual/reference/operator/query/bitsAnyClear/) | Not supported
+[$bitsAnySet](https://docs.mongodb.com/manual/reference/operator/query/bitsAnySet/) | Not supported
 
 ### [Projection Operators](https://docs.mongodb.com/manual/reference/operator/projection/)
 
-No operators are supported.
+Name | Status
+-----|-------
+[<array>.$ (projection)](https://docs.mongodb.com/manual/reference/operator/projection/positional/) | Not supported
+[$elemMatch (projection)](https://docs.mongodb.com/manual/reference/operator/projection/elemMatch/) | Not supported
+[$slice (projection)](https://docs.mongodb.com/manual/reference/operator/projection/slic/) | Not supported
 
 ### [Miscallenous Operators](https://docs.mongodb.com/manual/reference/operator/query-miscellaneous/)
 
-No operators are supported.
+Name | Status
+-----|-------
+[$comment](https://docs.mongodb.com/manual/reference/operator/query/comment/) | Not supported
+[$rand](https://docs.mongodb.com/manual/reference/operator/query/rand/) | Not supported
 
 ## [Update Operators](https://docs.mongodb.com/manual/reference/operator/update/#update-operators)
 
 ### [Field Update Operators](https://docs.mongodb.com/manual/reference/operator/update-field/)
 
-Currently, the following operators are supported.
+Name | Status
+-----|-------
+[$currentDate](https://docs.mongodb.com/manual/reference/operator/update//) | Not supported
+[$inc](https://docs.mongodb.com/manual/reference/operator/update/inc/) | Not supported
+[$min](https://docs.mongodb.com/manual/reference/operator/update/min/) | Not supported
+[$max](https://docs.mongodb.com/manual/reference/operator/update/max/) | Not supported
+[$mul](https://docs.mongodb.com/manual/reference/operator/update/mul/) | Not supported
+[$rename](https://docs.mongodb.com/manual/reference/operator/update/rename/) | Not supported
+[$set](https://docs.mongodb.com/manual/reference/operator/update/set/) | Supported
+[$setOnInsert](https://docs.mongodb.com/manual/reference/operator/update/setOnInsert/) | Not supported
+[$unset](https://docs.mongodb.com/manual/reference/operator/update/unset/) | Supported
 
-Field | Description
-------|------------
-$set| Sets the value of a field in a document.
-$unset| Removes the specified field from a document.
+### [Array Update Operators](https://docs.mongodb.com/manual/reference/operator/update-array/)
+
+Name | Status
+-----|-------
+[\<array\>.$](https://docs.mongodb.com/manual/reference/operator/update/positional/) | Not supported
+[\<array\>.$\[\]](https://docs.mongodb.com/manual/reference/operator/update/positional/) | Not supported
+[\<array\>\[\<identifier\>\]](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) | Not supported
+[$addToSet](https://docs.mongodb.com/manual/reference/operator/update/addToSet/) | Not supported
+[$pop](https://docs.mongodb.com/manual/reference/operator/update/pop/) | Not supported
+[$pull](https://docs.mongodb.com/manual/reference/operator/update/pull/) | Not supported
+[$push](https://docs.mongodb.com/manual/reference/operator/update/push/) | Not supported
+[$pullAll](https://docs.mongodb.com/manual/reference/operator/update/pullAll/) | Not supported
+[$each](https://docs.mongodb.com/manual/reference/operator/update/each/) | Not supported
+[$position](https://docs.mongodb.com/manual/reference/operator/update/position/) | Not supported
+[$slice](https://docs.mongodb.com/manual/reference/operator/update/slice/) | Not supported
+[$sort](https://docs.mongodb.com/manual/reference/operator/update/sort/) | Not supported
+
+### [Bitwise Update Operators](https://docs.mongodb.com/manual/reference/operator/update-array/)
+
+Name | Status
+-----|-------
+[$bit](https://docs.mongodb.com/manual/reference/operator/update/bit/) | Not supported
+
+## [Aggregation Pipeline Stages](https://docs.mongodb.com/manual/reference/operator/aggregation-pipeline/)
+
+Currently not supported.
+
+## [Aggregation Pipeline Operators](https://docs.mongodb.com/manual/reference/operator/aggregation/)
+
+Currently not supported.
+
+## [Query Modifiers](https://docs.mongodb.com/manual/reference/operator/query-modifier/)
+
+Currently not supported.
 
 # Database Commands
 
