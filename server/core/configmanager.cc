@@ -191,14 +191,73 @@ private:
         case Type::MAXSCALE:
         case Type::UNKNOWN:
             mxb_assert(!true);
-            throw Exception("Found object of unexpected type '" + type + "': " + name);
+            throw Exception("Found old object of unexpected type '" + type + "': " + name);
             break;
         }
     }
 
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj)
     {
-        MXS_INFO("Would create: %s %s %s", name.c_str(), type.c_str(), obj.to_string().c_str());
+        m_tmp.set_object(CN_DATA, obj);
+
+        switch (to_type(type))
+        {
+        case Type::SERVERS:
+            // Let the other objects express the two-way relationships
+            obj.erase(CN_RELATIONSHIPS);
+
+            if (!runtime_create_server_from_json(m_tmp.get_json()))
+            {
+                throw Exception("Failed to create server '" + name + "'");
+            }
+            break;
+
+        case Type::MONITORS:
+            // Erase any service relationships, they can be expressed by services themselves
+            obj.get_object(CN_RELATIONSHIPS).erase(CN_SERVICES);
+
+            if (!runtime_create_monitor_from_json(m_tmp.get_json()))
+            {
+                throw Exception("Failed to create monitor '" + name + "'");
+            }
+            break;
+
+        case Type::SERVICES:
+            {
+                // Create services without relationships, they will be handled by the update step
+                auto rel = obj.get_object(CN_RELATIONSHIPS);
+                obj.erase(CN_RELATIONSHIPS);
+
+                if (!runtime_create_service_from_json(m_tmp.get_json()))
+                {
+                    throw Exception("Failed to create service '" + name + "'");
+                }
+
+                obj.set_object(CN_RELATIONSHIPS, rel);
+            }
+            break;
+
+        case Type::LISTENERS:
+            if (!runtime_create_listener_from_json(m_tmp.get_json()))
+            {
+                throw Exception("Failed to create listener '" + name + "'");
+            }
+            break;
+
+        case Type::FILTERS:
+            if (!runtime_create_filter_from_json(m_tmp.get_json()))
+            {
+                throw Exception("Failed to create filter '" + name + "'");
+            }
+            break;
+
+        case Type::MAXSCALE:
+        // The maxscales type should not be "new" as it is always created even if there are no other objects.
+        case Type::UNKNOWN:
+            mxb_assert(!true);
+            throw Exception("Found new object of unexpected type '" + type + "': " + name);
+            break;
+        }
     }
 
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json)
@@ -258,6 +317,10 @@ private:
         json_decref(json);
     }
 
+    // Helper object for storing temporary data
+    mxb::Json m_tmp {mxb::Json::Type::OBJECT};
+
+    // The latest processed configuration version
     int64_t m_version {0};
 };
 
