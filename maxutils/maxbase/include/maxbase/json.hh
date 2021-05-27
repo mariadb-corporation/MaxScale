@@ -32,6 +32,18 @@ namespace maxbase
 std::string json_dump(const json_t* json, int flags = 0);
 
 /**
+ * @brief Return value at provided JSON Pointer
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6901
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ *
+ * @return Pointed value or NULL if no value is found
+ */
+json_t* json_ptr(const json_t* json, const char* json_ptr);
+
+/**
  * Wrapper class for Jansson json-objects.
  */
 class Json
@@ -181,6 +193,15 @@ public:
      * @return A vector of mxb::Json objects. If the field is not an array, an empty vector is returned.
      */
     std::vector<Json> get_array_elems(const std::string& key) const;
+
+    /**
+     * Get value at JSON Pointer
+     *
+     * @param ptr The JSON Pointer to use
+     *
+     * @return The value at the pointer or an empty object if no value is found
+     */
+    Json at(const char* ptr) const;
 
     /**
      * Get latest error message

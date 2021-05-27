@@ -22,6 +22,71 @@ namespace
 {
 const char key_not_found[] = "Key '%s' was not found in json data.";
 const char val_is_null[] = "'%s' is null.";
+
+std::string grab_next_component(std::string* s)
+{
+    std::string& str = *s;
+
+    while (str.length() > 0 && str[0] == '/')
+    {
+        str.erase(str.begin());
+    }
+
+    size_t pos = str.find("/");
+    std::string rval;
+
+    if (pos != std::string::npos)
+    {
+        rval = str.substr(0, pos);
+        str.erase(0, pos);
+        return rval;
+    }
+    else
+    {
+        rval = str;
+        str.erase(0);
+    }
+
+    return rval;
+}
+
+bool is_integer(const std::string& str)
+{
+    char* end;
+    return strtol(str.c_str(), &end, 10) >= 0 && *end == '\0';
+}
+
+json_t* json_ptr_internal(const json_t* json, std::string str)
+{
+    json_t* rval = NULL;
+    std::string comp = grab_next_component(&str);
+
+    if (comp.length() == 0)
+    {
+        return const_cast<json_t*>(json);
+    }
+
+    if (json_is_array(json) && is_integer(comp))
+    {
+        size_t idx = strtol(comp.c_str(), NULL, 10);
+
+        if (idx < json_array_size(json))
+        {
+            rval = json_ptr_internal(json_array_get(json, idx), str);
+        }
+    }
+    else if (json_is_object(json))
+    {
+        json_t* obj = json_object_get(json, comp.c_str());
+
+        if (obj)
+        {
+            rval = json_ptr_internal(obj, str);
+        }
+    }
+
+    return rval;
+}
 }
 
 namespace maxbase
@@ -389,6 +454,19 @@ std::string Json::to_string() const
     return json_dump(m_obj);
 }
 
+Json Json::at(const char* ptr) const
+{
+    if (valid())
+    {
+        if (json_t* js = json_ptr(m_obj, ptr))
+        {
+            return Json(js);
+        }
+    }
+
+    return Json(Type::NONE);
+}
+
 std::string json_dump(const json_t* json, int flags)
 {
     std::string rval;
@@ -401,5 +479,10 @@ std::string json_dump(const json_t* json, int flags)
 
     json_dump_callback(json, dump_cb, &rval, flags);
     return rval;
+}
+
+json_t* json_ptr(const json_t* json, const char* json_ptr)
+{
+    return json_ptr_internal(json, json_ptr);
 }
 }

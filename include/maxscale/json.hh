@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/jansson.hh>
+#include <maxbase/json.hh>
 
 /**
  * @brief Return value at provided JSON Pointer
@@ -22,7 +23,10 @@
  *
  * @return Pointed value or NULL if no value is found
  */
-json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
+static inline json_t* mxs_json_pointer(json_t* json, const char* json_ptr)
+{
+    return mxb::json_ptr(json, json_ptr);
+}
 
 /**
  * @brief Check if the value at the provided JSON Pointer is of a certain type
