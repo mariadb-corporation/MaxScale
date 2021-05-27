@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-struct json_t;
+#include <maxbase/jansson.h>
 
 namespace maxbase
 {
@@ -44,6 +44,13 @@ public:
         ARRAY,      /**< Json array */
         JS_NULL,    /**< Json null */
         NONE        /**< No object */
+    };
+
+    enum Format
+    {
+        NORMAL  = 0,                // JSON on one line
+        COMPACT = JSON_COMPACT,     // As compact as possible
+        PRETTY  = JSON_INDENT(4),   // Pretty-printed
     };
 
     /**
@@ -90,10 +97,11 @@ public:
      * Save data to a file.
      *
      * @param filepath Path to where the JSON file is stored
+     * @param flags    The format to store the file in
      *
      * @return True on success
      */
-    bool save(const std::string& filepath);
+    bool save(const std::string& filepath, Format format = Format::PRETTY);
 
     /**
      * Check if object contains a field

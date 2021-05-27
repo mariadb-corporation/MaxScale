@@ -300,11 +300,12 @@ void Json::set_object(const char* key, Json&& value)
     value.m_obj = nullptr;
 }
 
-bool Json::save(const std::string& filepath)
+bool Json::save(const std::string& filepath, Format format)
 {
+    int flags = format;
     bool write_ok = false;
     auto filepathc = filepath.c_str();
-    if (json_dump_file(m_obj, filepathc, JSON_INDENT(4)) == 0)
+    if (json_dump_file(m_obj, filepathc, flags) == 0)
     {
         write_ok = true;
     }
