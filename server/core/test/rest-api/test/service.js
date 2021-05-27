@@ -102,7 +102,7 @@ describe("Service", function () {
         return request.get(base_url + "/services/RW-Split-Router");
       })
       .then(function (svc) {
-        svc.data.relationships.services.data.should.be.empty;
+        svc.data.relationships.should.not.have.keys("services");
       });
   });
 
@@ -207,7 +207,7 @@ describe("Service", function () {
       .patch(base_url + "/services/RW-Split-Router/relationships/services", { json: { data: null } })
       .then(() => request.get(base_url + "/services/RW-Split-Router"))
       .then((res) => {
-        res.data.relationships.services.data.should.be.empty;
+        res.data.relationships.should.not.have.keys("service");
       });
   });
 
