@@ -509,12 +509,6 @@ Service::Service(const std::string& name, const std::string& router_name)
 {
     const MXS_MODULE* module = get_module(router_name, mxs::ModuleType::ROUTER);
     m_capabilities = module->module_capabilities;
-
-    if (config()->connection_keepalive.count())
-    {
-        // The connection keepalive relies on knowing when a connection is logically idle
-        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
-    }
 }
 
 Service::~Service()
