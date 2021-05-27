@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
     test.repl->set_repl_user();
 
-    test.start_mm(0);   // first node - slave, second - master
+    test.start_mm();   // first node - slave, second - master
 
     test.set_timeout(120);
     auto res = test.maxctrl("api get servers/server1 data.attributes.state").output;

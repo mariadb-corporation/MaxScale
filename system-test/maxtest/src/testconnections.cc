@@ -978,7 +978,7 @@ void TestConnections::revert_replicate_from_master()
     }
 }
 
-int TestConnections::start_mm(int m)
+int TestConnections::start_mm()
 {
     tprintf("Stopping maxscale\n");
     int rval = maxscales->stop_maxscale();
@@ -1083,7 +1083,7 @@ static int read_log(const char* name, char** err_log_content_p)
     }
 }
 
-int TestConnections::find_connected_slave1(int m)
+int TestConnections::find_connected_slave1()
 {
     int conn_num;
     int all_conn = 0;
@@ -1158,13 +1158,13 @@ int TestConnections::check_maxscale_alive(int m)
     return global_result - gr;
 }
 
-int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_master, bool rc_slave)
+int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave)
 {
     int rval = 0;
     int rc;
 
     tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_rwsplit[m], "select 1");
+    rc = execute_query(maxscales->conn_rwsplit[0], "select 1");
     if ((rc == 0) != rw_split)
     {
         tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
@@ -1172,7 +1172,7 @@ int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_mas
     }
 
     tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_master[m], "select 1");
+    rc = execute_query(maxscales->conn_master[0], "select 1");
     if ((rc == 0) != rc_master)
     {
         tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
@@ -1190,11 +1190,7 @@ int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_mas
 }
 
 
-int TestConnections::create_connections(int m,
-                                        int conn_N,
-                                        bool rwsplit_flag,
-                                        bool master_flag,
-                                        bool slave_flag,
+int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
                                         bool galera_flag)
 {
     int i;
@@ -1400,7 +1396,7 @@ void TestConnections::log_printf(const char* format, ...)
     maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
-int TestConnections::get_master_server_id(int m)
+int TestConnections::get_master_server_id()
 {
     int master_id = -1;
     MYSQL* conn = maxscales->open_rwsplit_connection();
@@ -1459,27 +1455,27 @@ void TestConnections::log_copy_thread()
     }
 }
 
-int TestConnections::insert_select(int m, int N)
+int TestConnections::insert_select(int N)
 {
     int result = 0;
 
     tprintf("Create t1\n");
     set_timeout(30);
-    create_t1(maxscales->conn_rwsplit[m]);
+    create_t1(maxscales->conn_rwsplit[0]);
 
     tprintf("Insert data into t1\n");
     set_timeout(N * 16 + 30);
-    insert_into_t1(maxscales->conn_rwsplit[m], N);
+    insert_into_t1(maxscales->conn_rwsplit[0], N);
     stop_timeout();
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_rwsplit[m], N);
+    result += select_from_t1(maxscales->conn_rwsplit[0], N);
 
     tprintf("SELECT: master\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_master[m], N);
+    result += select_from_t1(maxscales->conn_master[0], N);
 
     tprintf("SELECT: slave\n");
     set_timeout(30);
@@ -1488,7 +1484,7 @@ int TestConnections::insert_select(int m, int N)
     return result;
 }
 
-int TestConnections::use_db(int m, char* db)
+int TestConnections::use_db(char* db)
 {
     int local_result = 0;
     char sql[100];
@@ -1496,11 +1492,11 @@ int TestConnections::use_db(int m, char* db)
     sprintf(sql, "USE %s;", db);
     set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    local_result += execute_query(maxscales->conn_rwsplit[m], "%s", sql);
+    local_result += execute_query(maxscales->conn_rwsplit[0], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
     local_result += execute_query(maxscales->conn_slave, "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    local_result += execute_query(maxscales->conn_master[m], "%s", sql);
+    local_result += execute_query(maxscales->conn_master[0], "%s", sql);
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
@@ -1509,19 +1505,19 @@ int TestConnections::use_db(int m, char* db)
     return local_result;
 }
 
-int TestConnections::check_t1_table(int m, bool presence, char* db)
+int TestConnections::check_t1_table(bool presence, char* db)
 {
     const char* expected = presence ? "" : "NOT";
     const char* actual = presence ? "NOT" : "";
     int start_result = global_result;
 
-    add_result(use_db(m, db), "use db failed\n");
+    add_result(use_db(db), "use db failed\n");
     stop_timeout();
     repl->sync_slaves();
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
     set_timeout(30);
-    int exists = check_if_t1_exists(maxscales->conn_rwsplit[m]);
+    int exists = check_if_t1_exists(maxscales->conn_rwsplit[0]);
 
     if (exists == presence)
     {
@@ -1533,7 +1529,7 @@ int TestConnections::check_t1_table(int m, bool presence, char* db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(maxscales->conn_master[m]);
+    exists = check_if_t1_exists(maxscales->conn_master[0]);
 
     if (exists == presence)
     {
@@ -1609,12 +1605,12 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
     return res;
 }
 
-StringSet TestConnections::get_server_status(const std::string& name, int m)
+StringSet TestConnections::get_server_status(const std::string& name)
 {
     return maxscales->get_server_status(name);
 }
 
-void TestConnections::check_current_operations(int m, int value)
+void TestConnections::check_current_operations(int value)
 {
     for (int i = 0; i < repl->N; i++)
     {
@@ -1627,7 +1623,7 @@ void TestConnections::check_current_operations(int m, int value)
     }
 }
 
-void TestConnections::check_current_connections(int m, int value)
+void TestConnections::check_current_connections(int value)
 {
     for (int i = 0; i < repl->N; i++)
     {
@@ -1638,16 +1634,6 @@ void TestConnections::check_current_connections(int m, int value)
         expect(std::stoi(res.output) == value,
                "Current no. of conns is not %d for server%d", value, i + 1);
     }
-}
-
-void TestConnections::check_current_persistent_connections(int m, const std::string& name, int value)
-{
-    auto res = maxctrl("api get servers/" + name
-                       + " data.attributes.statistics.persistent_connections");
-
-    expect(atoi(res.output.c_str()) == value,
-           "Current no. of persistent conns is '%s' not '%d' for %s",
-           res.output.c_str(), value, name.c_str());
 }
 
 bool TestConnections::test_bad_config(const string& config)

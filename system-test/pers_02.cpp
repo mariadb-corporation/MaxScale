@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 
     test.set_timeout(60);
     test.repl->execute_query_all_nodes("set global max_connections = 20;");
-    test.create_connections(0, 75, true, true, true, false);
+    test.create_connections(75, true, true, true, false);
 
     test.stop_timeout();
     test.repl->stop_nodes();
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     sleep(10);
 
     test.set_timeout(60);
-    test.add_result(test.create_connections(0, 70, true, true, true, false),
+    test.add_result(test.create_connections(70, true, true, true, false),
                     "Connections creation error \n");
 
     test.check_maxscale_alive(0);

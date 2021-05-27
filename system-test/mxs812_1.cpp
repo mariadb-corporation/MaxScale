@@ -44,7 +44,7 @@ void run_test(TestConnections& test, size_t size, int chunks)
 
     test.stop_timeout();
     sleep(5);
-    test.check_current_operations(0, 0);
+    test.check_current_operations(0);
     test.add_result(mysql_stmt_close(stmt), "Closing statement failed: %s", mysql_stmt_error(stmt));
 }
 

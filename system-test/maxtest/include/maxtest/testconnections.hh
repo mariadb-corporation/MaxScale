@@ -153,7 +153,7 @@ public:
      * @brief start_mm configure first node as Master for second, Second as Master for first
      * @return  0 in case of success
      */
-    int start_mm(int m = 0);
+    int start_mm();
 
     /**
      * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
@@ -183,7 +183,7 @@ public:
      * false for no connection.
      * @return  0 if connections are in the expected state
      */
-    int test_maxscale_connections(int m, bool rw_split, bool rc_master, bool rc_slave);
+    int test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave);
 
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
@@ -198,7 +198,7 @@ public:
      *- no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
+    int create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
                            bool galera_flag);
 
     /**
@@ -245,7 +245,7 @@ public:
      * last INSERT is about 700kb long
      * @return 0 in case of no error and all checks are ok
      */
-    int insert_select(int m, int N);
+    int insert_select(int N);
 
     /**
      * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
@@ -253,7 +253,7 @@ public:
      * @param db Name of DB in 'USE' command
      * @return 0 in case of success
      */
-    int use_db(int m, char* db);
+    int use_db(char* db);
 
     /**
      * @brief Checks if table t1 exists in DB
@@ -262,7 +262,7 @@ public:
      * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=false)
      */
 
-    int check_t1_table(int m, bool presence, char* db);
+    int check_t1_table(bool presence, char* db);
 
     /**
      * @brief Check whether logs match a pattern
@@ -285,7 +285,7 @@ public:
      * @param Test  TestConnections object which contains info about test setup
      * @return index of found slave node
      */
-    int find_connected_slave1(int m = 0);
+    int find_connected_slave1();
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
@@ -311,7 +311,7 @@ public:
      *
      * @return A set of string labels assigned to this server
      */
-    StringSet get_server_status(const std::string& name, int m = 0);
+    StringSet get_server_status(const std::string& name);
 
 
     /**
@@ -345,9 +345,9 @@ public:
         tprintf("\n%s", maxctrl(cmd, sudo).output.c_str());
     }
 
-    void check_current_operations(int m, int value);
-    void check_current_connections(int m, int value);
-    void check_current_persistent_connections(int m, const std::string& name, int value);
+    void check_current_operations(int value);
+    void check_current_connections(int value);
+
     int  stop_maxscale(int m = 0);
     int  start_maxscale(int m = 0);
     bool stop_all_maxscales();
@@ -355,10 +355,9 @@ public:
     /**
      * Get the current master server id from the cluster, as seen by rwsplit.
      *
-     * @param m MaxScale node index
      * @return Server id of the master
      */
-    int get_master_server_id(int m = 0);
+    int get_master_server_id();
 
 
     /**
