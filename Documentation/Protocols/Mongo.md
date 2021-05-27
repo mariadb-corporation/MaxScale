@@ -892,8 +892,7 @@ If the database creation fails, the command returns an error document.
 ##### **mxsDiagnose**
 
 The `mxsDiagnose` command provides diagnostics for any other command; that is, how
-MaxScale will handle that command. The command must be run against the 'admin'
-database.
+MaxScale will handle that command.
 
 #### Syntax
 

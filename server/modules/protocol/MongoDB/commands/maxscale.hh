@@ -19,14 +19,6 @@ namespace mxsmongo
 namespace command
 {
 
-class MxsDiagnose;
-
-template<>
-struct IsAdmin<MxsDiagnose>
-{
-    static const bool is_admin { true };
-};
-
 class MxsDiagnose final : public ImmediateCommand
 {
 public:
@@ -34,11 +26,6 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
-
-    bool is_admin() const override
-    {
-        return IsAdmin<MxsDiagnose>::is_admin;
-    }
 
     void populate_response(DocumentBuilder& doc)
     {
