@@ -216,7 +216,9 @@ Filter* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
 
 json_t* FilterDef::parameters_to_json() const
 {
-    return configuration().to_json();
+    json_t* params = configuration().to_json();
+    json_object_set_new(params, CN_MODULE, json_string(m_module.c_str()));
+    return params;
 }
 
 json_t* FilterDef::json_data(const char* host) const

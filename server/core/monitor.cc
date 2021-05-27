@@ -472,7 +472,7 @@ json_t* Monitor::parameters_to_json() const
     json_t* rval = json_object();
     const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::MONITOR);
     config_add_module_params_json(parameters(),
-                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
+                                  {CN_TYPE, CN_SERVERS},
                                   common_monitor_params(),
                                   mod->parameters,
                                   rval);
