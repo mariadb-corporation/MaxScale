@@ -23,9 +23,14 @@
 #include "internal/servermanager.hh"
 #include "internal/monitormanager.hh"
 
+#include <set>
+
 namespace
 {
 using namespace std::string_literals;
+
+const char CN_VERSION[] = "version";
+const char CN_CONFIG[] = "config";
 
 class ConfigManager
 {
@@ -43,8 +48,8 @@ public:
         append_config(arr, config_maxscale_to_json(""));
 
         json_t* obj = json_object();
-        json_object_set_new(obj, "config", arr);
-        json_object_set_new(obj, "version", json_integer(1));
+        json_object_set_new(obj, CN_CONFIG, arr);
+        json_object_set_new(obj, CN_VERSION, json_integer(m_version));
 
         mxb::Json rval(mxb::Json::Type::NONE);
         rval.reset(obj);
@@ -53,9 +58,87 @@ public:
 
     void process_config(mxb::Json&& new_json)
     {
+        // TODO: Keep the old JSON so that we don't have to create it again for every change
+        mxb::Json old_json = create_config();
+        int64_t next_version = new_json.get_int(CN_VERSION);
+
+        // TODO: This must be an error
+        mxb_assert(next_version > m_version);
+
+        std::set<std::string> old_names;
+        std::set<std::string> new_names;
+
+        auto new_objects = new_json.get_array_elems(CN_CONFIG);
+        auto old_objects = old_json.get_array_elems(CN_CONFIG);
+
+        for (const auto& obj : new_objects)
+        {
+            new_names.insert(obj.get_string(CN_ID));
+        }
+
+        for (const auto& obj : old_objects)
+        {
+            old_names.insert(obj.get_string(CN_ID));
+        }
+
+        std::set<std::string> removed;
+        std::set_difference(old_names.begin(), old_names.end(),
+                            new_names.begin(), new_names.end(),
+                            std::inserter(removed, removed.begin()));
+
+        std::set<std::string> added;
+        std::set_difference(new_names.begin(), new_names.end(),
+                            old_names.begin(), old_names.end(),
+                            std::inserter(added, added.begin()));
+
+        // Iterate the config in reverse to remove the objects in the reverse dependency order.
+        for (auto it = old_objects.rbegin(); it != old_objects.rend(); ++it)
+        {
+            auto name = it->get_string(CN_ID);
+
+            if (removed.find(name) != removed.end())
+            {
+                remove_old_object(name, it->get_string(CN_TYPE));
+            }
+        }
+
+        for (auto& obj : new_objects)
+        {
+            auto name = obj.get_string(CN_ID);
+
+            if (added.find(name) != added.end())
+            {
+                // Pass the object as a non-const reference in case it needs to be modified before use. For
+                // all objects except listeners, the new object must be created without relationships to
+                // make sure all objects exist before the links between them are established.
+                create_new_object(name, obj.get_string(CN_TYPE), obj);
+            }
+        }
+
+        for (const auto& obj : new_objects)
+        {
+            update_object(obj.get_string(CN_ID), obj.get_string(CN_TYPE), obj);
+        }
+
+        m_version = next_version;
     }
 
 private:
+
+    void remove_old_object(const std::string& name, const std::string& type)
+    {
+        MXS_INFO("Would remove: %s %s", name.c_str(), type.c_str());
+    }
+
+    void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj)
+    {
+        MXS_INFO("Would create: %s %s %s", name.c_str(), type.c_str(), obj.to_string().c_str());
+    }
+
+    void update_object(const std::string& name, const std::string& type, const mxb::Json& json)
+    {
+        MXS_INFO("Would update: %s %s %s", name.c_str(), type.c_str(), json.to_string().c_str());
+    }
 
     auto remove_extra_data(json_t* data)
     {
@@ -108,6 +191,8 @@ private:
 
         json_decref(json);
     }
+
+    int64_t m_version {0};
 };
 
 ConfigManager manager;
