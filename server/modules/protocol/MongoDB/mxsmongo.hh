@@ -47,6 +47,40 @@ using bsoncxx::builder::basic::kvp;
 namespace mongo
 {
 
+namespace type
+{
+// These are the one we recognize, but there are more.
+const int32_t DOUBLE = 1;
+const int32_t STRING = 2;
+const int32_t OBJECT = 3;
+const int32_t ARRAY = 4;
+const int32_t BOOL = 8;
+const int32_t INT32 = 16;
+};
+
+namespace alias
+{
+extern const char* DOUBLE;
+extern const char* STRING;
+extern const char* OBJECT;
+extern const char* ARRAY;
+extern const char* BOOL;
+extern const char* INT32;
+
+int32_t to_type(const std::string& alias);
+
+inline int32_t to_type(const char* zAlias)
+{
+    return to_type(std::string(zAlias));
+}
+
+inline int32_t to_type(const bsoncxx::stdx::string_view& alias)
+{
+    return to_type(std::string(alias.data(), alias.length()));
+}
+
+}
+
 struct HEADER
 {
     int32_t msg_len;

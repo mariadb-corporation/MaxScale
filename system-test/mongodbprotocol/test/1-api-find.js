@@ -627,6 +627,7 @@ describe(name, function () {
 
     it('Supports $size', async function () {
         drop(misc);
+
         var documents = [
             { _id: 1, f: [ 1, 2 ] },
             { _id: 2, f: [ 1, 2, 3 ] },
@@ -656,6 +657,7 @@ describe(name, function () {
 
     it('Supports $all', async function () {
         drop(misc);
+
         var documents = [
             {
                 _id: 1,
@@ -715,6 +717,110 @@ describe(name, function () {
         assert.equal(rv1.cursor.firstBatch.length, 2);
         assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
 
+    });
+
+    it('Supports $type', async function () {
+        drop(misc);
+
+        var documents = [
+            { _id: 1, f: true },
+            { _id: 2, f: "hello" },
+            { _id: 3, f: 4711 },
+            { _id: 4, f: 3.14 },
+            { _id: 5, f: {} },
+            { _id: 6, f: [] },
+        ];
+
+        var command = {
+            insert: misc,
+            documents: documents
+        };
+
+        await mng.runCommand(command);
+        await mxs.runCommand(command);
+
+        var types = [
+            { code: 1,  alias: "double", value: documents[3].f },
+            { code: 2,  alias: "string", value: documents[1].f },
+            { code: 3,  alias: "object", value: documents[4].f },
+            { code: 4,  alias: "array",  value: documents[5].f },
+            { code: 8,  alias: "bool",   value: documents[0].f },
+            { code: 16, alias: "int",    value: documents[2].f },
+        ];
+
+        for (var type of types) {
+            command = {
+                find: misc,
+                filter: { f: { $type: type.code }}
+            };
+
+            async function check() {
+                var rv1 = await mng.runCommand(command);
+                var rv2 = await mxs.runCommand(command);
+                assert.equal(rv1.cursor.firstBatch.length, 1);
+                assert.deepEqual(rv1.cursor.firstBatch[0].f, type.value);
+                assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+            }
+
+            await check();
+
+            command = {
+                find: misc,
+                filter: { f: { $type: [ type.code ] }}
+            };
+
+            await check();
+
+            command = {
+                find: misc,
+                filter: { f: { $type: type.alias }}
+            };
+
+            await check();
+
+            command = {
+                find: misc,
+                filter: { f: { $type: [ type.alias ] }}
+            };
+
+            await check();
+        }
+
+        command = {
+            find: misc,
+            filter: { f: { $type: "number" }}
+        };
+
+        var rv1 = await mng.runCommand(command);
+        var rv2 = await mxs.runCommand(command);
+        assert.equal(rv1.cursor.firstBatch.length, 2);
+        assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+
+        command = {
+            find: misc,
+            filter: { f: { $type: [] } }
+        };
+
+        async function check_n(command, n) {
+            var rv1 = await mng.runCommand(command);
+            var rv2 = await mxs.runCommand(command);
+            assert.equal(rv1.cursor.firstBatch.length, n);
+            assert.deepEqual(rv1.cursor.firstBatch, rv2.cursor.firstBatch);
+        }
+
+        for (var type of types) {
+            command.filter.f.$type.push(type.code);
+        }
+
+        await check_n(command, types.length);
+
+        command.filter.f.$type = [];
+
+        for (var type of types) {
+            command.filter.f.$type.push(type.alias);
+        }
+
+        await check_n(command, types.length);
     });
 
     after(function () {

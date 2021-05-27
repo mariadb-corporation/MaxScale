@@ -233,7 +233,25 @@ All operators are supported.
 
 ### [Element Query Operators](https://docs.mongodb.com/manual/reference/operator/query-element/)
 
-`$exists` is, but `$type` is not supported.
+All operators are supported.
+
+#### [$type](https://docs.mongodb.com/manual/reference/operator/query/type/#mongodb-query-op.-type)
+
+When `$type` is used, it will be converted into a condition involving one or more
+[JSON_TYPE](https://mariadb.com/kb/en/json_type/) comparisons. The following subset
+of types can be used in `$type` queries:
+
+Type | Number | Alias | MariaDB Type
+-----|--------|-------|-------------
+Double | 1 | "double" | `DOUBLE`
+String | 2 | "string" | `STRING`
+object | 3 | "object" | `OBJECT`
+Array | 4 | "array" | `ARRAY`
+Boolean | 5 | "bool" | `BOOLEAN`
+32-bit integer | 16 | "int" | `INTEGER`
+
+The _"number"_ alias is supported and will match values whose MariaDB type is
+`DOUBLE` or `INTEGER`.
 
 ### [Evaluation Query Operators](https://docs.mongodb.com/manual/reference/operator/query-evaluation/)
 

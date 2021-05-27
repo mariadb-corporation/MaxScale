@@ -35,6 +35,53 @@ uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 namespace mxsmongo
 {
 
+namespace mongo
+{
+
+namespace alias
+{
+
+const char* DOUBLE = "double";
+const char* STRING = "string";
+const char* OBJECT = "object";
+const char* ARRAY  = "array";
+const char* BOOL   = "bool";
+const char* INT32  = "int";
+
+}
+
+namespace
+{
+
+const std::unordered_map<string, int32_t> alias_type_mapping =
+{
+    { alias::DOUBLE, type::DOUBLE },
+    { alias::STRING, type::STRING },
+    { alias::OBJECT, type::OBJECT },
+    { alias::ARRAY,  type::ARRAY },
+    { alias::BOOL,   type::BOOL },
+    { alias::INT32,  type::INT32 },
+};
+
+}
+
+int32_t alias::to_type(const string& alias)
+{
+    auto it = alias_type_mapping.find(alias);
+
+    if (it == alias_type_mapping.end())
+    {
+        stringstream ss;
+        ss << "Unknown type name alias: " << alias;
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    return it->second;
+}
+
+}
+
 void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element)
 {
     // bsoncxx should simply allow the addition of an element, and do this internally.
@@ -1340,6 +1387,157 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
     return ss.str();
 }
 
+string mongodb_type_to_mariadb_type(int32_t number)
+{
+    switch (number)
+    {
+    case mongo::type::DOUBLE:
+        return "'DOUBLE'";
+
+    case mongo::type::STRING:
+        return "'STRING'";
+
+    case mongo::type::OBJECT:
+        return "'OBJECT'";
+
+    case mongo::type::ARRAY:
+        return "'ARRAY'";
+
+    case mongo::type::BOOL:
+        return "'BOOLEAN'";
+
+    case mongo::type::INT32:
+        return "'INTEGER'";
+
+    default:
+        {
+            stringstream ss;
+            ss << "Invalid numerical type code: " << number;
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        };
+    }
+
+    return nullptr;
+}
+
+string type_to_condition_from_value(const string& field, int32_t number)
+{
+    stringstream ss;
+
+    ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = "
+       << mongodb_type_to_mariadb_type(number)
+       << ")";
+
+    return ss.str();
+}
+
+string type_to_condition_from_value(const string& field, const bsoncxx::stdx::string_view& alias)
+{
+    string rv;
+
+    if (alias.compare("number") == 0)
+    {
+        stringstream ss;
+
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'DOUBLE' OR "
+           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'INTEGER')";
+
+        rv = ss.str();
+    }
+    else
+    {
+        rv = type_to_condition_from_value(field, mongo::alias::to_type(alias));
+    }
+
+    return rv;
+}
+
+template<class document_or_array_element>
+string type_to_condition_from_value(const string& field, const document_or_array_element& element)
+{
+    string rv;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_utf8:
+        rv = type_to_condition_from_value(field, (bsoncxx::stdx::string_view)element.get_utf8());
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            double d = element.get_double();
+            int32_t i = d;
+
+            if (d != (double)i)
+            {
+                stringstream ss;
+                ss << "Invalid numerical type code: " << d;
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            rv = type_to_condition_from_value(field, i);
+        };
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = type_to_condition_from_value(field, (int32_t)element.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = type_to_condition_from_value(field, (int32_t)(int64_t)element.get_int64());
+        break;
+
+    default:
+        throw SoftError("type must be represented as a number or a string", error::TYPE_MISMATCH);
+    }
+
+    return rv;
+}
+
+string type_to_condition(const string& field, const bsoncxx::document::element& element)
+{
+    string rv;
+
+    if (element.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view all_elements = element.get_array();
+
+        if (all_elements.empty())
+        {
+            // Yes, this is what MongoDB returns.
+            throw SoftError("a must match at least one type", error::FAILED_TO_PARSE);
+        }
+
+        stringstream ss;
+        ss << "(";
+
+        bool first = true;
+        for (const auto& one_element : all_elements)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                ss << " OR ";
+            }
+
+            ss << type_to_condition_from_value(field, one_element);
+        }
+
+        ss << ")";
+
+        rv = ss.str();
+    }
+    else
+    {
+        rv = type_to_condition_from_value(field, element);
+    }
+
+    return rv;
+}
+
 string get_comparison_condition(const string& field, const bsoncxx::document::view& doc)
 {
     string rv;
@@ -1388,6 +1586,10 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         else if (op == "$all")
         {
             rv = all_to_condition(field, element);
+        }
+        else if (op == "$type")
+        {
+            rv = type_to_condition(field, element);
         }
         else
         {
