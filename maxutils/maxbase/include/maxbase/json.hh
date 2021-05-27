@@ -113,11 +113,17 @@ public:
      */
     std::string to_string() const;
 
+    /**
+     * Replace the current JSON object
+     *
+     * @param obj Object to use. The reference is stolen.
+     */
+    void reset(json_t* obj = nullptr);
+
 private:
     json_t*             m_obj{nullptr}; /**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */
 
-    void reset();
     void swap(Json& rhs) noexcept;
 };
 }

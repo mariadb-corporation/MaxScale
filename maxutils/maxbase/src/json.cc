@@ -29,15 +29,11 @@ namespace maxbase
 
 bool Json::load_string(const string& source)
 {
-    json_decref(m_obj);
-    m_obj = nullptr;
-
     json_error_t error;
     auto res = json_loads(source.c_str(), 0, &error);
     if (res)
     {
-        m_obj = res;
-        m_errormsg.clear();
+        reset(res);
     }
     else
     {
@@ -320,14 +316,13 @@ Json::Json(Type type)
 
 bool Json::load(const string& filepath)
 {
-    reset();
     auto filepathc = filepath.c_str();
     json_error_t err;
     json_t* obj = json_load_file(filepathc, 0, &err);
     bool rval = false;
     if (obj)
     {
-        m_obj = obj;
+        reset(obj);
         rval = true;
     }
     else
@@ -337,10 +332,10 @@ bool Json::load(const string& filepath)
     return rval;
 }
 
-void Json::reset()
+void Json::reset(json_t* obj)
 {
     json_decref(m_obj);
-    m_obj = json_null();
+    m_obj = obj;
     m_errormsg.clear();
 }
 
