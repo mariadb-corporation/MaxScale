@@ -13,7 +13,7 @@
 import { getCookie, uniqBy } from 'utils/helpers'
 function initialState() {
     return {
-        checking_active_conn: true,
+        checking_active_conn: false,
         active_conn_state: false,
         conn_err_state: false,
         rc_target_names_map: {},
