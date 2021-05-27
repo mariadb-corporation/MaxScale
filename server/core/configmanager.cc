@@ -121,7 +121,13 @@ public:
 
         for (const auto& obj : new_objects)
         {
-            update_object(obj.get_string(CN_ID), obj.get_string(CN_TYPE), obj);
+            auto name = obj.get_string(CN_ID);
+            auto type = obj.get_string(CN_TYPE);
+
+            if (added.find(name) == added.end() || to_type(type) == Type::SERVICES)
+            {
+                update_object(obj.get_string(CN_ID), type, obj);
+            }
         }
 
         m_version = next_version;
@@ -262,7 +268,58 @@ private:
 
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json)
     {
-        MXS_INFO("Would update: %s %s %s", name.c_str(), type.c_str(), json.to_string().c_str());
+        m_tmp.set_object(CN_DATA, json);
+        json_t* js = m_tmp.get_json();
+
+        switch (to_type(type))
+        {
+        case Type::SERVERS:
+            if (!runtime_alter_server_from_json(ServerManager::find_by_unique_name(name), js))
+            {
+                throw Exception("Failed to update server '" + name + "'");
+            }
+            break;
+
+        case Type::MONITORS:
+            if (!runtime_alter_monitor_from_json(MonitorManager::find_monitor(name.c_str()), js))
+            {
+                throw Exception("Failed to update monitor '" + name + "'");
+            }
+            break;
+
+        case Type::SERVICES:
+            if (!runtime_alter_service_from_json(Service::find(name), js))
+            {
+                throw Exception("Failed to update service '" + name + "'");
+            }
+            break;
+
+        case Type::LISTENERS:
+            if (!runtime_alter_listener_from_json(listener_find(name), js))
+            {
+                throw Exception("Failed to update listener '" + name + "'");
+            }
+            break;
+
+        case Type::FILTERS:
+            if (!runtime_alter_filter_from_json(filter_find(name), js))
+            {
+                throw Exception("Failed to update filter '" + name + "'");
+            }
+            break;
+
+        case Type::MAXSCALE:
+            if (!runtime_alter_maxscale_from_json(js))
+            {
+                throw Exception("Failed to configure global options");
+            }
+            break;
+
+        case Type::UNKNOWN:
+            mxb_assert(!true);
+            throw Exception("Found object of unexpected type '" + type + "': " + name);
+            break;
+        }
     }
 
     auto remove_extra_data(json_t* data)
