@@ -185,19 +185,25 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int max_rows)
 
         case ResultType::RESULTSET:
             {
-                // Only send a maximum of 1000 rows per resultset.
-                int64_t rows_read = 0;
                 auto res = conn.get_resultset();
                 auto fields = res->fields();
                 json_t* resultset = json_object();
                 json_object_set_new(resultset, "fields", generate_column_info(fields));
                 json_t* rows = json_array();
-                while (res->next_row() && rows_read < max_rows)
+
+                int rows_read = 0;
+                bool have_more = res->next_row();
+                bool rows_limit_reached = (rows_read == max_rows);
+                while (have_more && !rows_limit_reached)
                 {
                     json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
                     rows_read++;
+
+                    have_more = res->next_row();
+                    rows_limit_reached = (rows_read == max_rows);
                 }
                 json_object_set_new(resultset, "data", rows);
+                json_object_set_new(resultset, "complete", json_boolean(!have_more));
                 json_array_append_new(resultset_arr, resultset);
             }
             break;
@@ -221,8 +227,8 @@ construct_result_response(json_t* resultdata, const string& host, const std::str
 
     json_t* attr = json_object();
     json_object_set_new(attr, "results", resultdata);
-    int exec_time_ms = std::round(mxb::to_secs(query_exec_time) * 1000);
-    json_object_set_new(attr, "execution_time", json_integer(exec_time_ms));
+    auto exec_time = mxb::to_secs(query_exec_time);
+    json_object_set_new(attr, "execution_time", json_real(exec_time));
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_t* rval = mxs_json_resource(host.c_str(), self.c_str(), obj);
 
@@ -429,8 +435,8 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
     }
 
-    // Optional row limit.
-    int64_t max_rows = 1000;    // default
+    // Optional row limit. 1000 is default, 10000 is hard limit. TODO: make configurable
+    int64_t max_rows = 1000;
     json.try_get_int("max_rows", &max_rows);
     if (max_rows < 0 || max_rows > 10000)
     {
