@@ -1920,7 +1920,7 @@ bool runtime_create_filter_from_json(json_t* json)
             // allocate an empty object. In addition, the module name is injected into it to make the
             // construction behave uniformly across all parameter types.
             parameters = parameters ? json_incref(parameters) : json_object();
-            json_object_set(parameters, CN_MODULE, json_string(module));
+            json_object_set_new(parameters, CN_MODULE, json_string(module));
             mxs::json_remove_nulls(parameters);
 
             if (auto filter = filter_alloc(name, parameters))
