@@ -35,6 +35,10 @@ const char CN_CONFIG[] = "config";
 class ConfigManager
 {
 public:
+    struct Exception : public std::runtime_error
+    {
+        using std::runtime_error::runtime_error;
+    };
 
     mxb::Json create_config()
     {
@@ -124,10 +128,72 @@ public:
     }
 
 private:
+    enum class Type
+    {
+        SERVERS, MONITORS, SERVICES, LISTENERS, FILTERS, MAXSCALE, UNKNOWN
+    };
+
+    Type to_type(const std::string& type)
+    {
+        static const std::unordered_map<std::string, Type> types
+        {
+            {CN_SERVERS, Type::SERVERS},
+            {CN_MONITORS, Type::MONITORS},
+            {CN_SERVICES, Type::SERVICES},
+            {CN_LISTENERS, Type::LISTENERS},
+            {CN_FILTERS, Type::FILTERS},
+            {CN_MAXSCALE, Type::MAXSCALE}
+        };
+
+        auto it = types.find(type);
+        return it != types.end() ? it->second : Type::UNKNOWN;
+    }
 
     void remove_old_object(const std::string& name, const std::string& type)
     {
-        MXS_INFO("Would remove: %s %s", name.c_str(), type.c_str());
+        switch (to_type(type))
+        {
+        case Type::SERVERS:
+            if (!runtime_destroy_server(ServerManager::find_by_unique_name(name), true))
+            {
+                throw Exception("Failed to destroy server '" + name + "'");
+            }
+            break;
+
+        case Type::MONITORS:
+            if (!runtime_destroy_monitor(MonitorManager::find_monitor(name.c_str()), true))
+            {
+                throw Exception("Failed to destroy monitor '" + name + "'");
+            }
+            break;
+
+        case Type::SERVICES:
+            if (!runtime_destroy_service(Service::find(name), true))
+            {
+                throw Exception("Failed to destroy service '" + name + "'");
+            }
+            break;
+
+        case Type::LISTENERS:
+            if (!runtime_destroy_listener(listener_find(name)))
+            {
+                throw Exception("Failed to destroy listener '" + name + "'");
+            }
+            break;
+
+        case Type::FILTERS:
+            if (!runtime_destroy_filter(filter_find(name), true))
+            {
+                throw Exception("Failed to destroy filter '" + name + "'");
+            }
+            break;
+
+        case Type::MAXSCALE:
+        case Type::UNKNOWN:
+            mxb_assert(!true);
+            throw Exception("Found object of unexpected type '" + type + "': " + name);
+            break;
+        }
     }
 
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj)
@@ -231,7 +297,15 @@ bool load_dynamic_config()
     }
     else
     {
-        manager.process_config(std::move(new_json));
+        try
+        {
+            manager.process_config(std::move(new_json));
+        }
+        catch (const ConfigManager::Exception& e)
+        {
+            MXS_ERROR("%s", e.what());
+            ok = false;
+        }
     }
 
     return ok;
