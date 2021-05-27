@@ -27,6 +27,7 @@ function initialState() {
         loading_prvw_data_details: false,
         prvw_data_details: {},
         loading_query_result: false,
+        query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
     }
@@ -100,6 +101,9 @@ export default {
         },
         SET_QUERY_RESULT(state, payload) {
             state.query_result = payload
+        },
+        SET_QUERY_REQUEST_SENT_TIME(state, payload) {
+            state.query_request_sent_time = payload
         },
         SET_ACTIVE_DB(state, payload) {
             state.active_db = payload
@@ -356,7 +360,7 @@ export default {
 
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
-                    { sql }
+                    { sql, max_rows: 10000 }
                 )
                 await this.vue.$help.delay(400)
                 commit(`SET_${prvwMode}`, Object.freeze(res.data.data.attributes.results[0]))
@@ -373,10 +377,12 @@ export default {
         async fetchQueryResult({ state, commit, dispatch }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
+                commit('SET_QUERY_REQUEST_SENT_TIME', new Date().valueOf())
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
+                        max_rows: 10000, //TODO: make this a configurable value
                     }
                 )
                 await this.vue.$help.delay(400)
@@ -385,6 +391,7 @@ export default {
                 const USE_REG = /(use|drop database)\s/i
                 if (query.match(USE_REG)) await dispatch('updateActiveDb')
             } catch (e) {
+                commit('SET_LOADING_QUERY_RESULT', false)
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
             }

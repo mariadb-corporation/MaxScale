@@ -10,6 +10,7 @@
                     :close-on-content-click="false"
                     content-class="shadow-drop color text-navigation "
                     open-on-hover
+                    nudge-left="16"
                 >
                     <template v-slot:activator="{ on }">
                         <span class="mr-4 pointer color text-links " v-on="on">
@@ -39,6 +40,11 @@
                         {{ name }}
                     </v-tab>
                 </v-tabs>
+                <v-spacer />
+                <duration-timer
+                    :startTime="query_request_sent_time"
+                    :executionTime="executionTime"
+                />
             </template>
         </div>
         <template v-if="!showGuide">
@@ -95,10 +101,12 @@
  */
 import { mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
+import DurationTimer from './DurationTimer'
 export default {
     name: 'result-tab',
     components: {
         ResultDataTable,
+        DurationTimer,
     },
     props: {
         dynDim: {
@@ -114,6 +122,7 @@ export default {
             headerHeight: 0,
             isMounted: true,
             activeResSet: '',
+            runSeconds: 0,
         }
     },
     computed: {
@@ -121,12 +130,18 @@ export default {
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
             active_conn_state: state => state.query.active_conn_state,
+            query_request_sent_time: state => state.query.query_request_sent_time,
         }),
         showGuide() {
             return this.isMounted || !this.active_conn_state
         },
         queryTxt() {
             return this.$typy(this.query_result, 'attributes.sql').safeObject
+        },
+        executionTime() {
+            if (this.loading_query_result) return -1
+            const seconds = this.$typy(this.query_result, 'attributes.execution_time').safeObject
+            return parseFloat(seconds.toFixed(3))
         },
         resultData() {
             if (this.$typy(this.query_result, 'attributes.results').isDefined) {
@@ -184,6 +199,6 @@ export default {
 
 <style lang="scss" scoped>
 .tab-navigation--btn-style--custom-max-width {
-    max-width: calc(100% - 90px);
+    max-width: calc(100% - 250px);
 }
 </style>
