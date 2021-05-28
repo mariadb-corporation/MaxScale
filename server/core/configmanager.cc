@@ -74,7 +74,7 @@ bool ConfigManager::load_cached_config()
 {
     bool have_config = false;
     std::string filename = dynamic_config_filename();
-    std::string cluster = mxs::Config::get().config_sync_cluster;
+    const std::string& cluster = cluster_name();
 
     // Check only if the file exists. If it does, try to load it.
     if (!cluster.empty() && access(filename.c_str(), F_OK) == 0)
@@ -129,6 +129,11 @@ bool ConfigManager::process_cached_config()
 
 bool ConfigManager::start()
 {
+    if (cluster_name().empty())
+    {
+        return true;
+    }
+
     // TODO: Execute the following:
     //    START TRANSACTION
     //    SELECT version FROM mysql.maxscale_config WHERE CLUSTER = '%s' FOR UPDATE
@@ -137,12 +142,22 @@ bool ConfigManager::start()
 
 void ConfigManager::rollback()
 {
+    if (cluster_name().empty())
+    {
+        return;
+    }
+
     // TODO: Execute the following:
     //    ROLLBACK
 }
 
 bool ConfigManager::commit()
 {
+    if (cluster_name().empty())
+    {
+        return true;
+    }
+
     bool ok = false;
 
     // Increment the current version and create the JSON
@@ -190,7 +205,10 @@ mxb::Json ConfigManager::create_config()
 
     rval.set_object(CN_CONFIG, arr);
     rval.set_int(CN_VERSION, m_version);
-    rval.set_string(CN_CLUSTER_NAME, mxs::Config::get().config_sync_cluster);
+
+    const std::string& cluster = cluster_name();
+    mxb_assert(!cluster.empty());
+    rval.set_string(CN_CLUSTER_NAME, cluster);
 
     return rval;
 }
@@ -509,5 +527,10 @@ void ConfigManager::append_config(json_t* arr, json_t* json)
 std::string ConfigManager::dynamic_config_filename() const
 {
     return std::string(mxs::datadir()) + "/maxscale-config.json";
+}
+
+const std::string& ConfigManager::cluster_name() const
+{
+    return mxs::Config::get().config_sync_cluster;
 }
 }

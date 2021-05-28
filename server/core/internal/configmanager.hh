@@ -113,6 +113,8 @@ private:
     auto      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
 
+    const std::string& cluster_name() const;
+
     mxs::MainWorker* m_worker {nullptr};
 
     // Helper object for storing temporary data
