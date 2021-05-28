@@ -1702,6 +1702,13 @@ bool runtime_destroy_monitor(Monitor* monitor, bool force)
 {
     bool rval = false;
 
+    if (mxs::Config::get().config_sync_cluster == monitor->name())
+    {
+        MXS_ERROR("Cannot destroy monitor '%s', it is set as the configuration sync cluster.",
+                  monitor->name());
+        return false;
+    }
+
     if (force)
     {
         prepare_for_destruction(monitor);

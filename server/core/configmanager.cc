@@ -31,6 +31,7 @@ namespace
 {
 const char CN_VERSION[] = "version";
 const char CN_CONFIG[] = "config";
+const char CN_CLUSTER_NAME[] = "cluster_name";
 
 struct ThisUnit
 {
@@ -73,17 +74,31 @@ bool ConfigManager::load_cached_config()
 {
     bool have_config = false;
     std::string filename = dynamic_config_filename();
+    std::string cluster = mxs::Config::get().config_sync_cluster;
 
     // Check only if the file exists. If it does, try to load it.
-    if (access(filename.c_str(), F_OK) == 0)
+    if (!cluster.empty() && access(filename.c_str(), F_OK) == 0)
     {
         mxb::Json new_json(mxb::Json::Type::NONE);
 
         if (new_json.load(filename))
         {
-            // We have a cached configuration and it's for the correct cluster.
-            m_current_config = std::move(new_json);
-            have_config = true;
+            std::string cluster_name = new_json.get_string(CN_CLUSTER_NAME);
+
+            if (cluster_name == cluster)
+            {
+                MXS_NOTICE("Using cached configuration for cluster '%s': %s",
+                           cluster_name.c_str(), filename.c_str());
+
+                m_current_config = std::move(new_json);
+                have_config = true;
+            }
+            else
+            {
+                MXS_WARNING("Found cached configuration for cluster '%s' when configured "
+                            "to use cluster '%s', ignoring the cached configuration: %s",
+                            cluster_name.c_str(), cluster.c_str(), filename.c_str());
+            }
         }
     }
 
@@ -172,6 +187,7 @@ mxb::Json ConfigManager::create_config()
 
     rval.set_object(CN_CONFIG, arr);
     rval.set_int(CN_VERSION, m_version);
+    rval.set_string(CN_CLUSTER_NAME, mxs::Config::get().config_sync_cluster);
 
     return rval;
 }

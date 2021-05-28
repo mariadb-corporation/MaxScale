@@ -158,6 +158,7 @@ public:
 
     std::string local_address;                  /**< Local address to use when connecting */
     bool        load_persisted_configs;         /**< Load persisted configuration files on startup */
+    std::string config_sync_cluster;            /**< Cluster used for config sync */
     bool        log_warn_super_user;            /**< Log a warning if incoming client has super-priv. */
     bool        gui;                            /**< Enable admin GUI */
     bool        secure_gui;                     /**< Serve GUI only over HTTPS */
@@ -194,6 +195,7 @@ private:
 
         bool validate(const mxs::ConfigParameters& params,
                       mxs::ConfigParameters* pUnrecognized = nullptr) const override final;
+        bool validate(json_t* pJson, std::set<std::string>* pUnrecognized = nullptr) const override final;
     };
 
     static Specification s_specification;
@@ -243,6 +245,7 @@ private:
     static config::ParamString                          s_admin_ssl_ca_cert;
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
+    static config::ParamString                          s_config_sync_cluster;
     static config::ParamBool                            s_log_warn_super_user;
     static config::ParamBool                            s_gui;
     static config::ParamBool                            s_secure_gui;

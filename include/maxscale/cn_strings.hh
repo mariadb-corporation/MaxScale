@@ -28,6 +28,7 @@ constexpr char CN_AUTH_CONNECT_TIMEOUT[] = "auth_connect_timeout";
 constexpr char CN_AUTH_READ_TIMEOUT[] = "auth_read_timeout";
 constexpr char CN_AUTH_WRITE_TIMEOUT[] = "auth_write_timeout";
 constexpr char CN_CLUSTER[] = "cluster";
+constexpr char CN_CONFIG_SYNC_CLUSTER[] = "config_sync_cluster";
 constexpr char CN_DATA[] = "data";
 constexpr char CN_DESCRIPTION[] = "description";
 constexpr char CN_DISK_SPACE_THRESHOLD[] = "disk_space_threshold";

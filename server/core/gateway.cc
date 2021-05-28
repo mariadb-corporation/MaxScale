@@ -2115,6 +2115,20 @@ int main(int argc, char** argv)
             // started after they have been created.
             if (use_static_cnf)
             {
+                // Ideally we'd do this in mxs::Config::Specification::validate but since it is configured
+                // before the objects are created, it's simpler to do the check here. For runtime changes it
+                // is done inside the validation function.
+                auto cluster = mxs::Config::get().config_sync_cluster;
+
+                if (!cluster.empty() && !MonitorManager::find_monitor(cluster.c_str()))
+                {
+                    log_startup_error("The value of '%s' is not the name of a monitor: %s.",
+                                      CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
+                    rc = MAXSCALE_BADCONFIG;
+                    maxscale_shutdown();
+                    return;
+                }
+
                 MonitorManager::start_all_monitors();
                 MonitorManager::wait_one_tick();
 

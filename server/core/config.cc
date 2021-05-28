@@ -169,6 +169,24 @@ bool Config::Specification::validate(const ConfigParameters& params,
     return validated;
 }
 
+bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized) const
+{
+    bool ok = false;
+    auto cluster = s_config_sync_cluster.get(pJson);
+
+    if (cluster.empty() || MonitorManager::find_monitor(cluster.c_str()))
+    {
+        ok = mxs::config::Specification::validate(pJson, pUnrecognized);
+    }
+    else
+    {
+        MXS_ERROR("The value of '%s' is not the name of a monitor: %s.",
+                  CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
+    }
+
+    return ok;
+}
+
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
 
 config::ParamBool Config::s_log_debug(
@@ -499,6 +517,13 @@ config::ParamBool Config::s_load_persisted_configs(
     "Specifies whether persisted configuration files should be loaded on startup.",
     true);
 
+config::ParamString Config::s_config_sync_cluster(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_CLUSTER,
+    "Cluster used for configuration synchronization."
+    " If left empty (i.e. value is \"\"), synchronization is not done.",
+    "", mxs::config::Param::AT_RUNTIME);
+
 config::ParamBool Config::s_log_warn_super_user(
     &Config::s_specification,
     CN_LOG_WARN_SUPER_USER,
@@ -639,6 +664,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
+    add_native(&Config::config_sync_cluster, &s_config_sync_cluster);
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
