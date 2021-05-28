@@ -1266,7 +1266,7 @@ As the id is not explicitly provided, it will not be the same.
 Store the following into a file called `find.js`.
 ```
 const { MongoClient } = require("mongodb");
-// Replace the uri string with your MongoDB deployment's connection string.
+
 const uri = "mongodb://127.0.0.1:17017";
 
 const client = new MongoClient(uri, { useUnifiedTopology: true });
@@ -1275,14 +1275,14 @@ async function run() {
     await client.connect();
     const database = client.db("mydb");
     const movies = database.collection("movies");
-    // Query for a movie that has the title 'The Room'
+    // Query for a movie that has the title 'Apocalypse Now'
     const query = { title: "Apocalypse Now" };
     const options = {
       // Include only the 'director' field in the returned document
       projection: { _id: 0, director: 1 },
     };
     const movie = await movies.findOne(query, options);
-    // since this method returns the matched document, not a cursor, print it directly
+    // Returns a document and not a cursor, so print directly.
     console.log(movie);
   } finally {
     await client.close();
@@ -1293,6 +1293,5 @@ run().catch(console.dir);
 Then, run the program like
 ```
 $ nodejs find.js
-{ _id: 60afca73bf486114e3fb48b8,
-  director: 'Francis Ford Coppola' }
+{ director: 'Francis Ford Coppola' }
 ```
