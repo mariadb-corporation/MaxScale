@@ -533,6 +533,7 @@ struct ThisUnit
     bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
     CONFIG_CONTEXT config_context;
     bool           is_root_config_file = true;  /**< The first one will be. */
+    bool           mask_passwords = true;
 } this_unit;
 }
 
@@ -3431,7 +3432,14 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
         break;
 
     case MXS_MODULE_PARAM_PASSWORD:
-        rval = json_string("*****");
+        if (config_mask_passwords())
+        {
+            rval = json_string("*****");
+        }
+        else
+        {
+            rval = json_string(value.c_str());
+        }
         break;
 
     default:
@@ -4865,4 +4873,14 @@ bool config_set_rebalance_threshold(const char* value)
     }
 
     return rv;
+}
+
+void config_set_mask_passwords(bool enable)
+{
+    this_unit.mask_passwords = enable;
+}
+
+bool config_mask_passwords()
+{
+    return this_unit.mask_passwords;
 }

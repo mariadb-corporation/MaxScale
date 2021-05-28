@@ -269,3 +269,17 @@ bool config_load_single_file(const char* file,
  * @return Parameters as json.
  */
 json_t* config_core_params_to_json(const char* host);
+
+/**
+ * Enable or disable masking of passwords
+ *
+ * @param enable If true, passwords are masked (the default state). If false, the passwords are not masked.
+ */
+void config_set_mask_passwords(bool enable);
+
+/**
+ * Check if passwords should be masked
+ *
+ * @return True if passwords should be masked.
+ */
+bool config_mask_passwords();

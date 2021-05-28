@@ -1198,7 +1198,11 @@ json_t* service_attributes(const char* host, const SERVICE* service)
     // Mask the password to prevent it from leaking. This does cause a problem when a GET request is followed
     // by a PATCH request with the same resource.The password is changed to the masked version which causes
     // problems that are sometimes hard to track.
-    json_object_set_new(params, CN_PASSWORD, json_string("*****"));
+
+    if (config_mask_passwords())
+    {
+        json_object_set_new(params, CN_PASSWORD, json_string("*****"));
+    }
 
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(host, service));
