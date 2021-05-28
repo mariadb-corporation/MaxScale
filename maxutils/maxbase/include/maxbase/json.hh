@@ -290,9 +290,11 @@ public:
     /**
      * Return contents as a string
      *
+     * @param format The format to print the JSON in
+     *
      * @return The JSON as a string
      */
-    std::string to_string() const;
+    std::string to_string(Format format = Format::PRETTY) const;
 
     /**
      * Replace the current JSON object

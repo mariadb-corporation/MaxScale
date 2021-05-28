@@ -449,9 +449,9 @@ json_t* Json::get_json() const
     return m_obj;
 }
 
-std::string Json::to_string() const
+std::string Json::to_string(Format format) const
 {
-    return json_dump(m_obj);
+    return json_dump(m_obj, format);
 }
 
 Json Json::at(const char* ptr) const
