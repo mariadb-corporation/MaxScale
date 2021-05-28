@@ -1570,8 +1570,13 @@ private:
     ResourceList m_patch;   /**< PATCH request handlers */
 };
 
-static RootResource resources;      /**< Core resource set */
-static ResourceWatcher watcher;     /**< Modification watcher */
+struct ThisUnit
+{
+    RootResource    resources;          /**< Core resource set */
+    ResourceWatcher watcher;            /**< Modification watcher */
+};
+
+ThisUnit this_unit;
 
 static bool request_modifies_data(const string& verb)
 {
@@ -1597,14 +1602,16 @@ static bool request_precondition_met(const HttpRequest& request, HttpResponse& r
     auto if_match = request.get_header(MHD_HTTP_HEADER_IF_MATCH);
     auto if_none_match = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH);
 
-    if ((!if_unmodified_since.empty() && watcher.last_modified(uri) > http_from_date(if_unmodified_since))
+    if ((!if_unmodified_since.empty()
+         && this_unit.watcher.last_modified(uri) > http_from_date(if_unmodified_since))
         || (!if_match.empty() && cksum != if_match))
     {
         response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
     }
     else if (!if_modified_since.empty() || !if_none_match.empty())
     {
-        if ((if_modified_since.empty() || watcher.last_modified(uri) <= http_from_date(if_modified_since))
+        if ((if_modified_since.empty()
+             || this_unit.watcher.last_modified(uri) <= http_from_date(if_modified_since))
             && (if_none_match.empty() || cksum == if_none_match))
         {
             response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
@@ -1679,7 +1686,16 @@ static HttpResponse handle_request(const HttpRequest& request)
               request.get_uri().c_str(),
               request.get_json_str().c_str());
 
-    HttpResponse rval = resources.process_request(request);
+    bool modifies_data = request_modifies_data(request.get_verb());
+    auto manager = mxs::ConfigManager::get();
+    mxb_assert(manager);
+
+    if (modifies_data && !manager->start())
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    }
+
+    HttpResponse rval = this_unit.resources.process_request(request);
 
     // Calculate the checksum from the generated JSON
     auto str = mxs::json_dump(rval.get_response(), JSON_COMPACT);
@@ -1687,25 +1703,31 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     if (request_precondition_met(request, rval, cksum))
     {
-        if (request_modifies_data(request.get_verb()))
+        if (modifies_data)
         {
             switch (rval.get_code())
             {
             case MHD_HTTP_OK:
             case MHD_HTTP_NO_CONTENT:
             case MHD_HTTP_CREATED:
-                watcher.modify(request.get_uri());
-                mxs::save_dynamic_config();
+                this_unit.watcher.modify(request.get_uri());
+
+                if (!manager->commit())
+                {
+                    rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+                }
                 break;
 
             default:
+                manager->rollback();
                 break;
             }
         }
         else if (request_reads_data(request.get_verb()))
         {
             const auto& uri = request.get_uri();
-            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_to_date(watcher.last_modified(uri)));
+            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
+                            http_to_date(this_unit.watcher.last_modified(uri)));
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 

@@ -2027,6 +2027,9 @@ int main(int argc, char** argv)
     /** Load the admin users */
     rest_users_init();
 
+    // Create the configuration manager
+    mxs::ConfigManager manager(&main_worker);
+
     /**
      * The following lambda function is executed as the first event on the main worker. This is what starts
      * up the listeners for all services.
@@ -2040,40 +2043,46 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
+            bool use_static_cnf = !manager.load_cached_config();
 
-            if (mxs::have_dynamic_config())
+            if (use_static_cnf)
             {
-                if (!mxs::load_dynamic_config())
+                if (!config_load(cnf_file_path.c_str()))
                 {
-                    MXS_ALERT("Failed to apply dynamic configuration, cannot continue.");
+                    print_alert("Failed to open, read or process the MaxScale configuration "
+                                "file. See the error log for details.");
+                    MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
+                              cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();
                     return;
                 }
-            }
-            else if (!config_load(cnf_file_path.c_str()))
-            {
-                print_alert("Failed to open, read or process the MaxScale configuration "
-                            "file. See the error log for details.");
-                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
-                          cnf_file_path.c_str());
-                rc = MAXSCALE_BADCONFIG;
-                maxscale_shutdown();
-                return;
-            }
 
-            if (cnf.config_check)
-            {
-                MXS_NOTICE("Configuration was successfully verified.");
-
-                if (*export_cnf && export_config_file(export_cnf))
+                if (cnf.config_check)
                 {
-                    MXS_NOTICE("Configuration exported to '%s'", export_cnf);
-                }
+                    MXS_NOTICE("Configuration was successfully verified.");
 
-                rc = MAXSCALE_SHUTDOWN;
-                maxscale_shutdown();
-                return;
+                    if (*export_cnf && export_config_file(export_cnf))
+                    {
+                        MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+                    }
+
+                    rc = MAXSCALE_SHUTDOWN;
+                    maxscale_shutdown();
+                    return;
+                }
+            }
+            else
+            {
+                if (!manager.process_cached_config())
+                {
+                    MXS_ALERT("Failed to apply cached configuration, cannot continue. "
+                              "To start MaxScale without the cached configuration, disable "
+                              "configuration synchronization or remove the cached file.");
+                    rc = MAXSCALE_BADCONFIG;
+                    maxscale_shutdown();
+                    return;
+                }
             }
 
             if (cnf.admin_enabled)
@@ -2102,16 +2111,23 @@ int main(int argc, char** argv)
                 }
             }
 
-            MonitorManager::start_all_monitors();
-            MonitorManager::wait_one_tick();
-
-            if (!service_launch_all())
+            // If the configuration was read from the static configuration file, the objects need to be
+            // started after they have been created.
+            if (use_static_cnf)
             {
-                log_startup_error("Failed to start all MaxScale services.");
-                rc = MAXSCALE_NOSERVICES;
-                maxscale_shutdown();
+                MonitorManager::start_all_monitors();
+                MonitorManager::wait_one_tick();
+
+                if (!service_launch_all())
+                {
+                    log_startup_error("Failed to start all MaxScale services.");
+                    rc = MAXSCALE_NOSERVICES;
+                    maxscale_shutdown();
+                    return;
+                }
             }
-            else if (this_unit.daemon_mode)
+
+            if (this_unit.daemon_mode)
             {
                 // Successful start, notify the parent process that it can exit.
                 write_child_exit_code(child_pipe, rc);

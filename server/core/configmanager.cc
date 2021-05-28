@@ -31,6 +31,13 @@ namespace
 {
 const char CN_VERSION[] = "version";
 const char CN_CONFIG[] = "config";
+
+struct ThisUnit
+{
+    mxs::ConfigManager* manager {nullptr};
+};
+
+ThisUnit this_unit;
 }
 
 namespace maxscale
@@ -38,12 +45,22 @@ namespace maxscale
 
 using namespace std::string_literals;
 
-ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
+// static
+ConfigManager* ConfigManager::get()
 {
+    return this_unit.manager;
+}
+
+ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
+    : m_worker(main_worker)
+{
+    mxb_assert(!this_unit.manager);
+    this_unit.manager = this;
 }
 
 ConfigManager::~ConfigManager()
 {
+    mxb_assert(this_unit.manager == this);
 }
 
 void ConfigManager::sync()

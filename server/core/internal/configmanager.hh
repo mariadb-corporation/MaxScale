@@ -27,6 +27,11 @@ class ConfigManager
 public:
 
     /**
+     * Get the current configuration manager
+     */
+    static ConfigManager* get();
+
+    /**
      * Create a new configuration manager
      */
     ConfigManager(MainWorker* main_worker);
@@ -107,6 +112,8 @@ private:
     mxb::Json create_config();
     auto      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
+
+    mxs::MainWorker* m_worker {nullptr};
 
     // Helper object for storing temporary data
     mxb::Json m_tmp {mxb::Json::Type::OBJECT};
