@@ -753,7 +753,7 @@ vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view
             continue;
         }
 
-        if (key.compare("_id") != 0)
+        if (key.compare("_id") == 0)
         {
             id_seen = true;
 
