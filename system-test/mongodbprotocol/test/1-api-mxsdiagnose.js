@@ -29,15 +29,9 @@ describe(name, function () {
         mxs = await test.MDB.create(test.MxsMongo);
     });
 
-    it('Cannot use with non-admin database.', async function () {
-        var rv = await mxs.ntRunCommand({mxsDiagnose: { ping: 1 }});
-
-        assert.equal(rv.code, error.UNAUTHORIZED);
-    });
-
-    it('Can use with admin database.', async function () {
+    it('Works.', async function () {
         // Valid command.
-        var rv = await mxs.adminCommand({mxsDiagnose: { ping: 1 }});
+        var rv = await mxs.runCommand({mxsDiagnose: { ping: 1 }});
 
         assert.equal(rv.ok, 1);
         assert.equal(rv.error, undefined);
@@ -45,7 +39,7 @@ describe(name, function () {
         assert.notEqual(rv.response, undefined);
 
         // Invalid command.
-        var rv = await mxs.adminCommand({mxsDiagnose: { pingX: 1 }});
+        var rv = await mxs.runCommand({mxsDiagnose: { pingX: 1 }});
 
         assert.equal(rv.ok, 1);
         assert.notEqual(rv.error, undefined);
