@@ -127,18 +127,18 @@ ignore_tables_regex=^db1|^db2|^db3\.t
 
 ### `preferred_server`
 
-This parameter has been removed in MaxScale 2.6.0. It is no longer needed after
+This parameter has been removed in MaxScale 6.0. It is no longer needed after
 the fix to MXS-2793 made it possible to correctly store the database location
 information.
 
 ### `ignore_databases`
 
-This parameter has been removed in MaxScale 2.6.0, use
+This parameter has been removed in MaxScale 6.0, use
 [ignore_tables](#ignore_tables) instead.
 
 ### `ignore_databases_regex`
 
-This parameter has been removed in MaxScale 2.6.0, use
+This parameter has been removed in MaxScale 6.0, use
 [ignore_tables_regex](#ignore_tables_regex) instead.
 
 
@@ -173,13 +173,13 @@ value pairs.
 
 This parameter has been moved to
 [the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
-in MaxScale 2.6.0.
+in MaxScale 6.0.
 
 ### `disable_sescmd_history`
 
 This parameter has been moved to
 [the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
-in MaxScale 2.6.0.
+in MaxScale 6.0.
 
 ### `refresh_databases`
 

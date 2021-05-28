@@ -129,7 +129,7 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
 
         if (!comment.empty() && comment != "Synced")
         {
-            // The Synced state is still functional in 2.6 as readconnroute has it as one of the values for
+            // The Synced state is still functional in 6 as readconnroute has it as one of the values for
             // `router_options`. This should be changed so that the Running state is only assigned for Galera
             // nodes that can actually be used for routing.
             states.push_back(comment);

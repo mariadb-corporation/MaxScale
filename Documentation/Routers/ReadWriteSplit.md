@@ -289,19 +289,19 @@ the slave with the least amount of connections
 
 This parameter has been moved to
 [the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
-in MaxScale 2.6.0.
+in MaxScale 6.0.
 
 ### `disable_sescmd_history`
 
 This parameter has been moved to
 [the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
-in MaxScale 2.6.0.
+in MaxScale 6.0.
 
 ### `prune_sescmd_history`
 
 This parameter has been moved to
 [the MaxScale core](../Getting-Started/Configuration-Guide.md#prune_sescmd_history)
-in MaxScale 2.6.0.
+in MaxScale 6.0.
 
 ### `master_accept_reads`
 
@@ -528,7 +528,7 @@ modifications done by the client itself.
   to `last_gtid`.
 
 **Note:** Support for binary protocol prepared statements was added in MaxScale
-  2.6.0. When `causal_reads` is used with binary protocol prepared statements,
+  6.0. When `causal_reads` is used with binary protocol prepared statements,
   the session command history should be enabled. Refer to the prepared statement
   [section](#prepared-statements) for an explanation as to why it is needed.
 

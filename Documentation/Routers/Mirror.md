@@ -135,7 +135,7 @@ What to do when a backend network connection fails. Accepted values are:
 
   * Close the client connection when the first backend fails.
 
-This parameter was added in MaxScale 2.6.0. Older versions always ignored
+This parameter was added in MaxScale 6.0. Older versions always ignored
 failing backends.
 
 ### `report`
@@ -156,7 +156,7 @@ When to report the result of the queries. Accepted values are:
 
   * Only report when one or more backends returns a conflicting result.
 
-This parameter was added in MaxScale 2.6.0. Older versions always reported the
+This parameter was added in MaxScale 6.0. Older versions always reported the
 result.
 
 ## Example Configuration

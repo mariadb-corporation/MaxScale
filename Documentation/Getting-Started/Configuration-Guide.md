@@ -191,7 +191,7 @@ not supported.
 some_parameter=123
 ```
 
-**Note:** Multi-line parameters have been deprecated in MaxScale 2.6.0 due to
+**Note:** Multi-line parameters have been deprecated in MaxScale 6.0 due to
   the unintuitive way they worked when the same parameter was declared multiple
   times.
 
@@ -336,7 +336,7 @@ defined in the root configuration file which by default is `/etc/maxscale.cnf`.
 
 This parameter controls the number of worker threads that are handling the
 events coming from the kernel. The default is `auto` which uses as many threads
-as there are CPU cores. MaxScale versions older than 2.6 used one thread by
+as there are CPU cores. MaxScale versions older than 6 used one thread by
 default.
 
 You can explicitly enable automatic configuration of this value by setting the
@@ -1615,7 +1615,7 @@ When a limitation is set, it effectively creates a cap on the session's memory
 consumption. This might be useful if connection pooling is used and the sessions
 use large amounts of session commands.
 
-This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
@@ -1651,7 +1651,7 @@ state plus a safety margin of 10. The safety margin reserves some extra space
 for new commands that might be executed due to changes in the client side
 application.
 
-This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
@@ -1666,7 +1666,7 @@ This parameter should only be used when either the memory footprint must be as
 small as possible or when the pruning of the session command history is not
 acceptable.
 
-This parameter was moved into the MaxScale core in MaxScale 2.6.0. The parameter
+This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
@@ -2081,7 +2081,7 @@ the TLS can be enabled after creation but it cannot be disabled or altered.
 
 This enables SSL connections when set to true. The parameter takes a boolean
 value and is disabled by default. The legacy values `required` and `disabled`
-were removed in MaxScale 2.6.0.
+were removed in MaxScale 6.0.
 
 If enabled, the certificate files mentioned above must also be
 supplied. MaxScale connections to will then be encrypted with TLS/SSL.

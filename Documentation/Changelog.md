@@ -1,6 +1,6 @@
 # Changelog
 
-## MariaDB MaxScale 2.6
+## MariaDB MaxScale 6
 
 * The Columnstore monitor no longer supports Columnstore versions prior to 1.5.
 * The Database Firewall filter has been deprecated.
@@ -13,7 +13,7 @@ connection fails due to too low *extra_max_connections*-setting on the backend.
 for more information.
 
 For more details, please refer to:
-* [MariaDB MaxScale 2.6.0 Release Notes](Release-Notes/MaxScale-2.6.0-Release-Notes.md)
+* [MariaDB MaxScale 6.0.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.5
 

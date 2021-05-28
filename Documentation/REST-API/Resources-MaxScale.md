@@ -290,10 +290,10 @@ location where the log files are stored.
 
 **Note:** The parameters in this endpoint are a subset of the parameters in the
   `/v1/maxscale` endpoint. Because of this, the parameters in this endpoint are
-  deprecated as of MaxScale 2.6.0.
+  deprecated as of MaxScale 6.0.
 
 **Note:** In MaxScale 2.5 the `log_throttling` and `ms_timestamp` parameters
-  were incorrectly named as `throttling` and `highprecision`. In MaxScale 2.6,
+  were incorrectly named as `throttling` and `highprecision`. In MaxScale 6,
   the parameter names are now correct which means the parameters declared here
   aren't fully backwards compatible.
 
@@ -342,7 +342,7 @@ location where the log files are stored.
 GET /v1/maxscale/logs/data
 ```
 
-Get the contents of the MaxScale logs. This endpoint was added in MaxScale 2.6.
+Get the contents of the MaxScale logs. This endpoint was added in MaxScale 6.
 
 To navigate the log, use the `prev` link to move backwards to older log
 entries. The latest log entries can be read with the `last` link.
@@ -419,7 +419,7 @@ This endpoint supports the following parameters:
 GET /v1/maxscale/logs/stream
 ```
 
-Stream the contents of the MaxScale logs. This endpoint was added in MaxScale 2.6.
+Stream the contents of the MaxScale logs. This endpoint was added in MaxScale 6.
 
 This endpoint opens a [WebSocket](https://tools.ietf.org/html/rfc6455)
 connection and streams the contents of the log to it. Each WebSocket message
@@ -474,7 +474,7 @@ Client didn't request a WebSocket upgrade:
 ## Update logging parameters
 
 **Note:** The modification of logging parameters via this endpoint has
-  deprecated in MaxScale 2.6.0. The parameters should be modified with the
+  deprecated in MaxScale 6.0. The parameters should be modified with the
   `/v1/maxscale` endpoint instead.
 
   Any PATCH requests done to this endpoint will be redirected to the

@@ -81,7 +81,7 @@ exports.builder = function (yargs) {
               "Warning: This command is not safe to interrupt. If interrupted, " +
               "the servers might not be added back to the service. For a better " +
               "alternative, use `set server <server> drain`. This command has been " +
-              "deprecated in MaxScale 2.6.0."
+              "deprecated in MaxScale 6.0."
           )
           .usage("Usage: drain server <server>");
       },

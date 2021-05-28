@@ -1,8 +1,8 @@
-# MariaDB MaxScale 2.6.0 Release Notes
+# MariaDB MaxScale 6.0 Release Notes
 
-Release 2.6.0 is a Beta release.
+Release 6.0 is a Beta release.
 
-This document describes the changes in release 2.6.0, when compared to
+This document describes the changes in release 6, when compared to
 release 2.5.
 
 For any problems you encounter, please consider submitting a bug
@@ -16,7 +16,7 @@ report at [Jira](https://jira.mariadb.org).
 
 ### Database Firewall filter
 
-The filter is deprecated in 2.6 and will be removed in 2.7.
+The filter is deprecated in MaxScale 6 and will be removed in MaxScale 7.
 
 ## New Features
 

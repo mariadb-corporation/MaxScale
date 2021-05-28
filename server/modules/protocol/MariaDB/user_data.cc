@@ -73,7 +73,7 @@ const string db_grants_query_old =
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
 
 // The query above does not check the procs_priv-table. To avoid requiring new privileges in existing
-// installations, keep the existing query as an alternative. The old query can be removed in 2.6.
+// installations, keep the existing query as an alternative. The old query can be removed in 6.
 const string db_grants_query =
     "SELECT DISTINCT * FROM ("
     // Select table level privs counting as db-level privs

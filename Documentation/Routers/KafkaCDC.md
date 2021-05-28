@@ -171,13 +171,13 @@ from Kafka.
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
 used when replicating from the master in direct replication mode. The default
-value is 1234. This parameter was added in MaxScale 2.6.0.
+value is 1234. This parameter was added in MaxScale 6.0.
 
 ### `cooperative_replication`
 
 Controls whether multiple instances cooperatively replicate from the same
 cluster. This is a boolean parameter and is disabled by default. It was added in
-MaxScale 2.6.0.
+MaxScale 6.0.
 
 When this parameter is enabled and the monitor pointed to by the `cluster`
 parameter supports cooperative monitoring (currently only `mariadbmon`), the

@@ -151,7 +151,7 @@ Connector-C function `mariadb_stmt_prepare` and then executed with
 SELECT user FROM accounts WHERE id = ? -- maxscale route to master
 ```
 
-Support for binary protocol prepared statements was added in MaxScale 2.6.0
+Support for binary protocol prepared statements was added in MaxScale 6.0
 ([MXS-2838](https://jira.mariadb.org/browse/MXS-2838)).
 
 The protocol commands that the routing hints are applied to are:

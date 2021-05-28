@@ -169,7 +169,7 @@ binlog files.
 
 Controls whether multiple instances cooperatively replicate from the same
 cluster. This is a boolean parameter and is disabled by default. It was
-added in MaxScale 2.6.0.
+added in MaxScale 6.0.
 
 When this parameter is enabled and the monitor pointed to by the `cluster`
 parameter supports cooperative monitoring (currently only `mariadbmon`),

@@ -1,9 +1,18 @@
-# Upgrading MariaDB MaxScale from 2.5 to 2.6
+# Upgrading MariaDB MaxScale from 2.5 to 6
 
 This document describes possible issues when upgrading MariaDB MaxScale from
-version 2.5 to 2.6.
+version 2.5 to 6.
 
-For more information about MaxScale 2.6, refer to the
+Note that the versioning scheme has changed and that version 6 immediately
+follows version 2.5. Effectively, the non-changing `2.`-prefix has been
+dropped and henceforth at a major release, the _major_, instead of the _minor_
+version number, will be bumped. So, MaxScale 6 will be followed by MaxScale 7.
+This change also affects how maintenance releases are versioned. For instance,
+2.5.1, the first GA version of MaxScale 2.5, was followed by the maintenace
+release 2.5.2. 6.1, the first GA version of MaxScale 6, will be followed by
+the maintenance release 6.2.
+
+For more information about MaxScale 6, refer to the
 [ChangeLog](../Changelog.md).
 
 Before starting the upgrade, any existing configuration files should be backed
@@ -12,7 +21,7 @@ up.
 ## Duration Type Parameters
 
 Using duration type parameters without an explicit suffix has been deprecated in
-MaxScale 2.4. In MaxScale 2.6 they are no longer allowed when used with the REST
+MaxScale 2.4. In MaxScale 6 they are no longer allowed when used with the REST
 API or MaxCtrl. This means that any `create` or `alter` commands in MaxCtrl that
 use a duration type parameter must explicitly specify the suffix of the unit.
 
@@ -31,7 +40,7 @@ maxctrl alter service My-Service connection_keepalive 30000ms
 Duration type parameters can still be defined in the configuration file without
 an explicit suffix but this behavior is deprecated. The recommended approach is
 to add explicit suffixes to all duration type parameters when upgrading to
-MaxScale 2.6.
+MaxScale 6.
 
 ## Changed Parameters
 
