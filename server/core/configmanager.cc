@@ -155,9 +155,12 @@ bool ConfigManager::commit()
     //    COMMIT
 
     // Store the cached value locally on disk.
-    std::ofstream file(dynamic_config_filename());
+    std::string filename = dynamic_config_filename();
+    std::string tmpname = filename + ".tmp";
+    std::ofstream file(tmpname);
 
-    if (file.write(payload.c_str(), payload.size()) && file.flush())
+    if (file.write(payload.c_str(), payload.size()) && file.flush()
+        && rename(tmpname.c_str(), filename.c_str()) == 0)
     {
         // Config successfully stored, stash it for later use
         m_current_config = std::move(config);
