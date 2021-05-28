@@ -38,6 +38,7 @@
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
+#include "internal/config_runtime.hh"
 #include "internal/filter.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"
@@ -110,6 +111,91 @@ const Relationship to_filter_rel
     MXS_JSON_PTR_RELATIONSHIPS_FILTERS,
     filter_relation_is_valid
 };
+
+bool save_config(Server* server)
+{
+    bool ok = true;
+
+    if (mxs::Config::get().config_sync_cluster.empty())
+    {
+        std::ostringstream ss;
+        server->persist(ss);
+        ok = runtime_save_config(server->name(), ss.str());
+    }
+
+    return ok;
+}
+
+bool save_config(Service* service)
+{
+    bool ok = true;
+
+    if (mxs::Config::get().config_sync_cluster.empty())
+    {
+        std::ostringstream ss;
+        service->persist(ss);
+        ok = runtime_save_config(service->name(), ss.str());
+    }
+
+    return ok;
+}
+
+bool save_config(const SListener& listener)
+{
+    bool ok = true;
+
+    if (mxs::Config::get().config_sync_cluster.empty())
+    {
+        std::ostringstream ss;
+        listener->persist(ss);
+        ok = runtime_save_config(listener->name(), ss.str());
+    }
+
+    return ok;
+}
+
+bool save_config(mxs::Monitor* monitor)
+{
+    bool ok = true;
+
+    if (mxs::Config::get().config_sync_cluster.empty())
+    {
+
+        std::ostringstream ss;
+        MonitorManager::monitor_persist(monitor, ss);
+        ok = runtime_save_config(monitor->name(), ss.str());
+    }
+
+    return ok;
+}
+
+bool save_config(const SFilterDef& filter)
+{
+    bool ok = true;
+
+    if (mxs::Config::get().config_sync_cluster.empty())
+    {
+        std::ostringstream ss;
+        filter->persist(ss);
+        ok = runtime_save_config(filter->name(), ss.str());
+    }
+
+    return ok;
+}
+
+bool save_config(const mxs::Config& config)
+{
+    bool ok = true;
+
+    if (config.config_sync_cluster.empty())
+    {
+        std::ostringstream ss;
+        config.persist(ss);
+        ok = runtime_save_config("maxscale", ss.str());
+    }
+
+    return ok;
+}
 
 const MXS_MODULE_PARAM* get_type_parameters(const char* type)
 {
@@ -295,9 +381,7 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
 
         if (rval)
         {
-            std::ostringstream ss;
-            service->persist(ss);
-            rval = runtime_save_config(service->name(), ss.str());
+            rval = save_config(service);
         }
     }
     else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
@@ -325,9 +409,7 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
 
         if (rval)
         {
-            std::ostringstream ss;
-            MonitorManager::monitor_persist(monitor, ss);
-            rval = runtime_save_config(monitor->name(), ss.str());
+            rval = save_config(monitor);
         }
     }
     else
@@ -377,9 +459,7 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
 
         if (rval)
         {
-            std::ostringstream ss;
-            service->persist(ss);
-            rval = runtime_save_config(service->name(), ss.str());
+            rval = save_config(service);
         }
     }
     else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
@@ -407,9 +487,7 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
 
         if (rval)
         {
-            std::ostringstream ss;
-            MonitorManager::monitor_persist(monitor, ss);
-            rval = runtime_save_config(monitor->name(), ss.str());
+            rval = save_config(monitor);
         }
     }
     else
@@ -1445,9 +1523,7 @@ void prepare_for_destruction(const SFilterDef& filter)
         service->remove_filter(filter);
 
         // Save the changes in the filters list
-        std::ostringstream ss;
-        service->persist(ss);
-        runtime_save_config(service->name(), ss.str());
+        save_config(service);
     }
 }
 
@@ -1754,9 +1830,7 @@ bool runtime_create_server_from_json(json_t* json)
         {
             if (link_target_to_objects(server->name(), relations))
             {
-                std::ostringstream ss;
-                server->persist(ss);
-                rval = runtime_save_config(server->name(), ss.str());
+                rval = save_config(server);
             }
             else
             {
@@ -1811,9 +1885,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
         {
             if ((rval = server->configure(new_parameters)))
             {
-                std::ostringstream ss;
-                server->persist(ss);
-                rval = runtime_save_config(server->name(), ss.str());
+                rval = save_config(server);
 
                 // Restart the monitor that monitors this server to propagate the configuration changes
                 // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
@@ -1879,10 +1951,7 @@ bool runtime_create_monitor_from_json(json_t* json)
             {
                 if (auto monitor = MonitorManager::create_monitor(name, module, &params))
                 {
-                    std::ostringstream ss;
-                    MonitorManager::monitor_persist(monitor, ss);
-
-                    if (runtime_save_config(monitor->name(), ss.str()))
+                    if (save_config(monitor))
                     {
                         MXS_NOTICE("Created monitor '%s'", name);
                         MonitorManager::start_monitor(monitor);
@@ -1932,10 +2001,7 @@ bool runtime_create_filter_from_json(json_t* json)
 
             if (auto filter = filter_alloc(name, parameters))
             {
-                std::ostringstream ss;
-                filter->persist(ss);
-
-                if (runtime_save_config(filter->name(), ss.str()))
+                if (save_config(filter))
                 {
                     MXS_NOTICE("Created filter '%s'", name);
                     rval = true;
@@ -1988,10 +2054,7 @@ bool runtime_create_service_from_json(json_t* json)
             {
                 if (update_service_relationships(service, json))
                 {
-                    std::ostringstream ss;
-                    service->persist(ss);
-
-                    if (runtime_save_config(name, ss.str()))
+                    if (save_config(service))
                     {
                         MXS_NOTICE("Created service '%s'", name);
                         serviceStart(service);
@@ -2030,9 +2093,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     {
         if (MonitorManager::reconfigure_monitor(monitor, params))
         {
-            std::ostringstream ss;
-            MonitorManager::monitor_persist(monitor, ss);
-            success = runtime_save_config(monitor->name(), ss.str());
+            success = save_config(monitor);
         }
     }
 
@@ -2106,9 +2167,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
         if (rval)
         {
-            std::ostringstream ss;
-            service->persist(ss);
-            runtime_save_config(service->name(), ss.str());
+            save_config(service);
         }
     }
 
@@ -2136,9 +2195,7 @@ bool runtime_alter_filter_from_json(const SFilterDef& filter, json_t* new_json)
                 && can_modify_params(config, params)
                 && config.configure(params))
             {
-                std::ostringstream ss;
-                filter->persist(ss);
-                rval = runtime_save_config(filter->name(), ss.str());
+                rval = save_config(filter);
             }
 
             json_decref(params);
@@ -2181,10 +2238,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
 
             if (auto listener = Listener::create(name, params))
             {
-                std::ostringstream ss;
-                listener->persist(ss);
-
-                if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
+                if (save_config(listener) && listener->listen())
                 {
                     MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
                                name, listener->address(), listener->port(), service->name());
@@ -2219,10 +2273,7 @@ bool runtime_alter_listener_from_json(SListener listener, json_t* new_json)
             if (cnf.specification().validate(params) && cnf.configure(params))
             {
                 // TODO: Configure the protocol module as well
-
-                std::ostringstream ss;
-                listener->persist(ss);
-                rval = runtime_save_config(listener->name(), ss.str());
+                rval = save_config(listener);
             }
 
             json_decref(params);
@@ -2331,9 +2382,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
         if (cfg.specification().validate(params) && cfg.configure(params))
         {
-            std::ostringstream ss;
-            mxs::Config::get().persist(ss);
-            rval = runtime_save_config("maxscale", ss.str());
+            rval = save_config(cfg);
         }
 
         json_decref(params);
@@ -2416,6 +2465,11 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
 
 bool runtime_remove_config(const char* name)
 {
+    if (!mxs::Config::get().config_sync_cluster.empty())
+    {
+        return true;
+    }
+
     bool rval = true;
     std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf";
 
