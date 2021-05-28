@@ -367,7 +367,7 @@ void Json::set_object(const char* key, Json&& value)
 
 bool Json::save(const std::string& filepath, Format format)
 {
-    int flags = format;
+    int flags = static_cast<int>(format);
     bool write_ok = false;
     auto filepathc = filepath.c_str();
     if (json_dump_file(m_obj, filepathc, flags) == 0)
@@ -451,7 +451,7 @@ json_t* Json::get_json() const
 
 std::string Json::to_string(Format format) const
 {
-    return json_dump(m_obj, format);
+    return json_dump(m_obj, static_cast<int>(format));
 }
 
 Json Json::at(const char* ptr) const

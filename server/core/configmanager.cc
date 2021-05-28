@@ -148,7 +148,7 @@ bool ConfigManager::commit()
     // Increment the current version and create the JSON
     ++m_version;
     mxb::Json config = create_config();
-    std::string payload = config.to_string(mxb::Json::COMPACT);
+    std::string payload = config.to_string(mxb::Json::Format::COMPACT);
 
     // TODO: Execute the following:
     //    UPDATE mysql.maxscale_config SET data = '%s', version = %d WHERE CLUSTER = '%s'

@@ -58,7 +58,7 @@ public:
         NONE        /**< No object */
     };
 
-    enum Format
+    enum class Format
     {
         NORMAL  = 0,                // JSON on one line
         COMPACT = JSON_COMPACT,     // As compact as possible
