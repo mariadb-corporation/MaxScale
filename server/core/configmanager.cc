@@ -34,6 +34,7 @@ const char CN_VERSION[] = "version";
 const char CN_CONFIG[] = "config";
 const char CN_CLUSTER_NAME[] = "cluster_name";
 
+const char SCOPE_NAME[] = "ConfigManager";
 const char TABLE[] = "mysql.maxscale_config";
 
 struct ThisUnit
@@ -165,6 +166,7 @@ void ConfigManager::queue_sync()
 
 void ConfigManager::sync()
 {
+    mxb::LogScope scope(SCOPE_NAME);
 
     if (!cluster_name().empty())
     {
@@ -192,6 +194,7 @@ void ConfigManager::sync()
 
 bool ConfigManager::load_cached_config()
 {
+    mxb::LogScope scope(SCOPE_NAME);
     bool have_config = false;
     std::string filename = dynamic_config_filename();
     const std::string& cluster = cluster_name();
@@ -228,6 +231,7 @@ bool ConfigManager::load_cached_config()
 
 bool ConfigManager::process_cached_config()
 {
+    mxb::LogScope scope(SCOPE_NAME);
     bool ok = true;
 
     try
@@ -250,6 +254,7 @@ bool ConfigManager::process_cached_config()
 
 bool ConfigManager::start()
 {
+    mxb::LogScope scope(SCOPE_NAME);
     bool ok = true;
 
     if (!cluster_name().empty())
@@ -271,6 +276,7 @@ bool ConfigManager::start()
 
 void ConfigManager::rollback()
 {
+    mxb::LogScope scope(SCOPE_NAME);
     if (!cluster_name().empty())
     {
         m_conn.cmd("ROLLBACK");
@@ -279,6 +285,7 @@ void ConfigManager::rollback()
 
 bool ConfigManager::commit()
 {
+    mxb::LogScope scope(SCOPE_NAME);
     if (cluster_name().empty())
     {
         return true;
