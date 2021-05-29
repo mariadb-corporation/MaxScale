@@ -44,7 +44,6 @@ ThisUnit this_unit;
 namespace maxscale
 {
 
-using namespace std::string_literals;
 
 // static
 ConfigManager* ConfigManager::get()
@@ -219,9 +218,8 @@ void ConfigManager::process_config(mxb::Json&& new_json)
 
     if (next_version <= m_version)
     {
-        throw Exception("Not processing old configuration: got version "
-                        + std::to_string(m_version) + ", found version "
-                        + std::to_string(next_version) + " in the configuration.");
+        throw error("Not processing old configuration: got version ",
+                    m_version, ", found version ", next_version, " in the configuration.");
     }
 
     std::set<std::string> old_names;
@@ -312,42 +310,42 @@ void ConfigManager::remove_old_object(const std::string& name, const std::string
     case Type::SERVERS:
         if (!runtime_destroy_server(ServerManager::find_by_unique_name(name), true))
         {
-            throw Exception("Failed to destroy server '" + name + "'");
+            throw error("Failed to destroy server '", name, "'");
         }
         break;
 
     case Type::MONITORS:
         if (!runtime_destroy_monitor(MonitorManager::find_monitor(name.c_str()), true))
         {
-            throw Exception("Failed to destroy monitor '" + name + "'");
+            throw error("Failed to destroy monitor '", name, "'");
         }
         break;
 
     case Type::SERVICES:
         if (!runtime_destroy_service(Service::find(name), true))
         {
-            throw Exception("Failed to destroy service '" + name + "'");
+            throw error("Failed to destroy service '", name, "'");
         }
         break;
 
     case Type::LISTENERS:
         if (!runtime_destroy_listener(listener_find(name)))
         {
-            throw Exception("Failed to destroy listener '" + name + "'");
+            throw error("Failed to destroy listener '", name, "'");
         }
         break;
 
     case Type::FILTERS:
         if (!runtime_destroy_filter(filter_find(name), true))
         {
-            throw Exception("Failed to destroy filter '" + name + "'");
+            throw error("Failed to destroy filter '", name, "'");
         }
         break;
 
     case Type::MAXSCALE:
     case Type::UNKNOWN:
         mxb_assert(!true);
-        throw Exception("Found old object of unexpected type '" + type + "': " + name);
+        throw error("Found old object of unexpected type '", type, "': ", name);
         break;
     }
 }
@@ -364,7 +362,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
 
         if (!runtime_create_server_from_json(m_tmp.get_json()))
         {
-            throw Exception("Failed to create server '" + name + "'");
+            throw error("Failed to create server '", name, "'");
         }
         break;
 
@@ -374,7 +372,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
 
         if (!runtime_create_monitor_from_json(m_tmp.get_json()))
         {
-            throw Exception("Failed to create monitor '" + name + "'");
+            throw error("Failed to create monitor '", name, "'");
         }
         break;
 
@@ -386,7 +384,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
 
             if (!runtime_create_service_from_json(m_tmp.get_json()))
             {
-                throw Exception("Failed to create service '" + name + "'");
+                throw error("Failed to create service '", name, "'");
             }
 
             obj.set_object(CN_RELATIONSHIPS, rel);
@@ -396,14 +394,14 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
     case Type::LISTENERS:
         if (!runtime_create_listener_from_json(m_tmp.get_json()))
         {
-            throw Exception("Failed to create listener '" + name + "'");
+            throw error("Failed to create listener '", name, "'");
         }
         break;
 
     case Type::FILTERS:
         if (!runtime_create_filter_from_json(m_tmp.get_json()))
         {
-            throw Exception("Failed to create filter '" + name + "'");
+            throw error("Failed to create filter '", name, "'");
         }
         break;
 
@@ -411,7 +409,7 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
     // The maxscales type should not be "new" as it is always created even if there are no other objects.
     case Type::UNKNOWN:
         mxb_assert(!true);
-        throw Exception("Found new object of unexpected type '" + type + "': " + name);
+        throw error("Found new object of unexpected type '", type, "': ", name);
         break;
     }
 }
@@ -426,53 +424,53 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     case Type::SERVERS:
         if (!runtime_alter_server_from_json(ServerManager::find_by_unique_name(name), js))
         {
-            throw Exception("Failed to update server '" + name + "'");
+            throw error("Failed to update server '", name, "'");
         }
         break;
 
     case Type::MONITORS:
         if (!runtime_alter_monitor_from_json(MonitorManager::find_monitor(name.c_str()), js))
         {
-            throw Exception("Failed to update monitor '" + name + "'");
+            throw error("Failed to update monitor '", name, "'");
         }
         break;
 
     case Type::SERVICES:
         if (!runtime_alter_service_from_json(Service::find(name), js))
         {
-            throw Exception("Failed to update service '" + name + "'");
+            throw error("Failed to update service '", name, "'");
         }
         break;
 
     case Type::LISTENERS:
         if (!runtime_alter_listener_from_json(listener_find(name), js))
         {
-            throw Exception("Failed to update listener '" + name + "'");
+            throw error("Failed to update listener '", name, "'");
         }
         break;
 
     case Type::FILTERS:
         if (!runtime_alter_filter_from_json(filter_find(name), js))
         {
-            throw Exception("Failed to update filter '" + name + "'");
+            throw error("Failed to update filter '", name, "'");
         }
         break;
 
     case Type::MAXSCALE:
         if (!runtime_alter_maxscale_from_json(js))
         {
-            throw Exception("Failed to configure global options");
+            throw error("Failed to configure global options");
         }
         break;
 
     case Type::UNKNOWN:
         mxb_assert(!true);
-        throw Exception("Found object of unexpected type '" + type + "': " + name);
+        throw error("Found object of unexpected type '", type, "': ", name);
         break;
     }
 }
 
-auto ConfigManager::remove_extra_data(json_t* data)
+void ConfigManager::remove_extra_data(json_t* data)
 {
     static const std::unordered_set<std::string> keys_to_keep {
         CN_PARAMETERS, CN_MODULE, CN_ROUTER

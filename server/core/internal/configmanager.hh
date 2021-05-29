@@ -101,6 +101,27 @@ private:
         SERVERS, MONITORS, SERVICES, LISTENERS, FILTERS, MAXSCALE, UNKNOWN
     };
 
+    template<class T>
+    std::string args_to_string(std::ostringstream& ss, T t) const
+    {
+        ss << t;
+        return ss.str();
+    }
+
+    template<class T, class ... Args>
+    std::string args_to_string(std::ostringstream& ss, T t, Args ... args) const
+    {
+        ss << t;
+        return args_to_string(ss, args ...);
+    }
+
+    template<class ... Args>
+    Exception error(Args ... args) const
+    {
+        std::ostringstream ss;
+        return Exception(args_to_string(ss, args ...));
+    }
+
     Type        to_type(const std::string& type);
     std::string dynamic_config_filename() const;
 
@@ -110,7 +131,7 @@ private:
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json);
 
     mxb::Json create_config();
-    auto      remove_extra_data(json_t* data);
+    void      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
 
     const std::string& cluster_name() const;
