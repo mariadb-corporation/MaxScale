@@ -178,6 +178,9 @@ void ConfigManager::sync()
             {
                 MXS_NOTICE("Updating to configuration version %ld", config.get_int(CN_VERSION));
                 process_config(std::move(config));
+
+                // Config updated, save a local version of it.
+                save_config(m_current_config.to_string(mxb::Json::Format::COMPACT));
                 m_log_sync_error = true;
             }
         }
@@ -307,20 +310,12 @@ bool ConfigManager::commit()
 
         std::string payload = config.to_string(mxb::Json::Format::COMPACT);
         update_config(payload);
+        save_config(payload);
 
-        // Store the cached value locally on disk.
-        std::string filename = dynamic_config_filename();
-        std::string tmpname = filename + ".tmp";
-        std::ofstream file(tmpname);
-
-        if (file.write(payload.c_str(), payload.size()) && file.flush()
-            && rename(tmpname.c_str(), filename.c_str()) == 0)
-        {
-            // Config successfully stored, stash it for later use
-            m_current_config = std::move(config);
-            ++m_version;
-            ok = true;
-        }
+        // Config successfully updated in the cluster and cached locally
+        m_current_config = std::move(config);
+        ++m_version;
+        ok = true;
     }
     catch (const Exception& e)
     {
@@ -329,6 +324,19 @@ bool ConfigManager::commit()
     }
 
     return ok;
+}
+
+void ConfigManager::save_config(const std::string& payload)
+{
+    std::string filename = dynamic_config_filename();
+    std::string tmpname = filename + ".tmp";
+    std::ofstream file(tmpname);
+
+    if (!file.write(payload.c_str(), payload.size()) || !file.flush()
+        || rename(tmpname.c_str(), filename.c_str()) != 0)
+    {
+        throw error("Failed to save configuration to disk: ", errno, ", ", mxb_strerror(errno));
+    }
 }
 
 mxb::Json ConfigManager::create_config(int64_t version)

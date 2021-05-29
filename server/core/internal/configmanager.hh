@@ -134,6 +134,7 @@ private:
     void remove_old_object(const std::string& name, const std::string& type);
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj);
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json);
+    void save_config(const std::string& payload);
 
     mxb::Json create_config(int64_t version);
     void      remove_extra_data(json_t* data);
