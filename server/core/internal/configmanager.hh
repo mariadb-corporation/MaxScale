@@ -16,6 +16,7 @@
 
 #include <maxbase/json.hh>
 #include <maxscale/mainworker.hh>
+#include <maxsql/mariadb_connector.hh>
 
 #include <stdexcept>
 
@@ -25,6 +26,11 @@ namespace maxscale
 class ConfigManager
 {
 public:
+
+    // The primary key must be under 3072 bytes which for the utf8_mb4 character set is 768 characters. Having
+    // the limit as 256 characters should be enough for almost all cases as that's the maximum length of a
+    // hostname which some people seem to use for the object names.
+    static constexpr int CLUSTER_MAX_LEN = 256;
 
     /**
      * Get the current configuration manager
@@ -57,7 +63,6 @@ public:
      * @return True if the configuration was processed successfully
      */
     bool process_cached_config();
-
 
     /**
      * Start a configuration change
@@ -130,11 +135,16 @@ private:
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj);
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json);
 
-    mxb::Json create_config();
+    mxb::Json create_config(int64_t version);
     void      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
 
     const std::string& cluster_name() const;
+
+    void    connect();
+    void    verify_sync();
+    void    update_config(const std::string& payload);
+    SERVER* get_server() const;
 
     mxs::MainWorker* m_worker {nullptr};
 
@@ -142,9 +152,13 @@ private:
     mxb::Json m_tmp {mxb::Json::Type::OBJECT};
 
     // The latest configuration that was either created or loaded
-    mxb::Json m_current_config {mxb::Json::Type::OBJECT};
+    mxb::Json m_current_config {mxb::Json::Type::NONE};
 
     // The latest processed configuration version
     int64_t m_version {0};
+
+    mxq::MariaDB m_conn;
+    bool         m_row_exists {false};
+    SERVER*      m_server {nullptr};
 };
 }

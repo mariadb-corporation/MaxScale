@@ -26,6 +26,7 @@
 
 #include <set>
 #include <fstream>
+#include <mysqld_error.h>
 
 namespace
 {
@@ -198,26 +199,31 @@ bool ConfigManager::process_cached_config()
 
 bool ConfigManager::start()
 {
-    if (cluster_name().empty())
+    bool ok = true;
+
+    if (!cluster_name().empty())
     {
-        return true;
+        try
+        {
+            verify_sync();
+        }
+        catch (const Exception& e)
+        {
+            MXS_ERROR("%s", e.what());
+            ok = false;
+            rollback();
+        }
     }
 
-    // TODO: Execute the following:
-    //    START TRANSACTION
-    //    SELECT version FROM mysql.maxscale_config WHERE CLUSTER = '%s' FOR UPDATE
-    return true;
+    return ok;
 }
 
 void ConfigManager::rollback()
 {
-    if (cluster_name().empty())
+    if (!cluster_name().empty())
     {
-        return;
+        m_conn.cmd("ROLLBACK");
     }
-
-    // TODO: Execute the following:
-    //    ROLLBACK
 }
 
 bool ConfigManager::commit()
@@ -229,38 +235,39 @@ bool ConfigManager::commit()
 
     bool ok = false;
 
-    // Increment the current version and create the JSON
-    ++m_version;
-    mxb::Json config = create_config();
-    std::string payload = config.to_string(mxb::Json::Format::COMPACT);
-
-    // TODO: Execute the following:
-    //    UPDATE mysql.maxscale_config SET data = '%s', version = %d WHERE CLUSTER = '%s'
-    //    COMMIT
-
-    // Store the cached value locally on disk.
-    std::string filename = dynamic_config_filename();
-    std::string tmpname = filename + ".tmp";
-    std::ofstream file(tmpname);
-
-    if (file.write(payload.c_str(), payload.size()) && file.flush()
-        && rename(tmpname.c_str(), filename.c_str()) == 0)
+    try
     {
-        // Config successfully stored, stash it for later use
-        m_current_config = std::move(config);
-        ok = true;
+        mxb::Json config = create_config(m_version + 1);
+        std::string payload = config.to_string(mxb::Json::Format::COMPACT);
+        update_config(payload);
+
+        // Store the cached value locally on disk.
+        std::string filename = dynamic_config_filename();
+        std::string tmpname = filename + ".tmp";
+        std::ofstream file(tmpname);
+
+        if (file.write(payload.c_str(), payload.size()) && file.flush()
+            && rename(tmpname.c_str(), filename.c_str()) == 0)
+        {
+            // Config successfully stored, stash it for later use
+            m_current_config = std::move(config);
+            ++m_version;
+            ok = true;
+        }
     }
-    else
+    catch (const Exception& e)
     {
-        // TODO: Make the next sync take place immediately after this call.
-        --m_version;
+        MXS_ERROR("%s", e.what());
+        rollback();
     }
 
     return ok;
 }
 
-mxb::Json ConfigManager::create_config()
+mxb::Json ConfigManager::create_config(int64_t version)
 {
+    bool mask = config_mask_passwords();
+    config_set_mask_passwords(false);
     mxb::Json arr(mxb::Json::Type::ARRAY);
 
     append_config(arr.get_json(), ServerManager::server_list_to_json(""));
@@ -273,12 +280,13 @@ mxb::Json ConfigManager::create_config()
     mxb::Json rval(mxb::Json::Type::OBJECT);
 
     rval.set_object(CN_CONFIG, arr);
-    rval.set_int(CN_VERSION, m_version);
+    rval.set_int(CN_VERSION, version);
 
     const std::string& cluster = cluster_name();
     mxb_assert(!cluster.empty());
     rval.set_string(CN_CLUSTER_NAME, cluster);
 
+    config_set_mask_passwords(mask);
     return rval;
 }
 
@@ -476,7 +484,10 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
         break;
 
     case Type::MAXSCALE:
-    // The maxscales type should not be "new" as it is always created even if there are no other objects.
+        // We'll end up here when we're loading a cached configuration
+        mxb_assert(m_version == 0);
+        break;
+
     case Type::UNKNOWN:
         mxb_assert(!true);
         throw error("Found new object of unexpected type '", type, "': ", name);
@@ -600,5 +611,126 @@ std::string ConfigManager::dynamic_config_filename() const
 const std::string& ConfigManager::cluster_name() const
 {
     return mxs::Config::get().config_sync_cluster;
+}
+
+SERVER* ConfigManager::get_server() const
+{
+    SERVER* rval = nullptr;
+    auto monitor = MonitorManager::find_monitor(cluster_name().c_str());
+    mxb_assert(monitor);
+
+    for (const auto& server : monitor->servers())
+    {
+        if (server->server->is_master())
+        {
+            rval = server->server;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+void ConfigManager::connect()
+{
+    SERVER* server = get_server();
+
+    if (!server)
+    {
+        throw error("No valid servers in cluster '", cluster_name(),
+                    "', cannot perform configuration update.");
+    }
+    else if (server != m_server)
+    {
+        // New server, close old connection
+        m_conn.close();
+        m_server = nullptr;
+    }
+
+    if (!m_conn.is_open() || !m_conn.ping())
+    {
+        auto monitor = MonitorManager::find_monitor(cluster_name().c_str());
+        mxb_assert(monitor);
+        const auto& params = monitor->parameters();
+        auto& cfg = m_conn.connection_settings();
+
+        // TODO: Create separate configurations for these
+        cfg.user = params.get_string(CN_USER);
+        cfg.password = params.get_string(CN_PASSWORD);
+        cfg.timeout = params.get_integer("backend_connect_timeout");
+        cfg.ssl = server->ssl_config();
+
+        if (!m_conn.open(server->address(), server->port()))
+        {
+            throw error("Failed to connect to '", server->name(), "' for configuration update: ",
+                        m_conn.error());
+        }
+
+        m_server = server;
+    }
+
+    mxb_assert(m_server);
+}
+
+void ConfigManager::verify_sync()
+{
+    connect();
+
+    if (!m_conn.cmd("START TRANSACTION"))
+    {
+        throw error("Failed to start transaction: ", m_conn.error());
+    }
+
+    auto sql = sql_select_for_update(cluster_name());
+    auto res = m_conn.query(sql);
+
+    if (m_conn.errornum() == ER_NO_SUCH_TABLE)
+    {
+        if (!m_conn.cmd(sql_create_table(CLUSTER_MAX_LEN)))
+        {
+            throw error("Failed to create table for configuration sync: ", m_conn.error());
+        }
+
+        if (!m_conn.cmd("START TRANSACTION"))
+        {
+            throw error("Failed to start transaction: ", m_conn.error());
+        }
+
+        res = m_conn.query(sql);
+    }
+
+    if (m_conn.errornum() || !res)
+    {
+        throw error("Failed to check config version: ", m_conn.error());
+    }
+
+    m_row_exists = res->next_row();
+
+    if (m_row_exists)
+    {
+        int64_t version = res->get_int(0);
+
+        if (version != m_version)
+        {
+            throw error("Configuration conflict detected: version stored in the cluster",
+                        " (", version, ") is not the same as the local version (", m_version, "),",
+                        " MaxScale is out of sync.");
+        }
+    }
+}
+
+void ConfigManager::update_config(const std::string& payload)
+{
+    auto sql = m_row_exists ? sql_update : sql_insert;
+
+    if (!m_conn.cmd(sql(cluster_name(), m_version, payload)))
+    {
+        throw error("Failed to update: ", m_conn.error());
+    }
+
+    if (!m_conn.cmd("COMMIT"))
+    {
+        throw error("Failed to commit: ", m_conn.error());
+    }
 }
 }
