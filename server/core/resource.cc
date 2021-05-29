@@ -1455,31 +1455,50 @@ public:
     {
     }
 
-    ResourceList::const_iterator find_resource(const ResourceList& list, const HttpRequest& request) const
+    const Resource* find_resource(const ResourceList& list, const HttpRequest& request) const
     {
-        for (ResourceList::const_iterator it = list.begin(); it != list.end(); it++)
+        for (const auto& res : list)
         {
-            if (it->match(request))
+            if (res.match(request))
             {
-                return it;
+                return &res;
             }
         }
 
-        return list.end();
+        return nullptr;
+    }
+
+    const Resource* find_resource(const HttpRequest& request) const
+    {
+        if (request.get_verb() == MHD_HTTP_METHOD_GET)
+        {
+            return find_resource(m_get, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_PUT)
+        {
+            return find_resource(m_put, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
+        {
+            return find_resource(m_patch, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_POST)
+        {
+            return find_resource(m_post, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_DELETE)
+        {
+            return find_resource(m_delete, request);
+        }
+
+        return nullptr;
     }
 
     HttpResponse process_request_type(const ResourceList& list, const HttpRequest& request)
     {
-        ResourceList::const_iterator it = find_resource(list, request);
-
-        if (it != list.end())
+        if (const auto* res = find_resource(list, request))
         {
-            if (it->requires_body() && request.get_json() == NULL)
-            {
-                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));
-            }
-
-            return it->call(request);
+            return res->call(request);
         }
 
         return HttpResponse(MHD_HTTP_NOT_FOUND);
@@ -1489,19 +1508,19 @@ public:
     {
         std::vector<string> l;
 
-        if (find_resource(m_get, request) != m_get.end())
+        if (find_resource(m_get, request))
         {
             l.push_back(MHD_HTTP_METHOD_GET);
         }
-        if (find_resource(m_put, request) != m_put.end())
+        if (find_resource(m_put, request))
         {
             l.push_back(MHD_HTTP_METHOD_PUT);
         }
-        if (find_resource(m_post, request) != m_post.end())
+        if (find_resource(m_post, request))
         {
             l.push_back(MHD_HTTP_METHOD_POST);
         }
-        if (find_resource(m_delete, request) != m_delete.end())
+        if (find_resource(m_delete, request))
         {
             l.push_back(MHD_HTTP_METHOD_DELETE);
         }
@@ -1509,48 +1528,35 @@ public:
         return mxb::join(l, ", ");
     }
 
-    HttpResponse process_request(const HttpRequest& request)
+    HttpResponse process_request(const HttpRequest& request, const Resource* resource)
     {
-        if (request.get_verb() == MHD_HTTP_METHOD_GET)
+        HttpResponse response(MHD_HTTP_NOT_FOUND);
+
+        if (resource)
         {
-            return process_request_type(m_get, request);
-        }
-        else if (request.get_verb() == MHD_HTTP_METHOD_PUT)
-        {
-            return process_request_type(m_put, request);
-        }
-        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
-        {
-            return process_request_type(m_patch, request);
-        }
-        else if (request.get_verb() == MHD_HTTP_METHOD_POST)
-        {
-            return process_request_type(m_post, request);
-        }
-        else if (request.get_verb() == MHD_HTTP_METHOD_DELETE)
-        {
-            return process_request_type(m_delete, request);
+            response = resource->call(request);
         }
         else if (request.get_verb() == MHD_HTTP_METHOD_OPTIONS)
         {
             string methods = get_supported_methods(request);
 
-            if (methods.size() > 0)
+            if (!methods.empty())
             {
-                HttpResponse response(MHD_HTTP_OK);
+                response.set_code(MHD_HTTP_OK);
                 response.add_header(HTTP_RESPONSE_HEADER_ACCEPT, methods);
-                return response;
             }
         }
         else if (request.get_verb() == MHD_HTTP_METHOD_HEAD)
         {
             /** Do a GET and just drop the body of the response */
-            HttpResponse response = process_request_type(m_get, request);
-            response.drop_response();
-            return response;
+            if (const auto* res = find_resource(m_get, request))
+            {
+                response = res->call(request);
+                response.drop_response();
+            }
         }
 
-        return HttpResponse(MHD_HTTP_METHOD_NOT_ALLOWED);
+        return response;
     }
 
 private:
@@ -1569,6 +1575,22 @@ struct ThisUnit
 };
 
 ThisUnit this_unit;
+
+static bool is_unknown_method(const std::string& verb)
+{
+    static std::unordered_set<std::string> supported_methods
+    {
+        MHD_HTTP_METHOD_GET,
+        MHD_HTTP_METHOD_PUT,
+        MHD_HTTP_METHOD_PATCH,
+        MHD_HTTP_METHOD_POST,
+        MHD_HTTP_METHOD_DELETE,
+        MHD_HTTP_METHOD_OPTIONS,
+        MHD_HTTP_METHOD_HEAD
+    };
+
+    return supported_methods.find(verb) == supported_methods.end();
+}
 
 static bool request_modifies_data(const string& verb)
 {
@@ -1678,16 +1700,29 @@ static HttpResponse handle_request(const HttpRequest& request)
               request.get_uri().c_str(),
               request.get_json_str().c_str());
 
+    const Resource* resource = this_unit.resources.find_resource(request);
     bool modifies_data = request_modifies_data(request.get_verb());
+    bool requires_sync = false;
+
+    if (resource)
+    {
+        requires_sync = resource->requires_sync();
+
+        if (resource->requires_body() && !request.get_json())
+        {
+            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));
+        }
+    }
+
     auto manager = mxs::ConfigManager::get();
     mxb_assert(manager);
 
-    if (modifies_data && !manager->start())
+    if (requires_sync && !manager->start())
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
 
-    HttpResponse rval = this_unit.resources.process_request(request);
+    HttpResponse rval = this_unit.resources.process_request(request, resource);
 
     // Calculate the checksum from the generated JSON
     auto str = mxs::json_dump(rval.get_response(), JSON_COMPACT);
@@ -1704,14 +1739,17 @@ static HttpResponse handle_request(const HttpRequest& request)
             case MHD_HTTP_CREATED:
                 this_unit.watcher.modify(request.get_uri());
 
-                if (!manager->commit())
+                if (requires_sync && !manager->commit())
                 {
                     rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
                 }
                 break;
 
             default:
-                manager->rollback();
+                if (requires_sync)
+                {
+                    manager->rollback();
+                }
                 break;
             }
         }
@@ -1735,6 +1773,11 @@ HttpResponse resource_handle_request(const HttpRequest& request)
 {
     mxb::WatchedWorker* worker = mxs::MainWorker::get();
     HttpResponse response;
+
+    if (is_unknown_method(request.get_verb()))
+    {
+        return HttpResponse(MHD_HTTP_METHOD_NOT_ALLOWED);
+    }
 
     if (!worker->call([&request, &response, worker]() {
                           mxb::WatchdogNotifier::Workaround workaround(worker);
