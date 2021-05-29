@@ -33,12 +33,82 @@ const char CN_VERSION[] = "version";
 const char CN_CONFIG[] = "config";
 const char CN_CLUSTER_NAME[] = "cluster_name";
 
+const char TABLE[] = "mysql.maxscale_config";
+
 struct ThisUnit
 {
     mxs::ConfigManager* manager {nullptr};
 };
 
 ThisUnit this_unit;
+
+// It's possible for the configuration data to contain single quotes (e.g. in a password or a regex). Since
+// we're using single quotes for delimiting strings, we must escape them. Using double quotes isn't a
+// realistic option as the JSON data is full of them.
+std::string escape_for_sql(const std::string& str)
+{
+    auto sql = str;
+    size_t pos = sql.find('\'');
+
+    while (pos != std::string::npos)
+    {
+        sql.replace(pos, 1, "\\'");
+        pos = sql.find('\'', pos + 2);
+    }
+
+    return sql;
+}
+
+std::string sql_create_table(int max_len)
+{
+    std::ostringstream ss;
+    ss << "CREATE TABLE IF NOT EXISTS " << TABLE << "("
+       << "cluster VARCHAR(" << max_len << ") PRIMARY KEY ,"
+       << "version BIGINT NOT NULL, "
+       << "config JSON NOT NULL "
+       << ") ENGINE=InnoDB";
+    return ss.str();
+}
+
+std::string sql_insert(const std::string& cluster, int64_t version, const std::string& payload)
+{
+    std::ostringstream ss;
+    ss << "INSERT INTO " << TABLE << "(cluster, version, config) VALUES"
+       << " ('" << escape_for_sql(cluster) << "', " << version + 1 << ","
+       << "'" << escape_for_sql(payload) << "')";
+    return ss.str();
+}
+
+std::string sql_update(const std::string& cluster, int64_t version, const std::string& payload)
+{
+    std::ostringstream ss;
+    ss << "UPDATE " << TABLE << " SET version = version + 1, config = '" << escape_for_sql(payload) << "'"
+       << " WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
+    return ss.str();
+}
+
+std::string sql_select_for_update(const std::string& cluster)
+{
+    std::ostringstream ss;
+    ss << "SELECT version FROM " << TABLE << " WHERE "
+       << "cluster = '" << escape_for_sql(cluster) << "' FOR UPDATE";
+    return ss.str();
+}
+
+std::string sql_select_version(const std::string& cluster)
+{
+    std::ostringstream ss;
+    ss << "SELECT version FROM " << TABLE << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
+    return ss.str();
+}
+
+std::string sql_select_config(const std::string& cluster, int64_t version)
+{
+    std::ostringstream ss;
+    ss << "SELECT config, version FROM " << TABLE << " WHERE "
+       << "version > " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
+    return ss.str();
+}
 }
 
 namespace maxscale
