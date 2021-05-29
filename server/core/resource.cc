@@ -1287,6 +1287,8 @@ public:
      */
     RootResource()
     {
+        const auto REQ_BODY = Resource::REQUIRE_BODY;
+
         // Special resources required by OPTION etc.
         m_get.emplace_back(cb_send_ok);
         m_get.emplace_back(cb_send_ok, "*");
@@ -1364,28 +1366,20 @@ public:
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
 
         /** Create new resources */
-        m_post.emplace_back(cb_create_server, "servers");
-        m_post.emplace_back(cb_create_monitor, "monitors");
-        m_post.emplace_back(cb_create_filter, "filters");
-        m_post.emplace_back(cb_create_service, "services");
-        m_post.emplace_back(cb_create_service_listener, "services", ":service", "listeners");
-        m_post.emplace_back(cb_create_listener, "listeners");
-        m_post.emplace_back(cb_create_user, "users", "inet");
-        m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
+        m_post.emplace_back(REQ_BODY, cb_create_server, "servers");
+        m_post.emplace_back(REQ_BODY, cb_create_monitor, "monitors");
+        m_post.emplace_back(REQ_BODY, cb_create_filter, "filters");
+        m_post.emplace_back(REQ_BODY, cb_create_service, "services");
+        m_post.emplace_back(REQ_BODY, cb_create_service_listener,
+                            "services", ":service", "listeners");
+        m_post.emplace_back(REQ_BODY, cb_create_listener, "listeners");
+        m_post.emplace_back(REQ_BODY, cb_create_user, "users", "inet");
+        // For backward compatibility.
+        m_post.emplace_back(REQ_BODY, cb_create_user, "users", "unix");
 
         /** SQL connection management endpoints */
-        m_post.emplace_back(cb_sql_connect, "sql");
-        m_post.emplace_back(cb_sql_query, "sql", ":connection_id", "queries");
-
-        /** All of the above require a request body */
-        for (auto& r : m_post)
-        {
-            r.add_constraint(Resource::REQUIRE_BODY);
-        }
-
-        /**
-         * NOTE: all POST resources added after this DO NOT require a request body.
-         */
+        m_post.emplace_back(REQ_BODY, cb_sql_connect, "sql");
+        m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
 
         /** For all module commands that modify state/data */
         m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");
@@ -1395,46 +1389,36 @@ public:
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
 
         /** Update resources */
-        m_patch.emplace_back(cb_alter_server, "servers", ":server");
-        m_patch.emplace_back(cb_alter_monitor, "monitors", ":monitor");
-        m_patch.emplace_back(cb_alter_service, "services", ":service");
-        m_patch.emplace_back(cb_alter_filter, "filters", ":filter");
-        m_patch.emplace_back(cb_alter_listener, "listeners", ":listener");
-        m_patch.emplace_back(cb_alter_maxscale, "maxscale", "logs");    // Deprecated
-        m_patch.emplace_back(cb_alter_maxscale, "maxscale");
-        m_patch.emplace_back(cb_alter_qc, "maxscale", "query_classifier");
-        m_patch.emplace_back(cb_alter_user, "users", "inet", ":inetuser");
-        m_patch.emplace_back(cb_alter_session, "sessions", ":session");
+        m_patch.emplace_back(REQ_BODY, cb_alter_server, "servers", ":server");
+        m_patch.emplace_back(REQ_BODY, cb_alter_monitor, "monitors", ":monitor");
+        m_patch.emplace_back(REQ_BODY, cb_alter_service, "services", ":service");
+        m_patch.emplace_back(REQ_BODY, cb_alter_filter, "filters", ":filter");
+        m_patch.emplace_back(REQ_BODY, cb_alter_listener, "listeners", ":listener");
+        m_patch.emplace_back(REQ_BODY, cb_alter_maxscale, "maxscale", "logs");      // Deprecated
+        m_patch.emplace_back(REQ_BODY, cb_alter_maxscale, "maxscale");
+        m_patch.emplace_back(REQ_BODY, cb_alter_qc, "maxscale", "query_classifier");
+        m_patch.emplace_back(REQ_BODY, cb_alter_user, "users", "inet", ":inetuser");
+        m_patch.emplace_back(REQ_BODY, cb_alter_session, "sessions", ":session");
 
         /** Update resource relationships directly */
-        m_patch.emplace_back(cb_alter_server_service_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_server_service_relationship,
                              "servers", ":server", "relationships", "services");
-        m_patch.emplace_back(cb_alter_server_monitor_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_server_monitor_relationship,
                              "servers", ":server", "relationships", "monitors");
-        m_patch.emplace_back(cb_alter_monitor_server_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_monitor_server_relationship,
                              "monitors", ":monitor", "relationships", "servers");
-        m_patch.emplace_back(cb_alter_monitor_service_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_monitor_service_relationship,
                              "monitors", ":monitor", "relationships", "services");
-        m_patch.emplace_back(cb_alter_service_server_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_service_server_relationship,
                              "services", ":service", "relationships", "servers");
-        m_patch.emplace_back(cb_alter_service_service_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_service_service_relationship,
                              "services", ":service", "relationships", "services");
-        m_patch.emplace_back(cb_alter_service_filter_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_service_filter_relationship,
                              "services", ":service", "relationships", "filters");
-        m_patch.emplace_back(cb_alter_service_monitor_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_service_monitor_relationship,
                              "services", ":service", "relationships", "monitors");
-        m_patch.emplace_back(cb_alter_session_filter_relationship,
+        m_patch.emplace_back(REQ_BODY, cb_alter_session_filter_relationship,
                              "sessions", ":session", "relationships", "filters");
-
-        /** All patch resources require a request body */
-        for (auto& r : m_patch)
-        {
-            r.add_constraint(Resource::REQUIRE_BODY);
-        }
-
-        /**
-         * NOTE: all PATCH resources added after this DO NOT require a request body.
-         */
 
         /** Change resource states */
         m_put.emplace_back(cb_stop_monitor, "monitors", ":monitor", "stop");

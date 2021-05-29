@@ -40,13 +40,19 @@ public:
     };
 
     template<class ... Args>
-    Resource(ResourceCallback cb, Args... args)
+    Resource(uint32_t constraints, ResourceCallback cb, Args... args)
         : m_cb(cb)
         , m_is_glob(false)
-        , m_constraints(NONE)
+        , m_constraints(constraints)
         , m_path({args ...})
     {
         m_is_glob = std::find(m_path.begin(), m_path.end(), "?") != m_path.end();
+    }
+
+    template<class ... Args>
+    Resource(ResourceCallback cb, Args... args)
+        : Resource(NONE, cb, args...)
+    {
     }
 
     /**
