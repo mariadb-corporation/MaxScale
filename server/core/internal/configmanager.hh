@@ -45,9 +45,9 @@ public:
     ~ConfigManager();
 
     /**
-     * Synchronize with the cluster
+     * Start synchronizing with the cluster
      */
-    void sync();
+    void start_sync();
 
     /**
      * Check if a cached configuration is available and load it if it is
@@ -146,6 +146,10 @@ private:
     void    update_config(const std::string& payload);
     SERVER* get_server() const;
 
+    void      sync();
+    void      queue_sync();
+    mxb::Json fetch_config();
+
     mxs::MainWorker* m_worker {nullptr};
 
     // Helper object for storing temporary data
@@ -160,5 +164,9 @@ private:
     mxq::MariaDB m_conn;
     bool         m_row_exists {false};
     SERVER*      m_server {nullptr};
+    uint32_t     m_dcid {0};
+
+    bool m_log_sync_error {true};
+    bool m_log_stale_cluster {true};
 };
 }

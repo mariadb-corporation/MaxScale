@@ -2141,6 +2141,8 @@ int main(int argc, char** argv)
                 }
             }
 
+            manager.start_sync();
+
             if (this_unit.daemon_mode)
             {
                 // Successful start, notify the parent process that it can exit.

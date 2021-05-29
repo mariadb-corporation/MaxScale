@@ -132,12 +132,62 @@ ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
 ConfigManager::~ConfigManager()
 {
     mxb_assert(this_unit.manager == this);
+
+    if (m_dcid)
+    {
+        m_worker->cancel_delayed_call(m_dcid);
+    }
+}
+
+void ConfigManager::start_sync()
+{
+    m_dcid = m_worker->delayed_call(
+        1000, [this](auto action) {
+            if (action == mxb::Worker::Call::EXECUTE)
+            {
+                sync();
+            }
+
+            return true;
+        });
+
+    // Queue a sync to take place right after startup
+    queue_sync();
+}
+
+void ConfigManager::queue_sync()
+{
+    m_worker->execute(
+        [this]() {
+            sync();
+        }, mxb::Worker::EXECUTE_QUEUED);
 }
 
 void ConfigManager::sync()
 {
-    // TODO: Execute the following:
-    //    SELECT config FROM mysql.maxscale_config WHERE CLUSTER = '%s' AND version > %d
+
+    if (!cluster_name().empty())
+    {
+        try
+        {
+            auto config = fetch_config();
+
+            if (config.valid())
+            {
+                MXS_NOTICE("Updating to configuration version %ld", config.get_int(CN_VERSION));
+                process_config(std::move(config));
+                m_log_sync_error = true;
+            }
+        }
+        catch (const ConfigManager::Exception& e)
+        {
+            if (m_log_sync_error)
+            {
+                MXS_ERROR("%s", e.what());
+                m_log_sync_error = false;
+            }
+        }
+    }
 }
 
 bool ConfigManager::load_cached_config()
@@ -154,11 +204,12 @@ bool ConfigManager::load_cached_config()
         if (new_json.load(filename))
         {
             std::string cluster_name = new_json.get_string(CN_CLUSTER_NAME);
+            int64_t version = new_json.get_int(CN_VERSION);
 
             if (cluster_name == cluster)
             {
-                MXS_NOTICE("Using cached configuration for cluster '%s': %s",
-                           cluster_name.c_str(), filename.c_str());
+                MXS_NOTICE("Using cached configuration for cluster '%s', version %ld: %s",
+                           cluster_name.c_str(), version, filename.c_str());
 
                 m_current_config = std::move(new_json);
                 have_config = true;
@@ -292,13 +343,24 @@ mxb::Json ConfigManager::create_config(int64_t version)
 
 void ConfigManager::process_config(mxb::Json&& new_json)
 {
+    if (!m_current_config.valid())
+    {
+        // If we're using the static configuration, create the initial configuration before starting the
+        // processing of the configuration. This makes sure that m_current_config represents the current state
+        // before we start comparing to it.
+        m_current_config = create_config(m_version);
+    }
+
     int64_t next_version = new_json.get_int(CN_VERSION);
 
     if (next_version <= m_version)
     {
+        mxb_assert(!true);      // We shouldn't end up here
         throw error("Not processing old configuration: got version ",
                     m_version, ", found version ", next_version, " in the configuration.");
     }
+
+    mxb_assert(new_json.valid());
 
     std::set<std::string> old_names;
     std::set<std::string> new_names;
@@ -712,6 +774,7 @@ void ConfigManager::verify_sync()
 
         if (version != m_version)
         {
+            queue_sync();
             throw error("Configuration conflict detected: version stored in the cluster",
                         " (", version, ") is not the same as the local version (", m_version, "),",
                         " MaxScale is out of sync.");
@@ -732,5 +795,82 @@ void ConfigManager::update_config(const std::string& payload)
     {
         throw error("Failed to commit: ", m_conn.error());
     }
+}
+
+mxb::Json ConfigManager::fetch_config()
+{
+    connect();
+
+    mxb::Json config(mxb::Json::Type::NONE);
+    auto res = m_conn.query(sql_select_version(cluster_name()));
+
+    if (!res)
+    {
+        if (m_conn.errornum() == ER_NO_SUCH_TABLE)
+        {
+            // The table hasn't been created which means no updates have been done.
+            return config;
+        }
+
+        throw error("No result for version query: ", m_conn.error());
+    }
+
+    if (res->next_row())
+    {
+        int64_t version = res->get_int(0);
+
+        if (version <= m_version)
+        {
+            if (version < m_version && m_log_stale_cluster)
+            {
+                // Reverting the configuration is possible but it introduces a problem:
+                // If the configuration on server-A causes server-B to be chosen and the configuration on
+                // server-B causes server-A to be chosen, the configuration would oscillate between the two if
+                // the version values were different. Ignoring older configurations guaratees that we
+                // stabilize to some known configuration which is easier to deal with (for both MaxScale and
+                // the users) than trying to figure out which of the configurations is the real one.
+                mxb_assert(m_server);
+                MXS_WARNING("The local configuration version (%ld) is ahead of the cluster "
+                            "configuration (%ld) found on server '%s', ignoring to cluster "
+                            "configuration.", m_version, version, m_server->name());
+                m_log_stale_cluster = false;
+            }
+
+            return config;
+        }
+    }
+
+    m_log_stale_cluster = true;
+
+    res = m_conn.query(sql_select_config(cluster_name(), m_version));
+
+    if (!res)
+    {
+        throw error("No result for config query: ", m_conn.error());
+    }
+
+    if (res->next_row())
+    {
+        // We need to check whether the loading succeeds as it's possible that we're using a MariaDB version
+        // which does not have the check constraint on the JSON datatype. It's also possible that the table is
+        // modified with a different datatype. Neither of these happen in normal use but we should still check
+        // it.
+        if (!config.load_string(res->get_string(0)))
+        {
+            throw error("The configuration in the database was not valid JSON: ", config.error_msg());
+        }
+
+        int64_t config_version = config.get_int(CN_VERSION);
+        int64_t db_version = res->get_int(1);
+
+        if (config_version != db_version)
+        {
+            MXS_WARNING("Version mismatch between JSON (%ld) and version field in database (%ld),"
+                        " using version from database.", config_version, db_version);
+            config.set_int(CN_VERSION, db_version);
+        }
+    }
+
+    return config;
 }
 }
