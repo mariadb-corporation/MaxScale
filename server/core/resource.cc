@@ -212,6 +212,11 @@ bool Resource::requires_body() const
     return m_constraints & REQUIRE_BODY;
 }
 
+bool Resource::requires_sync() const
+{
+    return m_constraints & REQUIRE_SYNC;
+}
+
 namespace
 {
 
@@ -1288,6 +1293,7 @@ public:
     RootResource()
     {
         const auto REQ_BODY = Resource::REQUIRE_BODY;
+        const auto REQ_SYNC = Resource::REQUIRE_SYNC;
 
         // Special resources required by OPTION etc.
         m_get.emplace_back(cb_send_ok);
@@ -1366,13 +1372,13 @@ public:
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
 
         /** Create new resources */
-        m_post.emplace_back(REQ_BODY, cb_create_server, "servers");
-        m_post.emplace_back(REQ_BODY, cb_create_monitor, "monitors");
-        m_post.emplace_back(REQ_BODY, cb_create_filter, "filters");
-        m_post.emplace_back(REQ_BODY, cb_create_service, "services");
-        m_post.emplace_back(REQ_BODY, cb_create_service_listener,
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_server, "servers");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_monitor, "monitors");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_filter, "filters");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_service, "services");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_service_listener,
                             "services", ":service", "listeners");
-        m_post.emplace_back(REQ_BODY, cb_create_listener, "listeners");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_listener, "listeners");
         m_post.emplace_back(REQ_BODY, cb_create_user, "users", "inet");
         // For backward compatibility.
         m_post.emplace_back(REQ_BODY, cb_create_user, "users", "unix");
@@ -1389,38 +1395,39 @@ public:
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
 
         /** Update resources */
-        m_patch.emplace_back(REQ_BODY, cb_alter_server, "servers", ":server");
-        m_patch.emplace_back(REQ_BODY, cb_alter_monitor, "monitors", ":monitor");
-        m_patch.emplace_back(REQ_BODY, cb_alter_service, "services", ":service");
-        m_patch.emplace_back(REQ_BODY, cb_alter_filter, "filters", ":filter");
-        m_patch.emplace_back(REQ_BODY, cb_alter_listener, "listeners", ":listener");
-        m_patch.emplace_back(REQ_BODY, cb_alter_maxscale, "maxscale", "logs");      // Deprecated
-        m_patch.emplace_back(REQ_BODY, cb_alter_maxscale, "maxscale");
-        m_patch.emplace_back(REQ_BODY, cb_alter_qc, "maxscale", "query_classifier");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_server, "servers", ":server");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_monitor, "monitors", ":monitor");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_service, "services", ":service");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_filter, "filters", ":filter");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_listener, "listeners", ":listener");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_maxscale, "maxscale", "logs");   // Deprecated
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_maxscale, "maxscale");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_qc, "maxscale", "query_classifier");
         m_patch.emplace_back(REQ_BODY, cb_alter_user, "users", "inet", ":inetuser");
         m_patch.emplace_back(REQ_BODY, cb_alter_session, "sessions", ":session");
 
         /** Update resource relationships directly */
-        m_patch.emplace_back(REQ_BODY, cb_alter_server_service_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_server_service_relationship,
                              "servers", ":server", "relationships", "services");
-        m_patch.emplace_back(REQ_BODY, cb_alter_server_monitor_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_server_monitor_relationship,
                              "servers", ":server", "relationships", "monitors");
-        m_patch.emplace_back(REQ_BODY, cb_alter_monitor_server_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_monitor_server_relationship,
                              "monitors", ":monitor", "relationships", "servers");
-        m_patch.emplace_back(REQ_BODY, cb_alter_monitor_service_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_monitor_service_relationship,
                              "monitors", ":monitor", "relationships", "services");
-        m_patch.emplace_back(REQ_BODY, cb_alter_service_server_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_service_server_relationship,
                              "services", ":service", "relationships", "servers");
-        m_patch.emplace_back(REQ_BODY, cb_alter_service_service_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_service_service_relationship,
                              "services", ":service", "relationships", "services");
-        m_patch.emplace_back(REQ_BODY, cb_alter_service_filter_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_service_filter_relationship,
                              "services", ":service", "relationships", "filters");
-        m_patch.emplace_back(REQ_BODY, cb_alter_service_monitor_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_service_monitor_relationship,
                              "services", ":service", "relationships", "monitors");
-        m_patch.emplace_back(REQ_BODY, cb_alter_session_filter_relationship,
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_session_filter_relationship,
                              "sessions", ":session", "relationships", "filters");
 
         /** Change resource states */
+        // TODO: Sync these once object states are synchronized as well
         m_put.emplace_back(cb_stop_monitor, "monitors", ":monitor", "stop");
         m_put.emplace_back(cb_start_monitor, "monitors", ":monitor", "start");
         m_put.emplace_back(cb_stop_service, "services", ":service", "stop");
@@ -1430,12 +1437,13 @@ public:
         m_put.emplace_back(cb_set_server, "servers", ":server", "set");
         m_put.emplace_back(cb_clear_server, "servers", ":server", "clear");
 
-        m_delete.emplace_back(cb_delete_server, "servers", ":server");
-        m_delete.emplace_back(cb_delete_monitor, "monitors", ":monitor");
-        m_delete.emplace_back(cb_delete_service, "services", ":service");
-        m_delete.emplace_back(cb_delete_filter, "filters", ":filter");
-        m_delete.emplace_back(cb_delete_service_listener, "services", ":service", "listeners", ":listener");
-        m_delete.emplace_back(cb_delete_listener, "listeners", ":listener");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_server, "servers", ":server");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_monitor, "monitors", ":monitor");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_service, "services", ":service");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_filter, "filters", ":filter");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_listener, "listeners", ":listener");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_service_listener,
+                              "services", ":service", "listeners", ":listener");
 
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
 

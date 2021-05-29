@@ -36,7 +36,8 @@ public:
     enum resource_constraint
     {
         NONE         = 0,
-        REQUIRE_BODY = (1 << 0)
+        REQUIRE_BODY = (1 << 0),
+        REQUIRE_SYNC = (1 << 1),
     };
 
     template<class ... Args>
@@ -86,6 +87,13 @@ public:
      * @return True if resource requires a request body
      */
     bool requires_body() const;
+
+    /**
+     * Whether resource must be synchronized to the cluster
+     *
+     * @return True if resource requires synchronization
+     */
+    bool requires_sync() const;
 
 private:
 
