@@ -80,7 +80,7 @@ describe("Link/Unlink Commands", function () {
       "unlink service Read-Connection-Router RW-Split-Router",
       "services/Read-Connection-Router"
     ).then(function (res) {
-      res.data.relationships.services.data.length.should.be.empty;
+      expect(res.data.relationships.services).to.be.undefined;
     });
   });
 
