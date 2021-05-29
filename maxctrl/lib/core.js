@@ -47,13 +47,11 @@ function configParser(filename) {
   var stats;
   try {
     stats = fs.statSync(filename);
-  }
-  catch (x) {
+  } catch (x) {
     if (filename == expanded_default_filename) {
       // We do not require the presence of the default config file.
-      return {}
-    }
-    else {
+      return {};
+    } else {
       // But if a different has been specified, we do.
       throw x;
     }
@@ -61,12 +59,15 @@ function configParser(filename) {
 
   // As the file may contain a password, we are picky about the bits.
   if ((stats.mode & 31) != 0) {
-    throw Error("EACCESS: " + filename + " exists, "
-                + "but can be accessed by group and world. "
-                + "Remove all rights from everyone else but owner");
+    throw Error(
+      "EACCESS: " +
+        filename +
+        " exists, but can be accessed by group and world." +
+        " Remove all rights from everyone else but owner"
+    );
   }
 
-  var content = fs.readFileSync(filename, 'utf-8');
+  var content = fs.readFileSync(filename, "utf-8");
   var config = ini.parse(content);
 
   if (!config.maxctrl) {
@@ -89,7 +90,7 @@ program
     describe: "MaxCtrl configuration file",
     type: "string",
     config: true,
-    configParser: configParser
+    configParser: configParser,
   })
   .option("u", {
     alias: "user",
