@@ -68,6 +68,7 @@
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
+#include "internal/configmanager.hh"
 
 using std::set;
 using std::string;
@@ -176,7 +177,16 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
 
     if (cluster.empty() || MonitorManager::find_monitor(cluster.c_str()))
     {
-        ok = mxs::config::Specification::validate(pJson, pUnrecognized);
+        // TODO: Build length limits into ParamString
+        if (cluster.length() > mxs::ConfigManager::CLUSTER_MAX_LEN)
+        {
+            MXS_ERROR("The cluster name for '%s' must be less than %d characters long.",
+                      CN_CONFIG_SYNC_CLUSTER, mxs::ConfigManager::CLUSTER_MAX_LEN);
+        }
+        else
+        {
+            ok = mxs::config::Specification::validate(pJson, pUnrecognized);
+        }
     }
     else
     {
