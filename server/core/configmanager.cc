@@ -296,6 +296,15 @@ bool ConfigManager::commit()
     try
     {
         mxb::Json config = create_config(m_version + 1);
+
+        if (json_equal(config.get_object(CN_CONFIG).get_json(),
+                       m_current_config.get_object(CN_CONFIG).get_json()))
+        {
+            MXS_INFO("Resulting configuration is the same as current configuration, ignoring update.");
+            rollback();
+            return true;
+        }
+
         std::string payload = config.to_string(mxb::Json::Format::COMPACT);
         update_config(payload);
 
