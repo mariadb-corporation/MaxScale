@@ -283,6 +283,18 @@ parameters. Parameters are given in the HTTP query string:
     be used. Note the double quotes around the `"RW-Split-Router"`, they are
     required to correctly convert strings into JSON values.
 
+- `sync`
+
+  - Control configuration synchronization.
+
+    If this parameter is set to `false` then the configuration synchronization
+    is disabled for this request. This can be used to perform configuration
+    changes when MaxScale is unable to reach the cluster used to synchronize the
+    configuration. The modifications to the local configuration will be
+    overwritten when the next modification to the cluster's configuration is
+    done which means this should only be used to perform temporary fixes.
+
+
 ## HTTP Headers
 
 ### Request Headers

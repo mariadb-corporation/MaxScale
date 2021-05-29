@@ -1708,6 +1708,13 @@ static HttpResponse handle_request(const HttpRequest& request)
     {
         requires_sync = resource->requires_sync();
 
+        if (requires_sync && request.get_option("sync") == "false")
+        {
+            requires_sync = false;
+            MXS_NOTICE("Disabling configuration sync for: %s %s",
+                       request.get_verb().c_str(), request.get_uri().c_str());
+        }
+
         if (resource->requires_body() && !request.get_json())
         {
             return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));

@@ -190,6 +190,11 @@ program
     default: true,
     type: "boolean",
   })
+  .option("skip-sync", {
+    describe: "Disable configuration synchronization for this command",
+    default: false,
+    type: "boolean",
+  })
 
   .command(require("./list.js"))
   .command(require("./show.js"))

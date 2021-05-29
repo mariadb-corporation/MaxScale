@@ -300,11 +300,12 @@ module.exports = function () {
   };
 
   // Helper for converting endpoints to acutal URLs
-  this.getUri = function (host, secure, endpoint) {
-    var base = "http://";
+  this.getUri = function (host, endpoint) {
+    var base = this.argv.secure ? "https://" : "http://";
 
-    if (secure) {
-      base = "https://";
+    if (this.argv["skip-sync"]) {
+      endpoint += endpoint.includes("?") ? "&" : "?";
+      endpoint += "sync=false";
     }
 
     return base + host + "/v1/" + endpoint;
@@ -345,7 +346,7 @@ module.exports = function () {
 
   this.simpleRequest = function (host, resource, obj) {
     args = obj || {};
-    args.url = getUri(host, this.argv.secure, resource);
+    args.url = getUri(host, resource);
     args.auth = { username: argv.u, password: argv.p };
     args.timeout = this.argv.timeout;
 
@@ -520,7 +521,7 @@ function pingCluster(hosts) {
   if (hosts.length > 1) {
     hosts.forEach(function (i) {
       args = {};
-      args.url = getUri(i, this.argv.secure, "");
+      args.url = getUri(i, "");
       args.auth = { username: argv.u, password: argv.p };
       setTlsCerts(args);
       promises.push(axios(args));
