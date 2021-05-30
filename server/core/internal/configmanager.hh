@@ -130,7 +130,7 @@ private:
     Type        to_type(const std::string& type);
     std::string dynamic_config_filename() const;
 
-    void process_config(mxb::Json&& new_json);
+    void process_config(const mxb::Json& new_json);
     void remove_old_object(const std::string& name, const std::string& type);
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj);
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json);

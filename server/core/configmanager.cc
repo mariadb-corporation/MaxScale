@@ -170,17 +170,30 @@ void ConfigManager::sync()
 
     if (!cluster_name().empty())
     {
+        int64_t next_version = m_version;
+
         try
         {
             auto config = fetch_config();
 
             if (config.valid())
             {
-                MXS_NOTICE("Updating to configuration version %ld", config.get_int(CN_VERSION));
-                process_config(std::move(config));
+                next_version = config.get_int(CN_VERSION);
+                MXS_NOTICE("Updating to configuration version %ld", next_version);
+
+                process_config(config);
 
                 // Config updated, save a local version of it.
                 save_config(m_current_config.to_string(mxb::Json::Format::COMPACT));
+
+                // TODO: If we fail to apply the new configuration, we could try to wipe out all existing
+                // objects and apply it again. This should always succeed if only valid states are stored in
+                // the cluster. If someone manually introduced a bad configuration or some bug causes a bad
+                // state to be generated, this might cause a complete outage for a brief period of time.
+
+                // Runtime state updated and config cached on disk, the config change was successful
+                m_version = next_version;
+                m_current_config = std::move(config);
                 m_log_sync_error = true;
             }
         }
@@ -188,8 +201,29 @@ void ConfigManager::sync()
         {
             if (m_log_sync_error)
             {
-                MXS_ERROR("%s", e.what());
+                MXS_ERROR("Failed to sync configuration: %s", e.what());
                 m_log_sync_error = false;
+            }
+
+            if (next_version > m_version)
+            {
+                try
+                {
+                    // Try to revert any changes that might've been done
+                    auto prev_config = std::move(m_current_config);
+                    m_current_config = create_config(m_version);
+                    process_config(prev_config);
+                }
+                catch (const ConfigManager::Exception& e)
+                {
+                    MXS_ERROR("Failed to revert configuration change: %s", e.what());
+                }
+
+                // Regardless of what happens, re-calculate the current configuration and update the version.
+                // This will prevent repeated attempts to apply the same configuration while still allowing
+                // the internal state to be correctly represented by m_current_config.
+                m_version = next_version;
+                m_current_config = create_config(m_version);
             }
         }
     }
@@ -244,7 +278,10 @@ bool ConfigManager::process_cached_config()
         // Storing an empty object in the current JSON will cause all objects to be treated as new.
         m_current_config = mxb::Json(mxb::Json::Type::OBJECT);
 
-        process_config(std::move(config));
+        process_config(config);
+
+        m_version = config.get_int(CN_VERSION);
+        m_current_config = std::move(config);
     }
     catch (const ConfigManager::Exception& e)
     {
@@ -365,7 +402,7 @@ mxb::Json ConfigManager::create_config(int64_t version)
     return rval;
 }
 
-void ConfigManager::process_config(mxb::Json&& new_json)
+void ConfigManager::process_config(const mxb::Json& new_json)
 {
     if (!m_current_config.valid())
     {
@@ -373,15 +410,6 @@ void ConfigManager::process_config(mxb::Json&& new_json)
         // processing of the configuration. This makes sure that m_current_config represents the current state
         // before we start comparing to it.
         m_current_config = create_config(m_version);
-    }
-
-    int64_t next_version = new_json.get_int(CN_VERSION);
-
-    if (next_version <= m_version)
-    {
-        mxb_assert(!true);      // We shouldn't end up here
-        throw error("Not processing old configuration: got version ",
-                    m_version, ", found version ", next_version, " in the configuration.");
     }
 
     mxb_assert(new_json.valid());
@@ -446,9 +474,6 @@ void ConfigManager::process_config(mxb::Json&& new_json)
             update_object(obj.get_string(CN_ID), type, obj);
         }
     }
-
-    m_version = next_version;
-    m_current_config = std::move(new_json);
 }
 
 ConfigManager::Type ConfigManager::to_type(const std::string& type)
