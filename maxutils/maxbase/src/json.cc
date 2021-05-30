@@ -341,6 +341,16 @@ void Json::set_float(const char* key, double value)
     json_object_set_new(m_obj, key, json_real(value));
 }
 
+void Json::set_bool(const char* key, bool value)
+{
+    json_object_set_new(m_obj, key, json_boolean(value));
+}
+
+void Json::set_null(const char* key)
+{
+    json_object_set_new(m_obj, key, json_null());
+}
+
 void Json::add_array_elem(const Json& elem)
 {
     mxb_assert(json_is_array(m_obj));

@@ -257,6 +257,21 @@ public:
     void set_float(const char* key, double value);
 
     /**
+     * Store a JSON boolean in a field
+     *
+     * @param key   The name of the field to store the value in
+     * @param value The value to store
+     */
+    void set_bool(const char* key, bool value);
+
+    /**
+     * Store a JSON null in a field
+     *
+     * @param key   The name of the field to store the value in
+     */
+    void set_null(const char* key);
+
+    /**
      * Apend an element to an array
      *
      * @param value The value to append
