@@ -94,6 +94,14 @@ public:
      * If the configuration change fails on the local node, the configuration change must be rolled back.
      */
     void rollback();
+
+    /**
+     * Get current state as JSON
+     *
+     * @return The currentstate as JSON
+     */
+    mxb::Json to_json() const;
+
 private:
 
     struct Exception : public std::runtime_error

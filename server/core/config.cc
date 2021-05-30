@@ -4136,6 +4136,9 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
     json_object_set_new(attr, "process_datadir", json_string(mxs::process_datadir()));
 
+    auto manager = mxs::ConfigManager::get()->to_json();
+    json_object_set_new(attr, "config_sync", json_incref(manager.get_json()));
+
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
     json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));

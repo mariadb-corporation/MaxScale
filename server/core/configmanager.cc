@@ -16,6 +16,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/json.hh>
+#include <maxscale/utils.hh>
 #include <maxbase/json.hh>
 
 #include "internal/config.hh"
@@ -30,9 +31,11 @@
 
 namespace
 {
-const char CN_VERSION[] = "version";
-const char CN_CONFIG[] = "config";
+const char CN_CHECKSUM[] = "checksum";
 const char CN_CLUSTER_NAME[] = "cluster_name";
+const char CN_CONFIG[] = "config";
+const char CN_ENABLED[] = "enabled";
+const char CN_VERSION[] = "version";
 
 const char SCOPE_NAME[] = "ConfigManager";
 const char TABLE[] = "mysql.maxscale_config";
@@ -115,7 +118,6 @@ std::string sql_select_config(const std::string& cluster, int64_t version)
 
 namespace maxscale
 {
-
 
 // static
 ConfigManager* ConfigManager::get()
@@ -361,6 +363,22 @@ bool ConfigManager::commit()
     }
 
     return ok;
+}
+
+mxb::Json ConfigManager::to_json() const
+{
+    mxb::Json obj;
+    bool enabled = !cluster_name().empty() && m_current_config.valid();
+    obj.set_bool(CN_ENABLED, enabled);
+
+    if (enabled)
+    {
+        auto cnf = m_current_config.to_string(mxb::Json::Format::COMPACT);
+        obj.set_string(CN_CHECKSUM, mxs::checksum<mxs::SHA1Checksum>(cnf));
+        obj.set_int(CN_VERSION, m_version);
+    }
+
+    return obj;
 }
 
 void ConfigManager::save_config(const std::string& payload)
