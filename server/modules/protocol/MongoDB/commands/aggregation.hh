@@ -89,11 +89,7 @@ public:
                 }
                 else
                 {
-                    // TODO: Implement MariaDBError
-                    stringstream ss;
-                    ss << "Mongo request to backend failed: (" << code << "): " << err.message();
-
-                    throw HardError(ss.str(), error::from_mariadb_code(code));
+                    throw MariaDBError(err);
                 }
             }
             break;

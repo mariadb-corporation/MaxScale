@@ -84,7 +84,7 @@ public:
                         abort = true;
                     }
 
-                    add_error(m_write_errors, ComERR(response), m_it - m_statements.begin());
+                    add_error(m_write_errors, err, m_it - m_statements.begin());
                 }
             }
             break;
@@ -743,7 +743,6 @@ protected:
                 }
                 else
                 {
-                    MXB_ERROR("Could not create table: (%d), %s", err.code(), err.message().c_str());
                     throw MariaDBError(err);
                 }
             }
@@ -790,7 +789,6 @@ protected:
                 }
                 else
                 {
-                    MXB_ERROR("Could not create database: (%d), %s", err.code(), err.message().c_str());
                     throw MariaDBError(err);
                 }
             }

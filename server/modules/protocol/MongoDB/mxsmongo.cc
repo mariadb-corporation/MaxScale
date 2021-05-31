@@ -671,7 +671,7 @@ unique_ptr<mxsmongo::LastError> mxsmongo::HardError::create_last_error() const
 }
 
 mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
-    : Exception("Mongo request failed due to MariaDB error.", error::COMMAND_FAILED)
+    : Exception("Mongo command failed due to MariaDB error.", error::COMMAND_FAILED)
     , m_mariadb_code(err.code())
     , m_mariadb_message(err.message())
 {
@@ -701,7 +701,9 @@ void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBui
     doc.append(kvp("code", mongo_code));
     doc.append(kvp("codeName", mxsmongo::error::name(mongo_code)));
     doc.append(kvp("mariadb", mariadb.extract()));
-}
+
+    MXS_ERROR("Mongo command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
+              m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
 
 unique_ptr<mxsmongo::LastError> mxsmongo::MariaDBError::create_last_error() const
 {
