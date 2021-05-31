@@ -14,7 +14,7 @@ void test_rwsplit(TestConnections& test)
     std::string master_id = test.repl->get_server_id_str(0);
     test.repl->disconnect();
 
-    auto c = test.maxscales->rwsplit();
+    auto c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Connection to readwritesplit should succeed");
 
     // Transactions to master
@@ -90,24 +90,24 @@ void test_rwsplit(TestConnections& test)
     c.query("DROP TABLE test.t1");
 
     // COM_STATISTICS
-    test.maxscales->connect();
+    test.maxscale->connect();
     for (int i = 0; i < 10; i++)
     {
-        mysql_stat(test.maxscales->conn_rwsplit[0]);
-        test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
+        mysql_stat(test.maxscale->conn_rwsplit[0]);
+        test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 1");
     }
 
     //
     // MXS-3229: Hang with COM_SET_OPTION
     //
 
-    mysql_set_server_option(test.maxscales->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_ON);
-    mysql_set_server_option(test.maxscales->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_OFF);
+    mysql_set_server_option(test.maxscale->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_ON);
+    mysql_set_server_option(test.maxscale->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_OFF);
 
     // Make sure the connection is still OK
-    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 1");
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 }
 
 int main(int argc, char** argv)
@@ -119,21 +119,21 @@ int main(int argc, char** argv)
         };
 
     test.expect(connections()[0] == '0', "The master should have no connections");
-    test.maxscales->connect();
+    test.maxscale->connect();
     test.expect(connections()[0] == '2', "The master should have two connections");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
     test.expect(connections()[0] == '0', "The master should have no connections");
 
-    test.maxscales->connect();
+    test.maxscale->connect();
     for (auto a : {"show status", "show variables", "show global status"})
     {
         for (int i = 0; i < 10; i++)
         {
-            test.try_query(test.maxscales->conn_rwsplit[0], "%s", a);
-            test.try_query(test.maxscales->conn_master, "%s", a);
+            test.try_query(test.maxscale->conn_rwsplit[0], "%s", a);
+            test.try_query(test.maxscale->conn_master, "%s", a);
         }
     }
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     // Readwritesplit sanity checks
     test_rwsplit(test);

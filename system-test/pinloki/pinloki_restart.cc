@@ -16,7 +16,7 @@ public:
         for (int i = 0; i < 20 && test.ok(); i++)
         {
             master.query("INSERT INTO test.t1 VALUES (" + std::to_string(i) + ")");
-            test.maxscales->restart();
+            test.maxscale->restart();
             test.expect(maxscale.connect(), "Reconnection after restart should work");
             sync(master, maxscale);
         }

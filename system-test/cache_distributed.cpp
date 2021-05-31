@@ -34,21 +34,21 @@ const int TIMEOUT = 10; // This should be bigger that the cache timeout in the c
 
 bool restart_service(TestConnections& test, const char* zService)
 {
-    bool rv = test.maxscales->ssh_node_f(0, true, "service %s restart", zService) == 0;
+    bool rv = test.maxscale->ssh_node_f(0, true, "service %s restart", zService) == 0;
     sleep(1); // A short sleep to ensure connecting is possible.
     return rv;
 }
 
 bool start_service(TestConnections& test, const char* zService)
 {
-    bool rv = test.maxscales->ssh_node_f(0, true, "service %s start", zService) == 0;
+    bool rv = test.maxscale->ssh_node_f(0, true, "service %s start", zService) == 0;
     sleep(1); // A short sleep to ensure connecting is possible.
     return rv;
 }
 
 bool stop_service(TestConnections& test, const char* zService)
 {
-    return test.maxscales->ssh_node_f(0, true, "service %s stop", zService) == 0;
+    return test.maxscale->ssh_node_f(0, true, "service %s stop", zService) == 0;
 }
 
 bool start_redis(TestConnections& test)
@@ -73,11 +73,11 @@ bool stop_memcached(TestConnections& test)
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_distributed");
 
-    test.maxscales->ssh_node_f(0, true, "redis-cli flushall");
+    test.maxscale->ssh_node_f(0, true, "redis-cli flushall");
     restart_service(test, "memcached");
 }
 
@@ -85,14 +85,14 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "CREATE TABLE cache_distributed (f INT)");
 }
 
 Connection connect(TestConnections& test, int port)
 {
-    Connection c = test.maxscales->get_connection(port);
+    Connection c = test.maxscale->get_connection(port);
     bool connected = c.connect();
 
     test.expect(connected, "Could not connect to %d.", port);
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    auto maxscales = test.maxscales;
+    auto maxscales = test.maxscale;
 
     install_and_start_redis_and_memcached(*maxscales);
 

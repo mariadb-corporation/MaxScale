@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         threads.emplace_back([&, i]() {
                                  while (running)
                                  {
-                                     Connection c = i % 2 == 0 ? test.maxscales->rwsplit() : test.maxscales->readconn_master();
+                                     Connection c = i % 2 == 0 ? test.maxscale->rwsplit() : test.maxscale->readconn_master();
                                      if (c.connect())
                                      {
                                          c.query("CREATE TABLE IF NOT EXITS test.t1 (id INT)");

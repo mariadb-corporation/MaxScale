@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
         Test->tprintf("Connection to backend\n");
         Test->repl->connect();
         Test->tprintf("Connection to Maxscale\n");
-        if (Test->maxscales->connect_maxscale() != 0)
+        if (Test->maxscale->connect_maxscale() != 0)
         {
             Test->add_result(1, "Error connecting to MaxScale");
             break;
@@ -78,9 +78,9 @@ int main(int argc, char* argv[])
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
-        Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test1;");
+        Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP TABLE t1");
+        Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
+        Test->try_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE test1;");
         Test->set_timeout(10 * Test->repl->N);
         Test->repl->sync_slaves();
 
@@ -95,12 +95,12 @@ int main(int argc, char* argv[])
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)
         {
-            execute_query(Test->maxscales->routers[j], "DROP DATABASE I EXISTS test1;");
-            execute_query(Test->maxscales->routers[j], "CREATE TABLE ");
+            execute_query(Test->maxscale->routers[j], "DROP DATABASE I EXISTS test1;");
+            execute_query(Test->maxscale->routers[j], "CREATE TABLE ");
         }
 
         // close connections
-        Test->maxscales->close_maxscale_connections();
+        Test->maxscale->close_maxscale_connections();
         Test->repl->close_connections();
     }
 
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 
     Test->check_maxscale_alive();
 
-    Test->maxscales->restart_maxscale();
+    Test->maxscale->restart_maxscale();
     Test->check_maxscale_alive();
 
     int rval = Test->global_result;

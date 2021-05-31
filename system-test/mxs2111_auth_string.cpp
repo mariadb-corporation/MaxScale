@@ -10,19 +10,19 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto batch = [&](std::vector<std::string> queries) {
-            test.maxscales->connect();
+            test.maxscale->connect();
             for (const auto& a : queries)
             {
-                test.try_query(test.maxscales->conn_rwsplit[0], "%s", a.c_str());
+                test.try_query(test.maxscale->conn_rwsplit[0], "%s", a.c_str());
             }
-            test.maxscales->disconnect();
+            test.maxscale->disconnect();
         };
 
     batch({"CREATE USER 'test' IDENTIFIED BY 'test'",
            "GRANT SELECT ON *.* TO test",
            "SET PASSWORD FOR 'test' = PASSWORD('test')"});
 
-    MYSQL* conn = open_conn(test.maxscales->rwsplit_port, test.maxscales->ip4(), "test", "test");
+    MYSQL* conn = open_conn(test.maxscale->rwsplit_port, test.maxscale->ip4(), "test", "test");
     test.try_query(conn, "SELECT 1");
     mysql_close(conn);
 

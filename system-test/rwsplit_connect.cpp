@@ -12,8 +12,8 @@ int main(int argc, char* argv[])
     Test->set_timeout(20);
     Test->repl->connect();
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip());
-    Test->maxscales->connect_rwsplit();
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip());
+    Test->maxscale->connect_rwsplit();
 
     unsigned int conn_num;
     unsigned int all_conn = 0;
@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
     {
         conn_num =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->ip(),
-                         Test->maxscales->hostname(),
+                         Test->maxscale->ip(),
+                         Test->maxscale->hostname(),
                          (char*) "test");
         Test->tprintf("connections: %u\n", conn_num);
         if ((i == 0) && (conn_num != 1))
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
                          all_conn);
     }
 
-    Test->maxscales->close_rwsplit();
+    Test->maxscale->close_rwsplit();
     Test->repl->close_connections();
 
     int rval = Test->global_result;

@@ -21,10 +21,10 @@ using std::endl;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     // Set up test table
     basic_test(test);
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(master_index);
 
     // Wait until failover is performed
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
 
     int master_id = get_master_server_id(test);
@@ -56,18 +56,18 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         // Recreate maxscale session
-        maxconn = test.maxscales->open_rwsplit_connection();
+        maxconn = test.maxscale->open_rwsplit_connection();
         cout << "Sending more inserts." << endl;
         generate_traffic_and_check(test, maxconn, 5);
         print_gtids(test);
         cout << "Bringing old master back online..." << endl;
         test.repl->start_node(master_index, (char*) "");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
         test.tprintf("and manually rejoining it to cluster.");
         const char REJOIN_CMD[] = "maxctrl call command mariadbmon rejoin MySQL-Monitor server1";
-        test.maxscales->ssh_output(REJOIN_CMD);
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->ssh_output(REJOIN_CMD);
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
         test.repl->connect();
 
@@ -90,8 +90,8 @@ int main(int argc, char** argv)
                     "Old master did not successfully rejoin the cluster (%s != %s).",
                     gtid_final.c_str(), gtid_old_master.c_str());
         // Switch master back to server1 so last check is faster
-        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server2");
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
         master_id = get_master_server_id(test);
         test.expect(master_id == old_master_id, "Switchover back to server1 failed.");
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
             string sstatus_query = "SHOW ALL SLAVES STATUS;";
             test.try_query(conn,
                            "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL gtid_slave_pos='';");
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
             get_output(test);
             auto row = get_row(conn, sstatus_query);
             test.expect(row.empty(), "server3 is still replicating.");
@@ -115,8 +115,8 @@ int main(int argc, char** argv)
             test.expect(row.empty() || row[0].empty(),
                         "server3 gtid is not empty as it should (%s).", row[0].c_str());
             cout << "Rejoining server3.\n";
-            test.maxscales->ssh_output("maxctrl call command mysqlmon rejoin MySQL-Monitor server3");
-            test.maxscales->wait_for_monitor(2);
+            test.maxscale->ssh_output("maxctrl call command mysqlmon rejoin MySQL-Monitor server3");
+            test.maxscale->wait_for_monitor(2);
             get_output(test);
             test.repl->connect();
             char result[100];
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
     else
     {
         test.repl->start_node(master_index, (char*) "");
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
     }
 
     return test.global_result;

@@ -31,9 +31,9 @@ void query_thread(TestConnections& test, int thread_id)
     // Keep running the test until we exhaust all available ports
     while (run && test.global_result == 0 && errno != EADDRNOTAVAIL)
     {
-        validate(test.maxscales->open_rwsplit_connection());
-        validate(test.maxscales->open_readconn_master_connection());
-        validate(test.maxscales->open_readconn_slave_connection());
+        validate(test.maxscale->open_rwsplit_connection());
+        validate(test.maxscale->open_readconn_master_connection());
+        validate(test.maxscale->open_readconn_slave_connection());
         i++;
     }
 }
@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
 
     // Tuning these kernel parameters removes any system limitations on how many
     // connections can be created within a short period
-    test.maxscales->ssh_node_f(0,
-                                true,
+    test.maxscale->ssh_node_f(0,
+                              true,
                                 "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
                                 "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 

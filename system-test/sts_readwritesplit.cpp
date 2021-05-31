@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     auto ids = test.repl->get_all_server_ids_str();
     test.repl->disconnect();
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     test.log_printf("Test 2: Outage of secondary sub-service");
 
     test.repl->block_node(3);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     server_id = conn.field("SELECT @@server_id");
     test.expect(server_id == ids[1] || server_id == ids[2],
@@ -49,13 +49,13 @@ int main(int argc, char* argv[])
     test.log_printf("Test 3: Total sub-service outage");
 
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.expect(!conn.query("SELECT @@last_insert_id"), "Master read should fail");
 
     test.repl->unblock_node(0);
     test.repl->unblock_node(3);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
 
 
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 
     // Unblock and reconnect so that both services are in use
     test.repl->unblock_node(3);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
 
 
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     test.expect(!conn.query("SELECT 1"), "Subsequent read after failure should fail");
 
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
     test.expect(conn.query("SELECT 1"), "Read after reconnection should work: %s", conn.error());

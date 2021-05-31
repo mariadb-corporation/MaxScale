@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 3; i++)
     {
-        auto a = test.maxscales->rwsplit();
-        auto b = test.maxscales->rwsplit();
+        auto a = test.maxscale->rwsplit();
+        auto b = test.maxscale->rwsplit();
         test.expect(a.connect() && b.connect(), "Connections should work");
 
         auto id = a.thread_id();
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
         test.stop_timeout();
     }
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.connect();
     conn.query("DROP TABLE test.t1");
 

@@ -78,7 +78,7 @@ string extract_ip(string s)
 void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
 {
     static const char COMMAND[] = "export PATH=$PATH:/sbin:/usr/sbin; ip addr|fgrep inet|fgrep -v ::";
-    auto res = test.maxscales->ssh_output(COMMAND, false);
+    auto res = test.maxscale->ssh_output(COMMAND, false);
     to_collection(res.output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
 
@@ -104,7 +104,7 @@ void drop_user(TestConnections& test, const string& user, const string& host)
     stmt += "'@'";
     stmt += host;
     stmt += "'";
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
 }
 
 void create_user(TestConnections& test, const string& user, const string& password, const string& host)
@@ -120,7 +120,7 @@ void create_user(TestConnections& test, const string& user, const string& passwo
     stmt += "'";
     stmt += password;
     stmt += "'";
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
 }
 
 void grant_access(TestConnections& test, const string& user, const string& host)
@@ -132,9 +132,9 @@ void grant_access(TestConnections& test, const string& user, const string& host)
     stmt += "'@'";
     stmt += host;
     stmt += "'";
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "FLUSH PRIVILEGES");
+    test.try_query(test.maxscale->conn_rwsplit[0], "FLUSH PRIVILEGES");
 }
 
 void create_user_and_grants(TestConnections& test,
@@ -214,14 +214,14 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
 
 string get_local_ip(TestConnections& test)
 {
-    auto res = test.maxscales->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://", false);
+    auto res = test.maxscale->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://", false);
 
     return trim(res.output);
 }
 
 string get_gateway_ip(TestConnections& test)
 {
-    auto res = test.maxscales->ssh_output("echo $SSH_CLIENT", false);
+    auto res = test.maxscale->ssh_output("echo $SSH_CLIENT", false);
     return mxt::cutoff_string(res.output, ' ');
 }
 
@@ -236,8 +236,8 @@ void start_maxscale_with_local_address(TestConnections& test,
     command += "/ ";
     command += "/etc/maxscale.cnf";
 
-    test.maxscales->ssh_node(command.c_str(), true);
-    test.maxscales->start_and_check_started();
+    test.maxscale->ssh_node(command.c_str(), true);
+    test.maxscale->start_and_check_started();
 }
 
 void test_connecting(TestConnections& test,
@@ -246,8 +246,8 @@ void test_connecting(TestConnections& test,
                      const char* zHost,
                      bool should_be_able_to)
 {
-    bool could_connect = can_connect_to_maxscale(test.maxscales->ip4(),
-                                                 test.maxscales->rwsplit_port,
+    bool could_connect = can_connect_to_maxscale(test.maxscale->ip4(),
+                                                 test.maxscale->rwsplit_port,
                                                  zUser,
                                                  zPassword);
 
@@ -274,8 +274,8 @@ void test_connecting(TestConnections& test,
 
 void run_test(TestConnections& test, const vector<string>& ips)
 {
-    auto* mxs = test.maxscales;
-    test.maxscales->connect();
+    auto* mxs = test.maxscale;
+    test.maxscale->connect();
 
     string ip1 = ips[0];
     // If we do not have a proper second IP-address, we'll use an arbitrary one.
@@ -303,7 +303,7 @@ void run_test(TestConnections& test, const vector<string>& ips)
     test_connecting(test, zUser1, zPassword1, ip1.c_str(), true);
     test_connecting(test, zUser2, zPassword2, ip2.c_str(), false);
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
     mxs->stop_and_check_stopped();
 
     test.tprintf("\n");
@@ -312,12 +312,12 @@ void run_test(TestConnections& test, const vector<string>& ips)
 
     string local_address_ip1 = "local_address=" + ip1;
     start_maxscale_with_local_address(test, "###local_address###", local_address_ip1);
-    test.maxscales->connect();
+    test.maxscale->connect();
 
     test_connecting(test, zUser1, zPassword1, ip1.c_str(), true);
     test_connecting(test, zUser2, zPassword2, ip2.c_str(), false);
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
     mxs->stop_and_check_stopped();
 
     if (ips.size() > 1)

@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Create a table");
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.set_timeout(15);
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
     test.expect(conn.query("CREATE TABLE test.t1(id INT)"), "Query failed: %s", conn.error());
@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     test.tprintf("Block and unblock the slave to force a reconnection");
 
     test.repl->block_node(1);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(1);
 
     test.tprintf("Execute a query on the master to force the next query to "

@@ -12,14 +12,14 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE test.t1 (a LONGTEXT)"),
                 "Table creation should work: %s", conn.error());
     conn.disconnect();
 
     std::string data(1000000, 'a');
-    auto secondary = test.maxscales->rwsplit();
+    auto secondary = test.maxscale->rwsplit();
     secondary.connect();
 
     for (int i = 0; i < 50 && test.ok(); i++)

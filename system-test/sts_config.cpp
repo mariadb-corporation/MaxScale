@@ -9,8 +9,8 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     auto do_check = [&]() {
-            test.maxscales->wait_for_monitor();
-            auto conn = test.maxscales->rwsplit();
+            test.maxscale->wait_for_monitor();
+            auto conn = test.maxscale->rwsplit();
             test.expect(conn.connect(), "Connection should work: %s", conn.error());
             test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
             test.expect(conn.query("SET @a = 1"), "SET should work: %s", conn.error());
@@ -25,13 +25,13 @@ int main(int argc, char* argv[])
     test.check_maxctrl("link service combined-service service1 service2");
 
     do_check();
-    test.maxscales->restart();
+    test.maxscale->restart();
     do_check();
 
     {
         test.log_printf("Open connection to combined-service and remove sub-service while the connection is still open");
 
-        auto conn = test.maxscales->rwsplit();
+        auto conn = test.maxscale->rwsplit();
         test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
         test.check_maxctrl("unlink service combined-service service2");
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     test.log_printf("Make sure other connections work and don't use the removed service");
 
-    auto other = test.maxscales->rwsplit();
+    auto other = test.maxscale->rwsplit();
     test.expect(other.connect(), "Other connection should work: %s", other.error());
     test.expect(other.query("SELECT 1"), "SELECT should work: %s", other.error());
     test.expect(other.query("SET @a = 1"), "SET should work: %s", other.error());

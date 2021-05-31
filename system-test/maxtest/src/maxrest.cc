@@ -154,7 +154,7 @@ unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 
     curl_command += url;
 
-    auto result = m_test.maxscales->ssh_output(curl_command, false);
+    auto result = m_test.maxscale->ssh_output(curl_command, false);
 
     if (result.rc != 0)
     {

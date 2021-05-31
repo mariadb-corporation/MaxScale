@@ -40,7 +40,7 @@ private:
         auto regular_slave_ip = regular_slave.host();   // the second regular slave doesn't come into play
 
         // Check initial server setup
-        auto& mxs = test.maxscales->maxscale_b();
+        auto& mxs = test.maxscale->maxscale_b();
         mxs.wait_monitor_ticks(2);
         mxs.check_servers_status(initial_stats);
 

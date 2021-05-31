@@ -46,7 +46,7 @@ void thread_stress(TestConnections* pTest, int id)
 
     cout << greeting << flush;
 
-    Connection c = pTest->maxscales->rwsplit();
+    Connection c = pTest->maxscale->rwsplit();
 
     c.connect();
 
@@ -89,7 +89,7 @@ void test_stress(TestConnections& test)
         threads[i].join();
     }
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     c.connect();
 
     test.repl->sync_slaves();
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
 
     test.expect(c.connect(), "Could not connect to MaxScale.");
 

@@ -28,7 +28,7 @@ void writer_func(TestConnections* test)
 {
     while (is_running)
     {
-        MYSQL* conn = open_conn(test->maxscales->rwsplit_port, test->maxscales->ip4(),
+        MYSQL* conn = open_conn(test->maxscale->rwsplit_port, test->maxscale->ip4(),
                                 "test", "test", false);
 
         for (int i = 0; i < 100; i++)
@@ -59,14 +59,14 @@ int main(int argc, char** argv)
 
     test.tprintf("Start by having the current master replicate from the external server.");
     test.repl->replicate_from(0, 3);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale->wait_for_monitor(1);
     check_status(test, "server1", master_running, "server1 should be the master");
     check_status(test, "server2", slave_running, "server2 should be a slave");
     check_status(test, "server3", slave_running, "server3 should be a slave");
 
     test.tprintf("Stop server1, expect server2 to be promoted as the master");
     test.repl->stop_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 
     check_status(test, "server1", down, "server1 should be down");
     check_status(test, "server2", master_running, "server2 should be the master");
@@ -79,21 +79,21 @@ int main(int argc, char** argv)
     // TODO: Think about what to do with this test and the setting in general.
     //    test.repl->replicate_from(1, 3);
     test.repl->replicate_from(3, 1);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale->wait_for_monitor(1);
     check_status(test, "server2", master_running, "server2 should still be the master");
     check_status(test, "server3", slave_running, "server3 should be a slave");
 
     test.tprintf("Start server1, expect it to rejoin the cluster");
     // The rejoin should redirect the existing external master connection in server1.
     test.repl->start_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_status(test, "server1", slave_running, "server1 should be a slave");
     check_status(test, "server2", master_running, "server2 should still be the master");
     check_status(test, "server3", slave_running, "server3 should be a slave");
 
     test.tprintf("Stop server2, expect server1 to be promoted as the master");
     test.repl->stop_node(1);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.repl->connect();
     // Same as before.
     // test.repl->replicate_from(0, 3);
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Start server2, expect it to rejoin the cluster");
     test.repl->start_node(1);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_status(test, "server1", master_running, "server1 should still be the master");
     check_status(test, "server2", slave_running, "server2 should be a slave");
     check_status(test, "server3", slave_running, "server3 should be a slave");

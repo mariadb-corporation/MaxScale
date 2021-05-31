@@ -23,11 +23,11 @@ int main(int argc, char* argv[])
     int r = (Test->smoke) ? 1 : 3;
 
     Test->set_timeout(5);
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     MYSQL* router[3];
-    router[0] = Test->maxscales->conn_rwsplit[0];
-    router[1] = Test->maxscales->conn_master;
-    router[2] = Test->maxscales->conn_slave;
+    router[0] = Test->maxscale->conn_rwsplit[0];
+    router[1] = Test->maxscale->conn_master;
+    router[2] = Test->maxscale->conn_slave;
 
     for (int ir = 0; ir < r; ir++)
     {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
     Test->set_timeout(20);
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
     Test->check_maxscale_alive();
 
     int rval = Test->global_result;

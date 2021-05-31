@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
 
     tcp::Connection conn;
-    conn.connect(test.maxscales->ip(), test.maxscales->rwsplit_port);
+    conn.connect(test.maxscale->ip(), test.maxscale->rwsplit_port);
 
     // Read the handshake
     uint8_t buf[512] = {};

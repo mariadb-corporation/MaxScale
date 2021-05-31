@@ -32,9 +32,9 @@ struct TestCase
 
 void run_test(TestConnections& test, TestCase test_case)
 {
-    test.maxscales->connect();
+    test.maxscale->connect();
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     std::string query = "SELECT * FROM test.t1";
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
     mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type);
@@ -49,17 +49,17 @@ void run_test(TestConnections& test, TestCase test_case)
     }
 
     cout << test_case.name << endl;
-    test.expect(test_case.func(test.maxscales->conn_rwsplit[0], stmt, bind),
+    test.expect(test_case.func(test.maxscale->conn_rwsplit[0], stmt, bind),
                 "Test '%s' failed: %s %s", test_case.name.c_str(),
-                mysql_error(test.maxscales->conn_rwsplit[0]),
+                mysql_error(test.maxscale->conn_rwsplit[0]),
                 mysql_stmt_error(stmt));
 
     mysql_stmt_close(stmt);
 
-    test.expect(mysql_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
-                "Normal queries should work: %s", mysql_error(test.maxscales->conn_rwsplit[0]));
+    test.expect(mysql_query(test.maxscale->conn_rwsplit[0], "SELECT 1") == 0,
+                "Normal queries should work: %s", mysql_error(test.maxscale->conn_rwsplit[0]));
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 }
 
 
@@ -68,18 +68,18 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     test.maxctrl("enable log-priority info");
-    test.maxscales->connect();
+    test.maxscale->connect();
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.try_query(test.maxscales->conn_rwsplit[0], "BEGIN");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "BEGIN");
 
     for (int i = 0; i < 100; i++)
     {
-        execute_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (%d)", i);
+        execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (%d)", i);
     }
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
-    test.maxscales->disconnect();
+    test.try_query(test.maxscale->conn_rwsplit[0], "COMMIT");
+    test.maxscale->disconnect();
     test.repl->sync_slaves();
 
     vector<TestCase> tests =

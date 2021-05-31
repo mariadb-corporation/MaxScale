@@ -24,12 +24,12 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
     test.repl->disable_ssl();
-    test.maxscales->restart();
+    test.maxscale->restart();
 
     for (auto srv : {"server1", "server2", "server3", "server4"})
     {
         StringSet expected = {"Down"};
-        auto status = test.maxscales->get_server_status(srv);
+        auto status = test.maxscale->get_server_status(srv);
         test.expect(status == expected,
                     "Expected '%s' but got '%s'", join(expected).c_str(), join(status).c_str());
     }

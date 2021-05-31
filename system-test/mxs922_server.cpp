@@ -8,14 +8,14 @@
 
 int check_server_id(TestConnections* test, int idx)
 {
-    test->maxscales->close_maxscale_connections();
-    test->maxscales->connect_maxscale();
+    test->maxscale->close_maxscale_connections();
+    test->maxscale->connect_maxscale();
 
     int a = test->repl->get_server_id(idx);
     int b = -1;
     char str[1024];
 
-    if (find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str) == 0)
+    if (find_field(test->maxscale->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str) == 0)
     {
         b = atoi(str);
     }
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     config.destroy_server(1);
     config.destroy_server(1);
     config.check_server_count(0);
-    test->maxscales->expect_running_status(true);
+    test->maxscale->expect_running_status(true);
 
     test->tprintf("Testing adding of server to service");
 
@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
     test->check_maxscale_alive();
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
     config.alter_server(1, "port", 12345);
-    test->maxscales->connect_maxscale();
-    test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
+    test->maxscale->connect_maxscale();
+    test->add_result(execute_query_silent(test->maxscale->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query with bad address should fail");
 
     config.remove_server(1);

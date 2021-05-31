@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    std::string ip = test.maxscales->ip();
+    std::string ip = test.maxscale->ip();
     test.repl->execute_query_all_nodes(("SET GLOBAL proxy_protocol_networks='" + ip + "'").c_str());
 
     Connection node = test.repl->get_connection(0);
@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 100 && test.ok(); i++)
     {
-        connections.emplace_back(test.maxscales->rwsplit());
+        connections.emplace_back(test.maxscale->rwsplit());
         Connection& c = connections.back();
         c.set_credentials("bob", "bob");
         test.expect(c.connect(), "Connection should work: %s", c.error());

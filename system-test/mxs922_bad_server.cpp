@@ -43,16 +43,16 @@ void do_query(TestConnections* test, bool should_fail)
     test->tprintf("Trying to query, expecting %s", should_fail ? "failure" : "success");
     test->set_timeout(120);
 
-    test->maxscales->connect_maxscale();
+    test->maxscale->connect_maxscale();
 
-    bool failed = execute_query(test->maxscales->conn_rwsplit[0], "select @@server_id") == 0;
+    bool failed = execute_query(test->maxscale->conn_rwsplit[0], "select @@server_id") == 0;
 
     const char* msg = should_fail ?
         "Query was successful when failure was expected." :
         "Query failed when success was expected.";
 
     test->add_result(failed == should_fail, "%s", msg);
-    test->maxscales->close_maxscale_connections();
+    test->maxscale->close_maxscale_connections();
 
     test->stop_timeout();
 }
@@ -81,12 +81,12 @@ int main(int argc, char* argv[])
     test->tprintf("Create the servers with correct parameters");
     for (int i = 0; i < 4; i++)
     {
-        test->maxscales->ssh_node_f(0,
-                                    true,
-                                    "maxctrl create server server%d %s %d",
+        test->maxscale->ssh_node_f(0,
+                                   true,
+                                   "maxctrl create server server%d %s %d",
                                     i + 1,
-                                    test->repl->ip_private(i),
-                                    test->repl->port[i]);
+                                   test->repl->ip_private(i),
+                                   test->repl->port[i]);
     }
 
     /**  Add the servers again */
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
 
     do_query(test, true);
 
-    test->maxscales->expect_running_status(true);
+    test->maxscale->expect_running_status(true);
     int rval = test->global_result;
     delete test;
     return rval;

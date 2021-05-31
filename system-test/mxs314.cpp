@@ -13,9 +13,9 @@ int main(int argc, char** argv)
     std::ostringstream ss;
     ss << "SELECT 1";
 
-    test.maxscales->connect();
+    test.maxscale->connect();
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
 
     for (int i = 0; i < 50; i++)
     {
@@ -23,9 +23,9 @@ int main(int argc, char** argv)
         test.set_timeout(30);
         test.add_result(mysql_stmt_prepare(stmt, query.c_str(), query.length()),
                         "Failed at %d: %s\n", i,
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
         test.add_result(mysql_stmt_reset(stmt), "Failed at %d: %s\n", i,
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
 
         for (int x = 0; x < 17; x++)
         {
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
     test.set_timeout(20);
     mysql_stmt_close(stmt);
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

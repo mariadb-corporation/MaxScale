@@ -32,11 +32,11 @@ int main(int argc, char* argv[])
             char str[256];
             sprintf(str, "shard_db%d", i);
             test.set_timeout(60);
-            MYSQL* conn = open_conn_db(test.maxscales->rwsplit_port,
-                                       test.maxscales->ip4(),
+            MYSQL* conn = open_conn_db(test.maxscale->rwsplit_port,
+                                       test.maxscale->ip4(),
                                        str,
-                                       test.maxscales->user_name,
-                                       test.maxscales->password,
+                                       test.maxscale->user_name,
+                                       test.maxscale->password,
                                        test.maxscale_ssl);
             test.set_timeout(60);
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);

@@ -26,12 +26,12 @@ const int N = 60;
 
 Connection create_rcr_connection(TestConnections& test)
 {
-    return test.maxscales->readconn_master();
+    return test.maxscale->readconn_master();
 }
 
 Connection create_rws_connection(TestConnections& test)
 {
-    return test.maxscales->rwsplit();
+    return test.maxscale->rwsplit();
 }
 
 void run_test(TestConnections& test,

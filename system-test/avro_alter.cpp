@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (16, 17, \"d\")");
     execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
 
-    test.maxscales->start();
+    test.maxscale->start();
 
     /** Give avrorouter some time to process the events */
     test.stop_timeout();
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     {
         char cmd[PATH_MAX];
         snprintf(cmd, sizeof(cmd), "maxavrocheck -d /var/lib/maxscale/avro/test.t1.%06d.avro", i);
-        auto res = test.maxscales->ssh_output(cmd);
+        auto res = test.maxscale->ssh_output(cmd);
         int nrows = 0;
         std::istringstream iss;
         iss.str(res.output);

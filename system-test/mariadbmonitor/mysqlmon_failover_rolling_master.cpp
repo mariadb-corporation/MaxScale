@@ -70,7 +70,7 @@ class XTestConnections : private TestConnections
 public:
     using TestConnections::add_result;
     using TestConnections::global_result;
-    using TestConnections::maxscales;
+    using TestConnections::maxscale;
     using TestConnections::repl;
 
     XTestConnections(int argc, char* argv[])
@@ -90,7 +90,7 @@ public:
 
     void connect_maxscale(int m = 0)
     {
-        if (maxscales->connect_maxscale() != 0)
+        if (maxscale->connect_maxscale() != 0)
         {
             ++global_result;
             throw std::runtime_error("Could not connect to MaxScale.");
@@ -146,8 +146,8 @@ namespace
 
 void create_table(XTestConnections& test)
 {
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
 }
 
 static int i_start = 0;
@@ -156,7 +156,7 @@ static int i_end = 0;
 
 void insert_data(XTestConnections& test)
 {
-    test.try_query(test.maxscales->conn_rwsplit[0], "BEGIN");
+    test.try_query(test.maxscale->conn_rwsplit[0], "BEGIN");
 
     i_end = i_start + n_rows;
 
@@ -164,16 +164,16 @@ void insert_data(XTestConnections& test)
     {
         stringstream ss;
         ss << "INSERT INTO test.t1 VALUES (" << i << ")";
-        test.try_query(test.maxscales->conn_rwsplit[0], ss.str().c_str());
+        test.try_query(test.maxscale->conn_rwsplit[0], ss.str().c_str());
     }
-    test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
+    test.try_query(test.maxscale->conn_rwsplit[0], "COMMIT");
 
     i_start = i_end;
 }
 
 void check(XTestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->open_rwsplit_connection();
+    MYSQL* pConn = test.maxscale->open_rwsplit_connection();
     const char* zQuery = "SELECT * FROM test.t1";
 
     test.try_query(pConn, "BEGIN");
@@ -211,7 +211,7 @@ void stop_node(XTestConnections& test, int index)
 
 void run(XTestConnections& test)
 {
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     const int N = 4;
 
@@ -233,20 +233,20 @@ void run(XTestConnections& test)
         cout << "\nSyncing slaves." << endl;
         test.repl->sync_slaves();
 
-        int master_id = get_server_id(*test.maxscales);
+        int master_id = get_server_id(*test.maxscale);
         int master_index = master_id - 1;
 
         cout << "\nStopping master." << endl;
         stop_node(test, master_index);
 
         cout << "\nClosing connection to MaxScale." << endl;
-        test.maxscales->close_maxscale_connections();
+        test.maxscale->close_maxscale_connections();
 
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
 
         list_servers(test);
 
-        master_id = get_server_id(*test.maxscales);
+        master_id = get_server_id(*test.maxscale);
         cout << "\nNew master is: " << master_id << endl;
 
         cout << "\nConnecting to MaxScale." << endl;

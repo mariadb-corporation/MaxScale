@@ -22,10 +22,10 @@ int main(int argc, char** argv)
 
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    test.maxscales->copy_fw_rules("rules.txt", ".");
-    test.maxscales->start();
+    test.maxscale->copy_fw_rules("rules.txt", ".");
+    test.maxscale->start();
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connect failed: %s", conn.error());
     test.expect(conn.query("SELECT 1; SELECT 2; SELECT 3;"), "Query failed: %s", conn.error());
     test.expect(!conn.query("DROP DATABASE mysql"), "DROP succeeded");

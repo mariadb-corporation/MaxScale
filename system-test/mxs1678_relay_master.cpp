@@ -28,21 +28,21 @@ int main(int argc, char** argv)
     test.tprintf("Checking before stopping IO thread");
     test.print_maxctrl("list servers");
 
-    test.add_result(test.maxscales->get_server_status("server1") != master, "server1 is not a master");
-    test.add_result(test.maxscales->get_server_status("server2") != slave, "server2 is not a slave");
-    test.add_result(test.maxscales->get_server_status("server3") != relay_master,
+    test.add_result(test.maxscale->get_server_status("server1") != master, "server1 is not a master");
+    test.add_result(test.maxscale->get_server_status("server2") != slave, "server2 is not a slave");
+    test.add_result(test.maxscale->get_server_status("server3") != relay_master,
                     "server3 is not a relay master");
-    test.add_result(test.maxscales->get_server_status("server4") != slave, "server4 is not a slave");
+    test.add_result(test.maxscale->get_server_status("server4") != slave, "server4 is not a slave");
 
     execute_query(test.repl->nodes[2], "STOP SLAVE IO_THREAD");
     sleep(10);
 
     test.tprintf("Checking after stopping IO thread");
     test.print_maxctrl("list servers");
-    test.add_result(test.maxscales->get_server_status("server1") != master, "server1 is not a master");
-    test.add_result(test.maxscales->get_server_status("server2") != slave, "server2 is not a slave");
-    test.add_result(test.maxscales->get_server_status("server3") != running, "server3 is not only running");
-    test.add_result(test.maxscales->get_server_status("server4") != running, "server4 is not only running");
+    test.add_result(test.maxscale->get_server_status("server1") != master, "server1 is not a master");
+    test.add_result(test.maxscale->get_server_status("server2") != slave, "server2 is not a slave");
+    test.add_result(test.maxscale->get_server_status("server3") != running, "server3 is not only running");
+    test.add_result(test.maxscale->get_server_status("server4") != running, "server4 is not only running");
 
     return test.global_result;
 }

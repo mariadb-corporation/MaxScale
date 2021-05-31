@@ -7,14 +7,14 @@
 
 bool try_connect(TestConnections& test)
 {
-    const char* ip = test.maxscales->ip4();
-    const char* user = test.maxscales->user_name.c_str();
-    const char* pw = test.maxscales->password.c_str();
+    const char* ip = test.maxscale->ip4();
+    const char* user = test.maxscale->user_name.c_str();
+    const char* pw = test.maxscale->password.c_str();
     const char* db = "test_db";
 
-    MYSQL* rwsplit = open_conn_db(test.maxscales->rwsplit_port, ip, db, user, pw, false);
-    MYSQL* master = open_conn_db(test.maxscales->readconn_master_port, ip, db, user, pw, false);
-    MYSQL* slave = open_conn_db(test.maxscales->readconn_slave_port, ip, db, user, pw, false);
+    MYSQL* rwsplit = open_conn_db(test.maxscale->rwsplit_port, ip, db, user, pw, false);
+    MYSQL* master = open_conn_db(test.maxscale->readconn_master_port, ip, db, user, pw, false);
+    MYSQL* slave = open_conn_db(test.maxscale->readconn_slave_port, ip, db, user, pw, false);
     bool rval = false;
 
     if (rwsplit && master && slave
@@ -42,10 +42,10 @@ int main(int argc, char* argv[])
     test.add_result(try_connect(test), "Connection with dropped database should fail");
 
     test.tprintf("Connecting to RWSplit again to recreate 'test_db' db");
-    MYSQL* conn = open_conn_no_db(test.maxscales->rwsplit_port,
-                                  test.maxscales->ip4(),
-                           test.maxscales->user_name,
-                           test.maxscales->password,
+    MYSQL* conn = open_conn_no_db(test.maxscale->rwsplit_port,
+                                  test.maxscale->ip4(),
+                           test.maxscale->user_name,
+                           test.maxscale->password,
                            test.maxscale_ssl);
     test.add_result(conn == NULL, "Error connecting to MaxScale");
 
@@ -61,10 +61,10 @@ int main(int argc, char* argv[])
 
 
     test.tprintf("Trying simple operations with t1 ");
-    conn = open_conn_no_db(test.maxscales->rwsplit_port,
-                           test.maxscales->ip4(),
-                           test.maxscales->user_name,
-                           test.maxscales->password,
+    conn = open_conn_no_db(test.maxscale->rwsplit_port,
+                           test.maxscale->ip4(),
+                           test.maxscale->user_name,
+                           test.maxscale->password,
                            test.maxscale_ssl);
     test.try_query(conn, "USE test_db");
     test.try_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1)");

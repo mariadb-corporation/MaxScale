@@ -97,7 +97,7 @@ void run_test(TestConnections& test, Expectation expectation)
     maxbase::Semaphore sem2;
 
     std::thread t1([&test, &sem1, &sem2]() {
-            MYSQL* pConn = test.maxscales->open_rwsplit_connection();
+            MYSQL* pConn = test.maxscale->open_rwsplit_connection();
             mxb_assert(pConn);
             mysql_autocommit(pConn, false);
 
@@ -115,7 +115,7 @@ void run_test(TestConnections& test, Expectation expectation)
 
     Query::Result rv;
     std::thread t2([&test, &sem1, &sem2, &rv]() {
-            MYSQL* pConn = test.maxscales->open_rwsplit_connection();
+            MYSQL* pConn = test.maxscale->open_rwsplit_connection();
             mxb_assert(pConn);
             mysql_autocommit(pConn, false);
 
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    MYSQL* pConn = test.maxscales->open_rwsplit_connection();
+    MYSQL* pConn = test.maxscale->open_rwsplit_connection();
     test.expect(pConn, "Could not connect to rwsplit.");
 
     // Preparations
@@ -161,17 +161,17 @@ int main(int argc, char* argv[])
     // Intermediate cleanup; delete contents from table, turn on transaction replay, restart MaxScale.
     test.try_query(pConn, "DELETE FROM mxs2512");
     mysql_close(pConn);
-    test.maxscales->stop_and_check_stopped();
+    test.maxscale->stop_and_check_stopped();
     const char* zSed = "sed -i -e 's/transaction_replay=false/transaction_replay=true/' /etc/maxscale.cnf";
-    test.add_result(test.maxscales->ssh_node(zSed, true), "Could not tweak /etc/maxscale.cnf");
-    test.maxscales->start_and_check_started();
+    test.add_result(test.maxscale->ssh_node(zSed, true), "Could not tweak /etc/maxscale.cnf");
+    test.maxscale->start_and_check_started();
 
     // Test with 'transaction_replay=true' => should succeed.
     cout << "Testing with 'transaction_replay=true', SELECT should succeed." << endl;
     run_test(test, Expectation::SUCCESS);
 
     // Final cleanup
-    pConn = test.maxscales->open_rwsplit_connection();
+    pConn = test.maxscale->open_rwsplit_connection();
     test.expect(pConn, "Could not connect to rwsplit.");
     test.try_query(pConn, "DROP TABLE mxs2512");
     mysql_close(pConn);

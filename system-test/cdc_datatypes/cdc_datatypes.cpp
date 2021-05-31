@@ -287,7 +287,7 @@ bool run_test(TestConnections& test)
     test.repl->connect();
     execute_query(test.repl->nodes[0], "RESET MASTER");
     test.repl->close_connections();
-    test.maxscales->start();
+    test.maxscale->start();
 
     test.tprintf("Inserting data");
     for (int x = 0; test_set[x].types; x++)
@@ -312,7 +312,7 @@ bool run_test(TestConnections& test)
             test.set_timeout(60);
             test.tprintf("Testing type: %s", test_set[x].types[i]);
             std::string name = type_to_table_name(test_set[x].types[i]);
-            CDC::Connection conn(test.maxscales->ip4(), 4001, "skysql", "skysql");
+            CDC::Connection conn(test.maxscale->ip4(), 4001, "skysql", "skysql");
 
             if (conn.connect(name))
             {
@@ -368,7 +368,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Test failed");
     }
 
-    test.maxscales->expect_running_status(true);
+    test.maxscale->expect_running_status(true);
 
     return test.global_result;
 }

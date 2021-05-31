@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    Connection rwsplit = test.maxscales->rwsplit();
+    Connection rwsplit = test.maxscale->rwsplit();
 
     test.expect(rwsplit.connect(),
                 "Could not connect to rwsplit.");

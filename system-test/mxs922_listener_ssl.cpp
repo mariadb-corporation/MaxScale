@@ -15,19 +15,19 @@ int main(int argc, char* argv[])
     config.reset();
     sleep(1);
 
-    test->maxscales->connect_maxscale();
-    test->try_query(test->maxscales->conn_rwsplit[0], "select @@server_id");
+    test->maxscale->connect_maxscale();
+    test->try_query(test->maxscale->conn_rwsplit[0], "select @@server_id");
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 
-    MYSQL* conn = open_conn(test->maxscales->readconn_master_port,
-                            test->maxscales->ip4(),
-                            test->maxscales->user_name,
-                            test->maxscales->password,
+    MYSQL* conn = open_conn(test->maxscale->readconn_master_port,
+                            test->maxscale->ip4(),
+                            test->maxscale->user_name,
+                            test->maxscale->password,
                             true);
     test->add_result(execute_query(conn, "select @@server_id"), "SSL query to readconnroute failed");
     mysql_close(conn);
 
-    test->maxscales->expect_running_status(true);
+    test->maxscale->expect_running_status(true);
     int rval = test->global_result;
     delete test;
     return rval;

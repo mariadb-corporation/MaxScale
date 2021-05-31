@@ -15,14 +15,14 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&](string q) {
-            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
         };
 
     auto ok = [&](string q) {
             test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
         };
 
     auto err = [&](string q) {
@@ -30,7 +30,7 @@ int main(int argc, char** argv)
         };
 
     // Create a table and insert one value
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
     ok("INSERT INTO test.t1 VALUES (1)");
 
@@ -53,11 +53,11 @@ int main(int argc, char** argv)
 
     // The checksums for the results should conflict causing the replay to fail
     err("COMMIT");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     ok("DROP TABLE test.t1");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

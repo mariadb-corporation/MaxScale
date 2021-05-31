@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < TestConnNum; i++)
     {
         Test->set_timeout(10 * Test->repl->N);
-        conn[i] = Test->maxscales->open_readconn_slave_connection();
+        conn[i] = Test->maxscale->open_readconn_slave_connection();
     }
     Test->set_timeout(25 * Test->repl->N);
     Test->tprintf("Waiting 5 seconds\n");
@@ -39,8 +39,8 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Checking connections to Master: should be 0\n");
     conn_num = get_conn_num(Test->repl->nodes[0],
-                            Test->maxscales->ip(),
-                            Test->maxscales->hostname(),
+                            Test->maxscale->ip(),
+                            Test->maxscale->hostname(),
                             (char*) "test");
     Test->add_result(conn_num, "number of connections to Master is %d\n", conn_num);
 
@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
     {
         conn_num =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->ip(),
-                         Test->maxscales->hostname(),
+                         Test->maxscale->ip(),
+                         Test->maxscale->hostname(),
                          (char*) "test");
         TotalConn += conn_num;
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->ip4(i), conn_num);

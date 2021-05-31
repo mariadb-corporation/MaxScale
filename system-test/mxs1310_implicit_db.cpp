@@ -27,28 +27,28 @@ int main(int argc, char* argv[])
     test.repl->sync_slaves();
 
     test.tprintf("Run test with sharded database as active database");
-    test.maxscales->connect_rwsplit();
-    test.try_query(test.maxscales->conn_rwsplit[0], "USE db2");
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM t2", server_id[1]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+    test.maxscale->connect_rwsplit();
+    test.try_query(test.maxscale->conn_rwsplit[0], "USE db2");
+    execute_query_check_one(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM t2", server_id[1]);
+    execute_query_check_one(test.maxscale->conn_rwsplit[0],
                             "SELECT @@server_id, id FROM db1.t1",
                             server_id[0]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+    execute_query_check_one(test.maxscale->conn_rwsplit[0],
                             "SELECT @@server_id, a.id FROM t2 as a JOIN db1.t1 as b",
                             server_id[1]);
-    test.maxscales->close_rwsplit();
+    test.maxscale->close_rwsplit();
 
     test.tprintf("Run test with a common database as active database");
-    test.maxscales->connect_rwsplit();
-    test.try_query(test.maxscales->conn_rwsplit[0], "USE db1");
-    execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM t1", server_id[0]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+    test.maxscale->connect_rwsplit();
+    test.try_query(test.maxscale->conn_rwsplit[0], "USE db1");
+    execute_query_check_one(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM t1", server_id[0]);
+    execute_query_check_one(test.maxscale->conn_rwsplit[0],
                             "SELECT @@server_id, id FROM db2.t2",
                             server_id[1]);
-    execute_query_check_one(test.maxscales->conn_rwsplit[0],
+    execute_query_check_one(test.maxscale->conn_rwsplit[0],
                             "SELECT @@server_id, a.id FROM t1 as a JOIN db1.t1 as b",
                             server_id[0]);
-    test.maxscales->close_rwsplit();
+    test.maxscale->close_rwsplit();
 
     //  Cleanup
     execute_query(test.repl->nodes[0], "DROP DATABASE db1");

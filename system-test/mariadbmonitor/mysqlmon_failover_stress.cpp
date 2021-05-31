@@ -322,7 +322,7 @@ private:
     {
         cout << "\nCreating tables." << endl;
 
-        MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
         string drop_head("DROP TABLE IF EXISTS test.t");
         string create_head("CREATE TABLE test.t");
@@ -344,7 +344,7 @@ private:
     {
         cout << "\nInserting data." << endl;
 
-        MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
         for (size_t i = 0; i < s_nClients; ++i)
         {
@@ -521,16 +521,16 @@ bool is_valid_server_id(TestConnections& test, int id)
 void run(TestConnections& test)
 {
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
 
     if (test.ok())
     {
-        const char* zHost = test.maxscales->ip4();
-        int port = test.maxscales->rwsplit_port;
-        const char* zUser = test.maxscales->user_name.c_str();
-        const char* zPassword = test.maxscales->password.c_str();
+        const char* zHost = test.maxscale->ip4();
+        int port = test.maxscale->rwsplit_port;
+        const char* zUser = test.maxscale->user_name.c_str();
+        const char* zPassword = test.maxscale->password.c_str();
 
         cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
         cout << "Starting clients." << endl;
@@ -541,7 +541,7 @@ void run(TestConnections& test)
         for (int i = 0; i < 2; i++)
         {
             test.set_timeout(20);
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
@@ -551,21 +551,21 @@ void run(TestConnections& test)
                 cout << "\nStopping node: " << master_id << endl;
                 test.repl->stop_node(master_id - 1);
 
-                test.maxscales->wait_for_monitor();
+                test.maxscale->wait_for_monitor();
                 list_servers(test);
 
-                test.maxscales->wait_for_monitor();
+                test.maxscale->wait_for_monitor();
                 list_servers(test);
 
                 test.set_timeout(20);
-                test.maxscales->wait_for_monitor();
+                test.maxscale->wait_for_monitor();
                 cout << "\nStarting node: " << master_id << endl;
                 test.repl->start_node(master_id - 1);
 
-                test.maxscales->wait_for_monitor();
+                test.maxscale->wait_for_monitor();
                 list_servers(test);
 
-                test.maxscales->wait_for_monitor();
+                test.maxscale->wait_for_monitor();
                 list_servers(test);
             }
             else
@@ -574,7 +574,7 @@ void run(TestConnections& test)
             }
         }
 
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
 
         cout << "\nStopping clients.\n" << flush;
         Client::stop();

@@ -44,7 +44,7 @@ void basic(TestConnections& test)
     test.check_maxctrl("create filter test1 regexfilter \"match=SELECT 1\" \"replace=SELECT 2\"");
     test.check_maxctrl("alter service-filters svc1 test1");
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     c.connect();
     test.expect(c.check("SELECT 1", "2"), "The regex filter did not replace the query");
 
@@ -128,7 +128,7 @@ void load(TestConnections& test)
     auto worker = [&](std::atomic<bool>& running) {
             while (running && test.global_result == 0)
             {
-                Connection c = test.maxscales->rwsplit();
+                Connection c = test.maxscale->rwsplit();
                 c.connect();
 
                 while (running && test.global_result == 0)
@@ -154,7 +154,7 @@ void filter_swap(TestConnections& test)
     auto worker = [&](std::atomic<bool>& running) {
             while (running && test.global_result == 0)
             {
-                Connection c = test.maxscales->rwsplit();
+                Connection c = test.maxscale->rwsplit();
                 c.connect();
 
                 while (running && test.global_result == 0)

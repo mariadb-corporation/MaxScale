@@ -26,7 +26,7 @@ const int PORT_REDIS_CACHE = 4007;
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_invalidate");
 }
@@ -35,7 +35,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "CREATE TABLE cache_invalidate (f INT)");
 }
@@ -77,7 +77,7 @@ void run(TestConnections& test, int port, Expect expect)
 {
     create(test);
 
-    Connection c = test.maxscales->get_connection(port);
+    Connection c = test.maxscale->get_connection(port);
     c.connect();
     if (port == PORT_REDIS_CACHE)
     {
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    auto maxscales = test.maxscales;
+    auto maxscales = test.maxscale;
 
     install_and_start_redis(*maxscales);
 

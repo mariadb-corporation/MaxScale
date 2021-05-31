@@ -19,10 +19,10 @@
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    const char* host = test.maxscales->ip4();
-    int port = test.maxscales->ports[0];
-    const char* user = test.maxscales->user_name.c_str();
-    const char* pass = test.maxscales->password.c_str();
+    const char* host = test.maxscale->ip4();
+    int port = test.maxscale->ports[0];
+    const char* user = test.maxscale->user_name.c_str();
+    const char* pass = test.maxscale->password.c_str();
     const char plugin[] = "mysql_clear_password";
 
     test.tprintf("Trying to log in to [%s]:%i as %s with plugin '%s'.\n", host, port, user, plugin);

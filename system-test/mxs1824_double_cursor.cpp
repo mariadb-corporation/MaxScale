@@ -75,9 +75,9 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.maxctrl("enable log-priority info");
-    test.maxscales->connect();
-    double_cursor(test, test.maxscales->conn_rwsplit[0]);
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    double_cursor(test, test.maxscale->conn_rwsplit[0]);
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

@@ -8,8 +8,8 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 123");
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 123");
+    test.maxscale->disconnect();
     return test.global_result;
 }

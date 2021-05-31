@@ -28,18 +28,18 @@ int main(int argc, char** argv)
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE DATABASE db1");
     execute_query(test.repl->nodes[0], "CREATE TABLE db1.t1(id INT)");
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     test.tprintf("Loading local data file");
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
 
     test.tprintf("Verifying that data was loaded");
 
-    long total = execute_query_count_rows(test.maxscales->conn_rwsplit[0], "SELECT * FROM db1.t1");
+    long total = execute_query_count_rows(test.maxscale->conn_rwsplit[0], "SELECT * FROM db1.t1");
     test.add_result(total != 100, "Expected 100 rows, got %ld", total);
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     test.repl->execute_query_all_nodes("DROP DATABASE db1");
 

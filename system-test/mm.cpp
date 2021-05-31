@@ -31,9 +31,9 @@ int check_conf(TestConnections& test, int blocked_node)
     test.set_timeout(60);
 
     test.repl->connect();
-    test.maxscales->connect_rwsplit();
-    create_t1(test.maxscales->conn_rwsplit[0]);
-    global_result += insert_into_t1(test.maxscales->conn_rwsplit[0], 1);
+    test.maxscale->connect_rwsplit();
+    create_t1(test.maxscale->conn_rwsplit[0]);
+    global_result += insert_into_t1(test.maxscale->conn_rwsplit[0], 1);
 
     printf("Sleeping to let replication happen\n");
     fflush(stdout);
@@ -52,11 +52,11 @@ int check_conf(TestConnections& test, int blocked_node)
     test.set_timeout(100);
     printf("Checking data from rwsplit\n");
     fflush(stdout);
-    global_result += select_from_t1(test.maxscales->conn_rwsplit[0], 1);
-    global_result += execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE t1");
+    global_result += select_from_t1(test.maxscale->conn_rwsplit[0], 1);
+    global_result += execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE t1");
 
     test.repl->close_connections();
-    mysql_close(test.maxscales->conn_rwsplit[0]);
+    mysql_close(test.maxscale->conn_rwsplit[0]);
 
     test.stop_timeout();
     return global_result;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     test.tprintf("Block slave\n");
     test.repl->block_node(0);
     test.stop_timeout();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.set_timeout(120);
 
     res = test.maxctrl("api get servers/server1 data.attributes.state").output;
@@ -109,12 +109,12 @@ int main(int argc, char* argv[])
     test.set_timeout(120);
     test.tprintf("Unlock slave\n");
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.set_timeout(120);
     test.tprintf("Block master\n");
     test.repl->block_node(1);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     res = test.maxctrl("api get servers/server2 data.attributes.state").output;
 
@@ -129,19 +129,19 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], (char*) "SET GLOBAL READ_ONLY=OFF");
     test.repl->close_connections();
 
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.set_timeout(120);
 
     printf("Unlock slave\n");
     test.repl->unblock_node(1);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.set_timeout(120);
     printf("Make node 2 slave\n");
     test.repl->connect();
     execute_query(test.repl->nodes[1], (char*) "SET GLOBAL READ_ONLY=ON");
     test.repl->close_connections();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.set_timeout(120);
 

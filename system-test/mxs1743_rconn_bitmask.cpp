@@ -12,9 +12,9 @@ int main(int argc, char** argv)
 
     auto do_test = [&]() {
             test.set_timeout(20);
-            test.maxscales->connect();
-            test.try_query(test.maxscales->conn_master, "SELECT 1");
-            test.maxscales->disconnect();
+            test.maxscale->connect();
+            test.try_query(test.maxscale->conn_master, "SELECT 1");
+            test.maxscale->disconnect();
             test.stop_timeout();
         };
 
@@ -23,17 +23,17 @@ int main(int argc, char** argv)
 
     test.tprintf("Testing with only the master");
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     do_test();
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.tprintf("Testing with only the slave");
     test.repl->block_node(1);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     do_test();
     test.repl->unblock_node(1);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.tprintf("Checking that both the master and slave are used");
     std::vector<Connection> connections;
@@ -43,15 +43,15 @@ int main(int argc, char** argv)
     for (int i = 0; i < 20; i++)
     {
         test.set_timeout(20);
-        connections.push_back(test.maxscales->readconn_master());
+        connections.push_back(test.maxscale->readconn_master());
         Connection& c = connections.back();
         test.expect(c.connect(), "Connect should work: %s", c.error());
         test.expect(c.query("SELECT 1"), "Query should work: %s", c.error());
         test.stop_timeout();
     }
 
-    auto s1 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server1|cut -f 4").output;
-    auto s2 = test.maxscales->ssh_output("maxctrl --tsv list servers|grep server2|cut -f 4").output;
+    auto s1 = test.maxscale->ssh_output("maxctrl --tsv list servers|grep server1|cut -f 4").output;
+    auto s2 = test.maxscale->ssh_output("maxctrl --tsv list servers|grep server2|cut -f 4").output;
 
     test.expect(s1 == s2,
                 "Master and slave shoud have the same amount of connections: %s != %s",

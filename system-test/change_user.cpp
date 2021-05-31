@@ -54,19 +54,19 @@ int main(int argc, char *argv[])
     test.repl->sync_slaves();
     test.repl->disconnect();
 
-    test.maxscales->connect();
+    test.maxscale->connect();
     test.tprintf("Testing readwritesplit");
-    run_test(test, test.maxscales->conn_rwsplit[0]);
+    run_test(test, test.maxscale->conn_rwsplit[0]);
     test.tprintf("Testing readconnroute");
-    run_test(test, test.maxscales->conn_master);
-    test.maxscales->disconnect();
+    run_test(test, test.maxscale->conn_master);
+    test.maxscale->disconnect();
 
     // Test MXS-3366.
-    test.maxscales->connect_rwsplit("");
-    auto conn = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_rwsplit("");
+    auto conn = test.maxscale->conn_rwsplit[0];
     test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
                 "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(conn));
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     test.repl->connect();
     execute_query_silent(test.repl->nodes[0], "DROP USER user@'%%';");

@@ -16,11 +16,11 @@ int main(int argc, char** argv)
         sprintf(server_id[i], "%d", test.repl->get_server_id(i));
     }
 
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* write_query = "SELECT @@server_id, @@last_insert_id";
     const char* read_query = "SELECT @@server_id";
     char buffer[100] = "";
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
     mysql_stmt_close(stmt);
 
-    stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
 
     // Execute read, should return a slave server ID
     test.add_result(mysql_stmt_prepare(stmt, read_query, strlen(read_query)), "Failed to prepare");
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
     mysql_stmt_close(stmt);
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
     test.log_excludes("Closing unknown prepared statement");

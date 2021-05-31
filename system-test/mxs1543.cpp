@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[0], "INSERT INTO t1 VALUES ('ROW2')");
 
     // Wait for the avrorouter to process the data
-    test.maxscales->start();
+    test.maxscale->start();
     sleep(10);
     test.log_includes("Possible STATEMENT or MIXED");
 

@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 
     test.maxctrl("alter monitor MariaDB-Monitor monitor_interval 99999");
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.connect();
     conn.query("SET @a = (SELECT SLEEP(1))");
 

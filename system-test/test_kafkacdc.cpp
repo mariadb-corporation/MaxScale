@@ -11,7 +11,7 @@ void prepare_consumer(TestConnections& test)
 {
     std::string err;
     auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-    cnf->set("bootstrap.servers", test.maxscales->ip4() + ":9092"s, err);
+    cnf->set("bootstrap.servers", test.maxscale->ip4() + ":9092"s, err);
     cnf->set("group.id", "kafkacdc", err);
 
     consumer.reset(RdKafka::KafkaConsumer::create(cnf, err));
@@ -59,8 +59,8 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.tprintf("Starting Kafka container");
-    auto res = test.maxscales->ssh_output(
-        "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->ip4()
+    auto res = test.maxscale->ssh_output(
+        "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscale->ip4()
         + " -p 9092:9092 -p 2182:2181 --network=host --name=kafka spotify/kafka");
 
     if (res.rc != 0)
@@ -95,9 +95,9 @@ int main(int argc, char** argv)
     read_messages(test, 3);
 
     test.tprintf("Restarting MaxScale and inserting data");
-    test.maxscales->stop();
-    test.maxscales->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
-    test.maxscales->start();
+    test.maxscale->stop();
+    test.maxscale->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
+    test.maxscale->start();
 
     conn.query("INSERT INTO t1 VALUES (7), (8), (9)");
     sleep(5);
@@ -105,6 +105,6 @@ int main(int argc, char** argv)
     read_messages(test, 3);
 
     test.tprintf("Stopping Kafka container");
-    test.maxscales->ssh_output("sudo docker rm -vf kafka");
+    test.maxscale->ssh_output("sudo docker rm -vf kafka");
     return test.global_result;
 }

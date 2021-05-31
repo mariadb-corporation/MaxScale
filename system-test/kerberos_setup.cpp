@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->ip4(i), i);
         fprintf(f, "%s node_%03d\n", Test->repl->ip4(i), i);
     }
-    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->ip4());
-    fprintf(f, "%s maxscale\n", Test->maxscales->ip4());
+    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscale->ip4());
+    fprintf(f, "%s maxscale\n", Test->maxscale->ip4());
     fclose(f);
 
     Test->tprintf(
@@ -62,72 +62,72 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
-    auto mxs_homedir = Test->maxscales->access_homedir();
-    Test->maxscales->copy_to_node("hosts", mxs_homedir);
-    Test->maxscales->ssh_node_f(0, true, "cp %s/hosts /etc/", mxs_homedir);
+    auto mxs_homedir = Test->maxscale->access_homedir();
+    Test->maxscale->copy_to_node("hosts", mxs_homedir);
+    Test->maxscale->ssh_node_f(0, true, "cp %s/hosts /etc/", mxs_homedir);
 
-    Test->maxscales->copy_to_node(str, mxs_homedir);
-    Test->maxscales->ssh_node_f(0, true, "cp %s/krb5.conf /etc/", mxs_homedir);
+    Test->maxscale->copy_to_node(str, mxs_homedir);
+    Test->maxscale->ssh_node_f(0, true, "cp %s/krb5.conf /etc/", mxs_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
-    std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->maxscales->node_name();
+    std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->maxscale->node_name();
     std::string maria_vrs = Test->repl->backend(0)->version_as_string();
     install_kerberos(machine_name, maria_vrs);
 
-    Test->maxscales->ssh_node((char*)"rngd -r /dev/urandom -o /dev/random", true);
+    Test->maxscale->ssh_node((char*)"rngd -r /dev/urandom -o /dev/random", true);
 
     Test->tprintf("Configuring Kerberos server\n");
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "sed -i \"s/EXAMPLE.COM/MAXSCALE.TEST/\" /var/kerberos/krb5kdc/kdc.conf",
         true);
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "sed -i \"s/EXAMPLE.COM/MAXSCALE.TEST/\" /var/kerberos/krb5kdc/kadm5.acl",
         true);
     Test->tprintf("Creating Kerberos DB and admin principal\n");
-    Test->maxscales->ssh_node((char*)"kdb5_util create -P skysql -r MAXSCALE.TEST -s", true);
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node((char*)"kdb5_util create -P skysql -r MAXSCALE.TEST -s", true);
+    Test->maxscale->ssh_node(
         (char*)"kadmin.local -q \"addprinc -pw skysql admin/admin@MAXSCALE.TEST\"",
         true);
 
     Test->tprintf("Opening ports 749 and 88\n");
-    Test->maxscales->ssh_node((char*)"iptables -I INPUT -p tcp --dport 749 -j ACCEPT", true);
-    Test->maxscales->ssh_node((char*)"iptables -I INPUT -p tcp --dport 88 -j ACCEPT", true);
+    Test->maxscale->ssh_node((char*)"iptables -I INPUT -p tcp --dport 749 -j ACCEPT", true);
+    Test->maxscale->ssh_node((char*)"iptables -I INPUT -p tcp --dport 88 -j ACCEPT", true);
 
     Test->tprintf("Starting Kerberos\n");
-    Test->maxscales->ssh_node((char*)"service krb5kdc start", true);
-    Test->maxscales->ssh_node((char*)"service kadmin start", true);
+    Test->maxscale->ssh_node((char*)"service krb5kdc start", true);
+    Test->maxscale->ssh_node((char*)"service kadmin start", true);
 
     Test->tprintf("Creating principal\n");
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "echo \"skysql\" | sudo kadmin -p admin/admin -q \"addprinc -randkey mariadb/maxscale.test\"",
         true);
 
     Test->tprintf("Creating keytab file\n");
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "echo \"skysql\" | sudo kadmin -p admin/admin -q \"ktadd mariadb/maxscale.test\"",
         true);
 
     Test->tprintf("Making keytab file readable for all\n");
-    Test->maxscales->ssh_node((char*)"chmod a+r /etc/krb5.keytab;", true);
+    Test->maxscale->ssh_node((char*)"chmod a+r /etc/krb5.keytab;", true);
 
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)"kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab",
         false);
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "mkdir -p /home/maxscale",
         true);
-    Test->maxscales->ssh_node(
+    Test->maxscale->ssh_node(
         (char*)
             "su maxscale --login -s /bin/sh -c \"kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab\"",
         true);
 
     Test->tprintf("Coping keytab file from Maxscale node\n");
-    Test->maxscales->copy_from_node("/etc/krb5.keytab", ".");
+    Test->maxscale->copy_from_node("/etc/krb5.keytab", ".");
 
     Test->tprintf("Coping keytab and .cnf files to all nodes and executing knit for all nodes\n");
     for (i = 0; i < Test->repl->N; i++)

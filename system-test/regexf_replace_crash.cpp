@@ -48,19 +48,19 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     Test->tprintf("RWSplit: \n");
     fflush(stdout);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
     Test->tprintf("ReadConn master: \n");
     fflush(stdout);
-    Test->try_query(Test->maxscales->conn_master, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->try_query(Test->maxscale->conn_master, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
     Test->tprintf("readConn slave: \n");
     fflush(stdout);
-    Test->try_query(Test->maxscales->conn_slave, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->try_query(Test->maxscale->conn_slave, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 
     Test->check_maxscale_alive();
 

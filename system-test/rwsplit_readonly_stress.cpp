@@ -28,7 +28,7 @@ void query_thread(TestConnections& test)
     while (running.load() == 1 && test.ok())
     {
         auto conn = counter % 2 == 0 ?
-            test.maxscales->readconn_slave() : test.maxscales->readconn_master();
+                    test.maxscale->readconn_slave() : test.maxscale->readconn_master();
         const char* type = counter % 2 == 0 ?
             "master_failure_mode=error_on_write" : "master_failure_mode=fail_on_write";
 

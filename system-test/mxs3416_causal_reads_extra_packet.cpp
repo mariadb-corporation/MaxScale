@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     TestConnections::require_repl_version("10.3.8");
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection failed: %s", conn.error());
 
     for (int i = 0; i < 1000 && test.ok(); i++)

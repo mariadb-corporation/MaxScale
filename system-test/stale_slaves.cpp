@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     }
 
     auto get_id = [&]() {
-            Connection c = test.maxscales->readconn_slave();
+            Connection c = test.maxscale->readconn_slave();
             test.expect(c.connect(), "Connection should be OK: %s", c.error());
             string res = c.field("SELECT @@server_id");
             test.expect(!res.empty(), "Field should not be empty: %s", c.error());
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Blocking the master and doing a read query");
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 
     string first = get_id();
     auto it = find(begin(ids), end(ids), first);
@@ -56,22 +56,22 @@ int main(int argc, char** argv)
 
     test.tprintf("Blocking the slave that replied to us");
     test.repl->block_node(node);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.expect(!in_use(first), "The first slave should not be in use");
 
     test.tprintf("Unblocking all nodes");
     test.repl->unblock_all_nodes();
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.expect(in_use(first), "The first slave should be in use");
 
     test.tprintf("Stopping replication on first slave");
     execute_query(test.repl->nodes[node], "STOP SLAVE");
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.expect(!in_use(first), "The first slave should not be in use");
 
     test.tprintf("Starting replication on first slave");
     execute_query(test.repl->nodes[node], "START SLAVE");
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.expect(in_use(first), "The first slave should be in use");
     test.repl->disconnect();
 

@@ -19,22 +19,22 @@ int main(int argc, char* argv[])
 
     test.set_timeout(30);
 
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
     test.tprintf("Stopping node 0");
     test.galera->block_node(0);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     test.stop_timeout();
 
     test.tprintf("Waiting until the monitor picks a new master");
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.set_timeout(30);
 
-    test.maxscales->connect_maxscale();
-    test.try_query(test.maxscales->conn_rwsplit[0], "USE test");
-    test.try_query(test.maxscales->conn_rwsplit[0], "show processlist;");
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->connect_maxscale();
+    test.try_query(test.maxscale->conn_rwsplit[0], "USE test");
+    test.try_query(test.maxscale->conn_rwsplit[0], "show processlist;");
+    test.maxscale->close_maxscale_connections();
 
     test.stop_timeout();
 

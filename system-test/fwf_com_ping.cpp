@@ -19,15 +19,15 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.maxscales->copy_fw_rules("rules.txt", ".");
+    test.maxscale->copy_fw_rules("rules.txt", ".");
 
-    test.maxscales->restart_maxscale();
-    test.maxscales->connect_maxscale();
+    test.maxscale->restart_maxscale();
+    test.maxscale->connect_maxscale();
     test.tprintf("Pinging MaxScale, expecting success");
-    test.add_result(mysql_ping(test.maxscales->conn_rwsplit[0]),
+    test.add_result(mysql_ping(test.maxscale->conn_rwsplit[0]),
                     "Ping should not fail: %s",
-                    mysql_error(test.maxscales->conn_rwsplit[0]));
-    test.maxscales->close_maxscale_connections();
+                    mysql_error(test.maxscale->conn_rwsplit[0]));
+    test.maxscale->close_maxscale_connections();
 
     return test.global_result;
 }

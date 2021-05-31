@@ -40,7 +40,7 @@ void load(long int* new_inserts,
     }
 
     nodes->connect();
-    Test->maxscales->connect_rwsplit();
+    Test->maxscale->connect_rwsplit();
 
     data.i1 = 0;
     data.i2 = 0;
@@ -49,7 +49,7 @@ void load(long int* new_inserts,
     data.rwsplit_only = rwsplit_only;
     // connect to the MaxScale server (rwsplit)
 
-    if (Test->maxscales->conn_rwsplit[0] == NULL)
+    if (Test->maxscale->conn_rwsplit[0] == NULL)
     {
         if (report_errors)
         {
@@ -60,15 +60,15 @@ void load(long int* new_inserts,
     }
     else
     {
-        create_t1(Test->maxscales->conn_rwsplit[0]);
+        create_t1(Test->maxscale->conn_rwsplit[0]);
         create_insert_string(sql, sql_l, 1);
 
-        if ((execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != 0) && (report_errors))
+        if ((execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql) != 0) && (report_errors))
         {
             Test->add_result(1, "Query %s failed\n", sql);
         }
         // close connections
-        Test->maxscales->close_rwsplit();
+        Test->maxscale->close_rwsplit();
 
         if (nodes == Test->repl)
         {
@@ -120,12 +120,12 @@ void* query_thread1(void* ptr)
     MYSQL* conn3 = nullptr;
     int conn_err = 0;
     thread_data* data = (thread_data*) ptr;
-    auto mxs_ip = data->Test->maxscales->ip4();
+    auto mxs_ip = data->Test->maxscale->ip4();
 
-    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port, mxs_ip,
+    conn1 = open_conn_db_timeout(data->Test->maxscale->rwsplit_port, mxs_ip,
                                  "test",
-                                 data->Test->maxscales->user_name,
-                                 data->Test->maxscales->password,
+                                 data->Test->maxscale->user_name,
+                                 data->Test->maxscale->password,
                                  20,
                                  data->Test->maxscale_ssl);
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
@@ -136,10 +136,10 @@ void* query_thread1(void* ptr)
     if (data->rwsplit_only == 0)
     {
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port, mxs_ip,
+        conn2 = open_conn_db_timeout(data->Test->maxscale->readconn_master_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscales->user_name,
-                                     data->Test->maxscales->password,
+                                     data->Test->maxscale->user_name,
+                                     data->Test->maxscale->password,
                                      20,
                                      data->Test->maxscale_ssl);
         if (mysql_errno(conn2) != 0)
@@ -147,10 +147,10 @@ void* query_thread1(void* ptr)
             conn_err++;
         }
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port, mxs_ip,
+        conn3 = open_conn_db_timeout(data->Test->maxscale->readconn_slave_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscales->user_name,
-                                     data->Test->maxscales->password,
+                                     data->Test->maxscale->user_name,
+                                     data->Test->maxscale->password,
                                      20,
                                      data->Test->maxscale_ssl);
         if (mysql_errno(conn3) != 0)
@@ -196,13 +196,13 @@ void* query_thread2(void* ptr)
     MYSQL* conn2;
     MYSQL* conn3;
     thread_data* data = (thread_data*) ptr;
-    auto mxs_ip = data->Test->maxscales->ip4();
+    auto mxs_ip = data->Test->maxscale->ip4();
 
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
-    conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port, mxs_ip,
+    conn1 = open_conn_db_timeout(data->Test->maxscale->rwsplit_port, mxs_ip,
                                  "test",
-                                 data->Test->maxscales->user_name,
-                                 data->Test->maxscales->password,
+                                 data->Test->maxscale->user_name,
+                                 data->Test->maxscale->password,
                                  20,
                                  data->Test->maxscale_ssl);
     if (data->rwsplit_only == 0)
@@ -210,17 +210,17 @@ void* query_thread2(void* ptr)
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
 
-        conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port, mxs_ip,
+        conn2 = open_conn_db_timeout(data->Test->maxscale->readconn_master_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscales->user_name,
-                                     data->Test->maxscales->password,
+                                     data->Test->maxscale->user_name,
+                                     data->Test->maxscale->password,
                                      20,
                                      data->Test->maxscale_ssl);
         // if (mysql_errno(conn2) != 0) { conn_err++; }
-        conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port, mxs_ip,
+        conn3 = open_conn_db_timeout(data->Test->maxscale->readconn_slave_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscales->user_name,
-                                     data->Test->maxscales->password,
+                                     data->Test->maxscale->user_name,
+                                     data->Test->maxscale->password,
                                      20,
                                      data->Test->maxscale_ssl);
         // if (mysql_errno(conn3) != 0) { conn_err++; }

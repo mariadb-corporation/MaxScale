@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     }
 
     test.tprintf("Stopping MaxScale");
-    test.maxscales->stop();
+    test.maxscale->stop();
 
     // Configure extra-port on servers 1&2.
     const int N_extra_port = 2;
@@ -132,14 +132,14 @@ int main(int argc, char** argv)
                 // Finally, start MaxScale. The monitor should use extra port to connect to nodes 0&1,
                 // and normal port to connect to 2&3. All servers should be running.
                 cout << "Starting MaxScale" << endl;
-                test.maxscales->start();
+                test.maxscale->start();
                 sleep(3);   // Give maxscale some time to start properly.
-                test.maxscales->wait_for_monitor(2);
+                test.maxscale->wait_for_monitor(2);
                 for (int i = 0; i < N; i++)
                 {
                     string server_name = "server" + std::to_string(i + 1);
                     auto srv_namez = server_name.c_str();
-                    auto status = test.maxscales->get_server_status(srv_namez);
+                    auto status = test.maxscale->get_server_status(srv_namez);
                     bool status_ok = status.count("Running") == 1;
                     if (status_ok)
                     {
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
                 {
                     // Creating sessions should not work since normal connections cannot be created to
                     // the master node.
-                    auto conn = test.maxscales->open_rwsplit_connection();
+                    auto conn = test.maxscale->open_rwsplit_connection();
                     if (!conn)
                     {
                         test.tprintf("Session creation failed, as expected.");
@@ -200,8 +200,8 @@ int main(int argc, char** argv)
     {
         string srv_name = "server1";
         test.maxctrl("alter server " + srv_name + " port 12345");
-        test.maxscales->wait_for_monitor(2);
-        auto status = test.maxscales->get_server_status(srv_name);
+        test.maxscale->wait_for_monitor(2);
+        auto status = test.maxscale->get_server_status(srv_name);
         test.expect(status.count("Running") == 1, "Monitoring of %s through extra-port failed when normal "
                                                   "port disabled", srv_name.c_str());
         test.maxctrl("alter server " + srv_name + " port " + std::to_string(test.repl->port[0]));

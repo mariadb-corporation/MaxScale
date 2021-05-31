@@ -36,7 +36,7 @@ void expect_event_charset_collation(TestConnections& test, const string& event_n
 int read_incremented_field(TestConnections& test)
 {
     int rval = -1;
-    MYSQL* conn = test.maxscales->open_rwsplit_connection();
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
     char output[100];
     if (find_field(conn, "SELECT * FROM test.t1;", "c1", output) == 0)
     {
@@ -72,8 +72,8 @@ void create_event(TestConnections& test)
 {
     // Create table, enable scheduler and add an event
     test.tprintf("Creating table, inserting data and scheduling an event.");
-    test.maxscales->connect_maxscale();
-    MYSQL* conn = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_maxscale();
+    MYSQL* conn = test.maxscale->conn_rwsplit[0];
     const char create_event_query[] = "CREATE EVENT %s ON SCHEDULE EVERY 1 SECOND "
                                       "DO UPDATE test.t1 SET c1 = c1 + 1;";
 
@@ -93,8 +93,8 @@ void create_event(TestConnections& test)
 
 void delete_event(TestConnections& test)
 {
-    test.maxscales->connect_maxscale();
-    MYSQL* conn = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_maxscale();
+    MYSQL* conn = test.maxscale->conn_rwsplit[0];
 
     if ((test.try_query(conn, EVENT_SHCEDULER, "OFF") == 0)
         && (test.try_query(conn, USE_TEST) == 0)
@@ -109,8 +109,8 @@ void delete_event(TestConnections& test)
 
 void try_delete_event(TestConnections& test)
 {
-    test.maxscales->connect_maxscale();
-    MYSQL* conn = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_maxscale();
+    MYSQL* conn = test.maxscale->conn_rwsplit[0];
 
     execute_query(conn, EVENT_SHCEDULER, "OFF");
     execute_query(conn, USE_TEST);
@@ -159,8 +159,8 @@ bool check_event_status(TestConnections& test, int node,
 void set_event_state(TestConnections& test, const string& event_name, const string& new_state)
 {
     bool success = false;
-    test.maxscales->connect_maxscale();
-    MYSQL* conn = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_maxscale();
+    MYSQL* conn = test.maxscale->conn_rwsplit[0];
     const char query_fmt[] = "ALTER EVENT %s %s;";
 
     if ((test.try_query(conn, USE_TEST) == 0)
@@ -179,7 +179,7 @@ void switchover(TestConnections& test, const string& new_master)
 {
     string switch_cmd = "call command mysqlmon switchover MySQL-Monitor " + new_master;
     test.maxctrl(switch_cmd.c_str());
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     // Check success.
     auto new_master_status = test.get_server_status(new_master.c_str());
     auto new_master_id = test.get_master_server_id();
@@ -232,7 +232,7 @@ int main(int argc, char** argv)
     // Part 1: Do a failover
     cout << "\nStep 1: Stop master and wait for failover. Check that another server is promoted.\n";
     test.repl->stop_node(server1_ind);
-    test.maxscales->wait_for_monitor(3);
+    test.maxscale->wait_for_monitor(3);
     get_output(test);
     int master_id_failover = test.get_master_server_id();
     cout << "Master server id is " << master_id_failover << ".\n";
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
     // Part 2: Start node 0, let it join the cluster and check that the event is properly disabled.
     cout << "\nStep 2: Restart " << server1_name << ". It should join the cluster.\n";
     test.repl->start_node(server1_ind);
-    test.maxscales->wait_for_monitor(4);
+    test.maxscale->wait_for_monitor(4);
     get_output(test);
 
     auto states = test.get_server_status(server1_name);
@@ -290,7 +290,7 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         set_event_state(test, EVENT_NAME, "DISABLE");
-        test.maxscales->wait_for_monitor(); // Wait for the monitor to detect the change.
+        test.maxscale->wait_for_monitor(); // Wait for the monitor to detect the change.
         check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_DISABLED);
         check_event_status(test, server2_ind, EVENT_NAME, EV_STATE_SLAVE_DISABLED);
 
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
         for (int i = 1; i < N; i++)
         {
             string server_name = server_names[i];
-            states = test.maxscales->get_server_status(server_name.c_str());
+            states = test.maxscale->get_server_status(server_name.c_str());
             test.expect(states.count("Slave") == 1, "%s is not a slave.", server_name.c_str());
         }
     }
@@ -364,7 +364,7 @@ void expect_event_charset_collation(TestConnections& test, const string& event_n
                                     const string& client_charset, const string& collation_connection,
                                     const string& database_collation)
 {
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.connect();
     string query = mxb::string_printf("select CHARACTER_SET_CLIENT, COLLATION_CONNECTION, DATABASE_COLLATION "
                                       "from information_schema.EVENTS where EVENT_NAME = '%s';",

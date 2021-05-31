@@ -8,14 +8,14 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE test.t1 (a LONGTEXT)"),
                 "Table creation should work: %s", conn.error());
     conn.disconnect();
 
     std::string data(1000000, 'a');
-    auto secondary = test.maxscales->rwsplit();
+    auto secondary = test.maxscale->rwsplit();
     secondary.connect();
 
     for (int i = 0; i < 25; i++)

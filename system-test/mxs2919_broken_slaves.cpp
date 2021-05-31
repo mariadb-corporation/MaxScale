@@ -9,7 +9,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work");
 
     std::string master_id = conn.field("SELECT @@server_id, @@last_insert_id", 0);
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     }
 
     test.repl->disconnect();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     for (int i = 0; test.ok() && i < 50; i++)
     {

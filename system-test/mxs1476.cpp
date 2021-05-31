@@ -10,52 +10,52 @@
 
 void list_servers(TestConnections& test)
 {
-    auto output = test.maxscales->ssh_output("maxctrl list servers");
+    auto output = test.maxscale->ssh_output("maxctrl list servers");
     test.tprintf("%s", output.output.c_str());
 }
 
 void do_test(TestConnections& test, int master, int slave)
 {
-    test.maxscales->connect_maxscale();
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (id int)");
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test.maxscale->connect_maxscale();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1 (id int)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Stop a slave node and perform an insert");
     test.galera->block_node(slave);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     list_servers(test);
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the slave node and perform another insert");
     test.galera->unblock_node(slave);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     list_servers(test);
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    test.maxscales->close_maxscale_connections();
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test.maxscale->close_maxscale_connections();
 
     test.tprintf("Stop the master node and perform an insert");
     test.galera->block_node(master);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     list_servers(test);
 
-    test.maxscales->connect_maxscale();
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test.maxscale->connect_maxscale();
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the master node and perform another insert (expecting failure)");
     test.galera->unblock_node(master);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     list_servers(test);
 
-    test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0],
+    test.add_result(execute_query_silent(test.maxscale->conn_rwsplit[0],
                                          "INSERT INTO test.t1 VALUES (1)") == 0,
                     "Query should fail");
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
-    test.maxscales->connect_maxscale();
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.maxscale->connect_maxscale();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
 }
 
 int main(int argc, char** argv)
@@ -68,12 +68,12 @@ int main(int argc, char** argv)
     do_test(test, 1, 0);
 
     test.tprintf("Swap the priorities around and run the test again");
-    test.maxscales->ssh_node_f(0,
-                               true,
+    test.maxscale->ssh_node_f(0,
+                              true,
                                "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=2/priority=1/' /etc/maxscale.cnf;"
                                "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
-    test.maxscales->restart_maxscale();
+    test.maxscale->restart_maxscale();
 
     // Give the Galera nodes some time to stabilize
     sleep(5);

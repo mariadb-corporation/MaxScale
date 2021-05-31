@@ -18,17 +18,17 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     std::vector<MYSQL_STMT*> stmts;
 
-    test.maxscales->connect();
+    test.maxscale->connect();
 
     cout << "Setting variable @a to 123" << endl;
-    mysql_query(test.maxscales->conn_rwsplit[0], "SET @a = 123");
-    int rc = execute_query_check_one(test.maxscales->conn_rwsplit[0], "SELECT @a", "123");
+    mysql_query(test.maxscale->conn_rwsplit[0], "SET @a = 123");
+    int rc = execute_query_check_one(test.maxscale->conn_rwsplit[0], "SELECT @a", "123");
     test.expect(rc == 0, "Text protocol should return 123 as the value of @a");
 
     cout << "Preparing and executing " << NUM_STMT << " prepared statements" << endl;
     for (int i = 0; i < NUM_STMT && test.global_result == 0; i++)
     {
-        stmts.push_back(mysql_stmt_init(test.maxscales->conn_rwsplit[0]));
+        stmts.push_back(mysql_stmt_init(test.maxscale->conn_rwsplit[0]));
         MYSQL_STMT* stmt = stmts.back();
         const char* query = "SELECT @a";
         test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)),
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
         mysql_stmt_close(stmt);
     }
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
     test.log_excludes("unknown prepared statement");
 
     return test.global_result;

@@ -27,7 +27,7 @@ namespace
 
 void create_table(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pConn, "DROP TABLE IF EXISTS test.t1");
     test.try_query(pConn, "CREATE TABLE test.t1(id INT)");
@@ -39,7 +39,7 @@ int i_end = 0;
 
 void insert_data(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pConn, "BEGIN");
 
@@ -59,7 +59,7 @@ void insert_data(TestConnections& test)
 
 void run(TestConnections& test)
 {
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     mxs.wait_monitor_ticks();
 
     const int N = 4;
@@ -70,7 +70,7 @@ void run(TestConnections& test)
     mxs.check_servers_status(normal_status);
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     cout << "\nCreating table." << endl;
     create_table(test);

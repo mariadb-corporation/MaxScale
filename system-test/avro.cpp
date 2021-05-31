@@ -32,14 +32,14 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
 
     test.repl->close_connections();
-    test.maxscales->start();
+    test.maxscale->start();
 
     /** Give avrorouter some time to process the events */
     test.stop_timeout();
     sleep(10);
     test.set_timeout(120);
 
-    auto res = test.maxscales->ssh_output("maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro");
+    auto res = test.maxscale->ssh_output("maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro");
 
     std::istringstream iss;
     iss.str(res.output);

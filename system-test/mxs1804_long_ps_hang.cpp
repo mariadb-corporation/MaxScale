@@ -31,9 +31,9 @@ int main(int argc, char** argv)
     gen_select_sqlstr(sqlstr, strsize, sqlsize);
 
     test.set_timeout(30);
-    test.maxscales->connect();
+    test.maxscale->connect();
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     test.expect(mysql_stmt_prepare(stmt, sqlstr, strlen(sqlstr)) == 0,
                 "Prepare should not fail. Error: %s",
                 mysql_stmt_error(stmt));

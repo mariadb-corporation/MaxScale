@@ -14,7 +14,7 @@ void* async_query(void* data)
 
     while (running && test->global_result == 0)
     {
-        MYSQL* conn = test->maxscales->open_rwsplit_connection();
+        MYSQL* conn = test->maxscale->open_rwsplit_connection();
 
         for (int i = 0; i < 50 && running && test->global_result == 0; i++)
         {
@@ -37,8 +37,8 @@ int main(int argc, char* argv[])
     std::stringstream ss;
 
     ss << "CREATE OR REPLACE TABLE test.t1 (id INT)";
-    test.maxscales->connect_maxscale();
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
+    test.maxscale->connect_maxscale();
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", ss.str().c_str());
 
     ss.str("");
     ss << "INSERT INTO test.t1 VALUES (0)";
@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
     {
         ss << ",(" << i << ")";
     }
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", ss.str().c_str());
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", ss.str().c_str());
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     if (test.global_result)
     {

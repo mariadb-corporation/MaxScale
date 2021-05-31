@@ -49,21 +49,21 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto mxs_ip = test.maxscales->ip4();
+    auto mxs_ip = test.maxscale->ip4();
     auto node_ip = test.repl->ip4(0);
 
     cout << "Non-existent database" << endl;
     test.repl->connect(0, "non_existing_db");
-    test.maxscales->connect("non_existing_db");
-    test.expect(is_equal_error(test.repl->nodes[0], test.maxscales->conn_rwsplit[0]), "readwritesplit returned wrong error");
-    test.expect(is_equal_error(test.repl->nodes[0], test.maxscales->conn_master), "readconnroute returned wrong error");
+    test.maxscale->connect("non_existing_db");
+    test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_rwsplit[0]), "readwritesplit returned wrong error");
+    test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_master), "readconnroute returned wrong error");
     test.repl->disconnect();
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     cout << "Non-existent user" << endl;
     auto conn_direct = open_conn(test.repl->port[0], node_ip, "not-a-user", "not-a-password", false);
-    auto conn_rwsplit = open_conn(test.maxscales->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
-    auto conn_rconn = open_conn(test.maxscales->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
+    auto conn_rwsplit = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
+    auto conn_rconn = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");
@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 
     cout << "Wrong password" << endl;
     conn_direct = open_conn(test.repl->port[0], node_ip, "skysql", "not-a-password", false);
-    conn_rwsplit = open_conn(test.maxscales->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
-    conn_rconn = open_conn(test.maxscales->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
+    conn_rwsplit = open_conn(test.maxscale->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
+    conn_rconn = open_conn(test.maxscale->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");
@@ -93,8 +93,8 @@ int main(int argc, char** argv)
 
     cout << "No permissions on database" << endl;
     conn_direct = open_conn_db(test.repl->port[0], node_ip, "error_messages", "bob", "s3cret", false);
-    conn_rwsplit = open_conn_db(test.maxscales->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
-    conn_rconn = open_conn_db(test.maxscales->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
+    conn_rwsplit = open_conn_db(test.maxscale->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
+    conn_rconn = open_conn_db(test.maxscale->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
 
     test.expect(is_equal_error(conn_direct, conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(conn_direct, conn_rconn), "readconnroute returned wrong error");

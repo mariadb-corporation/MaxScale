@@ -15,12 +15,12 @@
 void test_all_ok(TestConnections* Test)
 {
     /** Insert should work */
-    auto rc_master = Test->maxscales->conn_master;
-    auto rc_slave = Test->maxscales->conn_slave;
+    auto rc_master = Test->maxscale->conn_master;
+    auto rc_slave = Test->maxscale->conn_slave;
 
     Test->set_timeout(30);
     Test->tprintf("Testing that writes and reads to all services work\n");
-    Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0],
+    Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0],
                                           "INSERT INTO test.readonly VALUES (1) -- fail_instantly"),
                      "Query to service with 'fail_instantly' should succeed\n");
     Test->set_timeout(30);
@@ -32,7 +32,7 @@ void test_all_ok(TestConnections* Test)
                                           "INSERT INTO test.readonly VALUES (1) -- error_on_write"),
                      "Query to service with 'error_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0],
+    Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0],
                                           "SELECT * FROM test.readonly -- fail_instantly"),
                      "Query to service with 'fail_instantly' should succeed\n");
     Test->set_timeout(30);
@@ -48,7 +48,7 @@ void test_all_ok(TestConnections* Test)
 void test_basic(TestConnections* Test)
 {
     /** Check that everything is OK before blocking the master */
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     test_all_ok(Test);
 
     /** Block master */
@@ -56,13 +56,13 @@ void test_basic(TestConnections* Test)
     Test->repl->block_node(0);
     sleep(10);
 
-    MYSQL*& conn_rc_master = Test->maxscales->conn_master;
-    MYSQL*& conn_rc_slave = Test->maxscales->conn_slave;
+    MYSQL*& conn_rc_master = Test->maxscale->conn_master;
+    MYSQL*& conn_rc_slave = Test->maxscale->conn_slave;
 
     /** Select to service with 'fail_instantly' should close the connection */
     Test->set_timeout(30);
     Test->tprintf("SELECT to 'fail_instantly'\n");
-    Test->add_result(!execute_query_silent(Test->maxscales->conn_rwsplit[0],
+    Test->add_result(!execute_query_silent(Test->maxscale->conn_rwsplit[0],
                                            "SELECT * FROM test.readonly -- fail_instantly"),
                      "SELECT to service with 'fail_instantly' should fail\n");
 
@@ -103,13 +103,13 @@ void test_basic(TestConnections* Test)
 
     /** Close connections and try to create new ones */
     Test->set_timeout(30);
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
     Test->tprintf("Opening connections while master is blocked\n");
-    Test->add_result(Test->maxscales->connect_rwsplit() == 0,
+    Test->add_result(Test->maxscale->connect_rwsplit() == 0,
                      "Connection to 'fail_instantly' service should fail\n");
-    Test->add_result(Test->maxscales->connect_readconn_master() != 0,
+    Test->add_result(Test->maxscale->connect_readconn_master() != 0,
                      "Connection to 'fail_on_write' service should succeed\n");
-    Test->add_result(Test->maxscales->connect_readconn_slave() != 0,
+    Test->add_result(Test->maxscale->connect_readconn_slave() != 0,
                      "Connection to 'error_on_write' service should succeed\n");
 
 
@@ -125,21 +125,21 @@ void test_basic(TestConnections* Test)
                                           "SELECT * FROM test.readonly -- error_on_write"),
                      "SELECT to service with 'error_on_write' should succeed\n");
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
     Test->stop_timeout();
     Test->repl->unblock_node(0);
     sleep(10);
 
     /** Check that everything is OK after unblocking */
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     test_all_ok(Test);
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 }
 
 void test_complex(TestConnections* Test)
 {
     /** Check that everything works before test */
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     test_all_ok(Test);
 
     /** Block master */
@@ -147,13 +147,13 @@ void test_complex(TestConnections* Test)
     Test->repl->block_node(0);
     sleep(10);
 
-    MYSQL*& conn_rc_master = Test->maxscales->conn_master;
-    MYSQL*& conn_rc_slave = Test->maxscales->conn_slave;
+    MYSQL*& conn_rc_master = Test->maxscale->conn_master;
+    MYSQL*& conn_rc_slave = Test->maxscale->conn_slave;
 
     /** Select to service with 'fail_instantly' should close the connection */
     Test->set_timeout(30);
     Test->tprintf("SELECT to 'fail_instantly'\n");
-    Test->add_result(!execute_query_silent(Test->maxscales->conn_rwsplit[0],
+    Test->add_result(!execute_query_silent(Test->maxscale->conn_rwsplit[0],
                                            "SELECT * FROM test.readonly -- fail_instantly"),
                      "SELECT to service with 'fail_instantly' should fail\n");
 
@@ -187,7 +187,7 @@ void test_complex(TestConnections* Test)
 
     /** Block slaves */
     Test->stop_timeout();
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
     Test->repl->block_node(1);
     Test->repl->block_node(2);
     Test->repl->block_node(3);
@@ -195,7 +195,7 @@ void test_complex(TestConnections* Test)
 
     /** Reconnect to MaxScale */
     Test->set_timeout(30);
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     Test->set_timeout(30);
     Test->tprintf("SELECT to 'fail_on_write'\n");
@@ -253,10 +253,10 @@ void test_complex(TestConnections* Test)
     sleep(10);
 
     /** Reconnect and check that everything works after the test */
-    Test->maxscales->close_maxscale_connections();
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->close_maxscale_connections();
+    Test->maxscale->connect_maxscale();
     test_all_ok(Test);
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 }
 
 int main(int argc, char* argv[])
@@ -266,10 +266,10 @@ int main(int argc, char* argv[])
 
     /** Prepare for tests */
     Test->stop_timeout();
-    Test->maxscales->connect_maxscale();
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.readonly");
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.readonly(id int)");
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->connect_maxscale();
+    execute_query_silent(Test->maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.readonly");
+    execute_query_silent(Test->maxscale->conn_rwsplit[0], "CREATE TABLE test.readonly(id int)");
+    Test->maxscale->close_maxscale_connections();
 
     Test->repl->connect();
     Test->repl->sync_slaves();

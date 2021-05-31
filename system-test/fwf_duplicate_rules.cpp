@@ -20,11 +20,11 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.maxscales->copy_fw_rules("rules.txt", ".");
+    test.maxscale->copy_fw_rules("rules.txt", ".");
 
     int rc = 0;
 
-    if (test.maxscales->restart_maxscale() == 0)
+    if (test.maxscale->restart_maxscale() == 0)
     {
         test.tprintf("Restarting MaxScale succeeded when it should've failed!");
         rc = 1;

@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     }
     cout << ".\n";
 
-    auto maxconn = test.maxscales->open_rwsplit_connection();
+    auto maxconn = test.maxscale->open_rwsplit_connection();
     test.try_query(maxconn, "SELECT 1;");
     if (test.ok())
     {
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 
         auto test_server_down = [&](int node_to_stop, int allowed_node) {
             test.repl->stop_node(node_to_stop);
-            test.maxscales->wait_for_monitor(1);
+            test.maxscale->wait_for_monitor(1);
             int stopped_id = server_ids[node_to_stop];
             int allowed_id = server_ids[allowed_node];
             cout << "Stopped server " << stopped_id << ".\n";

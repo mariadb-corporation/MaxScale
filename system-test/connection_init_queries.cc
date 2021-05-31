@@ -33,10 +33,10 @@ int main(int argc, char** argv)
     string create_file_cmd = "printf \"" + file_contents + "\" > " + filepath;
     string delete_file_cmd = "rm -f " + filepath;
 
-    test.maxscales->ssh_node_f(0, true, "%s", create_file_cmd.c_str());
-    test.maxscales->start_and_check_started();
-    test.maxscales->wait_for_monitor();
-    auto conn = test.maxscales->open_rwsplit_connection();
+    test.maxscale->ssh_node_f(0, true, "%s", create_file_cmd.c_str());
+    test.maxscale->start_and_check_started();
+    test.maxscale->wait_for_monitor();
+    auto conn = test.maxscale->open_rwsplit_connection();
 
     auto check_variable_value = [conn](const string& var_name, const string& expected_value) {
             string query = "select " + var_name + ";";
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     test.expect(check_variable_value(init_var2, extected_res2), msg);
     test.expect(check_variable_value(init_var3, extected_res3), msg);
 
-    test.maxscales->ssh_node_f(0, true, "%s", delete_file_cmd.c_str());
+    test.maxscale->ssh_node_f(0, true, "%s", delete_file_cmd.c_str());
     test.log_includes("Super user '.*' logged in to service");
     return test.global_result;
 }

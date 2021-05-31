@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->get_connection(4006);
+    auto conn = test.maxscale->get_connection(4006);
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
     test.expect(conn.query("CREATE OR REPLACE TABLE test.t1(id INT)"), "CREATE should work: %s",
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
 
     test.tprintf("Open a connection to a readwritesplit that is using another readwritesplit");
-    auto conn2 = test.maxscales->get_connection(4008);
+    auto conn2 = test.maxscale->get_connection(4008);
     test.expect(conn2.connect(), "Connection should work: %s", conn2.error());
 
     test.tprintf("Check that connection keepalive works on the upper level as well");

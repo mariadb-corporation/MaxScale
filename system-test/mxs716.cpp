@@ -18,8 +18,8 @@ void run_test(TestConnections* Test, const char* database)
     Test->set_timeout(20);
     Test->tprintf("Trying to connect using 'table_privilege'@'%%' to database '%s'", database);
 
-    MYSQL* conn = open_conn_db(Test->maxscales->rwsplit_port,
-                               Test->maxscales->ip4(),
+    MYSQL* conn = open_conn_db(Test->maxscale->rwsplit_port,
+                               Test->maxscale->ip4(),
                                database,
                                "table_privilege",
                                "pass",
@@ -43,31 +43,31 @@ int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     Test->tprintf("Preparing test");
     Test->set_timeout(180);
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS db1");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS db2");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS db3");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS db4");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE db1");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE db2");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE db3");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE db4");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE db1.t1 (id INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE db2.t1 (id INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE db3.t1 (id INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE db4.t1 (id INT)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db1.t1  VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db2.t1  VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db3.t1  VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO db4.t1  VALUES (1)");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db1");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db2");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db3");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db4");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE db1");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE db2");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE db3");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE db4");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE TABLE db1.t1 (id INT)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE TABLE db2.t1 (id INT)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE TABLE db3.t1 (id INT)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE TABLE db4.t1 (id INT)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "INSERT INTO db1.t1  VALUES (1)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "INSERT INTO db2.t1  VALUES (1)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "INSERT INTO db3.t1  VALUES (1)");
+    execute_query(Test->maxscale->conn_rwsplit[0], "INSERT INTO db4.t1  VALUES (1)");
+    execute_query(Test->maxscale->conn_rwsplit[0],
                   "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db1.* TO 'table_privilege'@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db2.* TO 'table_privilege'@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db3.t1 TO 'table_privilege'@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON db4.t1 TO 'table_privilege'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT SELECT ON db1.* TO 'table_privilege'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT SELECT ON db2.* TO 'table_privilege'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT SELECT ON db3.t1 TO 'table_privilege'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT SELECT ON db4.t1 TO 'table_privilege'@'%%'");
 
     Test->repl->sync_slaves();
 
@@ -78,12 +78,12 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Cleaning up...");
     Test->set_timeout(60);
-    Test->maxscales->connect_maxscale();
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db1");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db2");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db3");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db4");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'table_privilege'@'%%'");
+    Test->maxscale->connect_maxscale();
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db1");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db2");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db3");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db4");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'table_privilege'@'%%'");
 
     int rval = Test->global_result;
     delete Test;

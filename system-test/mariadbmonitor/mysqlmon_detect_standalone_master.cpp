@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     mxs.wait_monitor_ticks();
     mxs.get_servers().print();
     mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
@@ -93,9 +93,9 @@ int main(int argc, char* argv[])
         replicate_from(test, 0, 3);
         replicate_from(test, 1, 3);
         replicate_from(test, 2, 3);
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
         mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor server1");
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
         auto status = mxs.get_servers();
         status.print();
         status.check_servers_status(mxt::ServersInfo::default_repl_states());

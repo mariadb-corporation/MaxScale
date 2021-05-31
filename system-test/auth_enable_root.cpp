@@ -244,23 +244,23 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     Test->tprintf("Creating 'root'@'%%'\n");
     // global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER 'root'@'%'; SET
     // PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
 
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' IDENTIFIED BY 'skysqlroot';");
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' IDENTIFIED BY 'skysqlroot';");
     sleep(10);
 
     MYSQL* conn;
 
     Test->tprintf("Connecting using 'root'@'%%'\n");
-    conn = open_conn(Test->maxscales->rwsplit_port,
-                     Test->maxscales->ip4(),
+    conn = open_conn(Test->maxscale->rwsplit_port,
+                     Test->maxscale->ip4(),
                      (char*) "root",
                      (char*)  "skysqlroot",
                      Test->maxscale_ssl);
@@ -281,9 +281,9 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Dropping 'root'@'%%'\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER 'root'@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER 'root'@'%%';");
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 
     Test->log_excludes("Failed to add user skysql");
     Test->log_excludes("getaddrinfo failed");

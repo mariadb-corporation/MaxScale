@@ -71,10 +71,10 @@ int main(int argc, char* argv[])
     sprintf(str,
             "php %s/rwsplit_php_stmt.php %s %d %s %s",
             test_dir,
-            Test->maxscales->ip4(),
-            Test->maxscales->rwsplit_port,
-            Test->maxscales->user_name.c_str(),
-            Test->maxscales->password.c_str());
+            Test->maxscale->ip4(),
+            Test->maxscale->rwsplit_port,
+            Test->maxscale->user_name.c_str(),
+            Test->maxscale->password.c_str());
 
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");

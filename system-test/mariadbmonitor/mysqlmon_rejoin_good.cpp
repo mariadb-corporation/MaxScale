@@ -21,9 +21,9 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
 
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 10);
     mysql_close(maxconn);
     test.tprintf(LINE);
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
         {
             test.tprintf("'%s' is new master.", new_master->cnf_name().c_str());
             test.tprintf("Sending more inserts.");
-            maxconn = test.maxscales->open_rwsplit_connection();
+            maxconn = test.maxscale->open_rwsplit_connection();
             generate_traffic_and_check(test, maxconn, 5);
             mxs.wait_monitor_ticks(1);
             auto status_before_rejoin = mxs.get_servers();

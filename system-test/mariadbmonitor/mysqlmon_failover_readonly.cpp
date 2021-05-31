@@ -28,14 +28,14 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
     // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 1);
     test.repl->sync_slaves(0);
     get_output(test);
     print_gtids(test);
 
     auto expect_server_status = [&test](const string& server_name, const string& status) {
-            bool found = (test.maxscales->get_server_status(server_name.c_str()).count(status) == 1);
+            bool found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 1);
             test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
         };
 
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
         };
 
     auto mon_wait = [&test](int ticks) {
-            test.maxscales->wait_for_monitor(ticks);
+            test.maxscale->wait_for_monitor(ticks);
         };
 
     auto crash_node = [&test](int node) {
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
         // Slave 2 could be promoted as well, but in this case there is no reason to choose it.
         expect_server_status_multi({slave, master, slave});
         expect_read_only_multi({true, false, true});
-        maxconn = test.maxscales->open_rwsplit_connection();
+        maxconn = test.maxscale->open_rwsplit_connection();
         generate_traffic_and_check(test, maxconn, 4);
 
         cout << "Step 6: Servers 1 & 3 go down. Server 2 should remain as master.\n";
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
         mon_wait(2);
         get_output(test);
         expect_server_status_multi({down, down, master});
-        maxconn = test.maxscales->open_rwsplit_connection();
+        maxconn = test.maxscale->open_rwsplit_connection();
         generate_traffic_and_check(test, maxconn, 1);
         mysql_close(maxconn);
     }

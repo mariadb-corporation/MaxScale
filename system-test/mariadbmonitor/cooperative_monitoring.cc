@@ -56,8 +56,8 @@ void test_main(TestConnections& test)
         return;
     }
 
-    auto& mxs1 = test.maxscales->maxscale_b();
-    auto& mxs2 = test.maxscales2->maxscale_b();
+    auto& mxs1 = test.maxscale->maxscale_b();
+    auto& mxs2 = test.maxscale2->maxscale_b();
     monitors[0].maxscale = &mxs1;
     monitors[1].maxscale = &mxs1;
     monitors[2].maxscale = &mxs2;

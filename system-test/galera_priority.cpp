@@ -17,7 +17,7 @@
 void check_server_id(TestConnections& test, const std::string& id)
 {
     test.tprintf("Expecting '%s'...", id.c_str());
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
     test.expect(conn.query("BEGIN"), "BEGIN should work: %s", conn.error());
     auto f = conn.field("SELECT @@server_id");
@@ -36,34 +36,34 @@ int main(int argc, char** argv)
 
     /** Block node 3 and node 1 should be master */
     test.galera->block_node(2);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_server_id(test, ids[0]);
 
     /** Block node 1 and node 4 should be master */
     test.galera->block_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_server_id(test, ids[3]);
 
     /** Block node 4 and node 2 should be master */
     test.galera->block_node(3);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_server_id(test, ids[1]);
 
     /** All nodes blocked, expect failure */
     test.galera->block_node(1);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(!conn.connect(), "Connecting to rwsplit should fail");
 
     /** Unblock all nodes, node 3 should be master again */
     test.galera->unblock_all_nodes();
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_server_id(test, ids[2]);
 
     /** Restart MaxScale check that states are the same */
-    test.maxscales->restart();
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->restart();
+    test.maxscale->wait_for_monitor(2);
     check_server_id(test, ids[2]);
 
     return test.global_result;

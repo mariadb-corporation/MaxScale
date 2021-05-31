@@ -13,12 +13,12 @@ int create_key(TestConnections* test)
     int exit_code;
     test->set_timeout(120);
     test->tprintf("Creating new encryption keys\n");
-    test->maxscales->ssh_node(
+    test->maxscale->ssh_node(
         "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",
         true);
-    test->maxscales->ssh_node("maxkeys", true);
-    auto result = test->maxscales->ssh_output("sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
-                                              false);
+    test->maxscale->ssh_node("maxkeys", true);
+    auto result = test->maxscale->ssh_output("sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
+                                             false);
 
     if (strncmp(result.output.c_str(), "SUCCESS", 7) != 0)
     {
@@ -27,7 +27,7 @@ int create_key(TestConnections* test)
     }
     else
     {
-        test->maxscales->ssh_node("sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
+        test->maxscale->ssh_node("sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
     }
     return res;
 }
@@ -36,11 +36,11 @@ int create_key(TestConnections* test)
 /** Hash a new password and start MaxScale */
 int hash_password(TestConnections* test)
 {
-    test->maxscales->stop();
+    test->maxscale->stop();
     test->stop_timeout();
 
     test->tprintf("Creating a new encrypted password\n");
-    auto res = test->maxscales->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
+    auto res = test->maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");
 
     std::string enc_pw = res.output;
     auto pos = enc_pw.find('\n');
@@ -50,12 +50,12 @@ int hash_password(TestConnections* test)
     }
 
     test->tprintf("Encrypted password is: %s\n", enc_pw.c_str());
-    test->maxscales->ssh_node_f(0, true,
-                                "sed -i -e 's/password[[:space:]]*=[[:space:]]*skysql/password=%s/' /etc/maxscale.cnf",
-                                enc_pw.c_str());
+    test->maxscale->ssh_node_f(0, true,
+                               "sed -i -e 's/password[[:space:]]*=[[:space:]]*skysql/password=%s/' /etc/maxscale.cnf",
+                               enc_pw.c_str());
 
     test->tprintf("Starting MaxScale\n");
-    test->maxscales->start_maxscale();
+    test->maxscale->start_maxscale();
 
     test->tprintf("Checking if MaxScale is alive\n");
     return test->check_maxscale_alive();

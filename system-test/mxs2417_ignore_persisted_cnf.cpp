@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     test.check_maxctrl("show server server1234");
 
     test.tprintf("Restarting MaxScale");
-    test.maxscales->restart_maxscale();
+    test.maxscale->restart_maxscale();
 
     test.tprintf("Creating the server again and verifying it is successful");
     test.check_maxctrl("create server server1234 127.0.0.1 3306");

@@ -19,19 +19,19 @@ int main(int argc, char *argv[])
     TestConnections test(argc, argv);
     test.repl->connect();
 
-    const string maxscale_ip = test.maxscales->ip4();
-    const int maxscale_port = test.maxscales->rwsplit_port;
+    const string maxscale_ip = test.maxscale->ip4();
+    const int maxscale_port = test.maxscale->rwsplit_port;
 
     // Router sessions shouldn't work, since MaxScale is sending the proxy header even when
     // server is not expecting it. The connection to MaxScale is created but queries will fail.
-    auto adminconn = test.maxscales->open_rwsplit_connection();
+    auto adminconn = test.maxscale->open_rwsplit_connection();
     test.expect(adminconn != NULL, "Connection to MaxScale with user %s failed when success was expected.",
-                test.maxscales->user_name.c_str());
+                test.maxscale->user_name.c_str());
     if (adminconn)
     {
         test.expect(execute_query(adminconn, "SELECT 1") != 0,
                     "Query with user %s succeeded when failure was expected.",
-                    test.maxscales->user_name.c_str());
+                    test.maxscale->user_name.c_str());
         mysql_close(adminconn);
         adminconn = NULL;
     }
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         test.repl->add_server_setting(0, "skip-name-resolve=1"); // To disable server hostname resolution.
         test.repl->start_node(0, (char *) "");
         cout << "Proxy protocol set.\n";
-        test.maxscales->wait_for_monitor(2); // Wait for server to start and be detected
+        test.maxscale->wait_for_monitor(2); // Wait for server to start and be detected
         test.repl->connect();
         server_proxy_setting = true;
     }
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     const string userpass = "proxy_pwd";
     if (test.global_result == 0)
     {
-        adminconn = test.maxscales->open_rwsplit_connection();
+        adminconn = test.maxscale->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
     if (test.global_result == 0)
     {
-        adminconn = test.maxscales->open_rwsplit_connection();
+        adminconn = test.maxscale->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
             }
         }
         // Use the superuser to remove the test user.
-        adminconn = test.maxscales->open_rwsplit_connection();
+        adminconn = test.maxscale->open_rwsplit_connection();
         test.expect(adminconn, "MaxScale connection failed.");
         if (adminconn)
         {
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
      * https://jira.mariadb.org/browse/MXS-2252
      */
     Connection direct = test.repl->get_connection(0);
-    Connection rwsplit = test.maxscales->rwsplit();
+    Connection rwsplit = test.maxscale->rwsplit();
     direct.connect();
     rwsplit.connect();
     auto d = direct.field("SELECT USER()");
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
         test.repl->stop_node(0);
         test.repl->restore_server_settings(0);
         test.repl->start_node(0, (char *) "");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         server_proxy_setting = false;
     }
 

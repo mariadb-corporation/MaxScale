@@ -32,19 +32,19 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
-    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) == 0)
+    if (mysql_errno(Test->maxscale->conn_rwsplit[0]) == 0)
     {
         Test->add_result(1, "RWSplit services should fail, but it is started\n");
     }
 
     Test->tprintf("Trying query to ReadConn master\n");
-    Test->try_query(Test->maxscales->conn_master, "show processlist;");
+    Test->try_query(Test->maxscale->conn_master, "show processlist;");
     Test->tprintf("Trying query to ReadConn slave\n");
-    Test->try_query(Test->maxscales->conn_slave, "show processlist;");
+    Test->try_query(Test->maxscale->conn_slave, "show processlist;");
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 
     int rval = Test->global_result;
     delete Test;

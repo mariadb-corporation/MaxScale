@@ -47,7 +47,7 @@ const maxbase::Duration TEST_RUN_TIME = std::chrono::seconds(60);
  */
 void setup_test(TestConnections& test)
 {
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Could not connect to MaxScale.");
     test.expect(c.query("drop table if exists ints1"), "Could not drop ints1.");
     test.expect(c.query("drop table if exists ints2"), "Could not drop ints2.");
@@ -70,7 +70,7 @@ void setup_test(TestConnections& test)
  */
 void tear_down_test(TestConnections& test)
 {
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Could not connect to MaxScale.");
 
     test.expect(c.query("drop table if exists ints1"), "Could not drop ints1.");
@@ -91,7 +91,7 @@ const std::string THE_QUERY = "select @@server_id, count(*)"
  */
 int track_server(TestConnections& test)
 {
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Could not connect to MaxScale.");
 
     Result rows = c.rows(THE_QUERY);

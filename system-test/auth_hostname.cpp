@@ -12,27 +12,27 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
 
     Test->tprintf("Creating user 'user' with 3 different passwords for different hosts\n");
-    Test->maxscales->connect_maxscale();
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    Test->maxscale->connect_maxscale();
+    execute_query(Test->maxscale->conn_rwsplit[0],
                   "CREATE USER 'user'@'non_existing_host1' IDENTIFIED BY 'pass1'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
+    execute_query(Test->maxscale->conn_rwsplit[0],
                   "CREATE USER 'user'@'non_existing_host2' IDENTIFIED BY 'pass3'");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit[0],
                   "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host1'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT ALL PRIVILEGES ON *.* TO 'user'@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT ALL PRIVILEGES ON *.* TO 'user'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0],
                   "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host2'");
 
     Test->tprintf("Synchronizing slaves");
     Test->set_timeout(50);
     Test->repl->sync_slaves();
 
-    const char* mxs_ip = Test->maxscales->ip4();
+    const char* mxs_ip = Test->maxscale->ip4();
 
     Test->tprintf("Trying first hostname, expecting failure");
     Test->set_timeout(15);
-    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port, mxs_ip, "user", "pass1", Test->maxscale_ssl);
+    MYSQL* conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass1", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {
         Test->add_result(1, "MaxScale ignores host in authentication\n");
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying second hostname, expecting success");
     Test->set_timeout(15);
-    conn = open_conn(Test->maxscales->rwsplit_port, mxs_ip, "user", "pass2", Test->maxscale_ssl);
+    conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass2", Test->maxscale_ssl);
     Test->add_result(mysql_errno(conn), "MaxScale can't connect: %s\n", mysql_error(conn));
     if (conn != NULL)
     {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying third hostname, expecting failure");
     Test->set_timeout(15);
-    conn = open_conn(Test->maxscales->rwsplit_port, mxs_ip, "user", "pass3", Test->maxscale_ssl);
+    conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass3", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {
         Test->add_result(1, "MaxScale ignores host in authentication\n");
@@ -63,10 +63,10 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host1'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host2'");
-    Test->maxscales->close_maxscale_connections();
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host1'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host2'");
+    Test->maxscale->close_maxscale_connections();
 
     int rval = Test->global_result;
     delete Test;

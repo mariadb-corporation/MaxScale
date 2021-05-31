@@ -46,7 +46,7 @@ void* test_thr(void* data)
 
     while (running)
     {
-        MYSQL* mysql = Test->maxscales->open_rwsplit_connection();
+        MYSQL* mysql = Test->maxscale->open_rwsplit_connection();
 
         for (int i = 0; i < 3; i++)
         {
@@ -78,10 +78,10 @@ int main(int argc, char* argv[])
     {
         Test->tprintf("Blocking master");
         Test->repl->block_node(0);
-        Test->maxscales->wait_for_monitor();
+        Test->maxscale->wait_for_monitor();
         Test->tprintf("Unblocking master");
         Test->repl->unblock_node(0);
-        Test->maxscales->wait_for_monitor();
+        Test->maxscale->wait_for_monitor();
     }
 
     running = false;

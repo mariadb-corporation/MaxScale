@@ -29,7 +29,7 @@ public:
         : test(t)
         , master(test.repl->get_connection(0))
         , slave(test.repl->get_connection(1))
-        , maxscale(test.maxscales->rwsplit())
+        , maxscale(test.maxscale->rwsplit())
     {
     }
 
@@ -90,7 +90,7 @@ protected:
 
         // Configure the slave to replicate from MaxScale and sync it
         test.set_timeout(60);
-        slave.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port));
+        slave.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port));
         slave.query("START SLAVE");
         sync(maxscale, slave);
         test.stop_timeout();

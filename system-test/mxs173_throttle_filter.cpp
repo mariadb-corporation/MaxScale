@@ -127,7 +127,7 @@ void gauge_raw_speed(TestConnections& test)
     const int raw_rows = NUM_ROWS / 5;
     std::cout << "\n****\nRead " << raw_rows
               << " rows via master readconnrouter, to gauge speed.\n";
-    auto rs = read_rows(test.maxscales->conn_master, raw_rows, 0, false);
+    auto rs = read_rows(test.maxscale->conn_master, raw_rows, 0, false);
     std::cout << rs.qps << "qps " << " duration " << rs.duration << '\n';
 
     if (rs.qps < 2 * max_qps)
@@ -147,12 +147,12 @@ void verify_throttling_performace(TestConnections& test)
               << " rows which should take about " << 3 * throttling_duration / 4
               << " seconds.\nThrottling should keep qps around "
               << max_qps << ".\n";
-    auto rs1 = read_rows(test.maxscales->conn_rwsplit[0], three_quarter, 0, false);
+    auto rs1 = read_rows(test.maxscale->conn_rwsplit[0], three_quarter, 0, false);
     std::cout << "1: " << rs1.qps << "qps " << " duration " << rs1.duration << '\n';
     std::cout << "Sleep for " << continuous_duration << "s (continuous_duration)\n";
     usleep(continuous_duration * 1000000);
     std::cout << "Run the same read again. Should be throttled, but not disconnected.\n";
-    auto rs2 = read_rows(test.maxscales->conn_rwsplit[0], three_quarter, 0, false);
+    auto rs2 = read_rows(test.maxscale->conn_rwsplit[0], three_quarter, 0, false);
     std::cout << "2: " << rs2.qps << "qps " << " duration " << rs2.duration << '\n';
 
     if (std::abs(rs1.qps - max_qps) > 0.1 * max_qps
@@ -172,7 +172,7 @@ void verify_throttling_disconnect(TestConnections& test)
     std::cout << "\n****\nRead " << 3 * half_rows
               << " rows which should cause a disconnect at a little\nbelow "
               << half_rows << " rows to go, in about " << throttling_duration << "s.\n";
-    auto rs = read_rows(test.maxscales->conn_rwsplit[0], 3 * half_rows, 0, true);
+    auto rs = read_rows(test.maxscale->conn_rwsplit[0], 3 * half_rows, 0, true);
     std::cout << rs.qps << "qps " << " duration " << rs.duration << '\n';
 
     if (!rs.error)
@@ -198,15 +198,15 @@ int main(int argc, char* argv[])
 
     try
     {
-        test.maxscales->connect_maxscale();
+        test.maxscale->connect_maxscale();
 
         std::cout << "Create table\n";
         test.set_timeout(TIMEOUT);
-        create_table(test.maxscales->conn_master);
+        create_table(test.maxscale->conn_master);
 
         std::cout << "Insert rows\n";
         test.set_timeout(TIMEOUT);
-        insert_rows(test.maxscales->conn_master);
+        insert_rows(test.maxscale->conn_master);
 
         test.set_timeout(TIMEOUT);
         gauge_raw_speed(test);
@@ -217,8 +217,8 @@ int main(int argc, char* argv[])
         test.set_timeout(TIMEOUT);
         verify_throttling_performace(test);
 
-        test.maxscales->close_maxscale_connections();
-        test.maxscales->connect_maxscale();
+        test.maxscale->close_maxscale_connections();
+        test.maxscale->connect_maxscale();
 
         test.set_timeout(TIMEOUT);
         verify_throttling_disconnect(test);

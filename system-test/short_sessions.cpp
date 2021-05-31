@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     test.set_timeout(20);
     test.repl->connect();
 
-    MYSQL* conn = test.maxscales->open_rwsplit_connection();
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
     execute_query(conn, "USE test;");
     create_t1(conn);
     mysql_close(conn);
@@ -37,37 +37,37 @@ int main(int argc, char* argv[])
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
 
         test.set_timeout(15);
-        conn = test.maxscales->open_rwsplit_connection();
+        conn = test.maxscale->open_rwsplit_connection();
         execute_query(conn, "%s", sql);
         mysql_close(conn);
     }
 
     test.set_timeout(20);
-    test.add_result(test.maxscales->connect_maxscale(), "Failed to connect to MaxScale");
+    test.add_result(test.maxscale->connect_maxscale(), "Failed to connect to MaxScale");
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0],
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0],
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in master mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master,
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_master,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in slave mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave,
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_slave,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
     test.set_timeout(20);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
     test.check_maxscale_alive();
 
     return test.global_result;

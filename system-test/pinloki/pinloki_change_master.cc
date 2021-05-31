@@ -42,7 +42,7 @@ private:
         maxscale.query("START SLAVE");
 
         test.tprintf("Point demoted master to maxscale");
-        master.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port,
+        master.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port,
                                        GtidPos::CURRENT));
         master.query("START SLAVE");
 
@@ -60,7 +60,7 @@ private:
         maxscale.query("START SLAVE");
 
         test.tprintf("Point original slave back at MaxScale");
-        slave.query(change_master_sql(test.maxscales->ip(), test.maxscales->rwsplit_port,
+        slave.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port,
                                       GtidPos::CURRENT));
         slave.query("START SLAVE");
 

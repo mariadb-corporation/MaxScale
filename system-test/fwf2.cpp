@@ -33,14 +33,14 @@ int read_and_execute_queries(TestConnections* Test, const char* filename, int ex
             if (strlen(sql) > 1)
             {
                 Test->tprintf("%s", sql);
-                if (execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql) != expected
-                    && (expected == 1 || mysql_errno(Test->maxscales->conn_rwsplit[0]) == 1141))
+                if (execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql) != expected
+                    && (expected == 1 || mysql_errno(Test->maxscale->conn_rwsplit[0]) == 1141))
                 {
                     Test->tprintf("Query %s, but %s expected, MySQL error: %d, %s\n",
                                   expected ? "succeeded" : "failed",
                                   expected ? "failure" : "success",
-                                  mysql_errno(Test->maxscales->conn_rwsplit[0]),
-                                  mysql_error(Test->maxscales->conn_rwsplit[0]));
+                                  mysql_errno(Test->maxscale->conn_rwsplit[0]),
+                                  mysql_error(Test->maxscale->conn_rwsplit[0]));
                     local_result++;
                 }
             }
@@ -73,13 +73,13 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         local_result = 0;
 
-        Test->maxscales->stop_and_check_stopped();
+        Test->maxscale->stop_and_check_stopped();
 
         sprintf(str, "rules%d", i);
-        Test->maxscales->copy_fw_rules(str, rules_dir);
+        Test->maxscale->copy_fw_rules(str, rules_dir);
 
-        Test->maxscales->start_maxscale();
-        Test->maxscales->connect_rwsplit();
+        Test->maxscale->start_maxscale();
+        Test->maxscale->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw2/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw2/deny%d", test_dir, i);
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
         Test->add_result(local_result, "********** rules%d test FAILED\n", i);
     }
 
-    Test->maxscales->expect_running_status(true);
+    Test->maxscale->expect_running_status(true);
 
     int rval = Test->global_result;
     delete Test;
