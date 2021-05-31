@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
     mxs.wait_monitor_ticks();
     mxs.get_servers().print();
     mxs.check_servers_status(mxt::ServersInfo::default_repl_states());

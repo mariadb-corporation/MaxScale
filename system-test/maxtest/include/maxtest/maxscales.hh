@@ -13,6 +13,7 @@
 namespace maxtest
 {
 class MariaDB;
+class MaxScale;
 }
 
 class Maxscales : private Nodes
@@ -250,7 +251,8 @@ public:
     bool prepare_for_test();
     void write_env_vars();
 
-    mxt::VMNode& vm_node();
+    mxt::VMNode&   vm_node();
+    mxt::MaxScale& maxscale_b();
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
@@ -259,6 +261,8 @@ private:
     int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
+
+    std::unique_ptr<mxt::MaxScale> m_maxscale_b;
 
     std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 

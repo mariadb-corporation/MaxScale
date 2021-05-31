@@ -1809,16 +1809,6 @@ StringSet TestConnections::parse_to_stringset(const string& source)
     return rval;
 }
 
-mxt::MaxScale& TestConnections::maxscale()
-{
-    return *m_maxscale;
-}
-
-mxt::MaxScale& TestConnections::maxscale2()
-{
-    return *m_maxscale2;
-}
-
 mxt::TestLogger& TestConnections::logger()
 {
     return m_shared.log;
@@ -1998,9 +1988,7 @@ bool TestConnections::initialize_nodes()
         initialize_cluster(xpand, 4, false, backend_ssl);
     }
 
-    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage,
-                                              std::unique_ptr<mxt::MaxScale>& mxs_storage_b,
-                                              int vm_ind) {
+    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage, int vm_ind) {
             delete mxs_storage;
             mxs_storage = nullptr;
             string vm_name = mxb::string_printf("%s_%03d", Maxscales::prefix().c_str(), vm_ind);
@@ -2012,7 +2000,6 @@ bool TestConnections::initialize_nodes()
                 new_maxscale->set_ssl(maxscale_ssl);
 
                 mxs_storage = new_maxscale.release();
-                mxs_storage_b = std::make_unique<mxt::MaxScale>(mxs_storage, m_shared);
 
                 auto prepare_maxscales = [mxs_storage]() {
                         return mxs_storage->prepare_for_test();
@@ -2021,10 +2008,10 @@ bool TestConnections::initialize_nodes()
             }
         };
 
-    initialize_maxscale(maxscales, m_maxscale, 0);
+    initialize_maxscale(maxscales, 0);
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
-    initialize_maxscale(maxscales2, m_maxscale2, 1);
+    initialize_maxscale(maxscales2, 1);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2186,7 +2173,7 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
     mxt::MariaDBServer* rval = nullptr;
     if (repl)
     {
-        auto server_info = m_maxscale->get_servers();
+        auto server_info = maxscales->maxscale_b().get_servers();
         for (size_t i = 0; i < server_info.size() && !rval; i++)
         {
             auto& info = server_info.get(i);

@@ -22,6 +22,7 @@ const string my_prefix = "maxscale";
 Maxscales::Maxscales(mxt::SharedData* shared)
     : Nodes(shared)
 {
+    m_maxscale_b = std::make_unique<mxt::MaxScale>(this, *shared);
 }
 
 Maxscales::~Maxscales()
@@ -619,6 +620,11 @@ void Maxscales::write_env_vars()
 int Maxscales::ssh_node(const string& cmd, bool sudo)
 {
     return Nodes::ssh_node(0, cmd, sudo);
+}
+
+mxt::MaxScale& Maxscales::maxscale_b()
+{
+    return *m_maxscale_b;
 }
 
 namespace maxtest

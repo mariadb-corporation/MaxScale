@@ -59,7 +59,7 @@ void insert_data(TestConnections& test)
 
 void run(TestConnections& test)
 {
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
     mxs.wait_monitor_ticks();
 
     const int N = 4;

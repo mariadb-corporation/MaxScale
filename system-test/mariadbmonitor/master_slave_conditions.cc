@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     auto all_running = {running_st, running_st, running_st, running_st};
 
     TestConnections test(argc, argv);
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
 
     auto reset = [&]() {
             test.repl->stop_slaves();
