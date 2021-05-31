@@ -836,7 +836,7 @@ protected:
                 if (action == Worker::Call::EXECUTE)
                 {
                     stringstream ss;
-                    ss << "CREATE DATABASE " << m_database.name();
+                    ss << "CREATE DATABASE `" << m_database.name() << "`";
 
                     send_downstream(ss.str());
                 }
