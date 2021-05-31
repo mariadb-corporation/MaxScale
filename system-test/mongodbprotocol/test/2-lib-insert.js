@@ -29,11 +29,11 @@ describe(name, function () {
     });
 
     async function insertOne(db) {
-        const movies = db.collection("movies");
+        const cars = db.collection("cars");
 
         // create a document to be inserted
-        const doc = { _id: mongodb.ObjectId(), name: "Red", town: "kanto" };
-        const result = await movies.insertOne(doc);
+        const doc = { _id: 10000, Year: 2022, Make: "Caterham", Model: "Super Seven 1600", Category: "Sport" };
+        const result = await cars.insertOne(doc);
 
         return result;
     }
@@ -47,17 +47,17 @@ describe(name, function () {
     });
 
     async function insertMany(db) {
-        const movies = db.collection("movies");
+        const cars = db.collection("cars");
 
         // create an array of documents to insert
         const docs = [
-            { name: "Red", town: "Kanto" },
-            { name: "Blue", town: "Kanto" },
-            { name: "Leon", town: "Galar" }
+            { _id: 10001, Year: 2022, Make: "Caterham", Model: "Seven 270", Category: "Sport" },
+            { _id: 10002, Year: 2022, Make: "Caterham", Model: "Seven 310", Category: "Sport" },
+            { _id: 10003, Year: 2022, Make: "Caterham", Model: "Seven 360", Category: "Sport" },
         ];
 
         const options = { ordered: true };
-        const result = await movies.insertMany(docs, options);
+        const result = await cars.insertMany(docs, options);
 
         return result;
     }
