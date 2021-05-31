@@ -2,7 +2,10 @@
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
             <template v-if="validConn">
-                <div class="mr-4"><b class="mr-1">Table:</b> {{ previewDataSchemaId }}</div>
+                <div class="d-flex align-center mr-4">
+                    <b class="mr-1">Table:</b>
+                    <truncate-string :maxWidth="260" :nudgeLeft="16" :text="previewDataSchemaId" />
+                </div>
                 <v-tabs
                     v-model="activeView"
                     hide-slider
@@ -26,6 +29,20 @@
                         {{ $t('details') }}
                     </v-tab>
                 </v-tabs>
+                <v-spacer />
+                <keep-alive>
+                    <duration-timer
+                        v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
+                        :key="SQL_QUERY_MODES.PRVW_DATA"
+                        :startTime="prvw_data_request_sent_time"
+                        :executionTime="getPrvwExeTime(activeView)"
+                    />
+                    <duration-timer
+                        v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                        :startTime="prvw_data_details_request_sent_time"
+                        :executionTime="getPrvwExeTime(activeView)"
+                    />
+                </keep-alive>
             </template>
             <span v-else v-html="$t('prvwTabGuide')" />
         </div>
@@ -44,16 +61,16 @@
                             :key="SQL_QUERY_MODES.PRVW_DATA"
                             :height="dynDim.height - headerHeight"
                             :width="dynDim.width"
-                            :headers="prvw_data.fields"
-                            :rows="prvw_data.data"
+                            :headers="getPrvwDataRes(activeView).fields"
+                            :rows="getPrvwDataRes(activeView).data"
                         />
                         <result-data-table
                             v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
                             :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
                             :height="dynDim.height - headerHeight"
                             :width="dynDim.width"
-                            :headers="prvw_data_details.fields"
-                            :rows="prvw_data_details.data"
+                            :headers="getPrvwDataRes(activeView).fields"
+                            :rows="getPrvwDataRes(activeView).data"
                         />
                     </keep-alive>
                 </v-slide-x-transition>
@@ -75,12 +92,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions, mapMutations } from 'vuex'
+import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 import ResultDataTable from './ResultDataTable'
+import DurationTimer from './DurationTimer'
 export default {
     name: 'preview-data-tab',
     components: {
         ResultDataTable,
+        DurationTimer,
     },
     props: {
         previewDataSchemaId: { type: String, require: true },
@@ -99,13 +118,18 @@ export default {
     },
     computed: {
         ...mapState({
-            prvw_data: state => state.query.prvw_data,
             loading_prvw_data: state => state.query.loading_prvw_data,
-            prvw_data_details: state => state.query.prvw_data_details,
             loading_prvw_data_details: state => state.query.loading_prvw_data_details,
+            prvw_data_request_sent_time: state => state.query.prvw_data_request_sent_time,
+            prvw_data_details_request_sent_time: state =>
+                state.query.prvw_data_details_request_sent_time,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
             active_conn_state: state => state.query.active_conn_state,
+        }),
+        ...mapGetters({
+            getPrvwDataRes: 'query/getPrvwDataRes',
+            getPrvwExeTime: 'query/getPrvwExeTime',
         }),
         validConn() {
             return this.previewDataSchemaId && this.active_conn_state
@@ -150,14 +174,8 @@ export default {
         async handleFetch(SQL_QUERY_MODE) {
             switch (SQL_QUERY_MODE) {
                 case this.SQL_QUERY_MODES.PRVW_DATA:
-                    if (!this.prvw_data.fields)
-                        await this.fetchPrvw({
-                            tblId: this.previewDataSchemaId,
-                            prvwMode: SQL_QUERY_MODE,
-                        })
-                    break
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    if (!this.prvw_data_details.fields)
+                    if (!this.getPrvwDataRes(SQL_QUERY_MODE).fields)
                         await this.fetchPrvw({
                             tblId: this.previewDataSchemaId,
                             prvwMode: SQL_QUERY_MODE,

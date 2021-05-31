@@ -24,8 +24,10 @@ function initialState() {
         db_completion_list: [],
         loading_prvw_data: false,
         prvw_data: {},
+        prvw_data_request_sent_time: 0,
         loading_prvw_data_details: false,
         prvw_data_details: {},
+        prvw_data_details_request_sent_time: 0,
         loading_query_result: false,
         query_request_sent_time: 0,
         query_result: {},
@@ -90,11 +92,17 @@ export default {
         SET_PRVW_DATA(state, payload) {
             state.prvw_data = payload
         },
+        SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
+            state.prvw_data_request_sent_time = payload
+        },
         SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
             state.loading_prvw_data_details = payload
         },
         SET_PRVW_DATA_DETAILS(state, payload) {
             state.prvw_data_details = payload
+        },
+        SET_PRVW_DATA_DETAILS_REQUEST_SENT_TIME(state, payload) {
+            state.prvw_data_details_request_sent_time = payload
         },
         SET_LOADING_QUERY_RESULT(state, payload) {
             state.loading_query_result = payload
@@ -347,6 +355,7 @@ export default {
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
+                commit(`SET_${prvwMode}_REQUEST_SENT_TIME`, new Date().valueOf())
                 let sql
                 const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
                 switch (prvwMode) {
@@ -363,9 +372,10 @@ export default {
                     { sql, max_rows: 10000 }
                 )
                 await this.vue.$help.delay(400)
-                commit(`SET_${prvwMode}`, Object.freeze(res.data.data.attributes.results[0]))
+                commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
                 commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
+                commit(`SET_LOADING_${prvwMode}`, false)
                 const logger = this.vue.$logger('store-query-fetchPrvw')
                 logger.error(e)
             }
@@ -453,6 +463,35 @@ export default {
         getDbCmplList: state => {
             // remove duplicated labels
             return uniqBy(state.db_completion_list, 'label')
+        },
+        getQueryExeTime: state => {
+            if (state.loading_query_result) return -1
+            return parseFloat(state.query_result.attributes.execution_time.toFixed(4))
+        },
+        getPrvwDataRes: state => mode => {
+            switch (mode) {
+                case 'PRVW_DATA': {
+                    if (state.prvw_data.attributes) return state.prvw_data.attributes.results[0]
+                    return {}
+                }
+                case 'PRVW_DATA_DETAILS': {
+                    if (state.prvw_data_details.attributes)
+                        return state.prvw_data_details.attributes.results[0]
+                    return {}
+                }
+            }
+        },
+        getPrvwExeTime: state => mode => {
+            switch (mode) {
+                case 'PRVW_DATA': {
+                    if (state.loading_prvw_data) return -1
+                    return parseFloat(state.prvw_data.attributes.execution_time.toFixed(4))
+                }
+                case 'PRVW_DATA_DETAILS': {
+                    if (state.loading_prvw_data_details) return -1
+                    return parseFloat(state.prvw_data_details.attributes.execution_time.toFixed(4))
+                }
+            }
         },
     },
 }

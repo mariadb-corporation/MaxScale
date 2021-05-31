@@ -43,7 +43,7 @@
                 <v-spacer />
                 <duration-timer
                     :startTime="query_request_sent_time"
-                    :executionTime="executionTime"
+                    :executionTime="getQueryExeTime"
                 />
             </template>
         </div>
@@ -99,7 +99,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
 export default {
@@ -132,16 +132,14 @@ export default {
             active_conn_state: state => state.query.active_conn_state,
             query_request_sent_time: state => state.query.query_request_sent_time,
         }),
+        ...mapGetters({
+            getQueryExeTime: 'query/getQueryExeTime',
+        }),
         showGuide() {
             return this.isMounted || !this.active_conn_state
         },
         queryTxt() {
             return this.$typy(this.query_result, 'attributes.sql').safeObject
-        },
-        executionTime() {
-            if (this.loading_query_result) return -1
-            const seconds = this.$typy(this.query_result, 'attributes.execution_time').safeObject
-            return parseFloat(seconds.toFixed(3))
         },
         resultData() {
             if (this.$typy(this.query_result, 'attributes.results').isDefined) {

@@ -1,33 +1,35 @@
 <template>
-    <v-tooltip
-        :disabled="isGettingEndTime"
-        top
-        transition="slide-y-transition"
-        content-class="shadow-drop pa-3"
-    >
-        <template v-slot:activator="{ on }">
-            <pre v-on="on"> {{ totalDuration }} seconds </pre>
-        </template>
-        <v-sheet min-width="220" max-width="450" class="color text-small-text">
-            <div class="d-flex align-center color text-navigation font-weight-bold">
-                <span>Total Duration:</span>
-                <v-spacer />
-                <span>{{ totalDuration }} seconds</span>
-            </div>
-            <div class="d-flex align-center">
-                <span>Network delay</span>
-                <v-spacer />
-                <span class="color text-navigation">
-                    {{ (totalDuration - executionTime).toFixed(3) }} seconds
-                </span>
-            </div>
-            <div class="d-flex align-center">
-                <span>Execution Time:</span>
-                <v-spacer />
-                <span class="color text-navigation"> {{ executionTime }} seconds</span>
-            </div>
-        </v-sheet>
-    </v-tooltip>
+    <div>
+        <v-tooltip
+            :disabled="isGettingEndTime"
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop pa-3"
+        >
+            <template v-slot:activator="{ on }">
+                <pre v-on="on"> {{ totalDuration }} seconds </pre>
+            </template>
+            <v-sheet min-width="220" max-width="450" class="color text-small-text">
+                <div class="d-flex align-center color text-navigation font-weight-bold">
+                    <span>Total Duration:</span>
+                    <v-spacer />
+                    <span>{{ totalDuration }} seconds</span>
+                </div>
+                <div class="d-flex align-center">
+                    <span>Network delay</span>
+                    <v-spacer />
+                    <span class="color text-navigation">
+                        {{ Math.abs(totalDuration - executionTime).toFixed(4) }} seconds
+                    </span>
+                </div>
+                <div class="d-flex align-center">
+                    <span>Execution Time:</span>
+                    <v-spacer />
+                    <span class="color text-navigation"> {{ executionTime }} seconds</span>
+                </div>
+            </v-sheet>
+        </v-tooltip>
+    </div>
 </template>
 
 <script>
@@ -64,7 +66,7 @@ export default {
     methods: {
         updateSecond() {
             const now = new Date().valueOf()
-            const currSec = ((now - this.startTime) / 1000).toFixed(3)
+            const currSec = ((now - this.startTime) / 1000).toFixed(4)
             if (this.isGettingEndTime) {
                 this.totalDuration = parseFloat(currSec)
                 requestAnimationFrame(this.updateSecond)
