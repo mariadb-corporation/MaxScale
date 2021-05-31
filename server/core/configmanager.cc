@@ -215,10 +215,15 @@ void ConfigManager::sync()
                     auto prev_config = std::move(m_current_config);
                     m_current_config = create_config(m_version);
                     process_config(prev_config);
+
+                    MXS_WARNING("Successfully reverted the failed configuration change, "
+                                "ignoring configuration version %ld.", next_version);
                 }
                 catch (const ConfigManager::Exception& e)
                 {
-                    MXS_ERROR("Failed to revert configuration change: %s", e.what());
+                    MXS_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
+                              "is in an indeterminate state. Restart MaxScale to restore the configuration "
+                              "to a known state. The error that caused the failure was: %s", e.what());
                 }
 
                 // Regardless of what happens, re-calculate the current configuration and update the version.
@@ -268,10 +273,10 @@ bool ConfigManager::load_cached_config()
     return have_config;
 }
 
-bool ConfigManager::process_cached_config()
+ConfigManager::Startup ConfigManager::process_cached_config()
 {
     mxb::LogScope scope(SCOPE_NAME);
-    bool ok = true;
+    Startup status = Startup::OK;
 
     try
     {
@@ -287,11 +292,28 @@ bool ConfigManager::process_cached_config()
     }
     catch (const ConfigManager::Exception& e)
     {
-        MXS_ERROR("%s", e.what());
-        ok = false;
+        MXS_ERROR("Failed to apply cached configuration: %s", e.what());
+        std::string old_name = dynamic_config_filename();
+        std::string new_name = old_name + ".bad-config";
+
+        if (rename(old_name.c_str(), new_name.c_str()) == 0)
+        {
+            MXS_ERROR("Discarding bad cached configuration and using static configuration files."
+                      " A copy of the bad cached configuration is stored at: %s", new_name.c_str());
+            status = Startup::RESTART;
+        }
+        else
+        {
+            MXS_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
+                      old_name.c_str(), errno, mxs_strerror(errno));
+            status = Startup::ERROR;
+        }
+
+        // Reset the current configuration to signal that it must be recreated in the next process_config call
+        m_current_config.reset();
     }
 
-    return ok;
+    return status;
 }
 
 bool ConfigManager::start()

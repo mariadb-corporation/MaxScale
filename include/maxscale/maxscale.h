@@ -30,6 +30,7 @@ MXS_BEGIN_DECLS
 #define MAXSCALE_ALREADYRUNNING 4   /* MaxScale is already running */
 #define MAXSCALE_BADARG         5   /* Bad command line argument */
 #define MAXSCALE_INTERNALERROR  6   /* Internal error, see error log */
+#define MAXSCALE_RESTARTING     75  /* MaxScale must restart (same as EX_TEMPFAIL from the BSD sysexits.h */
 
 /**
  * Return the time when MaxScale was started.

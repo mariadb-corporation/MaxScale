@@ -2074,12 +2074,23 @@ int main(int argc, char** argv)
             }
             else
             {
-                if (!manager.process_cached_config())
+                auto res = manager.process_cached_config();
+
+                if (res != mxs::ConfigManager::Startup::OK)
                 {
-                    MXS_ALERT("Failed to apply cached configuration, cannot continue. "
-                              "To start MaxScale without the cached configuration, disable "
-                              "configuration synchronization or remove the cached file.");
-                    rc = MAXSCALE_BADCONFIG;
+                    if (res == mxs::ConfigManager::Startup::RESTART)
+                    {
+                        MXS_NOTICE("Attempting to restart MaxScale");
+                        rc = MAXSCALE_RESTARTING;
+                    }
+                    else
+                    {
+                        MXS_ALERT("Failed to apply cached configuration, cannot continue. "
+                                  "To start MaxScale without the cached configuration, disable "
+                                  "configuration synchronization or remove the cached file.");
+                        rc = MAXSCALE_BADCONFIG;
+                    }
+
                     maxscale_shutdown();
                     return;
                 }

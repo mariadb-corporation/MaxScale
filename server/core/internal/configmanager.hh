@@ -27,6 +27,13 @@ class ConfigManager
 {
 public:
 
+    enum class Startup
+    {
+        OK,         // Startup was OK
+        ERROR,      // Fatal error, cannot continue
+        RESTART,    // Cached configuration was discarded, restart with static config
+    };
+
     // The primary key must be under 3072 bytes which for the utf8_mb4 character set is 768 characters. Having
     // the limit as 256 characters should be enough for almost all cases as that's the maximum length of a
     // hostname which some people seem to use for the object names.
@@ -60,9 +67,11 @@ public:
     /**
      * Process the cached configuration from disk
      *
-     * @return True if the configuration was processed successfully
+     * @return Startup::OK if the configuration was processed successfully. Startup::RESTART if the cached
+     *         configuration was discarded and MaxScale should restart. Startup::ERROR on fatal error,
+     *         MaxScale should exit with an error code.
      */
-    bool process_cached_config();
+    Startup process_cached_config();
 
     /**
      * Start a configuration change

@@ -25,6 +25,9 @@ StartLimitBurst=0
 WatchdogSec=60s
 NotifyAccess=all
 
+# MaxScale should be restarted if it exits with 75 (BSD's EX_TEMPFAIL)
+RestartForceExitStatus=75
+
 # Only relevant when MaxScale is linked with -fsanitize=address
 Environment=ASAN_OPTIONS=abort_on_error=1
 
