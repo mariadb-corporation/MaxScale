@@ -19,7 +19,6 @@
 #include <ctime>
 #include <maxtest/testconnections.hh>
 #include <maxtest/sql_t1.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 int read_and_execute_queries(TestConnections* Test, const char* filename, int expected)
 {
@@ -77,7 +76,7 @@ int main(int argc, char* argv[])
         Test->maxscales->stop_and_check_stopped();
 
         sprintf(str, "rules%d", i);
-        copy_rules(Test, str, rules_dir);
+        Test->maxscales->copy_fw_rules(str, rules_dir);
 
         Test->maxscales->start_maxscale();
         Test->maxscales->connect_rwsplit();

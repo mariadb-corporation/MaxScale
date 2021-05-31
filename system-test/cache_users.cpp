@@ -92,9 +92,9 @@ int main(int argc, char* argv[])
         test.tprintf("Testing users=mixed.");
         run(test);
 
-        maxscales->ssh_node(0,
-                            "sed -i \"s/users=mixed/users=isolated/\" /etc/maxscale.cnf",
-                            true);
+        maxscales->ssh_node(
+            "sed -i \"s/users=mixed/users=isolated/\" /etc/maxscale.cnf",
+            true);
         maxscales->restart_maxscale();
 
         // To be certain that MaxScale has started.

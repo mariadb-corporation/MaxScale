@@ -5,7 +5,6 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 const char* rules = "rule test1 deny no_where_clause\n"
                     "rule test1 deny columns a b c\n"
@@ -21,7 +20,7 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    copy_rules(&test, (char*) "rules.txt", (char*) ".");
+    test.maxscales->copy_fw_rules("rules.txt", ".");
 
     int rc = 0;
 

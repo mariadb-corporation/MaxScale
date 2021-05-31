@@ -248,7 +248,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
         if (m_mdbci_called)
         {
-            auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
+            auto res = maxscales->ssh_output("maxscale --version-full", false);
             if (res.rc != 0)
             {
                 tprintf("Error retrieving MaxScale version info");
@@ -466,7 +466,7 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
-            maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir());
+            maxscales->copy_to_node(src.c_str(), maxscales->access_homedir());
             maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(),
                                   verbose() ? "verbose" : "");
         }
@@ -835,7 +835,7 @@ void TestConnections::init_maxscale(int m)
         char dtr[4096];
         sprintf(str, "%s/ssl-cert/*", test_dir);
         sprintf(dtr, "%s/certs/", homedir);
-        mxs->copy_to_node(0, str, dtr);
+        mxs->copy_to_node(str, dtr);
         sprintf(str, "cp %s/ssl-cert/* .", test_dir);
         call_system(str);
         mxs->ssh_node_f(0, true, "chmod -R a+rx %s;", homedir);
@@ -2099,17 +2099,20 @@ bool TestConnections::verbose() const
 
 void TestConnections::write_node_env_vars()
 {
-    auto write_env_vars = [](Nodes* nodes) {
-            if (nodes)
+    auto write_env_vars = [](MariaDBCluster* cluster) {
+            if (cluster)
             {
-                nodes->write_env_vars();
+                cluster->write_env_vars();
             }
         };
 
     write_env_vars(repl);
     write_env_vars(galera);
     write_env_vars(xpand);
-    write_env_vars(maxscales);
+    if (maxscales)
+    {
+        maxscales->write_env_vars();
+    }
 }
 
 int TestConnections::n_maxscales() const

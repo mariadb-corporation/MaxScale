@@ -175,7 +175,7 @@ int Maxscales::restart_maxscale()
     }
     else
     {
-        res = ssh_node(0, "service maxscale restart", true);
+        res = ssh_node("service maxscale restart", true);
     }
     return res;
 }
@@ -208,7 +208,7 @@ int Maxscales::start_maxscale()
     }
     else
     {
-        res = ssh_node(0, "service maxscale restart", true);
+        res = ssh_node("service maxscale restart", true);
     }
     return res;
 }
@@ -219,25 +219,25 @@ int Maxscales::stop_maxscale()
     if (m_use_valgrind)
     {
         const char kill_vgrind[] = "kill $(pidof valgrind) 2>&1 > /dev/null";
-        res = ssh_node(0, kill_vgrind, true);
-        auto vgrind_pid = ssh_output("pidof valgrind", 0);
+        res = ssh_node(kill_vgrind, true);
+        auto vgrind_pid = ssh_output("pidof valgrind");
         bool still_running = (atoi(vgrind_pid.output.c_str()) > 0);
         if ((res != 0) || still_running)
         {
             // Try again, maybe it will work.
-            res = ssh_node(0, kill_vgrind, true);
+            res = ssh_node(kill_vgrind, true);
         }
     }
     else
     {
-        res = ssh_node(0, "service maxscale stop", true);
+        res = ssh_node("service maxscale stop", true);
     }
     return res;
 }
 
 long unsigned Maxscales::get_maxscale_memsize(int m)
 {
-    auto res = ssh_output("ps -e -o pid,vsz,comm= | grep maxscale", m, false);
+    auto res = ssh_output("ps -e -o pid,vsz,comm= | grep maxscale", false);
     long unsigned mem = 0;
     pid_t pid;
     sscanf(res.output.c_str(), "%d %lu", &pid, &mem);
@@ -288,6 +288,11 @@ void Maxscales::wait_for_monitor(int intervals)
 const char* Maxscales::ip() const
 {
     return m_use_ipv6 ? Nodes::ip6(0) : Nodes::ip4(0);
+}
+
+const char* Maxscales::ip_private() const
+{
+    return Nodes::ip_private(0);
 }
 
 void Maxscales::set_use_ipv6(bool use_ipv6)
@@ -407,7 +412,7 @@ void Maxscales::expect_running_status(bool expected)
         "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
         "ps -C maxscale | grep maxscale | wc -l";
 
-    auto cmd_res = ssh_output(ps_cmd, 0, false);
+    auto cmd_res = ssh_output(ps_cmd, false);
     if (cmd_res.output.empty() || (cmd_res.rc != 0))
     {
         log().add_failure("Can't check MaxScale running status. Command '%s' failed with code %i and "
@@ -423,7 +428,7 @@ void Maxscales::expect_running_status(bool expected)
         log().log_msgf("%s MaxScale processes detected when %s was expected. Trying again in 5 seconds.",
                        cmd_res.output.c_str(), expected_str.c_str());
         sleep(5);
-        cmd_res = ssh_output(ps_cmd, 0, false);
+        cmd_res = ssh_output(ps_cmd, false);
         cmd_res.output = mxt::cutoff_string(cmd_res.output, '\n');
 
         if (cmd_res.output != expected_str)
@@ -570,6 +575,52 @@ void Maxscales::close_readconn_master()
     conn_master = NULL;
 }
 
+int Maxscales::ssh_node_f(int node, bool sudo, const char* format, ...)
+{
+    va_list valist;
+    va_start(valist, format);
+    string cmd = mxb::string_vprintf(format, valist);
+    va_end(valist);
+    return ssh_node(cmd, sudo);
+}
+
+void Maxscales::copy_fw_rules(const std::string& rules_name, const std::string& rules_dir)
+{
+    ssh_node_f(0, true, "cd %s; rm -rf rules; mkdir rules; chown %s:%s rules",
+               access_homedir(), access_user(), access_user());
+
+    string src = rules_dir + "/" + rules_name;
+    string dest = string(access_homedir()) + "/rules/rules.txt";
+
+    copy_to_node(src.c_str(), dest.c_str());
+    ssh_node_f(0, true, "chmod a+r %s", dest.c_str());
+}
+
+mxt::CmdResult Maxscales::ssh_output(const std::string& cmd, bool sudo)
+{
+    return Nodes::ssh_output(cmd, 0, sudo);
+}
+
+int Maxscales::copy_to_node(const char* src, const char* dest)
+{
+    return Nodes::copy_to_node(0, src, dest);
+}
+
+int Maxscales::copy_from_node(const char* src, const char* dest)
+{
+    return Nodes::copy_from_node(0, src, dest);
+}
+
+void Maxscales::write_env_vars()
+{
+    Nodes::write_env_vars();
+}
+
+int Maxscales::ssh_node(const string& cmd, bool sudo)
+{
+    return Nodes::ssh_node(0, cmd, sudo);
+}
+
 namespace maxtest
 {
 
@@ -592,7 +643,7 @@ mxt::CmdResult MaxScale::curl_rest_api(const std::string& path)
                                     m_rest_user.c_str(), m_rest_pw.c_str(),
                                     m_rest_ip.c_str(), m_rest_port.c_str(),
                                     path.c_str());
-    auto res = m_maxscales->ssh_output(cmd, 0, true);
+    auto res = m_maxscales->ssh_output(cmd, true);
     return res;
 }
 

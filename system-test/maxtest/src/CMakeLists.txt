@@ -6,7 +6,6 @@ add_library(maxtest SHARED
         different_size.cc
         envv.cc
         execute_cmd.cc
-        fw_copy_rules.cc
         galera_cluster.cc
         get_com_select_insert.cc
         get_my_ip.cc

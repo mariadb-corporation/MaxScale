@@ -13,12 +13,12 @@ int create_key(TestConnections* test)
     int exit_code;
     test->set_timeout(120);
     test->tprintf("Creating new encryption keys\n");
-    test->maxscales->ssh_node(0,
-                              "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",
-                              true);
-    test->maxscales->ssh_node(0, "maxkeys", true);
+    test->maxscales->ssh_node(
+        "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",
+        true);
+    test->maxscales->ssh_node("maxkeys", true);
     auto result = test->maxscales->ssh_output("sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS",
-                                              0, false);
+                                              false);
 
     if (strncmp(result.output.c_str(), "SUCCESS", 7) != 0)
     {
@@ -27,7 +27,7 @@ int create_key(TestConnections* test)
     }
     else
     {
-        test->maxscales->ssh_node(0, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
+        test->maxscales->ssh_node("sudo chown maxscale:maxscale /var/lib/maxscale/.secrets", true);
     }
     return res;
 }

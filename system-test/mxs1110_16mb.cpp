@@ -6,7 +6,6 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxtest/blob_test.hh>
-#include <maxtest/fw_copy_rules.hh>
 #include <maxtest/galera_cluster.hh>
 
 int main(int argc, char* argv[])
@@ -23,13 +22,13 @@ int main(int argc, char* argv[])
     std::string cache_rules = src_dir + "/cache/cache_basic/cache_rules.json";
     std::string fw_rules = src_dir + "/fw";
 
-    Test->maxscales->copy_to_node_legacy(masking_rules.c_str(), "~/", 0);
+    Test->maxscales->copy_to_node(masking_rules.c_str(), "~/");
 
-    Test->maxscales->copy_to_node_legacy(cache_rules.c_str(), "~/", 0);
+    Test->maxscales->copy_to_node(cache_rules.c_str(), "~/");
 
-    Test->maxscales->ssh_node(0, "chmod a+rw *.json", true);
+    Test->maxscales->ssh_node("chmod a+rw *.json", true);
 
-    copy_rules(Test, "rules2", fw_rules.c_str());
+    Test->maxscales->copy_fw_rules("rules2", fw_rules);
 
     Test->maxscales->start_maxscale();
 

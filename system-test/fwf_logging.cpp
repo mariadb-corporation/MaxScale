@@ -8,7 +8,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <maxtest/testconnections.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 int main(int argc, char** argv)
 {
@@ -22,7 +21,7 @@ int main(int argc, char** argv)
 
     test->tprintf("Creating rules\n");
     test->maxscales->stop();
-    copy_rules(test, (char*) "rules_logging", rules_dir);
+    test->maxscales->copy_fw_rules("rules_logging", rules_dir);
 
     test->maxscales->start_maxscale();
     test->set_timeout(20);

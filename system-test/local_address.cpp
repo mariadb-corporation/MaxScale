@@ -78,7 +78,7 @@ string extract_ip(string s)
 void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
 {
     static const char COMMAND[] = "export PATH=$PATH:/sbin:/usr/sbin; ip addr|fgrep inet|fgrep -v ::";
-    auto res = test.maxscales->ssh_output(COMMAND, 0, false);
+    auto res = test.maxscales->ssh_output(COMMAND, false);
     to_collection(res.output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
 
@@ -214,15 +214,14 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
 
 string get_local_ip(TestConnections& test)
 {
-    auto res = test.maxscales->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://",
-                                          0, false);
+    auto res = test.maxscales->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://", false);
 
     return trim(res.output);
 }
 
 string get_gateway_ip(TestConnections& test)
 {
-    auto res = test.maxscales->ssh_output("echo $SSH_CLIENT", 0, false);
+    auto res = test.maxscales->ssh_output("echo $SSH_CLIENT", false);
     return mxt::cutoff_string(res.output, ' ');
 }
 
@@ -237,7 +236,7 @@ void start_maxscale_with_local_address(TestConnections& test,
     command += "/ ";
     command += "/etc/maxscale.cnf";
 
-    test.maxscales->ssh_node(0, command.c_str(), true);
+    test.maxscales->ssh_node(command.c_str(), true);
     test.maxscales->start_and_check_started();
 }
 

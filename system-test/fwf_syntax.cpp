@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <linux/limits.h>
 #include <maxtest/testconnections.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 const char* temp_rules = "rules_tmp.txt";
 
@@ -44,7 +43,7 @@ const char* rules_failure[] =
 
 int truncate_maxscale_logs(TestConnections& test)
 {
-    return test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/max*", true);
+    return test.maxscales->ssh_node("truncate -s 0 /var/log/maxscale/max*", true);
 }
 
 void create_rule(const char* rule, const char* user)
@@ -67,7 +66,7 @@ int main(int argc, char** argv)
         int __attribute__((unused)) rc = truncate(temp_rules, 0);
         create_rule(rules_failure[i], users_ok[0]);
         char buf[PATH_MAX + 1];
-        copy_rules(&test, (char*)temp_rules, (char*)getcwd(buf, sizeof(buf)));
+        test.maxscales->copy_fw_rules(temp_rules, getcwd(buf, sizeof(buf)));
 
         test.tprintf("Testing rule: %s\n", rules_failure[i]);
         test.add_result(test.maxscales->start_maxscale() == 0, "MaxScale should fail to start");

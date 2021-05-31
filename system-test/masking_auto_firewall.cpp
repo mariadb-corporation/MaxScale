@@ -159,11 +159,11 @@ void run_ansi_quotes(TestConnections& test)
     test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::SUCCESS);
 
     // Let's turn on 'treat_string_arg_as_field=true'
-    test.maxscales->ssh_node(0,
-                             "sed -i -e "
-                             "'s/treat_string_arg_as_field=false/treat_string_arg_as_field=true/' "
-                             "/etc/maxscale.cnf",
-                             true);
+    test.maxscales->ssh_node(
+        "sed -i -e "
+        "'s/treat_string_arg_as_field=false/treat_string_arg_as_field=true/' "
+        "/etc/maxscale.cnf",
+        true);
     // and restart MaxScale
     test.maxscales->restart();
 
@@ -188,9 +188,9 @@ int main(int argc, char* argv[])
     std::string from = test_dir + json_file;
     std::string to = test.maxscales->access_homedir() + json_file;
 
-    if (test.maxscales->copy_to_node(0, from.c_str(), to.c_str()) == 0)
+    if (test.maxscales->copy_to_node(from.c_str(), to.c_str()) == 0)
     {
-        test.maxscales->ssh_node(0, (std::string("chmod a+r ") + to).c_str(), true);
+        test.maxscales->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
         if (test.maxscales->start() == 0)
         {
             sleep(2);
