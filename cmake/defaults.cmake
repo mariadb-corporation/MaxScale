@@ -31,6 +31,7 @@ option(WITH_MAXSCALE_CNF "Install the template maxscale.cnf file" ON)
 option(WITH_SCRIPTS "Install init.d scripts and ldconf configuration files" ON)
 option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_TSAN "Enable ThreadSanitizer" OFF)
+option(WITH_LTO "Enable link-time optimization" OFF)
 
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
