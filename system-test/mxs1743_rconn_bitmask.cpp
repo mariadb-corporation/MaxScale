@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     auto do_test = [&]() {
             test.set_timeout(20);
             test.maxscales->connect();
-            test.try_query(test.maxscales->conn_master[0], "SELECT 1");
+            test.try_query(test.maxscales->conn_master, "SELECT 1");
             test.maxscales->disconnect();
             test.stop_timeout();
         };

@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
                      "Query to first service should have replaced the query.\n");
     test->add_result(execute_query_check_one(test->maxscales->conn_slave, "SELECT 123", "123"),
                      "Query to second service should not have replaced the query.\n");
-    test->add_result(execute_query_check_one(test->maxscales->conn_master[0], "SELECT 123", "123"),
+    test->add_result(execute_query_check_one(test->maxscales->conn_master, "SELECT 123", "123"),
                      "Query to third service should not have replaced the query.\n");
     test->maxscales->close_maxscale_connections();
     int rval = test->global_result;

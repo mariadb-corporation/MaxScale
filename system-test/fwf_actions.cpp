@@ -55,11 +55,11 @@ int main(int argc, char** argv)
     /** Testing NO OP mode */
     test->tprintf("Trying matching query to ignoring Conn master, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->maxscales->conn_master[0], "select 1"),
+    test->add_result(execute_query_silent(test->maxscales->conn_master, "select 1"),
                      "Query to ignoring service should succeed.\n");
     test->tprintf("Trying non-matching query to ignoring Conn master, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->maxscales->conn_master[0], "show status"),
+    test->add_result(execute_query_silent(test->maxscales->conn_master, "show status"),
                      "Non-matching query to ignoring service should succeed.\n");
 
     test->stop_timeout();

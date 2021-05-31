@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
     char str[1024];
     Test->set_timeout(60);
 
+    MYSQL*& rc_master = Test->maxscales->conn_master;
     Test->maxscales->connect_maxscale();
     Test->repl->connect();
 
@@ -109,7 +110,7 @@ int main(int argc, char* argv[])
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
     Test->tprintf("using ReadConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
-    Test->try_query(Test->maxscales->conn_master[0], (char*) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
+    Test->try_query(rc_master, (char*) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
     Test->tprintf("using ReadConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
     Test->try_query(Test->maxscales->conn_slave, (char*) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
@@ -119,7 +120,7 @@ int main(int argc, char* argv[])
     MYSQL* srv[2];
 
     srv[0] = Test->maxscales->conn_rwsplit[0];
-    srv[1] = Test->maxscales->conn_master[0];
+    srv[1] = rc_master;
     for (int i = 0; i < iterations; i++)
     {
         Test->set_timeout(100);
@@ -140,7 +141,7 @@ int main(int argc, char* argv[])
         Test->tprintf("SELECT: rwsplitter\n");
         Test->add_result(select_from_t1(Test->maxscales->conn_rwsplit[0], N), "Wrong data in 't1'");
         Test->tprintf("SELECT: master\n");
-        Test->add_result(select_from_t1(Test->maxscales->conn_master[0], N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(rc_master, N), "Wrong data in 't1'");
         Test->tprintf("SELECT: slave\n");
         Test->add_result(select_from_t1(Test->maxscales->conn_slave, N), "Wrong data in 't1'");
     }

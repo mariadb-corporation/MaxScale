@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     test.tprintf("Testing readwritesplit");
     run_test(test, test.maxscales->conn_rwsplit[0]);
     test.tprintf("Testing readconnroute");
-    run_test(test, test.maxscales->conn_master[0]);
+    run_test(test, test.maxscales->conn_master);
     test.maxscales->disconnect();
 
     // Test MXS-3366.

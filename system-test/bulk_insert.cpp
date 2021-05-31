@@ -230,7 +230,7 @@ int main(int argc, char** argv)
     test.add_result(bind_by_column(test.maxscales->conn_rwsplit[0]),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing column-wise binding with readconnroute");
-    test.add_result(bind_by_column(test.maxscales->conn_master[0]),
+    test.add_result(bind_by_column(test.maxscales->conn_master),
                     "Bulk inserts with readconnroute should work");
 
     test.tprintf("Testing row-wise binding with a direct connection");
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
     test.add_result(bind_by_row(test.maxscales->conn_rwsplit[0]),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing row-wise binding with readconnroute");
-    test.add_result(bind_by_row(test.maxscales->conn_master[0]),
+    test.add_result(bind_by_row(test.maxscales->conn_master),
                     "Bulk inserts with readconnroute should work");
 
     test.maxscales->close_maxscale_connections();

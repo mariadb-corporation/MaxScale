@@ -127,7 +127,7 @@ void gauge_raw_speed(TestConnections& test)
     const int raw_rows = NUM_ROWS / 5;
     std::cout << "\n****\nRead " << raw_rows
               << " rows via master readconnrouter, to gauge speed.\n";
-    auto rs = read_rows(test.maxscales->conn_master[0], raw_rows, 0, false);
+    auto rs = read_rows(test.maxscales->conn_master, raw_rows, 0, false);
     std::cout << rs.qps << "qps " << " duration " << rs.duration << '\n';
 
     if (rs.qps < 2 * max_qps)
@@ -202,11 +202,11 @@ int main(int argc, char* argv[])
 
         std::cout << "Create table\n";
         test.set_timeout(TIMEOUT);
-        create_table(test.maxscales->conn_master[0]);
+        create_table(test.maxscales->conn_master);
 
         std::cout << "Insert rows\n";
         test.set_timeout(TIMEOUT);
-        insert_rows(test.maxscales->conn_master[0]);
+        insert_rows(test.maxscales->conn_master);
 
         test.set_timeout(TIMEOUT);
         gauge_raw_speed(test);

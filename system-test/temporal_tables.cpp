@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
     test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], "SELECT * FROM t1", 1),
                     "Current connection should show one row");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_master, "SELECT * FROM t1", 2),
                     "New connection should show two rows");
     test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
                     "New connection should show two rows");
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE t1");
     test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], "SELECT * FROM t1", 2),
                     "check failed");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_master, "SELECT * FROM t1", 2),
                     "check failed");
     test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
                     "check failed");

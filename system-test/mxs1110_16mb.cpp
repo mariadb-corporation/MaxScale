@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking data via RWSplit\n");
     check_longblob_data(Test, Test->maxscales->conn_rwsplit[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn master\n");
-    check_longblob_data(Test, Test->maxscales->conn_master[0], chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_master, chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");
     check_longblob_data(Test, Test->maxscales->conn_slave, chunk_size, chunk_num, 2);
     Test->maxscales->close_maxscale_connections();
