@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     config.add_server(1);
     config.check_server_count(1);
     sleep(1);
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
     config.remove_server(1);
     config.destroy_server(1);
     config.check_server_count(0);
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     config.add_server(1);
     config.alter_server(1, "address", test->repl->ip_private(1));
     sleep(1);
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
     config.alter_server(1, "port", 12345);
     test->maxscales->connect_maxscale();
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
     config.reset();
     sleep(1);
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
     int rval = test->global_result;
     delete test;
     return rval;

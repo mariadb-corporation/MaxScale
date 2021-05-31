@@ -88,9 +88,9 @@ int main(int argc, char** argv)
     test.maxscales->close_maxscale_connections();
 
     test.set_timeout(160);
-    test.check_maxscale_alive(0);
-    test.log_excludes(0, "due to authentication failure");
-    test.log_excludes(0, "due to handshake failure");
+    test.check_maxscale_alive();
+    test.log_excludes("due to authentication failure");
+    test.log_excludes("due to handshake failure");
 
     return test.global_result;
 }

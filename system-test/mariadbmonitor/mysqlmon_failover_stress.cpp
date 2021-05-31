@@ -496,7 +496,7 @@ void check_server_statuses(TestConnections& test)
     {
         test.global_result = 0;
         test.tprintf("No master, checking that autofail has been turned off.");
-        test.log_includes(0, "disabling automatic failover");
+        test.log_includes("disabling automatic failover");
     }
     else if (masters != 1)
     {

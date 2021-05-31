@@ -105,14 +105,14 @@ int main(int argc, char* argv[])
     }
 
     Test->stop_timeout();
-    Test->log_excludes(0, "Length (0) is 0");
-    Test->log_excludes(0, "Unable to parse query");
-    Test->log_excludes(0, "query string allocation failed");
+    Test->log_excludes("Length (0) is 0");
+    Test->log_excludes("Unable to parse query");
+    Test->log_excludes("query string allocation failed");
 
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     Test->maxscales->restart_maxscale();
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Restart Maxscale");
     test.maxscales->restart_maxscale();
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
 
     test.stop_timeout();
     test.tprintf("Restore backend configuration\n");

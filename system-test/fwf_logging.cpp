@@ -48,8 +48,8 @@ int main(int argc, char** argv)
 
     /** Check that the logs contains entries for both matching and
      * non-matching queries */
-    test->log_includes(0, "matched by");
-    test->log_includes(0, "was not matched");
+    test->log_includes("matched by");
+    test->log_includes("was not matched");
 
     int rval = test->global_result;
     delete test;

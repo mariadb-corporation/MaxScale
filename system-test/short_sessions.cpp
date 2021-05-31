@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 
     test.set_timeout(20);
     test.maxscales->close_maxscale_connections();
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
 
     return test.global_result;
 }

@@ -34,7 +34,7 @@ void test_basic(TestConnections& test)
     test.try_query(test.maxscales->conn_rwsplit[0], "SET @x = 4;");
     test.try_query(test.maxscales->conn_rwsplit[0], "EXECUTE stmt");
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     test.stop_timeout();
 }
 
@@ -102,7 +102,7 @@ void test_routing(TestConnections& test)
                     server_id);
 
     // Cleanup
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     test.stop_timeout();
 }
 

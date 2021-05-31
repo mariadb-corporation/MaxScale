@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
 
 
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

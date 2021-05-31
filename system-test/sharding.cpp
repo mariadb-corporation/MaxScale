@@ -171,9 +171,9 @@ int main(int argc, char* argv[])
     }
 
     test.stop_timeout();
-    test.log_excludes(0, "Length (0) is 0");
-    test.log_excludes(0, "Unable to parse query");
-    test.log_excludes(0, "query string allocation failed");
+    test.log_excludes("Length (0) is 0");
+    test.log_excludes("Unable to parse query");
+    test.log_excludes("query string allocation failed");
 
     test.repl->connect();
     /** Cleanup */

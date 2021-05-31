@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
         check_max_conn(2, 25, test);
     }
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
     int rval = test.global_result;
     return rval;
 }

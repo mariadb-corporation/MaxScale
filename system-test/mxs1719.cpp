@@ -57,7 +57,7 @@ void run(TestConnections& test)
         sleep(5);
         // This is actually related to MXS-1861 "masking filter logs warnings with
         // multistatements" but it seems excessive to create a specific test for that.
-        test.log_excludes(0, "Received data, although expected nothing");
+        test.log_excludes("Received data, although expected nothing");
 
         // This will hang immediately, so we can shorten the timeout.
         test.set_timeout(5);

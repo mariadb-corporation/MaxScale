@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(20);
 
     Test->maxscales->close_maxscale_connections();
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

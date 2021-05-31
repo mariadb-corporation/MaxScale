@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 
     // Need to send a read query so that rwsplit detects replication lag.
     maxconn->query(show);
-    test.log_includes(0, "is excluded from query routing.");
+    test.log_includes("is excluded from query routing.");
 
     test.tprintf("Test 2 - Set nodes 0 and 1 into read-only mode");
 
@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 
     // Rwsplit should detects that replication lag is 0.
     maxconn->query(show);
-    test.log_includes(0, "is returned to query routing.");
+    test.log_includes("is returned to query routing.");
 
     // Test over, reset topology.
     const char reset_with_name[] = "STOP SLAVE '%s'; RESET SLAVE '%s' ALL;";

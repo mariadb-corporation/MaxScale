@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
     sleep(1);
 
-    test->check_maxscale_alive(0);
+    test->check_maxscale_alive();
     int rval = test->global_result;
     delete test;
     return rval;

@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     test.expect(slave_response == master_response, "Slave value '%s' is different from master value '%s'",
                 slave_response.c_str(), master_response.c_str());
 
-    test.log_excludes(0, "Router session exceeded session command history limit");
+    test.log_excludes("Router session exceeded session command history limit");
 
     return test.global_result;
 }

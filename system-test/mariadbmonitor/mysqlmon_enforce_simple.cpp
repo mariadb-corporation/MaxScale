@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     sleep(3);
     test.maxscales->wait_for_monitor(3);
 
-    test.log_includes(0, "Performing automatic failover");
+    test.log_includes("Performing automatic failover");
     int new_master_id = get_master_server_id(test);
     int expected_id1 = server_ids[1];
     int expected_id2 = server_ids[2];

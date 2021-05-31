@@ -270,7 +270,7 @@ public:
      * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
      * log file does not match the pattern, it is considered an error.
      */
-    void log_includes(int m, const char* pattern);
+    void log_includes(const char* pattern);
 
     /**
      * @brief Check whether logs do not match a pattern
@@ -278,7 +278,7 @@ public:
      * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
      * log file match the pattern, it is considered an error.
      */
-    void log_excludes(int m, const char* pattern);
+    void log_excludes(const char* pattern);
 
     /**
      * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
@@ -294,7 +294,7 @@ public:
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
-    int check_maxscale_alive(int m = 0);
+    int check_maxscale_alive();
 
     /**
      * @brief try_query Executes SQL query and repors error
@@ -393,7 +393,7 @@ private:
 
     bool read_test_info();
 
-    bool log_matches(int m, const char* pattern);
+    bool log_matches(const char* pattern);
 
     std::unique_ptr<mxt::MaxScale> m_maxscale;      /**< Main MaxScale instance */
     std::unique_ptr<mxt::MaxScale> m_maxscale2;     /**< Secondary MaxScale instance */

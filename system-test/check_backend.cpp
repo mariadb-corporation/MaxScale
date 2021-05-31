@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Closing connections\n");
     Test->maxscales->close_maxscale_connections();
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     auto ver = Test->maxscales->ssh_output("maxscale --version-full", 0, false);
     Test->tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver.output.c_str());

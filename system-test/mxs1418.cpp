@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     test.maxctrl("link service Read-Connection-Router-Slave server1 server2 server3 server4");
     test.maxctrl("link service Read-Connection-Router-Master server1 server2 server3 server4");
 
-    test.check_maxscale_alive(0);
+    test.check_maxscale_alive();
 
     return test.global_result;
 }

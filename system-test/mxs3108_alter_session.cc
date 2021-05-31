@@ -58,11 +58,11 @@ int main(int argc, char* argv[])
 
     test.check_maxctrl("alter session " + std::to_string(conn.thread_id()) + " log_info true");
     test.expect(conn.query("SELECT 123"), "Query failed: %s", conn.error());
-    test.log_includes(0, "info   :.*SELECT 123");
+    test.log_includes("info   :.*SELECT 123");
 
     test.check_maxctrl("alter session " + std::to_string(conn.thread_id()) + " log_info false");
     test.expect(conn.query("SELECT 456"), "Query failed: %s", conn.error());
-    test.log_excludes(0, "info   :.*SELECT 456");
+    test.log_excludes("info   :.*SELECT 456");
 
     return test.global_result;
 }

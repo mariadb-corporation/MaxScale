@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     pthread_join(restart_t, NULL);
 
     Test->tprintf("Checxking if MaxScale is still alive!\n");
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
 
     int rval = Test->global_result;
     delete Test;

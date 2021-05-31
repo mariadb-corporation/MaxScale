@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
 
     Test->set_verbose(true);
-    Test->check_maxscale_alive(0);
+    Test->check_maxscale_alive();
     Test->set_verbose(false);
 
     int rval = Test->global_result;
