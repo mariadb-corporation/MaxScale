@@ -160,7 +160,6 @@ bool save_config(mxs::Monitor* monitor)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
-
         std::ostringstream ss;
         MonitorManager::monitor_persist(monitor, ss);
         ok = runtime_save_config(monitor->name(), ss.str());
@@ -342,13 +341,13 @@ bool check_link_target(Service* service, mxs::Target* target)
     return rval;
 }
 
-bool runtime_link_target(const std::string& subject, const std::string& target)
+bool link_service(Service* service, const StringSet& children)
 {
-    bool rval = false;
+    bool rval = true;
 
-    if (auto service = Service::find(target))
+    for (const auto& child : children)
     {
-        if (auto monitor = MonitorManager::find_monitor(subject.c_str()))
+        if (auto monitor = MonitorManager::find_monitor(child.c_str()))
         {
             rval = link_service_to_monitor(service, monitor);
         }
@@ -357,81 +356,135 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
             MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
                       "Servers cannot explicitly be added to the service.",
                       service->name(), cluster->name());
+            rval = false;
         }
-        else if (auto server = ServerManager::find_by_unique_name(subject))
+        else if (auto server = ServerManager::find_by_unique_name(child))
         {
             if (check_link_target(service, server))
             {
-                rval = true;
                 service->add_target(server);
-            }
-        }
-        else if (auto other = Service::find(subject))
-        {
-            if (check_link_target(service, other))
-            {
-                rval = true;
-                service->add_target(other);
-            }
-        }
-        else
-        {
-            MXS_ERROR("Could not find target with name '%s'", subject.c_str());
-        }
-
-        if (rval)
-        {
-            rval = save_config(service);
-        }
-    }
-    else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
-    {
-        if (auto srv = ServerManager::find_by_unique_name(subject))
-        {
-            std::string error_msg;
-            if (MonitorManager::add_server_to_monitor(monitor, srv, &error_msg))
-            {
-                rval = true;
             }
             else
             {
-                MXS_ERROR("%s", error_msg.c_str());
+                rval = false;
             }
         }
-        else if (auto service = Service::find(subject))
+        else if (auto other = Service::find(child))
         {
-            rval = link_service_to_monitor(service, monitor);
+            if (check_link_target(service, other))
+            {
+                service->add_target(other);
+            }
+            else
+            {
+                rval = false;
+            }
         }
         else
         {
-            MXS_ERROR("No server or service named '%s' found", subject.c_str());
+            MXS_ERROR("Could not find target with name '%s'", child.c_str());
+            rval = false;
         }
 
-        if (rval)
+        if (!rval)
         {
-            rval = save_config(monitor);
+            break;
         }
-    }
-    else
-    {
-        MXS_ERROR("No monitor or service named '%s' found", target.c_str());
     }
 
     if (rval)
     {
-        MXS_NOTICE("Added '%s' to '%s'", subject.c_str(), target.c_str());
+        rval = save_config(service);
     }
 
     return rval;
 }
 
-bool runtime_unlink_target(const std::string& subject, const std::string& target)
+bool link_monitor(mxs::Monitor* monitor, const StringSet& children)
 {
-    bool rval = false;
+    bool rval = true;
 
-    if (auto service = Service::find(target))
+    for (const auto& child : children)
     {
-        if (auto monitor = MonitorManager::find_monitor(subject.c_str()))
+        if (auto srv = ServerManager::find_by_unique_name(child))
+        {
+            std::string error_msg;
+            if (!MonitorManager::add_server_to_monitor(monitor, srv, &error_msg))
+            {
+                MXS_ERROR("%s", error_msg.c_str());
+                rval = false;
+            }
+        }
+        else if (auto service = Service::find(child))
+        {
+            rval = link_service_to_monitor(service, monitor);
+        }
+        else
+        {
+            MXS_ERROR("No server or service named '%s' found", child.c_str());
+            rval = false;
+        }
+
+        if (!rval)
+        {
+            break;
+        }
+    }
+
+    if (rval)
+    {
+        rval = save_config(monitor);
+    }
+
+    return rval;
+}
+
+bool runtime_link_target(const StringSet& children, const StringSet& parents)
+{
+    if (children.empty())
+    {
+        return true;
+    }
+
+    bool rval = true;
+    auto names = mxb::join(children, ", ", "'");
+
+    for (const auto& parent : parents)
+    {
+        if (auto service = Service::find(parent))
+        {
+            rval = link_service(service, children);
+        }
+        else if (auto monitor = MonitorManager::find_monitor(parent.c_str()))
+        {
+            rval = link_monitor(monitor, children);
+        }
+        else
+        {
+            MXS_ERROR("No monitor or service named '%s' found", parent.c_str());
+            rval = false;
+        }
+
+        if (rval)
+        {
+            MXS_NOTICE("Added %s to '%s'", names.c_str(), parent.c_str());
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return rval;
+}
+
+bool unlink_service(Service* service, const StringSet& children)
+{
+    bool rval = true;
+
+    for (const auto& child : children)
+    {
+        if (auto monitor = MonitorManager::find_monitor(child.c_str()))
         {
             rval = unlink_service_from_monitor(service, monitor);
         }
@@ -440,64 +493,110 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
             MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
                       "Servers cannot explicitly be removed from the service.",
                       service->name(), cluster->name());
+            rval = false;
         }
-        else if (auto server = SERVER::find_by_unique_name(subject))
+        else if (auto server = SERVER::find_by_unique_name(child))
         {
             // TODO: Should we check that the service actually uses the server?
-            rval = true;
             service->remove_target(server);
         }
-        else if (auto other = Service::find(subject))
+        else if (auto other = Service::find(child))
         {
-            rval = true;
             service->remove_target(other);
         }
         else
         {
-            MXS_ERROR("Target '%s' not found", subject.c_str());
+            MXS_ERROR("Target '%s' not found", child.c_str());
+            rval = false;
         }
 
-        if (rval)
+        if (!rval)
         {
-            rval = save_config(service);
+            break;
         }
     }
-    else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
+
+    if (rval)
     {
-        if (auto srv = ServerManager::find_by_unique_name(subject))
+        rval = save_config(service);
+    }
+
+    return rval;
+}
+
+bool unlink_monitor(mxs::Monitor* monitor, const StringSet& children)
+{
+    bool rval = true;
+
+    for (const auto& child : children)
+    {
+        if (auto srv = ServerManager::find_by_unique_name(child))
         {
             std::string error_msg;
-            if (MonitorManager::remove_server_from_monitor(monitor, srv, &error_msg))
-            {
-                rval = true;
-            }
-            else
+            if (!MonitorManager::remove_server_from_monitor(monitor, srv, &error_msg))
             {
                 MXS_ERROR("%s", error_msg.c_str());
+                rval = false;
             }
         }
-        else if (auto service = Service::find(subject))
+        else if (auto service = Service::find(child))
         {
             rval = unlink_service_from_monitor(service, monitor);
         }
         else
         {
-            MXS_ERROR("No server named '%s' found", subject.c_str());
+            MXS_ERROR("No server named '%s' found", child.c_str());
+            rval = false;
         }
 
-        if (rval)
+        if (!rval)
         {
-            rval = save_config(monitor);
+            break;
         }
-    }
-    else
-    {
-        MXS_ERROR("No monitor or service named '%s' found", target.c_str());
     }
 
     if (rval)
     {
-        MXS_NOTICE("Removed '%s' from '%s'", subject.c_str(), target.c_str());
+        rval = save_config(monitor);
+    }
+
+    return rval;
+}
+
+bool runtime_unlink_target(const StringSet& children, const StringSet& parents)
+{
+    if (children.empty())
+    {
+        return true;
+    }
+
+    bool rval = true;
+    auto names = mxb::join(children, ", ", "'");
+
+    for (const auto& parent : parents)
+    {
+        if (auto service = Service::find(parent))
+        {
+            rval = unlink_service(service, children);
+        }
+        else if (auto monitor = MonitorManager::find_monitor(parent.c_str()))
+        {
+            rval = unlink_monitor(monitor, children);
+        }
+        else
+        {
+            MXS_ERROR("No monitor or service named '%s' found", parent.c_str());
+            rval = false;
+        }
+
+        if (rval)
+        {
+            MXS_NOTICE("Removed %s from '%s'", names.c_str(), parent.c_str());
+        }
+        else
+        {
+            break;
+        }
     }
 
     return rval;
@@ -842,31 +941,17 @@ bool server_contains_required_fields(json_t* json)
 
 bool unlink_target_from_objects(const std::string& target, StringSet& relations)
 {
-    bool rval = true;
-
-    for (const auto& rel : relations)
-    {
-        if (!runtime_unlink_target(target, rel))
-        {
-            rval = false;
-        }
-    }
-
-    return rval;
+    return runtime_unlink_target({target}, relations);
 }
 
 bool link_target_to_objects(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (const auto& rel : relations)
+    if (!runtime_link_target({target}, relations))
     {
-        if (!runtime_link_target(target, rel))
-        {
-            unlink_target_from_objects(target, relations);
-            rval = false;
-            break;
-        }
+        runtime_unlink_target({target}, relations);
+        rval = false;
     }
 
     return rval;
@@ -1072,13 +1157,9 @@ bool unlink_object_from_targets(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (const auto& rel : relations)
+    if (!runtime_unlink_target(relations, {target}))
     {
-        if (!runtime_unlink_target(rel, target))
-        {
-            rval = false;
-            break;
-        }
+        rval = false;
     }
 
     return rval;
@@ -1088,14 +1169,10 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (const auto& rel : relations)
+    if (!runtime_link_target(relations, {target}))
     {
-        if (!runtime_link_target(rel, target))
-        {
-            unlink_target_from_objects(rel, relations);
-            rval = false;
-            break;
-        }
+        runtime_unlink_target(relations, {target});
+        rval = false;
     }
 
     return rval;
@@ -1507,12 +1584,12 @@ void prepare_for_destruction(Server* server)
 {
     if (auto mon = MonitorManager::server_is_monitored(server))
     {
-        runtime_unlink_target(server->name(), mon->name());
+        unlink_monitor(mon, {server->name()});
     }
 
     for (auto service : service_server_in_use(server))
     {
-        service->remove_target(server);
+        unlink_service(service, {server->name()});
     }
 }
 
@@ -1531,7 +1608,7 @@ void prepare_for_destruction(Service* service)
 {
     for (Service* s : service->get_parents())
     {
-        runtime_unlink_target(s->name(), service->name());
+        unlink_service(s, {service->name()});
     }
 
     // Destroy listeners that point to the service. They are separate objects and are not managed by the
@@ -1547,7 +1624,7 @@ void prepare_for_destruction(Monitor* monitor)
 {
     for (auto svc : service_uses_monitor(monitor))
     {
-        runtime_unlink_target(monitor->name(), svc->name());
+        unlink_service(svc, {monitor->name()});
     }
 }
 
