@@ -19,6 +19,7 @@
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <limits>
 
 namespace maxsimd::simd256
 {
