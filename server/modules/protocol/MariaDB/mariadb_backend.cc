@@ -889,9 +889,8 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     }
 }
 
-int MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
+void MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
 {
-    int rc = 0;
     mxb_assert(m_ignore_replies > 0);
 
     if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
@@ -912,10 +911,7 @@ int MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
          */
         MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
         m_stored_query = gwbuf_append(m_stored_query, queue);
-        rc = 1;
     }
-
-    return rc;
 }
 
 /*
@@ -928,7 +924,8 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 {
     if (m_ignore_replies > 0)
     {
-        return handle_persistent_connection(queue);
+        handle_persistent_connection(queue);
+        return 1;
     }
 
     int rc = 0;
