@@ -487,23 +487,22 @@ bool Maxscales::reinstall(const std::string& target, const std::string& mdbci_co
     return rval;
 }
 
-void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
+void Maxscales::copy_log(int mxs_ind, int timestamp, const std::string& test_name)
 {
-    char log_dir[PATH_MAX + 1024];
-    char log_dir_i[sizeof(log_dir) + 1024];
-    char sys[sizeof(log_dir_i) + 1024];
+    string log_dir;
     if (timestamp == 0)
     {
-        sprintf(log_dir, "%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
+        log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
     }
     else
     {
-        sprintf(log_dir, "%s/LOGS/%s/%04f", mxt::BUILD_DIR, test_name.c_str(), timestamp);
+        log_dir = mxb::string_printf("%s/LOGS/%s/%04d", mxt::BUILD_DIR, test_name.c_str(), timestamp);
     }
 
-    sprintf(log_dir_i, "%s/%03d", log_dir, i);
-    sprintf(sys, "mkdir -p %s", log_dir_i);
-    system(sys);
+    string dest_log_dir = mxb::string_printf("%s/%03d", log_dir.c_str(), mxs_ind);
+    string sys = "mkdir -p " + dest_log_dir;
+    system(sys.c_str());
+
     auto vm = m_vmnode.get();
     auto mxs_logdir = maxscale_log_dir.c_str();
     auto mxs_cnf_file = maxscale_cnf.c_str();
@@ -512,29 +511,28 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
     {
         auto homedir = vm->access_homedir();
         int rc = ssh_node_f(0, true,
-                            "rm -rf %s/logs;"
-                            "mkdir %s/logs;"
+                            "rm -rf %s/logs; mkdir %s/logs;"
                             "cp %s/*.log %s/logs/;"
                             "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
                             "cp %s %s/logs/;"
                             "chmod 777 -R %s/logs;"
                             "test -e /tmp/core*  && exit 42;",
-                            homedir,
-                            homedir,
+                            homedir, homedir,
                             mxs_logdir, homedir,
                             homedir,
                             mxs_cnf_file, homedir,
                             homedir);
-        sprintf(sys, "%s/logs/*", homedir);
-        vm->copy_from_node(sys, log_dir_i);
+        string log_source = mxb::string_printf("%s/logs/*", homedir);
+        vm->copy_from_node(log_source, dest_log_dir);
         log().expect(rc != 42, "Test should not generate core files");
     }
     else
     {
-        ssh_node_f(0, true, "cp %s/*.logs %s/", mxs_logdir, log_dir_i);
-        ssh_node_f(0, true, "cp /tmp/core* %s/", log_dir_i);
-        ssh_node_f(0, true, "cp %s %s/", mxs_cnf_file, log_dir_i);
-        ssh_node_f(0, true, "chmod a+r -R %s", log_dir_i);
+        auto dest = dest_log_dir.c_str();
+        ssh_node_f(0, true, "cp %s/*.logs %s/", mxs_logdir, dest);
+        ssh_node_f(0, true, "cp /tmp/core* %s/", dest);
+        ssh_node_f(0, true, "cp %s %s/", mxs_cnf_file, dest);
+        ssh_node_f(0, true, "chmod a+r -R %s", dest);
     }
 }
 

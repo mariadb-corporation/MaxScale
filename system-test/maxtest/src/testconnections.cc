@@ -20,6 +20,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/string.hh>
+#include <maxbase/stopwatch.hh>
 
 #include <maxtest/envv.hh>
 #include <maxtest/galera_cluster.hh>
@@ -161,7 +162,6 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     std::ios::sync_with_stdio(true);
     set_signal_handlers();
-    gettimeofday(&m_start_time, nullptr);
 
     // Read basic settings from env variables first, as cmdline may override.
     read_basic_settings();
@@ -264,9 +264,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
         {
             m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
-            m_log_copy_thread = std::thread(&TestConnections::log_copy_thread, this);
             tprintf("Starting test");
-            gettimeofday(&m_start_time, nullptr);
             logger().reset_timer();
             rc = 0;
         }
@@ -577,7 +575,7 @@ void TestConnections::read_basic_settings()
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
     m_threads = readenv_int("threads", 4);
-    m_no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
+    m_maxscale_log_copy = !readenv_bool("no_maxscale_log_copy", false);
 
     if (readenv_bool("no_nodes_check", false))
     {
@@ -858,7 +856,10 @@ void TestConnections::init_maxscale(int m)
     }
 }
 
-int TestConnections::copy_all_logs()
+/**
+ * Copies all MaxScale logs and (if happens) core to current workspace
+ */
+void TestConnections::copy_all_logs()
 {
     set_timeout(300);
 
@@ -877,39 +878,33 @@ int TestConnections::copy_all_logs()
         }
     }
 
-    int rv = 0;
-
-    if (!m_no_maxscale_log_copy)
+    if (m_maxscale_log_copy)
     {
-        rv = copy_maxscale_logs(0);
+        copy_maxscale_logs(0);
     }
-
-    return rv;
 }
 
-int TestConnections::copy_maxscale_logs(double timestamp)
+/**
+ * Copies logs from all MaxScales.
+ *
+ * @param timestamp The timestamp to add to log file directory. 0 means no timestamp.
+ */
+void TestConnections::copy_maxscale_logs(int timestamp)
 {
-    mxt::BoolFuncArray funcs;
     for (int i = 0; i < n_maxscales(); i++)
     {
         auto mxs = my_maxscale(i);
-        auto func = [this, mxs, i, timestamp]() {
-                mxs->copy_log(i, timestamp, m_shared.test_name);
-                return true;
-            };
-        funcs.push_back(move(func));
+        mxs->copy_log(i, timestamp, m_shared.test_name);
     }
-    return m_shared.concurrent_run(funcs) ? 0 : 1;
 }
 
-int TestConnections::copy_all_logs_periodic()
+/**
+ * Copies all MaxScale logs and (if happens) core to current workspace and
+ * sends time stamp to log copying script
+ */
+void TestConnections::copy_all_logs_periodic()
 {
-    timeval t2;
-    gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
-
-    return copy_maxscale_logs(elapsedTime);
+    copy_maxscale_logs(logger().time_elapsed_s());
 }
 
 void TestConnections::revert_replicate_from_master()
@@ -1283,11 +1278,15 @@ void TestConnections::set_test_timeout(std::chrono::seconds timeout)
     m_test_timeout = timeout;
 }
 
-int TestConnections::set_log_copy_interval(long int interval_seconds)
+void TestConnections::set_log_copy_interval(uint32_t interval_seconds)
 {
-    m_log_copy_to_go = interval_seconds;
+    // Add disabling if required. Currently periodic log copying is only used by a few long tests.
+    mxb_assert(interval_seconds > 0);
     m_log_copy_interval = interval_seconds;
-    return 0;
+
+    // Assume that log copy thread not yet created. Start it. Calling this function twice in a test
+    // will crash.
+    m_log_copy_thread = std::thread(&TestConnections::log_copy_thread_func, this);
 }
 
 int TestConnections::stop_timeout()
@@ -1363,26 +1362,28 @@ void TestConnections::timeout_thread()
     }
 }
 
-void TestConnections::log_copy_thread()
+/**
+ * Function which periodically copies logs from Maxscale machine.
+ */
+void TestConnections::log_copy_thread_func()
 {
+    logger().log_msg("**** Periodic log copy thread started ****");
+    auto last_log_copy = mxb::Clock::now();
+    auto interval = mxb::from_secs(m_log_copy_interval);
+
     while (!m_stop_threads)
     {
-        while (!m_stop_threads && m_log_copy_to_go > 0)
+        auto now = mxb::Clock::now();
+        if (now - last_log_copy > interval)
         {
-            struct timespec tim;
-            tim.tv_sec = 1;
-            tim.tv_nsec = 0;
-            nanosleep(&tim, NULL);
-            m_log_copy_to_go--;
-        }
-
-        if (!m_stop_threads)
-        {
-            m_log_copy_to_go = m_log_copy_interval;
-            tprintf("\n **** Copying all logs *** \n");
+            logger().log_msg("**** Copying all logs ****");
             copy_all_logs_periodic();
+            last_log_copy = now;
         }
+        sleep(1);
     }
+
+    logger().log_msg("**** Periodic log copy thread exiting ****");
 }
 
 int TestConnections::insert_select(int N)
@@ -1853,7 +1854,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 maxscale::start = false;
                 m_mxs_manual_debug = true;
                 m_init_maxscale = false;
-                m_no_maxscale_log_copy = true;
+                m_maxscale_log_copy = false;
                 m_shared.settings.local_maxscale = true;
             }
             break;
