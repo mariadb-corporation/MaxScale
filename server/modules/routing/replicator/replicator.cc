@@ -137,25 +137,30 @@ bool Replicator::Imp::ok() const
 bool Replicator::Imp::connect()
 {
     cdc::Server old_server = {};
+    auto servers = service_to_servers(m_cnf.service);
 
     if (m_sql)
     {
-        if (m_sql->errnum())
+        old_server = m_sql->server();
+
+        if (!m_sql->errnum())
         {
-            old_server = m_sql->server();
-            m_sql.reset();
+            for (const auto& a : servers)
+            {
+                if (a.host == old_server.host && a.port == old_server.port)
+                {
+                    // We already have a connection
+                    return true;
+                }
+            }
         }
-        else
-        {
-            // We already have a connection
-            return true;
-        }
+
+        m_sql.reset();
     }
 
     bool rval = false;
     std::string err;
 
-    auto servers = service_to_servers(m_cnf.service);
     std::tie(err, m_sql) = SQL::connect(servers, m_cnf.timeout, m_cnf.timeout);
 
     if (!err.empty())
