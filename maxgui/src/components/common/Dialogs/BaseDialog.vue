@@ -37,8 +37,8 @@
                 </v-form>
             </v-card-text>
             <v-card-actions class="v-card-actions_padding color border-top-reflection">
-                <v-spacer></v-spacer>
                 <slot :cancel="cancel" :save="save" name="actions">
+                    <v-spacer></v-spacer>
                     <v-btn
                         v-if="!isForceAccept"
                         small
@@ -172,6 +172,9 @@ export default {
     $paddingLeft: 62px;
     .v-card-title_padding {
         padding: 52px $paddingLeft 16px;
+        h3 {
+            word-break: break-word;
+        }
     }
     .v-card-text_padding {
         padding: 0px $paddingLeft 48px;

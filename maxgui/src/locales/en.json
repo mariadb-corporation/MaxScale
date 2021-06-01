@@ -143,8 +143,9 @@
     "connectedTo": "Connected to",
     "disconnectConn": "Disconnect connection",
     "incomplete": "Incomplete",
-    "queryShowConfirm": "{action} confirmation before running the queries",
+    "queryShowConfirm": "{action} confirmation",
     "queryConfig": "Query configuration",
+    "dontAskMeAgain": "Don't ask me again",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -167,14 +168,14 @@
         "stop": "Are you sure you want to stop {targetId}?",
         "start": "Are you sure you want to start {targetId}?",
         "disconnect": "Are you sure you want to disconnect from {targetId}?",
-        "runQuery": "Are you sure you want to run the queries?"
+        "runQuery": "Are you sure you want to run the following queries?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",
         "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
-        "disableConfirmGuide": "To disable this confirmation, click the gear icon on toolbar and choose option to hide it"
+        "queryShowConfirm": "{action} confirmation before running the queries"
     },
 
     "$vuetify": {

@@ -20,6 +20,33 @@
             </small>
             <slot name="body-append"></slot>
         </template>
+
+        <template v-slot:actions="{ cancel, save }">
+            <slot name="action-prepend"></slot>
+            <v-btn
+                small
+                height="36"
+                color="primary"
+                class="cancel font-weight-medium px-7 text-capitalize"
+                rounded
+                outlined
+                depressed
+                @click="cancel"
+            >
+                {{ $t('cancel') }}
+            </v-btn>
+            <v-btn
+                small
+                height="36"
+                color="primary"
+                class="save font-weight-medium px-7 text-capitalize"
+                rounded
+                depressed
+                @click="save"
+            >
+                {{ $t(type) }}
+            </v-btn>
+        </template>
     </base-dialog>
 </template>
 

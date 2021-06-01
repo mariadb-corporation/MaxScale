@@ -109,13 +109,35 @@
             :menuMaxWidth="400"
         >
             <v-list>
-                <v-list-item dense link @click="shouldShowConfirm = !shouldShowConfirm">
-                    <v-list-item-title class="color text-text">
+                <v-tooltip
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on }">
+                        <v-list-item
+                            dense
+                            link
+                            @click="shouldShowConfirm = !shouldShowConfirm"
+                            v-on="on"
+                        >
+                            <v-list-item-title class="color text-text">
+                                {{
+                                    $t('queryShowConfirm', {
+                                        action: shouldShowConfirm ? 'Hide' : 'Show',
+                                    })
+                                }}
+                            </v-list-item-title>
+                        </v-list-item>
+                    </template>
+                    <span>
                         {{
-                            $t('queryShowConfirm', { action: shouldShowConfirm ? 'Hide' : 'Show' })
+                            $t('info.queryShowConfirm', {
+                                action: shouldShowConfirm ? 'Hide' : 'Show',
+                            })
                         }}
-                    </v-list-item-title>
-                </v-list-item>
+                    </span>
+                </v-tooltip>
                 <!-- TODO: Open modal to configure query max-rows and something more? -->
                 <v-list-item dense link>
                     <v-list-item-title class="color text-text">
@@ -129,17 +151,31 @@
             ref="runConfirmDialog"
             :title="$t('confirmations.runQuery')"
             type="run"
-            :smallInfo="$t('info.disableConfirmGuide')"
-            :onSave="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
+            :onSave="confirmRunning"
             minBodyWidth="768px"
         >
             <template v-slot:body-prepend>
-                <!-- TODO: Replace with monaco editor with readonly mode props -->
-                <div class="mb-4 sql-code-wrapper pa-4">
-                    <code class="mariadb-code-style">
-                        {{ selectedQueryTxt ? selectedQueryTxt : queryTxt }}
-                    </code>
+                <div class="mb-4 sql-code-wrapper pa-2">
+                    <readonly-query-editor
+                        :value="selectedQueryTxt ? selectedQueryTxt : queryTxt"
+                        class="readonly-editor fill-height"
+                        readOnly
+                        :options="{
+                            fontSize: 10,
+                            contextmenu: false,
+                        }"
+                    />
                 </div>
+            </template>
+            <template v-slot:action-prepend>
+                <v-checkbox
+                    v-model="dontShowConfirm"
+                    class="pa-0 ma-0"
+                    :label="$t('dontAskMeAgain')"
+                    color="primary"
+                    hide-details
+                />
+                <v-spacer />
             </template>
         </confirm-dialog>
     </v-toolbar>
@@ -161,10 +197,12 @@
 
 import { mapActions, mapState, mapMutations } from 'vuex'
 import ConnectionManager from './ConnectionManager'
+import QueryEditor from '@/components/QueryEditor'
 export default {
     name: 'toolbar-container',
     components: {
         ConnectionManager,
+        'readonly-query-editor': QueryEditor,
     },
     props: {
         isFullScreen: { type: Boolean, required: true },
@@ -174,6 +212,7 @@ export default {
     data() {
         return {
             shouldShowConfirm: true,
+            dontShowConfirm: false,
         }
     },
     computed: {
@@ -215,7 +254,14 @@ export default {
         },
         async handleRun(mode) {
             if (!this.shouldShowConfirm) await this.onRun(mode)
-            else this.$refs.runConfirmDialog.open()
+            else {
+                this.dontShowConfirm = false // clear checkbox state
+                this.$refs.runConfirmDialog.open()
+            }
+        },
+        async confirmRunning() {
+            await this.onRun(this.selectedQueryTxt ? 'selected' : 'all')
+            if (this.dontShowConfirm) this.shouldShowConfirm = false
         },
         /**
          * @param {String} mode Mode to execute query: All or selected
@@ -244,5 +290,18 @@ export default {
 }
 .sql-code-wrapper {
     background-color: $reflection;
+    height: 300px;
+}
+::v-deep .readonly-editor {
+    .overflow-guard {
+        .monaco-editor,
+        .monaco-editor-background,
+        .monaco-editor .inputarea.ime-input {
+            background-color: #e8eef1;
+        }
+        .margin {
+            background-color: #e8eef1;
+        }
+    }
 }
 </style>
