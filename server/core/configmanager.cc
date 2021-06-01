@@ -228,8 +228,18 @@ void ConfigManager::sync()
                 catch (const ConfigManager::Exception& e)
                 {
                     MXS_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
-                              "is in an indeterminate state. Restart MaxScale to restore the configuration "
-                              "to a known state. The error that caused the failure was: %s", e.what());
+                              "is in an indeterminate state. The error that caused the failure was: %s",
+                              e.what());
+
+                    if (discard_config())
+                    {
+                        MXS_ALERT("Aborting the MaxScale process...");
+                        raise(SIGABRT);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Cached configuration was not removed, cannot safely abort the process.");
+                    }
                 }
 
                 // Regardless of what happens, re-calculate the current configuration and update the version.
@@ -299,21 +309,7 @@ ConfigManager::Startup ConfigManager::process_cached_config()
     catch (const ConfigManager::Exception& e)
     {
         MXS_ERROR("Failed to apply cached configuration: %s", e.what());
-        std::string old_name = dynamic_config_filename();
-        std::string new_name = old_name + ".bad-config";
-
-        if (rename(old_name.c_str(), new_name.c_str()) == 0)
-        {
-            MXS_ERROR("Discarding bad cached configuration and using static configuration files."
-                      " A copy of the bad cached configuration is stored at: %s", new_name.c_str());
-            status = Startup::RESTART;
-        }
-        else
-        {
-            MXS_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
-                      old_name.c_str(), errno, mxs_strerror(errno));
-            status = Startup::ERROR;
-        }
+        status = discard_config() ? Startup::RESTART : Startup::ERROR;
 
         // Reset the current configuration to signal that it must be recreated in the next process_config call
         m_current_config.reset();
@@ -421,6 +417,47 @@ void ConfigManager::save_config(const std::string& payload)
     {
         throw error("Failed to save configuration to disk: ", errno, ", ", mxb_strerror(errno));
     }
+}
+
+bool ConfigManager::discard_config()
+{
+    bool discarded = false;
+    std::string old_name = dynamic_config_filename();
+    std::string new_name = old_name + ".bad-config";
+
+    if (rename(old_name.c_str(), new_name.c_str()) == 0)
+    {
+        MXS_ERROR("Renamed cached configuration, using static configuration on next startup. "
+                  "A copy of the bad cached configuration is stored at: %s", new_name.c_str());
+        discarded = true;
+    }
+    else
+    {
+        if (errno == ENOENT)
+        {
+            // If the file doesn't exist, this means we're attempting to sync with the cluster using the
+            // static configuration. If this transition fails, we must not trigger a restart as that'll cause
+            // an endless restart loop.
+        }
+        else
+        {
+            MXS_ALERT("Failed to rename cached configuration file at '%s': %d, %s.",
+                      old_name.c_str(), errno, mxs_strerror(errno));
+
+            if (unlink(old_name.c_str()) == 0)
+            {
+                MXS_ERROR("Removed cached configuration, using static configuration on next startup.");
+                discarded = true;
+            }
+            else
+            {
+                MXS_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
+                          old_name.c_str(), errno, mxs_strerror(errno));
+            }
+        }
+    }
+
+    return discarded;
 }
 
 mxb::Json ConfigManager::create_config(int64_t version)
