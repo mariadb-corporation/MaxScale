@@ -28,8 +28,8 @@ describe(name, function () {
     let mxs;
 
     before(async function () {
-        mng = await test.MDB.create(test.MngMongo, name);
-        mxs = await test.MDB.create(test.MxsMongo, name);
+        mng = await test.MDB.create(test.MngMongo);
+        mxs = await test.MDB.create(test.MxsMongo);
     });
 
     async function delete_all () {
