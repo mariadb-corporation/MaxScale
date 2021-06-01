@@ -27,30 +27,22 @@ describe(name, function () {
     let mng;
     let mxs;
 
-    async function delete_all() {
-        await mng.deleteAll("cars");
-        await mxs.deleteAll("cars");
+    async function delete_cars() {
+        await mng.delete_cars();
+        await mxs.delete_cars();
     }
 
-    async function insert_lots(db) {
-        const cars = db.collection("cars");
-
-        var doc = JSON.parse(fs.readFileSync("test/cars.json", "utf8"));
-        var docs = doc.cars;
-
-        const options = { ordered: true };
-        const result = await cars.insertMany(docs, options);
-
-        return result;
+    async function insert_cars() {
+        await mng.insert_cars();
+        await mxs.insert_cars();
     }
 
     before(async function () {
         mng = await test.MDB.create(test.MngMongo, name);
         mxs = await test.MDB.create(test.MxsMongo, name);
 
-        await delete_all();
-        await insert_lots(mng.db);
-        await insert_lots(mxs.db);
+        await delete_cars();
+        await insert_cars();
     });
 
     async function find_one(db) {

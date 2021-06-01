@@ -47,6 +47,7 @@ var error = {
     COMMAND_FAILED: 125
 };
 
+const fs = require('fs');
 const mariadb = require('mariadb');
 const mongodb = require('mongodb')
 const assert = require('assert');
@@ -215,6 +216,21 @@ class MDB {
         }
 
         return rv;
+    }
+
+    async delete_cars() {
+        await this.deleteAll("cars");
+    }
+
+    async insert_cars() {
+        const cars = this.db.collection("cars");
+
+        var doc = JSON.parse(fs.readFileSync("test/cars.json", "utf8"));
+        var docs = doc.cars;
+
+        const options = { ordered: true };
+
+        return await cars.insertMany(docs, options);
     }
 };
 

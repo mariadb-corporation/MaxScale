@@ -21,62 +21,134 @@ const name = 'lib-update';
 describe(name, function () {
     this.timeout(test.timeout);
 
+    let mng;
     let mxs;
-    let collection;
-    const N = 20;
+
+    async function delete_cars() {
+        await mng.delete_cars();
+        await mxs.delete_cars();
+    }
+
+    async function insert_cars() {
+        await mng.insert_cars();
+        await mxs.insert_cars();
+    }
 
     before(async function () {
-        mxs = await test.MDB.create(test.MxsMongo);
+        mng = await test.MDB.create(test.MngMongo, name);
+        mxs = await test.MDB.create(test.MxsMongo, name);
 
-        const database = mxs.db;
-        collection = database.collection(name);
-
-        var documents = [];
-
-        for (var i = 0; i < N; ++i)
-        {
-            var doc = { field: i };
-            documents.push(doc);
-        }
-
-        const result = await collection.insertMany(documents);
-
-        assert.strictEqual(result.insertedCount, documents.length, "Should be able to insert documents.");
+        await delete_cars();
+        await insert_cars();
     });
 
-    it('$set', async function () {
+    async function update_one(db) {
+        const cars = db.collection("cars");
 
         const filter = {
-            field: Math.round(N/2)
+            Make: "Toyota"
         };
 
         const update = {
             "$set": {
-                field: N + 1
+                Make: "Toyoda"
             }
         };
 
-        var result;
+        return await cars.updateOne(filter, update);
+    }
 
-        result = await collection.updateOne(filter, update);
-        assert.strictEqual(result.matchedCount, 1);
+    async function find_one(db) {
+        const cars = db.collection("cars");
 
-        var doc = await collection.findOne({field: N + 1});
-        assert(doc);
-        assert.strictEqual(doc.field, N + 1);
+        const filter = {
+            Make: "Toyoda"
+        };
 
-        update["$set"].field = N + 2;
-        result = await collection.updateMany({}, update);
-        assert.strictEqual(result.modifiedCount, N);
+        return await cars.findOne(filter);
+    }
 
-        var cursor = collection.find();
+    it('Can $set on one', async function () {
+        var rv1 = await update_one(mng.db);
+        var rv2 = await update_one(mxs.db);
 
-        await cursor.forEach(function(doc) {
-            assert.strictEqual(doc.field, N + 2);
-        });
+        assert.equal(rv1.matchedCount, 1);
+        assert.equal(rv2.matchedCount, 1);
+
+        var car1 = await find_one(mng.db);
+        var car2 = await find_one(mxs.db);
+
+        assert.deepEqual(car1, car2);
+    });
+
+    async function find_many(db, make) {
+        const cars = db.collection("cars");
+
+        const filter = {
+            Make: make
+        };
+
+        return await cars.find(filter);
+    }
+
+    async function update_many(db, from, to) {
+        const cars = db.collection("cars");
+
+        const filter = {
+            Make: from
+        };
+
+        const update = {
+            "$set": {
+                Make: to
+            }
+        };
+
+        return await cars.updateMany(filter, update);
+    }
+
+    it('Can $set on many', async function () {
+        const toyota = "Toyota";
+        const toyoda = "Toyoda";
+
+        // Let's change all "Toyota" to "Toyoda"
+        var rv1 = await update_many(mng.db, toyota, toyoda);
+        var rv2 = await update_many(mxs.db, toyota, toyoda);
+
+        // More than 1 should be changed.
+        assert.notEqual(rv1.matchedCount, 0);
+        assert.notEqual(rv1.matchedCount, 1);
+        assert.equal(rv2.matchedCount, rv1.matchedCount);
+
+        var cursor1 = await find_many(mng.db, toyoda);
+        var cursor2 = await find_many(mxs.db, toyoda);
+
+        var count1 = await cursor1.count();
+        var count2 = await cursor2.count();
+
+        assert.notEqual(count1, 0);
+        assert.equal(count2, count1);
+
+        // Let's change "Toyoda" back to "Toyota"
+        var rv1 = await update_many(mng.db, toyoda, toyota);
+        var rv2 = await update_many(mxs.db, toyoda, toyota);
+
+        var cursor1 = await find_many(mng.db, toyoda);
+        var cursor2 = await find_many(mxs.db, toyoda);
+
+        var count1 = await cursor1.count();
+        var count2 = await cursor2.count();
+
+        // No "Toyoda"s should be found.
+        assert.equal(count1, 0);
+        assert.equal(count2, count2);
     });
 
     after(function () {
+        if (mng) {
+            mng.close();
+        }
+
         if (mxs) {
             mxs.close();
         }
