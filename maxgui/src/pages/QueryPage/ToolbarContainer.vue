@@ -21,7 +21,7 @@
                     :loading="loading_query_result"
                     :disabled="!queryTxt || !active_conn_state"
                     v-on="on"
-                    @click="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
+                    @click="() => handleRun(selectedQueryTxt ? 'selected' : 'all')"
                 >
                     <v-icon size="16" class="mr-2">
                         $vuetify.icons.running
@@ -86,6 +86,62 @@
         <!-- TODO: ADD gear icon for query settings.
              e.g. confirmation before sending query, configure query max rows
         -->
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn id="setting-btn" class="ml-2" icon small v-on="on">
+                    <v-icon size="16" color="primary">
+                        $vuetify.icons.settings
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
+        </v-tooltip>
+        <v-menu
+            transition="slide-y-transition"
+            offset-y
+            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+            activator="#setting-btn"
+            :max-width="350"
+            :menuMaxWidth="400"
+        >
+            <v-list>
+                <v-list-item dense link @click="shouldShowConfirm = !shouldShowConfirm">
+                    <v-list-item-title class="color text-text">
+                        {{
+                            $t('queryShowConfirm', { action: shouldShowConfirm ? 'Hide' : 'Show' })
+                        }}
+                    </v-list-item-title>
+                </v-list-item>
+                <!-- TODO: Open modal to configure query max-rows and something more? -->
+                <v-list-item dense link>
+                    <v-list-item-title class="color text-text">
+                        {{ $t('queryConfig') }}
+                    </v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
+        <confirm-dialog
+            v-if="shouldShowConfirm"
+            ref="runConfirmDialog"
+            :title="$t('confirmations.runQuery')"
+            type="run"
+            :smallInfo="$t('info.disableConfirmGuide')"
+            :onSave="() => onRun(selectedQueryTxt ? 'selected' : 'all')"
+            minBodyWidth="768px"
+        >
+            <template v-slot:body-prepend>
+                <!-- TODO: Replace with monaco editor with readonly mode props -->
+                <div class="mb-4 sql-code-wrapper pa-4">
+                    <code class="mariadb-code-style">
+                        {{ selectedQueryTxt ? selectedQueryTxt : queryTxt }}
+                    </code>
+                </div>
+            </template>
+        </confirm-dialog>
     </v-toolbar>
 </template>
 
@@ -115,6 +171,11 @@ export default {
         queryTxt: { type: String, required: true },
         selectedQueryTxt: { type: String, required: true },
     },
+    data() {
+        return {
+            shouldShowConfirm: true,
+        }
+    },
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
@@ -124,7 +185,14 @@ export default {
             loading_query_result: state => state.query.loading_query_result,
         }),
     },
-
+    watch: {
+        shouldShowConfirm(v) {
+            localStorage.setItem('show_query_confirm', v)
+        },
+    },
+    mounted() {
+        this.handleGetPreferredQueryConfirm()
+    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
@@ -135,6 +203,19 @@ export default {
         }),
         async handleSelectDb(db) {
             await this.useDb(db)
+        },
+        handleGetPreferredQueryConfirm() {
+            const preferredQueryConfirm =
+                localStorage.getItem('show_query_confirm') === 'true' ? true : false
+
+            // Default to true
+            if (this.$typy(preferredQueryConfirm).isNull)
+                localStorage.setItem('show_query_confirm', true)
+            else this.shouldShowConfirm = preferredQueryConfirm
+        },
+        async handleRun(mode) {
+            if (!this.shouldShowConfirm) await this.onRun(mode)
+            else this.$refs.runConfirmDialog.open()
         },
         /**
          * @param {String} mode Mode to execute query: All or selected
@@ -160,5 +241,8 @@ export default {
         height: 16px !important;
         width: 16px !important;
     }
+}
+.sql-code-wrapper {
+    background-color: $reflection;
 }
 </style>

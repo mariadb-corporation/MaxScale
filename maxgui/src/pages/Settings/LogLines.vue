@@ -62,7 +62,7 @@ export default {
     },
 
     methods: {
-        codeClasses: () => 'log-line color text-code-color text-no-wrap',
+        codeClasses: () => 'log-line mariadb-code-style',
         logPriorityColorClasses: level =>
             `color text-${level} ${level === 'alert' ? 'font-weight-bold' : ''}`,
     },
@@ -89,15 +89,5 @@ export default {
 
 pre {
     white-space: pre-wrap;
-}
-code {
-    background-color: transparent;
-    box-shadow: none;
-    line-height: 1.5rem;
-    padding: 0px 5px 0 10px;
-    &::before,
-    &::after {
-        content: none;
-    }
 }
 </style>

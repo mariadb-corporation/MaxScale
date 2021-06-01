@@ -37,8 +37,10 @@
                                 class="editor pt-2 pl-2"
                                 :cmplList="getDbCmplList"
                                 @on-selection="selectedQueryTxt = $event"
-                                @onCtrlEnter="() => $refs.toolbarContainer.onRun('all')"
-                                @onCtrlShiftEnter="() => $refs.toolbarContainer.onRun('selected')"
+                                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
+                                @onCtrlShiftEnter="
+                                    () => $refs.toolbarContainer.handleRun('selected')
+                                "
                             />
                         </template>
                         <template slot="pane-right">

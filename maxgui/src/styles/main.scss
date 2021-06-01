@@ -358,6 +358,17 @@ input:-webkit-autofill:active {
 .mariadb-v-list.theme--light.v-list {
     background: unset;
 }
+.mariadb-code-style {
+    white-space: nowrap !important;
+    background-color: transparent !important;
+    box-shadow: none;
+    line-height: 1.5rem;
+    padding: 0px 5px 0 10px !important;
+    &::before,
+    &::after {
+        content: none;
+    }
+}
 //-------------------------------------------------Typography
 h1 {
     font-size: map-deep-get($headings, 'h1', 'size');

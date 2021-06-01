@@ -6,6 +6,7 @@
         :onClose="onCloseHandler"
         :title="title"
         :saveText="type"
+        :minBodyWidth="minBodyWidth"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
@@ -13,6 +14,7 @@
                     {{ $t(`confirmations.${type}`, { targetId: item.id }) }}
                 </span>
             </p>
+            <slot name="body-prepend"></slot>
             <small>
                 {{ smallInfo }}
             </small>
@@ -44,6 +46,7 @@ export default {
         onCancel: { type: Function },
         item: { type: Object, default: null },
         smallInfo: { type: String, default: '' },
+        minBodyWidth: { type: String, default: '466px' },
     },
     data() {
         return {
