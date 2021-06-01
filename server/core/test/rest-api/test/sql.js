@@ -13,7 +13,7 @@ function check_resultset(res, sql) {
 
   for (result of res.data.attributes.results) {
     if (result.data) {
-      expect(result).to.be.an("object").that.has.keys("data", "fields");
+      expect(result).to.be.an("object").that.has.keys("data", "fields", "complete");
       expect(result.fields).to.be.an("array").that.is.not.empty;
       expect(result.data).to.be.an("array").that.is.not.empty;
 
