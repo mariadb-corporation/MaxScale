@@ -157,7 +157,7 @@ private:
     void      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
 
-    const std::string& cluster_name() const;
+    const std::string& get_cluster() const;
 
     void    connect();
     void    verify_sync();
@@ -183,6 +183,9 @@ private:
     bool         m_row_exists {false};
     SERVER*      m_server {nullptr};
     uint32_t     m_dcid {0};
+
+    // The current cluster being used.
+    std::string m_cluster;
 
     bool m_log_sync_error {true};
     bool m_log_stale_cluster {true};

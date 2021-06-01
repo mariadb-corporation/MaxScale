@@ -174,8 +174,9 @@ void ConfigManager::queue_sync()
 void ConfigManager::sync()
 {
     mxb::LogScope scope(SCOPE_NAME);
+    m_cluster = get_cluster();
 
-    if (!cluster_name().empty())
+    if (!m_cluster.empty())
     {
         int64_t next_version = m_version;
 
@@ -246,10 +247,10 @@ bool ConfigManager::load_cached_config()
     mxb::LogScope scope(SCOPE_NAME);
     bool have_config = false;
     std::string filename = dynamic_config_filename();
-    const std::string& cluster = cluster_name();
+    m_cluster = get_cluster();
 
     // Check only if the file exists. If it does, try to load it.
-    if (!cluster.empty() && access(filename.c_str(), F_OK) == 0)
+    if (!m_cluster.empty() && access(filename.c_str(), F_OK) == 0)
     {
         mxb::Json new_json(mxb::Json::Type::NONE);
 
@@ -258,7 +259,7 @@ bool ConfigManager::load_cached_config()
             std::string cluster_name = new_json.get_string(CN_CLUSTER_NAME);
             int64_t version = new_json.get_int(CN_VERSION);
 
-            if (cluster_name == cluster)
+            if (cluster_name == m_cluster)
             {
                 MXS_NOTICE("Using cached configuration for cluster '%s', version %ld: %s",
                            cluster_name.c_str(), version, filename.c_str());
@@ -270,7 +271,7 @@ bool ConfigManager::load_cached_config()
             {
                 MXS_WARNING("Found cached configuration for cluster '%s' when configured "
                             "to use cluster '%s', ignoring the cached configuration: %s",
-                            cluster_name.c_str(), cluster.c_str(), filename.c_str());
+                            cluster_name.c_str(), m_cluster.c_str(), filename.c_str());
             }
         }
     }
@@ -325,8 +326,9 @@ bool ConfigManager::start()
 {
     mxb::LogScope scope(SCOPE_NAME);
     bool ok = true;
+    m_cluster = get_cluster();
 
-    if (!cluster_name().empty())
+    if (!m_cluster.empty())
     {
         try
         {
@@ -346,7 +348,7 @@ bool ConfigManager::start()
 void ConfigManager::rollback()
 {
     mxb::LogScope scope(SCOPE_NAME);
-    if (!cluster_name().empty())
+    if (!m_cluster.empty())
     {
         m_conn.cmd("ROLLBACK");
     }
@@ -355,7 +357,7 @@ void ConfigManager::rollback()
 bool ConfigManager::commit()
 {
     mxb::LogScope scope(SCOPE_NAME);
-    if (cluster_name().empty())
+    if (m_cluster.empty())
     {
         return true;
     }
@@ -395,7 +397,7 @@ bool ConfigManager::commit()
 mxb::Json ConfigManager::to_json() const
 {
     mxb::Json obj;
-    bool enabled = !cluster_name().empty() && m_current_config.valid();
+    bool enabled = !get_cluster().empty() && m_current_config.valid();
     obj.set_bool(CN_ENABLED, enabled);
 
     if (enabled)
@@ -439,9 +441,8 @@ mxb::Json ConfigManager::create_config(int64_t version)
     rval.set_object(CN_CONFIG, arr);
     rval.set_int(CN_VERSION, version);
 
-    const std::string& cluster = cluster_name();
-    mxb_assert(!cluster.empty());
-    rval.set_string(CN_CLUSTER_NAME, cluster);
+    mxb_assert(!m_cluster.empty());
+    rval.set_string(CN_CLUSTER_NAME, m_cluster);
 
     config_set_mask_passwords(mask);
     return rval;
@@ -764,7 +765,7 @@ std::string ConfigManager::dynamic_config_filename() const
     return std::string(mxs::datadir()) + "/maxscale-config.json";
 }
 
-const std::string& ConfigManager::cluster_name() const
+const std::string& ConfigManager::get_cluster() const
 {
     return mxs::Config::get().config_sync_cluster;
 }
@@ -772,7 +773,7 @@ const std::string& ConfigManager::cluster_name() const
 SERVER* ConfigManager::get_server() const
 {
     SERVER* rval = nullptr;
-    auto monitor = MonitorManager::find_monitor(cluster_name().c_str());
+    auto monitor = MonitorManager::find_monitor(m_cluster.c_str());
     mxb_assert(monitor);
 
     for (const auto& server : monitor->servers())
@@ -793,7 +794,7 @@ void ConfigManager::connect()
 
     if (!server)
     {
-        throw error("No valid servers in cluster '", cluster_name(),
+        throw error("No valid servers in cluster '", m_cluster,
                     "', cannot perform configuration update.");
     }
     else if (server != m_server)
@@ -805,8 +806,6 @@ void ConfigManager::connect()
 
     if (!m_conn.is_open() || !m_conn.ping())
     {
-        auto monitor = MonitorManager::find_monitor(cluster_name().c_str());
-        mxb_assert(monitor);
         const auto& config = mxs::Config::get();
         auto& cfg = m_conn.connection_settings();
 
@@ -836,7 +835,7 @@ void ConfigManager::verify_sync()
         throw error("Failed to start transaction: ", m_conn.error());
     }
 
-    auto sql = sql_select_for_update(cluster_name());
+    auto sql = sql_select_for_update(m_cluster);
     auto res = m_conn.query(sql);
 
     if (m_conn.errornum() == ER_NO_SUCH_TABLE)
@@ -879,7 +878,7 @@ void ConfigManager::update_config(const std::string& payload)
 {
     auto sql = m_row_exists ? sql_update : sql_insert;
 
-    if (!m_conn.cmd(sql(cluster_name(), m_version, payload)))
+    if (!m_conn.cmd(sql(m_cluster, m_version, payload)))
     {
         throw error("Failed to update: ", m_conn.error());
     }
@@ -895,7 +894,7 @@ mxb::Json ConfigManager::fetch_config()
     connect();
 
     mxb::Json config(mxb::Json::Type::NONE);
-    auto res = m_conn.query(sql_select_version(cluster_name()));
+    auto res = m_conn.query(sql_select_version(m_cluster));
 
     if (!res)
     {
@@ -935,7 +934,7 @@ mxb::Json ConfigManager::fetch_config()
 
     m_log_stale_cluster = true;
 
-    res = m_conn.query(sql_select_config(cluster_name(), m_version));
+    res = m_conn.query(sql_select_config(m_cluster, m_version));
 
     if (!res)
     {
