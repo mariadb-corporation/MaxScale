@@ -1104,22 +1104,6 @@ int TestConnections::find_connected_slave1()
     return current_slave;
 }
 
-int TestConnections::stop_maxscale(int m)
-{
-    auto mxs = my_maxscale(m);
-    int res = mxs->stop_maxscale();
-    mxs->expect_running_status(false);
-    return res;
-}
-
-int TestConnections::start_maxscale(int m)
-{
-    auto mxs = my_maxscale(m);
-    int res = mxs->start_maxscale();
-    mxs->expect_running_status(true);
-    return res;
-}
-
 bool TestConnections::stop_all_maxscales()
 {
     bool rval = true;

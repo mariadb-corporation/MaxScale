@@ -439,6 +439,13 @@ mxt::TestLogger& Maxscales::log() const
     return m_shared.log;
 }
 
+bool Maxscales::start_and_check_started()
+{
+    int res = start_maxscale();
+    expect_running_status(true);
+    return res == 0;
+}
+
 bool Maxscales::stop_and_check_stopped()
 {
     int res = stop_maxscale();

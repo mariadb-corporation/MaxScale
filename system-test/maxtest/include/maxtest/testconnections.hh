@@ -348,8 +348,6 @@ public:
     void check_current_operations(int value);
     void check_current_connections(int value);
 
-    int  stop_maxscale(int m = 0);
-    int  start_maxscale(int m = 0);
     bool stop_all_maxscales();
 
     /**

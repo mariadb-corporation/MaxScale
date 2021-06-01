@@ -161,10 +161,10 @@ int main(int argc, char* argv[])
     // Intermediate cleanup; delete contents from table, turn on transaction replay, restart MaxScale.
     test.try_query(pConn, "DELETE FROM mxs2512");
     mysql_close(pConn);
-    test.stop_maxscale();
+    test.maxscales->stop_and_check_stopped();
     const char* zSed = "sed -i -e 's/transaction_replay=false/transaction_replay=true/' /etc/maxscale.cnf";
     test.add_result(test.maxscales->ssh_node(0, zSed, true), "Could not tweak /etc/maxscale.cnf");
-    test.start_maxscale();
+    test.maxscales->start_and_check_started();
 
     // Test with 'transaction_replay=true' => should succeed.
     cout << "Testing with 'transaction_replay=true', SELECT should succeed." << endl;

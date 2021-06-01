@@ -238,8 +238,7 @@ void start_maxscale_with_local_address(TestConnections& test,
     command += "/etc/maxscale.cnf";
 
     test.maxscales->ssh_node(0, command.c_str(), true);
-
-    test.start_maxscale();
+    test.maxscales->start_and_check_started();
 }
 
 void test_connecting(TestConnections& test,
@@ -276,6 +275,7 @@ void test_connecting(TestConnections& test,
 
 void run_test(TestConnections& test, const vector<string>& ips)
 {
+    auto* mxs = test.maxscales;
     test.maxscales->connect();
 
     string ip1 = ips[0];
@@ -305,7 +305,7 @@ void run_test(TestConnections& test, const vector<string>& ips)
     test_connecting(test, zUser2, zPassword2, ip2.c_str(), false);
 
     test.maxscales->disconnect();
-    test.stop_maxscale();
+    mxs->stop_and_check_stopped();
 
     test.tprintf("\n");
     test.tprintf("Testing with local_address=%s; alice should be able to access, bob not.",
@@ -319,7 +319,7 @@ void run_test(TestConnections& test, const vector<string>& ips)
     test_connecting(test, zUser2, zPassword2, ip2.c_str(), false);
 
     test.maxscales->disconnect();
-    test.stop_maxscale();
+    mxs->stop_and_check_stopped();
 
     if (ips.size() > 1)
     {

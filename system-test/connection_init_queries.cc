@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     string delete_file_cmd = "rm -f " + filepath;
 
     test.maxscales->ssh_node_f(0, true, "%s", create_file_cmd.c_str());
-    test.start_maxscale();
+    test.maxscales->start_and_check_started();
     test.maxscales->wait_for_monitor();
     auto conn = test.maxscales->open_rwsplit_connection();
 
