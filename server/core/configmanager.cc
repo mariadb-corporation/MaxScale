@@ -14,8 +14,9 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/cn_strings.hh>
-#include <maxscale/paths.hh>
 #include <maxscale/json.hh>
+#include <maxscale/paths.hh>
+#include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/json.hh>
 
@@ -28,6 +29,8 @@
 #include <set>
 #include <fstream>
 #include <mysqld_error.h>
+
+using namespace std::chrono;
 
 namespace
 {
@@ -144,8 +147,10 @@ ConfigManager::~ConfigManager()
 
 void ConfigManager::start_sync()
 {
+    auto ms = duration_cast<milliseconds>(mxs::Config::get().config_sync_interval);
+
     m_dcid = m_worker->delayed_call(
-        1000, [this](auto action) {
+        ms.count(), [this](auto action) {
             if (action == mxb::Worker::Call::EXECUTE)
             {
                 sync();
@@ -802,13 +807,12 @@ void ConfigManager::connect()
     {
         auto monitor = MonitorManager::find_monitor(cluster_name().c_str());
         mxb_assert(monitor);
-        const auto& params = monitor->parameters();
+        const auto& config = mxs::Config::get();
         auto& cfg = m_conn.connection_settings();
 
-        // TODO: Create separate configurations for these
-        cfg.user = params.get_string(CN_USER);
-        cfg.password = params.get_string(CN_PASSWORD);
-        cfg.timeout = params.get_integer("backend_connect_timeout");
+        cfg.user = config.config_sync_user;
+        cfg.password = mxs::decrypt_password(config.config_sync_password);
+        cfg.timeout = config.config_sync_timeout.count();
         cfg.ssl = server->ssl_config();
 
         if (!m_conn.open(server->address(), server->port()))

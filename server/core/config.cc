@@ -167,6 +167,23 @@ bool Config::Specification::validate(const ConfigParameters& params,
         }
     }
 
+    // The validity of config_sync_cluster is checked after the monitors have been allocated
+    if (!s_config_sync_cluster.get(params).empty())
+    {
+        if (s_config_sync_user.get(params).empty())
+        {
+            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+                      s_config_sync_user.name().c_str(), s_config_sync_cluster.name().c_str());
+            validated = false;
+        }
+        else if (s_config_sync_password.get(params).empty())
+        {
+            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+                      s_config_sync_password.name().c_str(), s_config_sync_cluster.name().c_str());
+            validated = false;
+        }
+    }
+
     return validated;
 }
 
@@ -192,6 +209,22 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
     {
         MXS_ERROR("The value of '%s' is not the name of a monitor: %s.",
                   CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
+    }
+
+    if (!cluster.empty())
+    {
+        if (s_config_sync_user.get(pJson).empty())
+        {
+            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+                      s_config_sync_user.name().c_str(), s_config_sync_cluster.name().c_str());
+            ok = false;
+        }
+        if (s_config_sync_password.get(pJson).empty())
+        {
+            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+                      s_config_sync_password.name().c_str(), s_config_sync_cluster.name().c_str());
+            ok = false;
+        }
     }
 
     return ok;
@@ -534,6 +567,32 @@ config::ParamString Config::s_config_sync_cluster(
     " If left empty (i.e. value is \"\"), synchronization is not done.",
     "", mxs::config::Param::AT_RUNTIME);
 
+config::ParamString Config::s_config_sync_user(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_USER,
+    "User account used for configuration synchronization.",
+    "", mxs::config::Param::AT_RUNTIME);
+
+config::ParamString Config::s_config_sync_password(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_PASSWORD,
+    "Password for the user used for configuration synchronization.",
+    "", mxs::config::Param::AT_RUNTIME);
+
+config::ParamSeconds Config::s_config_sync_timeout(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_TIMEOUT,
+    "Timeout for the configuration synchronization operations.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(10), mxs::config::Param::AT_RUNTIME);
+
+config::ParamSeconds Config::s_config_sync_interval(
+    &Config::s_specification,
+    CN_CONFIG_SYNC_INTERVAL,
+    "How often to synchronize the configuration.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(5));
+
 config::ParamBool Config::s_log_warn_super_user(
     &Config::s_specification,
     CN_LOG_WARN_SUPER_USER,
@@ -675,6 +734,10 @@ Config::Config(int argc, char** argv)
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
     add_native(&Config::config_sync_cluster, &s_config_sync_cluster);
+    add_native(&Config::config_sync_user, &s_config_sync_user);
+    add_native(&Config::config_sync_password, &s_config_sync_password);
+    add_native(&Config::config_sync_timeout, &s_config_sync_timeout);
+    add_native(&Config::config_sync_interval, &s_config_sync_interval);
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
@@ -4124,6 +4187,11 @@ json_t* config_maxscale_to_json(const char* host)
     const mxs::Config& cnf = mxs::Config::get();
     // This will dump all parameters defined using the new configuration mechanism.
     cnf.fill(param);
+
+    if (config_mask_passwords())
+    {
+        json_object_set_new(param, CN_CONFIG_SYNC_PASSWORD, json_string("*****"));
+    }
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
