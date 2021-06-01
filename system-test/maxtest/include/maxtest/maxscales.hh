@@ -1,13 +1,12 @@
 #pragma once
 
+#include <maxtest/ccdefs.hh>
+
 #include <functional>
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <maxtest/ccdefs.hh>
 #include <maxtest/mariadb_func.hh>
-#include <maxtest/mariadb_nodes.hh>
 #include <maxtest/nodes.hh>
 
 namespace maxtest
@@ -16,7 +15,7 @@ class MariaDB;
 class MaxScale;
 }
 
-class Maxscales : private Nodes
+class Maxscales
 {
 public:
     enum service
@@ -262,11 +261,14 @@ private:
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
 
+    std::unique_ptr<mxt::VMNode>   m_vmnode;
     std::unique_ptr<mxt::MaxScale> m_maxscale_b;
 
     std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
+    mxt::SharedData& m_shared;
 
     mxt::TestLogger& log() const;
+    bool             verbose() const;
 };
 
 class TestConnections;

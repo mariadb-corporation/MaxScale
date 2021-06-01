@@ -202,8 +202,6 @@ protected:
     const char* access_sudo(int i) const;
     const char* sshkey(int i) const;
 
-    virtual bool init_ssh_masters();
-
     mxt::VMNode*       node(int i);
     const mxt::VMNode* node(int i) const;
 
