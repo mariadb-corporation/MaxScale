@@ -25,6 +25,21 @@ html {
     //dashboard "responsive". preserve ratio
     overflow: auto !important;
 }
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: $field-text;
+    border-radius: 4px;
+    height: 30px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 
 //https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
 .wrapper-container {

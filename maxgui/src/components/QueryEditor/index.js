@@ -62,12 +62,14 @@ import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggle
 */
 
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
-
+import './customStyle.css'
 export default {
     name: 'query-editor',
     props: {
         value: { type: String, required: true },
         cmplList: { type: Array, default: () => [] },
+        readOnly: { type: Boolean, default: false },
+        options: { type: Object, default: () => {} },
     },
 
     model: {
@@ -193,10 +195,16 @@ export default {
                 automaticLayout: true,
                 fontSize: 12,
                 lineNumbersMinChars: 2,
+                minimap: { enabled: false },
                 scrollbar: {
                     verticalScrollbarSize: 10,
                     horizontalScrollbarSize: 10,
                 },
+                overviewRulerLanes: 0,
+                hideCursorInOverviewRuler: true,
+                overviewRulerBorder: false,
+                readOnly: this.readOnly,
+                ...this.options,
             }
 
             this.editor = monaco.editor.create(this.$el, options)
