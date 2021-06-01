@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
 
     TestConnections test(argc, argv);
-    std::string src = test_dir;
+    std::string src = mxt::SOURCE_DIR;
     src += "/mxs1719.json";
     std::string dst = std::string(test.maxscale->access_homedir()) + "/mxs1719.json";
 

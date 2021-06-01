@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(60);
     int chunk_size = 2500000;
     int chunk_num = 5;
-    std::string src_dir = test_dir;
+    std::string src_dir = mxt::SOURCE_DIR;
     std::string masking_rules = src_dir + "/masking/masking_user/masking_rules.json";
     std::string cache_rules = src_dir + "/cache/cache_basic/cache_rules.json";
     std::string fw_rules = src_dir + "/fw";

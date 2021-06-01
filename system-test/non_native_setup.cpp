@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     {
         TestConnections test(argc, argv);
         test.write_node_env_vars();
+        auto test_dir = mxt::SOURCE_DIR;
 
         sleep(3);
         setenv("src_dir", test_dir, 1);

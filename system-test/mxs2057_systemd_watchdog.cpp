@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     TestConnections test {argc, argv};
 
     std::string lua_file("/infinite_loop.lua");
-    std::string from = test_dir + lua_file;
+    std::string from = mxt::SOURCE_DIR + lua_file;
     std::string to = test.maxscale->access_homedir() + lua_file;
 
     test.maxscale->copy_to_node(from.c_str(), to.c_str());

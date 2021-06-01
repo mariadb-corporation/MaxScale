@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     test->tprintf("Creating rules\n");
     test->maxscale->stop();
 
-    sprintf(rules_dir, "%s/fw/", test_dir);
+    sprintf(rules_dir, "%s/fw/", mxt::SOURCE_DIR);
     test->maxscale->copy_fw_rules("rules_actions", rules_dir);
 
     test->set_timeout(60);

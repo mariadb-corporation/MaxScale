@@ -105,7 +105,7 @@ void install_and_start_redis(Maxscales& maxscales)
 
     // This will install memcached as well, but that's ok.
 
-    string path(test_dir);
+    string path(mxt::SOURCE_DIR);
     path += "/cache_install_and_start_storages.sh";
 
     system(path.c_str());

@@ -6,8 +6,9 @@ const TestDefinition test_definitions_arr[] =
 };
 
 const TestDefinition* test_definitions = test_definitions_arr;
-const char* test_dir = "@CMAKE_CURRENT_SOURCE_DIR@";
+
 namespace maxtest
 {
-    const char* test_build_dir = "@CMAKE_CURRENT_BINARY_DIR@";
+const char* const SOURCE_DIR = "@CMAKE_CURRENT_SOURCE_DIR@";
+const char* const BUILD_DIR = "@CMAKE_CURRENT_BINARY_DIR@";
 }

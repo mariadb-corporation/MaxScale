@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 
     sprintf(str,
             "php %s/rwsplit_php_stmt.php %s %d %s %s",
-            test_dir,
+            mxt::SOURCE_DIR,
             Test->maxscale->ip4(),
             Test->maxscale->rwsplit_port,
             Test->maxscale->user_name.c_str(),

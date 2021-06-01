@@ -22,6 +22,7 @@ int set_ssl(MYSQL* conn)
     char client_cert[1024];
     char ca[1024];
 
+    auto test_dir = mxt::SOURCE_DIR;
     sprintf(client_key, "%s/ssl-cert/client-key.pem", test_dir);
     sprintf(client_cert, "%s/ssl-cert/client-cert.pem", test_dir);
     sprintf(ca, "%s/ssl-cert/ca.pem", test_dir);

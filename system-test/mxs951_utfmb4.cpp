@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     auto repl = test.repl;
     auto N = repl->N;
 
-    string source_file = mxb::string_printf("%s/utf64.cnf", test_dir);
+    string source_file = mxb::string_printf("%s/utf64.cnf", mxt::SOURCE_DIR);
     for (int i = 0; i < N; i++)
     {
         repl->copy_to_node(i, source_file.c_str(), "./");
