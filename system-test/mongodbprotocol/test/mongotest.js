@@ -25,8 +25,9 @@ if (maxscale_host == "127.0.0.1") {
     timeout = 60 * 60 * 1000;
 }
 else {
-    // 2000ms is the default.
-    timeout = 2000;
+    // Otherwise 10 seconds. 2 seconds is the default, which is too little for some
+    // of the tests.
+    timeout = 10000;
 }
 
 var config = {

@@ -11,7 +11,11 @@
  * Public License.
  */
 
+// https://docs.mongodb.com/drivers/node/usage-examples/insertOne/
+// https://docs.mongodb.com/drivers/node/usage-examples/insertMany/
+
 const assert = require('assert');
+const fs = require('fs');
 const test = require('./mongotest');
 const mongodb = test.mongodb;
 
@@ -28,6 +32,11 @@ describe(name, function () {
         mxs = await test.MDB.create(test.MxsMongo, name);
     });
 
+    async function delete_all () {
+        await mng.deleteAll("cars");
+        await mxs.deleteAll("cars");
+    }
+
     async function insertOne(db) {
         const cars = db.collection("cars");
 
@@ -38,8 +47,9 @@ describe(name, function () {
         return result;
     }
 
-    // https://docs.mongodb.com/drivers/node/usage-examples/insertOne/
     it('Can insert one document', async function () {
+        await delete_all();
+
         const rv1 = await insertOne(mng.db);
         const rv2 = await insertOne(mxs.db);
 
@@ -62,10 +72,32 @@ describe(name, function () {
         return result;
     }
 
-    // https://docs.mongodb.com/drivers/node/usage-examples/insertMany/
-    it('Can insert many document', async function () {
+    it('Can insert many documents', async function () {
+        await delete_all();
+
         const rv1 = await insertMany(mng.db);
         const rv2 = await insertMany(mxs.db);
+
+        assert.deepEqual(rv1.result, rv2.result);
+    });
+
+    async function insertLots(db) {
+        const cars = db.collection("cars");
+
+        var doc = JSON.parse(fs.readFileSync("test/cars.json", "utf8"));
+        var docs = doc.cars;
+
+        const options = { ordered: true };
+        const result = await cars.insertMany(docs, options);
+
+        return result;
+    }
+
+    it('Can insert lots of documents', async function () {
+        await delete_all();
+
+        const rv1 = await insertLots(mng.db);
+        const rv2 = await insertLots(mxs.db);
 
         assert.deepEqual(rv1.result, rv2.result);
     });
