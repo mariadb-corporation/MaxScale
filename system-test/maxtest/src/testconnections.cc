@@ -86,13 +86,12 @@ static void signal_set(int sig, void (* handler)(int))
     while (errno == EINTR);
 }
 
-static int call_system(const char* command)
+static int call_system(const string& command)
 {
-    int rv = system(command);
-
+    int rv = system(command.c_str());
     if (rv == -1)
     {
-        printf("error: Could not execute '%s'.\n", command);
+        printf("error: Could not execute '%s'.\n", command.c_str());
     }
 
     return rv;
@@ -261,7 +260,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
         string create_logdir_cmd = "mkdir -p ";
         create_logdir_cmd += mxt::BUILD_DIR;
-        create_logdir_cmd += "/LOGS/" + m_test_name;
+        create_logdir_cmd += "/LOGS/" + m_shared.test_name;
         if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
         {
             m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
@@ -468,7 +467,7 @@ int TestConnections::setup_vms()
             string src = string(mxt::SOURCE_DIR) + "/mdbci/add_core_cnf.sh";
             maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
             maxscale->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
-                                  verbose() ? "verbose" : "");
+                                 verbose() ? "verbose" : "");
         }
     }
 
@@ -591,7 +590,7 @@ void TestConnections::read_basic_settings()
     }
 
     // The following settings are final, and not modified by either command line parameters or mdbci.
-    m_no_backend_log_copy = readenv_bool("no_backend_log_copy", false);
+    m_backend_log_copy = !readenv_bool("no_backend_log_copy", false);
     m_mdbci_vm_path = envvar_get_set("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
     m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
     mxb_assert(!m_mdbci_vm_path.empty() && !m_mdbci_config_name.empty());
@@ -610,7 +609,7 @@ bool TestConnections::read_test_info()
     for (int i = 0; test_definitions[i].name; i++)
     {
         auto* test = &test_definitions[i];
-        if (test->name == m_test_name)
+        if (test->name == m_shared.test_name)
         {
             found = test;
             break;
@@ -637,7 +636,7 @@ bool TestConnections::read_test_info()
         m_required_mdbci_labels_str = flatten_stringset(mdbci_labels);
 
         tprintf("Test: '%s', MaxScale config file: '%s', all labels: '%s', mdbci labels: '%s'",
-                m_test_name.c_str(), m_cnf_template_path.c_str(), found->labels,
+                m_shared.test_name.c_str(), m_cnf_template_path.c_str(), found->labels,
                 m_required_mdbci_labels_str.c_str());
 
         if (test_labels.count("BACKEND_SSL") > 0)
@@ -653,7 +652,7 @@ bool TestConnections::read_test_info()
     else
     {
         add_failure("Could not find '%s' in the CMake-generated test definitions array.",
-                    m_test_name.c_str());
+                    m_shared.test_name.c_str());
     }
     return found != nullptr;
 }
@@ -859,71 +858,23 @@ void TestConnections::init_maxscale(int m)
     }
 }
 
-void TestConnections::copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename)
-{
-    auto log_retrive_commands =
-    {
-        "cat /var/lib/mysql/*.err",
-        "cat /var/log/syslog | grep mysql",
-        "cat /var/log/messages | grep mysql"
-    };
-
-    int j = 1;
-
-    for (auto cmd : log_retrive_commands)
-    {
-        auto output = nrepl->ssh_output(cmd, i).output;
-
-        if (!output.empty())
-        {
-            std::ofstream outfile(filename + std::to_string(j++));
-
-            if (outfile)
-            {
-                outfile << output;
-            }
-        }
-    }
-}
-
-int TestConnections::copy_mariadb_logs(MariaDBCluster* nrepl,
-                                       const char* prefix,
-                                       std::vector<std::thread>& threads)
-{
-    int local_result = 0;
-
-    if (nrepl)
-    {
-        for (int i = 0; i < nrepl->N; i++)
-        {
-            // Do not copy MariaDB logs in case of local backend
-            if (strcmp(nrepl->ip4(i), "127.0.0.1") != 0)
-            {
-                char str[4096];
-                sprintf(str, "%s/LOGS/%s/%s%d_mariadb_log",
-                        mxt::BUILD_DIR, m_test_name.c_str(), prefix, i);
-                threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, string(str));
-            }
-        }
-    }
-
-    return local_result;
-}
-
 int TestConnections::copy_all_logs()
 {
     set_timeout(300);
 
-    char str[PATH_MAX + 1];
-    sprintf(str, "mkdir -p %s/LOGS/%s", mxt::BUILD_DIR, m_test_name.c_str());
+    string str = mxb::string_printf("mkdir -p %s/LOGS/%s", mxt::BUILD_DIR, m_shared.test_name.c_str());
     call_system(str);
 
-    std::vector<std::thread> threads;
-
-    if (!m_no_backend_log_copy)
+    if (m_backend_log_copy)
     {
-        copy_mariadb_logs(repl, "node", threads);
-        copy_mariadb_logs(galera, "galera", threads);
+        if (repl)
+        {
+            repl->copy_logs("node");
+        }
+        if (galera)
+        {
+            galera->copy_logs("galera");
+        }
     }
 
     int rv = 0;
@@ -931,11 +882,6 @@ int TestConnections::copy_all_logs()
     if (!m_no_maxscale_log_copy)
     {
         rv = copy_maxscale_logs(0);
-    }
-
-    for (auto& a : threads)
-    {
-        a.join();
     }
 
     return rv;
@@ -948,7 +894,7 @@ int TestConnections::copy_maxscale_logs(double timestamp)
     {
         auto mxs = my_maxscale(i);
         auto func = [this, mxs, i, timestamp]() {
-                mxs->copy_log(i, timestamp, m_test_name);
+                mxs->copy_log(i, timestamp, m_shared.test_name);
                 return true;
             };
         funcs.push_back(move(func));
@@ -1629,8 +1575,8 @@ bool TestConnections::test_bad_config(const string& config)
 
     int ssh_rc = maxscale->ssh_node_f(0,
                                       true,
-                                       "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
-                                       "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
+                                      "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
+                                      "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
     return (ssh_rc == 0) || (ssh_rc == 256);
 }
 
@@ -1933,7 +1879,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         }
     }
 
-    m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
+    m_shared.test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
     return rval;
 }
 

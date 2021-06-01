@@ -25,6 +25,7 @@
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/test_dir.hh>
 #include <cassert>
+#include <fstream>
 
 using std::cout;
 using std::endl;
@@ -1059,6 +1060,25 @@ void MariaDBCluster::remove_extra_backends()
     }
 }
 
+bool MariaDBCluster::copy_logs(const std::string& dest_prefix)
+{
+    auto func = [this, &dest_prefix](int i) {
+            // Do not copy MariaDB logs in case of local backend
+            bool rval = true;
+            auto be = backend(i);
+            if (be->m_vm.is_remote())
+            {
+                string destination = mxb::string_printf("%s/LOGS/%s/%s%d_mariadb_log",
+                                                        mxt::BUILD_DIR, m_shared.test_name.c_str(),
+                                                        dest_prefix.c_str(), i);
+                rval = be->copy_logs(destination);
+            }
+            return rval;
+        };
+
+    return run_on_every_backend(func);
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
@@ -1188,5 +1208,30 @@ mxt::MariaDB* MariaDBServer::admin_connection()
 {
     // Can assume that the connection has been created.
     return m_admin_conn.get();
+}
+
+bool MariaDBServer::copy_logs(const std::string& destination_prefix)
+{
+    string log_retrive_commands[] =
+    {
+        "cat /var/lib/mysql/*.err",
+        "cat /var/log/syslog | grep mysql",
+        "cat /var/log/messages | grep mysql"
+    };
+
+    int cmd_ind = 1;
+    for (const auto& cmd : log_retrive_commands)
+    {
+        auto output = m_vm.run_cmd_output_sudo(cmd).output;
+        if (!output.empty())
+        {
+            std::ofstream outfile(destination_prefix + std::to_string(cmd_ind++));
+            if (outfile)
+            {
+                outfile << output;
+            }
+        }
+    }
+    return true;
 }
 }
