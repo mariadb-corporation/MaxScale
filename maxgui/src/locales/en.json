@@ -142,6 +142,7 @@
     "useDb": "Use database",
     "connectedTo": "Connected to",
     "disconnectConn": "Disconnect connection",
+    "incomplete": "Incomplete",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -168,7 +169,8 @@
     "info": {
         "serverDrain": "Server is drained of connections",
         "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
-        "switchover": "Swap the running master with a designated slave"
+        "switchover": "Swap the running master with a designated slave",
+        "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)"
     },
 
     "$vuetify": {

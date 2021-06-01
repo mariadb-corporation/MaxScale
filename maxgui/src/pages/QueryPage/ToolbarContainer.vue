@@ -83,6 +83,9 @@
         >
             <span>{{ $t('useDb') }}: {{ active_db }} </span>
         </v-tooltip>
+        <!-- TODO: ADD gear icon for query settings.
+             e.g. confirmation before sending query, configure query max rows
+        -->
     </v-toolbar>
 </template>
 
