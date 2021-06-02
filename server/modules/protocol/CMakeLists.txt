@@ -5,6 +5,6 @@ endif()
 
 add_subdirectory(MariaDB)
 
-if(BUILD_MONGO)
-  add_subdirectory(MongoDB)
+if(BUILD_NOSQL)
+  add_subdirectory(NoSQL)
 endif()

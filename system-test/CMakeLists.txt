@@ -120,7 +120,7 @@ add_subdirectory(kafka)
 # BEGIN: Normal tests                      #
 ############################################
 
-add_subdirectory(mongodbprotocol)
+add_subdirectory(nosqlprotocol)
 
 # Routing sanity check. Also acts as the regression test case the following issues:
 #
