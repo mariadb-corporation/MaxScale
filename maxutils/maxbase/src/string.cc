@@ -14,6 +14,7 @@
 #include <maxbase/string.hh>
 #include <ctype.h>
 #include <string.h>
+#include <limits>
 
 using std::string;
 
