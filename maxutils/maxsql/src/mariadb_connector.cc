@@ -480,8 +480,9 @@ MariaDB::ResultType MariaDB::streamed_query(const string& query)
     return m_current_result_type;
 }
 
-MariaDB& MariaDB::operator=(MariaDB&& rhs)
+MariaDB& MariaDB::operator=(MariaDB&& rhs) noexcept
 {
+    mxb_assert(this != &rhs);
     close();
     m_conn = rhs.m_conn;
     rhs.m_conn = nullptr;
@@ -572,6 +573,11 @@ std::unique_ptr<mxq::MariaDBErrorResult> MariaDB::get_error_result()
 MariaDB::ResultType MariaDB::current_result_type()
 {
     return m_current_result_type;
+}
+
+MariaDB::MariaDB(MariaDB&& conn) noexcept
+{
+    *this = move(conn);
 }
 
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)

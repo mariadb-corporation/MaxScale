@@ -451,12 +451,14 @@ HttpResponse query(const HttpRequest& request)
             if (managed_conn)
             {
                 int64_t query_id = ++managed_conn->current_query_id;
-                mxb::StopWatch timer;
+                auto time_before = mxb::Clock::now();
                 managed_conn->conn.streamed_query(sql);
-                auto exec_time = timer.split();
+                auto time_after = mxb::Clock::now();
+                auto exec_time = time_after - time_before;
+                managed_conn->last_query_time = time_after;
 
                 json_t* result_data = generate_json_representation(managed_conn->conn, max_rows);
-                managed_conn->busy.store(false, std::memory_order_release);
+                managed_conn->release();
                 // 'managed_conn' is now effectively back in storage and should not be used.
 
                 string id_str = mxb::string_printf("%li-%li", id, query_id);

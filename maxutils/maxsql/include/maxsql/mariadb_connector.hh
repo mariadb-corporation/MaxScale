@@ -39,7 +39,9 @@ public:
     virtual ~MariaDB();
     MariaDB(const MariaDB& rhs) = delete;
     MariaDB& operator=(const MariaDB& rhs) = delete;
-    MariaDB& operator=(MariaDB&& rhs);
+
+    MariaDB(MariaDB&& conn) noexcept;
+    MariaDB& operator=(MariaDB&& rhs) noexcept;
 
     struct ConnectionSettings
     {
