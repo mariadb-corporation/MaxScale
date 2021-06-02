@@ -13,18 +13,17 @@
 void add_servers(TestConnections* test)
 {
     test->tprintf("Adding the servers");
-    test->set_timeout(120);
+    test->reset_timeout();
     test->maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
     test->maxctrl("link service " SERVICE_NAME1 " server1 server2 server3 server4 ");
     test->maxctrl("link service " SERVICE_NAME2 " server1 server2 server3 server4 ");
     test->maxctrl("link service " SERVICE_NAME3 " server1 server2 server3 server4");
-    test->stop_timeout();
 }
 
 void do_query(TestConnections* test, bool should_fail)
 {
     test->tprintf("Trying to query, expecting %s", should_fail ? "failure" : "success");
-    test->set_timeout(120);
+    test->reset_timeout();
 
     test->maxscale->connect_maxscale();
 
@@ -36,8 +35,6 @@ void do_query(TestConnections* test, bool should_fail)
 
     test->add_result(failed == should_fail, "%s", msg);
     test->maxscale->close_maxscale_connections();
-
-    test->stop_timeout();
 }
 
 int main(int argc, char* argv[])

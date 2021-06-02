@@ -176,27 +176,27 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.tprintf("Creating servers, monitors and services");
-    test.set_timeout(180);
+    test.reset_timeout();
     create_all(test);
 
     test.tprintf("Basic test");
-    test.set_timeout(180);
+    test.reset_timeout();
     basic(test);
 
     test.tprintf("Visibility test");
-    test.set_timeout(180);
+    test.reset_timeout();
     visibility(test);
 
     test.tprintf("Load test");
-    test.set_timeout(180);
+    test.reset_timeout();
     load(test);
 
     test.tprintf("Filter swap test");
-    test.set_timeout(180);
+    test.reset_timeout();
     filter_swap(test);
 
     test.tprintf("Destroying servers, monitors and services");
-    test.set_timeout(180);
+    test.reset_timeout();
     destroy_all(test);
 
     return test.global_result;

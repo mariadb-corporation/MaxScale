@@ -72,7 +72,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->reset_timeout();
     Test->repl->connect();
     Test->maxscale->connect_maxscale();
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     {
         for (int j = 0; j < Test->repl->N; j++)
         {
-            Test->set_timeout(10);
+            Test->reset_timeout();
             sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j + 1);
             Test->tprintf("%s\n", hint_sql);
 

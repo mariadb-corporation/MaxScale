@@ -18,7 +18,7 @@ void test_master_failure(TestConnections& test)
     master.query("INSERT INTO test.t1 VALUES (1)");
 
     // Execute a slow session command before starting a transaction.
-    test.set_timeout(60);
+    test.reset_timeout();
     Connection c = test.maxscale->rwsplit();
     c.set_credentials("bob", "bob");
     c.connect();
@@ -26,7 +26,6 @@ void test_master_failure(TestConnections& test)
     c.query("BEGIN");
     c.query("UPDATE test.t1 SET id = id + 1");
     c.query("SELECT * FROM test.t1");
-    test.stop_timeout();
 
     // Kill the connection, wait for it to reconnect and kill it again. This should happen during the
     // execution of the session command which should trigger the code involved with the bug. If the code works
@@ -37,7 +36,7 @@ void test_master_failure(TestConnections& test)
     master.query("KILL USER 'bob'");
 
     // The replay should work if the session command that's done outside of a transaction fails.
-    test.set_timeout(60);
+    test.reset_timeout();
     test.expect(c.query("UPDATE test.t1 SET id = id + 1"), "Second update should work: %s", c.error());
     test.expect(c.query("COMMIT"), "Commit should work: %s", c.error());
 
@@ -47,7 +46,6 @@ void test_master_failure(TestConnections& test)
     auto value = c.field("SELECT id FROM test.t1");
     test.expect(value == "3", "Value should be 3, it is `%s`", value.c_str());
     c.query("COMMIT");
-    test.stop_timeout();
 
     master.query("DROP USER bob");
     master.query("DROP TABLE test.t1");
@@ -66,11 +64,10 @@ void test_bad_master(TestConnections& test)
             test.expect(c.query(query), "'%s' failed: %s", query.c_str(), c.error());
         };
 
-    test.set_timeout(60);
+    test.reset_timeout();
     check("SET autocommit = 0");
     check("BEGIN");
     check("INSERT INTO test.t1 VALUES (1)");
-    test.stop_timeout();
 
     // Stop the monitor and manually set the servers into Down state
     test.maxctrl("stop monitor MariaDB-Monitor");
@@ -90,7 +87,7 @@ void test_bad_master(TestConnections& test)
             test.maxctrl("start monitor MariaDB-Monitor");
         });
 
-    test.set_timeout(60);
+    test.reset_timeout();
     check("INSERT INTO test.t1 VALUES (2)");
     check("COMMIT");
     thr.join();
@@ -102,8 +99,6 @@ void test_bad_master(TestConnections& test)
     // DROP TABLE will hang.
     check("SET autocommit = 1");
     master.query("DROP TABLE test.t1");
-
-    test.stop_timeout();
 }
 
 int main(int argc, char* argv[])

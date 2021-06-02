@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
                                "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.maxscale->connect_maxscale();
     create_t1(test.maxscale->conn_rwsplit[0]);
     execute_query(test.maxscale->conn_rwsplit[0], "set global max_connections=1000");
@@ -62,17 +62,15 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < iterations; i++)
     {
-        test.stop_timeout();
         sleep(sleep_interval);
 
-        test.set_timeout(60);
+        test.reset_timeout();
         test.tprintf("Block master");
         test.repl->block_node(0);
 
-        test.stop_timeout();
         sleep(sleep_interval);
 
-        test.set_timeout(60);
+        test.reset_timeout();
         test.tprintf("Unblock master");
         test.repl->unblock_node(0);
     }
@@ -80,12 +78,11 @@ int main(int argc, char* argv[])
     test.tprintf("Waiting for all master load threads exit");
     for (int i = 0; i < load_threads_num; i++)
     {
-        test.set_timeout(240);
+        test.reset_timeout();
         data_master[i].exit_flag = 1;
         pthread_join(thread_master[i], NULL);
     }
 
-    test.stop_timeout();
     test.tprintf("Check that replication works");
     sleep(1);
     auto& mxs = test.maxscale->maxscale_b();
@@ -101,7 +98,7 @@ int main(int argc, char* argv[])
     // TCP stack works.
     for (int i = 0; i < 60; i++)
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         test.set_verbose(true);
         int rc = test.maxscale->connect_maxscale();
         test.set_verbose(false);

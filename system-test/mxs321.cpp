@@ -24,7 +24,7 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for (int i = 0; i < CONNECTIONS; i++)
     {
-        test->set_timeout(20);
+        test->reset_timeout();
         switch (target)
         {
         case 1:
@@ -43,14 +43,13 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for (int i = 0; i < CONNECTIONS; i++)
     {
-        test->set_timeout(20);
+        test->reset_timeout();
         if (stmt[i])
         {
             mysql_close(stmt[i]);
         }
     }
 
-    test->stop_timeout();
     sleep(10);
 
     test->check_current_connections(0);
@@ -60,13 +59,12 @@ int main(int argc, char* argv[])
 {
 
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(50);
+    Test->reset_timeout();
 
     Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
     Test->maxscale->connect_maxscale();
     execute_query(Test->maxscale->conn_rwsplit[0], "SET GLOBAL max_connections=100");
     Test->maxscale->close_maxscale_connections();
-    Test->stop_timeout();
 
     /** Create connections to readwritesplit */
     create_and_check_connections(Test, 1);

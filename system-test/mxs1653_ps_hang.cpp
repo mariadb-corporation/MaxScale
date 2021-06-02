@@ -4,7 +4,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(20);
+    test.reset_timeout();
     test.maxscale->connect();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     mysql_stmt_execute(stmt);
     mysql_stmt_close(stmt);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     execute_query_silent(test.maxscale->conn_rwsplit[0], "PREPARE test FROM 'BEGIN'");
     execute_query_silent(test.maxscale->conn_rwsplit[0], "EXECUTE test");
 

@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     Test->maxscale->stop();
-    Test->set_timeout(60);
+    Test->reset_timeout();
     int chunk_size = 2500000;
     int chunk_num = 5;
     std::string src_dir = mxt::SOURCE_DIR;

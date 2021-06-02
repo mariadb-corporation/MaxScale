@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->reset_timeout();
     Test->maxscale->connect_maxscale();
 
     Test->try_query(Test->maxscale->conn_rwsplit[0], "SET wait_timeout=20");
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
     while (time(NULL) - start < 30)
     {
-        Test->set_timeout(10);
+        Test->reset_timeout();
         Test->try_query(Test->maxscale->conn_rwsplit[0], "SELECT 1");
     }
 

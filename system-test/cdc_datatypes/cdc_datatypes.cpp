@@ -309,7 +309,7 @@ bool run_test(TestConnections& test)
     {
         for (int i = 0; test_set[x].types[i]; i++)
         {
-            test.set_timeout(60);
+            test.reset_timeout();
             test.tprintf("Testing type: %s", test_set[x].types[i]);
             std::string name = type_to_table_name(test_set[x].types[i]);
             CDC::Connection conn(test.maxscale->ip4(), 4001, "skysql", "skysql");
@@ -352,7 +352,6 @@ bool run_test(TestConnections& test)
                 rval = false;
                 break;
             }
-            test.stop_timeout();
         }
     }
     return rval;

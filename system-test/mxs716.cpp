@@ -15,7 +15,7 @@
 void run_test(TestConnections* Test, const char* database)
 {
 
-    Test->set_timeout(20);
+    Test->reset_timeout();
     Test->tprintf("Trying to connect using 'table_privilege'@'%%' to database '%s'", database);
 
     MYSQL* conn = open_conn_db(Test->maxscale->rwsplit_port,
@@ -27,7 +27,7 @@ void run_test(TestConnections* Test, const char* database)
 
     if (conn && mysql_errno(conn) == 0)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         Test->tprintf("Trying SELECT on %s.t1", database);
         Test->try_query(conn, "SELECT * FROM t1");
     }
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
     Test->tprintf("Preparing test");
-    Test->set_timeout(180);
+    Test->reset_timeout();
     execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db1");
     execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db2");
     execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS db3");
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     run_test(Test, "db4");
 
     Test->tprintf("Cleaning up...");
-    Test->set_timeout(60);
+    Test->reset_timeout();
     Test->maxscale->connect_maxscale();
     execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db1");
     execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE db2");

@@ -19,29 +19,25 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(10);
+    test.reset_timeout();
 
     test.maxscale->connect_maxscale();
 
-    test.set_timeout(10);
+    test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit[0], (char*) "SET @a=1");
-    test.stop_timeout();
     sleep(1);
-    test.set_timeout(20);
+    test.reset_timeout();
     test.tprintf("Blocking first slave\n");
     test.repl->block_node(1);
-    test.stop_timeout();
     sleep(5);
-    test.set_timeout(10);
+    test.reset_timeout();
     test.tprintf("Unblocking first slave and blocking second slave\n");
 
     test.repl->unblock_node(1);
-    test.stop_timeout();
     sleep(5);
     test.repl->block_node(2);
-    test.stop_timeout();
     sleep(5);
-    test.set_timeout(20);
+    test.reset_timeout();
 
     for (int retries = 0; test.get_server_status("server2").count("Running") == 0 && retries < 10; retries++)
     {

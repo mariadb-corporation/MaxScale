@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     test.maxscale->wait_for_monitor();
 
     // Make sure that session commands trigger a reconnection if there are no open connections
-    test.set_timeout(20);
+    test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit[0], "set @a = 1");
     test.maxscale->disconnect();
 

@@ -31,7 +31,7 @@ void try_password(TestConnections* Test, char* pass)
      * Encrypt and change the password
      */
     Test->tprintf("Encrypting password: %s", pass);
-    Test->set_timeout(30);
+    Test->reset_timeout();
     int rc = Test->maxscale->ssh_node_f(0,
                                         true,
                                          "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
@@ -51,7 +51,7 @@ void try_password(TestConnections* Test, char* pass)
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(30);
+    Test->reset_timeout();
 
     Test->maxscale->ssh_node_f(0, true, "maxkeys");
     Test->maxscale->ssh_node_f(0, true, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets");

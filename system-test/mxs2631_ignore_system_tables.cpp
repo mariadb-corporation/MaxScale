@@ -9,13 +9,12 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(30);
+    test.reset_timeout();
 
     MYSQL* conn = test.maxscale->open_rwsplit_connection();
 
     test.add_result(execute_query(conn, "SELECT 1"), "Query should succeed.");
 
     mysql_close(conn);
-    test.stop_timeout();
     return test.global_result;
 }

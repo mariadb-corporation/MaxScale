@@ -43,9 +43,8 @@ int main(int argc, char* argv[])
         sleep(5);
         test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
 
-        test.set_timeout(15);
+        test.reset_timeout();
         thr.join();
-        test.stop_timeout();
     }
 
     auto conn = test.maxscale->rwsplit();

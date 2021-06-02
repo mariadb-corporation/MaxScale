@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
     int silent = 1;
     int i;
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(120);
+    Test->reset_timeout();
     Test->repl->connect();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip4());
@@ -173,7 +173,6 @@ int main(int argc, char* argv[])
                                       1),
                      "Wrong check_com_insert result\n");
 
-    Test->stop_timeout();
     Test->repl->sync_slaves();
 
     printf("Trying SELECT * FROM t1\n");
@@ -202,7 +201,6 @@ int main(int argc, char* argv[])
                                       1),
                      "Wrong check_com_insert result\n");
 
-    Test->stop_timeout();
     Test->repl->sync_slaves();
     Test->tprintf("Doing 100 selects\n");
 
@@ -210,12 +208,11 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < 100 && Test->global_result == 0; i++)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         Test->try_query(Test->maxscale->conn_rwsplit[0], "select * from t1;");
     }
 
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->stop_timeout();
     Test->repl->sync_slaves();
     Test->add_result(check_com_select(&new_selects[0],
                                       &new_inserts[0],
@@ -226,19 +223,18 @@ int main(int argc, char* argv[])
                      "Wrong check_com_select result\n");
 
 
-    Test->set_timeout(20);
+    Test->reset_timeout();
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
     Test->tprintf("Doing 100 inserts\n");
 
     for (i = 0; i < 100 && Test->global_result == 0; i++)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         Test->try_query(Test->maxscale->conn_rwsplit[0], "insert into t1 values(1);");
     }
 
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->stop_timeout();
     Test->repl->sync_slaves();
     Test->add_result(check_com_insert(&new_selects[0],
                                       &new_inserts[0],

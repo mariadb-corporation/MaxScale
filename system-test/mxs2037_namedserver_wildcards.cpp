@@ -15,7 +15,7 @@
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    test.set_timeout(10);
+    test.reset_timeout();
     test.maxscale->connect_maxscale();
     test.add_result(execute_query(test.maxscale->conn_rwsplit[0], "select 1"), "Can't connect to backend");
     test.maxscale->close_maxscale_connections();

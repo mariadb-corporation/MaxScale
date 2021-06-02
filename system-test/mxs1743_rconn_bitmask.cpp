@@ -11,11 +11,10 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto do_test = [&]() {
-            test.set_timeout(20);
+            test.reset_timeout();
             test.maxscale->connect();
             test.try_query(test.maxscale->conn_master, "SELECT 1");
             test.maxscale->disconnect();
-            test.stop_timeout();
         };
 
     test.tprintf("Testing with both master and slave up");
@@ -42,12 +41,11 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 20; i++)
     {
-        test.set_timeout(20);
+        test.reset_timeout();
         connections.push_back(test.maxscale->readconn_master());
         Connection& c = connections.back();
         test.expect(c.connect(), "Connect should work: %s", c.error());
         test.expect(c.query("SELECT 1"), "Query should work: %s", c.error());
-        test.stop_timeout();
     }
 
     auto s1 = test.maxscale->ssh_output("maxctrl --tsv list servers|grep server1|cut -f 4").output;

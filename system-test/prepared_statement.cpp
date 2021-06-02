@@ -18,7 +18,7 @@ using namespace std;
 
 void test_basic(TestConnections& test)
 {
-    test.set_timeout(20 * test.repl->N);
+    test.reset_timeout();
     int N = 4;
 
     test.repl->connect();
@@ -27,7 +27,7 @@ void test_basic(TestConnections& test)
     create_t1(test.maxscale->conn_rwsplit[0]);
     insert_into_t1(test.maxscale->conn_rwsplit[0], N);
 
-    test.set_timeout(10 * test.repl->N);
+    test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit[0], "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
     test.try_query(test.maxscale->conn_rwsplit[0], "SET @x = 3;");
     test.try_query(test.maxscale->conn_rwsplit[0], "EXECUTE stmt");
@@ -35,12 +35,11 @@ void test_basic(TestConnections& test)
     test.try_query(test.maxscale->conn_rwsplit[0], "EXECUTE stmt");
 
     test.check_maxscale_alive();
-    test.stop_timeout();
 }
 
 void test_routing(TestConnections& test)
 {
-    test.set_timeout(20 * test.repl->N);
+    test.reset_timeout();
     test.repl->connect();
     int server_id = test.repl->get_server_id(0);
     test.maxscale->connect_maxscale();
@@ -91,7 +90,7 @@ void test_routing(TestConnections& test)
     test.try_query(test.maxscale->conn_rwsplit[0], "PREPARE ps2 FROM 'INSERT INTO test.t1 VALUES (?)'");
     test.try_query(test.maxscale->conn_rwsplit[0], "SET @a = @@server_id");
     test.try_query(test.maxscale->conn_rwsplit[0], "EXECUTE ps2 USING @a");
-    test.set_timeout(30 * test.repl->N);
+    test.reset_timeout();
     test.repl->sync_slaves();
     test.add_result(find_field(test.maxscale->conn_rwsplit[0], "SELECT id FROM test.t1", "id", buf),
                     "Read should succeed");
@@ -103,7 +102,6 @@ void test_routing(TestConnections& test)
 
     // Cleanup
     test.check_maxscale_alive();
-    test.stop_timeout();
 }
 
 int main(int argc, char* argv[])

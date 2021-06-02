@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
         std::string query = "CALL p1((SELECT f1()), ?)";
         Bind bind;
 
-        test.set_timeout(30);
+        test.reset_timeout();
 
         test.expect(mysql_stmt_prepare(stmt, query.c_str(), query.size()) == 0,
                     "Prepared statement failure: %s",

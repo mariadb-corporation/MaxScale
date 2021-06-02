@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
     // Check that inserts work
     cout << "Selecting user variables" << endl;
-    test.set_timeout(15);
+    test.reset_timeout();
     test.expect(query("INSERT INTO test.t1 VALUES (1)") == 0, "Write should work after unblocking master");
     test.expect(check_result("@a", "1"), "@a should be 1");
     test.expect(check_result("@b", "2"), "@b should be 2");

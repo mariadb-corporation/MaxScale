@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
     int max_rlag = 100;
-    test.set_timeout(120);
+    test.reset_timeout();
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
     change_master(test, 0, 1);
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 2 - Set nodes 0 and 1 into read-only mode");
 
-    test.set_timeout(120);
+    test.reset_timeout();
     execute_query(test.repl->nodes[0], readonly_on_query);
     execute_query(test.repl->nodes[1], readonly_on_query);
     mxs.wait_monitor_ticks(1);
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
                  "a slave of node 1 and node 3 a slave of node 2");
 
     mxs.stop();
-    test.set_timeout(120);
+    test.reset_timeout();
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 4 - Set node 1 into read-only mode");
 
-    test.set_timeout(120);
+    test.reset_timeout();
     execute_query(test.repl->nodes[1], readonly_on_query);
     mxs.wait_monitor_ticks(1);
 
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     test.tprintf("Test 5 - Create two distinct groups");
 
     mxs.stop();
-    test.set_timeout(120);
+    test.reset_timeout();
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
 
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 6 - Set nodes 1 and 3 into read-only mode");
 
-    test.set_timeout(120);
+    test.reset_timeout();
     execute_query(test.repl->nodes[1], readonly_on_query);
     execute_query(test.repl->nodes[3], readonly_on_query);
 

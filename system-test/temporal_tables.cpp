@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     test.maxscale->connect_maxscale();
 
     test.tprintf("Create a table and insert two rows into it");
-    test.set_timeout(10 * test.repl->N);
+    test.reset_timeout();
 
     execute_query(test.maxscale->conn_rwsplit[0], "USE test");
     create_t1(test.maxscale->conn_rwsplit[0]);
@@ -30,14 +30,14 @@ int main(int argc, char* argv[])
     execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(1, 1)");
 
     test.tprintf("Create temporary table and insert one row");
-    test.set_timeout(10 * test.repl->N);
+    test.reset_timeout();
 
     execute_query(test.maxscale->conn_rwsplit[0],
                   "create temporary table t1 as (SELECT * FROM t1 WHERE fl=3)");
     execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
 
     test.tprintf("Check that the temporary table has one row");
-    test.set_timeout(25 * test.repl->N);
+    test.reset_timeout();
 
     test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0], "SELECT * FROM t1", 1),
                     "Current connection should show one row");
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
                     "New connection should show two rows");
 
     printf("Drop temporary table and check that the real table has two rows");
-    test.set_timeout(25 * test.repl->N);
+    test.reset_timeout();
 
     execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE t1");
     test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0], "SELECT * FROM t1", 2),

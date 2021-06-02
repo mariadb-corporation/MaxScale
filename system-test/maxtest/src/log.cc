@@ -28,6 +28,7 @@ void TestLogger::add_failure_v(const char* format, va_list args)
     string timeinfo = time_string();
 
     printf("%s: TEST_FAILED! %s\n", timeinfo.c_str(), msg.c_str());
+    fflush(stdout);
     string full_msg;
     full_msg.reserve(timeinfo.length() + 2 + msg.length());
     full_msg.append(timeinfo).append(": ").append(msg);

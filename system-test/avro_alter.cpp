@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.set_timeout(120);
+    test.reset_timeout();
     test.repl->connect();
 
     // This makes sure the binlogs don't have anything else
@@ -78,9 +78,8 @@ int main(int argc, char* argv[])
     test.maxscale->start();
 
     /** Give avrorouter some time to process the events */
-    test.stop_timeout();
     sleep(10);
-    test.set_timeout(120);
+    test.reset_timeout();
 
     for (int i = 1; i <= 12; i++)
     {
@@ -108,7 +107,6 @@ int main(int argc, char* argv[])
                         nchanges, i, nrows, res.output.c_str());
     }
 
-    test.stop_timeout();
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1;RESET MASTER");
     test.repl->close_connections();
 

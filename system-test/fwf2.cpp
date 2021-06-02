@@ -29,7 +29,7 @@ int read_and_execute_queries(TestConnections* Test, const char* filename, int ex
         char sql[4096];
         while (fgets(sql, sizeof(sql), file))
         {
-            Test->set_timeout(60);
+            Test->reset_timeout();
             if (strlen(sql) > 1)
             {
                 Test->tprintf("%s", sql);
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 
     for (i = 1; i < N + 1; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         local_result = 0;
 
         Test->maxscale->stop_and_check_stopped();

@@ -18,7 +18,6 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
-    test->stop_timeout();
     test->maxscale->stop();
 
     /** Copy original config so we can easily reset the testing environment */

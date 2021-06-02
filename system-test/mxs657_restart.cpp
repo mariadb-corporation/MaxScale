@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip4());
 
-    Test->set_timeout(2000);
+    Test->reset_timeout();
 
     pthread_create(&restart_t, NULL, kill_vm_thread, NULL);
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
 
     Test->tprintf("Creating query load with %d threads and use service restart...\n", threads_num);
-    Test->set_timeout(1200);
+    Test->reset_timeout();
     load(&new_inserts[0],
          &new_selects[0],
          &selects[0],
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
          false,
          false);
     restart_flag = 1;
-    Test->set_timeout(1200);
+    Test->reset_timeout();
     Test->tprintf("Creating query load with %d threads and restart maxscalen", threads_num);
     load(&new_inserts[0],
          &new_selects[0],

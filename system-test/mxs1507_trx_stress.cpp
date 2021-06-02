@@ -67,14 +67,12 @@ int main(int argc, char** argv)
     running = false;
 
     // Should be plenty of time for the threads to stop
-    test.set_timeout(60);
+    test.reset_timeout();
 
     for (auto& a : threads)
     {
         a.join();
     }
-
-    test.stop_timeout();
 
     test.repl->connect();
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");

@@ -60,9 +60,8 @@ void run(TestConnections& test)
         test.log_excludes("Received data, although expected nothing");
 
         // This will hang immediately, so we can shorten the timeout.
-        test.set_timeout(5);
+        test.reset_timeout();
         test.try_query(pMysql, "SELECT * FROM MXS_1719");
-        test.stop_timeout();
     }
     else
     {

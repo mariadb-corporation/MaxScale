@@ -17,11 +17,10 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.repl->execute_query_all_nodes("set global max_connections = 20;");
     test.create_connections(75, true, true, true, false);
 
-    test.stop_timeout();
     test.repl->stop_nodes();
     test.repl->start_nodes();
     test.repl->disconnect();
@@ -31,7 +30,7 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("set global max_connections = 2000;");
     sleep(10);
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.add_result(test.create_connections(70, true, true, true, false),
                     "Connections creation error \n");
 

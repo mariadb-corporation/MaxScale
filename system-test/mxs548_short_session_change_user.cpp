@@ -43,7 +43,7 @@ void query_thread(TestConnections& test)
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    test.set_timeout(20);
+    test.reset_timeout();
 
     test.repl->connect();
     test.maxscale->connect_maxscale();
@@ -60,7 +60,6 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
 
     std::vector<std::thread> threads;
-    test.stop_timeout();
 
     for (int i = 0; i < 5; i++)
     {
@@ -73,7 +72,7 @@ int main(int argc, char** argv)
     sleep(RUN_TIME);
     keep_running = false;
 
-    test.set_timeout(120);
+    test.reset_timeout();
     test.tprintf("Waiting for all threads to exit");
 
     for (auto& a : threads)
@@ -82,12 +81,12 @@ int main(int argc, char** argv)
     }
 
     test.tprintf("Dropping tables and users");
-    test.set_timeout(60);
+    test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1;");
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP USER user@'%%'");
     test.maxscale->close_maxscale_connections();
 
-    test.set_timeout(160);
+    test.reset_timeout();
     test.check_maxscale_alive();
     test.log_excludes("due to authentication failure");
     test.log_excludes("due to handshake failure");

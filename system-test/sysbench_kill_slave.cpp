@@ -39,10 +39,10 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
-    Test->set_timeout(5000);
+    Test->reset_timeout();
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
-    Test->set_timeout(2000);
+    Test->reset_timeout();
     for (int k = 0; k < 2; k++)
     {
         Test->tprintf("Trying test with port %d\n", port[k]);

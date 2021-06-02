@@ -11,7 +11,7 @@ int create_key(TestConnections* test)
 {
     int res = 0;
     int exit_code;
-    test->set_timeout(120);
+    test->reset_timeout();
     test->tprintf("Creating new encryption keys\n");
     test->maxscale->ssh_node(
         "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",
@@ -37,7 +37,6 @@ int create_key(TestConnections* test)
 int hash_password(TestConnections* test)
 {
     test->maxscale->stop();
-    test->stop_timeout();
 
     test->tprintf("Creating a new encrypted password\n");
     auto res = test->maxscale->ssh_output("maxpasswd /var/lib/maxscale/ skysql");

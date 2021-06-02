@@ -16,14 +16,13 @@ public:
     {
         for (int i = 0; i < 100 && test.ok(); i++)
         {
-            test.set_timeout(30);
+            test.reset_timeout();
             test.expect(master.query("INSERT INTO test.t1 VALUES (" + std::to_string(i) + ")"),
                         "INSERT failed: %s", master.error());
             test.expect(maxscale.query("STOP SLAVE"), "STOP SLAVE failed: %s", maxscale.error());
             test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
         }
 
-        test.stop_timeout();
         sync_all();
 
         // All servers should be at the same GTID

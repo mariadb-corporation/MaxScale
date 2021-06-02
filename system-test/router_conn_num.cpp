@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 {
 
     Test = new TestConnections(argc, argv);
-    Test->set_timeout(120);
+    Test->reset_timeout();
     int i;
     int num_conn = 0;
     char sql[100];
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < conn_N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         rwsplit_conn[i] = Test->maxscale->open_rwsplit_connection();
         master_conn[i] = Test->maxscale->open_readconn_master_connection();
         slave_conn[i] = Test->maxscale->open_readconn_slave_connection();
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
@@ -222,13 +222,12 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->stop_timeout();
     Test->tprintf("Sleeping");
     sleep(5);
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
@@ -245,7 +244,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
@@ -257,7 +256,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Opening ReadConn slave connections again\n");
     for (i = 0; i < conn_N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         slave_conn[i] = Test->maxscale->open_readconn_slave_connection();
         sprintf(sql, "SELECT * FROM t1");
         execute_query(slave_conn[i], "%s", sql);
@@ -266,7 +265,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))
@@ -278,14 +277,14 @@ int main(int argc, char* argv[])
     Test->tprintf("Closing ReadConn slave connections\n");
     for (i = 0; i < conn_N; i++)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         mysql_close(slave_conn[i]);
     }
     exit_flag = 1;
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         num_conn = get_conn_num(Test->repl->nodes[i], mxs_ip, mxs_host, (char*) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->ip_private(i), num_conn);
         if ((i == 0) && (num_conn != 0))

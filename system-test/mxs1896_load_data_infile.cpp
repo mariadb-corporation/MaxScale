@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.maxscale->connect();
 
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");

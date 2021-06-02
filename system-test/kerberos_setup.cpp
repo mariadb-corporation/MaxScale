@@ -21,7 +21,7 @@ int install_kerberos(std::string machine_name, std::string maria_version)
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(1000);
+    Test->reset_timeout();
     char str[1024];
     char str1[1024];
 

@@ -9,7 +9,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(60);
+    Test->reset_timeout();
 
     MYSQL*& rc_master = Test->maxscale->conn_master;
     Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=10000000");

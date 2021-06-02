@@ -26,18 +26,18 @@ int main(int argc, char* argv[])
 
     for (int i = 1; i < test.repl->N; i++)
     {
-        test.set_timeout(20);
+        test.reset_timeout();
         test.repl->block_node(i);
     }
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.maxscale->wait_for_monitor();
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.tprintf("Connecting to all MaxScale services, expecting no errors");
     test.expect(test.maxscale->connect_maxscale() == 0, "Connection should not fail");
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.tprintf("Trying some queries, expecting no failures");
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
     test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
@@ -46,13 +46,11 @@ int main(int argc, char* argv[])
     test.try_query(test.maxscale->conn_master, "select 'rconn master' from t1");
     test.try_query(test.maxscale->conn_slave, "select 'rconn slave' from t1 ");
 
-    test.set_timeout(10);
+    test.reset_timeout();
     test.maxscale->close_maxscale_connections();
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.repl->unblock_all_nodes();
-
-    test.stop_timeout();
 
     return test.global_result;
 }

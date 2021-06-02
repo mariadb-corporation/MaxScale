@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
     test.log_printf("Test 1: Basic routing");
-    test.set_timeout(200);
+    test.reset_timeout();
 
     std::vector<std::string> queries =
     {
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     }
 
     test.log_printf("Test 2: Query measurement");
-    test.set_timeout(200);
+    test.reset_timeout();
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
     test.expect(conn.query("CREATE OR REPLACE TABLE test.t2(id INT) ENGINE=MyISAM"), "CREATE failed: %s", conn.error());

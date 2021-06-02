@@ -65,7 +65,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(30);
+    Test->reset_timeout();
     char str[4096 + 1024];
 
     sprintf(str,

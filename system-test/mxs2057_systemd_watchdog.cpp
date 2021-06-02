@@ -46,7 +46,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
 
     test.log_includes("systemd watchdog keep-alive ping");
 
-    test.set_timeout(2 * mxb::to_secs(watchdog_interval));
+    test.reset_timeout();
 
     // Make one thread in maxscale hang
     mysql_query(test.maxscale->conn_rwsplit[0], "select LUA_INFINITE_LOOP");

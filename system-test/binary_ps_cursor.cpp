@@ -10,7 +10,7 @@ using std::endl;
 void test1(TestConnections& test)
 {
     test.maxscale->connect_maxscale();
-    test.set_timeout(20);
+    test.reset_timeout();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
@@ -49,7 +49,7 @@ void test1(TestConnections& test)
 
 void test2(TestConnections& test)
 {
-    test.set_timeout(20);
+    test.reset_timeout();
 
     MYSQL* conn = open_conn_db_timeout(test.maxscale->rwsplit_port,
                                        test.maxscale->ip(),
@@ -131,7 +131,7 @@ void test2(TestConnections& test)
 void test3(TestConnections& test)
 {
     test.maxscale->connect_maxscale();
-    test.set_timeout(20);
+    test.reset_timeout();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
@@ -185,7 +185,7 @@ void test3(TestConnections& test)
 void test4(TestConnections& test)
 {
     test.maxscale->connect_maxscale();
-    test.set_timeout(20);
+    test.reset_timeout();
 
     test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id VARCHAR(200))");
 

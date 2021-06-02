@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < NUM_THR; i++)
     {
-        test.set_timeout(10);
+        test.reset_timeout();
         pthread_join(query_thr[i], NULL);
     }
 

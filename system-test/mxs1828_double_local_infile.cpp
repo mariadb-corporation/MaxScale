@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 
     file << "1\n2\n3" << endl;
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.maxscale->connect();
     test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.try_query(test.maxscale->conn_rwsplit[0], "%s;%s", query, query);

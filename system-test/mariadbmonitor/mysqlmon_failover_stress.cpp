@@ -540,14 +540,14 @@ void run(TestConnections& test)
 
         for (int i = 0; i < 2; i++)
         {
-            test.set_timeout(20);
+            test.reset_timeout();
             test.maxscale->wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
             if (is_valid_server_id(test, master_id))
             {
-                test.set_timeout(20);
+                test.reset_timeout();
                 cout << "\nStopping node: " << master_id << endl;
                 test.repl->stop_node(master_id - 1);
 
@@ -557,7 +557,7 @@ void run(TestConnections& test)
                 test.maxscale->wait_for_monitor();
                 list_servers(test);
 
-                test.set_timeout(20);
+                test.reset_timeout();
                 test.maxscale->wait_for_monitor();
                 cout << "\nStarting node: " << master_id << endl;
                 test.repl->start_node(master_id - 1);

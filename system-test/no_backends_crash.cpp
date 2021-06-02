@@ -28,7 +28,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(60);
+    Test->reset_timeout();
 
     Test->tprintf("Connecting to Maxscale %s", Test->maxscale->ip4());
     Test->maxscale->connect_maxscale();

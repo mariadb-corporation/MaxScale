@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.repl->connect();
     auto ids = test.repl->get_all_server_ids();
     test.repl->disconnect();
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     int slave = std::stoi(first_slave);
     test.expect(slave != ids[0], "The result should not be from the master");
 
-    test.set_timeout(60);
+    test.reset_timeout();
     for (int i = 1; i < test.repl->N; i++)
     {
         if (ids[i] == slave)
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.expect(conn.connect(), "Connection to rwsplit should work: %s", conn.error());
     auto second_slave = conn.field("SELECT @@server_id");
 

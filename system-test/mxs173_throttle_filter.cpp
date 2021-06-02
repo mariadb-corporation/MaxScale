@@ -201,26 +201,25 @@ int main(int argc, char* argv[])
         test.maxscale->connect_maxscale();
 
         std::cout << "Create table\n";
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         create_table(test.maxscale->conn_master);
 
         std::cout << "Insert rows\n";
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         insert_rows(test.maxscale->conn_master);
 
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         gauge_raw_speed(test);
 
-        test.stop_timeout();
         test.repl->sync_slaves();
 
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         verify_throttling_performace(test);
 
         test.maxscale->close_maxscale_connections();
         test.maxscale->connect_maxscale();
 
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         verify_throttling_disconnect(test);
 
         std::cout << "\n\n";

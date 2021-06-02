@@ -13,7 +13,6 @@ void check_val(MYSQL* conn, TestConnections& test)
     find_field(conn, "SELECT * FROM t2", "x", val);
     test.tprintf("result: %s\n", val);
     test.add_result(strcmp("Кот", val) != 0, "Wrong SELECT result: %s\n", val);
-    test.stop_timeout();
 }
 
 int main(int argc, char *argv[])
@@ -32,7 +31,6 @@ int main(int argc, char *argv[])
 
     test.maxscales->disconnect();
 
-    test.stop_timeout();
     if (test.repl)
     {
         test.repl->connect();

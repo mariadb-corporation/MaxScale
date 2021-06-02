@@ -62,11 +62,11 @@ int main(int argc, char** argv)
     }
 
     running = false;
-    test.set_timeout(120);
+    test.reset_timeout();
 
     for (auto& a : threads)
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         pthread_join(a, NULL);
     }
 

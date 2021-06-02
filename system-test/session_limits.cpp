@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     int first_sleep = 5;
     int second_sleep = 12;
 
-    test.set_timeout(200);
+    test.reset_timeout();
 
     test.tprintf("Open session, wait %d seconds and execute a query", first_sleep);
     test.maxscale->connect_maxscale();
