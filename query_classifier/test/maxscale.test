@@ -180,3 +180,12 @@ SET DEFAULT ROLE 'MBK' FOR 'user'@'host';
 # MXS-3535
 # qc_sqlite misses symbols/vars used in an ON.
 select E.id  from bill_base  as T  inner join pb_meta_filter_item on A.itemName = @cFilterItemName;
+
+# MXS-3585
+# qc_sqlite crashes.
+update mailbox_queue as mb inner join ( select * from mailbox_queue where parsingDone=0 and scheduler=0 and testbed like "%an%" order by mailbox_queue.id limit 20) as mb2 on mb.id=mb2.id set mb.scheduler="2";
+
+# MXS-3589
+# "current_timestamp" is handled explicitly by sqlite3, which causes the function usage
+# to be parsed as token + parenthesis and not id + parenthesis.
+SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_timestamp());

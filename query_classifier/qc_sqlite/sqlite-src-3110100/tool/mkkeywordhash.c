@@ -214,9 +214,11 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "CURRENT",          "TK_CURRENT",      ALWAYS                 },
 #endif
+#ifndef MAXSCALE
   { "CURRENT_DATE",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIME",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIMESTAMP","TK_CTIME_KW",     ALWAYS                 },
+#endif
 #ifdef MAXSCALE
   { "DATA",             "TK_DATA",         ALWAYS                 },
   { "DATABASE",         "TK_DATABASE",     ALWAYS                 },
