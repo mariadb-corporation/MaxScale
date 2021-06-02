@@ -485,6 +485,11 @@ const show_maxscale_fields = [
     description: "Time MaxScale has been running",
   },
   {
+    name: "Config Sync",
+    path: "attributes.config_sync",
+    description: "MaxScale configuration synchronization",
+  },
+  {
     name: "Parameters",
     path: "attributes.parameters",
     description: "Global MaxScale parameters",
