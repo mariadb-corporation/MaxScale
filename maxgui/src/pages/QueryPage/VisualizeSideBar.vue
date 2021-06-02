@@ -1,11 +1,12 @@
 <template>
     <div class="pa-4">
-        <h4>Visualization</h4>
+        <h5 class="mb-4">Visualization</h5>
+        <label class="field__label color text-small-text"> Graph</label>
         <v-select
             v-model="selectedGraph"
             :items="graphs"
             outlined
-            class="mt-4 std mariadb-select-input error--text__bottom"
+            class="std mariadb-select-input error--text__bottom"
             :menu-props="{
                 contentClass: 'mariadb-select-v-menu',
                 bottom: true,
@@ -32,4 +33,9 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+$label-size: 0.75rem;
+.field__label {
+    font-size: $label-size;
+}
+</style>
