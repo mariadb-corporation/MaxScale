@@ -712,8 +712,6 @@ public:
 
     void update_names(const char* zDatabase, const char* zTable, const char* zAlias, QcAliases* pAliases)
     {
-        mxb_assert(zTable);
-
         bool should_collect_alias = pAliases && zAlias && should_collect(QC_COLLECT_FIELDS);
         bool should_collect_table = should_collect_alias || should_collect(QC_COLLECT_TABLES);
         bool should_collect_database = zDatabase
@@ -736,7 +734,7 @@ public:
                 exposed_sqlite3Dequote(database);
             }
 
-            if (should_collect_table)
+            if (should_collect_table && zTable)
             {
                 if (strcasecmp(zTable, "DUAL") != 0)
                 {
@@ -1437,9 +1435,14 @@ public:
                     update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
                 }
 
-                if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
+                if (pSrc->a[i].pSelect)
                 {
-                    update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+                    maxscaleCollectInfoFromSelect(nullptr, pSrc->a[i].pSelect, 1); // 1 denotes subselect.
+
+                    if (pSrc->a[i].pSelect->pSrc) // The FROM clause
+                    {
+                        update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+                    }
                 }
 
                 if (pSrc->a[i].pOn)
@@ -1818,6 +1821,11 @@ public:
                 {
                     const SrcList::SrcList_item* pItem = &pUsing->a[i];
 
+                    if (pItem->pSelect)
+                    {
+                        maxscaleCollectInfoFromSelect(nullptr, pItem->pSelect, 1); // 1 denotes subselect.
+                    }
+
                     update_names(pItem->zDatabase, pItem->zName, pItem->zAlias, &aliases);
                 }
 
@@ -1834,7 +1842,7 @@ public:
                     {
                         SrcList::SrcList_item* pItem = &pUsing->a[j++];
 
-                        if (strcasecmp(pTable->zName, pItem->zName) == 0)
+                        if (pItem->zName && (strcasecmp(pTable->zName, pItem->zName) == 0))
                         {
                             isSame = true;
                         }
@@ -2082,7 +2090,15 @@ public:
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
             update_names_from_srclist(&aliases, pTabList);
-            m_has_clause = ((pWhere && pWhere->op != TK_IN) ? true : false);
+            // If this is an UPDATE ... SELECT ...  and the select has a where clause
+            // or a limit, then m_has_clause has been set already.
+            if (!m_has_clause)
+            {
+                if (pWhere && pWhere->op != TK_IN)
+                {
+                    m_has_clause = true;
+                }
+            }
 
             if (pChanges)
             {

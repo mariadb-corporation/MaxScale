@@ -1592,10 +1592,8 @@ table_factor(A) ::= nm(X) DOT nm(Y) as_opt id(Z). {
   A = sqlite3SrcListAppendFromTerm(pParse, 0, &X, &Y, &Z, 0, 0, 0);
 }
 
-table_factor(A) ::= LP oneselect(S) RP as_opt id. {
-    maxscaleCollectInfoFromSelect(pParse, S, 1);
-  sqlite3SelectDelete(pParse->db, S);
-  A = 0;
+table_factor(A) ::= LP oneselect(S) RP as_opt id(Z). {
+  A = sqlite3SrcListAppendFromTerm(pParse, 0, 0, 0, &Z, S, 0, 0);
 }
 
 %type table_reference {SrcList*}
