@@ -84,7 +84,7 @@ describe('Graphs index', () => {
 
     it(`Should update graphs by first sending requests in parallel to
       get all servers, monitors, sessions, services and maxscale threads`, async () => {
-        // this prevent fetch loop in line-chart
+        // this prevent fetch loop in line-chart-stream
         await wrapper.setData({
             chartOptionsWithOutCallBack: null,
             mainChartOptions: null,

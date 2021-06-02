@@ -11,13 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Chart from 'chart.js'
+
 import { Line } from 'vue-chartjs'
 import 'chartjs-plugin-streaming'
-
-Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
-Chart.defaults.global.defaultFontColor = '#424F62'
-Chart.defaults.global.defaultFontSize = 10
 
 export default {
     extends: Line,
@@ -29,7 +25,6 @@ export default {
         options: {
             type: Object,
         },
-        isRealTime: { type: Boolean, default: true },
         yAxesTicks: {
             type: Object,
             default: () => {},
@@ -37,72 +32,6 @@ export default {
     },
     data() {
         return {
-            realtimeScales: {
-                xAxes: [
-                    {
-                        gridLines: {
-                            lineWidth: 0.6,
-                            color: 'rgba(234, 234, 234, 1)',
-                            drawTicks: false,
-                            drawBorder: true,
-                            zeroLineColor: 'rgba(234, 234, 234, 1)',
-                        },
-                        type: 'realtime',
-                        ticks: {
-                            display: false,
-                        },
-                    },
-                ],
-                yAxes: [
-                    {
-                        gridLines: {
-                            lineWidth: 0.6,
-                            color: 'rgba(234, 234, 234,1)',
-                            drawTicks: false,
-                            drawBorder: false,
-                            zeroLineColor: 'transparent',
-                        },
-                        ticks: {
-                            beginAtZero: true,
-                            padding: 12,
-
-                            maxTicksLimit: 3,
-                            ...this.yAxesTicks,
-                        },
-                    },
-                ],
-            },
-            defaultScales: {
-                xAxes: [
-                    {
-                        display: true,
-                    },
-                ],
-                yAxes: [
-                    {
-                        display: true,
-                        ticks: {
-                            padding: 0,
-                        },
-                    },
-                ],
-            },
-            realtimeLayout: {
-                padding: {
-                    left: 2,
-                    bottom: 10,
-                    right: 0,
-                    top: 15,
-                },
-            },
-            defaultLayout: {
-                padding: {
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                },
-            },
             uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
         }
     },
@@ -114,9 +43,6 @@ export default {
         */
         chartData: function() {
             this.$data._chart.destroy()
-            this.renderLineChart()
-        },
-        options() {
             this.renderLineChart()
         },
     },
@@ -134,7 +60,14 @@ export default {
             this.renderChart(this.chartData, {
                 showLines: true,
 
-                layout: self.isRealTime ? self.realtimeLayout : self.defaultLayout,
+                layout: {
+                    padding: {
+                        left: 2,
+                        bottom: 10,
+                        right: 0,
+                        top: 15,
+                    },
+                },
                 legend: {
                     display: false,
                 },
@@ -234,8 +167,41 @@ export default {
                             tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px'
                     },
                 },
+                scales: {
+                    xAxes: [
+                        {
+                            gridLines: {
+                                lineWidth: 0.6,
+                                color: 'rgba(234, 234, 234, 1)',
+                                drawTicks: false,
+                                drawBorder: true,
+                                zeroLineColor: 'rgba(234, 234, 234, 1)',
+                            },
+                            type: 'realtime',
+                            ticks: {
+                                display: false,
+                            },
+                        },
+                    ],
+                    yAxes: [
+                        {
+                            gridLines: {
+                                lineWidth: 0.6,
+                                color: 'rgba(234, 234, 234,1)',
+                                drawTicks: false,
+                                drawBorder: false,
+                                zeroLineColor: 'transparent',
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                padding: 12,
 
-                scales: this.isRealTime ? this.realtimeScales : this.defaultScales,
+                                maxTicksLimit: 3,
+                                ...this.yAxesTicks,
+                            },
+                        },
+                    ],
+                },
                 ...this.options,
             })
         },

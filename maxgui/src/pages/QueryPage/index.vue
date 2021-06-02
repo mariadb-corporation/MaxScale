@@ -176,9 +176,13 @@ export default {
     async created() {
         await this.checkActiveConn()
         if (this.active_conn_state) await this.updateActiveDb()
+        /*For development testing */
+        if (process.env.NODE_ENV === 'development')
+            this.queryTxt = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic;'
     },
     async beforeDestroy() {
-        if (this.curr_cnct_resource) await this.disconnect()
+        if (process.env.NODE_ENV !== 'development' && this.curr_cnct_resource)
+            await this.disconnect()
     },
     mounted() {
         this.$help.doubleRAF(() => this.setPanelsPct())

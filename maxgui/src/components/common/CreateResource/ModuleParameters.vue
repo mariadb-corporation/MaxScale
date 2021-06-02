@@ -102,3 +102,8 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.label {
+    font-size: 0.625rem;
+}
+</style>

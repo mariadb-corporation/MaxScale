@@ -19,7 +19,7 @@ import IconSpriteSheet from './IconSpriteSheet'
 import OutlinedOverviewCard from './OutlinedOverviewCard'
 import Collapse from './Collapse'
 
-import LineChart from './LineChart.vue'
+import Charts from './Charts'
 import GlobalSearch from './GlobalSearch'
 import CreateResource from './CreateResource'
 
@@ -41,7 +41,7 @@ export default {
     'outlined-overview-card': OutlinedOverviewCard,
     collapse: Collapse,
     ...Parameters,
-    'line-chart': LineChart,
+    ...Charts,
     ...DetailsPage,
     'split-pane': SplitPane,
     'm-treeview': MTreeVIew,

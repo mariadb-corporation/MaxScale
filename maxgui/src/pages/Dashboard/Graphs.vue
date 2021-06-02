@@ -7,7 +7,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart
+                        <line-chart-stream
                             v-if="sessions_datasets.length"
                             ref="sessionsChart"
                             :styles="chartStyle"
@@ -25,7 +25,7 @@
                 </template>
                 <template v-if="all_servers.length" v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart
+                        <line-chart-stream
                             v-if="server_connections_datasets.length"
                             ref="connectionsChart"
                             :styles="chartStyle"
@@ -45,7 +45,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <line-chart
+                        <line-chart-stream
                             v-if="threads_datasets.length"
                             ref="threadsChart"
                             :styles="chartStyle"
