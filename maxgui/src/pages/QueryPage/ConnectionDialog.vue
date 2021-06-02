@@ -1,5 +1,6 @@
 <template>
     <base-dialog
+        ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
         :title="`${$t('connectTo')}...`"
@@ -37,7 +38,7 @@
                 {{ $t('connect') }}
             </v-btn>
         </template>
-        <template v-slot:body>
+        <template v-if="isOpened" v-slot:body>
             <v-select
                 v-model="selectedResourceType"
                 :items="resourceTypes"
@@ -79,6 +80,7 @@
                             }}
                         </label>
                         <select-dropdown
+                            :key="selectedResourceType"
                             class="mt-2"
                             :entityName="selectedResourceType"
                             :items="resourceItems"
@@ -223,6 +225,10 @@ export default {
     watch: {
         selectedResourceType(v) {
             if (v) this.handleResourceSelect(v)
+        },
+        isOpened(v) {
+            // reset to initial state and bind this context
+            if (!v) Object.assign(this.$data, this.$options.data.apply(this))
         },
     },
     methods: {

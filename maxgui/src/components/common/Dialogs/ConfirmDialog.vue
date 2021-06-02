@@ -23,6 +23,7 @@
 
         <template v-slot:actions="{ cancel, save }">
             <slot name="action-prepend"></slot>
+            <v-spacer />
             <v-btn
                 small
                 height="36"
