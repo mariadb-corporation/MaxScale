@@ -45,7 +45,23 @@
                     :startTime="query_request_sent_time"
                     :executionTime="getQueryExeTime"
                 />
-                <portal-target name="header-append" />
+
+                <v-tooltip
+                    v-if="resultData[activeResSet] && !resultData[activeResSet].complete"
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on }">
+                        <div class="ml-4 d-flex align-center" v-on="on">
+                            <v-icon size="16" color="error" class="mr-2">
+                                $vuetify.icons.alertWarning
+                            </v-icon>
+                            {{ $t('incomplete') }}
+                        </div>
+                    </template>
+                    <span> {{ $t('info.queryIncomplete') }}</span>
+                </v-tooltip>
             </template>
         </div>
 
@@ -61,31 +77,13 @@
                     <v-slide-x-transition :key="name">
                         <keep-alive>
                             <template v-if="activeResSet === name">
-                                <div v-if="$typy(resSet, 'data').isDefined">
-                                    <result-data-table
-                                        :height="dynDim.height - headerHeight"
-                                        :width="dynDim.width"
-                                        :headers="resSet.fields"
-                                        :rows="resSet.data"
-                                    />
-                                    <portal v-if="!resSet.complete" to="header-append">
-                                        <v-tooltip
-                                            top
-                                            transition="slide-y-transition"
-                                            content-class="shadow-drop color text-navigation py-1 px-4"
-                                        >
-                                            <template v-slot:activator="{ on }">
-                                                <div class="ml-4 d-flex align-center" v-on="on">
-                                                    <v-icon size="16" color="error" class="mr-2">
-                                                        $vuetify.icons.alertWarning
-                                                    </v-icon>
-                                                    {{ $t('incomplete') }}
-                                                </div>
-                                            </template>
-                                            <span> {{ $t('info.queryIncomplete') }}</span>
-                                        </v-tooltip>
-                                    </portal>
-                                </div>
+                                <result-data-table
+                                    v-if="$typy(resSet, 'data').isDefined"
+                                    :height="dynDim.height - headerHeight"
+                                    :width="dynDim.width"
+                                    :headers="resSet.fields"
+                                    :rows="resSet.data"
+                                />
                                 <div
                                     v-else
                                     :style="{ height: `${dynDim.height - headerHeight}px` }"
