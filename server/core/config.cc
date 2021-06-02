@@ -763,13 +763,13 @@ Config::Config(int argc, char** argv)
 
     /* get uname info */
     struct utsname uname_data;
-    if (uname(&uname_data))
+    if (uname(&uname_data) == 0)
     {
-        strcpy(this->sysname, "undefined");
-    }
-    else
-    {
-        strcpy(this->sysname, uname_data.sysname);
+        this->sysname = uname_data.sysname;
+        this->nodename = uname_data.nodename;
+        this->release = uname_data.release;
+        this->version = uname_data.version;
+        this->machine = uname_data.machine;
     }
 }
 

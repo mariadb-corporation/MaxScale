@@ -171,9 +171,15 @@ public:
     std::string debug;
 
     // The following will not be configured via the configuration mechanism.
-    bool    config_check;                               /**< Only check config */
-    char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
-    char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
+    bool config_check;                              /**< Only check config */
+    char release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
+
+    std::string sysname {"undefined"};      // Name of the implementation of the operating system
+    std::string nodename {"undefined"};     // Name of this node on the network (i.e. hostname)
+    std::string release {"undefined"};      // Current release level of this implementation
+    std::string version {"undefined"};      // Current version level of this release
+    std::string machine {"undefined"};      // Name of the hardware type the system is running on
+
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
     mxb_log_target_t    log_target;                 /**< Log type */

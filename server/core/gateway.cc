@@ -440,11 +440,11 @@ static void sigfatal_handler(int i)
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
 
     MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
 
     const char* pStmt;
     size_t nStmt;
@@ -1913,7 +1913,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (!mxs::Config::get().debug.empty() && !handle_debug_args(&mxs::Config::get().debug[0]))
+    if (!cnf.debug.empty() && !handle_debug_args(&cnf.debug[0]))
     {
         rc = MAXSCALE_INTERNALERROR;
         return rc;
@@ -1943,10 +1943,9 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    struct utsname name;
-    uname(&name);
-    MXS_NOTICE("Running OS: %s@%s, %s, %s with %lu processor cores.",
-               name.sysname, name.release, name.version, name.machine, get_processor_count());
+    MXS_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %lu processor cores.",
+               cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
+               cnf.version.c_str(), cnf.machine.c_str(), get_processor_count());
 
     struct sysinfo info;
     sysinfo(&info);
@@ -2129,7 +2128,7 @@ int main(int argc, char** argv)
                 // Ideally we'd do this in mxs::Config::Specification::validate but since it is configured
                 // before the objects are created, it's simpler to do the check here. For runtime changes it
                 // is done inside the validation function.
-                auto cluster = mxs::Config::get().config_sync_cluster;
+                auto cluster = cnf.config_sync_cluster;
 
                 if (!cluster.empty() && !MonitorManager::find_monitor(cluster.c_str()))
                 {
