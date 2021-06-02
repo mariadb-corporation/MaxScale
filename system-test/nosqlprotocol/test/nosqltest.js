@@ -33,8 +33,8 @@ else {
 var config = {
     host: process.env.maxscale_000_network,
     mariadb_port: 4008,
-    mxsmongodb_port: 17017,
-    mngmongodb_port: 27017,
+    nosql_port: 17017,
+    mongodb_port: 27017,
     user: 'maxskysql',
     password: 'skysql'
 };
@@ -59,21 +59,12 @@ var MariaDB = {
             port: config.mariadb_port,
             user: config.user,
             password: config.password });
-    },
-
-    resetTable: async function (conn) {
-        await conn.query("DROP TABLE IF EXISTS test.mongo");
-        await conn.query("CREATE TABLE test.mongo "
-                         + "(id VARCHAR(35) AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) "
-                         + "UNIQUE KEY, "
-                         + "doc JSON, "
-                         + "CONSTRAINT id_not_null CHECK(id IS NOT NULL))");
     }
 }
 
 var MxsMongo = {
     createClient: async function () {
-        var uri = "mongodb://" + config.host + ":" + config.mxsmongodb_port;
+        var uri = "mongodb://" + config.host + ":" + config.nosql_port;
         client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
         await client.connect();
         return client;
@@ -82,7 +73,7 @@ var MxsMongo = {
 
 var MngMongo = {
     createClient: async function () {
-        var uri = "mongodb://" + config.host + ":" + config.mngmongodb_port;
+        var uri = "mongodb://" + config.host + ":" + config.mongodb_port;
         client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
         await client.connect();
         return client;

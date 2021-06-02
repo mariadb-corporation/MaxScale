@@ -17,7 +17,7 @@
 
 #include "defs.hh"
 
-namespace mxsmongo
+namespace nosql
 {
 
 namespace command
@@ -38,9 +38,9 @@ public:
     {
         doc.append(kvp("ismaster", true));
         doc.append(kvp("topologyVersion", topology_version()));
-        doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
-        doc.append(kvp("maxMessageSizeBytes", mongo::MAX_MSG_SIZE));
-        doc.append(kvp("maxWriteBatchSize", mongo::MAX_WRITE_BATCH_SIZE));
+        doc.append(kvp("maxBsonObjectSize", protocol::MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp("maxMessageSizeBytes", protocol::MAX_MSG_SIZE));
+        doc.append(kvp("maxWriteBatchSize", protocol::MAX_WRITE_BATCH_SIZE));
         doc.append(kvp("localTime", bsoncxx::types::b_date(std::chrono::system_clock::now())));
         doc.append(kvp("logicalSessionTimeoutMinutes", 30));
         doc.append(kvp("connectionId", m_database.context().connection_id()));

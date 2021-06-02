@@ -21,7 +21,7 @@
 
 class Config;
 
-namespace mxsmongo
+namespace nosql
 {
 
 class Database
@@ -49,7 +49,7 @@ public:
     /**
      * @return The context.
      */
-    Mongo::Context& context()
+    NoSQL::Context& context()
     {
         return m_context;
     }
@@ -77,7 +77,7 @@ public:
      * @return Unique pointer to the instance.
      */
     static std::unique_ptr<Database> create(const std::string& name,
-                                            Mongo::Context* pContext,
+                                            NoSQL::Context* pContext,
                                             Config* pConfig);
 
     /**
@@ -91,7 +91,7 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_query(GWBUF* pRequest, const mxsmongo::Query& req);
+    GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
 
     /**
      * Handle a Mongo command.
@@ -106,7 +106,7 @@ public:
      *         of the client protocol will eventually be called.
      */
     GWBUF* handle_command(GWBUF* pRequest,
-                          const mxsmongo::Msg& req,
+                          const nosql::Msg& req,
                           const bsoncxx::document::view& doc);
 
     /**
@@ -130,7 +130,7 @@ public:
 
 private:
     Database(const std::string& name,
-             Mongo::Context* pContext,
+             NoSQL::Context* pContext,
              Config* pConfig);
 
     bool is_pending() const
@@ -156,7 +156,7 @@ private:
                    const bsoncxx::document::view& doc,
                    const Command::DocumentArguments& arguments)
     {
-        auto sCommand = mxsmongo::Command::get(this, pRequest, req, doc, arguments);
+        auto sCommand = nosql::Command::get(this, pRequest, req, doc, arguments);
 
         return execute(std::move(sCommand));
     }
@@ -165,7 +165,7 @@ private:
 
     State             m_state { READY };
     const std::string m_name;
-    Mongo::Context&   m_context;
+    NoSQL::Context&   m_context;
     Config&           m_config;
     SCommand          m_sCommand;
 };

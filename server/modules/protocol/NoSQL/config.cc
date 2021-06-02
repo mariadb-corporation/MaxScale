@@ -15,7 +15,7 @@
 
 namespace
 {
-namespace mongodbprotocol
+namespace nosqlprotocol
 {
 
 mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
@@ -24,19 +24,19 @@ mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specifica
 }
 
 mxs::config::ParamString GlobalConfig::s_user(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "user",
     "The user to use when connecting to the backend.");
 
 mxs::config::ParamString GlobalConfig::s_password(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "password",
     "The password to use when connecting to the backend.");
 
 mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknown_command(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "on_unknown_command",
-    "Whether to return an error or an empty document in case an unknown Mongo "
+    "Whether to return an error or an empty document in case an unknown NoSQL "
     "command is encountered.",
     {
         { GlobalConfig::RETURN_ERROR, "return_error" },
@@ -45,7 +45,7 @@ mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknow
     GlobalConfig::RETURN_ERROR);
 
 mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "auto_create_databases",
     "Whether databases should be created automatically. If enabled, whenever a document is "
     "inserted to a collection the corresponding database will automatically be created if "
@@ -53,7 +53,7 @@ mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
     true);
 
 mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
     "inserted to a collection the corresponding table will automatically be created if "
@@ -61,7 +61,7 @@ mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
     true);
 
 mxs::config::ParamCount GlobalConfig::s_id_length(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
     "tables created after the change; existing tables are not altered.",
@@ -70,9 +70,9 @@ mxs::config::ParamCount GlobalConfig::s_id_length(
     GlobalConfig::ID_LENGTH_MAX);
 
 mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_behavior(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "insert_behavior",
-    "Whether documents will be inserted in a way true to how MongoDB behaves, "
+    "Whether documents will be inserted in a way true to how NoSQL behaves, "
     "or in a way that is efficient from MariaDB's point of view.",
     {
         { GlobalConfig::AS_MONGODB, "as_mongodb" },
@@ -81,7 +81,7 @@ mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_beha
     GlobalConfig::AS_MONGODB);
 
 mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
-    &mongodbprotocol::specification,
+    &nosqlprotocol::specification,
     "cursor_timeout",
     "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
     mxs::config::NO_INTERPRETATION,
@@ -89,7 +89,7 @@ mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
 
 
 GlobalConfig::GlobalConfig()
-    : mxs::config::Configuration(MXS_MODULE_NAME, &mongodbprotocol::specification)
+    : mxs::config::Configuration(MXS_MODULE_NAME, &nosqlprotocol::specification)
 {
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
@@ -104,5 +104,5 @@ GlobalConfig::GlobalConfig()
 //static
 mxs::config::Specification& GlobalConfig::specification()
 {
-    return mongodbprotocol::specification;
+    return nosqlprotocol::specification;
 }

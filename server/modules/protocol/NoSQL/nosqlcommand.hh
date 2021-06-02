@@ -23,7 +23,7 @@
 #include "../../filter/masking/mysql.hh"
 #include "nosql.hh"
 
-namespace mxsmongo
+namespace nosql
 {
 
 class Database;
@@ -62,15 +62,15 @@ public:
     {
     }
 
-    static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
+    static std::unique_ptr<Command> get(nosql::Database* pDatabase,
                                         GWBUF* pRequest,
-                                        const mxsmongo::Query& req,
+                                        const nosql::Query& req,
                                         const bsoncxx::document::view& doc,
                                         const DocumentArguments& arguments);
 
-    static std::unique_ptr<Command> get(mxsmongo::Database* pDatabase,
+    static std::unique_ptr<Command> get(nosql::Database* pDatabase,
                                         GWBUF* pRequest,
-                                        const mxsmongo::Msg& req,
+                                        const nosql::Msg& req,
                                         const bsoncxx::document::view& doc,
                                         const DocumentArguments& arguments);
 

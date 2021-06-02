@@ -13,7 +13,7 @@
 
 #include "defs.hh"
 
-namespace mxsmongo
+namespace nosql
 {
 
 namespace command

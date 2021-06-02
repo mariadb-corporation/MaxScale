@@ -19,29 +19,29 @@
 
 using namespace std;
 
-mxsmongo::Database::Database(const std::string& name,
-                             Mongo::Context* pContext,
-                             Config* pConfig)
+nosql::Database::Database(const std::string& name,
+                          NoSQL::Context* pContext,
+                          Config* pConfig)
     : m_name(name)
     , m_context(*pContext)
     , m_config(*pConfig)
 {
 }
 
-mxsmongo::Database::~Database()
+nosql::Database::~Database()
 {
     mxb_assert(m_state == READY);
 }
 
 //static
-unique_ptr<mxsmongo::Database> mxsmongo::Database::create(const std::string& name,
-                                                          Mongo::Context* pContext,
-                                                          Config* pConfig)
+unique_ptr<nosql::Database> nosql::Database::create(const std::string& name,
+                                                    NoSQL::Context* pContext,
+                                                    Config* pConfig)
 {
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
-GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
+GWBUF* nosql::Database::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     mxb_assert(is_ready());
 
@@ -50,16 +50,16 @@ GWBUF* mxsmongo::Database::handle_query(GWBUF* pRequest, const mxsmongo::Query& 
     return execute(pRequest, req, req.query(), arguments);
 }
 
-GWBUF* mxsmongo::Database::handle_command(GWBUF* pRequest,
-                                          const mxsmongo::Msg& req,
-                                          const bsoncxx::document::view& doc)
+GWBUF* nosql::Database::handle_command(GWBUF* pRequest,
+                                       const nosql::Msg& req,
+                                       const bsoncxx::document::view& doc)
 {
     mxb_assert(is_ready());
 
     return execute(pRequest, req, doc, req.arguments());
 }
 
-GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
+GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
 {
     mxb_assert(is_pending());
     mxb_assert(m_sCommand.get());
@@ -72,7 +72,7 @@ GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
     {
         state = m_sCommand->translate(std::move(mariadb_response), &pResponse);
     }
-    catch (const mxsmongo::Exception& x)
+    catch (const nosql::Exception& x)
     {
         m_context.set_last_error(x.create_last_error());
 
@@ -82,7 +82,7 @@ GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
     {
         MXB_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
 
-        HardError error(x.what(), mxsmongo::error::COMMAND_FAILED);
+        HardError error(x.what(), nosql::error::COMMAND_FAILED);
         m_context.set_last_error(error.create_last_error());
 
         pResponse = error.create_response(*m_sCommand);
@@ -100,7 +100,7 @@ GWBUF* mxsmongo::Database::translate(mxs::Buffer&& mariadb_response)
     return pResponse;
 }
 
-GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
+GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
 {
     GWBUF* pResponse = nullptr;
 
@@ -119,7 +119,7 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
 
         pResponse = sCommand->execute();
     }
-    catch (const mxsmongo::Exception& x)
+    catch (const nosql::Exception& x)
     {
         m_context.set_last_error(x.create_last_error());
 
@@ -129,7 +129,7 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
     {
         MXB_ERROR("bsoncxx exeception occurred when parsing MongoDB command: %s", x.what());
 
-        HardError error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
         pResponse = error.create_response(*sCommand);
@@ -138,7 +138,7 @@ GWBUF* mxsmongo::Database::execute(std::unique_ptr<Command> sCommand)
     {
         MXB_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
 
-        HardError error(x.what(), mxsmongo::error::FAILED_TO_PARSE);
+        HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
         pResponse = error.create_response(*sCommand);

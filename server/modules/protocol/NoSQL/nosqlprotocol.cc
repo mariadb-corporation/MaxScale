@@ -36,13 +36,13 @@ struct ThisUnit
 
 }
 
-bsoncxx::document::value& mxsmongo::topology_version()
+bsoncxx::document::value& nosql::topology_version()
 {
     return this_unit.topology_version;
 }
 
 /**
- * mongodbprotocol module entry point.
+ * nosqlprotocol module entry point.
  *
  * @return The module object
  */

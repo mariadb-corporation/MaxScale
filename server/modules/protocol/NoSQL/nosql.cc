@@ -32,10 +32,10 @@ uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
 }
 
-namespace mxsmongo
+namespace nosql
 {
 
-namespace mongo
+namespace protocol
 {
 
 namespace alias
@@ -364,26 +364,26 @@ bool element_as<bool>(const string& command,
 
 }
 
-mxsmongo::Query::Query(const Packet& packet)
+nosql::Query::Query(const Packet& packet)
     : Packet(packet)
 {
     mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
 
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-    pData += mxsmongo::get_byte4(pData, &m_flags);
-    pData += mxsmongo::get_zstring(pData, &m_zCollection);
-    pData += mxsmongo::get_byte4(pData, &m_nSkip);
-    pData += mxsmongo::get_byte4(pData, &m_nReturn);
+    pData += nosql::get_byte4(pData, &m_flags);
+    pData += nosql::get_zstring(pData, &m_zCollection);
+    pData += nosql::get_byte4(pData, &m_nSkip);
+    pData += nosql::get_byte4(pData, &m_nReturn);
 
     uint32_t size;
-    mxsmongo::get_byte4(pData, &size);
+    nosql::get_byte4(pData, &size);
     m_query = bsoncxx::document::view { pData, size };
     pData += size;
 
     if (pData < m_pEnd)
     {
-        mxsmongo::get_byte4(pData, &size);
+        nosql::get_byte4(pData, &size);
         if (m_pEnd - pData != size)
         {
             mxb_assert(!true);
@@ -407,14 +407,14 @@ mxsmongo::Query::Query(const Packet& packet)
     }
 }
 
-mxsmongo::Msg::Msg(const Packet& packet)
+nosql::Msg::Msg(const Packet& packet)
     : Packet(packet)
 {
     mxb_assert(opcode() == MONGOC_OPCODE_MSG);
 
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-    pData += mxsmongo::get_byte4(pData, &m_flags);
+    pData += nosql::get_byte4(pData, &m_flags);
 
     if (checksum_present())
     {
@@ -439,7 +439,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
     while (pData < pSections_end)
     {
         uint8_t kind;
-        pData += mxsmongo::get_byte1(pData, &kind);
+        pData += nosql::get_byte1(pData, &kind);
 
         switch (kind)
         {
@@ -448,7 +448,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
             {
                 mxb_assert(m_document.empty());
                 uint32_t size;
-                mxsmongo::get_byte4(pData, &size);
+                nosql::get_byte4(pData, &size);
 
                 if (pData + size > pSections_end)
                 {
@@ -466,7 +466,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
         case 1:
             {
                 uint32_t total_size;
-                mxsmongo::get_byte4(pData, &total_size);
+                nosql::get_byte4(pData, &total_size);
 
                 if (pData + total_size > pSections_end)
                 {
@@ -495,7 +495,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
                     while (pData < pEnd)
                     {
                         uint32_t size;
-                        mxsmongo::get_byte4(pData, &size);
+                        nosql::get_byte4(pData, &size);
                         if (pData + size <= pEnd)
                         {
                             bsoncxx::document::view doc { pData, size };
@@ -540,7 +540,7 @@ mxsmongo::Msg::Msg(const Packet& packet)
     }
 }
 
-const char* mxsmongo::opcode_to_string(int code)
+const char* nosql::opcode_to_string(int code)
 {
     switch (code)
     {
@@ -557,13 +557,13 @@ const char* mxsmongo::opcode_to_string(int code)
         return "MONGOC_OPCODE_QUERY";
 
     case MONGOC_OPCODE_GET_MORE:
-        return "OPCODE_GET_MORE";
+        return "MONGOC_OPCODE_GET_MORE";
 
     case MONGOC_OPCODE_DELETE:
         return "MONGOC_OPCODE_DELETE";
 
     case MONGOC_OPCODE_KILL_CURSORS:
-        return "OPCODE_KILL_CURSORS";
+        return "MONGOC_OPCODE_KILL_CURSORS";
 
     case MONGOC_OPCODE_COMPRESSED:
         return "MONGOC_OPCODE_COMPRESSED";
@@ -577,7 +577,7 @@ const char* mxsmongo::opcode_to_string(int code)
     }
 }
 
-int mxsmongo::error::from_mariadb_code(int code)
+int nosql::error::from_mariadb_code(int code)
 {
     // TODO: Expand the range of used codes.
 
@@ -591,13 +591,13 @@ int mxsmongo::error::from_mariadb_code(int code)
     }
 }
 
-const char* mxsmongo::error::name(int mongo_code)
+const char* nosql::error::name(int protocol_code)
 {
-    switch (mongo_code)
+    switch (protocol_code)
     {
-#define MXSMONGO_ERROR(symbol, code, name) case symbol: { return name; }
+#define NOSQL_ERROR(symbol, code, name) case symbol: { return name; }
 #include "nosqlerror.hh"
-#undef MXSMONGO_ERROR
+#undef NOSQL_ERROR
 
     default:
         mxb_assert(!true);
@@ -605,7 +605,7 @@ const char* mxsmongo::error::name(int mongo_code)
     }
 }
 
-GWBUF* mxsmongo::SoftError::create_response(const Command& command) const
+GWBUF* nosql::SoftError::create_response(const Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);
@@ -613,45 +613,45 @@ GWBUF* mxsmongo::SoftError::create_response(const Command& command) const
     return command.create_response(doc.extract());
 }
 
-void mxsmongo::SoftError::create_response(const Command&, DocumentBuilder& doc) const
+void nosql::SoftError::create_response(const Command&, DocumentBuilder& doc) const
 {
     doc.append(kvp("ok", 0));
     doc.append(kvp("errmsg", what()));
     doc.append(kvp("code", m_code));
-    doc.append(kvp("codeName", mxsmongo::error::name(m_code)));
+    doc.append(kvp("codeName", nosql::error::name(m_code)));
 }
 
 namespace
 {
-    class ConcreteLastError: public mxsmongo::LastError
+class ConcreteLastError: public nosql::LastError
+{
+public:
+    ConcreteLastError(const std::string& err, int32_t code)
+        : m_err(err)
+        , m_code(code)
     {
-    public:
-        ConcreteLastError(const std::string& err, int32_t code)
-            : m_err(err)
-            , m_code(code)
-        {
-        }
+    }
 
-        void populate(mxsmongo::DocumentBuilder& doc)
-        {
-            doc.append(mxsmongo::kvp("err", m_err));
-            doc.append(mxsmongo::kvp("code", m_code));
-            doc.append(mxsmongo::kvp("codeName", mxsmongo::error::name(m_code)));
-        }
+    void populate(nosql::DocumentBuilder& doc)
+    {
+        doc.append(nosql::kvp("err", m_err));
+        doc.append(nosql::kvp("code", m_code));
+        doc.append(nosql::kvp("codeName", nosql::error::name(m_code)));
+    }
 
-    private:
-        string  m_err;
-        int32_t m_code;
-        string  m_code_name;
-    };
+private:
+    string  m_err;
+    int32_t m_code;
+    string  m_code_name;
+};
 }
 
-unique_ptr<mxsmongo::LastError> mxsmongo::SoftError::create_last_error() const
+unique_ptr<nosql::LastError> nosql::SoftError::create_last_error() const
 {
     return std::make_unique<ConcreteLastError>(what(), m_code);
 }
 
-GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) const
+GWBUF* nosql::HardError::create_response(const nosql::Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);
@@ -659,25 +659,25 @@ GWBUF* mxsmongo::HardError::create_response(const mxsmongo::Command& command) co
     return command.create_response(doc.extract());
 }
 
-void mxsmongo::HardError::create_response(const Command&, DocumentBuilder& doc) const
+void nosql::HardError::create_response(const Command&, DocumentBuilder& doc) const
 {
     doc.append(kvp("$err", what()));
     doc.append(kvp("code", m_code));
 }
 
-unique_ptr<mxsmongo::LastError> mxsmongo::HardError::create_last_error() const
+unique_ptr<nosql::LastError> nosql::HardError::create_last_error() const
 {
     return std::make_unique<ConcreteLastError>(what(), m_code);
 }
 
-mxsmongo::MariaDBError::MariaDBError(const ComERR& err)
-    : Exception("Mongo command failed due to MariaDB error.", error::COMMAND_FAILED)
+nosql::MariaDBError::MariaDBError(const ComERR& err)
+    : Exception("Protocol command failed due to MariaDB error.", error::COMMAND_FAILED)
     , m_mariadb_code(err.code())
     , m_mariadb_message(err.message())
 {
 }
 
-GWBUF* mxsmongo::MariaDBError::create_response(const Command& command) const
+GWBUF* nosql::MariaDBError::create_response(const Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);
@@ -685,7 +685,7 @@ GWBUF* mxsmongo::MariaDBError::create_response(const Command& command) const
     return command.create_response(doc.extract());
 }
 
-void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
+void nosql::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
 {
     string json = bsoncxx::to_json(command.doc());
     string sql = command.last_statement();
@@ -697,15 +697,15 @@ void mxsmongo::MariaDBError::create_response(const Command& command, DocumentBui
     mariadb.append(kvp("sql", sql));
 
     doc.append(kvp("$err", what()));
-    auto mongo_code = error::from_mariadb_code(m_mariadb_code);;
-    doc.append(kvp("code", mongo_code));
-    doc.append(kvp("codeName", mxsmongo::error::name(mongo_code)));
+    auto protocol_code = error::from_mariadb_code(m_mariadb_code);;
+    doc.append(kvp("code", protocol_code));
+    doc.append(kvp("codeName", nosql::error::name(protocol_code)));
     doc.append(kvp("mariadb", mariadb.extract()));
 
-    MXS_ERROR("Mongo command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
+    MXS_ERROR("Protocol command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
               m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
 
-unique_ptr<mxsmongo::LastError> mxsmongo::MariaDBError::create_last_error() const
+unique_ptr<nosql::LastError> nosql::MariaDBError::create_last_error() const
 {
     class MariaDBLastError : public ConcreteLastError
     {
@@ -739,7 +739,7 @@ unique_ptr<mxsmongo::LastError> mxsmongo::MariaDBError::create_last_error() cons
 }
 
 
-vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view& projection)
+vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& projection)
 {
     vector<string> extractions;
 
@@ -796,7 +796,7 @@ vector<string> mxsmongo::projection_to_extractions(const bsoncxx::document::view
 namespace
 {
 
-using namespace mxsmongo;
+using namespace nosql;
 
 string get_condition(const bsoncxx::document::view& doc);
 
@@ -830,8 +830,8 @@ string get_and_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
-                                      mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError("$or/$and/$nor entries need to be full objects",
+                                   nosql::error::BAD_VALUE);
         }
     }
 
@@ -855,7 +855,7 @@ string get_and_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        throw mxsmongo::SoftError("$and must be an array", mxsmongo::error::BAD_VALUE);
+        throw nosql::SoftError("$and must be an array", nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -891,8 +891,8 @@ string get_nor_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
-                                      mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError("$or/$and/$nor entries need to be full objects",
+                                   nosql::error::BAD_VALUE);
         }
     }
 
@@ -916,7 +916,7 @@ string get_nor_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        throw mxsmongo::SoftError("$nor must be an array", mxsmongo::error::BAD_VALUE);
+        throw nosql::SoftError("$nor must be an array", nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -952,8 +952,8 @@ string get_or_condition(const bsoncxx::array::view& array)
         }
         else
         {
-            throw mxsmongo::SoftError("$or/$and/$nor entries need to be full objects",
-                                      mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError("$or/$and/$nor entries need to be full objects",
+                                   nosql::error::BAD_VALUE);
         }
     }
 
@@ -977,7 +977,7 @@ string get_or_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        throw mxsmongo::SoftError("$or must be an array", mxsmongo::error::BAD_VALUE);
+        throw nosql::SoftError("$or must be an array", nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -1007,7 +1007,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
         stringstream ss;
         ss << "unknown top level operator: " << key;
 
-        throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+        throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -1109,7 +1109,7 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         {
             ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
 
-            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
 
@@ -1154,7 +1154,7 @@ string element_to_array(const bsoncxx::document::element& element, const string&
 
 string element_to_null(const bsoncxx::document::element& element, const string& = "")
 {
-    bool b = mxsmongo::element_as<bool>("maxscale", "internal", element, mxsmongo::Conversion::RELAXED);
+    bool b = nosql::element_as<bool>("maxscale", "internal", element, nosql::Conversion::RELAXED);
 
     if (b)
     {
@@ -1320,7 +1320,7 @@ string get_op_and_value(const bsoncxx::document::view& doc)
 {
     string rv;
 
-    // We will ignore all but the last field. That's what Mongo does
+    // We will ignore all but the last field. That's what MongoDB does
     // but as it is unlikely that there will be more fields than one,
     // explicitly ignoring fields at the beginning would just make
     // things messier without adding much benefit.
@@ -1339,7 +1339,7 @@ string get_op_and_value(const bsoncxx::document::view& doc)
         {
             stringstream ss;
             ss << "unknown operator: " << op;
-            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
 
@@ -1389,26 +1389,26 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
     return ss.str();
 }
 
-string mongodb_type_to_mariadb_type(int32_t number)
+string protocol_type_to_mariadb_type(int32_t number)
 {
     switch (number)
     {
-    case mongo::type::DOUBLE:
+    case protocol::type::DOUBLE:
         return "'DOUBLE'";
 
-    case mongo::type::STRING:
+    case protocol::type::STRING:
         return "'STRING'";
 
-    case mongo::type::OBJECT:
+    case protocol::type::OBJECT:
         return "'OBJECT'";
 
-    case mongo::type::ARRAY:
+    case protocol::type::ARRAY:
         return "'ARRAY'";
 
-    case mongo::type::BOOL:
+    case protocol::type::BOOL:
         return "'BOOLEAN'";
 
-    case mongo::type::INT32:
+    case protocol::type::INT32:
         return "'INTEGER'";
 
     default:
@@ -1427,7 +1427,7 @@ string type_to_condition_from_value(const string& field, int32_t number)
     stringstream ss;
 
     ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = "
-       << mongodb_type_to_mariadb_type(number)
+       << protocol_type_to_mariadb_type(number)
        << ")";
 
     return ss.str();
@@ -1448,7 +1448,7 @@ string type_to_condition_from_value(const string& field, const bsoncxx::stdx::st
     }
     else
     {
-        rv = type_to_condition_from_value(field, mongo::alias::to_type(alias));
+        rv = type_to_condition_from_value(field, protocol::alias::to_type(alias));
     }
 
     return rv;
@@ -1597,7 +1597,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         {
             stringstream ss;
             ss << "unknown operator: " << op;
-            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::BAD_VALUE);
+            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
 
@@ -1718,7 +1718,7 @@ string get_condition(const bsoncxx::document::view& doc)
 
 }
 
-string mxsmongo::to_value(const bsoncxx::document::element& element)
+string nosql::to_value(const bsoncxx::document::element& element)
 {
     return element_to_value(element);
 }
@@ -1821,17 +1821,17 @@ string element_to_string(const document_element_or_array_item& x)
     return ss.str();
 }
 
-string mxsmongo::to_string(const bsoncxx::document::element& element)
+string nosql::to_string(const bsoncxx::document::element& element)
 {
     return element_to_string(element);
 }
 
-string mxsmongo::query_to_where_condition(const bsoncxx::document::view& query)
+string nosql::query_to_where_condition(const bsoncxx::document::view& query)
 {
     return get_condition(query);
 }
 
-string mxsmongo::query_to_where_clause(const bsoncxx::document::view& query)
+string nosql::query_to_where_clause(const bsoncxx::document::view& query)
 {
     string clause;
     string condition = query_to_where_condition(query);
@@ -1848,7 +1848,7 @@ string mxsmongo::query_to_where_clause(const bsoncxx::document::view& query)
 
 
 // https://docs.mongodb.com/manual/reference/method/cursor.sort/
-string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
+string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
 {
     string order_by;
 
@@ -1859,26 +1859,26 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
 
         if (key.size() == 0)
         {
-            throw mxsmongo::SoftError("FieldPath cannot be constructed with empty string",
-                                      mxsmongo::error::LOCATION40352);
+            throw nosql::SoftError("FieldPath cannot be constructed with empty string",
+                                   nosql::error::LOCATION40352);
         }
 
         int64_t value = 0;
 
-        if (!mxsmongo::get_number_as_integer(element, &value))
+        if (!nosql::get_number_as_integer(element, &value))
         {
             stringstream ss;
             // TODO: Should actually be the value itself, and not its type.
             ss << "Illegal key in $sort specification: "
                << element.key() << ": " << bsoncxx::to_string(element.type());
 
-            throw mxsmongo::SoftError(ss.str(), mxsmongo::error::LOCATION15974);
+            throw nosql::SoftError(ss.str(), nosql::error::LOCATION15974);
         }
 
         if (value != 1 && value != -1)
         {
-            throw mxsmongo::SoftError("$sort key ordering must be 1 (for ascending) or -1 (for descending)",
-                                      mxsmongo::error::LOCATION15975);
+            throw nosql::SoftError("$sort key ordering must be 1 (for ascending) or -1 (for descending)",
+                                   nosql::error::LOCATION15975);
         }
 
         if (!order_by.empty())
@@ -1897,7 +1897,7 @@ string mxsmongo::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
-bool mxsmongo::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
+bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
 {
     bool rv = true;
 
@@ -1918,7 +1918,7 @@ bool mxsmongo::get_integer(const bsoncxx::document::element& element, int64_t* p
     return rv;
 }
 
-bool mxsmongo::get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt)
+bool nosql::get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt)
 {
     bool rv = true;
 
@@ -1944,7 +1944,7 @@ bool mxsmongo::get_number_as_integer(const bsoncxx::document::element& element, 
     return rv;
 }
 
-bool mxsmongo::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
+bool nosql::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
 {
     bool rv = true;
 
@@ -1969,7 +1969,7 @@ bool mxsmongo::get_number_as_double(const bsoncxx::document::element& element, d
     return rv;
 }
 
-std::atomic_int64_t mxsmongo::Mongo::Context::s_connection_id;
+std::atomic_int64_t nosql::NoSQL::Context::s_connection_id;
 
 namespace
 {
@@ -1978,10 +1978,10 @@ void throw_cursor_not_found(int64_t id)
 {
     stringstream ss;
     ss << "cursor id " << id << " not found";
-    throw mxsmongo::SoftError(ss.str(), mxsmongo::error::CURSOR_NOT_FOUND);
+    throw nosql::SoftError(ss.str(), nosql::error::CURSOR_NOT_FOUND);
 }
 
-class NoError : public mxsmongo::LastError
+class NoError : public nosql::LastError
 {
 public:
     NoError(int32_t n = 0)
@@ -1989,9 +1989,9 @@ public:
     {
     }
 
-    void populate(mxsmongo::DocumentBuilder& doc)
+    void populate(nosql::DocumentBuilder& doc)
     {
-        mxsmongo::DocumentBuilder writeConcern;
+        nosql::DocumentBuilder writeConcern;
         writeConcern.append(kvp("w", 1));
         writeConcern.append(kvp("wtimeout", 0));
 
@@ -2008,7 +2008,7 @@ private:
 
 }
 
-mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& collection, int64_t id)
+nosql::NoSQLCursor& nosql::NoSQL::Context::get_cursor(const std::string& collection, int64_t id)
 {
     auto it = m_collection_cursors.find(collection);
 
@@ -2029,8 +2029,8 @@ mxsmongo::MongoCursor& mxsmongo::Mongo::Context::get_cursor(const std::string& c
     return jt->second;
 }
 
-mxsmongo::Mongo::Context::Context(mxs::ClientConnection* pClient_connection,
-                                  mxs::Component* pDownstream)
+nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
+                               mxs::Component* pDownstream)
     : m_client_connection(*pClient_connection)
     , m_downstream(*pDownstream)
     , m_connection_id(++s_connection_id)
@@ -2038,7 +2038,7 @@ mxsmongo::Mongo::Context::Context(mxs::ClientConnection* pClient_connection,
 {
 }
 
-void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
+void nosql::NoSQL::Context::remove_cursor(const NoSQLCursor& cursor)
 {
     auto it = m_collection_cursors.find(cursor.ns());
     mxb_assert(it != m_collection_cursors.end());
@@ -2057,7 +2057,7 @@ void mxsmongo::Mongo::Context::remove_cursor(const MongoCursor& cursor)
     }
 }
 
-void mxsmongo::Mongo::Context::store_cursor(MongoCursor&& cursor)
+void nosql::NoSQL::Context::store_cursor(NoSQLCursor&& cursor)
 {
     CursorsById& cursors = m_collection_cursors[cursor.ns()];
 
@@ -2066,8 +2066,8 @@ void mxsmongo::Mongo::Context::store_cursor(MongoCursor&& cursor)
     cursors.emplace(std::make_pair(cursor.id(), std::move(cursor)));
 }
 
-set<int64_t> mxsmongo::Mongo::Context::kill_cursors(const std::string& collection,
-                                                       const vector<int64_t>& ids)
+set<int64_t> nosql::NoSQL::Context::kill_cursors(const std::string& collection,
+                                                 const vector<int64_t>& ids)
 {
     set<int64_t> removed;
 
@@ -2092,8 +2092,8 @@ set<int64_t> mxsmongo::Mongo::Context::kill_cursors(const std::string& collectio
     return removed;
 }
 
-void mxsmongo::Mongo::Context::kill_idle_cursors(const mxb::TimePoint& now,
-                                                 const std::chrono::seconds& timeout)
+void nosql::NoSQL::Context::kill_idle_cursors(const mxb::TimePoint& now,
+                                              const std::chrono::seconds& timeout)
 {
     for (auto& kv : m_collection_cursors)
     {
@@ -2103,7 +2103,7 @@ void mxsmongo::Mongo::Context::kill_idle_cursors(const mxb::TimePoint& now,
 
         while (it != cursors.end())
         {
-            const MongoCursor& cursor = it->second;
+            const NoSQLCursor& cursor = it->second;
 
             auto idle = now - cursor.last_use();
 
@@ -2119,7 +2119,7 @@ void mxsmongo::Mongo::Context::kill_idle_cursors(const mxb::TimePoint& now,
     }
 }
 
-void mxsmongo::Mongo::Context::get_last_error(DocumentBuilder& doc)
+void nosql::NoSQL::Context::get_last_error(DocumentBuilder& doc)
 {
     int32_t connection_id = m_connection_id; // Mongo returns this as a 32-bit integer.
 
@@ -2128,24 +2128,24 @@ void mxsmongo::Mongo::Context::get_last_error(DocumentBuilder& doc)
     doc.append(kvp("ok", 1));
 }
 
-void mxsmongo::Mongo::Context::reset_error(int32_t n)
+void nosql::NoSQL::Context::reset_error(int32_t n)
 {
     m_sLast_error = std::make_unique<NoError>(n);
 }
 
-mxsmongo::Mongo::Mongo(mxs::ClientConnection* pClient_connection,
-                       mxs::Component* pDownstream,
-                       Config* pConfig)
+nosql::NoSQL::NoSQL(mxs::ClientConnection* pClient_connection,
+                    mxs::Component* pDownstream,
+                    Config* pConfig)
     : m_context(pClient_connection, pDownstream)
     , m_config(*pConfig)
 {
 }
 
-mxsmongo::Mongo::~Mongo()
+nosql::NoSQL::~NoSQL()
 {
 }
 
-GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
+GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
 {
     GWBUF* pResponse = nullptr;
 
@@ -2154,7 +2154,7 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
         try
         {
             // If no database operation is in progress, we proceed.
-            mxsmongo::Packet req(pRequest);
+            nosql::Packet req(pRequest);
 
             mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
 
@@ -2170,17 +2170,17 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
                 {
                     mxb_assert(!true);
                     stringstream ss;
-                    ss << "Unsupported packet " << mxsmongo::opcode_to_string(req.opcode()) << " received.";
+                    ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());
                 }
                 break;
 
             case MONGOC_OPCODE_MSG:
-                pResponse = handle_msg(pRequest, mxsmongo::Msg(req));
+                pResponse = handle_msg(pRequest, nosql::Msg(req));
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                pResponse = handle_query(pRequest, mxsmongo::Query(req));
+                pResponse = handle_query(pRequest, nosql::Query(req));
                 break;
 
             default:
@@ -2209,7 +2209,7 @@ GWBUF* mxsmongo::Mongo::handle_request(GWBUF* pRequest)
     return pResponse;
 }
 
-int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
+int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
 {
     mxb_assert(m_sDatabase.get());
 
@@ -2219,15 +2219,15 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
     mxb_assert(gwbuf_length(pMariadb_response) < MYSQL_PACKET_LENGTH_MAX);
 
     mxs::Buffer mariadb_response(pMariadb_response);
-    GWBUF* pMongoDB_response = m_sDatabase->translate(std::move(mariadb_response));
+    GWBUF* pProtocol_response = m_sDatabase->translate(std::move(mariadb_response));
 
     if (m_sDatabase->is_ready())
     {
         m_sDatabase.reset();
 
-        if (pMongoDB_response)
+        if (pProtocol_response)
         {
-            pDcb->writeq_append(pMongoDB_response);
+            pDcb->writeq_append(pProtocol_response);
         }
 
         if (!m_requests.empty())
@@ -2241,32 +2241,32 @@ int32_t mxsmongo::Mongo::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
                 GWBUF* pRequest = m_requests.front();
                 m_requests.pop_front();
 
-                pMongoDB_response = handle_request(pRequest);
+                pProtocol_response = handle_request(pRequest);
 
-                if (pMongoDB_response)
+                if (pProtocol_response)
                 {
                     // The response could be generated immediately, just send it.
-                    pDcb->writeq_append(pMongoDB_response);
+                    pDcb->writeq_append(pProtocol_response);
                 }
             }
-            while (pMongoDB_response && !m_requests.empty());
+            while (pProtocol_response && !m_requests.empty());
         }
     }
     else
     {
         // If the database is not ready, there cannot be a response.
-        mxb_assert(pMongoDB_response == nullptr);
+        mxb_assert(pProtocol_response == nullptr);
     }
 
     return 0;
 }
 
-void mxsmongo::Mongo::kill_client()
+void nosql::NoSQL::kill_client()
 {
     m_context.client_connection().dcb()->session()->kill();
 }
 
-GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req)
+GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
@@ -2283,7 +2283,7 @@ GWBUF* mxsmongo::Mongo::handle_query(GWBUF* pRequest, const mxsmongo::Query& req
     return pResponse;
 }
 
-GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
+GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
 {
     MXB_INFO("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
 
@@ -2327,7 +2327,7 @@ GWBUF* mxsmongo::Mongo::handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req)
     return pResponse;
 }
 
-string mxsmongo::table_create_statement(const std::string& table_name, int64_t id_length)
+string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
 {
     stringstream ss;
     ss << "CREATE TABLE " << table_name << " ("

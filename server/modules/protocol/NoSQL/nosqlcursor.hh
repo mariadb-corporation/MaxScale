@@ -21,15 +21,15 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 
-namespace mxsmongo
+namespace nosql
 {
 
-class MongoCursor
+class NoSQLCursor
 {
 public:
-    MongoCursor(const std::string& ns);
-    MongoCursor(MongoCursor&& rhs) = default;
-    MongoCursor(const std::string& ns,
+    NoSQLCursor(const std::string& ns);
+    NoSQLCursor(NoSQLCursor&& rhs) = default;
+    NoSQLCursor(const std::string& ns,
                 const std::vector<std::string>& extractions,
                 mxs::Buffer&& mariadb_response);
 

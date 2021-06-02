@@ -35,7 +35,7 @@ class DCB;
 class Config;
 class ComERR;
 
-namespace mxsmongo
+namespace nosql
 {
 
 class Command;
@@ -44,7 +44,7 @@ using DocumentBuilder = bsoncxx::builder::basic::document;
 using ArrayBuilder = bsoncxx::builder::basic::array;
 using bsoncxx::builder::basic::kvp;
 
-namespace mongo
+namespace protocol
 {
 
 namespace type
@@ -253,9 +253,9 @@ bool element_as<bool>(const std::string& command,
 namespace error
 {
 
-#define MXSMONGO_ERROR(symbol, code, name) const int symbol = code;
+#define NOSQL_ERROR(symbol, code, name) const int symbol = code;
 #include "nosqlerror.hh"
-#undef MXSMONGO_ERROR
+#undef NOSQL_ERROR
 
 int from_mariadb_code(int code);
 
@@ -432,7 +432,7 @@ public:
 
     Packet(const uint8_t* pData, const uint8_t* pEnd)
         : m_pEnd(pEnd)
-        , m_pHeader(reinterpret_cast<const mongo::HEADER*>(pData))
+        , m_pHeader(reinterpret_cast<const protocol::HEADER*>(pData))
     {
     }
 
@@ -491,7 +491,7 @@ public:
 
 protected:
     const uint8_t*       m_pEnd;
-    const mongo::HEADER* m_pHeader;
+    const protocol::HEADER* m_pHeader;
 };
 
 class Query final : public Packet
@@ -566,17 +566,17 @@ public:
     {
         mxb_assert(opcode() == MONGOC_OPCODE_REPLY);
 
-        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(mongo::HEADER);
+        const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-        pData += mxsmongo::get_byte4(pData, &m_flags);
-        pData += mxsmongo::get_byte8(pData, &m_cursor_id);
-        pData += mxsmongo::get_byte4(pData, &m_start_from);
-        pData += mxsmongo::get_byte4(pData, &m_nReturned);
+        pData += nosql::get_byte4(pData, &m_flags);
+        pData += nosql::get_byte8(pData, &m_cursor_id);
+        pData += nosql::get_byte4(pData, &m_start_from);
+        pData += nosql::get_byte4(pData, &m_nReturned);
 
         while (pData < m_pEnd)
         {
             uint32_t size;
-            mxsmongo::get_byte4(pData, &size);
+            nosql::get_byte4(pData, &size);
             m_documents.push_back(bsoncxx::document::view { pData, size });
             pData += size;
         }
@@ -697,7 +697,7 @@ private:
 
 class Database;
 
-class Mongo
+class NoSQL
 {
 public:
     class Context
@@ -734,9 +734,9 @@ public:
             return ++m_request_id;
         }
 
-        MongoCursor& get_cursor(const std::string& collection, int64_t id);
-        void remove_cursor(const MongoCursor& cursor);
-        void store_cursor(MongoCursor&& cursor);
+        NoSQLCursor& get_cursor(const std::string& collection, int64_t id);
+        void remove_cursor(const NoSQLCursor& cursor);
+        void store_cursor(NoSQLCursor&& cursor);
         std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids);
         void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
@@ -749,7 +749,7 @@ public:
         void reset_error(int32_t n = 0);
 
     private:
-        using CursorsById = std::unordered_map<int64_t, MongoCursor>;
+        using CursorsById = std::unordered_map<int64_t, NoSQLCursor>;
         using CollectionCursors = std::unordered_map<std::string, CursorsById>;
 
 
@@ -769,13 +769,13 @@ public:
         PENDING // A command is being executed.
     };
 
-    Mongo(mxs::ClientConnection* pClient_connection,
+    NoSQL(mxs::ClientConnection* pClient_connection,
           mxs::Component* pDownstream,
           Config* pConfig);
-    ~Mongo();
+    ~NoSQL();
 
-    Mongo(const Mongo&) = delete;
-    Mongo& operator = (const Mongo&) = delete;
+    NoSQL(const NoSQL&) = delete;
+    NoSQL& operator = (const NoSQL&) = delete;
 
     State state() const
     {
@@ -806,8 +806,8 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    GWBUF* handle_query(GWBUF* pRequest, const mxsmongo::Query& req);
-    GWBUF* handle_msg(GWBUF* pRequest, const mxsmongo::Msg& req);
+    GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
+    GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 
     State              m_state { READY };
     Context            m_context;
@@ -830,7 +830,7 @@ std::string table_create_statement(const std::string& table_name,
 
 }
 
-inline std::ostream& operator << (std::ostream& out, const mxsmongo::Packet& x)
+inline std::ostream& operator << (std::ostream& out, const nosql::Packet& x)
 {
     x.out(out);
     return out;

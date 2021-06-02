@@ -77,10 +77,10 @@ private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
 private:
-    State           m_state { CONNECTED };
-    Config          m_config;
-    MXS_SESSION&    m_session;
-    MYSQL_session&  m_session_data;
-    DCB*            m_pDcb = nullptr;
-    mxsmongo::Mongo m_mongo;
+    State          m_state { CONNECTED };
+    Config         m_config;
+    MXS_SESSION&   m_session;
+    MYSQL_session& m_session_data;
+    DCB*           m_pDcb = nullptr;
+    nosql::NoSQL   m_nosql;
 };

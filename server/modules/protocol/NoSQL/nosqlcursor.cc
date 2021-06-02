@@ -83,10 +83,10 @@ string create_entry(const string& extraction, const std::string& value)
 
 }
 
-namespace mxsmongo
+namespace nosql
 {
 
-MongoCursor::MongoCursor(const std::string& ns)
+NoSQLCursor::NoSQLCursor(const std::string& ns)
     : m_ns(ns)
     , m_id(0)
     , m_exhausted(false)
@@ -94,7 +94,7 @@ MongoCursor::MongoCursor(const std::string& ns)
     touch();
 }
 
-MongoCursor::MongoCursor(const std::string& ns,
+NoSQLCursor::NoSQLCursor(const std::string& ns,
                          const vector<string>& extractions,
                          mxs::Buffer&& mariadb_response)
     : m_ns(ns)
@@ -109,20 +109,20 @@ MongoCursor::MongoCursor(const std::string& ns,
     touch();
 }
 
-void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
+void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
                                      int32_t nBatch,
                                      bool single_batch)
 {
     create_batch(doc, key::FIRSTBATCH, nBatch, single_batch);
 }
 
-void MongoCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
+void NoSQLCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
     create_batch(doc, key::NEXTBATCH, nBatch, false);
 }
 
 //static
-void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
+void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
                                      const std::string& ns)
 {
     ArrayBuilder batch;
@@ -138,7 +138,7 @@ void MongoCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
     doc.append(kvp("ok", 1));
 }
 
-void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
+void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
                                const string& which_batch,
                                int32_t nBatch,
                                bool single_batch)
@@ -178,7 +178,7 @@ void MongoCursor::create_batch(bsoncxx::builder::basic::document& doc,
     touch();
 }
 
-MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
+NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
 {
     int n = 0;
     while (n < nBatch && ComResponse(m_pBuffer).type() != ComResponse::EOF_PACKET) // m_pBuffer not advanced
@@ -249,7 +249,7 @@ MongoCursor::Result MongoCursor::create_batch(bsoncxx::builder::basic::array& ba
     return at_end ? Result::COMPLETE : Result::PARTIAL;
 }
 
-void MongoCursor::initialize()
+void NoSQLCursor::initialize()
 {
     ComQueryResponse cqr(&m_pBuffer);
 
@@ -276,7 +276,7 @@ void MongoCursor::initialize()
     // Now m_pBuffer points at the beginning of rows.
 }
 
-void MongoCursor::touch()
+void NoSQLCursor::touch()
 {
     m_used = mxb::Worker::get_current()->epoll_tick_now();
 }

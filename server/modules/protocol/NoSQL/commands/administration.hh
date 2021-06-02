@@ -17,7 +17,7 @@
 
 #include "defs.hh"
 
-namespace mxsmongo
+namespace nosql
 {
 
 namespace command
@@ -44,7 +44,7 @@ public:
 
     string generate_sql() override
     {
-        auto sql = mxsmongo::table_create_statement(table(), m_database.config().id_length);
+        auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
 
         return sql;
     }

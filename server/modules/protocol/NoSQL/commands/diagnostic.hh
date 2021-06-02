@@ -19,7 +19,7 @@
 #include <openssl/opensslv.h>
 #include <maxscale/config.hh>
 
-namespace mxsmongo
+namespace nosql
 {
 
 namespace command
@@ -63,7 +63,7 @@ public:
         doc.append(kvp("javascriptEngine", "mozjs")); // We lie
         doc.append(kvp("bits", 64));
         doc.append(kvp("debug", debug));
-        doc.append(kvp("maxBsonObjectSize", mongo::MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp("maxBsonObjectSize", protocol::MAX_BSON_OBJECT_SIZE));
         doc.append(kvp("openssl", openssl.extract()));
         doc.append(kvp("modules", modules.extract()));
         doc.append(kvp("ok", 1));

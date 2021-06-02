@@ -26,7 +26,7 @@
 #include "config.hh"
 
 using namespace std;
-using namespace mxsmongo;
+using namespace nosql;
 
 ClientConnection::ClientConnection(const GlobalConfig& config,
                                    MXS_SESSION* pSession,
@@ -34,7 +34,7 @@ ClientConnection::ClientConnection(const GlobalConfig& config,
     : m_config(config)
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
-    , m_mongo(this, pDownstream, &m_config)
+    , m_nosql(this, pDownstream, &m_config)
 {
 }
 
@@ -44,7 +44,7 @@ ClientConnection::~ClientConnection()
 
 bool ClientConnection::init_connection()
 {
-    // TODO: If we need to initially send something to the MongoDB client,
+    // TODO: If we need to initially send something to the NoSQL client,
     // TODO: that should be done here.
     return true;
 }
@@ -66,7 +66,7 @@ const ClientDCB* ClientConnection::dcb() const
 
 void ClientConnection::ready_for_reading(DCB* dcb)
 {
-    DCB::ReadResult read_res = m_pDcb->read(mongo::HEADER_LEN, mongo::MAX_MSG_SIZE);
+    DCB::ReadResult read_res = m_pDcb->read(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
     if (!read_res)
     {
         return;
@@ -76,12 +76,12 @@ void ClientConnection::ready_for_reading(DCB* dcb)
     GWBUF* pBuffer = read_res.data.release();
     auto link_len = gwbuf_link_length(pBuffer);
 
-    if (link_len < mongo::HEADER_LEN)
+    if (link_len < protocol::HEADER_LEN)
     {
         pBuffer = gwbuf_make_contiguous(pBuffer);
     }
 
-    mongo::HEADER* pHeader = reinterpret_cast<mongo::HEADER*>(gwbuf_link_data(pBuffer));
+    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(gwbuf_link_data(pBuffer));
 
     int buffer_len = gwbuf_length(pBuffer);
     if (buffer_len >= pHeader->msg_len)
@@ -157,9 +157,9 @@ const char* dbg_decode_response(GWBUF* pPacket);
 
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
-    mxb_assert(m_mongo.is_pending());
+    mxb_assert(m_nosql.is_pending());
 
-    return m_mongo.clientReply(pMariaDB_response, m_pDcb);
+    return m_nosql.clientReply(pMariaDB_response, m_pDcb);
 }
 
 json_t* ClientConnection::diagnostics() const
@@ -251,9 +251,9 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     if (ready)
     {
         mxb_assert(gwbuf_is_contiguous(pPacket));
-        mxb_assert(gwbuf_length(pPacket) >= mongo::HEADER_LEN);
+        mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
 
-        pResponse = m_mongo.handle_request(pPacket);
+        pResponse = m_nosql.handle_request(pPacket);
     }
 
     return pResponse;
@@ -263,7 +263,7 @@ int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, con
 {
     int32_t rv = 0;
 
-    if (m_mongo.is_pending())
+    if (m_nosql.is_pending())
     {
         rv = write(pBuffer);
     }
@@ -296,7 +296,7 @@ int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, con
 
 void ClientConnection::tick(std::chrono::seconds idle)
 {
-    m_mongo.context().kill_idle_cursors(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
+    m_nosql.context().kill_idle_cursors(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
 
     mxs::ClientConnection::tick(idle);
 }

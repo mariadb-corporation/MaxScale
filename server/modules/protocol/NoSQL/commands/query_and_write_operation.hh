@@ -19,7 +19,7 @@
 #include <maxbase/worker.hh>
 #include "../nosqlcursor.hh"
 
-namespace mxsmongo
+namespace nosql
 {
 
 namespace command
@@ -413,7 +413,7 @@ public:
                 if (code == ER_NO_SUCH_TABLE)
                 {
                     DocumentBuilder doc;
-                    MongoCursor::create_first_batch(doc, table(Quoted::NO));
+                    NoSQLCursor::create_first_batch(doc, table(Quoted::NO));
 
                     pResponse = create_response(doc.extract());
                 }
@@ -434,7 +434,7 @@ public:
         default:
             {
                 // Must be a result set.
-                MongoCursor cursor(table(Quoted::NO), m_extractions, std::move(mariadb_response));
+                NoSQLCursor cursor(table(Quoted::NO), m_extractions, std::move(mariadb_response));
 
                 DocumentBuilder doc;
                 cursor.create_first_batch(doc, m_batch_size, m_single_batch);
@@ -500,7 +500,7 @@ public:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        MongoCursor& cursor = m_database.context().get_cursor(collection, id);
+        NoSQLCursor& cursor = m_database.context().get_cursor(collection, id);
 
         cursor.create_next_batch(doc, batch_size);
 
@@ -605,7 +605,7 @@ public:
                     vector<int> indexes;
                     for (const auto& element : m_ids)
                     {
-                        if (mxsmongo::to_string(element) == duplicate)
+                        if (nosql::to_string(element) == duplicate)
                         {
                             indexes.push_back(index);
 
@@ -816,7 +816,7 @@ protected:
 
                 if (action == Worker::Call::EXECUTE)
                 {
-                    auto sql = mxsmongo::table_create_statement(table(), m_database.config().id_length);
+                    auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
 
                     send_downstream(sql);
                 }
@@ -1206,7 +1206,7 @@ private:
                 if (add_value)
                 {
                     s += ", ";
-                    s += mxsmongo::to_value(field);
+                    s += nosql::to_value(field);
                 }
             }
 

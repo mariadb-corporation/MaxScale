@@ -49,12 +49,12 @@ namespace
 
 uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
-class Unknown : public mxsmongo::ImmediateCommand
+class Unknown : public nosql::ImmediateCommand
 {
 public:
-    using mxsmongo::ImmediateCommand::ImmediateCommand;
+    using nosql::ImmediateCommand::ImmediateCommand;
 
-    void populate_response(mxsmongo::DocumentBuilder& doc) override
+    void populate_response(nosql::DocumentBuilder& doc) override
     {
         string command;
         if (!m_doc.empty())
@@ -73,7 +73,7 @@ public:
         case GlobalConfig::RETURN_ERROR:
             {
                 MXS_INFO("%s", s.c_str());
-                throw mxsmongo::SoftError(s, mxsmongo::error::COMMAND_NOT_FOUND);
+                throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
             }
             break;
 
@@ -84,7 +84,7 @@ public:
     }
 };
 
-using namespace mxsmongo;
+using namespace nosql;
 
 template<class ConcreteCommand>
 unique_ptr<Command> create_command(const string& name,
@@ -194,7 +194,7 @@ struct ThisUnit
 
 }
 
-namespace mxsmongo
+namespace nosql
 {
 
 Command::~Command()
@@ -237,9 +237,9 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 }
 
 //static
-unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
+unique_ptr<Command> Command::get(nosql::Database* pDatabase,
                                  GWBUF* pRequest,
-                                 const mxsmongo::Query& query,
+                                 const nosql::Query& query,
                                  const bsoncxx::document::view& doc,
                                  const DocumentArguments& arguments)
 {
@@ -252,9 +252,9 @@ unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
 }
 
 //static
-unique_ptr<Command> Command::get(mxsmongo::Database* pDatabase,
+unique_ptr<Command> Command::get(nosql::Database* pDatabase,
                                  GWBUF* pRequest,
-                                 const mxsmongo::Msg& msg,
+                                 const nosql::Msg& msg,
                                  const bsoncxx::document::view& doc,
                                  const DocumentArguments& arguments)
 {
@@ -277,12 +277,12 @@ GWBUF* Command::create_empty_response() const
 //static
 void Command::check_write_batch_size(int size)
 {
-    if (size < 1 || size > mongo::MAX_WRITE_BATCH_SIZE)
+    if (size < 1 || size > protocol::MAX_WRITE_BATCH_SIZE)
     {
         stringstream ss;
-        ss << "Write batch sizes must be between 1 and " << mongo::MAX_WRITE_BATCH_SIZE
+        ss << "Write batch sizes must be between 1 and " << protocol::MAX_WRITE_BATCH_SIZE
            << ". Got " << size << " operations.";
-        throw mxsmongo::SoftError(ss.str(), mxsmongo::error::INVALID_LENGTH);
+        throw nosql::SoftError(ss.str(), nosql::error::INVALID_LENGTH);
     }
 }
 
@@ -323,8 +323,8 @@ string Command::convert_skip_and_limit() const
 {
     string rv;
 
-    auto skip = m_doc[mxsmongo::key::SKIP];
-    auto limit = m_doc[mxsmongo::key::LIMIT];
+    auto skip = m_doc[nosql::key::SKIP];
+    auto limit = m_doc[nosql::key::LIMIT];
 
     if (skip || limit)
     {
@@ -498,19 +498,19 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     int32_t starting_from = 0;
     int32_t number_returned = nDocuments;
 
-    size_t response_size = mongo::HEADER_LEN
+    size_t response_size = protocol::HEADER_LEN
         + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
         + size_of_documents;
 
     GWBUF* pResponse = gwbuf_alloc(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<mongo::HEADER*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_database.context().next_request_id();
     pRes_hdr->response_to = m_req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + mongo::HEADER_LEN;
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
 
     pData += set_byte4(pData, response_flags);
     pData += set_byte8(pData, cursor_id);
@@ -565,7 +565,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
     uint8_t kind = 0;
     uint32_t doc_length = doc.view().length();
 
-    size_t response_size = mongo::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
+    size_t response_size = protocol::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
 
     if (m_append_checksum)
     {
@@ -575,13 +575,13 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     GWBUF* pResponse = gwbuf_alloc(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<mongo::HEADER*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_database.context().next_request_id();
     pRes_hdr->response_to = m_req.request_id();
     pRes_hdr->opcode = MONGOC_OPCODE_MSG;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + mongo::HEADER_LEN;
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
 
     pData += set_byte4(pData, flag_bits);
 
@@ -605,11 +605,11 @@ GWBUF* ImmediateCommand::execute()
     return create_response(doc.extract());
 }
 
-Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response)
+Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppProtocol_response)
 {
     // This will never be called.
     mxb_assert(!true);
-    *ppMongo_response = nullptr;
+    *ppProtocol_response = nullptr;
     return READY;
 }
 
