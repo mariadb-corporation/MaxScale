@@ -1330,7 +1330,6 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                     // applicable.
                     if (lex->sql_command != SQLCOM_CREATE_TABLE)
                     {
-                        func_qtype |= QUERY_TYPE_LOCAL_READ;
                         MXS_DEBUG("%lu [resolve_query_type] "
                                   "functype NOW_FUNC, could be "
                                   "executed in MaxScale.",
