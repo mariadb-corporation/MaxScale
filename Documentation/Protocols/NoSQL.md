@@ -1,23 +1,23 @@
-# MongoDB Protocol
+# NoSQL Protocol Module
 
-The _mongodbprotocol_ module allows a MariaDB server or cluster to be
-used as the backend of an application using a MongoDB client library.
+The `nosqlprotocol` module allows a MariaDB server or cluster to be
+used as the backend of an application using a MongoDB® client library.
 Internally, all documents are stored in a table containing two columns;
-an _id_ column for the object id and a _doc_ column for the document itself.
+an `id` column for the object id and a `doc` column for the document itself.
 
-When the MongoDB client application issues MongoDB
+When the MongoDB® client application issues MongoDB
 [commands](https://docs.mongodb.com/manual/reference/command/),
 either directly or indirectly via the client library, they are transparently
 converted into the equivalent SQL and executed against the MariaDB backend.
-The responses are then in turn converted into the format expected by the
-MongoDB client library and application.
+The MariaDB responses are then in turn converted into the format expected by
+the MongoDB® client library and application.
 
 [TOC]
 
 # Configuring
 
 There are a number of [parameters](#parameters) with which the behavior
-of _mongodbprotocol_ can be adjusted. A minimal configuration looks
+of _nosqlprotocol_ can be adjusted. A minimal configuration looks
 like:
 ```
 [TheService]
@@ -27,18 +27,18 @@ type=service
 [MongoDB-Listener]
 type=listener
 service=TheService
-protocol=mongodbprotocol
-mongodbprotocol.user=the_user
-mongodbprotocol.password=the_password
+protocol=nosqlprotocol
+nosqlprotocol.user=the_user
+nosqlprotocol.password=the_password
 port=17017
 ```
-`mongodbprotocol.user` and `mongodbprotocol.password` specify the
+`nosqlprotocol.user` and `nosqlprotocol.password` specify the
 credentials that will be used when accessing the backend database or
 cluster. Note that the same credentials will be used for _all_ connecting
-MongoDB clients.
+MongoDB® clients.
 
-Since mongodbprotocol is a _listener_ there must be a _service_ to which
-the client requests will be sent. Mongodbprotocol places no limitations
+Since _nosqlprotocol_ is a _listener_, there must be a _service_ to which
+the client requests will be sent. _Nosqlprotocol_ places no limitations
 on what filters, routers or backends can be used.
 
 A complete example can be found at the [end](#example) of this document.
@@ -46,7 +46,7 @@ A complete example can be found at the [end](#example) of this document.
 # Client Authentication
 
 Currently no authentication is supported in the communication between
-the MongoDB client application and MaxScale. That is, when connecting only
+the MongoDB® client application and MaxScale. That is, when connecting, only
 the host and port should be provided, but neither username nor password.
 For instance, if the
 [MongoDB Node.JS Driver](https://mongodb.github.io/node-mongodb-native/)
@@ -66,33 +66,33 @@ MongoDB shell version v4.4.1
 
 # Client Library
 
-As the goal of _mongodbprotocol_ is to implement, to the extent that it
+As the goal of _nosqlprotocol_ is to implement, to the extent that it
 is feasible, the
 [MongoDB Wire Protocol](https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/)
 and the
 [Database Commands](https://docs.mongodb.com/manual/reference/command/)
-the way MongoDB implements them, it should be possible to use
+the way MongoDB® implements them, it should be possible to use
 any language specific [driver](https://docs.mongodb.com/drivers/).
 
-However, during the development of mongodbprotocol, the _only_ client library
+However, during the development of _nosqlprotocol_, the _only_ client library
 that has been verified to work is version 3.6 of
 [MongoDB Node.JS Driver](http://mongodb.github.io/node-mongodb-native/).
 
 # Parameters
 
-Using the following parameters, the behavior of _mongodbprotocol_ can be
+Using the following parameters, the behavior of _nosqlprotocol_ can be
 adjusted. As they are not generic listener parameters, but specific to
-_mongodbprotocol_ they must be qualified with the `mongodbprotocol`-prefix.
+_nosqlprotocol_ they must be qualified with the `nosqlprotocol`-prefix.
 
 For instance:
 ```
 [MongoDB-Listener]
 type=listener
 service=TheService
-protocol=mongodbprotocol
-mongodbprotocol.user=the_user
-mongodbprotocol.password=the_password
-mongodbprotocol.on_unknown_command=return_error
+protocol=nosqlprotocol
+nosqlprotocol.user=the_user
+nosqlprotocol.password=the_password
+nosqlprotocol.on_unknown_command=return_error
 ...
 ```
 
@@ -102,7 +102,7 @@ mongodbprotocol.on_unknown_command=return_error
    * Mandatory: true
 
 Specifies the _user_ to be used when connecting to the backend. Note that the
-same _user_/_password_ combination will be used for all Mongo clients connecting
+same _user_/_password_ combination will be used for all MongoDB® clients connecting
 to the same listener port.
 
 ## `password`
@@ -111,7 +111,7 @@ to the same listener port.
    * Mandatory: true
 
 Specifies the _password_ to be used when connecting to the backend. Note that the
-same _user_/_password_ combination will be used for all Mongo clients connecting
+same _user_/_password_ combination will be used for all MongoDB® clients connecting
 to the same listener port.
 
 ## `on_unknown_command`
@@ -187,11 +187,11 @@ automatically closed.
 
 # Databases and Tables
 
-By default, _mongodbprotocol_ automatically creates databases as needed.
+By default, _nosqlprotocol_ automatically creates databases as needed.
 The default behavior can be changed by setting `auto_create_databases` to
 false. In that case, databases must manually be created.
 
-Each Mongo _collection_ corresponds to a MariaDB table with the same name.
+Each MongoDB® _collection_ corresponds to a MariaDB table with the same name.
 However, it is always possible to access a collection irrespective of whether
 the corresponding table exists or not; it will simply appear to be empty.
 
@@ -199,7 +199,7 @@ Inserting documents into a collection, whose corresponding table does not
 exist, succeeds, provided `auto_create_tables` is `true`, as the table will
 in that case be created.
 
-When _mongodbprotocol_ creates a table, it uses a statement like
+When _nosqlprotocol_ creates a table, it uses a statement like
 ```
 CREATE TABLE name (id VARCHAR(35) AS (JSON_COMPACT(JSON_EXTRACT(doc, "$._id"))) UNIQUE KEY,
                    doc JSON,
@@ -212,7 +212,7 @@ whose default and minimum is 35.
 *must* contain a similar `AS`-clause as the one above and *should* contain
 a similar constraint.
 
-Note that _mongodbprotocol_ does not in any way verify that the table
+Note that _nosqlprotocol_ does not in any way verify that the table
 corresponding to a collection being accessed or modified does indeed
 have the expected columns `id` and `doc` of the expected types, but it
 simply uses the table, which will fail if the layout is not the expected
@@ -388,13 +388,13 @@ Currently not supported.
 
 # Database Commands
 
-The following lists all implemented MongoDB commands and to what extent
+The following lists all implemented MongoDB® commands and to what extent
 they are supported. Each heading links to the corresponding entry in the
 MongoDB documentation.
 
 The documentation of each command lists which fields are relevant for
 the command. The list is typically a subset of the fields specified in
-the MongoDB(R) documentation for the command.
+the MongoDB documentation for the command.
 
 **All** non-listed fields are ignored; their presence or absence have no
 impact, unless otherwise explicitly specified.
@@ -559,7 +559,7 @@ ordered | boolean | Optional, with default being `true`. See below for descripti
 The impact of `ordered` is dependent upon the value of `insert_behavior'.
 
 ##### `as_mongodb`
-In this case `ordered` has the same impact as in MongoDB. That is, if the value
+In this case `ordered` has the same impact as in MongoDB®. That is, if the value
 is `true`, then when an insert of a document fails, return without inserting any
 remaining documents listed in the inserts array. If `false`, then when an insert
 of a document fails, continue to insert the remaining documents.
@@ -601,7 +601,7 @@ u | document | The modifications to apply. See _behavior_ below for details.
 multi| boolean | Optional. If `true`, updates all documents that meet the query criteria. If `false` limit the update to one document that meets the query criteria. Defaults to `false`.
 
 Note that currently it is possible to set `multi` to `true` in conjunction
-with a _replacement-style_ update, even though MongoDB rejects that.
+with a _replacement-style_ update, even though MongoDB® rejects that.
 
 All other fields are ignored, with the exception of `upsert` that if present
 with the value of `true` will cause the command to fail.
@@ -648,7 +648,7 @@ cannot be true.
 
 **Note** If the replacement document contains an `_id` field, it will be ignored and the
 document id will remain non-changed while the document otherwise is replaced. This is
-different from MongoDB where the presence of the `_id` field in the replacement document
+different from MongoDB® where the presence of the `_id` field in the replacement document
 causes an error, if the value is not the same as it is in the document being replaced.
 
 ## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
@@ -742,7 +742,7 @@ nameOnly | boolean | Optional. A flag to indicate whether the command should ret
 
 Note that the command lists all collections (that is, tables) that are found
 in the current database. The listed collections may or may not be suitable
-for being accessed using _mongodbprotocol_.
+for being accessed using _nosqlprotocol_.
 
 ### [listDatabases](https://docs.mongodb.com/manual/reference/command/listDatabases/)
 
@@ -1063,17 +1063,17 @@ the session. For example:
 # Object Id
 
 When a document is created, an id of type `ObjectId` will be autogenerated by
-the MongoDB client library. If the id is provided explicitly, by assigning a
+the MongoDB® client library. If the id is provided explicitly, by assigning a
 value to the `_id` field, the value must be an `ObjectId`, a string or an
 integer.
 
 # Example
 
-The following is a minimal setup for getting _mongodbprotocol_ up and
+The following is a minimal setup for getting _nosqlprotocol_ up and
 running. It is assumed the reader knows how to configure MaxScale for
 normal use. If not, please start with the
 [MaxScale tutorial](Documentation/Tutorials/MaxScale-Tutorial.md).
-Note that as _mongodbprotocol_ is the first component in the MaxScale
+Note that as _nosqlprotocol_ is the first component in the MaxScale
 routing chain, it can be used with all routers and filters.
 
 ## Configuring MaxScale
@@ -1085,35 +1085,35 @@ for normal use and that there exists a _service_ `[TheService]`.
 type=service
 ...
 
-[MongoDB-Listener]
+[NoSQL-Listener]
 type=listener
 service=TheService
-protocol=mongodbprotocol
-mongodbprotocol.user=the_user
-mongodbprotocol.password=the_password
+protocol=nosqlprotocol
+nosqlprotocol.user=the_user
+nosqlprotocol.password=the_password
 port=17017
 ```
 The values `the_user` and `the_password` must be replaced with the
-actual credentials to be used for every MongoDB client that connects.
+actual credentials to be used for every MongoDB® client that connects.
 
 If MaxScale is now started, the following entry should appear in the
 log file.
 ```
-... notice : (Mongo-Listener); Listening for connections at [127.0.0.1]:17017
+... notice : (NoSQL-Listener); Listening for connections at [127.0.0.1]:17017
 ```
 
-## MongoDB Shell
+## MongoDB® Shell
 
 [The mongo Shell](https://docs.mongodb.com/manual/mongo/) is a powerful
 tool with which to access and manipulate a MongoDB database. It is part
-of the MongoDB package, which already for that reason alone should be
+of the MongoDB® package, which already for that reason alone should be
 installed. Having the native MongoDB database installed is adviseable
 anyway, as it makes it easy to ascertain whether a problem is due to
-_mongodbprotocol_ not fully implementing something or due to the API
+_nosqlprotocol_ not fully implementing something or due to the API
 not being used in the correct fashion.
 
-With the mongo shell, all that is needed is to invoke it with the port
-_mongodbprotocol_ is listening on:
+With the _mongo shell_, all that is needed is to invoke it with the port
+_nosqlprotocol_ is listening on:
 ```
 $ mongo --port 17017
 MongoDB shell version v4.4.1
@@ -1173,7 +1173,7 @@ The collection `collection` is represented by a table `collection` with
 the two colums `id` and `doc`. `id` is a virtual column whose content is
 the value of the `_id` field of the document in the `doc` column.
 
-All MongoDB commands that _mongdbprotocol_ support (but for the ones that
+All MongoDB® commands that _mongdbprotocol_ support (but for the ones that
 do not require database access), basically access or manipulate the
 content in the `doc` column using the
 [JSON functions](https://mariadb.com/kb/en/json-functions/) of MariaDB.
@@ -1203,17 +1203,17 @@ Similarily, the SQL of the `find` command can be find out like:
 }
 ```
 The returned SQL can be directly pasted at the `mysql` prompt, which is
-quite convenient in case the Mongo command does not behave as expected.
+quite convenient in case the MongoDB® command does not behave as expected.
 
-## MongoDB Node.JS Driver
+## MongoDB® Node.JS Driver
 
-As all client libraries implement and depend on the the Mongo wire API,
-all client libraries should work with _mongodbprotocol_. However, the
+As all client libraries implement and depend on the the MongoDB® wire protocol,
+all client libraries should work with _nosqlprotocol_. However, the
 only client library that has been used and that has been verified to work
 is version 3.6 of the [MongoDB Node.JS Driver](https://mongodb.github.io/node-mongodb-native/).
 
 In principle, the only thing that needs to be altered in an existing
-MongoDB Node.JS program is to change the uri string that typically
+_MongoDB Node.JS_ program is to change the uri string that typically
 is something like
 ```
 const uri = "mongodb+srv://<user>:<password>@<cluster-url>?writeConcern=majority";
@@ -1222,9 +1222,9 @@ to
 ```
 const uri = "mongodb://<maxscale-ip>:17017";
 ```
-with the assumption that the default _mongodbprotocol_ port is used.
+with the assumption that the default _nosqlprotocol_ port is used.
 
-In practice, additional modifications may be needed since _mongodbprotocol_
+In practice, additional modifications may be needed since _nosqlprotocol_
 does not implement all commands and does not in all cases implement the
 full functionality of the commands that it supports.
 
