@@ -168,6 +168,7 @@ private:
     void      sync();
     void      queue_sync();
     mxb::Json fetch_config();
+    void      try_update_status(const std::string& msg);
 
     mxs::MainWorker* m_worker {nullptr};
 
@@ -176,6 +177,15 @@ private:
 
     // The latest configuration that was either created or loaded
     mxb::Json m_current_config {mxb::Json::Type::NONE};
+
+    // Contains the status information of all nodes in the cluster
+    mxb::Json m_nodes;
+
+    // The host who originated the latest configuration change
+    std::string m_origin;
+
+    // Informational status that's displayed in the JSON output
+    std::string m_status_msg;
 
     // The latest processed configuration version
     int64_t m_version {0};

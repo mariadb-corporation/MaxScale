@@ -38,7 +38,11 @@ const char CN_CHECKSUM[] = "checksum";
 const char CN_CLUSTER_NAME[] = "cluster_name";
 const char CN_CONFIG[] = "config";
 const char CN_VERSION[] = "version";
+const char CN_NODES[] = "nodes";
+const char CN_ORIGIN[] = "origin";
+const char CN_STATUS[] = "status";
 
+const char STATUS_OK[] = "OK";
 const char SCOPE_NAME[] = "ConfigManager";
 const char TABLE[] = "mysql.maxscale_config";
 
@@ -66,31 +70,51 @@ std::string escape_for_sql(const std::string& str)
     return sql;
 }
 
+const std::string& hostname()
+{
+    return mxs::Config::get().nodename;
+}
+
 std::string sql_create_table(int max_len)
 {
     std::ostringstream ss;
     ss << "CREATE TABLE IF NOT EXISTS " << TABLE << "("
-       << "cluster VARCHAR(" << max_len << ") PRIMARY KEY ,"
+       << "cluster VARCHAR(" << max_len << ") PRIMARY KEY, "
        << "version BIGINT NOT NULL, "
-       << "config JSON NOT NULL "
+       << "config JSON NOT NULL, "
+       << "origin VARCHAR(254) NOT NULL, "
+       << "nodes JSON NOT NULL"
        << ") ENGINE=InnoDB";
     return ss.str();
 }
 
 std::string sql_insert(const std::string& cluster, int64_t version, const std::string& payload)
 {
+    const auto& host = hostname();
     std::ostringstream ss;
-    ss << "INSERT INTO " << TABLE << "(cluster, version, config) VALUES"
-       << " ('" << escape_for_sql(cluster) << "', " << version + 1 << ","
-       << "'" << escape_for_sql(payload) << "')";
+
+    ss << "INSERT INTO " << TABLE << "(cluster, version, config, origin, nodes) VALUES ("
+       << "'" << escape_for_sql(cluster) << "', "
+       << version + 1 << ", "
+       << "'" << escape_for_sql(payload) << "', "
+       << "'" << host << "', "
+       << "JSON_OBJECT('" << host << "', '" << STATUS_OK << "')"
+       << ")";
+
     return ss.str();
 }
 
 std::string sql_update(const std::string& cluster, int64_t version, const std::string& payload)
 {
+    const auto& host = hostname();
     std::ostringstream ss;
-    ss << "UPDATE " << TABLE << " SET version = version + 1, config = '" << escape_for_sql(payload) << "'"
-       << " WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
+
+    ss << "UPDATE " << TABLE << " SET version = version + 1, "
+       << "config = '" << escape_for_sql(payload) << "', "
+       << "origin = '" << host << "' ,"
+       << "nodes = JSON_OBJECT('" << host << "', '" << STATUS_OK << "')"
+       << "WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
+
     return ss.str();
 }
 
@@ -105,15 +129,26 @@ std::string sql_select_for_update(const std::string& cluster)
 std::string sql_select_version(const std::string& cluster)
 {
     std::ostringstream ss;
-    ss << "SELECT version FROM " << TABLE << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
+    ss << "SELECT version, nodes FROM " << TABLE << " WHERE cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
 }
 
 std::string sql_select_config(const std::string& cluster, int64_t version)
 {
     std::ostringstream ss;
-    ss << "SELECT config, version FROM " << TABLE << " WHERE "
+    ss << "SELECT config, version, origin FROM " << TABLE << " WHERE "
        << "version > " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
+    return ss.str();
+}
+
+std::string sql_update_status(const std::string& cluster, int64_t version, const std::string& status)
+{
+    mxb_assert(escape_for_sql(hostname()) == hostname());
+
+    std::ostringstream ss;
+    ss << "UPDATE " << TABLE << " SET nodes = JSON_SET"
+       << "(nodes, '$." << hostname() << "', '" << escape_for_sql(status) << "') "
+       << "WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
 }
 }
@@ -129,6 +164,7 @@ ConfigManager* ConfigManager::get()
 
 ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
     : m_worker(main_worker)
+    , m_status_msg(STATUS_OK)
 {
     mxb_assert(!this_unit.manager);
     this_unit.manager = this;
@@ -202,6 +238,8 @@ void ConfigManager::sync()
                 m_version = next_version;
                 m_current_config = std::move(config);
                 m_log_sync_error = true;
+
+                try_update_status(STATUS_OK);
             }
         }
         catch (const ConfigManager::Exception& e)
@@ -211,6 +249,8 @@ void ConfigManager::sync()
                 MXS_ERROR("Failed to sync configuration: %s", e.what());
                 m_log_sync_error = false;
             }
+
+            try_update_status(e.what());
 
             if (next_version > m_version)
             {
@@ -377,6 +417,8 @@ bool ConfigManager::commit()
 
         // Config successfully updated in the cluster and cached locally
         m_current_config = std::move(config);
+        m_status_msg = STATUS_OK;
+        m_origin = hostname();
         ++m_version;
         ok = true;
     }
@@ -399,6 +441,9 @@ mxb::Json ConfigManager::to_json() const
         auto cnf = m_current_config.to_string(mxb::Json::Format::COMPACT);
         obj.set_string(CN_CHECKSUM, mxs::checksum<mxs::SHA1Checksum>(cnf));
         obj.set_int(CN_VERSION, m_version);
+        obj.set_object(CN_NODES, m_nodes);
+        obj.set_string(CN_ORIGIN, m_origin);
+        obj.set_string(CN_STATUS, m_status_msg);
     }
     else
     {
@@ -928,6 +973,20 @@ void ConfigManager::update_config(const std::string& payload)
     }
 }
 
+void ConfigManager::try_update_status(const std::string& msg)
+{
+    // Store the latest status for later use.
+    m_status_msg = msg;
+
+    // It doesn't really matter if this command fails as it is attempted again during the sync. We aren't
+    // expecting it to fail so any errors might still be of interest.
+    if (!m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
+    {
+        MXS_WARNING("Failed to update node state to '%s' for hostname '%s': %s",
+                    msg.c_str(), hostname().c_str(), m_conn.error());
+    }
+}
+
 mxb::Json ConfigManager::fetch_config()
 {
     connect();
@@ -950,6 +1009,9 @@ mxb::Json ConfigManager::fetch_config()
     {
         int64_t version = res->get_int(0);
 
+        // Store the status information regardless of its version.
+        m_nodes.load_string(res->get_string(1));
+
         if (version <= m_version)
         {
             if (version < m_version && m_log_stale_cluster)
@@ -965,6 +1027,11 @@ mxb::Json ConfigManager::fetch_config()
                             "configuration (%ld) found on server '%s', ignoring to cluster "
                             "configuration.", m_version, version, m_server->name());
                 m_log_stale_cluster = false;
+            }
+            else if (!m_nodes.contains(hostname()))
+            {
+                // The status update must have failed, try it again.
+                try_update_status(m_status_msg);
             }
 
             return config;
@@ -993,6 +1060,9 @@ mxb::Json ConfigManager::fetch_config()
 
         int64_t config_version = config.get_int(CN_VERSION);
         int64_t db_version = res->get_int(1);
+
+        // Store the origin even if we fail to apply the configuration
+        m_origin = res->get_string(2);
 
         if (config_version != db_version)
         {
