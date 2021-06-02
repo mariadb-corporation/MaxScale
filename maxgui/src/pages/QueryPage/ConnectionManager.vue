@@ -2,7 +2,7 @@
     <div>
         <v-btn
             outlined
-            max-width="160"
+            width="220"
             class="text-none px-2 font-weight-regular"
             depressed
             small
@@ -12,7 +12,7 @@
             <div
                 id="curr_cnct_resource"
                 class="d-flex align-center"
-                :style="{ maxWidth: `${curr_cnct_resource ? 102 : 138}px` }"
+                :style="{ maxWidth: `${curr_cnct_resource ? 162 : 198}px` }"
             >
                 <v-icon v-if="curr_cnct_resource" class="mr-2" size="16" color="accent-dark">
                     $vuetify.icons.server

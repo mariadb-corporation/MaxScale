@@ -146,6 +146,9 @@
     "queryShowConfirm": "{action} confirmation",
     "queryConfig": "Query configuration",
     "dontAskMeAgain": "Don't ask me again",
+    "hide": "Hide",
+    "show": "Show",
+    "visualizedConfig": "{action} visualized configuration",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

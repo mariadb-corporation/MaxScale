@@ -5,6 +5,13 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': isFullScreen }"
         >
+            <toolbar-container
+                ref="toolbarContainer"
+                :queryTxt="queryTxt"
+                :selectedQueryTxt="selectedQueryTxt"
+                :isFullScreen="isFullScreen"
+                @show-vis-sidebar="showVisSidebar = $event"
+            />
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -23,33 +30,60 @@
                 </template>
                 <template slot="pane-right">
                     <!-- Main panel -->
-                    <split-pane v-model="editorPct" split="horiz" :minPercent="minEditorPct">
+                    <split-pane
+                        v-model="mainPanePct"
+                        class="main-pane__content"
+                        :minPercent="minMainPanePct"
+                        split="vert"
+                        disable
+                    >
                         <template slot="pane-left">
-                            <toolbar-container
-                                ref="toolbarContainer"
-                                :queryTxt="queryTxt"
-                                :selectedQueryTxt="selectedQueryTxt"
-                                :isFullScreen="isFullScreen"
-                            />
-                            <query-editor
-                                ref="queryEditor"
-                                v-model="queryTxt"
-                                class="editor pt-2 pl-2"
-                                :cmplList="getDbCmplList"
-                                @on-selection="selectedQueryTxt = $event"
-                                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
-                                @onCtrlShiftEnter="
-                                    () => $refs.toolbarContainer.handleRun('selected')
-                                "
-                            />
+                            <split-pane
+                                v-model="editorPct"
+                                split="horiz"
+                                :minPercent="minEditorPct"
+                            >
+                                <template slot="pane-left">
+                                    <split-pane
+                                        v-model="queryPanePct"
+                                        class="editor__content"
+                                        :minPercent="minQueryPanePct"
+                                        split="vert"
+                                        disable
+                                    >
+                                        <template slot="pane-left">
+                                            <query-editor
+                                                ref="queryEditor"
+                                                v-model="queryTxt"
+                                                class="editor pt-2 pl-2"
+                                                :cmplList="getDbCmplList"
+                                                @on-selection="selectedQueryTxt = $event"
+                                                @onCtrlEnter="
+                                                    () => $refs.toolbarContainer.handleRun('all')
+                                                "
+                                                @onCtrlShiftEnter="
+                                                    () =>
+                                                        $refs.toolbarContainer.handleRun('selected')
+                                                "
+                                            />
+                                        </template>
+                                        <template slot="pane-right">
+                                            <!-- TODO: Graph is shown here -->
+                                        </template>
+                                    </split-pane>
+                                </template>
+                                <template slot="pane-right">
+                                    <query-result
+                                        ref="queryResultPane"
+                                        :dynDim="resultPaneDim"
+                                        class="query-result"
+                                        :previewDataSchemaId="previewDataSchemaId"
+                                    />
+                                </template>
+                            </split-pane>
                         </template>
                         <template slot="pane-right">
-                            <query-result
-                                ref="queryResultPane"
-                                :dynDim="resultPaneDim"
-                                class="query-result"
-                                :previewDataSchemaId="previewDataSchemaId"
-                            />
+                            <visualize-sidebar class="visualize-sidebar" />
                         </template>
                     </split-pane>
                 </template>
@@ -76,6 +110,7 @@ import SidebarContainer from './SidebarContainer'
 import QueryResult from './QueryResult'
 import { mapActions, mapState, mapGetters } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
+import VisualizeSideBar from './VisualizeSideBar'
 export default {
     name: 'query-view',
     components: {
@@ -83,6 +118,7 @@ export default {
         SidebarContainer,
         QueryResult,
         ToolbarContainer,
+        'visualize-sidebar': VisualizeSideBar,
     },
     data() {
         return {
@@ -99,6 +135,11 @@ export default {
             queryTxt: '',
             previewDataSchemaId: '',
             selectedQueryTxt: '',
+            showVisSidebar: false,
+            mainPanePct: 100,
+            minMainPanePct: 0,
+            queryPanePct: 100,
+            minQueryPanePct: 0,
         }
     },
     computed: {
@@ -125,6 +166,10 @@ export default {
             this.$nextTick(() => this.setResultPaneDim())
         },
         editorPct() {
+            this.$nextTick(() => this.setResultPaneDim())
+        },
+        showVisSidebar(v) {
+            this.handleSetVisSidebar(v)
             this.$nextTick(() => this.setResultPaneDim())
         },
     },
@@ -171,6 +216,15 @@ export default {
                 this.sidebarPct = this.pxToPct({ px: 240, containerPx: containerWidth })
             }
         },
+        handleSetVisSidebar(showVisSidebar) {
+            if (showVisSidebar) {
+                const visSidebarPct = this.pxToPct({
+                    px: 250,
+                    containerPx: this.resultPaneDim.width,
+                })
+                this.mainPanePct = 100 - visSidebarPct
+            } else this.mainPanePct = 100
+        },
         pxToPct: ({ px, containerPx }) => (px / containerPx) * 100,
         placeToEditor(schemaId) {
             this.$refs.queryEditor.insertAtCursor(schemaId)
@@ -181,6 +235,7 @@ export default {
 
 <style lang="scss" scoped>
 .editor,
+.visualize-sidebar,
 .query-result {
     border: 1px solid $table-border;
     width: 100%;

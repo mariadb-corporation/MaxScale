@@ -6,35 +6,8 @@
         class="query-toolbar"
         :class="{ 'ml-0': isFullScreen }"
     >
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    outlined
-                    class="run-btn text-capitalize px-2 font-weight-medium"
-                    depressed
-                    small
-                    color="accent-dark"
-                    :loading="loading_query_result"
-                    :disabled="!queryTxt || !active_conn_state"
-                    v-on="on"
-                    @click="() => handleRun(selectedQueryTxt ? 'selected' : 'all')"
-                >
-                    <v-icon size="16" class="mr-2">
-                        $vuetify.icons.running
-                    </v-icon>
-                    {{ $t('run') }}
-                </v-btn>
-            </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
-            </span>
-        </v-tooltip>
-        <v-spacer></v-spacer>
         <connection-manager />
+        <!-- Use database section-->
         <v-btn
             id="active-db"
             outlined
@@ -83,9 +56,64 @@
         >
             <span>{{ $t('useDb') }}: {{ active_db }} </span>
         </v-tooltip>
-        <!-- TODO: ADD gear icon for query settings.
-             e.g. confirmation before sending query, configure query max rows
-        -->
+
+        <v-spacer></v-spacer>
+        <!-- Run section-->
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    outlined
+                    class="run-btn text-capitalize px-2 font-weight-medium"
+                    depressed
+                    small
+                    color="accent-dark"
+                    :loading="loading_query_result"
+                    :disabled="!queryTxt || !active_conn_state"
+                    v-on="on"
+                    @click="() => handleRun(selectedQueryTxt ? 'selected' : 'all')"
+                >
+                    <v-icon size="16" class="mr-2">
+                        $vuetify.icons.running
+                    </v-icon>
+                    {{ $t('run') }}
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
+            </span>
+        </v-tooltip>
+        <!-- Visualize section-->
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    class="ml-2 visualize"
+                    :outlined="!showVisSidebar"
+                    depressed
+                    small
+                    :color="showVisSidebar ? 'primary' : 'accent-dark'"
+                    v-on="on"
+                    @click="showVisSidebar = !showVisSidebar"
+                >
+                    <v-icon size="16" :color="showVisSidebar ? 'background' : 'accent-dark'">
+                        $vuetify.icons.reports
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span class="text-capitalize">
+                {{
+                    $t('visualizedConfig', { action: showVisSidebar ? $t('hide') : $t('show') })
+                }}</span
+            >
+        </v-tooltip>
+        <!-- Settings section-->
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -93,7 +121,7 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn id="setting-btn" class="ml-2" icon small v-on="on">
-                    <v-icon size="16" color="primary">
+                    <v-icon size="16" color="accent-dark">
                         $vuetify.icons.settings
                     </v-icon>
                 </v-btn>
@@ -124,7 +152,7 @@
                             <v-list-item-title class="color text-text">
                                 {{
                                     $t('queryShowConfirm', {
-                                        action: shouldShowConfirm ? 'Hide' : 'Show',
+                                        action: shouldShowConfirm ? $t('hide') : $t('show'),
                                     })
                                 }}
                             </v-list-item-title>
@@ -133,7 +161,7 @@
                     <span>
                         {{
                             $t('info.queryShowConfirm', {
-                                action: shouldShowConfirm ? 'Hide' : 'Show',
+                                action: shouldShowConfirm ? $t('hide') : $t('show'),
                             })
                         }}
                     </span>
@@ -213,6 +241,7 @@ export default {
         return {
             shouldShowConfirm: true,
             dontShowConfirm: false,
+            showVisSidebar: false,
         }
     },
     computed: {
@@ -227,6 +256,9 @@ export default {
     watch: {
         shouldShowConfirm(v) {
             localStorage.setItem('show_query_confirm', v)
+        },
+        showVisSidebar(v) {
+            this.$emit('show-vis-sidebar', v)
         },
     },
     mounted() {
@@ -302,6 +334,14 @@ export default {
         .margin {
             background-color: #e8eef1;
         }
+        .view-line {
+            background-color: $reflection;
+        }
+    }
+}
+::v-deep.query-toolbar {
+    .v-toolbar__content {
+        padding: 4px 12px;
     }
 }
 </style>

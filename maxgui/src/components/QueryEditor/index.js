@@ -185,6 +185,7 @@ export default {
                     'editorSuggestWidget.foreground': '#525a65',
                     'editorSuggestWidget.selectedBackground': '#f2fcff',
                     'editorSuggestWidget.highlightForeground': '#0e9bc0',
+                    'editor.lineHighlightBackground': '#ffffff',
                 },
             })
 
