@@ -462,7 +462,9 @@ export default {
         },
         getQueryExeTime: state => {
             if (state.loading_query_result) return -1
-            return parseFloat(state.query_result.attributes.execution_time.toFixed(4))
+            if (state.query_result.attributes)
+                return parseFloat(state.query_result.attributes.execution_time.toFixed(4))
+            return 0
         },
         getPrvwDataRes: state => mode => {
             switch (mode) {
@@ -481,11 +483,17 @@ export default {
             switch (mode) {
                 case 'PRVW_DATA': {
                     if (state.loading_prvw_data) return -1
-                    return parseFloat(state.prvw_data.attributes.execution_time.toFixed(4))
+                    if (state.prvw_data.attributes)
+                        return parseFloat(state.prvw_data.attributes.execution_time.toFixed(4))
+                    return 0
                 }
                 case 'PRVW_DATA_DETAILS': {
                     if (state.loading_prvw_data_details) return -1
-                    return parseFloat(state.prvw_data_details.attributes.execution_time.toFixed(4))
+                    if (state.prvw_data_details.attributes)
+                        return parseFloat(
+                            state.prvw_data_details.attributes.execution_time.toFixed(4)
+                        )
+                    return 0
                 }
             }
         },
