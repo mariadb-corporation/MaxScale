@@ -228,7 +228,7 @@ export default {
                         sql: 'SHOW DATABASES',
                     }
                 )
-                await this.vue.$help.delay(400)
+                await this.vue.$help.delay(200)
                 let dbCmplList = []
                 let dbTree = []
                 res.data.data.attributes.results[0].data.flat().forEach(db => {
@@ -267,7 +267,6 @@ export default {
                         sql: query,
                     }
                 )
-                await this.vue.$help.delay(400)
                 const tables = res.data.data.attributes.results[0].data.flat()
                 let dbChilren = []
                 let dbCmplList = []
@@ -310,7 +309,6 @@ export default {
                     }
                 )
                 if (res.data) {
-                    await this.vue.$help.delay(400)
                     const cols = res.data.data.attributes.results[0].data
                     const dbIndex = state.db_tree.findIndex(db => db.id === dbId)
 
@@ -371,7 +369,6 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql, max_rows: 10000 }
                 )
-                await this.vue.$help.delay(400)
                 commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
                 commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
@@ -395,7 +392,6 @@ export default {
                         max_rows: 10000, //TODO: make this a configurable value
                     }
                 )
-                await this.vue.$help.delay(400)
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
                 commit('SET_LOADING_QUERY_RESULT', false)
                 const USE_REG = /(use|drop database)\s/i
