@@ -15,14 +15,14 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&](string q) {
-            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
         };
 
     auto ok = [&](string q) {
             test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
         };
 
     auto err = [&](string q) {
@@ -30,12 +30,12 @@ int main(int argc, char** argv)
         };
 
     auto check = [&](string q, string res) {
-            Row row = get_row(test.maxscales->conn_rwsplit[0], q.c_str());
+            Row row = get_row(test.maxscale->conn_rwsplit[0], q.c_str());
             test.expect(!row.empty() && row[0] == res,
                         "Query '%s' should return 1: %s (%s)",
                         q.c_str(),
                         row.empty() ? "<empty>" : row[0].c_str(),
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
         };
 
     struct TrxTest
@@ -233,9 +233,9 @@ int main(int argc, char** argv)
     });
 
     // Create a table for testing
-    test.maxscales->connect_rwsplit();
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.maxscales->disconnect();
+    test.maxscale->connect_rwsplit();
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.maxscale->disconnect();
 
     int i = 1;
 
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
         test.set_timeout(90);
         test.tprintf("%d: %s", i++, a.description.c_str());
 
-        test.maxscales->connect_rwsplit();
+        test.maxscale->connect_rwsplit();
         for (auto& f : a.pre)
         {
             f();
@@ -252,36 +252,36 @@ int main(int argc, char** argv)
 
         // Block and unblock the master
         test.repl->block_node(0);
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         test.repl->unblock_node(0);
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
 
         for (auto& f : a.post)
         {
             f();
         }
-        test.maxscales->disconnect();
+        test.maxscale->disconnect();
 
         test.repl->connect();
         test.repl->sync_slaves();
         test.repl->disconnect();
 
-        test.maxscales->connect_rwsplit();
+        test.maxscale->connect_rwsplit();
         for (auto& f : a.check)
         {
             f();
         }
-        test.maxscales->disconnect();
+        test.maxscale->disconnect();
 
         // Clear the table at the end of the test
-        test.maxscales->connect_rwsplit();
-        test.try_query(test.maxscales->conn_rwsplit[0], "TRUNCATE TABLE test.t1");
-        test.maxscales->disconnect();
+        test.maxscale->connect_rwsplit();
+        test.try_query(test.maxscale->conn_rwsplit[0], "TRUNCATE TABLE test.t1");
+        test.maxscale->disconnect();
     }
 
-    test.maxscales->connect_rwsplit();
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
-    test.maxscales->disconnect();
+    test.maxscale->connect_rwsplit();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

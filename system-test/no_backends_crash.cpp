@@ -30,18 +30,18 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
-    Test->tprintf("Connecting to Maxscale %s", Test->maxscales->ip4());
-    Test->maxscales->connect_maxscale();
+    Test->tprintf("Connecting to Maxscale %s", Test->maxscale->ip4());
+    Test->maxscale->connect_maxscale();
 
     printf("Setup firewall to block mysql on master");
     Test->repl->block_node(0);
 
     Test->tprintf(
         "Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
-    execute_query(Test->maxscales->conn_rwsplit[0], "show processlist;");
-    execute_query(Test->maxscales->conn_master, "show processlist;");
-    execute_query(Test->maxscales->conn_slave, "show processlist;");
-    Test->maxscales->close_maxscale_connections();
+    execute_query(Test->maxscale->conn_rwsplit[0], "show processlist;");
+    execute_query(Test->maxscale->conn_master, "show processlist;");
+    execute_query(Test->maxscale->conn_slave, "show processlist;");
+    Test->maxscale->close_maxscale_connections();
 
     // Wait three monitor intervals to allow the monitor to detect that the server is up
     Test->repl->unblock_node(0);

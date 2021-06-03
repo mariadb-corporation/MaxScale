@@ -7,7 +7,7 @@
 
 void mxs2750(TestConnections& test)
 {
-    MYSQL* mysql = test.maxscales->open_rwsplit_connection();
+    MYSQL* mysql = test.maxscale->open_rwsplit_connection();
 
     test.try_query(mysql, "DROP TABLE IF EXISTS test.t1");
     test.try_query(mysql, "CREATE TABLE test.t1(id BIGINT)");
@@ -72,7 +72,7 @@ void mxs3565(TestConnections& test)
 {
     test.repl->connect();
     auto ids = test.repl->get_all_server_ids();
-    MYSQL* mysql = test.maxscales->open_rwsplit_connection();
+    MYSQL* mysql = test.maxscale->open_rwsplit_connection();
 
     test.try_query(mysql, "DROP TABLE IF EXISTS test.t1");
     test.try_query(mysql, "CREATE TABLE test.t1(id BIGINT)");
@@ -115,7 +115,7 @@ void mxs3565(TestConnections& test)
 
     int first_target = std::distance(ids.begin(), it);
     test.repl->block_node(first_target);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     value = 2;
     test.expect(mysql_stmt_execute(stmt) == 0, "Execute failed: %s", mysql_stmt_error(stmt));

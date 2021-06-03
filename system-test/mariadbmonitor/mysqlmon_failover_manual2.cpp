@@ -32,7 +32,7 @@ namespace x
 
 void connect_maxscale(TestConnections& test)
 {
-    if (test.maxscales->connect_maxscale() != 0)
+    if (test.maxscale->connect_maxscale() != 0)
     {
         ++test.global_result;
         throw std::runtime_error("Could not connect to MaxScale.");
@@ -41,7 +41,7 @@ void connect_maxscale(TestConnections& test)
 
 void try_query(TestConnections& test, const char* zQuery)
 {
-    if (test.try_query(test.maxscales->conn_rwsplit[0], "%s", zQuery) != 0)
+    if (test.try_query(test.maxscale->conn_rwsplit[0], "%s", zQuery) != 0)
     {
         string s("Could not execute query: ");
         s += zQuery;
@@ -65,7 +65,7 @@ void stop_node(MariaDBCluster& nodes, int node)
 
 void fail_query(TestConnections& test)
 {
-    int rv = execute_query(test.maxscales->conn_rwsplit[0], "BEGIN");
+    int rv = execute_query(test.maxscale->conn_rwsplit[0], "BEGIN");
 
     if (rv == 0)
     {
@@ -132,7 +132,7 @@ void run(TestConnections& test)
     list_servers(test);
 
     cout << "\nPerforming failover... " << endl;
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.print_maxctrl("call command mysqlmon failover MySQL-Monitor");
 
     list_servers(test);
@@ -143,8 +143,8 @@ void run(TestConnections& test)
     cout << "Failed as expected." << endl;
 
     cout << "\nClosing connection to MaxScale." << endl;
-    test.maxscales->close_maxscale_connections();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->close_maxscale_connections();
+    test.maxscale->wait_for_monitor();
 
     cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);

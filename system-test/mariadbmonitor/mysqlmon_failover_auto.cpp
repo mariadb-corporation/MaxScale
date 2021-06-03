@@ -19,13 +19,13 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
     test.repl->connect();
 
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     basic_test(test);
     print_gtids(test);
 
     // Part 1
     int node0_id = prepare_test_1(test);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_test_1(test, node0_id);
 
     if (test.global_result != 0)
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
     // Part 2
     prepare_test_2(test);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_test_2(test);
 
     if (test.global_result != 0)
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
     // Part 3
     prepare_test_3(test);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     check_test_3(test);
 
     return test.global_result;

@@ -45,8 +45,8 @@ int main(int argc, char** argv)
     {
         cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
                 "Starting MaxScale.\n";
-        test.maxscales->start_and_check_started();
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->start_and_check_started();
+        test.maxscale->wait_for_monitor(2);
         disks_plugin_loaded = true;
     }
     else
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
         };
 
     auto expect_server_status = [&test, &set_to_string](const string& server_name, const string& status) {
-            auto status_set = test.maxscales->get_server_status(server_name.c_str());
+            auto status_set = test.maxscale->get_server_status(server_name.c_str());
             string status_str = set_to_string(status_set);
             bool found = (status_set.count(status) == 1);
             test.expect(found, "%s was not %s as was expected. Status: %s.",
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     {
         // Set up test table to ensure queries are going through.
         test.tprintf("Creating table and inserting data.");
-        auto maxconn = test.maxscales->open_rwsplit_connection();
+        auto maxconn = test.maxscale->open_rwsplit_connection();
         test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
         test.try_query(maxconn, insert_query, insert_val++);
         mysql_close(maxconn);
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
         cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
         test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:1");
         sleep(2);   // The disk space is checked depending on wall clock time.
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
 
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
         // still replicating from server1. server1 was redirected to the new master. Although server1
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
 
         // Check that writes are working.
-        auto maxconn = test.maxscales->open_rwsplit_connection();
+        auto maxconn = test.maxscale->open_rwsplit_connection();
         test.try_query(maxconn, insert_query, insert_val);
         mysql_close(maxconn);
 
@@ -123,7 +123,7 @@ int main(int argc, char** argv)
         cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
         test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:100");
         sleep(2);   // To update disk space status
-        test.maxscales->wait_for_monitor(1);
+        test.maxscale->wait_for_monitor(1);
         get_output(test);
     }
 
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     cout << "Running reset-replication to fix the situation.\n";
     test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
     sleep(2);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
     // Check that no auto switchover has happened.
     expect_server_status(server_names[0], master);
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     expect_server_status(server_names[3], slave);
 
     const char drop_query[] = "DROP TABLE test.t1;";
-    auto maxconn = test.maxscales->open_rwsplit_connection();
+    auto maxconn = test.maxscale->open_rwsplit_connection();
     test.try_query(maxconn, drop_query);
     mysql_close(maxconn);
 

@@ -23,7 +23,7 @@ namespace
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("DROP TABLE IF EXISTS cache_test");
 
@@ -35,7 +35,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("CREATE TABLE cache_test (a INT)");
 
@@ -45,7 +45,7 @@ void create(TestConnections& test)
 
 void insert(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("INSERT INTO cache_test VALUES (1)");
 
@@ -55,7 +55,7 @@ void insert(TestConnections& test)
 
 void update(TestConnections& test, int value)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("UPDATE cache_test SET a=");
     stmt += std::to_string(value);
@@ -66,7 +66,7 @@ void update(TestConnections& test, int value)
 
 void select(TestConnections& test, int* pValue)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("SELECT * FROM cache_test");
 
@@ -109,7 +109,7 @@ enum What
 
 void set(TestConnections& test, Cache::What what, bool value)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("SET @maxscale.cache.");
     stmt += ((what == Cache::POPULATE) ? "populate" : "use");
@@ -199,14 +199,14 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    if (test.maxscales->connect_rwsplit() == 0)
+    if (test.maxscale->connect_rwsplit() == 0)
     {
         run(test);
     }
 
-    test.maxscales->connect();
+    test.maxscale->connect();
     drop(test);
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

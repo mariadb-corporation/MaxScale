@@ -21,10 +21,10 @@ using std::string;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    auto host = test.maxscales->ip();
-    auto port = test.maxscales->port();
-    auto& user = test.maxscales->user_name;
-    auto& pw = test.maxscales->password;
+    auto host = test.maxscale->ip();
+    auto port = test.maxscale->port();
+    auto& user = test.maxscale->user_name;
+    auto& pw = test.maxscale->password;
     string wrong_pw = "wrong_pw";
 
     auto testfunc = [&](ConnectorVersion vrs) {

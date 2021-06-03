@@ -51,8 +51,8 @@ void check_with_wrong_pw(int router, int max_conn, TestConnections& test)
     for (int i = 0; i < max_conn && !limit_reached; i++)
     {
         MYSQL* failed_conn = open_conn(
-            test.maxscales->ports[router], test.maxscales->ip4(),
-            test.maxscales->user_name, wrong_pw,
+            test.maxscale->ports[router], test.maxscale->ip4(),
+            test.maxscale->user_name, wrong_pw,
             test.maxscale_ssl);
         auto error = mysql_errno(failed_conn);
         if (error == 0)
@@ -72,22 +72,22 @@ void check_max_conn(int router, int max_conn, TestConnections& test)
 {
     MYSQL* conn[max_conn + 1];
 
-    auto mxs_ip = test.maxscales->ip4();
+    auto mxs_ip = test.maxscale->ip4();
     int i;
     for (i = 0; i < max_conn; i++)
     {
-        conn[i] = open_conn(test.maxscales->ports[router], mxs_ip,
-                            test.maxscales->user_name,
-                            test.maxscales->password,
+        conn[i] = open_conn(test.maxscale->ports[router], mxs_ip,
+                            test.maxscale->user_name,
+                            test.maxscale->password,
                             test.maxscale_ssl);
         if (mysql_errno(conn[i]) != 0)
         {
             test.add_result(1, "Connection %d failed, error is %s\n", i, mysql_error(conn[i]));
         }
     }
-    conn[max_conn] = open_conn(test.maxscales->ports[router], mxs_ip,
-                               test.maxscales->user_name,
-                               test.maxscales->password,
+    conn[max_conn] = open_conn(test.maxscale->ports[router], mxs_ip,
+                               test.maxscale->user_name,
+                               test.maxscale->password,
                                test.maxscale_ssl);
     if (mysql_errno(conn[i]) != 1040)
     {

@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 {
     char result_tmp[bufsize];
     TestConnections test(argc, argv);
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
 
     // Set up test table
     basic_test(test);
@@ -86,9 +86,9 @@ int main(int argc, char** argv)
     string rejoin_s3 = REJOIN_CMD + " server3";
     string rejoin_s4 = REJOIN_CMD + " server4";
 
-    test.maxscales->ssh_output(rejoin_s3);
-    test.maxscales->ssh_output(rejoin_s4);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->ssh_output(rejoin_s3);
+    test.maxscale->ssh_output(rejoin_s4);
+    test.maxscale->wait_for_monitor();
     get_output(test);
 
     StringSet node2_states = test.get_server_status("server3");
@@ -109,11 +109,11 @@ int main(int argc, char** argv)
     snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->ip_private(3), test.repl->port[3]);
     mysql_query(nodes[0], cmd);
     mysql_query(nodes[0], "START SLAVE;");
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     string rejoin_s2 = REJOIN_CMD + " server2";
-    test.maxscales->ssh_output(rejoin_s2);
-    test.maxscales->ssh_output(rejoin_s3);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->ssh_output(rejoin_s2);
+    test.maxscale->ssh_output(rejoin_s3);
+    test.maxscale->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.expect(master_id == 4, "Server 4 should be the cluster master.");
@@ -123,8 +123,8 @@ int main(int argc, char** argv)
     test.expect(states_n0_ok, "Server 1 is not a slave when it should be.");
     if (states_n0_ok)
     {
-        test.maxscales->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server4");
-        test.maxscales->wait_for_monitor();
+        test.maxscale->ssh_output("maxctrl call command mysqlmon switchover MySQL-Monitor server1 server4");
+        test.maxscale->wait_for_monitor();
         master_id = get_master_server_id(test);
         test.expect(master_id == 1, "Server 1 should be the cluster master.");
         get_output(test);

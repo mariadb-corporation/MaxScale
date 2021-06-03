@@ -17,11 +17,11 @@ int main(int argc, char** argv)
 
     auto block = [&test](int n) {
             test.repl->block_node(n);
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
             test.repl->unblock_node(n);
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
         };
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
 
     test.log_printf("Test 1: Master failure mid-reconnect should trigger query replay");
 

@@ -158,20 +158,20 @@ int main(int argc, char* argv[])
 
     Test->repl->connect();
 
-    conn = Test->maxscales->open_rwsplit_connection();
+    conn = Test->maxscale->open_rwsplit_connection();
     execute_query(conn, (char*) "USE test;");
     create_t1(conn);
     mysql_close(conn);
     Test->tprintf("Table t1 is created\n");
-    const char* mxs_ip = Test->maxscales->ip_private();
-    const char* mxs_host = Test->maxscales->hostname();
+    const char* mxs_ip = Test->maxscale->ip_private();
+    const char* mxs_host = Test->maxscale->hostname();
 
     for (i = 0; i < conn_N; i++)
     {
         Test->set_timeout(60);
-        rwsplit_conn[i] = Test->maxscales->open_rwsplit_connection();
-        master_conn[i] = Test->maxscales->open_readconn_master_connection();
-        slave_conn[i] = Test->maxscales->open_readconn_slave_connection();
+        rwsplit_conn[i] = Test->maxscale->open_rwsplit_connection();
+        master_conn[i] = Test->maxscale->open_readconn_master_connection();
+        slave_conn[i] = Test->maxscale->open_readconn_slave_connection();
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
         execute_query(rwsplit_conn[i], "%s", sql);
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);
@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < conn_N; i++)
     {
         Test->set_timeout(60);
-        slave_conn[i] = Test->maxscales->open_readconn_slave_connection();
+        slave_conn[i] = Test->maxscale->open_readconn_slave_connection();
         sprintf(sql, "SELECT * FROM t1");
         execute_query(slave_conn[i], "%s", sql);
         fflush(stdout);
@@ -306,7 +306,7 @@ void* parall_traffic(void* ptr)
     int i;
     for (i = 0; i < conn_N; i++)
     {
-        slave_conn1[i] = Test->maxscales->open_readconn_slave_connection();
+        slave_conn1[i] = Test->maxscale->open_readconn_slave_connection();
         execute_query(slave_conn1[i], "SELECT * FROM t1");
     }
 

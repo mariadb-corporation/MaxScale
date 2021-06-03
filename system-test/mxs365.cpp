@@ -49,24 +49,24 @@ int main(int argc, char* argv[])
     /** Set max packet size and create test table */
     test->set_timeout(20);
     test->tprintf("Connect to Maxscale\n");
-    test->maxscales->connect_maxscale();
+    test->maxscale->connect_maxscale();
     test->tprintf("Setting max_allowed_packet, creating table\n");
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0],
+    test->add_result(execute_query(test->maxscale->conn_rwsplit[0],
                                    "set global max_allowed_packet=(1048576 * 60)"),
                      "Setting max_allowed_packet failed.");
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0],
+    test->add_result(execute_query(test->maxscale->conn_rwsplit[0],
                                    "DROP TABLE IF EXISTS test.dump"),
                      "Dropping table failed.");
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0],
+    test->add_result(execute_query(test->maxscale->conn_rwsplit[0],
                                    "CREATE TABLE test.dump(a int, b varchar(80), c varchar(80))"),
                      "Creating table failed.");
     test->tprintf("Closing connection to Maxscale\n");
-    test->maxscales->close_maxscale_connections();
+    test->maxscale->close_maxscale_connections();
 
     /** Reconnect, load the data and then read it */
     test->tprintf("Re-connect to Maxscale\n");
     test->set_timeout(20);
-    test->maxscales->connect_maxscale();
+    test->maxscale->connect_maxscale();
     char query[1024 + sizeof(filename)];
     snprintf(query,
              sizeof(query),
@@ -74,19 +74,19 @@ int main(int argc, char* argv[])
              filename);
     test->tprintf("Loading data\n");
     test->set_timeout(100);
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0], "%s", query), "Loading data failed.");
+    test->add_result(execute_query(test->maxscale->conn_rwsplit[0], "%s", query), "Loading data failed.");
     test->tprintf("Reading data\n");
     test->set_timeout(100);
-    test->add_result(execute_query(test->maxscales->conn_rwsplit[0], "SELECT * FROM test.dump"),
+    test->add_result(execute_query(test->maxscale->conn_rwsplit[0], "SELECT * FROM test.dump"),
                      "Reading data failed.");
-    test->maxscales->close_maxscale_connections();
+    test->maxscale->close_maxscale_connections();
     test->tprintf("Cecking if Maxscale alive\n");
     test->check_maxscale_alive();
     int rval = test->global_result;
 
-    test->maxscales->connect();
-    execute_query(test->maxscales->conn_rwsplit[0], "DROP TABLE test.dump");
-    test->maxscales->disconnect();
+    test->maxscale->connect();
+    execute_query(test->maxscale->conn_rwsplit[0], "DROP TABLE test.dump");
+    test->maxscale->disconnect();
 
     delete test;
     unlink(filename);

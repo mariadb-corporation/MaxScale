@@ -106,7 +106,7 @@ void move_connections_to_thread(TestConnections& test,
 
             cout << curl << endl;
 
-            auto result = test.maxscales->ssh_output(curl);
+            auto result = test.maxscale->ssh_output(curl);
 
             cout << result.output << endl;
         }
@@ -132,7 +132,7 @@ void run(TestConnections* pTest, mxb::Semaphore* pSem_ready, mxb::Semaphore* pSe
     mxb::Semaphore& sem_ready = *pSem_ready;
     mxb::Semaphore& sem_exit = *pSem_exit;
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     bool connected = c.connect();
     test.expect(connected, "Could not connect to MaxScale.");
 

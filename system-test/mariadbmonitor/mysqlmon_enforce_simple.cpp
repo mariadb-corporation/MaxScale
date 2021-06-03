@@ -20,7 +20,7 @@ using std::cout;
 
 int get_master_server_id(TestConnections& test)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection();
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
     int id = -1;
     char str[1024];
 
@@ -59,10 +59,10 @@ int main(int argc, char** argv)
     test.repl->stop_node(last_slave_ind);
 
     test.tprintf("Starting MaxScale");
-    test.maxscales->start_and_check_started();
+    test.maxscale->start_and_check_started();
 
     sleep(3);
-    test.maxscales->wait_for_monitor(3);
+    test.maxscale->wait_for_monitor(3);
 
     test.log_includes("Performing automatic failover");
     int new_master_id = get_master_server_id(test);
@@ -76,9 +76,9 @@ int main(int argc, char** argv)
     {
         // Restart server4, check that it rejoins.
         test.repl->start_node(last_slave_ind, (char*)"");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
 
-        auto states = test.maxscales->get_server_status(slave_name.c_str());
+        auto states = test.maxscale->get_server_status(slave_name.c_str());
         test.expect(states.count("Slave") == 1, "%s is not replicating as it should.", slave_name.c_str());
     }
 
@@ -86,12 +86,12 @@ int main(int argc, char** argv)
     {
         // Finally, bring back old master and swap to it.
         test.repl->start_node(master_ind, (char*)"");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
 
         test.tprintf("Switching back old master %s.", master_name.c_str());
         string switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
         test.maxctrl(switchover);
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         new_master_id = get_master_server_id(test);
         test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
     }
@@ -100,14 +100,14 @@ int main(int argc, char** argv)
     {
         // Test that switchover works even if autocommit is off on all backends.
         test.tprintf("Setting autocommit=0 on all backends, then check that switchover works.");
-        test.maxscales->stop();
+        test.maxscale->stop();
         test.repl->connect();
         const char set_ac[] = "SET GLOBAL autocommit=%i;";
         for (int i = 0; i < 4; i++)
         {
             test.try_query(test.repl->nodes[i], set_ac, 0);
         }
-        test.maxscales->start();
+        test.maxscale->start();
 
         // Check that autocommit is really off.
         Connection conn = test.repl->get_connection(2);
@@ -123,7 +123,7 @@ int main(int argc, char** argv)
             test.tprintf("Switchover...");
             string switchover = "call command mariadbmon switchover MariaDB-Monitor";
             test.maxctrl(switchover);
-            test.maxscales->wait_for_monitor(2);
+            test.maxscale->wait_for_monitor(2);
             new_master_id = get_master_server_id(test);
             test.expect(new_master_id != server_ids[master_ind], "Switchover failed.");
             if (test.ok())
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
 
             switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
             test.maxctrl(switchover);
-            test.maxscales->wait_for_monitor(2);
+            test.maxscale->wait_for_monitor(2);
             new_master_id = get_master_server_id(test);
             test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
         }

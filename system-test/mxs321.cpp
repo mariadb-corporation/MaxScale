@@ -28,15 +28,15 @@ void create_and_check_connections(TestConnections* test, int target)
         switch (target)
         {
         case 1:
-            stmt[i] = test->maxscales->open_rwsplit_connection();
+            stmt[i] = test->maxscale->open_rwsplit_connection();
             break;
 
         case 2:
-            stmt[i] = test->maxscales->open_readconn_master_connection();
+            stmt[i] = test->maxscale->open_readconn_master_connection();
             break;
 
         case 3:
-            stmt[i] = test->maxscales->open_readconn_master_connection();
+            stmt[i] = test->maxscale->open_readconn_master_connection();
             break;
         }
     }
@@ -63,9 +63,9 @@ int main(int argc, char* argv[])
     Test->set_timeout(50);
 
     Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
-    Test->maxscales->connect_maxscale();
-    execute_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_connections=100");
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->connect_maxscale();
+    execute_query(Test->maxscale->conn_rwsplit[0], "SET GLOBAL max_connections=100");
+    Test->maxscale->close_maxscale_connections();
     Test->stop_timeout();
 
     /** Create connections to readwritesplit */

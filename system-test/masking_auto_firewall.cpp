@@ -21,7 +21,7 @@ namespace
 
 void init(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS masking_auto_firewall");
     test.try_query(pMysql, "CREATE TABLE masking_auto_firewall (a TEXT, b TEXT)");
@@ -36,7 +36,7 @@ enum class Expect
 
 void test_one(TestConnections& test, const char* zQuery, Expect expect)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     const char* zExpect = (expect == Expect::SUCCESS ? "SHOULD" : "should NOT");
 
@@ -55,7 +55,7 @@ void test_one(TestConnections& test, const char* zQuery, Expect expect)
 
 void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     MYSQL_STMT* pPs = mysql_stmt_init(pMysql);
     int rv = mysql_stmt_prepare(pPs, zQuery, strlen(zQuery));
@@ -74,7 +74,7 @@ void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
 
 void run(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     int rv;
 
@@ -115,8 +115,8 @@ void run(TestConnections& test)
     // garbage that causes the returned results of subsequent statements to be
     // out of sync. Instead of figuring out the actual cause, we'll just close
     // and reopen the connection.
-    test.add_result(test.maxscales->disconnect(), "Could NOT close RWS connection.");
-    test.add_result(test.maxscales->connect_rwsplit(), "Could NOT open the RWS connection.");
+    test.add_result(test.maxscale->disconnect(), "Could NOT close RWS connection.");
+    test.add_result(test.maxscale->connect_rwsplit(), "Could NOT open the RWS connection.");
 
     // This should NOT succeed as a masked column is used in a statement
     // defining a variable.
@@ -149,7 +149,7 @@ void run_ansi_quotes(TestConnections& test)
     // This SHOULD go through as we have 'treat_string_arg_as_field=false"
     test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::SUCCESS);
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     c.connect();
 
     test.expect(c.query("SET @@SQL_MODE = CONCAT(@@SQL_MODE, ',ANSI_QUOTES')"),
@@ -159,13 +159,13 @@ void run_ansi_quotes(TestConnections& test)
     test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::SUCCESS);
 
     // Let's turn on 'treat_string_arg_as_field=true'
-    test.maxscales->ssh_node(
+    test.maxscale->ssh_node(
         "sed -i -e "
         "'s/treat_string_arg_as_field=false/treat_string_arg_as_field=true/' "
         "/etc/maxscale.cnf",
         true);
     // and restart MaxScale
-    test.maxscales->restart();
+    test.maxscale->restart();
 
     // This should NOT go through as we have 'treat_string_arg_as_field=true" and ANSI_QUOTES.
     test_one(test, "select concat(\"a\") from masking_auto_firewall", Expect::FAILURE);
@@ -186,17 +186,17 @@ int main(int argc, char* argv[])
 
     std::string json_file("/masking_auto_firewall.json");
     std::string from = test_dir + json_file;
-    std::string to = test.maxscales->access_homedir() + json_file;
+    std::string to = test.maxscale->access_homedir() + json_file;
 
-    if (test.maxscales->copy_to_node(from.c_str(), to.c_str()) == 0)
+    if (test.maxscale->copy_to_node(from.c_str(), to.c_str()) == 0)
     {
-        test.maxscales->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
-        if (test.maxscales->start() == 0)
+        test.maxscale->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
+        if (test.maxscale->start() == 0)
         {
             sleep(2);
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
 
-            if (test.maxscales->connect_rwsplit() == 0)
+            if (test.maxscale->connect_rwsplit() == 0)
             {
                 init(test);
                 run(test);

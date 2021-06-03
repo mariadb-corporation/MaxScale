@@ -15,14 +15,14 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&](string q) {
-            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
         };
 
     auto ok = [&](string q) {
             test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscales->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit[0]));
         };
 
     auto kill_master = [&]() {
@@ -30,15 +30,15 @@ int main(int argc, char** argv)
             int master = test.repl->find_master();
             test.repl->disconnect();
             test.repl->block_node(master);
-            test.maxscales->wait_for_monitor(3);
+            test.maxscale->wait_for_monitor(3);
             test.repl->unblock_node(master);
-            test.maxscales->wait_for_monitor(3);
+            test.maxscale->wait_for_monitor(3);
         };
 
     // Create a table
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     // Make sure it's replicated to all slaves before starting the transaction
     test.repl->connect();
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     test.repl->disconnect();
 
     // Try to do a transaction across multiple master failures
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
 
     cout << "Start transaction, insert a value and read it" << endl;
     ok("START TRANSACTION");
@@ -78,18 +78,18 @@ int main(int argc, char** argv)
 
     cout << "Committing transaction" << endl;
     ok("COMMIT");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     cout << "Checking results" << endl;
-    Row r = get_row(test.maxscales->conn_rwsplit[0], "SELECT SUM(id), @@last_insert_id FROM t1");
+    Row r = get_row(test.maxscale->conn_rwsplit[0], "SELECT SUM(id), @@last_insert_id FROM t1");
     test.expect(!r.empty() && r[0] == "6", "All rows were not inserted: %s",
                 r.empty() ? "No rows" : r[0].c_str());
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     ok("DROP TABLE test.t1");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

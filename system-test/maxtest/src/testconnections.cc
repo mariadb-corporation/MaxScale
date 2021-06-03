@@ -248,7 +248,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
         if (m_mdbci_called)
         {
-            auto res = maxscales->ssh_output("maxscale --version-full", false);
+            auto res = maxscale->ssh_output("maxscale --version-full", false);
             if (res.rc != 0)
             {
                 tprintf("Error retrieving MaxScale version info");
@@ -295,7 +295,7 @@ TestConnections::~TestConnections()
     delete repl;
     delete galera;
     delete xpand;
-    delete maxscales;
+    delete maxscale;
 }
 
 int TestConnections::cleanup()
@@ -466,8 +466,8 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
-            maxscales->copy_to_node(src.c_str(), maxscales->access_homedir());
-            maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(),
+            maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
+            maxscale->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
                                   verbose() ? "verbose" : "");
         }
     }
@@ -981,7 +981,7 @@ void TestConnections::revert_replicate_from_master()
 int TestConnections::start_mm()
 {
     tprintf("Stopping maxscale\n");
-    int rval = maxscales->stop_maxscale();
+    int rval = maxscale->stop_maxscale();
 
     tprintf("Stopping all backend nodes\n");
     rval += repl->stop_nodes() ? 0 : 1;
@@ -1007,7 +1007,7 @@ int TestConnections::start_mm()
     repl->close_connections();
 
     tprintf("Starting back Maxscale\n");
-    rval += maxscales->start_maxscale();
+    rval += maxscale->start_maxscale();
 
     return rval;
 }
@@ -1025,7 +1025,7 @@ bool TestConnections::log_matches(const char* pattern)
         }
     }
 
-    return maxscales->ssh_node_f(0, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
+    return maxscale->ssh_node_f(0, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
 }
 
 void TestConnections::log_includes(const char* pattern)
@@ -1091,7 +1091,7 @@ int TestConnections::find_connected_slave1()
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(), maxscales->hostname(), (char*) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscale->ip(), maxscale->hostname(), (char*) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
@@ -1122,19 +1122,19 @@ int TestConnections::check_maxscale_alive()
     int gr = global_result;
     set_timeout(10);
     tprintf("Connecting to Maxscale\n");
-    add_result(maxscales->connect_maxscale(), "Can not connect to Maxscale\n");
+    add_result(maxscale->connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
-    try_query(maxscales->conn_rwsplit[0], "show databases;");
+    try_query(maxscale->conn_rwsplit[0], "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(maxscales->conn_master, "show databases;");
+    try_query(maxscale->conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
-    try_query(maxscales->conn_slave, "show databases;");
+    try_query(maxscale->conn_slave, "show databases;");
     set_timeout(10);
-    maxscales->close_maxscale_connections();
+    maxscale->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
     my_maxscale(0)->expect_running_status(true);
@@ -1148,7 +1148,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     int rc;
 
     tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_rwsplit[0], "select 1");
+    rc = execute_query(maxscale->conn_rwsplit[0], "select 1");
     if ((rc == 0) != rw_split)
     {
         tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
@@ -1156,7 +1156,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     }
 
     tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_master, "select 1");
+    rc = execute_query(maxscale->conn_master, "select 1");
     if ((rc == 0) != rc_master)
     {
         tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
@@ -1164,7 +1164,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     }
 
     tprintf("Testing ReadConnRoute Slave, expecting %s\n", (rc_slave ? "success" : "failure"));
-    rc = execute_query(maxscales->conn_slave, "select 1");
+    rc = execute_query(maxscale->conn_slave, "select 1");
     if ((rc == 0) != rc_slave)
     {
         tprintf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
@@ -1202,7 +1202,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
                 printf("RWSplit \t");
             }
 
-            rwsplit_conn[i] = maxscales->open_rwsplit_connection();
+            rwsplit_conn[i] = maxscale->open_rwsplit_connection();
             if (!rwsplit_conn[i])
             {
                 local_result++;
@@ -1216,7 +1216,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
                 printf("ReadConn master \t");
             }
 
-            master_conn[i] = maxscales->open_readconn_master_connection();
+            master_conn[i] = maxscale->open_readconn_master_connection();
             if (mysql_errno(master_conn[i]) != 0)
             {
                 local_result++;
@@ -1230,7 +1230,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
                 printf("ReadConn slave \t");
             }
 
-            slave_conn[i] = maxscales->open_readconn_slave_connection();
+            slave_conn[i] = maxscale->open_readconn_slave_connection();
             if (mysql_errno(slave_conn[i]) != 0)
             {
                 local_result++;
@@ -1245,7 +1245,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscales->ip4(), maxscales->user_name, maxscales->password, maxscale_ssl);
+                open_conn(4016, maxscale->ip4(), maxscale->user_name, maxscale->password, maxscale_ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;
@@ -1377,13 +1377,13 @@ void TestConnections::log_printf(const char* format, ...)
         *c = '^';
     }
 
-    maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+    maxscale->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 int TestConnections::get_master_server_id()
 {
     int master_id = -1;
-    MYSQL* conn = maxscales->open_rwsplit_connection();
+    MYSQL* conn = maxscale->open_rwsplit_connection();
     char str[100];
     if (find_field(conn, "SELECT @@server_id, @@last_insert_id;", "@@server_id", str) == 0)
     {
@@ -1445,25 +1445,25 @@ int TestConnections::insert_select(int N)
 
     tprintf("Create t1\n");
     set_timeout(30);
-    create_t1(maxscales->conn_rwsplit[0]);
+    create_t1(maxscale->conn_rwsplit[0]);
 
     tprintf("Insert data into t1\n");
     set_timeout(N * 16 + 30);
-    insert_into_t1(maxscales->conn_rwsplit[0], N);
+    insert_into_t1(maxscale->conn_rwsplit[0], N);
     stop_timeout();
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_rwsplit[0], N);
+    result += select_from_t1(maxscale->conn_rwsplit[0], N);
 
     tprintf("SELECT: master\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_master, N);
+    result += select_from_t1(maxscale->conn_master, N);
 
     tprintf("SELECT: slave\n");
     set_timeout(30);
-    result += select_from_t1(maxscales->conn_slave, N);
+    result += select_from_t1(maxscale->conn_slave, N);
 
     return result;
 }
@@ -1476,11 +1476,11 @@ int TestConnections::use_db(char* db)
     sprintf(sql, "USE %s;", db);
     set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    local_result += execute_query(maxscales->conn_rwsplit[0], "%s", sql);
+    local_result += execute_query(maxscale->conn_rwsplit[0], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    local_result += execute_query(maxscales->conn_master, "%s", sql);
+    local_result += execute_query(maxscale->conn_master, "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    local_result += execute_query(maxscales->conn_slave, "%s", sql);
+    local_result += execute_query(maxscale->conn_slave, "%s", sql);
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
@@ -1501,7 +1501,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
     set_timeout(30);
-    int exists = check_if_t1_exists(maxscales->conn_rwsplit[0]);
+    int exists = check_if_t1_exists(maxscale->conn_rwsplit[0]);
 
     if (exists == presence)
     {
@@ -1513,7 +1513,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(maxscales->conn_master);
+    exists = check_if_t1_exists(maxscale->conn_master);
 
     if (exists == presence)
     {
@@ -1528,7 +1528,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(maxscales->conn_slave);
+    exists = check_if_t1_exists(maxscale->conn_slave);
 
     if (exists == presence)
     {
@@ -1591,7 +1591,7 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
 
 StringSet TestConnections::get_server_status(const std::string& name)
 {
-    return maxscales->get_server_status(name);
+    return maxscale->get_server_status(name);
 }
 
 void TestConnections::check_current_operations(int value)
@@ -1622,13 +1622,13 @@ void TestConnections::check_current_connections(int value)
 
 bool TestConnections::test_bad_config(const string& config)
 {
-    process_template(*maxscales, config, "/tmp/");
+    process_template(*maxscale, config, "/tmp/");
 
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
-    int ssh_rc = maxscales->ssh_node_f(0,
-                                       true,
+    int ssh_rc = maxscale->ssh_node_f(0,
+                                      true,
                                        "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                        "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
     return (ssh_rc == 0) || (ssh_rc == 256);
@@ -2008,10 +2008,10 @@ bool TestConnections::initialize_nodes()
             }
         };
 
-    initialize_maxscale(maxscales, 0);
+    initialize_maxscale(maxscale, 0);
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
-    initialize_maxscale(maxscales2, 1);
+    initialize_maxscale(maxscale2, 1);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2096,9 +2096,9 @@ void TestConnections::write_node_env_vars()
     write_env_vars(repl);
     write_env_vars(galera);
     write_env_vars(xpand);
-    if (maxscales)
+    if (maxscale)
     {
-        maxscales->write_env_vars();
+        maxscale->write_env_vars();
     }
 }
 
@@ -2106,9 +2106,9 @@ int TestConnections::n_maxscales() const
 {
     // A maximum of two MaxScales are supported so far. Defining only the second MaxScale is an error.
     int rval = 0;
-    if (maxscales)
+    if (maxscale)
     {
-        rval = maxscales2 ? 2 : 1;
+        rval = maxscale2 ? 2 : 1;
     }
     return rval;
 }
@@ -2173,7 +2173,7 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
     mxt::MariaDBServer* rval = nullptr;
     if (repl)
     {
-        auto server_info = maxscales->maxscale_b().get_servers();
+        auto server_info = maxscale->maxscale_b().get_servers();
         for (size_t i = 0; i < server_info.size() && !rval; i++)
         {
             auto& info = server_info.get(i);
@@ -2205,11 +2205,11 @@ Maxscales* TestConnections::my_maxscale(int m) const
     Maxscales* rval = nullptr;
     if (m == 0)
     {
-        rval = maxscales;
+        rval = maxscale;
     }
     else if (m == 1)
     {
-        rval = maxscales2;
+        rval = maxscale2;
     }
     return rval;
 }

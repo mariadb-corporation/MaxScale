@@ -7,7 +7,7 @@
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
     auto row = conn.row("SELECT SQL_CALC_FOUND_ROWS LAST_INSERT_ID(), @@server_id FROM mysql.user");

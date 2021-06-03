@@ -21,15 +21,15 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
     test.repl->disconnect();
 
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
 
-    Row server1 = get_row(test.maxscales->conn_rwsplit[0],
+    Row server1 = get_row(test.maxscale->conn_rwsplit[0],
                           "SELECT @@server_id, @@last_insert_id, id FROM test.t1");
-    Row server2 = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t2");
-    Row server3 = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t3");
-    Row server4 = get_row(test.maxscales->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t4");
+    Row server2 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t2");
+    Row server3 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t3");
+    Row server4 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t4");
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     test.repl->connect();
     test.expect(server1[0] == test.repl->get_server_id_str(0),

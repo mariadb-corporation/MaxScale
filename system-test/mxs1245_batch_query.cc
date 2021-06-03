@@ -45,9 +45,9 @@ void test_master_failure(TestConnections& test, MYSQL* mysql)
 
     test.set_timeout(30);
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 
     for (int i = 0; i < NUM_QUERY && test.ok(); i++)
     {
@@ -62,8 +62,8 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     // Enable transaction_replay and reconnect to take it into use
     test.check_maxctrl("alter service RW-Split-Router transaction_replay true");
     test.check_maxctrl("alter service RW-Split-Router delayed_retry_timeout 30s");
-    test.maxscales->connect_rwsplit();
-    mysql = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_rwsplit();
+    mysql = test.maxscale->conn_rwsplit[0];
 
     const std::string query = "SELECT SLEEP(1)";
     const int NUM_QUERY = 15;
@@ -76,9 +76,9 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
 
     test.set_timeout(30);
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 
     read_results(test, mysql, NUM_QUERY);
 
@@ -86,7 +86,7 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
 
     // Revert the configuration change and reconnect
     test.check_maxctrl("alter service RW-Split-Router transaction_replay false");
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
 
     test.stop_timeout();
 }
@@ -95,8 +95,8 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
 {
     // Enable optimistic_trx and reconnect to take it into use
     test.check_maxctrl("alter service RW-Split-Router optimistic_trx true");
-    test.maxscales->connect_rwsplit();
-    mysql = test.maxscales->conn_rwsplit[0];
+    test.maxscale->connect_rwsplit();
+    mysql = test.maxscale->conn_rwsplit[0];
 
     const std::string read_query = "SELECT * FROM test.t1";
     const std::string write_query = "INSERT INTO test.t1 VALUES (1)";
@@ -120,7 +120,7 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
 
     // Revert the configuration change and reconnect
     test.check_maxctrl("alter service RW-Split-Router optimistic_trx false");
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
 
     test.stop_timeout();
 }
@@ -139,15 +139,15 @@ int main(int argc, char** argv)
         "SELECT LAST_INSERT_ID()",
     };
 
-    test.maxscales->connect_rwsplit();
-    mysql_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
+    test.maxscale->connect_rwsplit();
+    mysql_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
 
     test.log_printf("Testing streaming of various queries");
 
     for (const auto& query : queries)
     {
         test.tprintf("  %s", query.c_str());
-        run_test(test, test.maxscales->conn_rwsplit[0], query);
+        run_test(test, test.maxscale->conn_rwsplit[0], query);
     }
 
     test.log_printf("Run the same test but inside a transaction");
@@ -155,21 +155,21 @@ int main(int argc, char** argv)
     for (const auto& query : queries)
     {
         test.tprintf("  %s", query.c_str());
-        mysql_query(test.maxscales->conn_rwsplit[0], "START TRANSACTION");
-        run_test(test, test.maxscales->conn_rwsplit[0], query);
-        mysql_query(test.maxscales->conn_rwsplit[0], "COMMIT");
+        mysql_query(test.maxscale->conn_rwsplit[0], "START TRANSACTION");
+        run_test(test, test.maxscale->conn_rwsplit[0], query);
+        mysql_query(test.maxscale->conn_rwsplit[0], "COMMIT");
     }
 
     test.log_printf("Testing master failure during query streaming");
-    test_master_failure(test, test.maxscales->conn_rwsplit[0]);
+    test_master_failure(test, test.maxscale->conn_rwsplit[0]);
 
     test.log_printf("Testing transaction_replay with query streaming");
-    test_trx_replay(test, test.maxscales->conn_rwsplit[0]);
+    test_trx_replay(test, test.maxscale->conn_rwsplit[0]);
 
     test.log_printf("Testing optimistic_trx with query streaming");
-    test_optimistic_trx(test, test.maxscales->conn_rwsplit[0]);
+    test_optimistic_trx(test, test.maxscale->conn_rwsplit[0]);
 
-    mysql_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    mysql_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
 
     return test.global_result;
 }

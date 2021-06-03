@@ -19,52 +19,52 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     test.tprintf("Create a table and insert two rows into it");
     test.set_timeout(10 * test.repl->N);
 
-    execute_query(test.maxscales->conn_rwsplit[0], "USE test");
-    create_t1(test.maxscales->conn_rwsplit[0]);
-    execute_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
-    execute_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(1, 1)");
+    execute_query(test.maxscale->conn_rwsplit[0], "USE test");
+    create_t1(test.maxscale->conn_rwsplit[0]);
+    execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
+    execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(1, 1)");
 
     test.tprintf("Create temporary table and insert one row");
     test.set_timeout(10 * test.repl->N);
 
-    execute_query(test.maxscales->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit[0],
                   "create temporary table t1 as (SELECT * FROM t1 WHERE fl=3)");
-    execute_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
+    execute_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
 
     test.tprintf("Check that the temporary table has one row");
     test.set_timeout(25 * test.repl->N);
 
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], "SELECT * FROM t1", 1),
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0], "SELECT * FROM t1", 1),
                     "Current connection should show one row");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master, "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_master, "SELECT * FROM t1", 2),
                     "New connection should show two rows");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_slave, "SELECT * FROM t1", 2),
                     "New connection should show two rows");
 
     printf("Drop temporary table and check that the real table has two rows");
     test.set_timeout(25 * test.repl->N);
 
-    execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE t1");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], "SELECT * FROM t1", 2),
+    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE t1");
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0], "SELECT * FROM t1", 2),
                     "check failed");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_master, "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_master, "SELECT * FROM t1", 2),
                     "check failed");
-    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave, "SELECT * FROM t1", 2),
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_slave, "SELECT * FROM t1", 2),
                     "check failed");
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     // MXS-2103
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TEMPORARY TABLE temp.dummy5 (dum INT);");
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO temp.dummy5 VALUES(1),(2);");
-    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM temp.dummy5;");
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TEMPORARY TABLE temp.dummy5 (dum INT);");
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO temp.dummy5 VALUES(1),(2);");
+    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM temp.dummy5;");
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

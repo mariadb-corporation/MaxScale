@@ -6,7 +6,7 @@
 
 void run_test(TestConnections& test)
 {
-    Connection conn = test.maxscales->rwsplit();
+    Connection conn = test.maxscale->rwsplit();
     conn.connect();
 
     for (int i = 0; i <= 300 && test.global_result == 0; i++)

@@ -24,12 +24,12 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto expect_server_status = [&test](const string& server_name, const string& status) {
-            bool found = (test.maxscales->get_server_status(server_name.c_str()).count(status) == 1);
+            bool found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 1);
             test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
         };
 
     auto expect_not_server_status = [&test](const string& server_name, const string& status) {
-            bool not_found = (test.maxscales->get_server_status(server_name.c_str()).count(status) == 0);
+            bool not_found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 0);
             test.expect(not_found, "%s was %s contrary to expectation.", server_name.c_str(), status.c_str());
         };
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     string slave = "Slave";
 
     // Set up test table
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     test.tprintf("Creating table and inserting data.");
     test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
     int insert_val = 1;
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 
     // Stop MaxScale and mess with the nodes.
     cout << "Inserting events directly to nodes while MaxScale is stopped.\n";
-    test.maxscales->stop_maxscale();
+    test.maxscale->stop_maxscale();
     test.repl->connect();
     // Modify the databases of backends identically. This will unsync gtid:s but not the actual data.
     for (; insert_val <= 9; insert_val++)
@@ -86,8 +86,8 @@ int main(int argc, char** argv)
         test.try_query(test.repl->nodes[0], insert_query, insert_val);
     }
     // Restart MaxScale, there should be no slaves. Master is still ok.
-    test.maxscales->start_maxscale();
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->start_maxscale();
+    test.maxscale->wait_for_monitor(2);
     cout << "Restarted MaxScale.\n";
     print_gtids(test);
     get_output(test);
@@ -102,14 +102,14 @@ int main(int argc, char** argv)
         // Use the reset-replication command to magically fix the situation.
         cout << "Running reset-replication to fix the situation.\n";
         test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server2");
-        test.maxscales->wait_for_monitor(1);
+        test.maxscale->wait_for_monitor(1);
         // Add another event to force gtid forward.
-        maxconn = test.maxscales->open_rwsplit_connection();
+        maxconn = test.maxscale->open_rwsplit_connection();
         test.try_query(maxconn, "FLUSH TABLES;");
         test.try_query(maxconn, insert_query, insert_val);
         mysql_close(maxconn);
 
-        test.maxscales->wait_for_monitor(1);
+        test.maxscale->wait_for_monitor(1);
         get_output(test);
         expect_server_status(server_names[0], slave);
         expect_server_status(server_names[1], master);
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
         // Finally, switchover back and erase table
         cout << "Running switchover.\n";
         test.maxctrl("call command mariadbmon switchover MySQL-Monitor");
-        test.maxscales->wait_for_monitor(1);
+        test.maxscale->wait_for_monitor(1);
         get_output(test);
         expect_server_status(server_names[0], master);
         expect_server_status(server_names[1], slave);
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
         expect_server_status(server_names[3], slave);
     }
 
-    maxconn = test.maxscales->open_rwsplit_connection();
+    maxconn = test.maxscale->open_rwsplit_connection();
     test.try_query(maxconn, strict_mode, 0);
     test.try_query(maxconn, drop_query);
     mysql_close(maxconn);

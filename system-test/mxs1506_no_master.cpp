@@ -14,11 +14,11 @@ using namespace std;
 
 bool query(TestConnections& test)
 {
-    test.maxscales->connect_rwsplit();
-    execute_query_silent(test.maxscales->conn_rwsplit[0], "SET @a = 1");
+    test.maxscale->connect_rwsplit();
+    execute_query_silent(test.maxscale->conn_rwsplit[0], "SET @a = 1");
     sleep(5);
-    Row row = get_row(test.maxscales->conn_rwsplit[0], "SELECT @a");
-    test.maxscales->disconnect();
+    Row row = get_row(test.maxscale->conn_rwsplit[0], "SELECT @a");
+    test.maxscale->disconnect();
     return !row.empty() && row[0] == "1";
 }
 

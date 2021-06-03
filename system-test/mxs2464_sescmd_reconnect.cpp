@@ -7,24 +7,24 @@
 
 void run_test(TestConnections& test, const char* query)
 {
-    test.maxscales->connect_rwsplit();
+    test.maxscale->connect_rwsplit();
     std::thread thr([&]() {
                         sleep(5);
                         test.tprintf("block node 0");
                         test.repl->block_node(0);
                         test.tprintf("wait for monitor");
-                        test.maxscales->wait_for_monitor(2);
+                        test.maxscale->wait_for_monitor(2);
                         test.tprintf("unblock node 0");
                         test.repl->unblock_node(0);
                     });
 
     test.set_timeout(60);
     test.tprintf("%s", query);
-    test.try_query(test.maxscales->conn_rwsplit[0], "%s", query);
+    test.try_query(test.maxscale->conn_rwsplit[0], "%s", query);
     test.stop_timeout();
 
     test.tprintf("disconnect");
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
     test.tprintf("join");
     thr.join();
 }

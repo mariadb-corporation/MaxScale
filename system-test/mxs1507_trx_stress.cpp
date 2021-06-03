@@ -15,7 +15,7 @@ atomic<bool> running {true};
 
 void client_thr(TestConnections* test, int id)
 {
-    MYSQL* conn = test->maxscales->open_rwsplit_connection();
+    MYSQL* conn = test->maxscale->open_rwsplit_connection();
 
     while (running && test->global_result == 0)
     {

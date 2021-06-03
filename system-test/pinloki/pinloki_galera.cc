@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     test.galera->connect();
     auto galera_ids = test.galera->get_all_server_ids_str();
 
-    Connection pinloki = test.maxscales->readconn_master();
+    Connection pinloki = test.maxscale->readconn_master();
     test.expect(pinloki.connect(), "Pinloki connection should work: %s", pinloki.error());
 
     // Pick a regular replica and make it replicate from pinloki
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     pinloki_replica.query("START SLAVE");
 
     // Create a table via RWS (galera cluster) and insert one value
-    Connection rws = test.maxscales->rwsplit();
+    Connection rws = test.maxscale->rwsplit();
     test.expect(rws.connect(), "RWS connection should work: %s", rws.error());
     rws.query("DROP TABLE if exists test.t1");
     test.expect(rws.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", rws.error());
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
                 "pinloki should have started to replicate from another node");
 
     /** Insert and check */
-    auto conn = test.maxscales->rwsplit();      // for some reason rws is no longer valid?
+    auto conn = test.maxscale->rwsplit();      // for some reason rws is no longer valid?
     test.expect(conn.connect(), "2nd RWS connection should work: %s", conn.error());
     test.expect(conn.query("INSERT INTO test.t1 values(2)"), "INSERT 2 failed: %s", conn.error());
 

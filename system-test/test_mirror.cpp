@@ -129,7 +129,7 @@ void run_sql(TestConnections& test)
 {
     for (auto& t : test_cases)
     {
-        auto conn = test.maxscales->rwsplit();
+        auto conn = test.maxscale->rwsplit();
         test.expect(conn.connect(), "Connection should work: %s", conn.error());
         t.id = conn.thread_id();
         conn.query(t.query);
@@ -145,10 +145,10 @@ void test_file(TestConnections& test, Mode mode)
 
     run_sql(test);
 
-    test.maxscales->stop();
-    test.maxscales->copy_from_node("/tmp/mirror.txt", "./mirror.txt");
-    test.maxscales->ssh_node_f(0, true, "rm /tmp/mirror.txt");
-    test.maxscales->start();
+    test.maxscale->stop();
+    test.maxscale->copy_from_node("/tmp/mirror.txt", "./mirror.txt");
+    test.maxscale->ssh_node_f(0, true, "rm /tmp/mirror.txt");
+    test.maxscale->start();
 
     std::ifstream infile("mirror.txt");
     std::string line;

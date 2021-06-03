@@ -23,10 +23,10 @@ int main(int argc, char* argv[])
     char sys1[4096];
     int port[3];
 
-    port[0] = Test->maxscales->rwsplit_port;
-    port[1] = Test->maxscales->readconn_master_port;
+    port[0] = Test->maxscale->rwsplit_port;
+    port[1] = Test->maxscale->readconn_master_port;
 
-    auto mxs_ip = Test->maxscales->ip4();
+    auto mxs_ip = Test->maxscale->ip4();
     Test->tprintf("Connecting to RWSplit %s\n", mxs_ip);
 
     if (Test->smoke)
@@ -71,17 +71,17 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
 
-    Test->global_result += execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE sbtest1");
+    Test->global_result += execute_query(Test->maxscale->conn_rwsplit[0], "DROP TABLE sbtest1");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
 
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 
     Test->tprintf("Checking if MaxScale is still alive!");
     fflush(stdout);

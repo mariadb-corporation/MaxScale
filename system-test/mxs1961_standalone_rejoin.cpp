@@ -11,7 +11,7 @@ using namespace std;
 void checkpoint(TestConnections& test)
 {
     const int v = 2;
-    test.maxscales->wait_for_monitor(v);
+    test.maxscale->wait_for_monitor(v);
 
     for (auto&& s : {
         "server1", "server2", "server3"
@@ -37,8 +37,8 @@ int main(int argc, char* argv[])
 
     auto comment = [&](const char* comment) {
             cout << comment << endl;
-            test.maxscales->ssh_node_f(0, true,
-                                       "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
+            test.maxscale->ssh_node_f(0, true,
+                                      "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
         };
 
     auto slave = [&](const char* name) {
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     slave("server2");
     slave("server3");
 
-    test.maxscales->stop();
+    test.maxscale->stop();
 
     return test.global_result;
 }

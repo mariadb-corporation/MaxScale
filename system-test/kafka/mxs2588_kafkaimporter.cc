@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     Kafka kafka(test);
     kafka.create_topic("test.t1");
     kafka.create_topic("second_topic");
-    test.maxscales->start();
+    test.maxscale->start();
 
     test_table_in_topic(test);
     test_table_in_key(test);

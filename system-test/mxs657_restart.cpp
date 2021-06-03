@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     int i, j;
 
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip4());
 
     Test->set_timeout(2000);
 
@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
     for (i = 0; i < iter; i++)
     {
         Test->tprintf("i= %d\n", i);
-        Test->maxscales->connect_maxscale();
+        Test->maxscale->connect_maxscale();
         for (j = 0; j < iter; j++)
         {
-            execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT 1");
+            execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT 1");
         }
-        Test->maxscales->close_maxscale_connections();
+        Test->maxscale->close_maxscale_connections();
         if (i > iter)
         {
             restart_flag = 1;
@@ -125,7 +125,7 @@ void* kill_vm_thread(void* ptr)
         }
         else
         {
-            Test->maxscales->restart_maxscale();
+            Test->maxscale->restart_maxscale();
         }
     }
 

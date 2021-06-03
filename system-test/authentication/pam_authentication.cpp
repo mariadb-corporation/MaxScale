@@ -81,7 +81,7 @@ void test_main(TestConnections& test)
     const string delete_pam_message_cmd = "rm -f " + pam_msgfile_path_dst;
 
     test.repl->connect();
-    auto mxs_ip = test.maxscales->ip4();
+    auto mxs_ip = test.maxscale->ip4();
 
     // Prepare the backends for PAM authentication. Enable the plugin and create a user. Also,
     // make /etc/shadow readable for all so that the server process can access it.
@@ -103,7 +103,7 @@ void test_main(TestConnections& test)
 
     // Also create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
     // local users.
-    auto& mxs_vm = test.maxscales->vm_node();
+    auto& mxs_vm = test.maxscale->vm_node();
     mxs_vm.run_cmd_sudo(add_user_cmd);
     mxs_vm.run_cmd_sudo(add_pw_cmd);
     mxs_vm.run_cmd_sudo(read_shadow);
@@ -113,14 +113,14 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         cout << "PAM-plugin installed and users created on all servers. Starting MaxScale.\n";
-        test.maxscales->restart();
+        test.maxscale->restart();
     }
     else
     {
         cout << "Test preparations failed.\n";
     }
 
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
 
     if (test.ok())
     {
@@ -131,7 +131,7 @@ void test_main(TestConnections& test)
 
     // Helper function for checking PAM-login. If db is empty, log to null database.
     auto try_log_in = [&test](const string& user, const string& pass, const string& database) {
-            int port = test.maxscales->rwsplit_port;
+            int port = test.maxscale->rwsplit_port;
             if (!test_pam_login(test, port, user, pass, database))
             {
                 test.expect(false, "PAM login failed.");
@@ -265,17 +265,17 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         // Test that normal authentication on the same port works. This tests MXS-2497.
-        auto maxconn = test.maxscales->open_rwsplit_connection();
-        int port = test.maxscales->rwsplit_port;
+        auto maxconn = test.maxscale->open_rwsplit_connection();
+        int port = test.maxscale->rwsplit_port;
         test.try_query(maxconn, "SELECT rand();");
         cout << "Normal mariadb-authentication on port " << port << (test.ok() ? " works.\n" : " failed.\n");
         mysql_close(maxconn);
     }
 
     // Remove the linux user from the MaxScale node. Required for next test cases.
-    test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
+    test.maxscale->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
 
-    int normal_port = test.maxscales->rwsplit_port;
+    int normal_port = test.maxscale->rwsplit_port;
     int skip_auth_port = 4007;
     int nomatch_port = 4008;
     int caseless_port = 4009;
@@ -472,8 +472,8 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             // The user needs to be recreated on the MaxScale node.
-            test.maxscales->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
 
             cout << "Testing listener with " << setting_val << "\n";
             MYSQL* conn = test.repl->nodes[0];
@@ -614,7 +614,7 @@ void test_main(TestConnections& test)
 MYSQL* pam_login(TestConnections& test, int port, const string& user, const string& pass,
                  const string& database)
 {
-    const char* host = test.maxscales->ip4();
+    const char* host = test.maxscale->ip4();
     const char* db = nullptr;
     if (!database.empty())
     {
@@ -703,7 +703,7 @@ bool test_normal_login(TestConnections& test, int port, const string& user, cons
                        const string& db)
 {
     bool rval = false;
-    auto host = test.maxscales->ip4();
+    auto host = test.maxscale->ip4();
     MYSQL* maxconn = nullptr;
     if (db.empty())
     {

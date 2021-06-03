@@ -20,30 +20,30 @@ int main(int argc, char** argv)
     sprintf(rules_dir, "%s/fw/", test_dir);
 
     test->tprintf("Creating rules\n");
-    test->maxscales->stop();
-    test->maxscales->copy_fw_rules("rules_logging", rules_dir);
+    test->maxscale->stop();
+    test->maxscale->copy_fw_rules("rules_logging", rules_dir);
 
-    test->maxscales->start_maxscale();
+    test->maxscale->start_maxscale();
     test->set_timeout(20);
-    test->maxscales->connect_maxscale();
+    test->maxscale->connect_maxscale();
 
     test->tprintf("trying first: 'select 1'\n");
     test->set_timeout(20);
-    test->add_result(execute_query_silent(test->maxscales->conn_slave, "select 1"),
+    test->add_result(execute_query_silent(test->maxscale->conn_slave, "select 1"),
                      "First query should succeed\n");
 
     test->tprintf("trying second: 'select 2'\n");
     test->set_timeout(20);
-    test->add_result(execute_query_silent(test->maxscales->conn_slave, "select 2"),
+    test->add_result(execute_query_silent(test->maxscale->conn_slave, "select 2"),
                      "Second query should succeed\n");
 
     /** Check that MaxScale is alive */
     test->stop_timeout();
-    test->maxscales->expect_running_status(true);
+    test->maxscale->expect_running_status(true);
 
     /** Check that MaxScale was terminated successfully */
-    test->maxscales->stop();
-    test->maxscales->expect_running_status(false);
+    test->maxscale->stop();
+    test->maxscale->expect_running_status(false);
 
     /** Check that the logs contains entries for both matching and
      * non-matching queries */

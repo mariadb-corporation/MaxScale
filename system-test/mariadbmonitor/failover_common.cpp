@@ -24,12 +24,12 @@ void reset_replication(TestConnections& test)
     {
         int ind = master_id - 1;
         replicate_from(test, 0, ind);
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
         stringstream switchover;
         switchover << "maxctrl call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
-        test.maxscales->ssh_output(switchover.str());
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->ssh_output(switchover.str());
+        test.maxscale->wait_for_monitor(2);
         master_id = get_master_server_id(test);
         cout << "Master server id is now back to " << master_id << endl;
         test.expect(master_id == 1, "Switchover back to server1 failed");
@@ -106,7 +106,7 @@ void check_test_2(TestConnections& test)
 
     // Reset state
     replicate_from(test, 1, master_id - 1);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
     StringSet node_states = test.get_server_status("server2");
     test.expect(node_states.find("Slave") != node_states.end(), "Server 2 is not replicating.");
@@ -123,7 +123,7 @@ void prepare_test_3(TestConnections& test)
             " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
             " master failure." << "\n" << LINE << endl;
     get_output(test);
-    test.maxscales->stop_maxscale();
+    test.maxscale->stop_maxscale();
     test.repl->stop_node(1);
     test.repl->stop_node(2);
     test.repl->stop_node(3);
@@ -142,8 +142,8 @@ void prepare_test_3(TestConnections& test)
     test.repl->start_node(1, (char*) "");
     test.repl->start_node(2, (char*) "");
     test.repl->start_node(3, (char*) "");
-    test.maxscales->start_maxscale();
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->start_maxscale();
+    test.maxscale->wait_for_monitor(2);
 
     test.repl->connect();
     test.tprintf("Settings changed.");
@@ -176,7 +176,7 @@ void check_test_3(TestConnections& test)
     // Restore server 2 and 4 settings. Because server 1 is now the master, shutting it down causes
     // another failover. Prevent this by stopping maxscale.
     test.tprintf("Restoring server settings.");
-    test.maxscales->stop_maxscale();
+    test.maxscale->stop_maxscale();
     test.repl->stop_node(1);
     test.repl->stop_node(2);
     test.repl->stop_node(3);
@@ -188,5 +188,5 @@ void check_test_3(TestConnections& test)
     test.repl->start_node(1, (char*) "");
     test.repl->start_node(2, (char*) "");
     test.repl->start_node(3, (char*) "");
-    test.maxscales->start_maxscale();
+    test.maxscale->start_maxscale();
 }

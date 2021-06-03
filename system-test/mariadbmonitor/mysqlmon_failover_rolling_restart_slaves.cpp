@@ -47,7 +47,7 @@ namespace
 
 void create_table(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pConn, "DROP TABLE IF EXISTS test.t1");
     test.try_query(pConn, "CREATE TABLE test.t1(id INT)");
@@ -59,7 +59,7 @@ static int i_end = 0;
 
 void insert_data(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscales->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pConn, "BEGIN");
 
@@ -156,14 +156,14 @@ void check_server_status(TestConnections& test, int N, int down = -1)
 
 void run(TestConnections& test)
 {
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     const int N = 4;
 
     check_server_status(test, N);
 
     cout << "\nConnecting to MaxScale." << endl;
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     cout << "\nCreating table." << endl;
     create_table(test);
@@ -181,14 +181,14 @@ void run(TestConnections& test)
         cout << "\nStopping slave " << slave << endl;
         test.repl->stop_node(i);
 
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
 
         check_server_status(test, N, i);
 
         cout << "\nStarting slave " << slave << endl;
         test.repl->start_node(i, (char*)"");
 
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
 
         check_server_status(test, N);
     }

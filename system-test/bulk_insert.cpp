@@ -221,27 +221,27 @@ int main(int argc, char** argv)
 {
     TestConnections::require_repl_version("10.2");
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
     test.repl->connect();
 
     test.tprintf("Testing column-wise binding with a direct connection");
     test.add_result(bind_by_column(test.repl->nodes[0]), "Bulk inserts with a direct connection should work");
     test.tprintf("Testing column-wise binding with readwritesplit");
-    test.add_result(bind_by_column(test.maxscales->conn_rwsplit[0]),
+    test.add_result(bind_by_column(test.maxscale->conn_rwsplit[0]),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing column-wise binding with readconnroute");
-    test.add_result(bind_by_column(test.maxscales->conn_master),
+    test.add_result(bind_by_column(test.maxscale->conn_master),
                     "Bulk inserts with readconnroute should work");
 
     test.tprintf("Testing row-wise binding with a direct connection");
     test.add_result(bind_by_row(test.repl->nodes[0]), "Bulk inserts with a direct connection should work");
     test.tprintf("Testing row-wise binding with readwritesplit");
-    test.add_result(bind_by_row(test.maxscales->conn_rwsplit[0]),
+    test.add_result(bind_by_row(test.maxscale->conn_rwsplit[0]),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing row-wise binding with readconnroute");
-    test.add_result(bind_by_row(test.maxscales->conn_master),
+    test.add_result(bind_by_row(test.maxscale->conn_master),
                     "Bulk inserts with readconnroute should work");
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
     return test.global_result;
 }

@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
 
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 5);
     test.repl->sync_slaves(0);
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     cout << "Stopping master, should auto-failover." << endl;
     int master_id_old = get_master_server_id(test);
     test.repl->stop_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
     int master_id_new = get_master_server_id(test);
     cout << "Master server id is " << master_id_new << endl;
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 
     cout << "Stopping MaxScale for a moment.\n";
     // Stop maxscale to prevent an unintended rejoin.
-    if (!test.maxscales->stop_and_check_stopped())
+    if (!test.maxscale->stop_and_check_stopped())
     {
         test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
@@ -108,12 +108,12 @@ int main(int argc, char** argv)
 
     cout << "Starting MaxScale, node 0 should not be able to join because it has extra events.\n";
     // Restart maxscale. Should not rejoin old master.
-    if (!test.maxscales->start_and_check_started())
+    if (!test.maxscale->start_and_check_started())
     {
         test.expect(false, "Could not start MaxScale.");
         return test.global_result;
     }
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
 
     expect(test, "server1", "Running");
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
     MYSQL** nodes = test.repl->nodes;
     mysql_query(nodes[ind], cmd);
     mysql_query(nodes[ind], "START SLAVE;");
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
 
     expect(test, "server1", "Master", "Running");

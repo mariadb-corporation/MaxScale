@@ -13,7 +13,7 @@ using std::string;
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    auto mxs = test.maxscales;
+    auto mxs = test.maxscale;
     test.set_timeout(20);
     test.repl->connect();
 
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
             if (test.ok())
             {
                 // Restart MaxScale to reload users, as the load limit may have been reached.
-                test.maxscales->restart();
+                test.maxscale->restart();
                 mxs->wait_for_monitor();
 
                 test.tprintf("Testing database grant with wildcard...");
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
                 test_login(fail_db2, true);
             }
 
-            test.maxscales->connect();
+            test.maxscale->connect();
             admin_conn = mxs->conn_rwsplit[0];
             const char drop_db_fmt[] = "drop database %s;";
             const char drop_db_failed[] = "DROP DATABASE failed";

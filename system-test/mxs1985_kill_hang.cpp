@@ -27,7 +27,7 @@ void mxs1985(TestConnections& test)
         threads.emplace_back([&, i]() {
                                  while (running && test.global_result == 0)
                                  {
-                                     MYSQL* c = test.maxscales->open_rwsplit_connection();
+                                     MYSQL* c = test.maxscale->open_rwsplit_connection();
 
                                     // It doesn't really matter if the connection ID exists, this is just a
                                     // handy way of generating cross-thread communication.
@@ -66,7 +66,7 @@ void mxs3251(TestConnections& test)
             [&, i]() {
                 while (running && test.global_result == 0)
                 {
-                    MYSQL* c = test.maxscales->open_rwsplit_connection();
+                    MYSQL* c = test.maxscale->open_rwsplit_connection();
                     string query = "KILL " + to_string(mysql_thread_id(c));
                     execute_query_silent(c, query.c_str());
                     mysql_close(c);

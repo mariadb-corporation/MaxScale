@@ -16,8 +16,8 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip4());
-    Test->maxscales->connect_rwsplit();
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip4());
+    Test->maxscale->connect_rwsplit();
 
     Test->set_timeout(30);
     Test->tprintf("Setup firewall to block mysql on master\n");
@@ -25,20 +25,20 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
     Test->set_timeout(30);
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "show processlist;");
+    execute_query(Test->maxscale->conn_rwsplit[0], (char*) "show processlist;");
 
     Test->set_timeout(30);
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0);
 
     Test->stop_timeout();
-    Test->maxscales->wait_for_monitor();
+    Test->maxscale->wait_for_monitor();
 
     Test->set_timeout(30);
     Test->tprintf("Reconnecting and trying query to RWSplit\n");
-    Test->maxscales->connect_rwsplit();
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "show processlist;");
-    Test->maxscales->close_rwsplit();
+    Test->maxscale->connect_rwsplit();
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "show processlist;");
+    Test->maxscale->close_rwsplit();
 
     Test->check_maxscale_alive();
     int rval = Test->global_result;

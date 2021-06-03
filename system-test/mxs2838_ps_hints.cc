@@ -10,7 +10,7 @@
 
 std::string test_one_hint(TestConnections& test, std::string hint)
 {
-    Connection conn = test.maxscales->rwsplit();
+    Connection conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection to MaxScale failed: %s", conn.error());
 
     MYSQL_STMT* stmt = conn.stmt();

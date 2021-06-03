@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
 
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     auto conn = mxs.open_rwsplit_connection();
 
     auto create_user = [&](const char* user, const char* pass) {
@@ -112,8 +112,8 @@ int main(int argc, char* argv[])
 void test_logins(TestConnections& test, bool expect_success)
 {
     int successes = 0;
-    int port = test.maxscales->rwsplit_port;
-    auto ip = test.maxscales->ip4();
+    int port = test.maxscale->rwsplit_port;
+    auto ip = test.maxscale->ip4();
 
     auto test_user = [&](const string& user, const string& pass, const string& query) {
             bool rval = false;

@@ -25,7 +25,7 @@ public:
         test.expect(new_logs.size() == 1, "All but the latest binlog should be purged:\n%s",
                     maxscale.pretty_rows("SHOW BINARY LOGS").c_str());
 
-        auto index = test.maxscales->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
+        auto index = test.maxscale->ssh_output("cat /var/lib/maxscale/binlogs/binlog.index");
         test.expect(index.rc == 0, "binlog.index should exist");
         test.expect(!index.output.empty(), "binlog.index should not be empty");
 
@@ -40,7 +40,7 @@ public:
 
         for (const auto& a : old_logs)
         {
-            auto file = test.maxscales->ssh_output("test -f " + filepath + "/" + a[0]);
+            auto file = test.maxscale->ssh_output("test -f " + filepath + "/" + a[0]);
             test.expect(file.rc != 0, "File '%s' should not exist.", a[0].c_str());
         }
     }

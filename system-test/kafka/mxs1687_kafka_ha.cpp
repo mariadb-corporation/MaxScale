@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     auto conn = test.repl->get_connection(0);
     conn.connect();
     conn.query("RESET MASTER");
-    test.maxscales->start();
+    test.maxscale->start();
 
     // Stop B-Monitor, A-Monitor will take ownership of the cluster
     test.maxctrl("stop monitor B-Monitor");

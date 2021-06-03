@@ -64,25 +64,25 @@ int main(int argc, char* argv[])
 
 
     test.repl->connect();
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
-    conn_found_rows = open_conn_db_flags(test.maxscales->rwsplit_port,
-                                         test.maxscales->ip4(),
+    conn_found_rows = open_conn_db_flags(test.maxscale->rwsplit_port,
+                                         test.maxscale->ip4(),
                                          (char*) "test",
-                                         test.maxscales->user_name,
-                                         test.maxscales->password,
+                                         test.maxscale->user_name,
+                                         test.maxscale->password,
                                          CLIENT_FOUND_ROWS,
                                          test.maxscale_ssl);
 
     test.set_timeout(30);
-    execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    execute_query(test.maxscales->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    execute_query(test.maxscale->conn_rwsplit[0],
                   "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
-    execute_query(test.maxscales->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit[0],
                   "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     test.set_timeout(30);
-    execute_query_affected_rows(test.maxscales->conn_rwsplit[0],
+    execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
     test.tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     }
 
     test.set_timeout(30);
-    execute_query_affected_rows(test.maxscales->conn_rwsplit[0],
+    execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
     test.tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Affected rows is not 2\n");
     }
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     mysql_close(conn_found_rows);
 

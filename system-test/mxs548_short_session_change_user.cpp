@@ -23,9 +23,9 @@ void query_thread(TestConnections& test)
     while (keep_running && test.ok())
     {
         std::vector<Connection> conns;
-        conns.emplace_back(test.maxscales->rwsplit());
-        conns.emplace_back(test.maxscales->readconn_master());
-        conns.emplace_back(test.maxscales->readconn_slave());
+        conns.emplace_back(test.maxscale->rwsplit());
+        conns.emplace_back(test.maxscale->readconn_master());
+        conns.emplace_back(test.maxscale->readconn_slave());
 
         for (auto& conn : conns)
         {
@@ -46,17 +46,17 @@ int main(int argc, char** argv)
     test.set_timeout(20);
 
     test.repl->connect();
-    test.maxscales->connect_maxscale();
-    create_t1(test.maxscales->conn_rwsplit[0]);
+    test.maxscale->connect_maxscale();
+    create_t1(test.maxscale->conn_rwsplit[0]);
     test.repl->execute_query_all_nodes("set global max_connections = 2000;");
     test.repl->sync_slaves();
 
     test.tprintf("Creating user 'user' ");
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP USER IF EXISTS user@'%%'");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
-    test.try_query(test.maxscales->conn_rwsplit[0], "GRANT SELECT ON test.* TO user@'%%'");
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (x1 int, fl int)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP USER IF EXISTS user@'%%'");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
+    test.try_query(test.maxscale->conn_rwsplit[0], "GRANT SELECT ON test.* TO user@'%%'");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1 (x1 int, fl int)");
     test.repl->sync_slaves();
 
     std::vector<std::thread> threads;
@@ -83,9 +83,9 @@ int main(int argc, char** argv)
 
     test.tprintf("Dropping tables and users");
     test.set_timeout(60);
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1;");
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP USER user@'%%'");
-    test.maxscales->close_maxscale_connections();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1;");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP USER user@'%%'");
+    test.maxscale->close_maxscale_connections();
 
     test.set_timeout(160);
     test.check_maxscale_alive();

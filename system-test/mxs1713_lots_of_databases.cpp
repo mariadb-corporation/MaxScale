@@ -34,11 +34,11 @@ int main(int argc, char** argv)
 
     for (auto db : db_list)
     {
-        MYSQL* conn = open_conn_db(test.maxscales->port(),
-                                   test.maxscales->ip(),
+        MYSQL* conn = open_conn_db(test.maxscale->port(),
+                                   test.maxscale->ip(),
                                    db,
-                                   test.maxscales->user_name,
-                                   test.maxscales->password);
+                                   test.maxscale->user_name,
+                                   test.maxscale->password);
 
         test.expect(execute_query(conn, "SELECT 1") == 0, "Query should work: %s", mysql_error(conn));
 

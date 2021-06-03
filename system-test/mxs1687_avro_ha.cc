@@ -6,7 +6,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto get_gtid = [&](std::string name) {
-            auto rv = test.maxscales->ssh_output(
+            auto rv = test.maxscale->ssh_output(
                 "cat /var/lib/maxscale/" + name + "/current_gtid.txt 2>/dev/null");
             return mxb::trimmed_copy(rv.output);
         };

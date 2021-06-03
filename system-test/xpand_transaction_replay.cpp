@@ -78,7 +78,7 @@ void create_table(TestConnections& test, MYSQL* pMysql)
 
 void setup_database(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->open_rwsplit_connection();
+    MYSQL* pMysql = test.maxscale->open_rwsplit_connection();
     test.expect(pMysql, "Could not open connection to rws.");
 
     drop_table(test, pMysql);
@@ -203,7 +203,7 @@ void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
 
-    Maxscales* pMaxscales = test.maxscales;
+    Maxscales* pMaxscales = test.maxscale;
     test.add_result(pMaxscales->connect_rwsplit(), "Could not connect to RWS.");
 
     MYSQL* pMysql = pMaxscales->conn_rwsplit[0];

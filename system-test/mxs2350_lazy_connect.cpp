@@ -9,10 +9,10 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
 
     test.expect(c.connect(), "Connection should work");
-    auto output = test.maxscales->ssh_output("maxctrl list servers --tsv|cut -f 4|sort|uniq").output;
+    auto output = test.maxscale->ssh_output("maxctrl list servers --tsv|cut -f 4|sort|uniq").output;
     mxb::trim(output);
     test.expect(output == "0", "Servers should have no connections: %s", output.c_str());
     c.disconnect();
@@ -39,9 +39,9 @@ int main(int argc, char* argv[])
     test.expect(c.query("SET @a = 1"), "Session command should work");
 
     test.repl->block_all_nodes();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.repl->unblock_all_nodes();
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.expect(c.query("SET @a = 1"), "Session command should work: %s", c.error());
     c.disconnect();

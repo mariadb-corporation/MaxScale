@@ -21,13 +21,13 @@ int main(int argc, char* argv[])
     int N = 13;
     int i;
     int exit_code;
-    auto mxs = Test->maxscales;
+    auto mxs = Test->maxscale;
 
-    Test->maxscales->stop();
+    Test->maxscale->stop();
     char first_rule[] = "rules1";
     mxs->copy_fw_rules(first_rule, rules_dir);
-    Test->maxscales->start_maxscale();
-    Test->maxscales->connect_rwsplit();
+    Test->maxscale->start_maxscale();
+    Test->maxscale->connect_rwsplit();
 
 
     for (i = 1; i <= N; i++)
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
             {
                 Test->set_timeout(180);
 
-                if (execute_query_from_file(Test->maxscales->conn_rwsplit[0], file) == 1)
+                if (execute_query_from_file(Test->maxscale->conn_rwsplit[0], file) == 1)
                 {
                     Test->tprintf("Query should succeed: %s\n", sql);
                     local_result++;
@@ -75,10 +75,10 @@ int main(int argc, char* argv[])
             {
                 Test->set_timeout(180);
 
-                int rc = execute_query_from_file(Test->maxscales->conn_rwsplit[0], file);
+                int rc = execute_query_from_file(Test->maxscale->conn_rwsplit[0], file);
 
                 if (rc != -1 && (rc == 0
-                                 || mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141))
+                                 || mysql_errno(Test->maxscale->conn_rwsplit[0]) != 1141))
                 {
                     Test->tprintf("Query should fail: %s\n", sql);
                     local_result++;
@@ -99,11 +99,11 @@ int main(int argc, char* argv[])
     Test->tprintf("Trying rules with syntax error\n");
     mxs->copy_fw_rules("rules_syntax_error", rules_dir);
 
-    auto res = Test->maxscales->ssh_output("maxctrl call command dbfwfilter rules/reload Database-Firewall");
+    auto res = Test->maxscale->ssh_output("maxctrl call command dbfwfilter rules/reload Database-Firewall");
     Test->add_result(strcasestr(res.output.c_str(), "Failed") == nullptr,
                      "Reloading rules should fail with syntax errors");
 
-    Test->maxscales->expect_running_status(true);
+    Test->maxscale->expect_running_status(true);
     int rval = Test->global_result;
     delete Test;
     return rval;

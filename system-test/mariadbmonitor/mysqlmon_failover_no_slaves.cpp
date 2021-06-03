@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     basic_test(test);
-    MYSQL* conn = test.maxscales->open_rwsplit_connection();
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
     bool success = generate_traffic_and_check(test, conn, 5);
     mysql_close(conn);
     if (!success)
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     test.repl->stash_server_settings(2);
     test.repl->disable_server_setting(2, "log-bin");
     test.repl->start_node(2, (char*) "");
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     // Slave 3. Set node to maintenance, then shut it down. Simultaneously check issue
     // MXS-2652: Maintenance flag should persist when server goes down & comes back up.
@@ -62,17 +62,17 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         test.maxctrl("set server " + server_name + " maintenance");
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
         expect_running(test, server_name, true);
         expect_maintenance(test, server_name, true);
 
         test.repl->stop_node(server_ind);
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
         expect_running(test, server_name, false);
         expect_maintenance(test, server_name, true);
 
         test.repl->start_node(server_ind);
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
         expect_running(test, server_name, true);
         expect_maintenance(test, server_name, true);
     }
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     test.tprintf(LINE);
     test.tprintf("Stopping master. Failover should not happen.");
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     get_output(test);
     int master_id = get_master_server_id(test);
     test.expect(master_id == -1, "Master was promoted even when no slave was eligible.");

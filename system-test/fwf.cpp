@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
     int N = 19;
     int i;
     const bool verbose = Test->verbose();
-    auto mxs = Test->maxscales;
+    auto mxs = Test->maxscale;
 
     for (i = 1; i < N + 1; i++)
     {
@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
         sprintf(str, "rules%d", i);
         mxs->copy_fw_rules(str, rules_dir);
 
-        Test->maxscales->restart_maxscale();
-        Test->maxscales->connect_rwsplit();
+        Test->maxscale->restart_maxscale();
+        Test->maxscale->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw/deny%d", test_dir, i);
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    int rv = execute_query(Test->maxscales->conn_rwsplit[0], "%s", sql);
+                    int rv = execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql);
                     Test->add_result(rv, "Query should succeed: %s", sql);
                     local_result += rv;
                 }
@@ -102,12 +102,12 @@ int main(int argc, char* argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    execute_query_silent(Test->maxscales->conn_rwsplit[0], sql);
-                    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141)
+                    execute_query_silent(Test->maxscale->conn_rwsplit[0], sql);
+                    if (mysql_errno(Test->maxscale->conn_rwsplit[0]) != 1141)
                     {
                         Test->tprintf("Expected 1141, Access Denied but got %d, %s instead: %s",
-                                      mysql_errno(Test->maxscales->conn_rwsplit[0]),
-                                      mysql_error(Test->maxscales->conn_rwsplit[0]),
+                                      mysql_errno(Test->maxscale->conn_rwsplit[0]),
+                                      mysql_error(Test->maxscale->conn_rwsplit[0]),
                                       sql);
                         local_result++;
                     }
@@ -145,27 +145,27 @@ int main(int argc, char* argv[])
         Test->tprintf("DELETE quries without WHERE clause will be blocked during the 30 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
     }
-    Test->maxscales->ssh_node_f(0,
-                                false,
+    Test->maxscale->ssh_node_f(0,
+                               false,
                                 "start_time=`date +%%T`;"
                                 "stop_time=` date --date \"now +30 secs\" +%%T`;"
                                 "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
-                                Test->maxscales->access_sudo(),
-                                Test->maxscales->access_homedir());
+                               Test->maxscale->access_sudo(),
+                               Test->maxscale->access_homedir());
 
-    Test->maxscales->restart_maxscale();
-    Test->maxscales->connect_rwsplit();
+    Test->maxscale->restart_maxscale();
+    Test->maxscale->connect_rwsplit();
 
     sleep(10);
 
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
+    execute_query_silent(Test->maxscale->conn_rwsplit[0], "DELETE FROM t1");
 
-    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141)
+    if (mysql_errno(Test->maxscale->conn_rwsplit[0]) != 1141)
     {
         Test->add_result(1,
                          "Query succeded, but fail expected, error is %d",
-                         mysql_errno(Test->maxscales->conn_rwsplit[0]));
+                         mysql_errno(Test->maxscale->conn_rwsplit[0]));
     }
 
     Test->tprintf("Waiting 30 seconds and trying 'DELETE FROM t1', expecting OK");
@@ -173,21 +173,21 @@ int main(int argc, char* argv[])
     Test->stop_timeout();
     sleep(30);
     Test->set_timeout(180);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], "DELETE FROM t1");
 
-    Test->maxscales->stop();
+    Test->maxscale->stop();
 
     Test->tprintf("Trying limit_queries clause");
     Test->tprintf("Copying rules to Maxscale machine: %s", str);
     mxs->copy_fw_rules("rules_limit_queries", rules_dir);
 
-    Test->maxscales->start_maxscale();
-    Test->maxscales->connect_rwsplit();
+    Test->maxscale->start_maxscale();
+    Test->maxscale->connect_rwsplit();
 
     Test->tprintf("Trying 10 quries as fast as possible");
     for (i = 0; i < 10; i++)
     {
-        Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1"),
+        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1"),
                          "%d -query failed",
                          i);
     }
@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
         elapsedTime = (t2.tv_sec - t1.tv_sec);
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
     }
-    while ((execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1") != 0)
+    while ((execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1") != 0)
            && (elapsedTime < 10));
 
     Test->tprintf("Quries were blocked during %f (using clock_gettime())", elapsedTime);
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < 12; i++)
     {
         sleep(1);
-        Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1"),
+        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1"),
                          "query failed");
         if (verbose)
         {

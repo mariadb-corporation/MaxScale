@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection failed: %s", conn.error());
 
     std::string cmd_no_filters = "alter session-filters " + std::to_string(conn.thread_id());

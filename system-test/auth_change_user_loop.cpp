@@ -35,12 +35,12 @@ int main(int argc, char* argv[])
     Test->repl->execute_query_all_nodes((char*) "set global max_connect_errors=1000;");
     Test->repl->execute_query_all_nodes((char*) "set global max_connections=1000;");
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
     Test->tprintf("Creating one user 'user@%%'");
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%'");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "CREATE USER user@'%%' identified by 'pass2'");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "GRANT SELECT ON test.* TO user@'%%';");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "FLUSH PRIVILEGES;");
+    execute_query_silent(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER user@'%'");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "CREATE USER user@'%%' identified by 'pass2'");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "GRANT SELECT ON test.* TO user@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "FLUSH PRIVILEGES;");
 
     Test->tprintf("Starting parallel thread which opens/closes session in the loop");
 
@@ -53,13 +53,13 @@ int main(int argc, char* argv[])
     for (int i = 0; i < iterations; i++)
     {
         Test->set_timeout(15);
-        Test->add_result(mysql_change_user(Test->maxscales->conn_rwsplit[0], "user", "pass2", (char*) "test"),
-                         "change_user failed! %s", mysql_error(Test->maxscales->conn_rwsplit[0]));
-        Test->add_result(mysql_change_user(Test->maxscales->conn_rwsplit[0],
-                                           Test->maxscales->user_name.c_str(),
-                                           Test->maxscales->password.c_str(),
+        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0], "user", "pass2", (char*) "test"),
+                         "change_user failed! %s", mysql_error(Test->maxscale->conn_rwsplit[0]));
+        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0],
+                                           Test->maxscale->user_name.c_str(),
+                                           Test->maxscale->password.c_str(),
                                            (char*) "test"), "change_user failed! %s",
-                         mysql_error(Test->maxscales->conn_rwsplit[0]));
+                         mysql_error(Test->maxscale->conn_rwsplit[0]));
     }
 
     Test->tprintf("Waiting for all threads to finish");
@@ -72,15 +72,15 @@ int main(int argc, char* argv[])
     Test->tprintf("All threads are finished");
 
     Test->tprintf("Change user to '%s' in order to be able to DROP user",
-                  Test->maxscales->user_name.c_str());
+                  Test->maxscale->user_name.c_str());
     Test->set_timeout(30);
-    mysql_change_user(Test->maxscales->conn_rwsplit[0],
-                      Test->maxscales->user_name.c_str(),
-                      Test->maxscales->password.c_str(),
+    mysql_change_user(Test->maxscale->conn_rwsplit[0],
+                      Test->maxscale->user_name.c_str(),
+                      Test->maxscale->password.c_str(),
                       NULL);
 
     Test->tprintf("Dropping user");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
 
     Test->set_verbose(true);
     Test->check_maxscale_alive();
@@ -95,7 +95,7 @@ void* parall_traffic(void* ptr)
 {
     while (exit_flag == 0)
     {
-        MYSQL* conn = Test->maxscales->open_rwsplit_connection();
+        MYSQL* conn = Test->maxscale->open_rwsplit_connection();
 
         while (exit_flag == 0 && mysql_query(conn, "DO 1") == 0)
         {

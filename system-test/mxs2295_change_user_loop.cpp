@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
 
-    Connection conn = test.maxscales->rwsplit();
+    Connection conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection failed: %s", conn.error());
 
     for (int i = 0; i <= 300 && test.global_result == 0; i++)

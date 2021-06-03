@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Check that there are no zombies");
 
-    int res = test.maxscales->ssh_node(
+    int res = test.maxscale->ssh_node(
         "if [ \"`ps -ef|grep defunct|grep -v grep`\" != \"\" ]; then exit 1; fi",
         false);
     test.add_result(res, "Zombie processes were found");

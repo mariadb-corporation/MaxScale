@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     test.repl->close_connections();
     test.stop_timeout();
     sleep(6); // The router is configured to refresh the shard map if older than 5 seconds.
-    auto mxs_ip = test.maxscales->ip4();
+    auto mxs_ip = test.maxscale->ip4();
 
     // Generate a table for each user on the common db. The tables should be on different backends since
     // each user only has access to one node.
@@ -115,8 +115,8 @@ int main(int argc, char* argv[])
         auto table = shard_tables[i];
 
         test.tprintf(opening_fmt, user, pass, common_db);
-        auto conn = open_conn_db(test.maxscales->rwsplit_port, mxs_ip,
-                                   common_db, user, pass, test.maxscale_ssl);
+        auto conn = open_conn_db(test.maxscale->rwsplit_port, mxs_ip,
+                                 common_db, user, pass, test.maxscale_ssl);
         if (test.try_query(conn, "CREATE TABLE %s (x1 int, fl int);", table) == 0)
         {
             test.tprintf("Table '%s.%s' for user '%s' created.", common_db, table, user);
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
         auto pass = user_pws[i];
         auto table = shard_tables[i];
         test.tprintf(opening_fmt, user, pass, common_db);
-        auto conn = open_conn_db(test.maxscales->rwsplit_port, mxs_ip,
+        auto conn = open_conn_db(test.maxscale->rwsplit_port, mxs_ip,
                                  common_db, user, pass, test.maxscale_ssl);
 
         const char* query = "SHOW TABLES;";
@@ -142,8 +142,8 @@ int main(int argc, char* argv[])
     }
 
     // Test accessing all databases as the admin.
-    test.maxscales->connect_rwsplit();
-    auto conn = test.maxscales->conn_rwsplit[0]; // Is a schemarouter connection.
+    test.maxscale->connect_rwsplit();
+    auto conn = test.maxscale->conn_rwsplit[0]; // Is a schemarouter connection.
     test.try_query(conn, "USE %s", common_db);
     for (int i = 0; i < N; i++)
     {
@@ -153,14 +153,14 @@ int main(int argc, char* argv[])
     {
         test.tprintf("%s", "All databases are present.");
     }
-    test.maxscales->close_rwsplit();
+    test.maxscale->close_rwsplit();
 
     test.tprintf("Test connecting with empty database name for all users.\n");
     for (int i = 0; i < N; i++)
     {
         auto user = user_names[i];
         auto pass = user_pws[i];
-        conn = open_conn_db(test.maxscales->rwsplit_port, mxs_ip,
+        conn = open_conn_db(test.maxscale->rwsplit_port, mxs_ip,
                             "", user, pass, test.maxscale_ssl);
         test.expect(conn, "Connection failed for user '%s'.", user);
         mysql_close(conn);

@@ -129,7 +129,7 @@ void check_state_change(const MaxRest& maxrest)
 
     int cycles = 3;
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscales->wait_for_monitor(cycles);
+    test.maxscale->wait_for_monitor(cycles);
 
     auto servers = maxrest.list_servers();
 
@@ -147,7 +147,7 @@ void check_state_change(const MaxRest& maxrest)
 
     test.xpand->unblock_node(node);
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscales->wait_for_monitor(cycles);
+    test.maxscale->wait_for_monitor(cycles);
 
     expect_all_servers_to_be(maxrest, "Master, Running");
     cout << endl;
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
 
 void check_login(TestConnections& test)
 {
-    test.maxscales->stop();
+    test.maxscale->stop();
     test.xpand->connect();
     auto conn = test.xpand->nodes[0];
     const char svc_user[] = "rwsplit_user";
@@ -256,12 +256,12 @@ void check_login(TestConnections& test)
     test.try_query(conn, create_fmt, no_db_user_host, no_db_pw);
 
     sleep(1);
-    test.maxscales->start();
+    test.maxscale->start();
     sleep(1);
 
     auto test_login = [&](const char* user, const char* pw, const char* db, bool expect_success) {
-            int port = test.maxscales->rwsplit_port;
-            auto ip = test.maxscales->ip();
+            int port = test.maxscale->rwsplit_port;
+            auto ip = test.maxscale->ip();
 
             MYSQL* rwsplit_conn = db ? open_conn_db(port, ip, db, user, pw) :
                 open_conn_no_db(port, ip, user, pw);

@@ -18,7 +18,7 @@ void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
     test.check_maxctrl("alter server server3 rank secondary");
     test.check_maxctrl("alter server server4 rank secondary");
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
 
     auto is_primary = [&]() {
             auto id = c.field("SELECT @@server_id");
@@ -104,7 +104,7 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
     test.check_maxctrl("alter server server4 rank secondary");
 
     auto do_test = [&](int node) {
-            Connection c = test.maxscales->readconn_master();
+            Connection c = test.maxscale->readconn_master();
             c.connect();
             test.expect(c.field("SELECT @@server_id") == ids[node], "server%d should reply", node + 1);
         };
@@ -133,7 +133,7 @@ void test_hints(TestConnections& test, std::vector<std::string> ids)
     test.check_maxctrl("alter server server3 rank primary");
     test.check_maxctrl("alter server server4 rank secondary");
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     c.connect();
 
     auto id = c.field("SELECT @@server_id -- maxscale route to server server4");
@@ -155,7 +155,7 @@ void test_services(TestConnections& test, std::vector<std::string> ids)
     test.check_maxctrl("alter server server3 rank primary");
     test.check_maxctrl("alter server server4 rank primary");
 
-    Connection c = test.maxscales->get_connection(4009);
+    Connection c = test.maxscale->get_connection(4009);
 
     test.check_maxctrl("alter service service1 rank primary");
     test.check_maxctrl("alter service service2 rank secondary");
@@ -205,12 +205,12 @@ int main(int argc, char* argv[])
     block_wait = [&](int node) {
             std::cout << "Block server" << (node + 1) << std::endl;
             test.repl->block_node(node);
-            test.maxscales->wait_for_monitor(2);
+            test.maxscale->wait_for_monitor(2);
         };
     unblock_wait = [&](int node) {
             std::cout << "Unblock server" << (node + 1) << std::endl;
             test.repl->unblock_node(node);
-            test.maxscales->wait_for_monitor(2);
+            test.maxscale->wait_for_monitor(2);
         };
 
     test.repl->connect();

@@ -13,15 +13,15 @@ void* thr(void* data)
     while (running && test->global_result == 0)
     {
         test->set_timeout(60);
-        if (test->try_query(test->maxscales->conn_rwsplit[0], "SELECT 1"))
+        if (test->try_query(test->maxscale->conn_rwsplit[0], "SELECT 1"))
         {
             test->tprintf("Failed to select via readwritesplit");
         }
-        if (test->try_query(test->maxscales->conn_master, "SELECT 1"))
+        if (test->try_query(test->maxscale->conn_master, "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute master");
         }
-        if (test->try_query(test->maxscales->conn_slave, "SELECT 1"))
+        if (test->try_query(test->maxscale->conn_slave, "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute slave");
         }
@@ -35,7 +35,7 @@ void* thr(void* data)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
 
     test.tprintf("Connect to MaxScale and continuously execute queries");
     pthread_t thread;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     test.tprintf("Stop queries and close the connections");
     running = false;
     pthread_join(thread, NULL);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     test.tprintf("Add all servers to all services");
 

@@ -17,8 +17,8 @@ int main(int argc, char* argv[])
     test.set_timeout(20);
     test.tprintf("Trying to connect using user with old style password");
 
-    MYSQL* conn = open_conn(test.maxscales->rwsplit_port,
-                            test.maxscales->ip4(),
+    MYSQL* conn = open_conn(test.maxscale->rwsplit_port,
+                            test.maxscale->ip4(),
                             (char*) "old",
                             (char*)  "old",
                             test.maxscale_ssl);

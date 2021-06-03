@@ -10,7 +10,7 @@ public:
     Kafka(TestConnections& test)
         : m_test(test)
     {
-        if (m_test.maxscales->ssh_node_f(0, false, "test -d kafka") != 0)
+        if (m_test.maxscale->ssh_node_f(0, false, "test -d kafka") != 0)
         {
             if (!install_kafka())
             {
@@ -29,7 +29,7 @@ public:
         std::string cmd = "kafka/bin/kafka-topics.sh --create --topic " + topic
             + " --bootstrap-server 127.0.0.1:4008";
 
-        m_test.expect(m_test.maxscales->ssh_node_f(0, false, "%s", cmd.c_str()) == 0,
+        m_test.expect(m_test.maxscale->ssh_node_f(0, false, "%s", cmd.c_str()) == 0,
                       "Failed to create topic '%s'", topic.c_str());
     }
 
@@ -52,17 +52,17 @@ private:
             " -daemon kafka/config/server.properties"
             " --override listeners=PLAINTEXT://0.0.0.0:4008"
             " --override advertised.listeners=PLAINTEXT://%s:4008;",
-            m_test.maxscales->ip4());
+            m_test.maxscale->ip4());
 
         std::string check =
             "kafka/bin/zookeeper-shell.sh localhost:2181"
             " ls -R /brokers/ids|grep /brokers/ids/0";
 
-        if (m_test.maxscales->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0)
+        if (m_test.maxscale->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0)
         {
             for (int i = 0; i < 10; i++)
             {
-                if (m_test.maxscales->ssh_node_f(0, false, "%s", check.c_str()) == 0)
+                if (m_test.maxscale->ssh_node_f(0, false, "%s", check.c_str()) == 0)
                 {
                     ok = true;
                     break;
@@ -79,7 +79,7 @@ private:
 
     void stop_kafka()
     {
-        m_test.maxscales->ssh_node_f(
+        m_test.maxscale->ssh_node_f(
             0, false,
             "kafka/bin/kafka-server-stop.sh;"
             "kafka/bin/zookeeper-server-stop.sh;"
@@ -95,13 +95,13 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
 )EOF";
 
         if (system(download.c_str()) != 0
-            || m_test.maxscales->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
+            || m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
         {
             return false;
         }
 
         // TODO: Install java with mdbci, this is a dumb workaround that will fail at some point.
-        if (m_test.maxscales->ssh_node_f(0, false, "sudo yum -y install java-latest-openjdk;"))
+        if (m_test.maxscale->ssh_node_f(0, false, "sudo yum -y install java-latest-openjdk;"))
         {
             return false;
         }
@@ -115,7 +115,7 @@ rm kafka_2.13-2.7.0.tgz;
 mv kafka_2.13-2.7.0 kafka;
         )EOF";
 
-        return m_test.maxscales->ssh_node_f(0, false, "%s", command.c_str()) == 0;
+        return m_test.maxscale->ssh_node_f(0, false, "%s", command.c_str()) == 0;
     }
 
     TestConnections& m_test;
@@ -160,7 +160,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":4008"), err);
+        cnf->set("bootstrap.servers", test.maxscale->ip4() + std::string(":4008"), err);
         cnf->set("group.id", "kafkacdc", err);
         cnf->set("enable.auto.commit", "false", err);
         cnf->set("enable.auto.offset.store", "true", err);
@@ -250,7 +250,7 @@ public:
     {
         std::string err;
         std::unique_ptr<RdKafka::Conf> cnf {RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL)};
-        cnf->set("bootstrap.servers", test.maxscales->ip4() + std::string(":4008"), err);
+        cnf->set("bootstrap.servers", test.maxscale->ip4() + std::string(":4008"), err);
         cnf->set("event_cb", &m_logger, err);
         m_producer.reset(RdKafka::Producer::create(cnf.get(), err));
     }

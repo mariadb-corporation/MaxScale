@@ -40,13 +40,13 @@ int main(int argc, char* argv[])
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "select /* maxscale hintname prepare route to master */ @@server_id;");
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "select /* maxscale hintname begin */ @@server_id;");
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "select /* maxscale route to master*/ @@server_id;");
 
     Test->log_excludes("Syntax error in hint");

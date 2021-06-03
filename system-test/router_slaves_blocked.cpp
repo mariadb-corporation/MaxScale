@@ -31,23 +31,23 @@ int main(int argc, char* argv[])
     }
 
     test.set_timeout(30);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     test.set_timeout(30);
     test.tprintf("Connecting to all MaxScale services, expecting no errors");
-    test.expect(test.maxscales->connect_maxscale() == 0, "Connection should not fail");
+    test.expect(test.maxscale->connect_maxscale() == 0, "Connection should not fail");
 
     test.set_timeout(30);
     test.tprintf("Trying some queries, expecting no failures");
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
-    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
-    test.try_query(test.maxscales->conn_rwsplit[0], "select 'rwsplit' from t1");
-    test.try_query(test.maxscales->conn_master, "select 'rconn master' from t1");
-    test.try_query(test.maxscales->conn_slave, "select 'rconn slave' from t1 ");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "select 'rwsplit' from t1");
+    test.try_query(test.maxscale->conn_master, "select 'rconn master' from t1");
+    test.try_query(test.maxscale->conn_slave, "select 'rconn slave' from t1 ");
 
     test.set_timeout(10);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     test.set_timeout(30);
     test.repl->unblock_all_nodes();

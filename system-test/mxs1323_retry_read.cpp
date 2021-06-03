@@ -16,7 +16,7 @@ void* async_block(void* data)
 
 std::string do_query(TestConnections& test)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection();
+    MYSQL* conn = test.maxscale->open_rwsplit_connection();
 
     const char* query = "SELECT SLEEP(15), @@server_id";
     char output[512] = "";

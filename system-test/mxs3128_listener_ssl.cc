@@ -11,12 +11,12 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     conn.ssl(false);
     test.expect(conn.connect(), "Connection without SSL should work: %s", conn.error());
     test.expect(conn.query("select 1"), "Query should work: %s", conn.error());
 
-    std::string home = test.maxscales->access_homedir();
+    std::string home = test.maxscale->access_homedir();
     std::string ssl_key = home + "/certs/server-key.pem";
     std::string ssl_cert = home + "/certs/server-cert.pem";
     std::string ssl_ca = home + "/certs/ca.pem";

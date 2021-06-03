@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 
     config.create_all_listeners();
     config.create_all_listeners();
-    test->maxscales->expect_running_status(true);
+    test->maxscale->expect_running_status(true);
 
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
     config.reset();

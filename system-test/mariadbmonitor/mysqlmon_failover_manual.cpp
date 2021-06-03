@@ -29,8 +29,8 @@ int main(int argc, char** argv)
     // Part 1
     node0_id = prepare_test_1(test);
 
-    test.maxscales->ssh_output(FAILOVER_CMD);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
 
     check_test_1(test, node0_id);
     if (test.global_result != 0)
@@ -41,8 +41,8 @@ int main(int argc, char** argv)
     // Part 2
     prepare_test_2(test);
 
-    test.maxscales->ssh_output(FAILOVER_CMD);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
 
     check_test_2(test);
     if (test.global_result != 0)
@@ -53,8 +53,8 @@ int main(int argc, char** argv)
     // Part 3
     prepare_test_3(test);
 
-    test.maxscales->ssh_output(FAILOVER_CMD);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->ssh_output(FAILOVER_CMD);
+    test.maxscale->wait_for_monitor();
 
     check_test_3(test);
     return test.global_result;

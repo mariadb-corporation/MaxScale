@@ -29,16 +29,16 @@ void* disconnect_thread(void* ptr);
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscales->ssh_node_f(0,
-                               true,
+    test.maxscale->ssh_node_f(0,
+                              true,
                                "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.set_timeout(60);
-    test.maxscales->connect_maxscale();
-    create_t1(test.maxscales->conn_rwsplit[0]);
-    execute_query(test.maxscales->conn_rwsplit[0], "set global max_connections=1000");
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->connect_maxscale();
+    create_t1(test.maxscale->conn_rwsplit[0]);
+    execute_query(test.maxscale->conn_rwsplit[0], "set global max_connections=1000");
+    test.maxscale->close_maxscale_connections();
 
     test.tprintf("Create query load");
     int load_threads_num = 10;
@@ -49,10 +49,10 @@ int main(int argc, char* argv[])
     for (int i = 0; i < load_threads_num; i++)
     {
         data_master[i].exit_flag = 0;
-        data_master[i].ip = test.maxscales->ip4();
-        data_master[i].port = test.maxscales->rwsplit_port;
-        data_master[i].user = test.maxscales->user_name;
-        data_master[i].password = test.maxscales->password;
+        data_master[i].ip = test.maxscale->ip4();
+        data_master[i].port = test.maxscale->rwsplit_port;
+        data_master[i].user = test.maxscale->user_name;
+        data_master[i].password = test.maxscale->password;
         data_master[i].ssl = test.maxscale_ssl;
         pthread_create(&thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     test.stop_timeout();
     test.tprintf("Check that replication works");
     sleep(1);
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     mxs.check_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st});
     if (!test.ok())
     {
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     {
         test.set_timeout(60);
         test.set_verbose(true);
-        int rc = test.maxscales->connect_maxscale();
+        int rc = test.maxscale->connect_maxscale();
         test.set_verbose(false);
 
         if (rc == 0)
@@ -113,10 +113,10 @@ int main(int argc, char* argv[])
         sleep(1);
     }
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.maxscales->close_maxscale_connections();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    test.maxscale->close_maxscale_connections();
 
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
     test.check_maxscale_alive();
     test.log_excludes("due to authentication failure");
     test.log_excludes("due to handshake failure");

@@ -13,9 +13,9 @@ void basic_test(TestConnections& test)
     test.tprintf("%s", __func__);
     const int N_QUERIES = 100;
 
-    test.maxscales->connect();
+    test.maxscale->connect();
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
 
     for (int i = 0; i < N_QUERIES; i++)
     {
@@ -23,17 +23,17 @@ void basic_test(TestConnections& test)
         std::string insert = "INSERT INTO test.t1 VALUES (" + value + ")";
         std::string select = "SELECT @@server_id, COUNT(*) FROM test.t1 WHERE id = " + value;
 
-        test.try_query(test.maxscales->conn_rwsplit[0], "%s", insert.c_str());
-        Row row = get_row(test.maxscales->conn_rwsplit[0], select);
+        test.try_query(test.maxscale->conn_rwsplit[0], "%s", insert.c_str());
+        Row row = get_row(test.maxscale->conn_rwsplit[0], select);
         test.expect(!row.empty() && row [0] != master && row[1] == "1",
                     "At %d: Row is %s",
                     i,
                     row.empty() ? "empty" : (row[0] + " " + row[1]).c_str());
     }
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
 
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 }
 
 void master_retry_test(TestConnections& test)
@@ -44,7 +44,7 @@ void master_retry_test(TestConnections& test)
 
     test.maxctrl("alter service RW-Split-Router causal_reads_timeout 1s");
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work");
     conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
 

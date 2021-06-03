@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
         test.repl->replicate_from(i, test.galera->ip(0), test.galera->port[0]);
     }
 
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     auto output = mxb::strtok(test.maxctrl("list servers").output, "\n");
     int n_slaves = std::count_if(output.begin(), output.end(), [](const std::string& line) {
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     // Check that the queries are routed to the right server
     auto repl_ids = test.repl->get_all_server_ids_str();
     auto galera_ids = test.galera->get_all_server_ids_str();
-    auto c = test.maxscales->rwsplit();
+    auto c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Could not connect to maxscale: %s", c.error());
 
     for (int i = 0; i < 4; i++)

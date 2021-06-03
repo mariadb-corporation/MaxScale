@@ -102,10 +102,10 @@ R"(\" RATE_LIMIT 3 30
     const int N = 2;
     auto cleanup = [&]() {
             // Cleanup: remove linux user and files from the MaxScale node.
-            test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", delete_2fa_secret_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", delete_2fa_secret_cmd.c_str());
 
             // Cleanup: remove the linux users on the backends, unload pam plugin.
             for (int i = 0; i < N; i++)
@@ -135,15 +135,15 @@ R"(\" RATE_LIMIT 3 30
                 test.repl->ssh_node_f(i, true, "%s", chown_2fa_secret_srv_cmd.c_str());
             }
 
-            test.maxscales->ssh_node_f(0, true, "%s", install_google_auth);
+            test.maxscale->ssh_node_f(0, true, "%s", install_google_auth);
             // Create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
             // local users.
-            test.maxscales->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", read_shadow.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", create_pam_conf_mxs_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", create_2fa_secret_cmd.c_str());
-            test.maxscales->ssh_node_f(0, true, "%s", chown_2fa_secret_mxs_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", read_shadow.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", create_pam_conf_mxs_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", create_2fa_secret_cmd.c_str());
+            test.maxscale->ssh_node_f(0, true, "%s", chown_2fa_secret_mxs_cmd.c_str());
         };
 
     cleanup();      // remove conflicting usernames and files, just in case.
@@ -152,7 +152,7 @@ R"(\" RATE_LIMIT 3 30
     if (test.ok())
     {
         test.tprintf("PAM-plugin installed and users created on all servers.");
-        auto& mxs = test.maxscales->maxscale_b();
+        auto& mxs = test.maxscale->maxscale_b();
         auto expected_states = {ServerInfo::master_st, ServerInfo::slave_st};
         mxs.check_servers_status(expected_states);
 
@@ -171,12 +171,12 @@ R"(\" RATE_LIMIT 3 30
                 auto twofa_token = generate_2fa_token(test, gauth_secret_key);
                 if (!twofa_token.empty())
                 {
-                    auto succ = test_pam_login(test, test.maxscales->port(), pam_user, pam_pw, twofa_token);
+                    auto succ = test_pam_login(test, test.maxscale->port(), pam_user, pam_pw, twofa_token);
                     test.expect(succ, "Two-factor login failed");
                     if (test.ok())
                     {
                         test.tprintf("Try an invalid 2FA-code");
-                        succ = test_pam_login(test, test.maxscales->port(), pam_user, pam_pw,
+                        succ = test_pam_login(test, test.maxscale->port(), pam_user, pam_pw,
                                               twofa_token + "1");
                         test.expect(!succ, "Two-factor login succeeded when it should have failed");
                     }
@@ -200,7 +200,7 @@ R"(\" RATE_LIMIT 3 30
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
                     const string& pass2)
 {
-    const char* host = test.maxscales->ip4();
+    const char* host = test.maxscale->ip4();
 
     test.tprintf("Trying to log in to [%s]:%i as %s, with passwords '%s' and '%s'.\n",
                  host, port, user.c_str(), pass.c_str(), pass2.c_str());

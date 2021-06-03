@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     for (int i = 0; i < Test->repl->N; i++)
     {
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
     Test->set_timeout(200);
     Test->tprintf("Restarting MaxScale");
-    Test->maxscales->restart_maxscale();
+    Test->maxscale->restart_maxscale();
 
     Test->tprintf("Checking if MaxScale is alive by connecting to with maxctrl\n");
     Test->check_maxctrl("show servers");

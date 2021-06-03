@@ -44,8 +44,8 @@ void connect_as_user(TestConnections& test, const string& user)
 
     if (pMysql)
     {
-        const char* zHost = test.maxscales->ip4();
-        int port = test.maxscales->rwsplit_port;
+        const char* zHost = test.maxscale->ip4();
+        int port = test.maxscale->rwsplit_port;
         const char* zUser = user.c_str();
         const char* zPassword = "nonexistent";
 
@@ -63,7 +63,7 @@ bool found_in_file(TestConnections& test, const string& file, const string& patt
     command += " ";
     command += file;
 
-    return test.maxscales->ssh_node_f(0, true, "%s", command.c_str()) == 0;
+    return test.maxscale->ssh_node_f(0, true, "%s", command.c_str()) == 0;
 }
 }
 
@@ -76,13 +76,13 @@ int main(int argc, char* argv[])
     int rc;
 
     secure_log = "/var/log/auth.log";
-    rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
+    rc = test.maxscale->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
     if (rc != 0)
     {
         test.tprintf("'/var/log/auth.log` does not exist. trying with '/var/log/secure'");
 
         secure_log = "/var/log/secure";
-        rc = test.maxscales->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
+        rc = test.maxscale->ssh_node_f(0, true, "test -f %s", secure_log.c_str());
     }
 
     if (rc != 0)
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     }
 
     // Ensure that non-root programs can log to the authentication log.
-    rc = test.maxscales->ssh_node_f(0, true,
+    rc = test.maxscale->ssh_node_f(0, true,
                                     "echo 'auth,authpriv.*  %s' > /etc/rsyslog.d/99-maxscale.conf; "
                                     "service rsyslog restart", secure_log.c_str());
 
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
         test.tprintf("Could not add /etc/rsyslog.d/99-maxscale.conf or not restart rsyslog. Test may fail.");
     }
 
-    test.maxscales->connect();
+    test.maxscale->connect();
 
     string user;
 
@@ -119,9 +119,9 @@ int main(int argc, char* argv[])
                 secure_log.c_str());
 
     // Turn on 'event.authentication_failure.facility=LOG_AUTH'
-    test.maxscales->stop();
-    test.maxscales->ssh_node_f(0, true, "sed -i 's/#event/event/' /etc/maxscale.cnf");
-    test.maxscales->start();
+    test.maxscale->stop();
+    test.maxscale->ssh_node_f(0, true, "sed -i 's/#event/event/' /etc/maxscale.cnf");
+    test.maxscale->start();
 
     // Connect again. This should cause an error to be logged to the authentication log.
     user = get_unique_user();

@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 
     auto maxctrl = [&](string cmd, bool print = true) {
             test.set_timeout(60);
-            auto rv = test.maxscales->ssh_output("maxctrl " + cmd);
+            auto rv = test.maxscale->ssh_output("maxctrl " + cmd);
 
             if (rv.rc != 0 && print)
             {
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
             return rv.rc == 0;
         };
 
-    Connection c1 = test.maxscales->rwsplit();
+    Connection c1 = test.maxscale->rwsplit();
     string host1 = test.repl->ip4(0);
     string port1 = to_string(test.repl->port[0]);
     string host2 = test.repl->ip4(1);
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     condition_variable cv;
     thread t([&]() {
                  cv.notify_one();
-                 test.expect(!test.maxscales->rwsplit().connect(),
+                 test.expect(!test.maxscale->rwsplit().connect(),
                              "New connections to created service "
                              "should fail with a timeout while the original connection is open");
              });

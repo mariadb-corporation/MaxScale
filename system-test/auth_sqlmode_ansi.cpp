@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Restarting MaxScale\n");
 
     Test->set_timeout(120);
-    Test->maxscales->restart_maxscale();
+    Test->maxscale->restart_maxscale();
 
     Test->log_excludes("Loading database names");
     Test->log_excludes("Unknown column");

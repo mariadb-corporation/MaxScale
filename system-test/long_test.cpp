@@ -59,8 +59,8 @@ int main(int argc, char *argv[])
     //threads_num[4] = 4;
 
 
-    port = Test->maxscales->rwsplit_port;
-    IP = Test->maxscales->ip4();
+    port = Test->maxscale->rwsplit_port;
+    IP = Test->maxscale->ip4();
 
     //port = 3306;
     //IP = Test->repl->IP[0];
@@ -74,20 +74,20 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes((char *) "set global expire_logs_days = 1;");
 
 
-    Test->maxscales->connect_rwsplit();
+    Test->maxscale->connect_rwsplit();
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
 
     Test->tprintf("create t1 in `test` DB\n");
-    create_t1(Test->maxscales->conn_rwsplit[0]);
+    create_t1(Test->maxscale->conn_rwsplit[0]);
 
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE test1");
-    execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE test2");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE test1");
+    execute_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE test2");
     Test->tprintf("create`test1` DB\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test1");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE test1");
 
     Test->tprintf("create`test2` DB\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test2");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE test2");
 
     Test->tprintf("Waiting for slaves after DB creation\n");
     Test->repl->sync_slaves(0);
@@ -96,15 +96,15 @@ int main(int argc, char *argv[])
 
     Test->tprintf("create t1 in `test1` DB\n");
     Test->tprintf("... use\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "USE test1");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], "USE test1");
     Test->tprintf("... create\n");
-    create_t1(Test->maxscales->conn_rwsplit[0]);
+    create_t1(Test->maxscale->conn_rwsplit[0]);
 
     Test->tprintf("create t1 in `test2` DB\n");
     Test->tprintf("... use\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0], "USE test2");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], "USE test2");
     Test->tprintf("... create\n");
-    create_t1(Test->maxscales->conn_rwsplit[0]);
+    create_t1(Test->maxscale->conn_rwsplit[0]);
 
     Test->tprintf("Waiting for slaves after tables creation\n");
     Test->repl->sync_slaves(0);
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     //fflush(stdout);
     //Test->check_maxscale_alive(0);
 
-    Test->maxscales->stop();
+    Test->maxscale->stop();
 
     int rval = Test->global_result;
     delete Test;
@@ -282,8 +282,8 @@ void *transaction_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "",
-                                Test->maxscales->user_name,
-                                Test->maxscales->password,
+                                Test->maxscale->user_name,
+                                Test->maxscale->password,
                                 20,
                                 Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test1");
@@ -341,8 +341,8 @@ void *prepared_stmt_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "",
-                                Test->maxscales->user_name,
-                                Test->maxscales->password,
+                                Test->maxscale->user_name,
+                                Test->maxscale->password,
                                 20,
                                 Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test2");

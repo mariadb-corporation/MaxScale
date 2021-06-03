@@ -26,7 +26,7 @@ bool staying_alive(TestConnections& test, const maxbase::Duration& dur)
     maxbase::StopWatch sw_loop_start;
     while (alive && sw_loop_start.split() < dur)
     {
-        if (execute_query_silent(test.maxscales->conn_rwsplit[0], "select 1"))
+        if (execute_query_silent(test.maxscale->conn_rwsplit[0], "select 1"))
         {
             alive = false;
             break;
@@ -49,7 +49,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     test.set_timeout(2 * mxb::to_secs(watchdog_interval));
 
     // Make one thread in maxscale hang
-    mysql_query(test.maxscales->conn_rwsplit[0], "select LUA_INFINITE_LOOP");
+    mysql_query(test.maxscale->conn_rwsplit[0], "select LUA_INFINITE_LOOP");
 
     // maxscale should get killed by systemd in less than duration(interval - epsilon).
     bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));
@@ -65,7 +65,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
         if (test.global_result == 0)
         {
             test.tprintf("Maxscale was killed by systemd - ok");
-            test.maxscales->ssh_node_f(0, true, "rm -f /tmp/core*");
+            test.maxscale->ssh_node_f(0, true, "rm -f /tmp/core*");
         }
     }
 }
@@ -78,14 +78,14 @@ int main(int argc, char* argv[])
 
     std::string lua_file("/infinite_loop.lua");
     std::string from = test_dir + lua_file;
-    std::string to = test.maxscales->access_homedir() + lua_file;
+    std::string to = test.maxscale->access_homedir() + lua_file;
 
-    test.maxscales->copy_to_node(from.c_str(), to.c_str());
-    test.maxscales->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
-    test.maxscales->start();
+    test.maxscale->copy_to_node(from.c_str(), to.c_str());
+    test.maxscale->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
+    test.maxscale->start();
     sleep(2);
-    test.maxscales->wait_for_monitor();
-    test.maxscales->connect_rwsplit();
+    test.maxscale->wait_for_monitor();
+    test.maxscale->connect_rwsplit();
 
     if (!test.global_result)
     {

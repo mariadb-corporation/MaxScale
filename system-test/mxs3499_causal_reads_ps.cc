@@ -39,7 +39,7 @@ void test_one_stmt(TestConnections& test, Connection& conn, MYSQL_STMT* stmt, in
 
 void run_test(TestConnections& test)
 {
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work");
     conn.query("CREATE OR REPLACE TABLE test.t1(id INT, data TEXT)");
 

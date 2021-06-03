@@ -2,15 +2,15 @@
 
 void check_connections(TestConnections& test, const std::vector<int>& expected)
 {
-    test.maxscales->maxscale_b().get_servers().check_connections(expected);
+    test.maxscale->maxscale_b().get_servers().check_connections(expected);
 }
 
 void cycle_master(TestConnections& test)
 {
     test.repl->block_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(0);
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
 }
 
 int main(int argc, char** argv)
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 10; i++)
     {
-        Connection c = test.maxscales->rwsplit();
+        Connection c = test.maxscale->rwsplit();
         test.expect(c.connect(), "Failed to connect: %s", c.error());
         connections.push_back(std::move(c));
     }

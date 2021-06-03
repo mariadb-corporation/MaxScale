@@ -61,7 +61,7 @@ void test_main(TestConnections& test)
 
         // First, check idle connection count. Restart MaxScale to get rid of any previously pooled
         // connections.
-        auto& mxs = test.maxscales->maxscale_b();
+        auto& mxs = test.maxscale->maxscale_b();
         mxs.stop();
         mxs.start();
         sleep(2);
@@ -137,7 +137,7 @@ void test_main(TestConnections& test)
 
 void check_conn_pool_size(TestConnections& test, const IntVector& expected)
 {
-    auto& mxs = test.maxscales->maxscale_b();
+    auto& mxs = test.maxscale->maxscale_b();
     auto info = mxs.get_servers();
     info.check_pool_connections(expected);
 }

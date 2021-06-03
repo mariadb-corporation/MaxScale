@@ -21,7 +21,7 @@ namespace
 
 void init(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS MXS_1719");
     test.try_query(pMysql, "CREATE TABLE MXS_1719 (a TEXT, b TEXT)");
@@ -35,12 +35,12 @@ void run(TestConnections& test)
     MYSQL* pMysql = mysql_init(NULL);
     test.expect(pMysql, "Could not create MYSQL handle.");
 
-    const char* zUser = test.maxscales->user_name.c_str();
-    const char* zPassword = test.maxscales->password.c_str();
-    int port = test.maxscales->rwsplit_port;
+    const char* zUser = test.maxscale->user_name.c_str();
+    const char* zPassword = test.maxscale->password.c_str();
+    int port = test.maxscale->rwsplit_port;
 
     if (mysql_real_connect(pMysql,
-                           test.maxscales->ip4(),
+                           test.maxscale->ip4(),
                            zUser,
                            zPassword,
                            "test",
@@ -80,17 +80,17 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
     std::string src = test_dir;
     src += "/mxs1719.json";
-    std::string dst = std::string(test.maxscales->access_homedir()) + "/mxs1719.json";
+    std::string dst = std::string(test.maxscale->access_homedir()) + "/mxs1719.json";
 
-    if (test.maxscales->copy_to_node(src.c_str(), dst.c_str()) == 0)
+    if (test.maxscale->copy_to_node(src.c_str(), dst.c_str()) == 0)
     {
-        test.maxscales->ssh_node((std::string("chmod a+r ") + dst).c_str(), true);
-        if (test.maxscales->start() == 0)
+        test.maxscale->ssh_node((std::string("chmod a+r ") + dst).c_str(), true);
+        if (test.maxscale->start() == 0)
         {
             sleep(10);
-            test.maxscales->wait_for_monitor();
+            test.maxscale->wait_for_monitor();
 
-            if (test.maxscales->connect_rwsplit() == 0)
+            if (test.maxscale->connect_rwsplit() == 0)
             {
                 run(test);
             }
@@ -109,9 +109,9 @@ int main(int argc, char* argv[])
         test.expect(false, "Could not copy masking file to MaxScale node.");
     }
 
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE MXS_1719");
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE MXS_1719");
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

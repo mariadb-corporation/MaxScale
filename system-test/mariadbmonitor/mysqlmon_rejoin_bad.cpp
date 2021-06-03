@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
     // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 10);
     test.repl->sync_slaves(0);
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Stopping MaxScale...");
     // Mess with the slaves to fix situation such that only one slave can be rejoined. Stop maxscale.
-    if (!test.maxscales->stop_and_check_stopped())
+    if (!test.maxscale->stop_and_check_stopped())
     {
         test.expect(false, "Could not stop MaxScale.");
         return test.global_result;
@@ -90,12 +90,12 @@ int main(int argc, char** argv)
 
     test.tprintf("Restarting MaxScale. Server 4 should not rejoin the cluster.");
     test.tprintf(LINE);
-    if (!test.maxscales->start_and_check_started())
+    if (!test.maxscale->start_and_check_started())
     {
         test.expect(false, "Could not start MaxScale.");
         return test.global_result;
     }
-    test.maxscales->wait_for_monitor(2);
+    test.maxscale->wait_for_monitor(2);
     get_output(test);
 
     if (test.ok())
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         snprintf(change_cmd, sizeof(change_cmd), CHANGE_CMD_FMT, test.repl->ip_private(3), test.repl->port[3]);
         test.try_query(nodes[0], "%s", change_cmd);
         test.try_query(nodes[0], "START SLAVE;");
-        test.maxscales->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
         int master_id = get_master_server_id(test);
         test.expect(master_id == 4, "Server 4 should be the cluster master.");
@@ -131,8 +131,8 @@ int main(int argc, char** argv)
 
     cout << "Reseting cluster...\n";
     string reset_cmd = "maxctrl call command mysqlmon reset-replication MySQL-Monitor server1";
-    test.maxscales->ssh_output(reset_cmd);
-    test.maxscales->wait_for_monitor(1);
+    test.maxscale->ssh_output(reset_cmd);
+    test.maxscale->wait_for_monitor(1);
     test.expect(get_master_server_id(test) == 1, "server1 is not the master when it should. "
                                                  "reset-replication must have failed.");
     return test.global_result;

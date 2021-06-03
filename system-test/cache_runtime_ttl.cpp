@@ -29,7 +29,7 @@ enum class Column
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("DROP TABLE IF EXISTS cache_test");
 
@@ -41,7 +41,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("CREATE TABLE cache_test (a INT, b INT)");
 
@@ -51,7 +51,7 @@ void create(TestConnections& test)
 
 void insert(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("INSERT INTO cache_test VALUES (1, 1)");
 
@@ -61,7 +61,7 @@ void insert(TestConnections& test)
 
 void update(TestConnections& test, Column column, int value)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("UPDATE cache_test SET ");
     stmt += (column == Column::A) ? "a=" : "b=";
@@ -73,7 +73,7 @@ void update(TestConnections& test, Column column, int value)
 
 void select(TestConnections& test, Column column, int* pValue)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("SELECT ");
     stmt += (column == Column::A) ? "a" : "b";
@@ -118,7 +118,7 @@ enum What
 
 void set(TestConnections& test, Cache::What what, uint32_t value)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     string stmt("SET @maxscale.cache.");
     stmt += ((what == Cache::SOFT_TTL) ? "soft_ttl" : "hard_ttl");
@@ -180,14 +180,14 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    if (test.maxscales->connect_rwsplit() == 0)
+    if (test.maxscale->connect_rwsplit() == 0)
     {
         run(test);
     }
 
-    test.maxscales->connect();
+    test.maxscale->connect();
     drop(test);
-    test.maxscales->disconnect();
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

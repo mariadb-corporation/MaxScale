@@ -39,7 +39,7 @@ bool cdc_com(TestConnections* Test)
 {
     int max_inserted_val = Test->smoke ? 25 : 100;
     int sock = create_tcp_socket();
-    char* ip = get_ip(Test->maxscales->ip4());
+    char* ip = get_ip(Test->maxscale->ip4());
 
     if (ip == NULL)
     {
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
 
     Test->tprintf("Waiting for binlogs to be processed...");
-    Test->maxscales->start();
+    Test->maxscale->start();
     Test->stop_timeout();
     sleep(10);
 

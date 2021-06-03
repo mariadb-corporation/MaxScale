@@ -66,8 +66,8 @@ private:
         test.tprintf("Stop maxscale and its slave. Remove binlog data.");
 
         slave.query("STOP SLAVE");
-        test.maxscales->stop_and_check_stopped();
-        auto res = test.maxscales->ssh_output("rm -rf /var/lib/maxscale/binlogs");
+        test.maxscale->stop_and_check_stopped();
+        auto res = test.maxscale->ssh_output("rm -rf /var/lib/maxscale/binlogs");
         test.expect(res.rc == 0, "Failed to remove binlog data %s",
                     strerror_r(res.rc, buf, sizeof(buf)));
 
@@ -78,8 +78,8 @@ private:
         test.tprintf("\"old system\" neutered. Restart and wait for ReplSYNC.");
 
         // Bring maxscale up, and start the slave.
-        test.maxscales->start_and_check_started();
-        maxscale = Connection(test.maxscales->rwsplit());
+        test.maxscale->start_and_check_started();
+        maxscale = Connection(test.maxscale->rwsplit());
         test.expect(maxscale.connect(), "Pinloki connection should work: %s", maxscale.error());
 
         maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port[0]));

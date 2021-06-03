@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
-    test.maxscales->start();
+    test.maxscale->start();
 
     // Connect to Kafka
     Consumer consumer(test, "kafkacdc");
@@ -43,9 +43,9 @@ int main(int argc, char** argv)
     read_messages(test, consumer, 3);
 
     test.tprintf("Restarting MaxScale and inserting data");
-    test.maxscales->stop();
-    test.maxscales->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
-    test.maxscales->start();
+    test.maxscale->stop();
+    test.maxscale->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
+    test.maxscale->start();
 
     conn.query("INSERT INTO t1 VALUES (7), (8), (9)");
     sleep(5);

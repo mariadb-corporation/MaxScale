@@ -125,16 +125,16 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Connecting to all MaxScale services\n");
     Test->set_timeout(10);
-    Test->add_result(Test->maxscales->connect_maxscale(), "Error connectiong to Maxscale\n");
+    Test->add_result(Test->maxscale->connect_maxscale(), "Error connectiong to Maxscale\n");
 
     Test->tprintf("executing fetch * from mysql.user \n");
     Test->set_timeout(10);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "fetch * from mysql.user;");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "fetch * from mysql.user;");
     Test->set_timeout(10);
-    Test->try_query(Test->maxscales->conn_rwsplit[0], (char*) "fetch count(*) form mysql.user;");
+    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "fetch count(*) form mysql.user;");
 
     Test->set_timeout(10);
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
     Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;

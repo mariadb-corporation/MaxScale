@@ -76,7 +76,7 @@ void set_drain(TestConnections& test, const string& server)
     string command = "set server " + server + " drain";
 
     test.check_maxctrl(command);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     check_state(test, server, Expectation::INCLUDES, "Draining|Drained");
 }
@@ -87,7 +87,7 @@ void clear_drain(TestConnections& test, const string& server)
     string command = "clear server " + server + " drain";
 
     test.check_maxctrl(command);
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     check_state(test, server, Expectation::EXCLUDES, "Draining|Drained");
 }
@@ -123,7 +123,7 @@ void test_rws(TestConnections& test)
 {
     test.tprintf("Testing draining with RWS\n");
 
-    Connection conn1 = test.maxscales->rwsplit();
+    Connection conn1 = test.maxscale->rwsplit();
     test.expect(conn1.connect(), "Connection failed: %s", conn1.error());
     smoke_test(test, conn1);
 
@@ -133,7 +133,7 @@ void test_rws(TestConnections& test)
     // Still works?
     smoke_test(test, conn1);
 
-    Connection conn2 = test.maxscales->rwsplit();
+    Connection conn2 = test.maxscale->rwsplit();
     test.expect(conn2.connect(), "Connection failed: %s", conn2.error());
     smoke_test(test, conn2);
 
@@ -151,7 +151,7 @@ void test_rws(TestConnections& test)
     set_drain(test, server2);
 
     // This should work as the master (server1) and one slave (server3) is available.
-    Connection conn3 = test.maxscales->rwsplit();
+    Connection conn3 = test.maxscale->rwsplit();
     test.expect(conn3.connect(), "Connection failed: %s", conn3.error());
     smoke_test(test, conn3);
 
@@ -165,7 +165,7 @@ void test_rws(TestConnections& test)
     clear_drain(test, server2);
 
     // So, this should work.
-    Connection conn4 = test.maxscales->rwsplit();
+    Connection conn4 = test.maxscale->rwsplit();
     test.expect(conn4.connect(), "Connection failed: %s", conn4.error());
     smoke_test(test, conn4);
 
@@ -179,7 +179,7 @@ void test_rcr(TestConnections& test)
 {
     test.tprintf("Testing draining with RCR\n");
 
-    Connection conn1 = test.maxscales->readconn_master();
+    Connection conn1 = test.maxscale->readconn_master();
     test.expect(conn1.connect(), "Connection failed: %s", conn1.error());
     smoke_test(test, conn1);
 
@@ -187,7 +187,7 @@ void test_rcr(TestConnections& test)
     set_drain(test, server2);
     set_drain(test, server3);
 
-    Connection conn2 = test.maxscales->readconn_master();
+    Connection conn2 = test.maxscale->readconn_master();
     test.expect(conn2.connect(), "Connection failed: %s", conn2.error());
     smoke_test(test, conn2);
 
@@ -203,7 +203,7 @@ void test_rcr(TestConnections& test)
 
     set_drain(test, server2);
 
-    Connection conn4 = test.maxscales->readconn_slave();
+    Connection conn4 = test.maxscale->readconn_slave();
     test.expect(conn4.connect(), "Connection failed: %s", conn4.error());
     smoke_test(test, conn4);
 
@@ -214,7 +214,7 @@ void test_rcr(TestConnections& test)
     clear_drain(test, server2);
     set_drain(test, server3);
 
-    Connection conn5 = test.maxscales->readconn_slave();
+    Connection conn5 = test.maxscale->readconn_slave();
     test.expect(conn5.connect(), "Connection failed: %s", conn5.error());
     smoke_test(test, conn5);
 
@@ -225,7 +225,7 @@ void test_rcr(TestConnections& test)
     // Now both slaves will be drained.
     set_drain(test, server2);
 
-    Connection conn6 = test.maxscales->readconn_slave();
+    Connection conn6 = test.maxscale->readconn_slave();
     test.expect(conn6.connect(), "Connection failed: %s", conn6.error());
     smoke_test(test, conn6);
 

@@ -25,8 +25,8 @@ void query_thread(TestConnections* t)
     std::string sql(1000000, '\0');
     create_insert_string(&sql[0], 1000, 2);
 
-    MYSQL* conn1 = test.maxscales->open_rwsplit_connection();
-    MYSQL* conn2 = test.maxscales->open_readconn_master_connection();
+    MYSQL* conn1 = test.maxscale->open_rwsplit_connection();
+    MYSQL* conn2 = test.maxscale->open_readconn_master_connection();
 
     test.add_result(mysql_errno(conn1), "Error connecting to readwritesplit: %s", mysql_error(conn1));
     test.add_result(mysql_errno(conn2), "Error connecting to readconnroute: %s", mysql_error(conn2));
@@ -58,10 +58,10 @@ int main(int argc, char* argv[])
         }
     }
 
-    test.maxscales->connect();
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x1 int, fl int)");
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE t1 (x1 int, fl int)");
+    test.maxscale->disconnect();
 
     std::vector<std::thread> threads;
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     {
         test.tprintf("Blocking node %d", i);
         test.galera->block_node(i);
-        test.maxscales->wait_for_monitor();
+        test.maxscale->wait_for_monitor();
     }
 
     test.tprintf("Unblocking nodes\n");
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
         test.galera->unblock_node(i);
     }
 
-    test.maxscales->wait_for_monitor();
+    test.maxscale->wait_for_monitor();
 
     running = false;
     test.set_timeout(120);
@@ -95,9 +95,9 @@ int main(int argc, char* argv[])
         a.join();
     }
 
-    test.maxscales->connect();
-    execute_query(test.maxscales->conn_rwsplit[0], "DROP TABLE t1");
-    test.maxscales->disconnect();
+    test.maxscale->connect();
+    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE t1");
+    test.maxscale->disconnect();
 
     return test.global_result;
 }

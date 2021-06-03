@@ -9,10 +9,10 @@ using std::endl;
 
 void test1(TestConnections& test)
 {
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
     char buffer[100] = "";
     my_bool err = false;
@@ -44,18 +44,18 @@ void test1(TestConnections& test)
 
     cout << "Close statement" << endl;
     mysql_stmt_close(stmt);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 }
 
 void test2(TestConnections& test)
 {
     test.set_timeout(20);
 
-    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port,
-                                       test.maxscales->ip(),
+    MYSQL* conn = open_conn_db_timeout(test.maxscale->rwsplit_port,
+                                       test.maxscale->ip(),
                                        "test",
-                                       test.maxscales->user_name,
-                                       test.maxscales->password,
+                                       test.maxscale->user_name,
+                                       test.maxscale->password,
                                        1,
                                        false);
 
@@ -130,10 +130,10 @@ void test2(TestConnections& test)
 
 void test3(TestConnections& test)
 {
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
     char buffer[100] = "";
     my_bool err = false;
@@ -148,9 +148,9 @@ void test3(TestConnections& test)
     test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Failed to prepare");
 
     cout << "Start transaction" << endl;
-    test.add_result(mysql_query(test.maxscales->conn_rwsplit[0], "START TRANSACTION"),
+    test.add_result(mysql_query(test.maxscale->conn_rwsplit[0], "START TRANSACTION"),
                     "START TRANSACTION should succeed: %s",
-                    mysql_error(test.maxscales->conn_rwsplit[0]));
+                    mysql_error(test.maxscale->conn_rwsplit[0]));
 
 
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
@@ -167,12 +167,12 @@ void test3(TestConnections& test)
     test.add_result(strlen(buffer) == 0, "Expected result buffer to not be empty");
 
     cout << "Commit" << endl;
-    test.add_result(mysql_query(test.maxscales->conn_rwsplit[0], "COMMIT"),
+    test.add_result(mysql_query(test.maxscale->conn_rwsplit[0], "COMMIT"),
                     "COMMIT should succeed: %s",
-                    mysql_error(test.maxscales->conn_rwsplit[0]));
+                    mysql_error(test.maxscale->conn_rwsplit[0]));
 
     mysql_stmt_close(stmt);
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 
     char server_id[1024];
     test.repl->connect();
@@ -184,17 +184,17 @@ void test3(TestConnections& test)
 
 void test4(TestConnections& test)
 {
-    test.maxscales->connect_maxscale();
+    test.maxscale->connect_maxscale();
     test.set_timeout(20);
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id VARCHAR(200))");
+    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id VARCHAR(200))");
 
     for (int i = 0; i < 100; i++)
     {
-        test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES ('test4')");
+        test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES ('test4')");
     }
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* query = "SELECT * FROM test.t1";
     char buffer[100] = "";
     my_bool err = false;
@@ -229,9 +229,9 @@ void test4(TestConnections& test)
 
     mysql_stmt_close(stmt);
 
-    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
 
-    test.maxscales->close_maxscale_connections();
+    test.maxscale->close_maxscale_connections();
 }
 
 int main(int argc, char** argv)

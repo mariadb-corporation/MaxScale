@@ -40,14 +40,14 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
     // Advance gtid:s a bit to so gtid variables are updated.
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
+    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 1);
     test.repl->sync_slaves(0);
     get_output(test);
     print_gtids(test);
 
     auto expect_server_status = [&test](const string& server_name, const string& status) {
-        bool found = (test.maxscales->get_server_status(server_name).count(status) == 1);
+        bool found = (test.maxscale->get_server_status(server_name).count(status) == 1);
         test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
     };
 
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
             };
 
     auto mon_wait = [&test](int ticks) {
-        test.maxscales->wait_for_monitor(ticks);
+        test.maxscale->wait_for_monitor(ticks);
     };
 
     string master = "Master";
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
         mon_wait(2);
 	    get_output(test);
         expect_server_status_multi({slave, master});
-        test.maxscales->ssh_output("maxctrl call command mariadbmon switchover MariaDB-Monitor");
+        test.maxscale->ssh_output("maxctrl call command mariadbmon switchover MariaDB-Monitor");
         mon_wait(2);
         expect_replicating_from(test, 0, 2);
         expect_replicating_from(test, 0, 3);
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     {
         test.try_query(test.repl->nodes[i], drop_query);
     }
-    test.maxscales->ssh_output("maxctrl call command mariadbmon reset-replication MariaDB-Monitor server1");
+    test.maxscale->ssh_output("maxctrl call command mariadbmon reset-replication MariaDB-Monitor server1");
     return test.global_result;
 }
 

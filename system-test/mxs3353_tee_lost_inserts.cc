@@ -5,7 +5,7 @@ int main(int argc, char** argv)
     const int N_ROWS = 10;
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     auto node1 = test.repl->get_connection(0);
     auto node2 = test.repl->get_connection(1);
 

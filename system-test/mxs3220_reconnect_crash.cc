@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto conn = test.maxscales->rwsplit();
+    auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection failed when creating user: %s", conn.error());
     test.expect(conn.query("CREATE USER 'bob' IDENTIFIED BY 'bob'"), "Query failed: %s", conn.error());
     test.expect(conn.query("GRANT ALL ON *.* TO 'bob'"), "Query failed: %s", conn.error());

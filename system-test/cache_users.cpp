@@ -26,7 +26,7 @@ const char* zPwd  = "maxpwd";
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_users");
 }
@@ -35,7 +35,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscales->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
 
     test.try_query(pMysql, "CREATE TABLE cache_users (f INT)");
 }
@@ -56,9 +56,9 @@ void run(TestConnections& test)
 {
     create(test);
 
-    Connection c1 = test.maxscales->rwsplit();
+    Connection c1 = test.maxscale->rwsplit();
     c1.connect();
-    Connection c2 = test.maxscales->rwsplit();
+    Connection c2 = test.maxscale->rwsplit();
     c2.set_credentials(zUser, zPwd);
     c2.connect();
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto maxscales = test.maxscales;
+    auto maxscales = test.maxscale;
 
     if (maxscales->connect_rwsplit() == 0)
     {

@@ -16,11 +16,11 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&test](std::string q) {
-            return execute_query_silent(test.maxscales->conn_rwsplit[0], q.c_str());
+            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str());
         };
 
     auto error_matches = [&test](std::string q) {
-            std::string err = mysql_error(test.maxscales->conn_rwsplit[0]);
+            std::string err = mysql_error(test.maxscale->conn_rwsplit[0]);
             return err.find(q) != std::string::npos;
         };
 
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
             sleep(10);
         };
 
-    test.maxscales->connect();
+    test.maxscale->connect();
     test.expect(query("DROP TABLE IF EXISTS test.t1") == 0,
                 "DROP TABLE should work.");
     test.expect(query("CREATE TABLE test.t1 (id INT)") == 0,

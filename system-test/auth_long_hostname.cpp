@@ -52,18 +52,18 @@ int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
     Test->set_timeout(50);
-    Test->maxscales->connect_maxscale();
+    Test->maxscale->connect_maxscale();
 
     Test->tprintf("Creating user with old style password\n");
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'");
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION");
     sleep(10);
 
     Test->tprintf("Trying to connect using user with old style password\n");
-    MYSQL* conn = open_conn(Test->maxscales->rwsplit_port,
-                            Test->maxscales->ip4(),
+    MYSQL* conn = open_conn(Test->maxscale->rwsplit_port,
+                            Test->maxscale->ip4(),
                             (char*) "user_long_host11",
                             (char*)  "old",
                             Test->maxscale_ssl);
@@ -81,9 +81,9 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    Test->try_query(Test->maxscales->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit[0],
                     (char*) "DROP USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org'");
-    Test->maxscales->close_maxscale_connections();
+    Test->maxscale->close_maxscale_connections();
 
     Test->check_maxscale_alive();
 

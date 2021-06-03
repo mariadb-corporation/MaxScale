@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.repl->connect();
-    test.maxscales->connect();
+    test.maxscale->connect();
 
     // Prepare a table
     test.try_query(test.repl->nodes[0], "DROP TABLE IF EXISTS double_execute;");
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     do_test(test, test.repl->nodes[0], true);
 
     test.tprintf("Running test through readwritesplit");
-    do_test(test, test.maxscales->conn_rwsplit[0], false);
+    do_test(test, test.maxscale->conn_rwsplit[0], false);
 
     test.try_query(test.repl->nodes[0], "DROP TABLE IF EXISTS double_execute;");
 

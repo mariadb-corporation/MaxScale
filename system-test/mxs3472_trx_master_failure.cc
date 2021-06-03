@@ -19,7 +19,7 @@ void test_master_failure(TestConnections& test)
 
     // Execute a slow session command before starting a transaction.
     test.set_timeout(60);
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     c.set_credentials("bob", "bob");
     c.connect();
     c.query("SET @a = (SELECT SLEEP(10))");
@@ -59,7 +59,7 @@ void test_bad_master(TestConnections& test)
     master.connect();
     master.query("CREATE TABLE test.t1(id INT)");
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Failed to connect: %s", c.error());
 
     auto check = [&](std::string query) {
