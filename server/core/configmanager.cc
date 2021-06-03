@@ -675,22 +675,47 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
     switch (to_type(type))
     {
     case Type::SERVERS:
-        // Let the other objects express the two-way relationships
-        obj.erase(CN_RELATIONSHIPS);
-
-        if (!runtime_create_server_from_json(m_tmp.get_json()))
         {
-            throw error("Failed to create server '", name, "'");
+            // Hide the relationships for new objects, the relationships are handled in the update step.
+            auto rel = obj.get_object(CN_RELATIONSHIPS);
+
+            if (rel)
+            {
+                obj.erase(CN_RELATIONSHIPS);
+            }
+
+            if (!runtime_create_server_from_json(m_tmp.get_json()))
+            {
+                throw error("Failed to create server '", name, "'");
+            }
+
+            if (rel)
+            {
+                obj.set_object(CN_RELATIONSHIPS, rel);
+            }
         }
         break;
 
     case Type::MONITORS:
-        // Erase any service relationships, they can be expressed by services themselves
-        obj.get_object(CN_RELATIONSHIPS).erase(CN_SERVICES);
-
-        if (!runtime_create_monitor_from_json(m_tmp.get_json()))
         {
-            throw error("Failed to create monitor '", name, "'");
+            // Hide the service relationship for new objects, it will be handled in the update step. Leaving
+            // the servers relationship intact reduces the amount of messages that are logged.
+            mxb::Json svc = obj.at("/relationships/services");
+
+            if (svc)
+            {
+                obj.get_object(CN_RELATIONSHIPS).erase(CN_SERVICES);
+            }
+
+            if (!runtime_create_monitor_from_json(m_tmp.get_json()))
+            {
+                throw error("Failed to create monitor '", name, "'");
+            }
+
+            if (svc)
+            {
+                obj.get_object(CN_RELATIONSHIPS).set_object(CN_SERVICES, svc);
+            }
         }
         break;
 
@@ -698,14 +723,21 @@ void ConfigManager::create_new_object(const std::string& name, const std::string
         {
             // Create services without relationships, they will be handled by the update step
             auto rel = obj.get_object(CN_RELATIONSHIPS);
-            obj.erase(CN_RELATIONSHIPS);
+
+            if (rel)
+            {
+                obj.erase(CN_RELATIONSHIPS);
+            }
 
             if (!runtime_create_service_from_json(m_tmp.get_json()))
             {
                 throw error("Failed to create service '", name, "'");
             }
 
-            obj.set_object(CN_RELATIONSHIPS, rel);
+            if (rel)
+            {
+                obj.set_object(CN_RELATIONSHIPS, rel);
+            }
         }
         break;
 
