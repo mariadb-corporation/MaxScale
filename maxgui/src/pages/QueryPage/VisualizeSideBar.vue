@@ -3,8 +3,8 @@
         <h5 class="mb-4">Visualization</h5>
         <label class="field__label color text-small-text"> Graph</label>
         <v-select
-            v-model="selectedGraph"
-            :items="graphs"
+            v-model="selectedChart"
+            :items="chartTypes"
             outlined
             class="std mariadb-select-input error--text__bottom"
             :menu-props="{
@@ -38,9 +38,14 @@ export default {
 
     data() {
         return {
-            selectedGraph: 'No Visualization',
-            graphs: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
+            selectedChart: 'No Visualization',
+            chartTypes: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
         }
+    },
+    watch: {
+        selectedChart(v) {
+            this.$emit('selected-chart', v)
+        },
     },
 }
 </script>

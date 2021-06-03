@@ -29,7 +29,7 @@
                     />
                 </template>
                 <template slot="pane-right">
-                    <!-- Main panel -->
+                    <!-- Main panel contains editor pane and visualize-sidebar pane -->
                     <split-pane
                         v-model="mainPanePct"
                         class="main-pane__content"
@@ -37,8 +37,10 @@
                         split="vert"
                         disable
                     >
+                        <!-- Editor pane contains editor and result pane -->
                         <template slot="pane-left">
                             <split-pane
+                                ref="editorResultPane"
                                 v-model="editorPct"
                                 split="horiz"
                                 :minPercent="minEditorPct"
@@ -49,8 +51,9 @@
                                         class="editor__content"
                                         :minPercent="minQueryPanePct"
                                         split="vert"
-                                        disable
+                                        :disable="!showVisChart"
                                     >
+                                        <!-- Editor pane contains editor and chart pane -->
                                         <template slot="pane-left">
                                             <query-editor
                                                 ref="queryEditor"
@@ -68,7 +71,10 @@
                                             />
                                         </template>
                                         <template slot="pane-right">
-                                            <!-- TODO: Graph is shown here -->
+                                            <chart-container
+                                                :selectedChart="selectedChart"
+                                                :chartHeight="chartHeight"
+                                            />
                                         </template>
                                     </split-pane>
                                 </template>
@@ -83,7 +89,10 @@
                             </split-pane>
                         </template>
                         <template slot="pane-right">
-                            <visualize-sidebar class="visualize-sidebar" />
+                            <visualize-sidebar
+                                class="visualize-sidebar"
+                                @selected-chart="selectedChart = $event"
+                            />
                         </template>
                     </split-pane>
                 </template>
@@ -111,6 +120,7 @@ import QueryResult from './QueryResult'
 import { mapActions, mapState, mapGetters } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
 import VisualizeSideBar from './VisualizeSideBar'
+import ChartContainer from './ChartContainer'
 export default {
     name: 'query-view',
     components: {
@@ -119,6 +129,7 @@ export default {
         QueryResult,
         ToolbarContainer,
         'visualize-sidebar': VisualizeSideBar,
+        ChartContainer,
     },
     data() {
         return {
@@ -140,6 +151,7 @@ export default {
             minMainPanePct: 0,
             queryPanePct: 100,
             minQueryPanePct: 0,
+            selectedChart: '',
         }
     },
     computed: {
@@ -151,6 +163,21 @@ export default {
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
         }),
+        showVisChart() {
+            return this.selectedChart !== 'No Visualization'
+        },
+        chartHeight() {
+            /**
+             * When resultPaneDim changes(when user resizes panes, enter fullscreen, toggle sidebar ...)
+             * we calculate chart height by subtracting resultPaneDim.height from editorResultPane's client height
+             **/
+            if (this.$refs.editorResultPane) {
+                const { clientHeight } = this.$refs.editorResultPane.$el
+                console.log('chartHeight', clientHeight - this.resultPaneDim.height - 18)
+                return clientHeight - this.resultPaneDim.height - 18
+            }
+            return 0
+        },
     },
     watch: {
         isFullScreen() {
@@ -171,6 +198,15 @@ export default {
         showVisSidebar(v) {
             this.handleSetVisSidebar(v)
             this.$nextTick(() => this.setResultPaneDim())
+        },
+        selectedChart() {
+            if (this.showVisChart) {
+                this.queryPanePct = 50
+                this.minQueryPanePct = this.pxToPct({
+                    px: 50,
+                    containerPx: this.resultPaneDim.width,
+                })
+            } else this.queryPanePct = 100
         },
     },
     async created() {
