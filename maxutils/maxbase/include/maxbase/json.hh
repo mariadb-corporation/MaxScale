@@ -75,6 +75,18 @@ public:
         PRETTY  = JSON_INDENT(4),   // Pretty-printed
     };
 
+    enum class JsonType
+    {
+        OBJECT,
+        ARRAY,
+        STRING,
+        INTEGER,
+        REAL,
+        BOOL,
+        JSON_NULL,
+        UNDEFINED
+    };
+
     /**
      * Construct a new Json wrapper object.
      *
@@ -135,13 +147,11 @@ public:
     bool contains(const std::string& key) const;
 
     /**
-     * Check if a field in a object is a JSON null
+     * Get the JSON type of this object
      *
-     * @param key The name of the field
-     *
-     * @return True if the field exists and is a JSON null
+     * @return the JsonType value or JsonType::UNDEFINED if the current object is not valid
      */
-    bool is_null(const std::string& key) const;
+    JsonType type() const;
 
     /**
      * Get JSON object from a field
@@ -165,6 +175,13 @@ public:
     std::string get_string(const std::string& key) const;
 
     /**
+     * Get JSON string value of this object
+     *
+     * @return The JSON string value or an empty string on invalid object type
+     */
+    std::string get_string() const;
+
+    /**
      * Get JSON integer from a field
      *
      * @param key The name of the field
@@ -174,6 +191,13 @@ public:
      */
     int64_t get_int(const char* key) const;
     int64_t get_int(const std::string& key) const;
+
+    /**
+     * Get JSON integer value of this object
+     *
+     * @return The JSON integer value or an empty string on invalid object type
+     */
+    int64_t get_int() const;
 
     /**
      * Try to get a JSON integer from a field
@@ -203,6 +227,13 @@ public:
      * @return A vector of mxb::Json objects. If the field is not an array, an empty vector is returned.
      */
     std::vector<Json> get_array_elems(const std::string& key) const;
+
+    /**
+     * Get JSON array elements
+     *
+     * @return A vector of mxb::Json objects. If the held object is not an array, an empty vector is returned.
+     */
+    std::vector<Json> get_array_elems() const;
 
     /**
      * Get value at JSON Pointer

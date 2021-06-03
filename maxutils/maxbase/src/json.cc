@@ -150,27 +150,25 @@ Json& Json::operator=(Json&& rhs)
     return *this;
 }
 
+std::string Json::get_string() const
+{
+    return json_is_string(m_obj) ? json_string_value(m_obj) : "";
+}
+
 std::string Json::get_string(const char* key) const
 {
     string rval;
     json_t* obj = json_object_get(m_obj, key);
     if (obj)
     {
-        const char* val = json_string_value(obj);
-        if (val)
+        if (json_is_string(obj))
         {
-            rval = val;
+            rval = json_string_value(obj);
         }
         else
         {
-            if (json_is_null(obj))
-            {
-                m_errormsg = mxb::string_printf(val_is_null, key);
-            }
-            else
-            {
-                m_errormsg = mxb::string_printf("'%s' is not a json string.", key);
-            }
+            m_errormsg = mxb::string_printf("'%s' is a JSON %s, not a JSON string.",
+                                            key, json_type_to_string(obj));
         }
     }
     else
@@ -186,6 +184,11 @@ std::string Json::get_string(const string& key) const
 }
 
 
+int64_t Json::get_int() const
+{
+    return json_is_integer(m_obj) ? json_integer_value(m_obj) : 0;
+}
+
 int64_t Json::get_int(const char* key) const
 {
     int64_t rval = 0;
@@ -196,13 +199,10 @@ int64_t Json::get_int(const char* key) const
         {
             rval = json_integer_value(obj);
         }
-        else if (json_is_null(obj))
-        {
-            m_errormsg = mxb::string_printf(val_is_null, key);
-        }
         else
         {
-            m_errormsg = mxb::string_printf("'%s' is not a json integer.", key);
+            m_errormsg = mxb::string_printf("'%s' is a JSON %s, not a JSON string.",
+                                            key, json_type_to_string(obj));
         }
     }
     else
@@ -253,13 +253,33 @@ std::vector<Json> Json::get_array_elems(const string& key) const
         }
         else
         {
-            m_errormsg = mxb::string_printf("'%s' is not a json array.", keyc);
+            m_errormsg = mxb::string_printf("'%s' is a JSON %s, not a JSON array.",
+                                            keyc, json_type_to_string(obj));
         }
     }
     else
     {
         m_errormsg = mxb::string_printf(key_not_found, keyc);
     }
+    return rval;
+}
+
+std::vector<Json> Json::get_array_elems() const
+{
+    std::vector<Json> rval;
+
+    if (type() == JsonType::ARRAY)
+    {
+        rval.reserve(json_array_size(m_obj));
+
+        size_t index;
+        json_t* elem;
+        json_array_foreach(m_obj, index, elem)
+        {
+            rval.emplace_back(elem);
+        }
+    }
+
     return rval;
 }
 
@@ -278,21 +298,40 @@ bool Json::contains(const string& key) const
     return json_object_get(m_obj, key.c_str());
 }
 
-bool Json::is_null(const string& key) const
+Json::JsonType Json::type() const
 {
-    bool rval = false;
-    auto keyc = key.c_str();
-    json_t* obj = json_object_get(m_obj, keyc);
+    if (m_obj)
+    {
+        switch (json_typeof(m_obj))
+        {
+        case JSON_OBJECT:
+            return JsonType::OBJECT;
 
-    if (obj)
-    {
-        rval = json_is_null(obj);
+        case JSON_ARRAY:
+            return JsonType::ARRAY;
+
+        case JSON_STRING:
+            return JsonType::STRING;
+
+        case JSON_INTEGER:
+            return JsonType::INTEGER;
+
+        case JSON_REAL:
+            return JsonType::REAL;
+
+        case JSON_TRUE:
+        case JSON_FALSE:
+            return JsonType::BOOL;
+
+        case JSON_NULL:
+            return JsonType::JSON_NULL;
+
+        default:
+            break;
+        }
     }
-    else
-    {
-        m_errormsg = mxb::string_printf(key_not_found, keyc);
-    }
-    return rval;
+
+    return JsonType::UNDEFINED;
 }
 
 bool Json::try_get_int(const std::string& key, int64_t* out) const
