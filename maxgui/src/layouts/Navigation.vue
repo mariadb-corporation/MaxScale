@@ -74,8 +74,12 @@ export default {
             if (url) {
                 return window.open(url)
             }
-
-            if (path && path !== this.currentPath) {
+            /**
+             * Sidebar dashboard path is /dashboard, but it'll be redirected to /dashboard/servers
+             * This checks it and prevent redundant navigation
+             */
+            const isDupRoute = path === '/dashboard' && this.currentPath === '/dashboard/servers'
+            if (path && path !== this.currentPath && !isDupRoute) {
                 this.$router.push(path)
             }
         },
