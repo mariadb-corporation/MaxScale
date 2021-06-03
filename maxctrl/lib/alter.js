@@ -68,24 +68,6 @@ function setFilters(host, endpoint, argv) {
   return doRequest(host, endpoint, { method: "PATCH", data: payload });
 }
 
-function parseValue(value) {
-  if (value == "true") {
-    // JSON true
-    return true;
-  } else if (value == "false") {
-    // JSON false
-    return false;
-  }
-
-  var n = Number(value);
-
-  if (!Number.isNaN(n)) {
-    return n;
-  }
-
-  return value;
-}
-
 function updateParams(host, resource, key, value, extra) {
   var arr = [key, value].concat(extra);
 

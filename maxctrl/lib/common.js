@@ -87,6 +87,24 @@ module.exports = function () {
     }
   };
 
+  this.parseValue = function (value) {
+    if (value == "true") {
+      // JSON true
+      return true;
+    } else if (value == "false") {
+      // JSON false
+      return false;
+    }
+
+    var n = Number(value);
+
+    if (!Number.isNaN(n)) {
+      return n;
+    }
+
+    return value;
+  };
+
   // Filter and format a JSON API resource from JSON to a table
   this.filterResource = function (res, fields) {
     table = [];

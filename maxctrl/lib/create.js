@@ -15,7 +15,7 @@ require("./common.js")();
 // Converts a key=value string into an object
 function to_obj(obj, value) {
   var pos = value.indexOf("=");
-  obj[value.slice(0, pos)] = value.slice(pos + 1);
+  obj[value.slice(0, pos)] = parseValue(value.slice(pos + 1));
   return obj;
 }
 
