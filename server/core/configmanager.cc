@@ -403,8 +403,7 @@ bool ConfigManager::commit()
     {
         mxb::Json config = create_config(m_version + 1);
 
-        if (json_equal(config.get_object(CN_CONFIG).get_json(),
-                       m_current_config.get_object(CN_CONFIG).get_json()))
+        if (config.get_object(CN_CONFIG) == m_current_config.get_object(CN_CONFIG))
         {
             MXS_INFO("Resulting configuration is the same as current configuration, ignoring update.");
             rollback();

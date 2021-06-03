@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include <maxbase/ccdefs.hh>
 #include <maxbase/jansson.h>
 
 namespace maxbase
@@ -318,10 +319,39 @@ public:
      */
     void reset(json_t* obj = nullptr);
 
+    /**
+     * Check if two JSON values are equal
+     *
+     * @return True if values compare equal
+     */
+    bool equal(const Json& other) const;
+
 private:
     json_t*             m_obj{nullptr}; /**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */
 
     void swap(Json& rhs) noexcept;
 };
+
+/**
+ * Compares two JSON values for equality
+ *
+ * @see https://jansson.readthedocs.io/en/2.13/apiref.html#equality
+ *
+ * @return True if the values compare equal
+ */
+static inline bool operator==(const Json& lhs, const Json& rhs)
+{
+    return lhs.equal(rhs);
+}
+
+/**
+ * Compares two JSON values for inequality
+ *
+ * @return True if the values compare inequal
+ */
+static inline bool operator!=(const Json& lhs, const Json& rhs)
+{
+    return !(lhs == rhs);
+}
 }

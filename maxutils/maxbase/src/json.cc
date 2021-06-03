@@ -449,6 +449,11 @@ void Json::reset(json_t* obj)
     m_errormsg.clear();
 }
 
+bool Json::equal(const Json& other) const
+{
+    return valid() && other.valid() && json_equal(m_obj, other.m_obj);
+}
+
 bool Json::ok() const
 {
     return m_errormsg.empty();
