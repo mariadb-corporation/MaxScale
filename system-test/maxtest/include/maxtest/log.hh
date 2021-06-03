@@ -48,8 +48,6 @@ struct Settings
     bool verbose {false};               /**< True if printing more details */
     bool local_maxscale {false};        /**< MaxScale running locally */
     bool allow_concurrent_run {true};   /**< Allow concurrent_run to run concurrently */
-
-    bool req_two_maxscales {false};     /**< Test requires a second MaxScale */
 };
 
 /**

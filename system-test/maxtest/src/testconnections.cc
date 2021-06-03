@@ -789,7 +789,7 @@ void TestConnections::init_maxscales()
     // Always initialize the first MaxScale
     init_maxscale(0);
 
-    if (settings().req_two_maxscales)
+    if (m_required_mdbci_labels.count(label_2nd_mxs))
     {
         init_maxscale(1);
     }
