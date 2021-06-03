@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxtest/testconnections.hh>
-#include <maxscale/jansson.hh>
+#include <maxbase/json.hh>
 
 /**
  * @class MaxRest
@@ -61,12 +61,12 @@ public:
     /**
      * @return The JSON object corresponding to /v1/servers/:id:
      */
-    std::unique_ptr<json_t> v1_servers(const std::string& id) const;
+    mxb::Json v1_servers(const std::string& id) const;
 
     /**
      * @return The JSON object corresponding to /v1/servers.
      */
-    std::unique_ptr<json_t> v1_servers() const;
+    mxb::Json v1_servers() const;
 
     /**
      * POST request to /v1/maxscale/modules/:module:/:command:?instance[&param...]
@@ -197,7 +197,7 @@ public:
      *
      * @return  The corresponding json_t object.
      */
-    std::unique_ptr<json_t> parse(const std::string& json) const;
+    mxb::Json parse(const std::string& json) const;
 
     /**
      * Issue a curl GET to the REST-API endpoint of the MaxScale running on
@@ -209,7 +209,7 @@ public:
      *
      * @return  The corresponding json_t object.
      */
-    std::unique_ptr<json_t> curl_get(const std::string& path) const;
+    mxb::Json curl_get(const std::string& path) const;
 
     /**
      * Issue a curl POST to the REST-API endpoint of the MaxScale running on
@@ -221,7 +221,7 @@ public:
      *
      * @return  The corresponding json_t object.
      */
-    std::unique_ptr<json_t> curl_post(const std::string& path) const;
+    mxb::Json curl_post(const std::string& path) const;
 
     void raise(const std::string& message) const;
 
@@ -232,7 +232,7 @@ private:
         POST
     };
 
-    std::unique_ptr<json_t> curl(Command command, const std::string& path) const;
+    mxb::Json curl(Command command, const std::string& path) const;
 
 private:
     TestConnections& m_test;

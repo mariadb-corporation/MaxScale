@@ -29,7 +29,7 @@ MaxRest::MaxRest(TestConnections* pTest)
 {
 }
 
-unique_ptr<json_t> MaxRest::v1_servers(const string& id) const
+mxb::Json MaxRest::v1_servers(const string& id) const
 {
     string path("servers");
     path += "/";
@@ -38,7 +38,7 @@ unique_ptr<json_t> MaxRest::v1_servers(const string& id) const
     return curl_get(path);
 }
 
-unique_ptr<json_t> MaxRest::v1_servers() const
+mxb::Json MaxRest::v1_servers() const
 {
     return curl_get("servers");
 }
@@ -71,14 +71,14 @@ void MaxRest::v1_maxscale_modules(const string& module,
 
 MaxRest::Server MaxRest::show_server(const std::string& id) const
 {
-    unique_ptr<json_t> sObject = v1_servers(id);
-    json_t* pData = get_object(sObject.get(), "data", Presence::MANDATORY);
+    mxb::Json object = v1_servers(id);
+    json_t* pData = get_object(object.get_json(), "data", Presence::MANDATORY);
     return Server(*this, pData);
 }
 
 vector<MaxRest::Server> MaxRest::list_servers() const
 {
-    return get_array<Server>(v1_servers().get(), "data", Presence::MANDATORY);
+    return get_array<Server>(v1_servers().get_json(), "data", Presence::MANDATORY);
 }
 
 json_t* MaxRest::get_object(json_t* pObject, const string& key, Presence presence) const
@@ -113,30 +113,17 @@ json_t* MaxRest::get_leaf_object(json_t* pObject, const string& key, Presence pr
     return pObject;
 }
 
-unique_ptr<json_t> MaxRest::parse(const string& json) const
-{
-    json_error_t error;
-    unique_ptr<json_t> sRoot(json_loads(json.c_str(), 0, &error));
-
-    if (!sRoot)
-    {
-        raise("JSON parsing failed: " + string(error.text));
-    }
-
-    return sRoot;
-}
-
-unique_ptr<json_t> MaxRest::curl_get(const string& path) const
+mxb::Json MaxRest::curl_get(const string& path) const
 {
     return curl(GET, path);
 }
 
-unique_ptr<json_t> MaxRest::curl_post(const string& path) const
+mxb::Json MaxRest::curl_post(const string& path) const
 {
     return curl(POST, path);
 }
 
-unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
+mxb::Json MaxRest::curl(Command command, const string& path) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
     string curl_command = "curl -s -u admin:mariadb ";
@@ -161,14 +148,14 @@ unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
         raise("Invocation of curl failed: " + to_string(result.rc));
     }
 
-    unique_ptr<json_t> sRv;
+    mxb::Json rv;
 
-    if (!result.output.empty())
+    if (!rv.load_string(result.output))
     {
-        sRv = parse(result.output);
+        raise("JSON parsing failed: " + rv.error_msg());
     }
 
-    return sRv;
+    return rv;
 }
 
 void MaxRest::raise(const std::string& message) const
