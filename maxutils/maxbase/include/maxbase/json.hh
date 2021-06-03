@@ -45,6 +45,15 @@ std::string json_dump(const json_t* json, int flags = 0);
 json_t* json_ptr(const json_t* json, const char* json_ptr);
 
 /**
+ * Get the type of the JSON as a string
+ *
+ * @param json The JSON object to inspect
+ *
+ * @return The human-readable JSON type
+ */
+const char* json_type_to_string(const json_t* json);
+
+/**
  * Wrapper class for Jansson json-objects.
  */
 class Json
