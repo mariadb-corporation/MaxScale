@@ -47,6 +47,7 @@ add_subdirectory(cdc_datatypes)
 
 add_subdirectory(mariadbmonitor)
 add_subdirectory(pinloki)
+add_subdirectory(config_sync)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
