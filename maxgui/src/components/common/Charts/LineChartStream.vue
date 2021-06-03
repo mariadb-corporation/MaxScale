@@ -14,7 +14,7 @@
 
 import { Line } from 'vue-chartjs'
 import 'chartjs-plugin-streaming'
-
+import customTooltip from './customTooltip'
 export default {
     extends: Line,
     props: {
@@ -56,10 +56,9 @@ export default {
     },
     methods: {
         renderLineChart() {
-            let self = this
+            let scope = this
             this.renderChart(this.chartData, {
                 showLines: true,
-
                 layout: {
                     padding: {
                         left: 2,
@@ -82,89 +81,16 @@ export default {
                     mode: 'index',
                     intersect: false,
                 },
-
                 tooltips: {
-                    mode: 'x-axis',
+                    mode: 'index',
                     intersect: false,
                     enabled: false,
                     custom: function(tooltipModel) {
-                        // Tooltip Element
-
-                        let tooltipEl = document.getElementById(self.uniqueTooltipId)
-
-                        // Create element on first render
-                        if (!tooltipEl) {
-                            tooltipEl = document.createElement('div')
-                            tooltipEl.id = self.uniqueTooltipId
-                            tooltipEl.className = ['chartjs-tooltip shadow-drop']
-                            tooltipEl.innerHTML = '<table></table>'
-                            document.body.appendChild(tooltipEl)
-                        }
-
-                        // Hide if no tooltip
-                        if (tooltipModel.opacity === 0) {
-                            tooltipEl.style.opacity = 0
-                            return
-                        }
-
-                        // Set caret Position
-                        tooltipEl.classList.remove('above', 'below', 'no-transform')
-                        if (tooltipModel.yAlign) {
-                            tooltipEl.classList.add(tooltipModel.yAlign)
-                        } else {
-                            tooltipEl.classList.add('no-transform')
-                        }
-
-                        function getBody(bodyItem) {
-                            return bodyItem.lines
-                        }
-
-                        // Set Text
-                        if (tooltipModel.body) {
-                            let titleLines = tooltipModel.title || []
-                            let bodyLines = tooltipModel.body.map(getBody)
-
-                            let innerHtml = '<thead>'
-
-                            titleLines.forEach(function(title) {
-                                innerHtml += '<tr><th>' + title + '</th></tr>'
-                            })
-                            innerHtml += '</thead><tbody>'
-
-                            bodyLines.forEach(function(body, i) {
-                                let colors = tooltipModel.labelColors[i]
-                                let style = 'background:' + colors.borderColor
-                                style += '; border-color:' + colors.borderColor
-                                style += '; border-width: 2px;margin-right:4px'
-                                let span =
-                                    '<span class="chartjs-tooltip-key" style="' +
-                                    style +
-                                    '"></span>'
-                                innerHtml += '<tr><td>' + span + body + '</td></tr>'
-                            })
-                            innerHtml += '</tbody>'
-
-                            let tableRoot = tooltipEl.querySelector('table')
-                            tableRoot.innerHTML = innerHtml
-                        }
-
-                        // `this` will be the overall tooltip
-                        let chart = this._chart.canvas.getBoundingClientRect()
-
-                        // Display, position, and set styles for font
-                        tooltipEl.style.opacity = 1
-                        // this makes sure the tooltip wont go over client view width when realtime chart is used
-                        let left =
-                            chart.left + tooltipModel.caretX > chart.width + chart.left
-                                ? chart.width + chart.left
-                                : chart.left + tooltipModel.caretX
-
-                        tooltipEl.style.left = left + 'px'
-                        tooltipEl.style.top = chart.top + tooltipModel.caretY + 'px'
-                        tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily
-                        tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle
-                        tooltipEl.style.padding =
-                            tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px'
+                        customTooltip({
+                            tooltipModel,
+                            tooltipId: scope.uniqueTooltipId,
+                            scope: this,
+                        })
                     },
                 },
                 scales: {
@@ -208,26 +134,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.chartjs-tooltip {
-    opacity: 1;
-    position: absolute;
-    background-color: #ffffff;
-    border-color: #ffffff;
-    color: rgba(0, 0, 0, 0.87);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-    pointer-events: none;
-    transform: translate(-50%, 0);
-    th,
-    td {
-        font-size: 10px;
-    }
-}
-.chartjs-tooltip-key {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-}
-</style>

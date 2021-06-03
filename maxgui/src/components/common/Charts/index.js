@@ -12,6 +12,7 @@
  */
 import Chart from 'chart.js'
 import LineChartStream from './LineChartStream.vue'
+import './customTooltip.scss'
 
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
 Chart.defaults.global.defaultFontColor = '#424F62'

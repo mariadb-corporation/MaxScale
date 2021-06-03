@@ -1,0 +1,20 @@
+.chartjs-tooltip {
+    opacity: 1;
+    position: absolute;
+    background-color: #ffffff;
+    border-color: #ffffff;
+    color: rgba(0, 0, 0, 0.87);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    transform: translate(-50%, 0);
+    th,
+    td {
+        font-size: 10px;
+    }
+}
+.chartjs-tooltip-key {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+}
