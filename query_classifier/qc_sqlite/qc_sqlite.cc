@@ -2784,6 +2784,10 @@ public:
                 {
                     m_type_mask = QUERY_TYPE_WRITE;
                 }
+                else if (m_keyword_2 == TK_STATEMENT)
+                {
+                    m_type_mask = QUERY_TYPE_UNKNOWN; // aka 0
+                }
                 break;
 
             case TK_START:
