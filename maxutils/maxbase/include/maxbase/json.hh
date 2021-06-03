@@ -218,6 +218,11 @@ public:
      */
     bool valid() const;
 
+    explicit operator bool() const
+    {
+        return valid();
+    }
+
     /**
      * Store a JSON object in a field
      *
