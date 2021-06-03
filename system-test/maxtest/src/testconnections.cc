@@ -248,7 +248,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
         if (m_mdbci_called)
         {
-            auto res = maxscales->ssh_output("maxscale --version-full", 0, false);
+            auto res = maxscales->ssh_output("maxscale --version-full", false);
             if (res.rc != 0)
             {
                 tprintf("Error retrieving MaxScale version info");
@@ -466,7 +466,7 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
-            maxscales->copy_to_node(0, src.c_str(), maxscales->access_homedir());
+            maxscales->copy_to_node(src.c_str(), maxscales->access_homedir());
             maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscales->access_homedir(),
                                   verbose() ? "verbose" : "");
         }
@@ -835,7 +835,7 @@ void TestConnections::init_maxscale(int m)
         char dtr[4096];
         sprintf(str, "%s/ssl-cert/*", test_dir);
         sprintf(dtr, "%s/certs/", homedir);
-        mxs->copy_to_node(0, str, dtr);
+        mxs->copy_to_node(str, dtr);
         sprintf(str, "cp %s/ssl-cert/* .", test_dir);
         call_system(str);
         mxs->ssh_node_f(0, true, "chmod -R a+rx %s;", homedir);
@@ -1809,16 +1809,6 @@ StringSet TestConnections::parse_to_stringset(const string& source)
     return rval;
 }
 
-mxt::MaxScale& TestConnections::maxscale()
-{
-    return *m_maxscale;
-}
-
-mxt::MaxScale& TestConnections::maxscale2()
-{
-    return *m_maxscale2;
-}
-
 mxt::TestLogger& TestConnections::logger()
 {
     return m_shared.log;
@@ -1998,9 +1988,7 @@ bool TestConnections::initialize_nodes()
         initialize_cluster(xpand, 4, false, backend_ssl);
     }
 
-    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage,
-                                              std::unique_ptr<mxt::MaxScale>& mxs_storage_b,
-                                              int vm_ind) {
+    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage, int vm_ind) {
             delete mxs_storage;
             mxs_storage = nullptr;
             string vm_name = mxb::string_printf("%s_%03d", Maxscales::prefix().c_str(), vm_ind);
@@ -2012,7 +2000,6 @@ bool TestConnections::initialize_nodes()
                 new_maxscale->set_ssl(maxscale_ssl);
 
                 mxs_storage = new_maxscale.release();
-                mxs_storage_b = std::make_unique<mxt::MaxScale>(mxs_storage, m_shared);
 
                 auto prepare_maxscales = [mxs_storage]() {
                         return mxs_storage->prepare_for_test();
@@ -2021,10 +2008,10 @@ bool TestConnections::initialize_nodes()
             }
         };
 
-    initialize_maxscale(maxscales, m_maxscale, 0);
+    initialize_maxscale(maxscales, 0);
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
-    initialize_maxscale(maxscales2, m_maxscale2, 1);
+    initialize_maxscale(maxscales2, 1);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2099,17 +2086,20 @@ bool TestConnections::verbose() const
 
 void TestConnections::write_node_env_vars()
 {
-    auto write_env_vars = [](Nodes* nodes) {
-            if (nodes)
+    auto write_env_vars = [](MariaDBCluster* cluster) {
+            if (cluster)
             {
-                nodes->write_env_vars();
+                cluster->write_env_vars();
             }
         };
 
     write_env_vars(repl);
     write_env_vars(galera);
     write_env_vars(xpand);
-    write_env_vars(maxscales);
+    if (maxscales)
+    {
+        maxscales->write_env_vars();
+    }
 }
 
 int TestConnections::n_maxscales() const
@@ -2183,7 +2173,7 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
     mxt::MariaDBServer* rval = nullptr;
     if (repl)
     {
-        auto server_info = m_maxscale->get_servers();
+        auto server_info = maxscales->maxscale_b().get_servers();
         for (size_t i = 0; i < server_info.size() && !rval; i++)
         {
             auto& info = server_info.get(i);

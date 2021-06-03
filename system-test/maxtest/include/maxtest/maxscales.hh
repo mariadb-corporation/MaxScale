@@ -13,9 +13,10 @@
 namespace maxtest
 {
 class MariaDB;
+class MaxScale;
 }
 
-class Maxscales : public Nodes
+class Maxscales : private Nodes
 {
 public:
     enum service
@@ -36,6 +37,7 @@ public:
 
     const char* ip4() const;
     const char* ip() const;
+    const char* ip_private() const;
     const char* hostname() const;
 
     const char* access_user() const;
@@ -48,9 +50,9 @@ public:
 
     bool ssl() const;
 
-    int rwsplit_port {-1};           /**< RWSplit port */
-    int readconn_master_port {-1};   /**< ReadConnection in master mode port */
-    int readconn_slave_port {-1};    /**< ReadConnection in slave mode port */
+    int rwsplit_port {-1};          /**< RWSplit port */
+    int readconn_master_port {-1};  /**< ReadConnection in master mode port */
+    int readconn_slave_port {-1};   /**< ReadConnection in slave mode port */
 
     /**
      * @brief Get port number of a MaxScale service
@@ -221,6 +223,21 @@ public:
      */
     void wait_for_monitor(int intervals = 2);
 
+    mxt::CmdResult ssh_output(const std::string& cmd, bool sudo = true);
+
+    int ssh_node(const std::string& cmd, bool sudo);
+    int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
+    int copy_to_node(const char* src, const char* dest);
+    int copy_from_node(const char* src, const char* dest);
+
+    /**
+     * Copy rules file for firewall filter to MaxScale machine.
+     *
+     * @param rules_name Rule file source filename
+     * @param rules_dir Rule file source directory
+     */
+    void copy_fw_rules(const std::string& rules_name, const std::string& rules_dir);
+
     /**
      * Check if MaxScale process is running or stopped. Wrong status is a test failure.
      *
@@ -232,8 +249,10 @@ public:
 
     bool use_valgrind() const;
     bool prepare_for_test();
+    void write_env_vars();
 
-    mxt::VMNode& vm_node();
+    mxt::VMNode&   vm_node();
+    mxt::MaxScale& maxscale_b();
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
@@ -242,6 +261,8 @@ private:
     int  m_valgrind_log_num {0};    /**< Counter for Maxscale restarts to avoid Valgrind log overwriting */
     bool m_use_valgrind {false};    /**< Run MaxScale under Valgrind? */
     bool m_use_callgrind {false};   /**< Run MaxScale under Valgrind with --callgrind option */
+
+    std::unique_ptr<mxt::MaxScale> m_maxscale_b;
 
     std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 

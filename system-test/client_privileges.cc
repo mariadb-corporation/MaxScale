@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
 
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
     auto conn = mxs.open_rwsplit_connection();
 
     auto create_user = [&](const char* user, const char* pass) {

@@ -20,12 +20,12 @@ int main(int argc, char* argv[])
 
     test->check_maxscale_alive();
 
-    test->maxscales->ssh_node(0, "maxctrl unlink monitor mysql-monitor server{0,1,2,3}", true);
+    test->maxscales->ssh_node("maxctrl unlink monitor mysql-monitor server{0,1,2,3}", true);
     config.destroy_monitor("mysql-monitor");
 
     test->check_maxscale_alive();
 
-    test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
+    test->maxscales->ssh_node("for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
 
     test->add_result(test->maxscales->connect_maxscale() == 0, "Should not be able to connect");
 
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
      * monitor is running if the states have changed and the query is
      * successful.
      */
-    test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
+    test->maxscales->ssh_node("for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
 
     test->maxscales->wait_for_monitor();
     test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,

@@ -554,9 +554,9 @@ int main(int argc, char* argv[])
 
     Test->maxscales->close_rwsplit();
 
-    Test->maxscales->ssh_node(0,
-                              "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf",
-                              true);
+    Test->maxscales->ssh_node(
+        "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf",
+        true);
     Test->set_timeout(100);
     Test->maxscales->restart_maxscale();
 

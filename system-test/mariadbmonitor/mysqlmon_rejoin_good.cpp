@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
 
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
     // Advance gtid:s a bit to so gtid variables are updated.
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 10);

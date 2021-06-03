@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
 
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
 
     test.tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
     int max_rlag = 100;

@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
     mysql_close(pConn);
     test.maxscales->stop_and_check_stopped();
     const char* zSed = "sed -i -e 's/transaction_replay=false/transaction_replay=true/' /etc/maxscale.cnf";
-    test.add_result(test.maxscales->ssh_node(0, zSed, true), "Could not tweak /etc/maxscale.cnf");
+    test.add_result(test.maxscales->ssh_node(zSed, true), "Could not tweak /etc/maxscale.cnf");
     test.maxscales->start_and_check_started();
 
     // Test with 'transaction_replay=true' => should succeed.

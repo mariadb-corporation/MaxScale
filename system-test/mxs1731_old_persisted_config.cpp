@@ -27,7 +27,7 @@ int main(int argc, char** argv)
             << "version_string=" << endl;
     }
 
-    test.maxscales->copy_to_node_legacy(filename, filename);
+    test.maxscales->copy_to_node(filename, filename);
     test.maxscales->ssh_node_f(0,
                                true,
                                "mkdir -p /var/lib/maxscale/maxscale.cnf.d/;"

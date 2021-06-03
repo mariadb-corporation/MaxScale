@@ -152,7 +152,7 @@ R"(\" RATE_LIMIT 3 30
     if (test.ok())
     {
         test.tprintf("PAM-plugin installed and users created on all servers.");
-        auto& mxs = test.maxscale();
+        auto& mxs = test.maxscales->maxscale_b();
         auto expected_states = {ServerInfo::master_st, ServerInfo::slave_st};
         mxs.check_servers_status(expected_states);
 

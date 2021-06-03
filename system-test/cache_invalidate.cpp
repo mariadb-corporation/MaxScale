@@ -135,10 +135,10 @@ int main(int argc, char* argv[])
 
         // When the 'invalidate' flag is turned on, we also need to flush redis.
         // Otherwise there will be entries that are not subject to invalidation.
-        maxscales->ssh_node(0,
-                            "sed -i \"s/invalidate=never/invalidate=current/\" /etc/maxscale.cnf; "
-                            "redis-cli flushall",
-                            true);
+        maxscales->ssh_node(
+            "sed -i \"s/invalidate=never/invalidate=current/\" /etc/maxscale.cnf; "
+            "redis-cli flushall",
+            true);
         maxscales->restart_maxscale();
 
         // To be certain that MaxScale has started.

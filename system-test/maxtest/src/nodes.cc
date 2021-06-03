@@ -189,9 +189,9 @@ int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 {
     va_list valist;
     va_start(valist, format);
-    string sys = mxb::string_vprintf(format, valist);
+    string cmd = mxb::string_vprintf(format, valist);
     va_end(valist);
-    return ssh_node(node, sys.c_str(), sudo);
+    return ssh_node(node, cmd, sudo);
 }
 
 int Nodes::copy_to_node(int i, const char* src, const char* dest)

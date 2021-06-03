@@ -364,8 +364,6 @@ public:
      */
     bool reinstall_maxscales();
 
-    mxt::MaxScale&   maxscale();
-    mxt::MaxScale&   maxscale2();
     mxt::TestLogger& logger();
     mxt::Settings&   settings();
 
@@ -392,9 +390,6 @@ private:
     bool read_test_info();
 
     bool log_matches(const char* pattern);
-
-    std::unique_ptr<mxt::MaxScale> m_maxscale;      /**< Main MaxScale instance */
-    std::unique_ptr<mxt::MaxScale> m_maxscale2;     /**< Secondary MaxScale instance */
 
     mxt::SharedData m_shared;   /**< Data shared with other objects */
 

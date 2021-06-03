@@ -7,7 +7,6 @@
 #include <ctime>
 #include <maxtest/testconnections.hh>
 #include <maxtest/sql_t1.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 int main(int argc, char* argv[])
 {
@@ -22,10 +21,11 @@ int main(int argc, char* argv[])
     int N = 13;
     int i;
     int exit_code;
+    auto mxs = Test->maxscales;
 
     Test->maxscales->stop();
     char first_rule[] = "rules1";
-    copy_rules(Test, first_rule, rules_dir);
+    mxs->copy_fw_rules(first_rule, rules_dir);
     Test->maxscales->start_maxscale();
     Test->maxscales->connect_rwsplit();
 
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         char str[1024];
         sprintf(str, "rules%d", i);
         Test->set_timeout(180);
-        copy_rules(Test, str, rules_dir);
+        mxs->copy_fw_rules(str, rules_dir);
         Test->maxctrl("call command dbfwfilter rules/reload Database-Firewall");
 
         int local_result = 0;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Trying rules with syntax error\n");
-    copy_rules(Test, (char*) "rules_syntax_error", rules_dir);
+    mxs->copy_fw_rules("rules_syntax_error", rules_dir);
 
     auto res = Test->maxscales->ssh_output("maxctrl call command dbfwfilter rules/reload Database-Firewall");
     Test->add_result(strcasestr(res.output.c_str(), "Failed") == nullptr,

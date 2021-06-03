@@ -95,7 +95,7 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
 )EOF";
 
         if (system(download.c_str()) != 0
-            || m_test.maxscales->copy_to_node(0, "./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
+            || m_test.maxscales->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
         {
             return false;
         }

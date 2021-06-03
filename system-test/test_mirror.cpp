@@ -146,7 +146,7 @@ void test_file(TestConnections& test, Mode mode)
     run_sql(test);
 
     test.maxscales->stop();
-    test.maxscales->copy_from_node(0, "/tmp/mirror.txt", "./mirror.txt");
+    test.maxscales->copy_from_node("/tmp/mirror.txt", "./mirror.txt");
     test.maxscales->ssh_node_f(0, true, "rm /tmp/mirror.txt");
     test.maxscales->start();
 

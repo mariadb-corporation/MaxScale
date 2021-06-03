@@ -20,7 +20,6 @@
 #include <ctime>
 #include <maxtest/testconnections.hh>
 #include <maxtest/sql_t1.hh>
-#include <maxtest/fw_copy_rules.hh>
 
 int main(int argc, char* argv[])
 {
@@ -38,6 +37,7 @@ int main(int argc, char* argv[])
     int N = 19;
     int i;
     const bool verbose = Test->verbose();
+    auto mxs = Test->maxscales;
 
     for (i = 1; i < N + 1; i++)
     {
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
         local_result = 0;
 
         sprintf(str, "rules%d", i);
-        copy_rules(Test, str, rules_dir);
+        mxs->copy_fw_rules(str, rules_dir);
 
         Test->maxscales->restart_maxscale();
         Test->maxscales->connect_rwsplit();
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
     {
         Test->tprintf("Trying at_times clause");
     }
-    copy_rules(Test, (char*) "rules_at_time", rules_dir);
+    mxs->copy_fw_rules("rules_at_time", rules_dir);
 
 
     if (verbose)
@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Trying limit_queries clause");
     Test->tprintf("Copying rules to Maxscale machine: %s", str);
-    copy_rules(Test, (char*) "rules_limit_queries", rules_dir);
+    mxs->copy_fw_rules("rules_limit_queries", rules_dir);
 
     Test->maxscales->start_maxscale();
     Test->maxscales->connect_rwsplit();

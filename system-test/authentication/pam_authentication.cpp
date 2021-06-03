@@ -120,7 +120,7 @@ void test_main(TestConnections& test)
         cout << "Test preparations failed.\n";
     }
 
-    auto& mxs = test.maxscale();
+    auto& mxs = test.maxscales->maxscale_b();
 
     if (test.ok())
     {
