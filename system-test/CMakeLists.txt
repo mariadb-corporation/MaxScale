@@ -23,7 +23,7 @@ include_directories(maxtest/include)
 include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 
 # Tool used to check backend state
-add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND SECOND_MAXSCALE)
+add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND)
 
 # Configuration tests
 add_template_manual(bug359 bug359)

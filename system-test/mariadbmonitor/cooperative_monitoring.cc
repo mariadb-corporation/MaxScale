@@ -1,4 +1,3 @@
-
 #include <string>
 #include <maxtest/testconnections.hh>
 #include "failover_common.cpp"
@@ -46,7 +45,6 @@ void test_main(TestConnections& test);
 int main(int argc, char* argv[])
 {
     TestConnections test;
-    test.settings().req_two_maxscales = true;
     return test.run_test(argc, argv, test_main);
 }
 
@@ -206,7 +204,7 @@ void test_failover(TestConnections& test, mxt::MaxScale& maxscale)
         int master_node = first_master.server_id - 1;
         test.repl->stop_node(master_node);
         maxscale.wait_monitor_ticks(failover_mon_ticks);
-        mxt::ServerInfo second_master = maxscale.get_servers().get_master();;
+        mxt::ServerInfo second_master = maxscale.get_servers().get_master();
         test.expect(second_master.server_id > 0, "No master after failover");
         if (test.ok())
         {
@@ -216,6 +214,6 @@ void test_failover(TestConnections& test, mxt::MaxScale& maxscale)
         }
         cout << "Starting " << first_master.name << ".\n";
         test.repl->start_node(master_node);
-        maxscale.wait_monitor_ticks(2);      // wait for rejoin, assume it works
+        maxscale.wait_monitor_ticks(2);     // wait for rejoin, assume it works
     }
 }
