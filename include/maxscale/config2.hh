@@ -2749,7 +2749,7 @@ ParamEnum<T>::ParamEnum(Specification* pSpecification,
     {
         MXS_ENUM_VALUE x {};
         x.name = entry.second;
-        x.enum_value = entry.first;
+        x.enum_value = static_cast<uint64_t>(entry.first);
 
         m_enum_values.emplace_back(x);
     }

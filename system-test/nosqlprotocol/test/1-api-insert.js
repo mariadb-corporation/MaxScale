@@ -178,11 +178,11 @@ describe(name, function () {
         assert.deepEqual(rv1, rv2);
     });
 
-    it('Can behave in a MongoDB way.', async function () {
+    it('Can behave in default way.', async function () {
         await reset('test', tblname);
 
         var config = {
-            insert_behavior: "as_mongodb"
+            ordered_insert_behavior: "default"
         };
 
         await mxs.adminCommand({mxsSetConfig: config});
@@ -218,11 +218,11 @@ describe(name, function () {
         assert.equal(rv2.n, 6);
     });
 
-    it('Can behave in a MariaDB way.', async function () {
+    it('Can behave in atomic way.', async function () {
         await reset('test', tblname);
 
         var config = {
-            insert_behavior: "as_mariadb"
+            ordered_insert_behavior: "atomic"
         };
 
         await mxs.adminCommand({mxsSetConfig: config});
@@ -241,7 +241,7 @@ describe(name, function () {
 
         var rv = await mxs.ntRunCommand(command);
 
-        // Insert behaviour is MariaDB and ordered is true, so no documents should be inserted.
+        // Insert behaviour is atomic and ordered is true, so no documents should be inserted.
         assert.equal(rv.n, 0);
 
         await reset('test', tblname);

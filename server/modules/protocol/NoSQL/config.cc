@@ -69,16 +69,16 @@ mxs::config::ParamCount GlobalConfig::s_id_length(
     GlobalConfig::ID_LENGTH_MIN,
     GlobalConfig::ID_LENGTH_MAX);
 
-mxs::config::ParamEnum<GlobalConfig::InsertBehavior> GlobalConfig::s_insert_behavior(
+mxs::config::ParamEnum<GlobalConfig::OrderedInsertBehavior> GlobalConfig::s_ordered_insert_behavior(
     &nosqlprotocol::specification,
-    "insert_behavior",
+    "ordered_insert_behavior",
     "Whether documents will be inserted in a way true to how NoSQL behaves, "
     "or in a way that is efficient from MariaDB's point of view.",
     {
-        { GlobalConfig::AS_MONGODB, "as_mongodb" },
-        { GlobalConfig::AS_MARIADB, "as_mariadb" }
+        { GlobalConfig::OrderedInsertBehavior::DEFAULT, "default" },
+        { GlobalConfig::OrderedInsertBehavior::ATOMIC, "atomic" }
     },
-    GlobalConfig::AS_MONGODB);
+    GlobalConfig::OrderedInsertBehavior::DEFAULT);
 
 mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
     &nosqlprotocol::specification,
@@ -97,7 +97,7 @@ GlobalConfig::GlobalConfig()
     add_native(&GlobalConfig::auto_create_databases, &s_auto_create_databases);
     add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
     add_native(&GlobalConfig::id_length, &s_id_length);
-    add_native(&GlobalConfig::insert_behavior, &s_insert_behavior);
+    add_native(&GlobalConfig::ordered_insert_behavior, &s_ordered_insert_behavior);
     add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
 }
 

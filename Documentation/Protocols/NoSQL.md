@@ -160,19 +160,19 @@ must also be set to `true`.
 
 Specifies the length of the id column in tables that are automatically created.
 
-## `insert_behavior`
+## `ordered_insert_behavior`
 
    * Type: enumeration
    * Mandatory: false
-   * Values: `as_mongodb`, `as_mariadb`
-   * Default: `as_mongodb`
+   * Values: `atomic`, `default`
+   * Default: `default`
 
 Enumeration values:
 
-   * `as_mongodb`: Each document is inserted using a _separate_ INSERT statement
+   * `default`: Each document is inserted using a _separate_ INSERT statement
      and whether an error causes the remaining insertions to be aborted, depends
      on the value of `ordered` specified in the command document.
-   * `as_mariadb`: If the value of `ordered` in the command document is `true`
+   * `atomic`: If the value of `ordered` in the command document is `true`
      (the default) then all documents are inserted using a _single_ INSERT statement,
      that is, either all insertions succeed or none will.
 
@@ -556,19 +556,19 @@ documents | array | An array of one or more documents to be inserted to the name
 ordered | boolean | Optional, with default being `true`. See below for description.
 
 #### `ordered`
-The impact of `ordered` is dependent upon the value of `insert_behavior'.
+The impact of `ordered` is dependent upon the value of `ordered_insert_behavior'.
 
-##### `as_mongodb`
+##### `default`
 In this case `ordered` has the same impact as in MongoDB®. That is, if the value
 is `true`, then when an insert of a document fails, return without inserting any
 remaining documents listed in the inserts array. If `false`, then when an insert
 of a document fails, continue to insert the remaining documents.
 
-##### `as_mariadb`
+##### `atomic`
 If `ordered` is `true`, then all documents will be inserted using a single
 INSERT command. That is, if the insertion of any document fails, for instance,
 due to a duplicate id, then no document will be inserted. If `ordered` is `false`,
-then the behavior is identical with that of `as_mongodb`.
+then the behavior is identical with that of `default`.
 
 ### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
 

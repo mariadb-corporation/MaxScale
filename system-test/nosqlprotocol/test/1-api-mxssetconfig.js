@@ -54,9 +54,9 @@ describe(name, function () {
         c.id_length = 80;
         await mxs.adminCommand({mxsSetConfig: c});
 
-        c.insert_behavior = "as_mariadb";
+        c.ordered_insert_behavior = "atomic";
         await mxs.adminCommand({mxsSetConfig: c});
-        c.insert_behavior = "as_mongodb";
+        c.ordered_insert_behavior = "default";
         await mxs.adminCommand({mxsSetConfig: c});
 
         var rv;
@@ -77,7 +77,7 @@ describe(name, function () {
         rv = await mxs.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
-        c = { insert_behavior: 'blah' };
+        c = { ordered_insert_behavior: 'blah' };
         rv = await mxs.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 

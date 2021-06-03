@@ -574,7 +574,9 @@ public:
         {
             string duplicate;
 
-            if (m_database.config().insert_behavior == GlobalConfig::AS_MARIADB && m_ordered == true)
+            auto oib = m_database.config().ordered_insert_behavior;
+
+            if (oib == GlobalConfig::OrderedInsertBehavior::ATOMIC && m_ordered == true)
             {
                 // Ok, so the documents were not inserted one by one, but everything
                 // in one go. As 'index' refers to the n:th statement being executed,
@@ -849,7 +851,9 @@ protected:
     {
         vector<string> statements;
 
-        if (m_database.config().insert_behavior == GlobalConfig::AS_MONGODB || m_ordered == false)
+        auto oib = m_database.config().ordered_insert_behavior;
+
+        if (oib == GlobalConfig::OrderedInsertBehavior::DEFAULT || m_ordered == false)
         {
             statements = OrderedCommand::generate_sql(documents);
         }

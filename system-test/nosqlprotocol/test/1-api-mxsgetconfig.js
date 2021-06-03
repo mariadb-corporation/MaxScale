@@ -45,13 +45,13 @@ describe(name, function () {
         assert.notEqual(c.auto_create_databases, undefined);
         assert.notEqual(c.auto_create_tables, undefined);
         assert.notEqual(c.id_length, undefined);
-        assert.notEqual(c.insert_behavior, undefined);
+        assert.notEqual(c.ordered_insert_behavior, undefined);
 
         delete c.on_unknown_command;
         delete c.auto_create_databases;
         delete c.auto_create_tables;
         delete c.id_length;
-        delete c.insert_behavior;
+        delete c.ordered_insert_behavior;
 
         assert.equal(Object.keys(c).length, 0);
     });
