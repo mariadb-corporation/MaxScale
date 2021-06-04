@@ -16,7 +16,7 @@
             :height="36"
             hide-details="auto"
         />
-        <div v-if="selectedChart !== 'No Visualization'" class="mt-2">
+        <div v-if="selectedChart !== 'No Visualization'" class="mt-4">
             <label class="field__label color text-small-text"> Select result set</label>
             <v-select
                 v-model="selectedResultSet"
@@ -35,8 +35,31 @@
                 item-value="id"
                 return-object
             />
+            <template v-if="selectedResultSet">
+                <template v-for="a in ['x', 'y']">
+                    <div :key="a" class="mt-2">
+                        <label class="field__label color text-small-text text-capitalize">
+                            {{ a }} axis
+                        </label>
+                        <v-select
+                            v-model="axis[a]"
+                            :items="selectedResultSet.fields"
+                            outlined
+                            class="std mariadb-select-input error--text__bottom"
+                            :menu-props="{
+                                contentClass: 'mariadb-select-v-menu',
+                                bottom: true,
+                                offsetY: true,
+                            }"
+                            dense
+                            :height="36"
+                            hide-details="auto"
+                        />
+                    </div>
+                </template>
+            </template>
+            <!-- TODO: add more graph configurations -->
         </div>
-        <!-- TODO: add x, y inputs to select field -->
     </div>
 </template>
 
@@ -62,6 +85,10 @@ export default {
             selectedChart: 'No Visualization',
             chartTypes: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
             selectedResultSet: null,
+            axis: {
+                x: '',
+                y: '',
+            },
         }
     },
     computed: {
@@ -105,6 +132,21 @@ export default {
     watch: {
         selectedChart(v) {
             this.$emit('selected-chart', v)
+        },
+        selectedResultSet() {
+            //Clear
+            this.axis = {
+                x: '',
+                y: '',
+            }
+        },
+        axis: {
+            deep: true,
+            handler(v) {
+                if (v.x && v.y) {
+                    //TODO: Generate datasets and labels and emit to parent
+                }
+            },
         },
     },
 }
