@@ -5,7 +5,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "nyc mocha --exit --timeout 30000 --slow 10000",
+    "test": "mocha --exit --timeout 30000 --slow 10000",
     "preinstall": "test -f lib/version.js || cp lib/version.js.in lib/version.js",
     "format": "prettier --write lib/*.js test/*.js"
   },
