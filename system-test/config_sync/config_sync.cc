@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <maxtest/maxrest.hh>
 #include <maxbase/json.hh>
 #include <iostream>
 #include <chrono>
@@ -9,6 +10,11 @@ const auto NORMAL = mxb::Json::Format::NORMAL;
 
 // This is both clearer and simpler than a pointer to a member function
 enum WhichMaxScale { FIRST, SECOND };
+
+using RestApi = std::unique_ptr<MaxRest>;
+
+RestApi api1;
+RestApi api2;
 
 struct TestCase
 {
@@ -115,16 +121,11 @@ std::vector<TestCase> tests
     },
 };
 
-mxb::Json get(mxt::MaxScale& m, const std::string& endpoint, const std::string& js_ptr)
+mxb::Json get(const RestApi& api, const std::string& endpoint, const std::string& js_ptr)
 {
     mxb::Json rval(mxb::Json::Type::NONE);
-    mxb::Json json(mxb::Json::Type::NONE);
 
-    // TODO: Replace with CURL once it's exposed
-    // TODO: Use MaxRest in mxt::Maxscale
-    std::string data = m.maxctrl("api get " + endpoint).output;
-
-    if (json.load_string(data))
+    if (auto json = api->curl_get(endpoint))
     {
         rval = json.at(js_ptr.c_str());
     }
@@ -174,8 +175,8 @@ void wait_for_sync(TestConnections& test, int expected_version, size_t num_maxsc
         ss.str("");
         ok = true;
 
-        auto status1 = get(test.maxscale(), "maxscale", "/data/attributes/config_sync");
-        auto status2 = get(test.maxscale2(), "maxscale", "/data/attributes/config_sync");
+        auto status1 = get(api1, "maxscale", "/data/attributes/config_sync");
+        auto status2 = get(api2, "maxscale", "/data/attributes/config_sync");
 
         check(status1);
         check(status2);
@@ -197,8 +198,8 @@ void wait_for_sync(TestConnections& test, int expected_version, size_t num_maxsc
 
 void expect_equal(TestConnections& test, const std::string& resource, const std::string& path)
 {
-    auto value1 = get(test.maxscale(), resource, path);
-    auto value2 = get(test.maxscale2(), resource, path);
+    auto value1 = get(api1, resource, path);
+    auto value2 = get(api2, resource, path);
 
     test.expect(value1 == value2, "Values for '%s' at '%s' are not equal: %s != %s",
                 resource.c_str(), path.c_str(),
@@ -213,7 +214,7 @@ void test_config(TestConnections& test)
         "destroy monitor --force MariaDB-Monitor"
     })
     {
-        test.expect(test.maxscale().maxctrl(cmd).rc != 0,
+        test.expect(test.maxscale->maxctrl(cmd).rc != 0,
                     "Command should fail: %s", cmd);
     }
 }
@@ -227,7 +228,7 @@ void test_sync(TestConnections& test)
     {
         test.tprintf("%s", t.desc.c_str());
 
-        auto res = (t.which == FIRST ? test.maxscale() : test.maxscale2()).maxctrl(t.cmd);
+        auto res = (t.which == FIRST ? test.maxscale : test.maxscale2)->maxctrl(t.cmd);
         test.expect(res.rc == 0, "MaxCtrl command '%s' failed: %s", t.cmd.c_str(), res.output.c_str());
 
         wait_for_sync(test, version++, 2);
@@ -247,6 +248,8 @@ void test_sync(TestConnections& test)
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    api1 = std::make_unique<MaxRest>(&test, test.maxscale);
+    api2 = std::make_unique<MaxRest>(&test, test.maxscale2);
 
     test_config(test);
     test_sync(test);
