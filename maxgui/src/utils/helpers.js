@@ -466,7 +466,7 @@ export function getSuffixFromValue(param, suffixes) {
  * @param {Array} [payload.data] - data for dataset (optional)
  * @returns {Object} dataset object
  */
-export function genLineDataSet({ label, value, colorIndex, timestamp, id, data }) {
+export function genLineStreamDataset({ label, value, colorIndex, timestamp, id, data }) {
     const lineColor = dynamicColors(colorIndex)
     const indexOfOpacity = lineColor.lastIndexOf(')') - 1
     const backgroundColor = strReplaceAt({ str: lineColor, index: indexOfOpacity, newChar: '0.1' })
@@ -568,7 +568,7 @@ Object.defineProperties(Vue.prototype, {
                 getSuffixFromValue,
                 convertDuration,
                 convertSize,
-                genLineDataSet,
+                genLineStreamDataset,
                 isNull,
                 isFunction,
                 isUndefined,

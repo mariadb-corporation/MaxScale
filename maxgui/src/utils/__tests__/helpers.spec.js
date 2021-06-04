@@ -491,12 +491,12 @@ describe('helpers unit tests', () => {
         expect(result.indexOfSuffix).to.be.equals(4)
     })
 
-    describe('genLineDataSet assertions', () => {
+    describe('genLineStreamDataset assertions', () => {
         const label = 'line 0'
         const value = 150
         const colorIndex = 0
         it('Should return dataset object with accurate keys', () => {
-            const result = helper.genLineDataSet({ label, value, colorIndex })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex })
             expect(result).to.have.all.keys(
                 'label',
                 'id',
@@ -510,24 +510,24 @@ describe('helpers unit tests', () => {
         })
         it(`Should get timestamp form Date.now() if timestamp
         argument is not provided`, () => {
-            const result = helper.genLineDataSet({ label, value, colorIndex })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex })
             expect(result.data.length).to.be.equals(1)
             expect(result.data[0].x).to.be.a('number')
         })
         it(`Should use provided timestamp argument`, () => {
             const timestamp = Date.now()
-            const result = helper.genLineDataSet({ label, value, colorIndex, timestamp })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex, timestamp })
             expect(result.data.length).to.be.equals(1)
             expect(result.data[0].x).to.be.equals(timestamp)
         })
         it(`Should have resourceId key if id argument is provided`, () => {
             const id = 'server_0'
-            const result = helper.genLineDataSet({ label, value, colorIndex, id })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex, id })
             expect(result).to.have.property('resourceId', id)
         })
         it(`Should create data array for key data if
         data argument is not provided`, () => {
-            const result = helper.genLineDataSet({ label, value, colorIndex })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex })
             expect(result.data[0]).to.have.all.keys('x', 'y')
         })
         it(`Should use data argument for key data`, () => {
@@ -535,7 +535,7 @@ describe('helpers unit tests', () => {
                 { x: 1598972034170, y: value - 10 },
                 { x: 1600000000000, y: value },
             ]
-            const result = helper.genLineDataSet({ label, value, colorIndex, data })
+            const result = helper.genLineStreamDataset({ label, value, colorIndex, data })
             expect(result.data).to.be.deep.equals(data)
         })
     })

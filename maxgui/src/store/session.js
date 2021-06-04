@@ -42,8 +42,8 @@ export default {
 
         genDataSets({ commit, state }) {
             const { all_sessions } = state
-            const { genLineDataSet } = this.vue.$help
-            const dataset = genLineDataSet({
+            const { genLineStreamDataset } = this.vue.$help
+            const dataset = genLineStreamDataset({
                 label: 'Total sessions',
                 value: all_sessions.length,
                 colorIndex: 0,

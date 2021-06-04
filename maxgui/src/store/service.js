@@ -51,8 +51,8 @@ export default {
                 current_service: { attributes: { connections = null } = {} },
             } = state
             if (connections !== null) {
-                const { genLineDataSet } = this.vue.$help
-                const dataset = genLineDataSet({
+                const { genLineStreamDataset } = this.vue.$help
+                const dataset = genLineStreamDataset({
                     label: 'Current connections',
                     value: connections,
                     colorIndex: 0,

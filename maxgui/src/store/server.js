@@ -263,7 +263,7 @@ export default {
          */
         genDataSets({ commit, state }) {
             const { all_servers } = state
-            const { genLineDataSet } = this.vue.$help
+            const { genLineStreamDataset } = this.vue.$help
 
             if (all_servers.length) {
                 let dataSets = []
@@ -273,7 +273,7 @@ export default {
                         attributes: { statistics: { connections = null } = {} } = {},
                     } = server
                     if (connections !== null) {
-                        const dataset = genLineDataSet({
+                        const dataset = genLineStreamDataset({
                             label: `Server ID - ${id}`,
                             value: connections,
                             colorIndex: i,

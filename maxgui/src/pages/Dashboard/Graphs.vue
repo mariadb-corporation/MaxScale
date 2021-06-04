@@ -137,7 +137,7 @@ export default {
 
         updateServerConnectionsDatasets(connectionsChart, timestamp) {
             const {
-                genLineDataSet,
+                genLineStreamDataset,
                 lodash: { xorWith, isEqual, cloneDeep },
             } = this.$help
 
@@ -184,7 +184,7 @@ export default {
                     let dataOfADataSet = cloneDeep(connectionsChartDataSets[0].data)
                     dataOfADataSet.forEach(item => (item.y = 0))
 
-                    const newDataSet = genLineDataSet({
+                    const newDataSet = genLineStreamDataset({
                         label: `Server ID - ${server.id}`,
                         value: serverConnections,
                         colorIndex: i,
@@ -209,7 +209,7 @@ export default {
         },
 
         updateThreadsDatasets(threadsChart, timestamp) {
-            const { genLineDataSet } = this.$help
+            const { genLineStreamDataset } = this.$help
             const threadChartDataSets = threadsChart.chartData.datasets
             this.thread_stats.forEach((thread, i) => {
                 const {
@@ -222,7 +222,7 @@ export default {
                         y: last_second,
                     })
                 } else {
-                    const newDataSet = genLineDataSet({
+                    const newDataSet = genLineStreamDataset({
                         label: `THREAD ID - ${thread.id}`,
                         value: last_second,
                         colorIndex: i,

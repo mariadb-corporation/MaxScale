@@ -116,7 +116,7 @@ export default {
 
         genDataSets({ commit, state }) {
             const { thread_stats } = state
-            const { genLineDataSet } = this.vue.$help
+            const { genLineStreamDataset } = this.vue.$help
             if (thread_stats.length) {
                 let dataSets = []
                 thread_stats.forEach((thread, i) => {
@@ -124,7 +124,7 @@ export default {
                         attributes: { stats: { load: { last_second = null } = {} } = {} } = {},
                     } = thread
                     if (last_second !== null) {
-                        const dataset = genLineDataSet({
+                        const dataset = genLineStreamDataset({
                             label: `THREAD ID - ${thread.id}`,
                             value: last_second,
                             colorIndex: i,
