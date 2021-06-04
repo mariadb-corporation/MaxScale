@@ -49,6 +49,7 @@ public:
      *               of the MaxRest instance.
      */
     MaxRest(TestConnections* pTest);
+    MaxRest(TestConnections* pTest, Maxscales* pMaxscale);
 
     /**
      * @return  The TestConnections instance used by this instance.
@@ -236,6 +237,7 @@ private:
 
 private:
     TestConnections& m_test;
+    Maxscales&       m_maxscale;
 };
 
 template<>

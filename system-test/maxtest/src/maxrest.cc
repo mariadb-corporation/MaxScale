@@ -26,6 +26,13 @@ MaxRest::Server::Server(const MaxRest& maxrest, json_t* pObject)
 
 MaxRest::MaxRest(TestConnections* pTest)
     : m_test(*pTest)
+    , m_maxscale(*pTest->maxscale)
+{
+}
+
+MaxRest::MaxRest(TestConnections* pTest, Maxscales* pMaxscale)
+    : m_test(*pTest)
+    , m_maxscale(*pMaxscale)
 {
 }
 
@@ -154,7 +161,7 @@ unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 
     curl_command += url;
 
-    auto result = m_test.maxscale->ssh_output(curl_command, false);
+    auto result = m_maxscale.ssh_output(curl_command, false);
 
     if (result.rc != 0)
     {
