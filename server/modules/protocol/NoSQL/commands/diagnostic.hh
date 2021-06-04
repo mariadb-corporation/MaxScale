@@ -109,7 +109,7 @@ public:
         auto& config = mxs::Config::get();
 
         ArrayBuilder argv;
-        for (const auto arg : config.argv)
+        for (const auto& arg : config.argv)
         {
             argv.append(arg);
         }
