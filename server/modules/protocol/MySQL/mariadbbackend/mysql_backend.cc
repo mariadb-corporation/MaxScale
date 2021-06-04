@@ -1223,7 +1223,6 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
             MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
             gwbuf_free(queue);
             poll_fake_hangup_event(dcb);
-            rc = 0;
         }
         else
         {
@@ -1235,9 +1234,8 @@ static int gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue)
              */
             MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
             backend_protocol->stored_query = gwbuf_append(backend_protocol->stored_query, queue);
-            rc = 1;
         }
-        return rc;
+        return 1;
     }
 
     /**
