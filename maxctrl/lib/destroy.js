@@ -60,18 +60,31 @@ exports.builder = function (yargs) {
       }
     )
     .command(
-      "listener <service> <name>",
+      "listener <listener> [extra]",
       "Destroy an unused listener",
       function (yargs) {
         return yargs
-          .epilog("Destroying a listener closes the listening socket, opening it up for reuse.")
-          .usage("Usage: destroy listener <service> <name>");
+          .epilog(
+            "Destroying a listener closes the listening socket, opening it up for " +
+              "immediate reuse. If only one argument is given and it is the name of a " +
+              "listener, it is unconditionally destroyed. If two arguments are given and " +
+              "they are a service and a listener, the listener is only destroyed if it " +
+              "is for the given service."
+          )
+          .usage("Usage: destroy listener { <listener> | <service> <listener> }");
       },
       function (argv) {
         maxctrl(argv, async function (host) {
-          // The GET before the DELETE makes sure we're deleting a listener of the given servie
-          await doRequest(host, "services/" + argv.service + "/listeners/" + argv.name);
-          return doRequest(host, "listeners/" + argv.name, { method: "DELETE" });
+          var listener = argv.listener;
+
+          if (argv.extra) {
+            var service = listener;
+            listener = argv.extra;
+            // The GET before the DELETE makes sure we're deleting a listener of the given servie
+            await doRequest(host, "services/" + service + "/listeners/" + listener);
+          }
+
+          return doRequest(host, "listeners/" + listener, { method: "DELETE" });
         });
       }
     )
