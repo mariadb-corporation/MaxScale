@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
     char deny_file[4096];
     char rules_dir[4096];
     FILE* file;
+    auto test_dir = mxt::SOURCE_DIR;
 
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 19;

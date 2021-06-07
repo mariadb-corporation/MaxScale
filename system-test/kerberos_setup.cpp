@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf(
         "Copying 'hosts' and krb5.conf files to all nodes, installing kerberos client and MariaDB plugins\n");
-    sprintf(str, "%s/krb5.conf", test_dir);
+    sprintf(str, "%s/krb5.conf", mxt::SOURCE_DIR);
     for (i = 0; i < Test->repl->N; i++)
     {
         std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->repl->mdbci_node_name(i);
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Coping keytab and .cnf files to all nodes and executing knit for all nodes\n");
     for (i = 0; i < Test->repl->N; i++)
     {
-        sprintf(str, "%s/kerb.cnf", test_dir);
+        sprintf(str, "%s/kerb.cnf", mxt::SOURCE_DIR);
         auto homedir = Test->repl->access_homedir(i);
         Test->repl->copy_to_node_legacy(str, homedir, i);
         Test->repl->ssh_node_f(i, true, "cp %s/kerb.cnf /etc/my.cnf.d/", homedir);

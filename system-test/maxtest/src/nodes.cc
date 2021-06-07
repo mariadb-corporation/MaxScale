@@ -170,21 +170,6 @@ int Nodes::ssh_node(int node, const string& ssh, bool sudo)
     return m_vms[node]->run_cmd(ssh, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
-bool Nodes::init_ssh_masters()
-{
-    mxt::BoolFuncArray funcs;
-    funcs.reserve(m_vms.size());
-    for (auto& vm : m_vms)
-    {
-        auto func = [&vm]() {
-                return vm->init_ssh_master();
-            };
-        funcs.push_back(move(func));
-    }
-
-    return m_shared.concurrent_run(funcs);
-}
-
 int Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 {
     va_list valist;

@@ -65,7 +65,7 @@ MariaDBCluster::MariaDBCluster(mxt::SharedData* shared, const std::string& cnf_s
     : Nodes(shared)
     , m_cnf_server_prefix(cnf_server_prefix)
 {
-    m_test_dir = test_dir;
+    m_test_dir = mxt::SOURCE_DIR;
 }
 
 bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expected)
@@ -1118,9 +1118,9 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
     sett.password = m_cluster.password;
     if (ssl == SslMode::ON)
     {
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", SOURCE_DIR);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", SOURCE_DIR);
         sett.ssl.enabled = true;
     }
     sett.timeout = 10;

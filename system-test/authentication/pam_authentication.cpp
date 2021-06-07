@@ -21,7 +21,7 @@ using std::string;
 using std::cout;
 namespace
 {
-const string plugin_path = string(mxt::test_build_dir) + "/../connector-c/install/lib/mariadb/plugin";
+const string plugin_path = string(mxt::BUILD_DIR) + "/../connector-c/install/lib/mariadb/plugin";
 }
 
 MYSQL* pam_login(TestConnections& test, int port, const string& user, const string& pass,
@@ -70,11 +70,11 @@ void test_main(TestConnections& test)
     // To make most out of this test, use a custom pam service configuration. It needs to be written to
     // all backends.
 
-    string pam_config_path_src = mxb::string_printf("%s/authentication/%s", test_dir, pam_config_name);
+    string pam_config_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_config_name);
     string pam_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_config_name);
 
     const char pam_msgfile[] = "pam_test_msg.txt";
-    string pam_msgfile_path_src = mxb::string_printf("%s/authentication/%s", test_dir, pam_msgfile);
+    string pam_msgfile_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, pam_msgfile);
     string pam_msgfile_path_dst = mxb::string_printf("/tmp/%s", pam_msgfile);
 
     const string delete_pam_conf_cmd = "rm -f " + pam_config_path_dst;

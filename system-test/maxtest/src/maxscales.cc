@@ -20,7 +20,7 @@ const string my_prefix = "maxscale";
 }
 
 Maxscales::Maxscales(mxt::SharedData* shared)
-    : Nodes(shared)
+    : m_shared(*shared)
 {
     m_maxscale_b = std::make_unique<mxt::MaxScale>(this, *shared);
 }
@@ -46,10 +46,14 @@ bool Maxscales::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_
         m_use_valgrind = true;
     }
 
-    clear_vms();
+    m_vmnode = nullptr;
     bool rval = false;
-    if (add_node(nwconfig, vm_name))
+
+    auto new_node = std::make_unique<mxt::VMNode>(m_shared, vm_name);
+    if (new_node->configure(nwconfig))
     {
+        m_vmnode = move(new_node);
+
         string key_cnf = vm_name + "_cnf";
         maxscale_cnf = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
@@ -288,12 +292,12 @@ void Maxscales::wait_for_monitor(int intervals)
 
 const char* Maxscales::ip() const
 {
-    return m_use_ipv6 ? Nodes::ip6(0) : Nodes::ip4(0);
+    return m_use_ipv6 ? m_vmnode->ip6s().c_str() : m_vmnode->ip4();
 }
 
 const char* Maxscales::ip_private() const
 {
-    return Nodes::ip_private(0);
+    return m_vmnode->priv_ip();
 }
 
 void Maxscales::set_use_ipv6(bool use_ipv6)
@@ -308,27 +312,27 @@ void Maxscales::set_ssl(bool ssl)
 
 const char* Maxscales::hostname() const
 {
-    return Nodes::hostname(0);
+    return m_vmnode->hostname();
 }
 
 const char* Maxscales::access_user() const
 {
-    return Nodes::access_user(0);
+    return m_vmnode->access_user();
 }
 
 const char* Maxscales::access_homedir() const
 {
-    return Nodes::access_homedir(0);
+    return m_vmnode->access_homedir();
 }
 
 const char* Maxscales::access_sudo() const
 {
-    return Nodes::access_sudo(0);
+    return m_vmnode->access_sudo();
 }
 
 const char* Maxscales::sshkey() const
 {
-    return Nodes::sshkey(0);
+    return m_vmnode->sshkey();
 }
 
 const std::string& Maxscales::prefix()
@@ -338,18 +342,18 @@ const std::string& Maxscales::prefix()
 
 const char* Maxscales::ip4() const
 {
-    return Nodes::ip4(0);
+    return m_vmnode->ip4();
 }
 
 const std::string& Maxscales::node_name() const
 {
-    return node(0)->m_name;
+    return m_vmnode->m_name;
 }
 
 mxt::CmdResult Maxscales::maxctrl(const std::string& cmd, bool sudo)
 {
     using CmdPriv = mxt::VMNode::CmdPriv;
-    return node(0)->run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    return m_vmnode->run_cmd_output("maxctrl " + cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 bool Maxscales::use_valgrind() const
@@ -378,15 +382,15 @@ bool Maxscales::prepare_for_test()
     if (m_shared.settings.local_maxscale)
     {
         // MaxScale is running locally, overwrite node address.
-        node(0)->set_local();
+        m_vmnode->set_local();
     }
 
     bool rval = false;
-    if (Nodes::init_ssh_masters())
+    if (m_vmnode->init_ssh_master())
     {
         if (m_use_valgrind)
         {
-            auto vm = node(0);
+            auto vm = m_vmnode.get();
             vm->run_cmd_sudo("yum install -y valgrind gdb 2>&1");
             vm->run_cmd_sudo("apt install -y --force-yes valgrind gdb 2>&1");
             vm->run_cmd_sudo("zypper -n install valgrind gdb 2>&1");
@@ -404,7 +408,7 @@ bool Maxscales::ssl() const
 
 mxt::VMNode& Maxscales::vm_node()
 {
-    return *node(0);
+    return *m_vmnode;
 }
 
 void Maxscales::expect_running_status(bool expected)
@@ -443,6 +447,11 @@ void Maxscales::expect_running_status(bool expected)
 mxt::TestLogger& Maxscales::log() const
 {
     return m_shared.log;
+}
+
+bool Maxscales::verbose() const
+{
+    return m_shared.settings.verbose;
 }
 
 bool Maxscales::start_and_check_started()
@@ -485,17 +494,17 @@ void Maxscales::copy_log(int i, double timestamp, const std::string& test_name)
     char sys[sizeof(log_dir_i) + 1024];
     if (timestamp == 0)
     {
-        sprintf(log_dir, "%s/LOGS/%s", mxt::test_build_dir, test_name.c_str());
+        sprintf(log_dir, "%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
     }
     else
     {
-        sprintf(log_dir, "%s/LOGS/%s/%04f", mxt::test_build_dir, test_name.c_str(), timestamp);
+        sprintf(log_dir, "%s/LOGS/%s/%04f", mxt::BUILD_DIR, test_name.c_str(), timestamp);
     }
 
     sprintf(log_dir_i, "%s/%03d", log_dir, i);
     sprintf(sys, "mkdir -p %s", log_dir_i);
     system(sys);
-    auto vm = node(0);
+    auto vm = m_vmnode.get();
     auto mxs_logdir = maxscale_log_dir.c_str();
     auto mxs_cnf_file = maxscale_cnf.c_str();
 
@@ -599,27 +608,29 @@ void Maxscales::copy_fw_rules(const std::string& rules_name, const std::string& 
 
 mxt::CmdResult Maxscales::ssh_output(const std::string& cmd, bool sudo)
 {
-    return Nodes::ssh_output(cmd, 0, sudo);
+    using CmdPriv = mxt::VMNode::CmdPriv;
+    return m_vmnode->run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 int Maxscales::copy_to_node(const char* src, const char* dest)
 {
-    return Nodes::copy_to_node(0, src, dest);
+    return m_vmnode->copy_to_node(src, dest);
 }
 
 int Maxscales::copy_from_node(const char* src, const char* dest)
 {
-    return Nodes::copy_from_node(0, src, dest);
+    return m_vmnode->copy_from_node(src, dest);
 }
 
 void Maxscales::write_env_vars()
 {
-    Nodes::write_env_vars();
+    m_vmnode->write_node_env_vars();
 }
 
 int Maxscales::ssh_node(const string& cmd, bool sudo)
 {
-    return Nodes::ssh_node(0, cmd, sudo);
+    using CmdPriv = mxt::VMNode::CmdPriv;
+    return m_vmnode->run_cmd(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
 mxt::MaxScale& Maxscales::maxscale_b()
@@ -960,9 +971,9 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::strin
     if (m_maxscales->ssl())
     {
         sett.ssl.enabled = true;
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", test_dir);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", test_dir);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", test_dir);
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", SOURCE_DIR);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", SOURCE_DIR);
     }
 
     conn->open(m_maxscales->ip(), m_maxscales->rwsplit_port, db);

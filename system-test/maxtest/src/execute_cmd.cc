@@ -74,7 +74,7 @@ Result test_connection(ConnectorVersion vrs, const std::string& host, int port,
         break;
     }
     auto java_cmd = mxb::string_printf("java -jar %s/jdbc_tool/%s \"%s\"",
-                                       test_dir, jarname.c_str(), url.c_str());
+                                       mxt::SOURCE_DIR, jarname.c_str(), url.c_str());
     if (!query.empty())
     {
         java_cmd += " \"" + query + "\"";

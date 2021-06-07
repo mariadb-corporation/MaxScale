@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     std::string json_file("/masking_auto_firewall.json");
-    std::string from = test_dir + json_file;
+    std::string from = mxt::SOURCE_DIR + json_file;
     std::string to = test.maxscale->access_homedir() + json_file;
 
     if (test.maxscale->copy_to_node(from.c_str(), to.c_str()) == 0)

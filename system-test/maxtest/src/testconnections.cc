@@ -260,7 +260,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         }
 
         string create_logdir_cmd = "mkdir -p ";
-        create_logdir_cmd += mxt::test_build_dir;
+        create_logdir_cmd += mxt::BUILD_DIR;
         create_logdir_cmd += "/LOGS/" + m_test_name;
         if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
         {
@@ -465,7 +465,7 @@ int TestConnections::setup_vms()
 
         if (rval == 0 && maxscale_installed)
         {
-            string src = string(test_dir) + "/mdbci/add_core_cnf.sh";
+            string src = string(mxt::SOURCE_DIR) + "/mdbci/add_core_cnf.sh";
             maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
             maxscale->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
                                   verbose() ? "verbose" : "");
@@ -833,10 +833,10 @@ void TestConnections::init_maxscale(int m)
 
         char str[4096];
         char dtr[4096];
-        sprintf(str, "%s/ssl-cert/*", test_dir);
+        sprintf(str, "%s/ssl-cert/*", mxt::SOURCE_DIR);
         sprintf(dtr, "%s/certs/", homedir);
         mxs->copy_to_node(str, dtr);
-        sprintf(str, "cp %s/ssl-cert/* .", test_dir);
+        sprintf(str, "cp %s/ssl-cert/* .", mxt::SOURCE_DIR);
         call_system(str);
         mxs->ssh_node_f(0, true, "chmod -R a+rx %s;", homedir);
     }
@@ -901,7 +901,7 @@ int TestConnections::copy_mariadb_logs(MariaDBCluster* nrepl,
             {
                 char str[4096];
                 sprintf(str, "%s/LOGS/%s/%s%d_mariadb_log",
-                        mxt::test_build_dir, m_test_name.c_str(), prefix, i);
+                        mxt::BUILD_DIR, m_test_name.c_str(), prefix, i);
                 threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, string(str));
             }
         }
@@ -915,7 +915,7 @@ int TestConnections::copy_all_logs()
     set_timeout(300);
 
     char str[PATH_MAX + 1];
-    sprintf(str, "mkdir -p %s/LOGS/%s", mxt::test_build_dir, m_test_name.c_str());
+    sprintf(str, "mkdir -p %s/LOGS/%s", mxt::BUILD_DIR, m_test_name.c_str());
     call_system(str);
 
     std::vector<std::thread> threads;
@@ -1651,7 +1651,8 @@ bool TestConnections::call_mdbci(const char* options)
                                                       m_vm_path.c_str(), m_mdbci_config_name.c_str());
             if (run_shell_command(mdbci_gen_cmd, "MDBCI failed to generate virtual machines description"))
             {
-                string copy_cmd = mxb::string_printf("cp -r %s/mdbci/cnf %s/", test_dir, m_vm_path.c_str());
+                string copy_cmd = mxb::string_printf("cp -r %s/mdbci/cnf %s/",
+                                                     mxt::SOURCE_DIR, m_vm_path.c_str());
                 if (run_shell_command(copy_cmd, "Failed to copy my.cnf files"))
                 {
                     ok = true;
@@ -1715,7 +1716,7 @@ bool TestConnections::process_mdbci_template()
     setenv("cnf_path", cnf_path.c_str(), 1);
 
     string template_file = mxb::string_printf("%s/mdbci/templates/%s.json.template",
-                                              test_dir, m_mdbci_template.c_str());
+                                              mxt::SOURCE_DIR, m_mdbci_template.c_str());
     string target_file = m_vm_path + ".json";
     string subst_cmd = "envsubst < " + template_file + " > " + target_file;
 

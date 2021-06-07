@@ -120,7 +120,7 @@ void install_and_start_redis_and_memcached(Maxscales& maxscales)
     setenv("maxscale_000_whoami", maxscales.access_user(), 0);
     setenv("maxscale_000_network", maxscales.ip4(), 0);
 
-    string path(test_dir);
+    string path(mxt::SOURCE_DIR);
     path += "/cache_install_and_start_storages.sh";
 
     system(path.c_str());
