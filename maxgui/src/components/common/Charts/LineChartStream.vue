@@ -25,10 +25,6 @@ export default {
         options: {
             type: Object,
         },
-        yAxesTicks: {
-            type: Object,
-            default: () => {},
-        },
     },
     data() {
         return {
@@ -57,7 +53,7 @@ export default {
     methods: {
         renderLineChart() {
             let scope = this
-            this.renderChart(this.chartData, {
+            let chartOption = {
                 showLines: true,
                 layout: {
                     padding: {
@@ -97,11 +93,7 @@ export default {
                     xAxes: [
                         {
                             gridLines: {
-                                lineWidth: 0.6,
-                                color: 'rgba(234, 234, 234, 1)',
-                                drawTicks: false,
                                 drawBorder: true,
-                                zeroLineColor: 'rgba(234, 234, 234, 1)',
                             },
                             type: 'realtime',
                             ticks: {
@@ -112,24 +104,18 @@ export default {
                     yAxes: [
                         {
                             gridLines: {
-                                lineWidth: 0.6,
-                                color: 'rgba(234, 234, 234,1)',
-                                drawTicks: false,
                                 drawBorder: false,
                                 zeroLineColor: 'transparent',
                             },
                             ticks: {
                                 beginAtZero: true,
-                                padding: 12,
-
                                 maxTicksLimit: 3,
-                                ...this.yAxesTicks,
                             },
                         },
                     ],
                 },
-                ...this.options,
-            })
+            }
+            this.renderChart(this.chartData, this.$help.lodash.deepMerge(chartOption, this.options))
         },
     },
 }

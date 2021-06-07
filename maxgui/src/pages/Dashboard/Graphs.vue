@@ -52,8 +52,20 @@
                             :chart-data="{
                                 datasets: threads_datasets,
                             }"
-                            :options="mainChartOptions"
-                            :yAxesTicks="{ max: 100, min: 0 }"
+                            :options="
+                                $help.lodash.deepMerge(mainChartOptions, {
+                                    scales: {
+                                        yAxes: [
+                                            {
+                                                ticks: {
+                                                    max: 100,
+                                                    min: 0,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                })
+                            "
                         />
                     </v-sheet>
                 </template>

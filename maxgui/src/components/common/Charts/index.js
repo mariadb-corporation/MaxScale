@@ -19,6 +19,12 @@ Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
 Chart.defaults.global.defaultFontColor = '#424F62'
 Chart.defaults.global.defaultFontSize = 10
 
+Chart.defaults.scale.gridLines.lineWidth = 0.6
+Chart.defaults.scale.gridLines.color = 'rgba(234, 234, 234, 1)'
+Chart.defaults.scale.gridLines.drawTicks = false
+Chart.defaults.scale.gridLines.drawBorder = true
+Chart.defaults.scale.gridLines.zeroLineColor = 'rgba(234, 234, 234, 1)'
+Chart.defaults.scale.ticks.padding = 12
 export default {
     'line-chart-stream': LineChartStream,
     'line-chart': LineChart,

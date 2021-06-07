@@ -30,6 +30,12 @@ export default {
             uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
         }
     },
+    watch: {
+        chartData() {
+            this.$data._chart.destroy()
+            this.renderLineChart()
+        },
+    },
     beforeDestroy() {
         let tooltipEl = document.getElementById(this.uniqueTooltipId)
         tooltipEl && tooltipEl.remove()
@@ -41,19 +47,15 @@ export default {
     methods: {
         renderLineChart() {
             const scope = this
-            this.renderChart(this.chartData, {
-                showLines: true,
-                responsive: true,
-                maintainAspectRatio: false,
-                hover: {
-                    mode: 'index',
-                    intersect: false,
-                },
+            let chartOption = {
                 tooltips: {
                     mode: 'index',
                     intersect: false,
                     enabled: false,
                     custom: function(tooltipModel) {
+                        /** TODO: Create another function for showing object tooltip
+                         *  and rename customTooltip to strTooltip
+                         */
                         customTooltip({
                             tooltipModel,
                             tooltipId: scope.uniqueTooltipId,
@@ -61,30 +63,32 @@ export default {
                         })
                     },
                 },
+                elements: {
+                    point: {
+                        radius: 0,
+                    },
+                },
                 scales: {
                     xAxes: [
                         {
                             gridLines: {
-                                lineWidth: 0.6,
-                                color: 'rgba(234, 234, 234, 1)',
                                 drawBorder: true,
-                                zeroLineColor: 'rgba(234, 234, 234, 1)',
                             },
                         },
                     ],
                     yAxes: [
                         {
                             gridLines: {
-                                lineWidth: 0.6,
-                                color: 'rgba(234, 234, 234,1)',
                                 drawBorder: false,
-                                zeroLineColor: 'transparent',
+                            },
+                            ticks: {
+                                beginAtZero: true,
                             },
                         },
                     ],
                 },
-                ...this.options,
-            })
+            }
+            this.renderChart(this.chartData, this.$help.lodash.deepMerge(chartOption, this.options))
         },
     },
 }

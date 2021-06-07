@@ -61,7 +61,7 @@ export default function customTooltip({ tooltipModel, tooltipId, scope }) {
             : chart.left + tooltipModel.caretX
 
     tooltipEl.style.left = left + 'px'
-    tooltipEl.style.top = chart.top + tooltipModel.caretY + 'px'
+    tooltipEl.style.top = chart.top + tooltipModel.caretY + 10 + 'px'
     tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily
     tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle
     tooltipEl.style.padding = tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px'

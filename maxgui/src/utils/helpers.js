@@ -22,6 +22,7 @@ export const get = require('lodash/get')
 export const unionBy = require('lodash/unionBy')
 export const pick = require('lodash/pick')
 export const uniqBy = require('lodash/uniqBy')
+export const merge = require('lodash/merge')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -32,6 +33,7 @@ export const lodash = {
     unionBy,
     pick,
     uniqBy,
+    deepMerge: merge,
 }
 
 export function isNull(v) {
