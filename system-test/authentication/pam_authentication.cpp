@@ -505,6 +505,7 @@ void test_main(TestConnections& test)
         // This file is installed with the server, but not with MaxScale. Depending on distro, the file
         // may be in different places. Check both.
         auto& vm = test.repl->backend(0)->vm_node();
+        auto test_dir = mxt::SOURCE_DIR;
         string lib_source1 = "/usr/lib64/security/pam_user_map.so";
         string lib_source2 = "/usr/lib/security/pam_user_map.so";
         string lib_temp = "/tmp/pam_user_map.so";
