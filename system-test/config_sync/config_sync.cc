@@ -1,14 +1,10 @@
 #include <maxtest/testconnections.hh>
-#include <maxtest/maxrest.hh>
-#include <maxbase/json.hh>
-#include <iostream>
-#include <chrono>
+
+#include "config_sync_common.hh"
 
 using namespace std::chrono;
 
 const auto NORMAL = mxb::Json::Format::NORMAL;
-
-using RestApi = std::unique_ptr<MaxRest>;
 
 RestApi api1;
 RestApi api2;
@@ -108,21 +104,41 @@ std::vector<TestCase> tests
         "Destroy filter",
         "destroy filter test-filter"
     },
+    {
+        "Create listener",
+        "create listener RW-Split-Router test-listener 3306",
+        "listeners/test-listener",
+        "/data/attributes/parameters"
+    },
+    {
+        "Destroy listener",
+        "destroy listener RW-Split-Router test-listener"
+    },
 };
 
-mxb::Json get(const RestApi& api, const std::string& endpoint, const std::string& js_ptr)
+void wait_for_sync()
 {
-    mxb::Json rval(mxb::Json::Type::NONE);
+    auto start = steady_clock::now();
 
-    if (auto json = api->curl_get(endpoint))
+    while (steady_clock::now() - start < seconds(5))
     {
-        rval = json.at(js_ptr.c_str());
-    }
+        auto res1 = get(api1, "maxscale", "/data/attributes/config_sync");
+        auto res2 = get(api2, "maxscale", "/data/attributes/config_sync");
 
-    return rval;
+        if (res1.get_int("version") == res2.get_int("version")
+            && res1.get_object("nodes").keys().size() == 2
+            && res2.get_object("nodes").keys().size() == 2)
+        {
+            break;
+        }
+        else
+        {
+            std::this_thread::sleep_for(milliseconds(500));
+        }
+    }
 }
 
-void wait_for_sync(TestConnections& test, int expected_version, size_t num_maxscales)
+void expect_sync(TestConnections& test, int expected_version, size_t num_maxscales)
 {
     bool ok = true;
     std::ostringstream ss;
@@ -157,29 +173,18 @@ void wait_for_sync(TestConnections& test, int expected_version, size_t num_maxsc
             }
         };
 
-    auto start = steady_clock::now();
+    wait_for_sync();
 
-    while (steady_clock::now() - start < seconds(5))
+    auto status1 = get(api1, "maxscale", "/data/attributes/config_sync");
+    auto status2 = get(api2, "maxscale", "/data/attributes/config_sync");
+
+    check(status1);
+    check(status2);
+
+    if (ok)
     {
-        ss.str("");
-        ok = true;
-
-        auto status1 = get(api1, "maxscale", "/data/attributes/config_sync");
-        auto status2 = get(api2, "maxscale", "/data/attributes/config_sync");
-
-        check(status1);
-        check(status2);
-
-        if (ok)
-        {
-            test.expect(status1 == status2, "Expected JSON to be equal: %s != %s",
-                        status1.to_string(NORMAL).c_str(), status2.to_string(NORMAL).c_str());
-            break;
-        }
-        else
-        {
-            std::this_thread::sleep_for(milliseconds(100));
-        }
+        test.expect(status1 == status2, "Expected JSON to be equal: %s != %s",
+                    status1.to_string(NORMAL).c_str(), status2.to_string(NORMAL).c_str());
     }
 
     test.expect(ok, "%s", ss.str().c_str());
@@ -201,7 +206,22 @@ void expect_equal(TestConnections& test, const std::string& resource, const std:
                 value2.to_string(NORMAL).c_str());
 }
 
-void test_config(TestConnections& test)
+void reset(TestConnections& test)
+{
+    test.stop_all_maxscales();
+
+    test.maxscale->ssh_output("rm -r /var/lib/maxscale/*");
+    test.maxscale2->ssh_output("rm -r /var/lib/maxscale/*");
+
+    auto conn = test.repl->get_connection(0);
+    test.expect(conn.connect(), "Connection failed: %s", conn.error());
+    conn.query("DROP TABLE mysql.maxscale_config");
+
+    test.maxscale->start();
+    test.maxscale2->start();
+}
+
+void test_config_parameters(TestConnections& test)
 {
     for (auto cmd : {
         "alter maxscale config_sync_cluster some-monitor",
@@ -223,7 +243,7 @@ void test_sync(TestConnections& test)
     for (const auto& t : tests)
     {
         t.execute(test, test.maxscale);
-        wait_for_sync(test, version++, 2);
+        expect_sync(test, version++, 2);
         expect_equal(test, t.endpoint, t.ptr);
     }
 
@@ -240,23 +260,147 @@ void test_sync(TestConnections& test)
 
     version = get(api1, "maxscale", "/data/attributes/config_sync").get_int("version");
     test.maxscale2->start();
-    wait_for_sync(test, version, 2);
+    expect_sync(test, version, 2);
+
+    reset(test);
+}
+
+void test_bad_change(TestConnections& test)
+{
+    test.tprintf("Do a configuration change that is expected to work");
+    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 15");
+    expect_sync(test, 1, 2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+
+    test.tprintf("Create a filter that only works on one MaxScale");
+    const char REMOVE_DIR[] = "rm -rf /tmp/path-that-exists-on-mxs1/";
+    const char CREATE_DIR[] = "mkdir --mode 0777 -p /tmp/path-that-exists-on-mxs1/";
+    test.maxscale->ssh_node(CREATE_DIR, false);
+
+    // Make sure the path on the other Maxscale doesn't exist
+    test.maxscale2->ssh_node(REMOVE_DIR, false);
+
+    auto res = test.maxscale->maxctrl("create filter test-filter qlafilter "
+                                      "log_type=unified append=true "
+                                      "filebase=/tmp/path-that-exists-on-mxs1/qla.log");
+    test.expect(res.rc == 0, "Creating the filter should work");
+
+    wait_for_sync();
+
+    auto sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
+    auto sync2 = get(api2, "maxscale", "/data/attributes/config_sync");
+    int64_t version1 = sync1.get_int("version");
+    int64_t version2 = sync2.get_int("version");
+
+    test.expect(version1 == version2,
+                "Second MaxScale should be at version %ld but it is at %ld",
+                version1, version2);
+
+    std::string cksum1 = sync1.get_string("checksum");
+    std::string cksum2 = sync2.get_string("checksum");
+
+    test.expect(cksum1 != cksum2, "Checksums should not match");
+
+    auto origin = sync1.get_string("origin");
+    auto nodes1 = sync1.get_object("nodes");
+    auto nodes2 = sync2.get_object("nodes");
+
+    test.expect(nodes1 == nodes2, "Both MaxScales should have the same \"nodes\" data: %s != %s",
+                nodes1.to_string(NORMAL).c_str(), nodes2.to_string(NORMAL).c_str());
+
+    int error = 0;
+    int ok = 0;
+
+    for (const auto& key : nodes1.keys())
+    {
+        auto value = nodes1.get_string(key);
+
+        if (value == "OK")
+        {
+            test.expect(key == origin, "\"nodes\" should have {\"%s\": \"OK\"}: %s",
+                        key.c_str(), nodes1.to_string(NORMAL).c_str());
+            ++ok;
+        }
+        else
+        {
+            test.expect(key != origin,
+                        "\"nodes\" should not have {\"%s\": \"OK\"}: %s",
+                        key.c_str(), nodes1.to_string(NORMAL).c_str());
+            ++error;
+        }
+    }
+
+    test.expect(ok == 1, "One node should be in sync, got %d", ok);
+    test.expect(error == 1, "One node should fail, got %d", error);
+
+    test.tprintf("Fix the second MaxScale and do a configuration change that works");
+    test.maxscale2->ssh_node(CREATE_DIR, false);
+
+    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 20");
+
+    wait_for_sync();
+
+    sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
+    sync2 = get(api2, "maxscale", "/data/attributes/config_sync");
+
+    test.expect(sync1 == sync2, "Expected \"config_sync\" values to be equal: %s != %s",
+                sync1.to_string(NORMAL).c_str(), sync2.to_string(NORMAL).c_str());
+
+    // Remove the directory in case we repeat the test
+    test.maxscale->ssh_node(CREATE_DIR, false);
+    test.maxscale2->ssh_node(CREATE_DIR, false);
+
+    reset(test);
+}
+
+void test_node_failure(TestConnections& test)
+{
+    int value = 10;
+    int version = 1;
+    auto config_update = [&]() {
+            test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+                                   + std::to_string(value++));
+            expect_sync(test, version++, 2);
+            expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+        };
+
+    config_update();
+
+    test.tprintf("Switch master to server2");
+    auto res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server2");
+    test.expect(res.rc == 0, "Error: %s", res.output.c_str());
+    config_update();
+
+    test.tprintf("Switch master to server3");
+    res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server3");
+    test.expect(res.rc == 0, "Error: %s", res.output.c_str());
+    config_update();
+
+    test.tprintf("Switch master back over to server1");
+    res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server1");
+    test.expect(res.rc == 0, "Error: %s", res.output.c_str());
+    config_update();
+
+    reset(test);
 }
 
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    api1 = std::make_unique<MaxRest>(&test, test.maxscale);
-    api2 = std::make_unique<MaxRest>(&test, test.maxscale2);
+    api1 = create_api1(test);
+    api2 = create_api2(test);
 
-    test_config(test);
+    test.tprintf("1. test_config_parameters");
+    test_config_parameters(test);
+
+    test.tprintf("2. test_sync");
     test_sync(test);
 
-    test.tprintf("Cleanup");
-    test.stop_all_maxscales();
+    test.tprintf("3. test_bad_change");
+    test_bad_change(test);
 
-    auto conn = test.repl->get_connection(0);
-    test.expect(conn.connect(), "Connection failed: %s", conn.error());
-    test.expect(conn.query("DROP TABLE mysql.maxscale_config"), "DROP failed: %s", conn.error());
+    test.tprintf("4. test_node_failure");
+    test_node_failure(test);
+
     return test.global_result;
 }
