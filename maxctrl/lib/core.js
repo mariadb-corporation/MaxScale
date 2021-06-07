@@ -82,7 +82,7 @@ program
   .strict()
   .exitProcess(false)
   .showHelpOnFail(false)
-  .group(["c", "u", "p", "h", "t", "q", "tsv"], "Global Options:")
+  .group(["c", "u", "p", "h", "t", "q", "tsv", "skip-sync"], "Global Options:")
   .option("c", {
     alias: "config",
     global: true,
