@@ -27,9 +27,9 @@ Usage: list servers
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -65,9 +65,9 @@ Usage: list services
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -102,9 +102,9 @@ Usage: list listeners [service]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -139,9 +139,9 @@ Usage: list monitors
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -179,9 +179,9 @@ Options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -213,9 +213,9 @@ Usage: list filters
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -248,9 +248,9 @@ Usage: list modules
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -283,9 +283,9 @@ Usage: list threads
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -321,9 +321,9 @@ Usage: list users
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -356,9 +356,9 @@ Usage: list commands
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -392,9 +392,9 @@ Usage: show server <server>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -441,9 +441,9 @@ Usage: show servers
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -490,9 +490,9 @@ Usage: show service <service>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -535,9 +535,9 @@ Usage: show services
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -580,9 +580,9 @@ Usage: show monitor <monitor>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -604,6 +604,7 @@ Show detailed information about a monitor. The `Parameters` field contains the c
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
   Parameters          | Monitor parameters
@@ -617,9 +618,9 @@ Usage: show monitors
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -641,6 +642,7 @@ Show detailed information about all monitors.
   Field               | Description
   -----               | -----------
   Monitor             | Monitor name
+  Module              | Monitor module
   State               | Monitor state
   Servers             | The servers that this monitor monitors
   Parameters          | Monitor parameters
@@ -659,9 +661,9 @@ Options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -678,20 +680,21 @@ Show detailed information about a single session. The list of sessions can be re
 The `Connections` field lists the servers to which the session is connected and the `Connection IDs` field lists the IDs for those connections.
 
 
-  Field          | Description
-  -----          | -----------
-  Id             | Session ID
-  Service        | The service where the session connected
-  State          | Session state
-  User           | Username
-  Host           | Client host address
-  Database       | Current default database of the connection
-  Connected      | Time when the session started
-  Idle           | How long the session has been idle, in seconds
-  Connections    | Ordered list of backend connections
-  Connection IDs | Thread IDs for the backend connections
-  Queries        | Query history
-  Log            | Per-session log messages
+  Field             | Description
+  -----             | -----------
+  Id                | Session ID
+  Service           | The service where the session connected
+  State             | Session state
+  User              | Username
+  Host              | Client host address
+  Database          | Current default database of the connection
+  Connected         | Time when the session started
+  Idle              | How long the session has been idle, in seconds
+  Client TLS Cipher | Client TLS cipher
+  Connections       | Ordered list of backend connections
+  Connection IDs    | Thread IDs for the backend connections
+  Queries           | Query history
+  Log               | Per-session log messages
 ```
 
 ### show sessions
@@ -706,9 +709,9 @@ Options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -723,20 +726,21 @@ HTTPS/TLS Options:
 Show detailed information about all sessions. See `--help show session` for more details.
 
 
-  Field          | Description
-  -----          | -----------
-  Id             | Session ID
-  Service        | The service where the session connected
-  State          | Session state
-  User           | Username
-  Host           | Client host address
-  Database       | Current default database of the connection
-  Connected      | Time when the session started
-  Idle           | How long the session has been idle, in seconds
-  Connections    | Ordered list of backend connections
-  Connection IDs | Thread IDs for the backend connections
-  Queries        | Query history
-  Log            | Per-session log messages
+  Field             | Description
+  -----             | -----------
+  Id                | Session ID
+  Service           | The service where the session connected
+  State             | Session state
+  User              | Username
+  Host              | Client host address
+  Database          | Current default database of the connection
+  Connected         | Time when the session started
+  Idle              | How long the session has been idle, in seconds
+  Client TLS Cipher | Client TLS cipher
+  Connections       | Ordered list of backend connections
+  Connection IDs    | Thread IDs for the backend connections
+  Queries           | Query history
+  Log               | Per-session log messages
 ```
 
 ### show filter
@@ -746,9 +750,9 @@ Usage: show filter <filter>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -782,9 +786,9 @@ Usage: show filters
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -818,9 +822,9 @@ Usage: show listener <listener>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -853,9 +857,9 @@ Usage: show filters
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -889,9 +893,9 @@ Usage: show module <module>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -928,9 +932,9 @@ Usage: show modules
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -967,9 +971,9 @@ Usage: show maxscale
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1005,9 +1009,9 @@ Usage: show thread <thread>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1057,9 +1061,9 @@ Usage: show threads
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1109,9 +1113,9 @@ Usage: show logging
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1144,9 +1148,9 @@ Usage: show commands <module>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1179,9 +1183,9 @@ Usage: show qc_cache
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1207,9 +1211,9 @@ Usage: show dbusers <service>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1237,9 +1241,9 @@ Usage: set server <server> <state>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1270,9 +1274,9 @@ Usage: clear server <server> <state>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1300,9 +1304,9 @@ Usage: drain server <server>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1322,6 +1326,8 @@ Options:
   --help     Show help  [boolean]
 
 This command drains the server of connections by first removing it from all services after which it waits until all connections are closed. When all connections are closed, the server is put into the `maintenance` state and added back to all the services where it was removed from. To take the server back into use, execute `clear server <server> maintenance`.
+
+Warning: This command is not safe to interrupt. If interrupted, the servers might not be added back to the service. For a better alternative, use `set server <server> drain`.
 ```
 
 ## enable
@@ -1333,9 +1339,9 @@ Usage: enable log-priority <log>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1363,9 +1369,9 @@ Usage: disable log-priority <log>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1408,9 +1414,9 @@ Create server options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1435,15 +1441,15 @@ The created server will not be used by any services or monitors unless the --ser
 Usage: create monitor <name> <module> [params...]
 
 Create monitor options:
-  --servers           Link the created monitor to these servers  [array]
+  --servers           Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
   --monitor-user      Username for the monitor user  [string]
   --monitor-password  Password for the monitor user  [string]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1468,16 +1474,16 @@ The list of servers given with the --servers option should not contain any serve
 Usage: service <name> <router> <params...>
 
 Create service options:
-  --servers   Link the created service to these servers  [array]
-  --filters   Link the created service to these filters  [array]
-  --services  Link the created service to these services  [array]
+  --servers   Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
+  --filters   Link the created service to these filters. All non-option arguments after --filters are interpreted as filter names e.g. `--filters f1 f2 f3`.  [array]
+  --services  Link the created service to these services. All non-option arguments after --services are interpreted as service names e.g. `--services svc1 svc2 svc3`.  [array]
   --cluster   Link the created service to this cluster (i.e. a monitor)  [string]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1505,9 +1511,9 @@ Usage: filter <name> <module> [params...]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1547,9 +1553,9 @@ Create listener options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1578,9 +1584,9 @@ Create user options:
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1606,11 +1612,14 @@ By default the created user will have read-only privileges. To make the user an 
 ```
 Usage: destroy server <name>
 
+Destroy options:
+  --force  Remove the server from monitors and services before destroying it  [boolean] [default: false]
+
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1625,7 +1634,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove the server from monitors and services before destroying it  [boolean] [default: false]
 
 The server must be unlinked from all services and monitor before it can be destroyed.
 ```
@@ -1635,11 +1643,14 @@ The server must be unlinked from all services and monitor before it can be destr
 ```
 Usage: destroy monitor <name>
 
+Destroy options:
+  --force  Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
+
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1654,7 +1665,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
 
 The monitor must be unlinked from all servers before it can be destroyed.
 ```
@@ -1666,9 +1676,9 @@ Usage: destroy listener <service> <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1692,11 +1702,14 @@ Destroying a listener closes the listening socket, opening it up for reuse.
 ```
 Usage: destroy service <name>
 
+Destroy options:
+  --force  Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
+
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1711,7 +1724,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
 
 The service must be unlinked from all servers and filters. All listeners for the service must be destroyed before the service itself can be destroyed.
 ```
@@ -1721,11 +1733,14 @@ The service must be unlinked from all servers and filters. All listeners for the
 ```
 Usage: destroy filter <name>
 
+Destroy options:
+  --force  Automatically remove the filter from all services before destroying it  [boolean] [default: false]
+
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1740,7 +1755,6 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
-  --force    Automatically remove the filter from all services before destroying it  [boolean] [default: false]
 
 The filter must not be used by any service when it is destroyed.
 ```
@@ -1752,9 +1766,9 @@ Usage: destroy user <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1782,9 +1796,9 @@ Usage: link service <name> <target...>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1810,9 +1824,9 @@ Usage: link monitor <name> <server...>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1840,9 +1854,9 @@ Usage: unlink service <name> <target...>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1868,9 +1882,9 @@ Usage: unlink monitor <name> <server...>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1898,9 +1912,9 @@ Usage: start service <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1926,9 +1940,9 @@ Usage: start monitor <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1954,9 +1968,9 @@ Usage: start [services|maxscale]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -1984,9 +1998,9 @@ Usage: stop service <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2012,9 +2026,9 @@ Usage: stop monitor <name>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2040,9 +2054,9 @@ Usage: stop [services|maxscale]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2070,9 +2084,9 @@ Usage: alter server <server> <key> <value> ...
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2098,9 +2112,9 @@ Usage: alter monitor <monitor> <key> <value> ...
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2126,9 +2140,9 @@ Usage: alter service <service> <key> <value> ...
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2168,9 +2182,9 @@ Usage: alter service-filters <service> [filters...]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2198,9 +2212,9 @@ Usage: alter logging <key> <value> ...
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2226,9 +2240,9 @@ Usage: alter maxscale <key> <value> ...
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2269,9 +2283,9 @@ Usage: alter user <name> <password>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2299,9 +2313,9 @@ Usage: rotate logs
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2329,13 +2343,14 @@ Usage: reload service <service>
 
 Global Options:
   -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p
-                  as the last argument or use --password=''
-                                                   [string] [default: "mariadb"]
+  -p, --password  Password for the user. To input the password manually, use -p
+                  '' or --password=''              [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
-                                            [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
+                                            [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
+                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
+                                                     [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.
                                                       [boolean] [default: false]
   --tsv           Print tab separated output          [boolean] [default: false]
@@ -2365,13 +2380,14 @@ Commands:
 
 Global Options:
   -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p
-                  as the last argument or use --password=''
-                                                   [string] [default: "mariadb"]
+  -p, --password  Password for the user. To input the password manually, use -p
+                  '' or --password=''              [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
-                                            [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
+                                            [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
+                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
+                                                     [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.
                                                       [boolean] [default: false]
   --tsv           Print tab separated output          [boolean] [default: false]
@@ -2399,9 +2415,9 @@ Usage: call command <module> <command> [params...]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2429,9 +2445,9 @@ Usage: cluster diff <target>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2457,9 +2473,9 @@ Usage: cluster sync <target>
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
@@ -2489,9 +2505,9 @@ Usage: get <resource> [path]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
-  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
   --tsv           Print tab separated output  [boolean] [default: false]
 
