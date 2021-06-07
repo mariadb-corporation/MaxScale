@@ -236,6 +236,13 @@ public:
     std::vector<Json> get_array_elems() const;
 
     /**
+     * Get object keys
+     *
+     * @return A vector of key names. If the held object is not an object, an empty vector is returned.
+     */
+    std::vector<std::string> keys() const;
+
+    /**
      * Get value at JSON Pointer
      *
      * @param ptr The JSON Pointer to use

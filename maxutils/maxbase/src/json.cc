@@ -283,6 +283,21 @@ std::vector<Json> Json::get_array_elems() const
     return rval;
 }
 
+std::vector<std::string> Json::keys() const
+{
+    std::vector<std::string> rval;
+    rval.reserve(json_object_size(m_obj));
+
+    const char* key;
+    json_t* ignored;
+    json_object_foreach(m_obj, key, ignored)
+    {
+        rval.push_back(key);
+    }
+
+    return rval;
+}
+
 const std::string& Json::error_msg() const
 {
     return m_errormsg;
