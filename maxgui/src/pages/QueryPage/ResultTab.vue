@@ -47,7 +47,10 @@
                 />
 
                 <v-tooltip
-                    v-if="resultData[activeResSet] && !resultData[activeResSet].complete"
+                    v-if="
+                        $typy(resultData[activeResSet], 'data').isDefined &&
+                            !resultData[activeResSet].complete
+                    "
                     top
                     transition="slide-y-transition"
                     content-class="shadow-drop color text-navigation py-1 px-4"
