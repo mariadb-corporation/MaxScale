@@ -435,12 +435,13 @@ HttpResponse query(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
     }
 
-    // Optional row limit. 1000 is default, 10000 is hard limit. TODO: make configurable
+    // Optional row limit. 1000 is default. Can crash if client asks for more data than MaxScale has memory
+    // for.
     int64_t max_rows = 1000;
     json.try_get_int("max_rows", &max_rows);
-    if (max_rows < 0 || max_rows > 10000)
+    if (max_rows < 0)
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("`max_rows` must be between 0 and 10000."));
+        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("`max_rows` cannot be negative."));
     }
 
     string host = request.host();
