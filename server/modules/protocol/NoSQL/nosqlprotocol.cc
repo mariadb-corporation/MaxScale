@@ -56,7 +56,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::ModuleType::PROTOCOL,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,
-        "The client to MaxScale MongoDB protocol implementation",
+        "MaxScale NoSQL client protocol implementation",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::ProtocolApiGenerator<ProtocolModule>::s_api,

@@ -80,7 +80,7 @@ GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
     }
     catch (const std::exception& x)
     {
-        MXB_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
+        MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
 
         HardError error(x.what(), nosql::error::COMMAND_FAILED);
         m_context.set_last_error(error.create_last_error());
@@ -127,7 +127,7 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
     }
     catch (const bsoncxx::exception& x)
     {
-        MXB_ERROR("bsoncxx exeception occurred when parsing MongoDB command: %s", x.what());
+        MXB_ERROR("bsoncxx exeception occurred when parsing NoSQL command: %s", x.what());
 
         HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
@@ -136,7 +136,7 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
     }
     catch (const std::exception& x)
     {
-        MXB_ERROR("std exception occurred when parsing MongoDB command: %s", x.what());
+        MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
 
         HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
