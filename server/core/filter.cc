@@ -95,6 +95,10 @@ SFilterDef do_filter_alloc(const char* name, Params params, Unrecognized unrecog
                     Guard guard(this_unit.lock);
                     this_unit.filters.push_back(filter);
                 }
+                else
+                {
+                    filter.reset();
+                }
             }
             else
             {
