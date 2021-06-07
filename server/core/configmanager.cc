@@ -227,7 +227,8 @@ void ConfigManager::sync()
                 process_config(config);
 
                 // Config updated, save a local version of it.
-                save_config(m_current_config.to_string(mxb::Json::Format::COMPACT));
+                mxb_assert(config.get_int(CN_VERSION) > 0);
+                save_config(config.to_string(mxb::Json::Format::COMPACT));
 
                 // TODO: If we fail to apply the new configuration, we could try to wipe out all existing
                 // objects and apply it again. This should always succeed if only valid states are stored in
@@ -412,6 +413,7 @@ bool ConfigManager::commit()
 
         std::string payload = config.to_string(mxb::Json::Format::COMPACT);
         update_config(payload);
+        mxb_assert(config.get_int(CN_VERSION) > 0);
         save_config(payload);
 
         // Config successfully updated in the cluster and cached locally
