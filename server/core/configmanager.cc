@@ -372,7 +372,7 @@ bool ConfigManager::start()
         }
         catch (const Exception& e)
         {
-            MXS_ERROR("%s", e.what());
+            MXS_ERROR("Cannot start configuration change: %s", e.what());
             ok = false;
             rollback();
         }
@@ -425,7 +425,7 @@ bool ConfigManager::commit()
     }
     catch (const Exception& e)
     {
-        MXS_ERROR("%s", e.what());
+        MXS_ERROR("Cannot complete configuration change: %s", e.what());
         rollback();
     }
 
@@ -911,8 +911,7 @@ void ConfigManager::connect()
 
     if (!server)
     {
-        throw error("No valid servers in cluster '", m_cluster,
-                    "', cannot perform configuration update.");
+        throw error("No valid servers in cluster '", m_cluster, "'.");
     }
     else if (server != m_server)
     {
