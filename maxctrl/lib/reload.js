@@ -31,9 +31,6 @@ exports.builder = function (yargs) {
     )
     .usage("Usage: reload <command>")
     .help()
-    .command("*", "the default command", {}, function (argv) {
-      maxctrl(argv, function (host) {
-        return error("Unknown command. See output of `help reload` for a list of commands.");
-      });
-    });
+    .wrap(null)
+    .demandCommand(1, helpMsg);
 };
