@@ -44,7 +44,15 @@ public:
 public:
     GWBUF* execute() override final
     {
-        m_statements = generate_sql();
+        auto statements = generate_sql();
+
+        int i = 0;
+        for (const auto& statement : statements)
+        {
+            check_maximum_sql_length(statement);
+        }
+
+        m_statements = std::move(statements);
 
         m_it = m_statements.begin();
 

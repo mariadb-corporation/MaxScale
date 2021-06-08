@@ -287,6 +287,20 @@ void Command::check_write_batch_size(int size)
 }
 
 //static
+void Command::check_maximum_sql_length(int length)
+{
+    if (length > MAX_QUERY_LEN)
+    {
+        stringstream ss;
+        ss << "Generated SQL of " << length
+           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
+           << " bytes.";
+
+        throw HardError(ss.str(), error::COMMAND_FAILED);
+    }
+}
+
+//static
 void Command::list_commands(DocumentBuilder& commands)
 {
     for (const auto& kv : this_unit.infos_by_name)
@@ -627,7 +641,11 @@ GWBUF* SingleCommand::execute()
 {
     prepare();
 
-    m_statement = generate_sql();
+    string statement = generate_sql();
+
+    check_maximum_sql_length(statement);
+
+    m_statement = std::move(statement);
 
     send_downstream(m_statement);
     return nullptr;

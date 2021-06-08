@@ -1067,12 +1067,17 @@ the MongoDB® client library. If the id is provided explicitly, by assigning a
 value to the `_id` field, the value must be an `ObjectId`, a string or an
 integer.
 
+# Limitations
+
+Currently, the generated SQL must fit in one `COM_QUERY` packet, that is,
+it can at most be 16777210 bytes.
+
 # Example
 
 The following is a minimal setup for getting _nosqlprotocol_ up and
 running. It is assumed the reader knows how to configure MaxScale for
 normal use. If not, please start with the
-[MaxScale tutorial](Documentation/Tutorials/MaxScale-Tutorial.md).
+[MaxScale tutorial](../Tutorials/MaxScale-Tutorial.md).
 Note that as _nosqlprotocol_ is the first component in the MaxScale
 routing chain, it can be used with all routers and filters.
 

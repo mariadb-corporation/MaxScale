@@ -62,6 +62,13 @@ public:
     {
     }
 
+    // For the time being, the requirement is that the SQL a document corresponds to
+    // must fit into a single COM_QUERY packet.
+    // The first -1 is the command byte and the second to ensure that the length stays
+    // below 0xffffff, as a length of exactly that would require an additional empty
+    // packet to be sent.
+    static const int32_t MAX_QUERY_LEN = (GW_MYSQL_MAX_PACKET_LEN - MYSQL_HEADER_LEN - 1 - 1);
+
     static std::unique_ptr<Command> get(nosql::Database* pDatabase,
                                         GWBUF* pRequest,
                                         const nosql::Query& req,
@@ -106,6 +113,12 @@ public:
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     static void check_write_batch_size(int size);
+
+    static void check_maximum_sql_length(int length);
+    static void check_maximum_sql_length(const std::string& s)
+    {
+        check_maximum_sql_length(s.length());
+    }
 
     virtual void diagnose(DocumentBuilder& doc)
     {
