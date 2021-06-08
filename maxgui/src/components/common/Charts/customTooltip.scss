@@ -1,14 +1,12 @@
 .chartjs-tooltip {
     opacity: 1;
     z-index: 9999;
-    position: absolute;
     background-color: #ffffff;
     border-color: #ffffff;
     color: rgba(0, 0, 0, 0.87);
     border-radius: 10px;
     transition: all 0.3s ease;
     pointer-events: none;
-
     max-width: 500px;
     th,
     td {
@@ -34,6 +32,9 @@
     td {
         &:first-child {
             padding-right: 16px;
+        }
+        &:last-child {
+            word-break: break-all;
         }
     }
 }

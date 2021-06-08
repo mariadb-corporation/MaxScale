@@ -19,7 +19,7 @@
         <div v-if="selectedChart !== 'No Visualization'" class="mt-4">
             <label class="field__label color text-small-text"> Select result set</label>
             <v-select
-                v-model="selectedResultSet"
+                v-model="resSetId"
                 :items="resultSets"
                 outlined
                 class="std mariadb-select-input error--text__bottom"
@@ -33,17 +33,17 @@
                 hide-details="auto"
                 item-text="id"
                 item-value="id"
-                return-object
             />
-            <template v-if="selectedResultSet">
+            <template v-if="resSetId">
                 <template v-for="a in ['x', 'y']">
                     <div :key="a" class="mt-2">
                         <label class="field__label color text-small-text text-capitalize">
                             {{ a }} axis
                         </label>
+                        <!-- TODO: Show only numeric value field in y axis -->
                         <v-select
                             v-model="axis[a]"
-                            :items="selectedResultSet.fields"
+                            :items="resultSetMap.get(resSetId).fields"
                             outlined
                             class="std mariadb-select-input error--text__bottom"
                             :menu-props="{
@@ -84,7 +84,7 @@ export default {
         return {
             selectedChart: 'No Visualization',
             chartTypes: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
-            selectedResultSet: null,
+            resSetId: null,
             axis: {
                 x: '',
                 y: '',
@@ -99,6 +99,7 @@ export default {
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
         }),
+
         resultSets() {
             let resSets = []
 
@@ -125,28 +126,89 @@ export default {
                 prvwDataDetails.id = this.$t('viewDetails')
                 resSets.push(prvwDataDetails)
             }
-
+            /* TODO: Add row index to each resSets */
             return resSets
+        },
+        resultSetMap() {
+            let map = new Map()
+            this.resultSets.forEach(ele => map.set(ele.id, ele))
+            return map
         },
     },
     watch: {
         selectedChart(v) {
             this.$emit('selected-chart', v)
         },
-        selectedResultSet() {
-            //Clear
-            this.axis = {
-                x: '',
-                y: '',
-            }
+        resultSets: {
+            deep: true,
+            handler() {
+                /** TODO: When resultSetMap changes its size, genChartData will be
+                 *  failed if chosen resSetId is not in the map.
+                 *  Possible workaround is to clear resSetId
+                 */
+                this.genChartData(this.axis)
+            },
+        },
+        resSetId() {
+            // Clear axis value
+            this.axis = { x: '', y: '' }
         },
         axis: {
             deep: true,
             handler(v) {
-                if (v.x && v.y) {
-                    //TODO: Generate datasets and labels and emit to parent
-                }
+                this.genChartData(v)
             },
+        },
+    },
+    methods: {
+        genDataset({ colorIndex, data }) {
+            const lineColor = this.$help.dynamicColors(colorIndex)
+            const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+            const backgroundColor = this.$help.strReplaceAt({
+                str: lineColor,
+                index: indexOfOpacity,
+                newChar: '0.1',
+            })
+            let dataset = {
+                type: 'line',
+                // background of the line
+                backgroundColor: backgroundColor,
+                borderColor: lineColor,
+                borderWidth: 1,
+                lineTension: 0,
+                data,
+            }
+            return dataset
+        },
+        getObjectRows({ columns, rows }) {
+            return rows.map(row => {
+                const obj = {}
+                columns.forEach((c, index) => {
+                    obj[c] = row[index]
+                })
+                return obj
+            })
+        },
+        genChartData(axis) {
+            if (axis.x && axis.y) {
+                let data = []
+                let xLabels = []
+                const dataRows = this.getObjectRows({
+                    columns: this.resultSetMap.get(this.resSetId).fields,
+                    rows: this.resultSetMap.get(this.resSetId).data,
+                })
+                for (const row of dataRows) {
+                    data.push({ ...row, x: row[axis.x], y: row[axis.y] })
+                    xLabels.push(row[axis.x])
+                }
+                const dataset = this.genDataset({ colorIndex: 0, data })
+                const chartData = {
+                    labels: xLabels,
+                    datasets: [dataset],
+                }
+                this.$emit('get-axis-labels', { x: axis.x, y: axis.y })
+                this.$emit('get-chart-data', chartData)
+            }
         },
     },
 }

@@ -1,21 +1,17 @@
 <template>
-    <div class="chart-container fill-height pa-2">
+    <div ref="chartContainer" class="chart-container fill-height">
+        <line-chart
+            v-if="selectedChart === 'Line' && !$typy(chartData).isEmptyObject"
+            class="line-chart-container py-2 px-3"
+            :style="{
+                minWidth: minLineChartWidth,
+                minHeight: `${chartHeight}px`,
+            }"
+            hasVertCrossHair
+            :chartData="chartData"
+            :options="lineChartOptions"
+        />
         <!-- TODO: Add more charts-->
-        <div class="chart-container fill-height pa-2">
-            <line-chart
-                v-if="selectedChart === 'Line'"
-                class="line-chart-container"
-                :style="{
-                    height: `${chartHeight}px`,
-                    overflow: 'auto',
-                    position: 'relative',
-                }"
-                :chartData="{
-                    labels: [],
-                    datasets: [],
-                }"
-            />
-        </div>
     </div>
 </template>
 
@@ -32,12 +28,117 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
 export default {
     name: 'chart-container',
     props: {
         selectedChart: { type: String, default: '' },
         chartHeight: { type: Number, default: 0 },
+        chartData: { type: Object, default: () => {} },
+        axisLabels: { type: Object, default: () => {} },
+    },
+    data() {
+        return {
+            uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
+            alignTooltipToLeft: false,
+            dataPointObj: null,
+        }
+    },
+    computed: {
+        minLineChartWidth() {
+            return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+        },
+        getXAxisDataType() {
+            if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
+                return typeof this.chartData.datasets[0].data[0].x
+            return null
+        },
+        lineChartOptions() {
+            const isNum = this.getXAxisDataType === 'number'
+            const componentScope = this
+            return {
+                showLines: true,
+                responsive: true,
+                spanGaps: true,
+                maintainAspectRatio: false,
+                hover: {
+                    mode: 'index',
+                    intersect: false,
+                    onHover: e => this.onChartHover(e),
+                },
+                tooltips: {
+                    enabled: false,
+                    custom: function(tooltipModel) {
+                        const chartScope = this
+                        const position = chartScope._chart.canvas.getBoundingClientRect()
+                        objectTooltip({
+                            tooltipModel,
+                            tooltipId: componentScope.uniqueTooltipId,
+                            position,
+                            dataPointObj: componentScope.dataPointObj,
+                            alignTooltipToLeft: componentScope.alignTooltipToLeft,
+                        })
+                    },
+                    callbacks: {
+                        label(tooltipItem, data) {
+                            componentScope.dataPointObj =
+                                data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
+                        },
+                    },
+                },
+                legend: {
+                    display: false,
+                },
+                scales: {
+                    xAxes: [
+                        {
+                            scaleLabel: {
+                                display: true,
+                                labelString: this.axisLabels.x,
+                                fontSize: 14,
+                                lineHeight: 1,
+                                padding: 0,
+                                fontColor: '#424f62',
+                            },
+                            ticks: {
+                                maxRotation: isNum ? 0 : 90,
+                                minRotation: isNum ? 0 : 90,
+                            },
+                        },
+                    ],
+                    yAxes: [
+                        {
+                            scaleLabel: {
+                                display: true,
+                                labelString: this.axisLabels.y,
+                                fontSize: 14,
+                                padding: 16,
+                            },
+                        },
+                    ],
+                },
+            }
+        },
+    },
+    beforeDestroy() {
+        let tooltipEl = document.getElementById(this.uniqueTooltipId)
+        if (tooltipEl) tooltipEl.remove()
+    },
+    methods: {
+        onChartHover(e) {
+            this.alignTooltipToLeft = e.offsetX >= this.$refs.chartContainer.clientWidth / 2
+        },
     },
 }
 </script>
+<style lang="scss" scoped>
+.chart-container {
+    width: 100%;
+    overflow: auto;
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+}
+</style>

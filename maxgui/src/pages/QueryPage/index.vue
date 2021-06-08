@@ -74,6 +74,8 @@
                                             <chart-container
                                                 :selectedChart="selectedChart"
                                                 :chartHeight="chartHeight"
+                                                :chartData="chartData"
+                                                :axisLabels="axisLabels"
                                             />
                                         </template>
                                     </split-pane>
@@ -92,6 +94,8 @@
                             <visualize-sidebar
                                 class="visualize-sidebar"
                                 @selected-chart="selectedChart = $event"
+                                @get-chart-data="chartData = $event"
+                                @get-axis-labels="axisLabels = $event"
                             />
                         </template>
                     </split-pane>
@@ -152,6 +156,8 @@ export default {
             queryPanePct: 100,
             minQueryPanePct: 0,
             selectedChart: '',
+            chartData: {},
+            axisLabels: { x: '', y: '' },
         }
     },
     computed: {
@@ -167,14 +173,10 @@ export default {
             return this.selectedChart !== 'No Visualization'
         },
         chartHeight() {
-            /**
-             * When resultPaneDim changes(when user resizes panes, enter fullscreen, toggle sidebar ...)
-             * we calculate chart height by subtracting resultPaneDim.height from editorResultPane's client height
-             **/
+            const { height: paneHeight } = this.resultPaneDim
             if (this.$refs.editorResultPane) {
                 const { clientHeight } = this.$refs.editorResultPane.$el
-                console.log('chartHeight', clientHeight - this.resultPaneDim.height - 18)
-                return clientHeight - this.resultPaneDim.height - 18
+                return clientHeight - paneHeight - 18
             }
             return 0
         },
@@ -203,7 +205,7 @@ export default {
             if (this.showVisChart) {
                 this.queryPanePct = 50
                 this.minQueryPanePct = this.pxToPct({
-                    px: 50,
+                    px: 32,
                     containerPx: this.resultPaneDim.width,
                 })
             } else this.queryPanePct = 100
