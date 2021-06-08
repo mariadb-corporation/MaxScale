@@ -3,7 +3,7 @@ threads=###threads###
 config_sync_cluster=MariaDB-Monitor
 config_sync_user=maxskysql
 config_sync_password=skysql
-config_sync_interval=1s
+config_sync_interval=100ms
 
 ###server###
 

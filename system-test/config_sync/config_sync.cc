@@ -133,7 +133,7 @@ void wait_for_sync()
         }
         else
         {
-            std::this_thread::sleep_for(milliseconds(500));
+            std::this_thread::sleep_for(milliseconds(100));
         }
     }
 }

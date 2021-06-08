@@ -586,11 +586,11 @@ config::ParamSeconds Config::s_config_sync_timeout(
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(10), mxs::config::Param::AT_RUNTIME);
 
-config::ParamSeconds Config::s_config_sync_interval(
+config::ParamMilliseconds Config::s_config_sync_interval(
     &Config::s_specification,
     CN_CONFIG_SYNC_INTERVAL,
     "How often to synchronize the configuration.",
-    mxs::config::INTERPRET_AS_SECONDS,
+    mxs::config::NO_INTERPRETATION,
     std::chrono::seconds(5));
 
 config::ParamBool Config::s_log_warn_super_user(

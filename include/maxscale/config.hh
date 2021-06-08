@@ -30,6 +30,7 @@ public:
     Config& operator=(const Config&) = delete;
 
     using seconds = std::chrono::seconds;
+    using milliseconds = std::chrono::milliseconds;
 
     /**
      * Initialize the config object. To be called *once* at program startup.
@@ -158,17 +159,17 @@ public:
     std::string               admin_ssl_ca_cert;/**< Admin SSL CA cert */
     mxb::ssl_version::Version admin_ssl_version;/**< Admin allowed SSL versions */
 
-    std::string local_address;                  /**< Local address to use when connecting */
-    bool        load_persisted_configs;         /**< Load persisted configuration files on startup */
-    std::string config_sync_cluster;            /**< Cluster used for config sync */
-    std::string config_sync_user;               /**< User used for config sync */
-    std::string config_sync_password;           /**< Password used for config sync */
-    seconds     config_sync_timeout;            /**< Timeout for the config sync database operations */
-    seconds     config_sync_interval;           /**< How often to  sync the config */
-    bool        log_warn_super_user;            /**< Log a warning if incoming client has super-priv. */
-    bool        gui;                            /**< Enable admin GUI */
-    bool        secure_gui;                     /**< Serve GUI only over HTTPS */
-    std::string debug;
+    std::string  local_address;                 /**< Local address to use when connecting */
+    bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
+    std::string  config_sync_cluster;           /**< Cluster used for config sync */
+    std::string  config_sync_user;              /**< User used for config sync */
+    std::string  config_sync_password;          /**< Password used for config sync */
+    seconds      config_sync_timeout;           /**< Timeout for the config sync database operations */
+    milliseconds config_sync_interval;          /**< How often to  sync the config */
+    bool         log_warn_super_user;           /**< Log a warning if incoming client has super-priv. */
+    bool         gui;                           /**< Enable admin GUI */
+    bool         secure_gui;                    /**< Serve GUI only over HTTPS */
+    std::string  debug;
 
     // The following will not be configured via the configuration mechanism.
     bool config_check;                              /**< Only check config */
@@ -261,7 +262,7 @@ private:
     static config::ParamString                          s_config_sync_user;
     static config::ParamString                          s_config_sync_password;
     static config::ParamSeconds                         s_config_sync_timeout;
-    static config::ParamSeconds                         s_config_sync_interval;
+    static config::ParamMilliseconds                    s_config_sync_interval;
     static config::ParamBool                            s_log_warn_super_user;
     static config::ParamBool                            s_gui;
     static config::ParamBool                            s_secure_gui;
