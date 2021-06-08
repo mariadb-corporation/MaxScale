@@ -1,7 +1,11 @@
 <template>
-    <div ref="chartContainer" class="chart-container fill-height">
+    <div
+        v-if="!$typy(chartData, 'datasets').isEmptyArray"
+        ref="chartContainer"
+        class="chart-container fill-height"
+    >
         <line-chart
-            v-if="selectedChart === 'Line' && !$typy(chartData).isEmptyObject"
+            v-if="selectedChart === 'Line'"
             class="line-chart-container py-2 px-3"
             :style="{
                 minWidth: minLineChartWidth,
@@ -11,7 +15,7 @@
             :chartData="chartData"
             :options="lineChartOptions"
         />
-        <!-- TODO: Add more charts-->
+        <!-- TODO: Add more charts, add fullscreen mode and export chart feat-->
     </div>
 </template>
 

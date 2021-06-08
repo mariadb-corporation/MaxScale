@@ -19,7 +19,7 @@
         <div v-if="selectedChart !== 'No Visualization'" class="mt-4">
             <label class="field__label color text-small-text"> Select result set</label>
             <v-select
-                v-model="resSetId"
+                v-model="resSet"
                 :items="resultSets"
                 outlined
                 class="std mariadb-select-input error--text__bottom"
@@ -33,9 +33,14 @@
                 hide-details="auto"
                 item-text="id"
                 item-value="id"
+                return-object
             />
-            <template v-if="resSetId">
-                <template v-for="a in ['x', 'y']">
+            <template v-if="resSet">
+                <!-- Don't show axis inputs if result set is empty -->
+                <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 color text-small-text">
+                    Empty set
+                </div>
+                <template v-for="a in ['x', 'y']" v-else>
                     <div :key="a" class="mt-2">
                         <label class="field__label color text-small-text text-capitalize">
                             {{ a }} axis
@@ -43,7 +48,7 @@
                         <!-- TODO: Show only numeric value field in y axis -->
                         <v-select
                             v-model="axis[a]"
-                            :items="resultSetMap.get(resSetId).fields"
+                            :items="a === 'y' ? yAxisFields : xAxisFields"
                             outlined
                             class="std mariadb-select-input error--text__bottom"
                             :menu-props="{
@@ -84,11 +89,12 @@ export default {
         return {
             selectedChart: 'No Visualization',
             chartTypes: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
-            resSetId: null,
+            resSet: null,
             axis: {
                 x: '',
                 y: '',
             },
+            numberSign: '#',
         }
     },
     computed: {
@@ -126,13 +132,33 @@ export default {
                 prvwDataDetails.id = this.$t('viewDetails')
                 resSets.push(prvwDataDetails)
             }
-            /* TODO: Add row index to each resSets */
             return resSets
         },
-        resultSetMap() {
-            let map = new Map()
-            this.resultSets.forEach(ele => map.set(ele.id, ele))
-            return map
+        xAxisFields() {
+            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            return [this.numberSign, ...this.resSet.fields]
+        },
+        yAxisFields() {
+            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            // Iterates the first row to get column type
+            let types = []
+            this.resSet.data[0].forEach(col => {
+                types.push(typeof col)
+            })
+            // get numeric column indexes
+            let indices = []
+            const numType = 'number'
+            let idx = types.indexOf(numType)
+            while (idx != -1) {
+                indices.push(idx)
+                idx = types.indexOf(numType, idx + 1)
+            }
+            // show numeric fields only
+            let fields = [
+                this.numberSign,
+                ...this.resSet.fields.filter((_, i) => indices.includes(i)),
+            ]
+            return fields
         },
     },
     watch: {
@@ -142,16 +168,16 @@ export default {
         resultSets: {
             deep: true,
             handler() {
-                /** TODO: When resultSetMap changes its size, genChartData will be
-                 *  failed if chosen resSetId is not in the map.
-                 *  Possible workaround is to clear resSetId
-                 */
+                this.clearAxisVal()
+                this.resSet = null
                 this.genChartData(this.axis)
             },
         },
-        resSetId() {
-            // Clear axis value
-            this.axis = { x: '', y: '' }
+        resSet: {
+            deep: true,
+            handler() {
+                this.clearAxisVal()
+            },
         },
         axis: {
             deep: true,
@@ -161,6 +187,9 @@ export default {
         },
     },
     methods: {
+        clearAxisVal() {
+            this.axis = { x: '', y: '' }
+        },
         genDataset({ colorIndex, data }) {
             const lineColor = this.$help.dynamicColors(colorIndex)
             const indexOfOpacity = lineColor.lastIndexOf(')') - 1
@@ -190,25 +219,41 @@ export default {
             })
         },
         genChartData(axis) {
+            let axisLabels = { x: '', y: '' }
+            let chartData = {
+                labels: [],
+                datasets: [],
+            }
             if (axis.x && axis.y) {
-                let data = []
+                axisLabels = { x: axis.x, y: axis.y }
+                let dataPoints = []
                 let xLabels = []
                 const dataRows = this.getObjectRows({
-                    columns: this.resultSetMap.get(this.resSetId).fields,
-                    rows: this.resultSetMap.get(this.resSetId).data,
+                    columns: this.resSet.fields,
+                    rows: this.resSet.data,
                 })
-                for (const row of dataRows) {
-                    data.push({ ...row, x: row[axis.x], y: row[axis.y] })
-                    xLabels.push(row[axis.x])
+                for (const [i, row] of dataRows.entries()) {
+                    const rowNumber = i + 1
+                    const isXAxisARowNum = axis.x === this.numberSign
+                    const isYAxisARowNum = axis.y === this.numberSign
+                    const xAxisVal = isXAxisARowNum ? rowNumber : row[axis.x]
+                    const yAxisVal = isYAxisARowNum ? rowNumber : row[axis.y]
+
+                    dataPoints.push({
+                        ...row,
+                        x: xAxisVal,
+                        y: yAxisVal,
+                    })
+                    xLabels.push(xAxisVal)
                 }
-                const dataset = this.genDataset({ colorIndex: 0, data })
-                const chartData = {
+                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
+                chartData = {
                     labels: xLabels,
                     datasets: [dataset],
                 }
-                this.$emit('get-axis-labels', { x: axis.x, y: axis.y })
-                this.$emit('get-chart-data', chartData)
             }
+            this.$emit('get-chart-data', chartData)
+            this.$emit('get-axis-labels', axisLabels)
         },
     },
 }
