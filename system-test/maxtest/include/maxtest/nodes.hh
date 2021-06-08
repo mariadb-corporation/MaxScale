@@ -174,14 +174,6 @@ public:
     int copy_to_node_legacy(const char* src, const char* dest, int i = 0);
     int copy_to_node(int i, const char* src, const char* dest);
 
-    /**
-     * @brief Copy a local file to the Node i machine
-     * @param src Source file on the remote filesystem
-     * @param dest Destination file on the local file system
-     * @param i Node index
-     * @return exit code of the system command or 1 in case of i > N
-     */
-    int copy_from_node_legacy(const char* src, const char* dest, int i);
     int copy_from_node(int i, const char* src, const char* dest);
 
     void write_env_vars();
