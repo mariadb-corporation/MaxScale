@@ -14,12 +14,12 @@
 "use strict";
 
 var maxctrl = require("./lib/core.js");
-var utils = require("./lib/utils.js");
 var process = require("process");
 
 function print(out) {
   if (out) {
     if (!process.stdout.isTTY) {
+      var utils = require("./lib/utils.js");
       out = utils.strip_colors(out);
     }
 

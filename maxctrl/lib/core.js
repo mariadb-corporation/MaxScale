@@ -15,8 +15,6 @@ var fs = require("fs");
 var ini = require("ini");
 var os = require("os");
 var yargs = require("yargs");
-var inquirer = require("inquirer");
-var readlineSync = require("readline-sync");
 
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, manually create the file
@@ -234,6 +232,7 @@ function program() {
         // TODO: Combine this into the one in common.js
         if (argv.password == "") {
           if (process.stdin.isTTY) {
+            var readlineSync = require("readline-sync");
             argv.password = readlineSync.question("Enter password: ", {
               hideEchoBack: true,
             });
@@ -300,6 +299,7 @@ module.exports.execute = function (argv, opts) {
 };
 
 function askQuestion() {
+  const inquirer = require("inquirer");
   inquirer.registerPrompt("command", require("inquirer-command-prompt"));
 
   var question = [
