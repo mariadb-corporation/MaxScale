@@ -270,6 +270,9 @@ program
 function doCommand(argv) {
   return new Promise(function (resolve, reject) {
     program.parse(argv, { resolve: resolve, reject: reject }, function (err, argv, output) {
+      // This callback only receives input if no command was called and Yargs encountered some sort of
+      // an error or auto-generated the output. The promise will be resolved or rejected via the reject
+      // and resolve values stored in argv.
       if (err) {
         reject(err.message);
       } else if (output) {
