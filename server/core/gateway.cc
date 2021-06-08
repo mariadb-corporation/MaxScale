@@ -2083,6 +2083,19 @@ int main(int argc, char** argv)
                     if (res == mxs::ConfigManager::Startup::RESTART)
                     {
                         MXS_NOTICE("Attempting to restart MaxScale");
+
+                        if (this_unit.daemon_mode)
+                        {
+                            // We have to fake success on the main process since we are using Type=forking.
+                            // This has to be done because systemd only considers the final process as the
+                            // main process whose return code is checked against RestartForceExitStatus. For
+                            // more information, refer to the following issues:
+                            //   https://github.com/systemd/systemd/issues/19295
+                            //   https://github.com/systemd/systemd/pull/19685
+
+                            write_child_exit_code(child_pipe, MAXSCALE_SHUTDOWN);
+                        }
+
                         rc = MAXSCALE_RESTARTING;
                     }
                     else
