@@ -14,17 +14,12 @@
 
 import { Line } from 'vue-chartjs'
 import 'chartjs-plugin-streaming'
-import customTooltip from './customTooltip'
+import { streamTooltip } from './customTooltips'
 export default {
     extends: Line,
     props: {
-        chartData: {
-            type: Object,
-            required: true,
-        },
-        options: {
-            type: Object,
-        },
+        chartData: { type: Object, required: true },
+        options: { type: Object },
     },
     data() {
         return {
@@ -82,10 +77,15 @@ export default {
                     intersect: false,
                     enabled: false,
                     custom: function(tooltipModel) {
-                        customTooltip({
+                        const chartScope = this
+                        const position = chartScope._chart.canvas.getBoundingClientRect()
+                        /** TODO: provide alignTooltipToLeft check to auto align tooltip position
+                         *  For now, it is aligned to center
+                         */
+                        streamTooltip({
                             tooltipModel,
                             tooltipId: scope.uniqueTooltipId,
-                            scope: this,
+                            position,
                         })
                     },
                 },

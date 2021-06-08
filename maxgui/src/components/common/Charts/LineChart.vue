@@ -11,24 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 import { Line } from 'vue-chartjs'
-import customTooltip from './customTooltip'
 export default {
     extends: Line,
     props: {
-        chartData: {
-            type: Object,
-            required: true,
-        },
-        options: {
-            type: Object,
-        },
-    },
-    data() {
-        return {
-            uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
-        }
+        chartData: { type: Object, required: true },
+        options: { type: Object },
+        hasVertCrossHair: { type: Boolean, default: false },
     },
     watch: {
         chartData() {
@@ -37,31 +26,40 @@ export default {
         },
     },
     beforeDestroy() {
-        let tooltipEl = document.getElementById(this.uniqueTooltipId)
-        tooltipEl && tooltipEl.remove()
         if (this.$data._chart) this.$data._chart.destroy()
     },
     mounted() {
+        if (this.hasVertCrossHair) {
+            this.addPlugin({
+                id: 'my-plugin',
+                afterDatasetsDraw: function(chart) {
+                    if (chart.tooltip._active && chart.tooltip._active.length) {
+                        let activePoint = chart.tooltip._active[0],
+                            ctx = chart.ctx,
+                            y_axis = chart.scales['y-axis-0'],
+                            x = activePoint.tooltipPosition().x,
+                            topY = y_axis.top,
+                            bottomY = y_axis.bottom
+                        ctx.save()
+                        ctx.beginPath()
+                        ctx.moveTo(x, topY)
+                        ctx.lineTo(x, bottomY)
+                        ctx.lineWidth = 2
+                        ctx.strokeStyle = '#0b718c'
+                        ctx.stroke()
+                        ctx.restore()
+                    }
+                },
+            })
+        }
         this.renderLineChart()
     },
     methods: {
         renderLineChart() {
-            const scope = this
             let chartOption = {
                 tooltips: {
                     mode: 'index',
                     intersect: false,
-                    enabled: false,
-                    custom: function(tooltipModel) {
-                        /** TODO: Create another function for showing object tooltip
-                         *  and rename customTooltip to strTooltip
-                         */
-                        customTooltip({
-                            tooltipModel,
-                            tooltipId: scope.uniqueTooltipId,
-                            scope: this,
-                        })
-                    },
                 },
                 elements: {
                     point: {
@@ -73,6 +71,9 @@ export default {
                         {
                             gridLines: {
                                 drawBorder: true,
+                            },
+                            ticks: {
+                                beginAtZero: true,
                             },
                         },
                     ],

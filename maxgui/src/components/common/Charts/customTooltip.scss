@@ -1,5 +1,6 @@
 .chartjs-tooltip {
     opacity: 1;
+    z-index: 9999;
     position: absolute;
     background-color: #ffffff;
     border-color: #ffffff;
@@ -7,14 +8,32 @@
     border-radius: 10px;
     transition: all 0.3s ease;
     pointer-events: none;
-    transform: translate(-50%, 0);
+
+    max-width: 500px;
     th,
     td {
-        font-size: 10px;
+        font-size: 12px;
+        vertical-align: baseline;
     }
 }
 .chartjs-tooltip-key {
     display: inline-block;
     width: 10px;
     height: 10px;
+}
+.chartjs-tooltip--transform-left {
+    transform: translate(-100%, 0);
+}
+.chartjs-tooltip--transform-right {
+    transform: translate(0, 0);
+}
+.chartjs-tooltip--transform-center {
+    transform: translate(-50%, 0);
+}
+.query-editor-chart-tooltip {
+    td {
+        &:first-child {
+            padding-right: 16px;
+        }
+    }
 }
