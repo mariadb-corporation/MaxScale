@@ -25,13 +25,11 @@ int main(int argc, char* argv[])
                   "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host2'");
 
     Test->tprintf("Synchronizing slaves");
-    Test->reset_timeout();
     Test->repl->sync_slaves();
 
     const char* mxs_ip = Test->maxscale->ip4();
 
     Test->tprintf("Trying first hostname, expecting failure");
-    Test->reset_timeout();
     MYSQL* conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass1", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {
@@ -43,7 +41,6 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Trying second hostname, expecting success");
-    Test->reset_timeout();
     conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass2", Test->maxscale_ssl);
     Test->add_result(mysql_errno(conn), "MaxScale can't connect: %s\n", mysql_error(conn));
     if (conn != NULL)
@@ -52,7 +49,6 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Trying third hostname, expecting failure");
-    Test->reset_timeout();
     conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass3", Test->maxscale_ssl);
     if (mysql_errno(conn) == 0)
     {

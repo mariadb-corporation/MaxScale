@@ -242,7 +242,6 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
 
     Test->maxscale->connect_maxscale();
 

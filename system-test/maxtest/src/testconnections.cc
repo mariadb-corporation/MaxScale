@@ -864,8 +864,6 @@ void TestConnections::init_maxscale(int m)
  */
 void TestConnections::copy_all_logs()
 {
-    reset_timeout();
-
     string str = mxb::string_printf("mkdir -p %s/LOGS/%s", mxt::BUILD_DIR, m_shared.test_name.c_str());
     call_system(str);
 
@@ -1064,20 +1062,15 @@ bool TestConnections::stop_all_maxscales()
 int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
-    reset_timeout();
     tprintf("Connecting to Maxscale\n");
     add_result(maxscale->connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
-    reset_timeout();
     try_query(maxscale->conn_rwsplit[0], "show databases;");
     tprintf("ReadConn Master \n");
-    reset_timeout();
     try_query(maxscale->conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
-    reset_timeout();
     try_query(maxscale->conn_slave, "show databases;");
-    reset_timeout();
     maxscale->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
     my_maxscale(0)->expect_running_status(true);
@@ -1131,8 +1124,6 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     tprintf("Opening %d connections to each router\n", conn_N);
     for (i = 0; i < conn_N; i++)
     {
-        reset_timeout();
-
         if (verbose)
         {
             tprintf("opening %d-connection: ", i + 1);
@@ -1198,8 +1189,6 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     }
     for (i = 0; i < conn_N; i++)
     {
-        reset_timeout();
-
         if (verbose)
         {
             tprintf("Trying query against %d-connection: ", i + 1);
@@ -1243,7 +1232,6 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     tprintf("Closing all connections\n");
     for (i = 0; i < conn_N; i++)
     {
-        reset_timeout();
         if (rwsplit_flag)
         {
             mysql_close(rwsplit_conn[i]);
@@ -1386,24 +1374,19 @@ int TestConnections::insert_select(int N)
     int result = 0;
 
     tprintf("Create t1\n");
-    reset_timeout();
     create_t1(maxscale->conn_rwsplit[0]);
 
     tprintf("Insert data into t1\n");
-    reset_timeout();
     insert_into_t1(maxscale->conn_rwsplit[0], N);
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
-    reset_timeout();
     result += select_from_t1(maxscale->conn_rwsplit[0], N);
 
     tprintf("SELECT: master\n");
-    reset_timeout();
     result += select_from_t1(maxscale->conn_master, N);
 
     tprintf("SELECT: slave\n");
-    reset_timeout();
     result += select_from_t1(maxscale->conn_slave, N);
 
     return result;
@@ -1415,7 +1398,6 @@ int TestConnections::use_db(char* db)
     char sql[100];
 
     sprintf(sql, "USE %s;", db);
-    reset_timeout();
     tprintf("selecting DB '%s' for rwsplit\n", db);
     local_result += execute_query(maxscale->conn_rwsplit[0], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
@@ -1440,7 +1422,6 @@ int TestConnections::check_t1_table(bool presence, char* db)
     repl->sync_slaves();
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
-    reset_timeout();
     int exists = check_if_t1_exists(maxscale->conn_rwsplit[0]);
 
     if (exists == presence)
@@ -1452,7 +1433,6 @@ int TestConnections::check_t1_table(bool presence, char* db)
         add_result(1, "Table t1 is %s found in '%s' database using RWSplit\n", actual, db);
     }
 
-    reset_timeout();
     exists = check_if_t1_exists(maxscale->conn_master);
 
     if (exists == presence)
@@ -1467,7 +1447,6 @@ int TestConnections::check_t1_table(bool presence, char* db)
                    db);
     }
 
-    reset_timeout();
     exists = check_if_t1_exists(maxscale->conn_slave);
 
     if (exists == presence)
@@ -1485,7 +1464,6 @@ int TestConnections::check_t1_table(bool presence, char* db)
 
     for (int i = 0; i < repl->N; i++)
     {
-        reset_timeout();
         exists = check_if_t1_exists(repl->nodes[i]);
         if (exists == presence)
         {
@@ -1561,9 +1539,6 @@ void TestConnections::check_current_connections(int value)
 bool TestConnections::test_bad_config(const string& config)
 {
     process_template(*maxscale, config, "/tmp/");
-
-    // Set the timeout to prevent hangs with configurations that work
-    reset_timeout();
 
     int ssh_rc = maxscale->ssh_node_f(0,
                                       true,

@@ -33,7 +33,6 @@ Config::~Config()
 void Config::add_server(int num)
 {
     test_->tprintf("Adding the servers");
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0, true, "maxctrl link service %s server%d", SERVICE_NAME1, num);
     test_->maxscale->ssh_node_f(0, true, "maxctrl link service %s server%d", SERVICE_NAME2, num);
     test_->maxscale->ssh_node_f(0, true, "maxctrl link service %s server%d", SERVICE_NAME3, num);
@@ -46,7 +45,6 @@ void Config::add_server(int num)
 
 void Config::remove_server(int num)
 {
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0, true, "maxctrl unlink service %s server%d", SERVICE_NAME1, num);
     test_->maxscale->ssh_node_f(0, true, "maxctrl unlink service %s server%d", SERVICE_NAME2, num);
     test_->maxscale->ssh_node_f(0, true, "maxctrl unlink service %s server%d", SERVICE_NAME3, num);
@@ -69,14 +67,12 @@ void Config::add_created_servers(const char* object)
 
 void Config::destroy_server(int num)
 {
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0, true, "maxctrl destroy server server%d", num);
     created_servers_.erase(num);
 }
 
 void Config::create_server(int num)
 {
-    test_->reset_timeout();
     auto homedir = test_->maxscale->access_homedir();
     char ssl_line[200 + 3 * strlen(homedir)] = "";
     if (test_->backend_ssl)
@@ -116,7 +112,6 @@ void Config::alter_server(int num, const char* key, float value)
 
 void Config::create_monitor(const char* name, const char* module, int interval)
 {
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0, true,
                                 "maxctrl create monitor %s %s monitor_interval=%d user=%s password=%s",
                                 name, module, interval, test_->maxscale->user_name.c_str(),
@@ -146,7 +141,6 @@ void Config::start_monitor(const char* name)
 
 void Config::destroy_monitor(const char* name)
 {
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0, true, "maxctrl destroy monitor %s", name);
     created_monitors_.erase(std::string(name));
 }
@@ -164,7 +158,6 @@ void Config::create_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
 
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0,
                                 true,
                                 "maxctrl create listener %s %s %d",
@@ -178,7 +171,6 @@ void Config::create_ssl_listener(Config::Service service)
     int i = static_cast<int>(service);
 
     auto homedir = test_->maxscale->access_homedir();
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0,
                                 true,
                                  "maxctrl create listener %s %s %d "
@@ -193,7 +185,6 @@ void Config::destroy_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
 
-    test_->reset_timeout();
     test_->maxscale->ssh_node_f(0,
                                 true,
                                 "maxctrl destroy listener %s %s",

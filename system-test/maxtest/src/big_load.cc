@@ -95,7 +95,7 @@ void load(long int* new_inserts,
         sleep(run_time);
         data.exit_flag = 1;
         Test->tprintf("Waiting for all threads to exit\n");
-        Test->reset_timeout();
+
         for (int i = 0; i < threads_num; i++)
         {
             pthread_join(thread1[i], NULL);

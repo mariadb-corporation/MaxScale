@@ -18,14 +18,12 @@ int main(int argc, char** argv)
         Test->tprintf("Creating 100 connections...\n");
         for (int i = 0; i < 100; i++)
         {
-            Test->reset_timeout();
             mysql[i] = Test->maxscale->open_readconn_master_connection();
             execute_query_silent(mysql[i], "select 1");
         }
 
         for (int i = 0; i < 100; i++)
         {
-            Test->reset_timeout();
             mysql_close(mysql[i]);
         }
     }

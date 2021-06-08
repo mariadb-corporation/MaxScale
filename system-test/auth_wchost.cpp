@@ -14,7 +14,6 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     auto mxs = test.maxscale;
-    test.reset_timeout();
     test.repl->connect();
 
     char my_ip[1024];
@@ -34,7 +33,6 @@ int main(int argc, char* argv[])
         test.tprintf("Connecting to Maxscale\n");
         test.add_result(mxs->connect_maxscale(), "Error connecting to Maxscale\n");
         test.tprintf("Creating user %s", userhostc);
-        test.reset_timeout();
 
         auto admin_conn = mxs->conn_rwsplit[0];
         test.add_result(execute_query(admin_conn, "CREATE USER %s identified by '%s';", userhostc, pw),
