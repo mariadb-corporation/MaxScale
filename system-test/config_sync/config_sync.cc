@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <maxbase/assert.h>
 
 #include "config_sync_common.hh"
 
@@ -116,7 +117,7 @@ std::vector<TestCase> tests
     },
 };
 
-void wait_for_sync()
+void wait_for_sync(int version = 0)
 {
     auto start = steady_clock::now();
 
@@ -124,8 +125,10 @@ void wait_for_sync()
     {
         auto res1 = get(api1, "maxscale", "/data/attributes/config_sync");
         auto res2 = get(api2, "maxscale", "/data/attributes/config_sync");
+        int v1 = res1.get_int("version");
+        int v2 = res2.get_int("version");
 
-        if (res1.get_int("version") == res2.get_int("version")
+        if (v1 == v2 && (version == 0 || v1 == version)
             && res1.get_object("nodes").keys().size() == 2
             && res2.get_object("nodes").keys().size() == 2)
         {
@@ -138,39 +141,75 @@ void wait_for_sync()
     }
 }
 
+std::string get_diff(const mxb::Json& js_a, const mxb::Json& js_b)
+{
+    if (!js_a.valid() || !js_b.valid() || js_a == js_b)
+    {
+        return "";
+    }
+
+    std::string a = js_a.to_string(NORMAL);
+    std::string b = js_b.to_string(NORMAL);
+    auto start = std::mismatch(a.begin(), a.end(), b.begin(), b.end());
+    auto end = std::mismatch(a.rbegin(), a.rend(), b.rbegin(), b.rend());
+
+    mxb_assert(start.first != a.end() && end.first != a.rend());
+
+    while (start.first != a.begin() && start.second != b.begin())
+    {
+        char c = *start.first;
+
+        if (c == ',' || c == '[' || c == '{')
+        {
+            break;
+        }
+
+        --start.first;
+        --start.second;
+    }
+
+    // Skip over the delimiting character
+    ++start.first;
+    ++start.second;
+
+    while (end.first != a.rbegin() && end.second != b.rbegin())
+    {
+        char c = *end.first;
+
+        if (c == ',' || c == '[' || c == '{')
+        {
+            break;
+        }
+
+        --end.first;
+        --end.second;
+    }
+
+    std::string a_diff(start.first, end.first.base());
+    std::string b_diff(start.second, end.second.base());
+
+    return a_diff + " != " + b_diff;
+}
+
 void expect_sync(TestConnections& test, int expected_version, size_t num_maxscales)
 {
     bool ok = true;
     std::ostringstream ss;
 
-    auto check = [&](auto status) {
+    auto check = [&](auto status, const char* who) {
             int version = status.get_int("version");
-            if (version != expected_version)
-            {
-                ok = false;
-                ss << "Expected version " << expected_version << ", got " << version << '\n';
-            }
+            test.expect(version == expected_version,
+                        "Expected version %d, got %d from %s", expected_version, version, who);
 
             auto nodes = status.get_object("nodes");
             size_t num_fields = json_object_size(nodes.get_json());
-            if (num_fields != num_maxscales)
-            {
-                ok = false;
-                ss << "Expected \"nodes\" object to have " << num_maxscales << " fields, got "
-                   << num_fields << ": " << nodes.to_string(NORMAL) << '\n';
-            }
 
-            if (!status.contains("origin"))
-            {
-                ok = false;
-                ss << "Expected \"origin\" to not be empty.\n";
-            }
+            test.expect(num_fields == num_maxscales,
+                        "Expected \"nodes\" object to have %lu fields, got %lu from %s: %s",
+                        num_maxscales, num_fields, who, nodes.to_string(NORMAL).c_str());
 
-            if (!status.contains("status"))
-            {
-                ok = false;
-                ss << "Expected \"status\" to not be empty.\n";
-            }
+            test.expect(status.contains("origin"), "Expected \"origin\" to not be empty.");
+            test.expect(status.contains("status"), "Expected \"status\" to not be empty.");
         };
 
     wait_for_sync();
@@ -178,13 +217,13 @@ void expect_sync(TestConnections& test, int expected_version, size_t num_maxscal
     auto status1 = get(api1, "maxscale", "/data/attributes/config_sync");
     auto status2 = get(api2, "maxscale", "/data/attributes/config_sync");
 
-    check(status1);
-    check(status2);
+    check(status1, "MaxScale 1");
+    check(status2, "MaxScale 2");
 
     if (ok)
     {
-        test.expect(status1 == status2, "Expected JSON to be equal: %s != %s",
-                    status1.to_string(NORMAL).c_str(), status2.to_string(NORMAL).c_str());
+        test.expect(status1 == status2, "Expected JSON to be equal: %s",
+                    get_diff(status1, status2).c_str());
     }
 
     test.expect(ok, "%s", ss.str().c_str());
@@ -200,10 +239,8 @@ void expect_equal(TestConnections& test, const std::string& resource, const std:
     auto value1 = get(api1, resource, path);
     auto value2 = get(api2, resource, path);
 
-    test.expect(value1 == value2, "Values for '%s' at '%s' are not equal: %s != %s",
-                resource.c_str(), path.c_str(),
-                value1.to_string(NORMAL).c_str(),
-                value2.to_string(NORMAL).c_str());
+    test.expect(value1 == value2, "Values for '%s' at '%s' are not equal: %s",
+                resource.c_str(), path.c_str(), get_diff(value1, value2).c_str());
 }
 
 void reset(TestConnections& test)
@@ -305,8 +342,9 @@ void test_bad_change(TestConnections& test)
     auto nodes1 = sync1.get_object("nodes");
     auto nodes2 = sync2.get_object("nodes");
 
-    test.expect(nodes1 == nodes2, "Both MaxScales should have the same \"nodes\" data: %s != %s",
-                nodes1.to_string(NORMAL).c_str(), nodes2.to_string(NORMAL).c_str());
+    test.expect(nodes1 == nodes2,
+                "Both MaxScales should have the same \"nodes\" data: %s",
+                get_diff(nodes1, nodes2).c_str());
 
     int error = 0;
     int ok = 0;
@@ -343,8 +381,8 @@ void test_bad_change(TestConnections& test)
     sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
     sync2 = get(api2, "maxscale", "/data/attributes/config_sync");
 
-    test.expect(sync1 == sync2, "Expected \"config_sync\" values to be equal: %s != %s",
-                sync1.to_string(NORMAL).c_str(), sync2.to_string(NORMAL).c_str());
+    test.expect(sync1 == sync2, "Expected \"config_sync\" values to be equal: %s",
+                get_diff(sync1, sync2).c_str());
 
     // Remove the directory in case we repeat the test
     test.maxscale->ssh_node(CREATE_DIR, false);
@@ -353,33 +391,86 @@ void test_bad_change(TestConnections& test)
     reset(test);
 }
 
-void test_node_failure(TestConnections& test)
+void test_failures(TestConnections& test)
 {
     int value = 10;
     int version = 1;
-    auto config_update = [&]() {
-            test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+    auto config_update = [&](auto mxs) {
+            auto rv = mxs->maxctrl("alter service RW-Split-Router max_sescmd_history "
                                    + std::to_string(value++));
+            test.expect(rv.rc == 0, "Expected alter service to work: %s", rv.output.c_str());
             expect_sync(test, version++, 2);
             expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
         };
 
-    config_update();
+    config_update(test.maxscale);
 
     test.tprintf("Switch master to server2");
     auto res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server2");
     test.expect(res.rc == 0, "Error: %s", res.output.c_str());
-    config_update();
+    config_update(test.maxscale);
 
     test.tprintf("Switch master to server3");
     res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server3");
     test.expect(res.rc == 0, "Error: %s", res.output.c_str());
-    config_update();
+    config_update(test.maxscale);
 
     test.tprintf("Switch master back over to server1");
     res = test.maxscale->maxctrl("call command mariadbmon switchover MariaDB-Monitor server1");
     test.expect(res.rc == 0, "Error: %s", res.output.c_str());
-    config_update();
+    config_update(test.maxscale);
+
+    test.tprintf("Config updates should fail if all nodes are down");
+    test.repl->stop_nodes();
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+                                 + std::to_string(value++));
+    test.expect(res.rc != 0, "Command should fail when all servers are down");
+
+    test.tprintf("Config updates works with --skip-sync");
+    res = test.maxscale->maxctrl("alter service --skip-sync RW-Split-Router max_sescmd_history "
+                                 + std::to_string(value++));
+    test.expect(res.rc == 0, "Command with --skip-sync should work: %s", res.output.c_str());
+    test.repl->start_nodes();
+
+    test.tprintf("Next update should override change done with --skip-sync");
+    test.maxscale->wait_for_monitor();
+    expect_equal(test, "maxscale", "/data/attributes/config_sync/version");
+    config_update(test.maxscale2);
+
+    test.tprintf("Set the version field in the database to 1, new changes should fail");
+    auto c = test.repl->get_connection(0);
+    c.connect();
+    c.query("UPDATE mysql.maxscale_config SET version = 1");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+                                 + std::to_string(value++));
+    test.expect(res.rc != 0, "Command should fail database has stale version value");
+
+    std::string EXPECTED = "100";
+    test.tprintf("Set the version field in the database to %s, all nodes should re-apply the config",
+                 EXPECTED.c_str());
+    c.query("UPDATE mysql.maxscale_config SET version = " + EXPECTED);
+    wait_for_sync(100);
+    auto mxs_version = get(api1, "maxscale", "/data/attributes/config_sync/version").get_int();
+    auto db_version = c.field("SELECT version FROM mysql.maxscale_config");
+
+    test.expect(db_version == EXPECTED,
+                "Version in the database should be %s, not %s", EXPECTED.c_str(), db_version.c_str());
+    test.expect(mxs_version == std::stoi(EXPECTED),
+                "Config change should update version value to %s, not %ld", EXPECTED.c_str(), mxs_version);
+    expect_equal(test, "maxscale", "/data/attributes/config_sync/version");
+
+    test.tprintf("Config change after new version should work");
+    version = 101;
+    config_update(test.maxscale);
+
+    test.tprintf("Delete configuration from database, next update should recreate the row");
+    c.query("DELETE FROM mysql.maxscale_config");
+    config_update(test.maxscale);
+    mxs_version = get(api1, "maxscale", "/data/attributes/config_sync/version").get_int();
+    db_version = c.field("SELECT version FROM mysql.maxscale_config");
+    test.expect(db_version == std::to_string(mxs_version),
+                "Database and MaxScale should be in sync: %s != %ld",
+                db_version.c_str(), mxs_version);
 
     reset(test);
 }
@@ -390,17 +481,17 @@ int main(int argc, char** argv)
     api1 = create_api1(test);
     api2 = create_api2(test);
 
-    test.tprintf("1. test_config_parameters");
+    test.log_printf("1. test_config_parameters");
     test_config_parameters(test);
 
-    test.tprintf("2. test_sync");
+    test.log_printf("2. test_sync");
     test_sync(test);
 
-    test.tprintf("3. test_bad_change");
+    test.log_printf("3. test_bad_change");
     test_bad_change(test);
 
-    test.tprintf("4. test_node_failure");
-    test_node_failure(test);
+    test.log_printf("4. test_failures");
+    test_failures(test);
 
     return test.global_result;
 }
