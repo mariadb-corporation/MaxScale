@@ -64,10 +64,10 @@ int main(int argc, char* argv[])
 
     auto mxs_homedir = Test->maxscale->access_homedir();
     Test->maxscale->copy_to_node("hosts", mxs_homedir);
-    Test->maxscale->ssh_node_f(0, true, "cp %s/hosts /etc/", mxs_homedir);
+    Test->maxscale->ssh_node_f(true, "cp %s/hosts /etc/", mxs_homedir);
 
     Test->maxscale->copy_to_node(str, mxs_homedir);
-    Test->maxscale->ssh_node_f(0, true, "cp %s/krb5.conf /etc/", mxs_homedir);
+    Test->maxscale->ssh_node_f(true, "cp %s/krb5.conf /etc/", mxs_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
     std::string machine_name = Test->get_mdbci_config_name() + "/" + Test->maxscale->node_name();

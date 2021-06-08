@@ -225,7 +225,8 @@ public:
     mxt::CmdResult ssh_output(const std::string& cmd, bool sudo = true);
 
     int ssh_node(const std::string& cmd, bool sudo);
-    int ssh_node_f(int node, bool sudo, const char* format, ...) mxb_attribute((format(printf, 4, 5)));
+
+    int ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
     int copy_to_node(const char* src, const char* dest);
     int copy_from_node(const char* src, const char* dest);
 

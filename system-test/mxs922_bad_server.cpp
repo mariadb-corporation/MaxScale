@@ -77,10 +77,9 @@ int main(int argc, char* argv[])
     test->tprintf("Create the servers with correct parameters");
     for (int i = 0; i < 4; i++)
     {
-        test->maxscale->ssh_node_f(0,
-                                   true,
+        test->maxscale->ssh_node_f(true,
                                    "maxctrl create server server%d %s %d",
-                                    i + 1,
+                                   i + 1,
                                    test->repl->ip_private(i),
                                    test->repl->port[i]);
     }

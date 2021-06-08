@@ -146,11 +146,10 @@ int main(int argc, char* argv[])
         Test->tprintf("DELETE quries without WHERE clause will be blocked during the 30 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
     }
-    Test->maxscale->ssh_node_f(0,
-                               false,
-                                "start_time=`date +%%T`;"
-                                "stop_time=` date --date \"now +30 secs\" +%%T`;"
-                                "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
+    Test->maxscale->ssh_node_f(false,
+                               "start_time=`date +%%T`;"
+                               "stop_time=` date --date \"now +30 secs\" +%%T`;"
+                               "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
                                Test->maxscale->access_sudo(),
                                Test->maxscale->access_homedir());
 

@@ -68,11 +68,10 @@ int main(int argc, char** argv)
     do_test(test, 1, 0);
 
     test.tprintf("Swap the priorities around and run the test again");
-    test.maxscale->ssh_node_f(0,
-                              true,
-                               "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
-                               "sed -i 's/priority=2/priority=1/' /etc/maxscale.cnf;"
-                               "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
+    test.maxscale->ssh_node_f(true,
+                              "sed -i 's/priority=1/priority=3/' /etc/maxscale.cnf;"
+                              "sed -i 's/priority=2/priority=1/' /etc/maxscale.cnf;"
+                              "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
     test.maxscale->restart_maxscale();
 
     // Give the Galera nodes some time to stabilize

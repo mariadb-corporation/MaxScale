@@ -112,9 +112,9 @@ void alter_schemarouter(TestConnections& test)
 
 void alter_unsupported(TestConnections& test)
 {
-    int rc = test.maxscale->ssh_node_f(0, true, "maxctrl alter service RW-Split-Router unknown parameter");
+    int rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router unknown parameter");
     test.expect(rc != 0, "Unknown router parameter should be detected");
-    rc = test.maxscale->ssh_node_f(0, true, "maxctrl alter service RW-Split-Router filters Regex");
+    rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router filters Regex");
     test.expect(rc != 0, "Unsupported router parameter should be detected");
 }
 

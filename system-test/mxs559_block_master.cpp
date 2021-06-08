@@ -29,10 +29,9 @@ void* disconnect_thread(void* ptr);
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.maxscale->ssh_node_f(0,
-                              true,
-                               "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
-                               "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
+    test.maxscale->ssh_node_f(true,
+                              "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
+                              "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.reset_timeout();
     test.maxscale->connect_maxscale();

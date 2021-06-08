@@ -34,21 +34,21 @@ const int TIMEOUT = 10; // This should be bigger that the cache timeout in the c
 
 bool restart_service(TestConnections& test, const char* zService)
 {
-    bool rv = test.maxscale->ssh_node_f(0, true, "service %s restart", zService) == 0;
+    bool rv = test.maxscale->ssh_node_f(true, "service %s restart", zService) == 0;
     sleep(1); // A short sleep to ensure connecting is possible.
     return rv;
 }
 
 bool start_service(TestConnections& test, const char* zService)
 {
-    bool rv = test.maxscale->ssh_node_f(0, true, "service %s start", zService) == 0;
+    bool rv = test.maxscale->ssh_node_f(true, "service %s start", zService) == 0;
     sleep(1); // A short sleep to ensure connecting is possible.
     return rv;
 }
 
 bool stop_service(TestConnections& test, const char* zService)
 {
-    return test.maxscale->ssh_node_f(0, true, "service %s stop", zService) == 0;
+    return test.maxscale->ssh_node_f(true, "service %s stop", zService) == 0;
 }
 
 bool start_redis(TestConnections& test)
@@ -77,7 +77,7 @@ void drop(TestConnections& test)
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_distributed");
 
-    test.maxscale->ssh_node_f(0, true, "redis-cli flushall");
+    test.maxscale->ssh_node_f(true, "redis-cli flushall");
     restart_service(test, "memcached");
 }
 

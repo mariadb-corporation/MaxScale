@@ -28,17 +28,16 @@ int main(int argc, char** argv)
     test.maxscale->copy_to_node("hidden.cnf", "~");
 
     // Move it into the maxscale.cnf.d directory and make it a hidden file
-    test.maxscale->ssh_node_f(0,
-                              true,
-                               "mkdir -p /etc/maxscale.cnf.d/;"
-                               "mv %s/hidden.cnf /etc/maxscale.cnf.d/.hidden.cnf;"
-                               "chown -R maxscale:maxscale /etc/maxscale.cnf.d/",
+    test.maxscale->ssh_node_f(true,
+                              "mkdir -p /etc/maxscale.cnf.d/;"
+                              "mv %s/hidden.cnf /etc/maxscale.cnf.d/.hidden.cnf;"
+                              "chown -R maxscale:maxscale /etc/maxscale.cnf.d/",
                               test.maxscale->access_homedir());
 
     // Make sure the hidden configuration is not read and that MaxScale starts up
     test.expect(test.maxscale->restart_maxscale() == 0, "Starting MaxScale should succeed");
 
-    test.maxscale->ssh_node_f(0, true, "rm -r /etc/maxscale.cnf.d/");
+    test.maxscale->ssh_node_f(true, "rm -r /etc/maxscale.cnf.d/");
     remove("hidden.cnf");
 
     return test.global_result;

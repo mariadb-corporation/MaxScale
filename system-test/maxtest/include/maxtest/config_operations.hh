@@ -62,7 +62,7 @@ public:
     template<class K, class V, class ...Args>
     void alter_server(int num, K k, V v, Args... args)
     {
-        test_->maxscale->ssh_node_f(0, true, "maxctrl alter server server%d %s", num,
+        test_->maxscale->ssh_node_f(true, "maxctrl alter server server%d %s", num,
                                     create_alter_server_params(k, v, args...).c_str());
     }
 

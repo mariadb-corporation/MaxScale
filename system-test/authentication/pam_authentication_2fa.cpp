@@ -102,10 +102,10 @@ R"(\" RATE_LIMIT 3 30
     const int N = 2;
     auto cleanup = [&]() {
             // Cleanup: remove linux user and files from the MaxScale node.
-            test.maxscale->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", delete_2fa_secret_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", remove_user_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", read_shadow_off.c_str());
+            test.maxscale->ssh_node_f(true, "%s", delete_pam_conf_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", delete_2fa_secret_cmd.c_str());
 
             // Cleanup: remove the linux users on the backends, unload pam plugin.
             for (int i = 0; i < N; i++)
@@ -135,15 +135,15 @@ R"(\" RATE_LIMIT 3 30
                 test.repl->ssh_node_f(i, true, "%s", chown_2fa_secret_srv_cmd.c_str());
             }
 
-            test.maxscale->ssh_node_f(0, true, "%s", install_google_auth);
+            test.maxscale->ssh_node_f(true, "%s", install_google_auth);
             // Create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
             // local users.
-            test.maxscale->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", read_shadow.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", create_pam_conf_mxs_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", create_2fa_secret_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", chown_2fa_secret_mxs_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", add_user_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", add_pw_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", read_shadow.c_str());
+            test.maxscale->ssh_node_f(true, "%s", create_pam_conf_mxs_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", create_2fa_secret_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", chown_2fa_secret_mxs_cmd.c_str());
         };
 
     cleanup();      // remove conflicting usernames and files, just in case.

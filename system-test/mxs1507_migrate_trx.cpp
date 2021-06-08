@@ -18,8 +18,7 @@ int main(int argc, char** argv)
 
     auto switchover = [&]() {
             test.maxscale->wait_for_monitor();
-            int rc = test.maxscale->ssh_node_f(0,
-                                               true,
+            int rc = test.maxscale->ssh_node_f(true,
                                                "maxctrl call command mariadbmon switchover MySQL-Monitor %s %s",
                                                slave.c_str(),
                                                master.c_str());

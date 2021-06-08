@@ -193,7 +193,7 @@ int Maxscales::start_maxscale()
         auto log_dir = maxscale_log_dir.c_str();
         if (m_use_callgrind)
         {
-            res = ssh_node_f(0, false,
+            res = ssh_node_f(false,
                              "sudo --user=maxscale valgrind -d "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              " --tool=callgrind --callgrind-out-file=/%s/callgrind%02d.log "
@@ -203,7 +203,7 @@ int Maxscales::start_maxscale()
         }
         else
         {
-            res = ssh_node_f(0, false,
+            res = ssh_node_f(false,
                              "sudo --user=maxscale valgrind --leak-check=full --show-leak-kinds=all "
                              "--log-file=/%s/valgrind%02d.log --trace-children=yes "
                              "--track-origins=yes /usr/bin/maxscale",
@@ -285,7 +285,7 @@ int Maxscales::port(enum service type) const
 
 void Maxscales::wait_for_monitor(int intervals)
 {
-    ssh_node_f(0, false,
+    ssh_node_f(false,
                "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
                intervals);
 }
@@ -510,7 +510,7 @@ void Maxscales::copy_log(int mxs_ind, int timestamp, const std::string& test_nam
     if (vm->is_remote())
     {
         auto homedir = vm->access_homedir();
-        int rc = ssh_node_f(0, true,
+        int rc = ssh_node_f(true,
                             "rm -rf %s/logs; mkdir %s/logs;"
                             "cp %s/*.log %s/logs/;"
                             "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
@@ -529,10 +529,10 @@ void Maxscales::copy_log(int mxs_ind, int timestamp, const std::string& test_nam
     else
     {
         auto dest = dest_log_dir.c_str();
-        ssh_node_f(0, true, "cp %s/*.logs %s/", mxs_logdir, dest);
-        ssh_node_f(0, true, "cp /tmp/core* %s/", dest);
-        ssh_node_f(0, true, "cp %s %s/", mxs_cnf_file, dest);
-        ssh_node_f(0, true, "chmod a+r -R %s", dest);
+        ssh_node_f(true, "cp %s/*.logs %s/", mxs_logdir, dest);
+        ssh_node_f(true, "cp /tmp/core* %s/", dest);
+        ssh_node_f(true, "cp %s %s/", mxs_cnf_file, dest);
+        ssh_node_f(true, "chmod a+r -R %s", dest);
     }
 }
 
@@ -583,7 +583,7 @@ void Maxscales::close_readconn_master()
     conn_master = NULL;
 }
 
-int Maxscales::ssh_node_f(int node, bool sudo, const char* format, ...)
+int Maxscales::ssh_node_f(bool sudo, const char* format, ...)
 {
     va_list valist;
     va_start(valist, format);
@@ -594,14 +594,14 @@ int Maxscales::ssh_node_f(int node, bool sudo, const char* format, ...)
 
 void Maxscales::copy_fw_rules(const std::string& rules_name, const std::string& rules_dir)
 {
-    ssh_node_f(0, true, "cd %s; rm -rf rules; mkdir rules; chown %s:%s rules",
+    ssh_node_f(true, "cd %s; rm -rf rules; mkdir rules; chown %s:%s rules",
                access_homedir(), access_user(), access_user());
 
     string src = rules_dir + "/" + rules_name;
     string dest = string(access_homedir()) + "/rules/rules.txt";
 
     copy_to_node(src.c_str(), dest.c_str());
-    ssh_node_f(0, true, "chmod a+r %s", dest.c_str());
+    ssh_node_f(true, "chmod a+r %s", dest.c_str());
 }
 
 mxt::CmdResult Maxscales::ssh_output(const std::string& cmd, bool sudo)

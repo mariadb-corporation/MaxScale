@@ -41,8 +41,7 @@ void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* exp
 {
     Test->reset_timeout();
     auto homedir = Test->maxscale->access_homedir();
-    Test->maxscale->ssh_node_f(0,
-                               true,
+    Test->maxscale->ssh_node_f(true,
                                "cd %s; truncate -s 0 script_output; \
                                 chown maxscale:maxscale script_output; \
                                 chmod a+rw script_output",
@@ -75,9 +74,9 @@ void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* exp
 
     Test->tprintf("Comparing results");
 
-    if (Test->maxscale->ssh_node_f(0, false, "diff %s/script_output %s", homedir, expected_filename) != 0)
+    if (Test->maxscale->ssh_node_f(false, "diff %s/script_output %s", homedir, expected_filename) != 0)
     {
-        Test->maxscale->ssh_node_f(0, true, "cat %s/script_output", homedir);
+        Test->maxscale->ssh_node_f(true, "cat %s/script_output", homedir);
         Test->add_result(1, "Wrong script output!");
     }
     else
@@ -106,11 +105,11 @@ int main(int argc, char* argv[])
     auto sudo = Test->maxscale->access_sudo();
 
     Test->tprintf("Creating script on Maxscale machine");
-    Test->maxscale->ssh_node_f(0, false,
-                                "%s rm -rf %s/script; mkdir %s/script; "
-                                "echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; "
-                                "chmod a+x %s/script/script.sh; chmod a+x %s; "
-                                "%s chown maxscale:maxscale %s/script -R",
+    Test->maxscale->ssh_node_f(false,
+                               "%s rm -rf %s/script; mkdir %s/script; "
+                               "echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; "
+                               "chmod a+x %s/script/script.sh; chmod a+x %s; "
+                               "%s chown maxscale:maxscale %s/script -R",
                                sudo, homedir, homedir,
                                homedir, homedir,
                                homedir, homedir,
@@ -220,7 +219,7 @@ int main(int argc, char* argv[])
     Test->reset_timeout();
 
     Test->tprintf("Making script non-executable");
-    Test->maxscale->ssh_node_f(0, true, "chmod a-x %s/script/script.sh", homedir);
+    Test->maxscale->ssh_node_f(true, "chmod a-x %s/script/script.sh", homedir);
 
     sleep(3);
 

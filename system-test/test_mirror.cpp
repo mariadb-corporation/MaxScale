@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 
     test.maxscale->stop();
     test.maxscale->copy_from_node("/tmp/mirror.txt", "./mirror.txt");
-    test.maxscale->ssh_node_f(0, true, "rm /tmp/mirror.txt");
+    test.maxscale->ssh_node_f(true, "rm /tmp/mirror.txt");
 
     std::ifstream infile("mirror.txt");
     std::string line;
