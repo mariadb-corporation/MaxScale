@@ -45,7 +45,7 @@ export default {
         return {
             uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
             alignTooltipToLeft: false,
-            dataPointObj: null,
+            dataPoint: null,
         }
     },
     computed: {
@@ -79,13 +79,13 @@ export default {
                             tooltipModel,
                             tooltipId: componentScope.uniqueTooltipId,
                             position,
-                            dataPointObj: componentScope.dataPointObj,
+                            dataPoint: componentScope.dataPoint,
                             alignTooltipToLeft: componentScope.alignTooltipToLeft,
                         })
                     },
                     callbacks: {
                         label(tooltipItem, data) {
-                            componentScope.dataPointObj =
+                            componentScope.dataPoint =
                                 data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
                         },
                     },
@@ -107,6 +107,12 @@ export default {
                             ticks: {
                                 maxRotation: isNum ? 0 : 90,
                                 minRotation: isNum ? 0 : 90,
+                                //truncate tick
+                                callback: v => {
+                                    const toStr = `${v}`
+                                    if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
+                                    return v
+                                },
                             },
                         },
                     ],

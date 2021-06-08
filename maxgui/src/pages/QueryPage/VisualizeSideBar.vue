@@ -240,9 +240,11 @@ export default {
                     const yAxisVal = isYAxisARowNum ? rowNumber : row[axis.y]
 
                     dataPoints.push({
-                        ...row,
+                        dataPointObj: row,
                         x: xAxisVal,
                         y: yAxisVal,
+                        xLabel: axis.x,
+                        yLabel: axis.y,
                     })
                     xLabels.push(xAxisVal)
                 }

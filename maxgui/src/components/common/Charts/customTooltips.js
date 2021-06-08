@@ -15,7 +15,8 @@ function createTooltipEle({ tooltipModel, tooltipId, position, className, alignT
         tooltipEl.id = tooltipId
         tooltipEl.className = [`chartjs-tooltip shadow-drop ${className}`]
         tooltipEl.innerHTML = '<table></table>'
-        document.body.appendChild(tooltipEl)
+        // append to #app div so that vuetify class can be used
+        document.getElementById('app').appendChild(tooltipEl)
     }
 
     // Hide if no tooltip
@@ -95,13 +96,13 @@ export function streamTooltip({ tooltipModel, tooltipId, position, alignTooltipT
  * @param {Object} payload.tooltipModel - chartjs tooltipModel
  * @param {String} payload.tooltipId - tooltipId. Use to remove the tooltip when chart instance is destroyed
  * @param {Object} payload.position -  chart canvas position (getBoundingClientRect)
- * @param {Object} payload.dataPointObj - label object
+ * @param {Object} payload.dataPoint - data point object
  */
 export function objectTooltip({
     tooltipModel,
     tooltipId,
     position,
-    dataPointObj,
+    dataPoint,
     alignTooltipToLeft,
 }) {
     // Tooltip Element
@@ -115,13 +116,19 @@ export function objectTooltip({
     // Set Text
     if (tooltipModel.body) {
         let innerHtml = '<tbody>'
-        Object.keys(dataPointObj).forEach(key => {
+        Object.keys(dataPoint.dataPointObj).forEach(key => {
             if (key !== 'x' && key !== 'y') {
+                //bold x,y axes value
+                const boldClass = `${
+                    key === dataPoint.xLabel || key === dataPoint.yLabel ? 'font-weight-black' : ''
+                }`
                 innerHtml += `
                 <tr>
-                    <td class="color text-small-text"> ${key}</td>
-                    <td class="color text-navigation">
-                        ${dataPointObj[key]}
+                    <td class="color text-small-text ${boldClass}">
+                     ${key}
+                     </td>
+                    <td class="color text-navigation ${boldClass}">
+                        ${dataPoint.dataPointObj[key]}
                     </td>
                 </tr>`
             }
