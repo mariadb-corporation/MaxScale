@@ -14,6 +14,7 @@
 #include "clientconnection.hh"
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <mysqld_error.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
@@ -157,9 +158,42 @@ const char* dbg_decode_response(GWBUF* pPacket);
 
 int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
-    mxb_assert(m_nosql.is_pending());
+    int32_t rv = 1;
 
-    return m_nosql.clientReply(pMariaDB_response, m_pDcb);
+    if (m_nosql.is_pending())
+    {
+        rv = m_nosql.clientReply(pMariaDB_response, m_pDcb);
+    }
+    else
+    {
+        ComResponse response(pMariaDB_response);
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            MXS_ERROR("OK packet received from server when no request was in progress, ignoring.");
+            break;
+
+        case ComResponse::EOF_PACKET:
+            MXS_ERROR("EOF packet received from server when no request was in progress, ignoring.");
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                // The session is likely to be terminated by the router.
+                ComERR err(response);
+                MXS_ERROR("ERR packet received from server when no request was in progress: (%d) %s",
+                          err.code(), err.message().c_str());
+            }
+            break;
+
+        default:
+            MXS_ERROR("Unexpected %d bytes received from server when no request was in progress, ignoring.",
+                      gwbuf_length(pMariaDB_response));
+        }
+    }
+
+    return rv;
 }
 
 json_t* ClientConnection::diagnostics() const
