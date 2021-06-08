@@ -12,6 +12,7 @@ else
 fi
 
 # NodeJS
-wget --quiet https://nodejs.org/dist/v10.20.0/node-v10.20.0-linux-${node_arch}.tar.gz
-tar -axf node-v10.20.0-linux-${node_arch}.tar.gz
-sudo cp -t /usr -r node-v10.20.0-linux-${node_arch}/*
+node_version=14.17.0
+wget --quiet https://nodejs.org/dist/v${node_version}/node-v${node_version}-linux-${node_arch}.tar.gz
+tar -axf node-v${node_version}-linux-${node_arch}.tar.gz
+sudo cp -t /usr -r node-v${node_version}-linux-${node_arch}/*
