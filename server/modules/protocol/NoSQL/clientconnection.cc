@@ -45,14 +45,13 @@ ClientConnection::~ClientConnection()
 
 bool ClientConnection::init_connection()
 {
-    // TODO: If we need to initially send something to the NoSQL client,
-    // TODO: that should be done here.
+    // Nothing need to be done.
     return true;
 }
 
 void ClientConnection::finish_connection()
 {
-    // TODO: Does something need to be cleaned up?
+    // Nothing need to be done.
 }
 
 ClientDCB* ClientConnection::dcb()
@@ -326,12 +325,4 @@ bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const 
     }
 
     return rv;
-}
-
-void ClientConnection::tick(std::chrono::seconds idle)
-{
-    // TODO: This can't be here. Every connection now kills idle cursors.
-    NoSQLCursor::kill_idle(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
-
-    mxs::ClientConnection::tick(idle);
 }

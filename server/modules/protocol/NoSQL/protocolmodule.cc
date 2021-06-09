@@ -17,12 +17,14 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "../MariaDB/user_data.hh"
 #include "clientconnection.hh"
+#include "nosqlcursor.hh"
 
 using namespace std;
 
 ProtocolModule::ProtocolModule(GlobalConfig&& config)
     : m_config(std::move(config))
 {
+    nosql::NoSQLCursor::start_purging_idle_cursors(config.cursor_timeout);
 }
 
 //static

@@ -14,6 +14,7 @@
 #include "nosqlcursor.hh"
 #include <sstream>
 #include <maxbase/worker.hh>
+#include <maxscale/mainworker.hh>
 #include "nosqlcommand.hh"
 
 using std::set;
@@ -270,6 +271,36 @@ std::set<int64_t> NoSQLCursor::kill(const std::string& collection, const std::ve
 void NoSQLCursor::kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
 {
     this_unit.kill_idle_cursors(now, timeout);
+}
+
+//static
+void NoSQLCursor::start_purging_idle_cursors(const std::chrono::seconds& cursor_timeout)
+{
+    // This should be called at startup, so we must be on MainWorker.
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    auto* pMain = mxs::MainWorker::get();
+
+    // The time between checks whether cursors need to be killed is defined
+    // as 1/10 of the cursor timeout, but at least 1 second.
+    std::chrono::milliseconds wait_timeout = cursor_timeout;
+    wait_timeout /= 10;
+
+    if (wait_timeout == std::chrono::milliseconds(0))
+    {
+        wait_timeout = std::chrono::milliseconds(1000);
+    }
+
+    // We don't ever want to cancel this explicitly so the delayed call will
+    // be cancelled when MainWorker is destructed.
+    pMain->delayed_call(wait_timeout, [pMain, cursor_timeout](mxb::Worker::Call::action_t action) {
+            if (action == mxb::Worker::Call::EXECUTE)
+            {
+                kill_idle(pMain->epoll_tick_now(), cursor_timeout);
+            }
+
+            return true; // Call again
+        });
 }
 
 void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,

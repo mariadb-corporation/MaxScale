@@ -41,6 +41,8 @@ public:
     static std::set<int64_t> kill(const std::string& collection, const std::vector<int64_t>& ids);
     static void kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
+    static void start_purging_idle_cursors(const std::chrono::seconds& cursor_timeout);
+
     const std::string& ns() const
     {
         return m_ns;

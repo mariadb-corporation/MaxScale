@@ -45,8 +45,6 @@ public:
         return true;
     }
 
-    void tick(std::chrono::seconds idle) override;
-
 private:
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
