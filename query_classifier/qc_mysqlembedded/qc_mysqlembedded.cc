@@ -22,6 +22,9 @@
  *
  */
 
+// The server sources do not use override.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
 #define EMBEDDED_LIBRARY
 #define MYSQL_YACC
 #define MYSQL_LEX012
@@ -56,6 +59,7 @@
 #include <set_var.h>
 #include <strfunc.h>
 #include <item_func.h>
+#pragma GCC diagnostic pop
 
 #include <pthread.h>
 
@@ -98,7 +102,10 @@ my_bool _db_my_assert(const char *file, int line, const char *msg)
 // making the private parts public. Ok, as qc_myselembedded is only
 // used for verifying the output of qc_sqlite.
 #define private public
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
 #include <sql_cte.h>
+#pragma GCC diagnostic pop
 #undef private
 #endif
 
