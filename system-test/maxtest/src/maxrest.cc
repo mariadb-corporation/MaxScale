@@ -180,7 +180,11 @@ unique_ptr<json_t> MaxRest::curl(Command command, const string& path) const
 
 void MaxRest::raise(const std::string& message) const
 {
-    ++m_test.global_result;
+    if (m_fail_on_error)
+    {
+        ++m_test.global_result;
+    }
+
     throw runtime_error(message);
 }
 
