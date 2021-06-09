@@ -178,8 +178,8 @@ public:
     // Implementation of mxs::Component
     bool routeQuery(GWBUF* buffer) override;
     bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                     const mxs::Reply& reply) override;
+    bool handleError(mxs::ErrorType type, GWBUF* error,
+                     mxs::Endpoint* down, const mxs::Reply& reply) override;
 
     mxs::ClientConnection*       client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
@@ -291,12 +291,12 @@ private:
         {
         }
 
-        bool routeQuery(GWBUF* pPacket)
+        bool routeQuery(GWBUF* pPacket) override
         {
             return m_session->m_down->routeQuery(pPacket);
         }
 
-        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
             return m_session->m_client_conn->clientReply(pPacket, const_cast<mxs::ReplyRoute&>(down), reply);
         }

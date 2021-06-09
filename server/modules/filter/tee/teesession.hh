@@ -32,7 +32,7 @@ public:
     ~TeeSession();
     static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
-    bool    routeQuery(GWBUF* pPacket);
+    bool    routeQuery(GWBUF* pPacket) override;
     json_t* diagnostics() const;
 
 private:

@@ -33,11 +33,12 @@ public:
 
     ~MirrorSession();
 
-    bool routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
 private:
     SMyBackends             m_backends;

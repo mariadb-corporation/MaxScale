@@ -86,7 +86,7 @@ public:
      *
      * @param pPacket A client packet.
      */
-    bool routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket) override;
 
     /**
      * Called when a packet is routed to the client. The router should
@@ -95,9 +95,10 @@ public:
      * @param pPacket  A client packet.
      * @param pBackend The backend the packet is coming from.
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& pBackend, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
 private:
     /**

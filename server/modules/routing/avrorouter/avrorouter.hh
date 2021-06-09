@@ -176,15 +176,15 @@ public:
      *
      * @return True on success, false on error
      */
-    bool routeQuery(GWBUF* buffer);
+    bool routeQuery(GWBUF* buffer) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
     {
         mxb_assert(!true);
         return 0;
     }
 
-    bool handleError(mxs::ErrorType, GWBUF*, mxs::Endpoint*, const mxs::Reply&)
+    bool handleError(mxs::ErrorType, GWBUF*, mxs::Endpoint*, const mxs::Reply&) override
     {
         /** We should never end up here */
         mxb_assert(false);

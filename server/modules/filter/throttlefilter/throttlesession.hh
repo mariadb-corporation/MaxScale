@@ -29,7 +29,7 @@ public:
     ThrottleSession& operator=(const ThrottleSession&) = delete;
     ~ThrottleSession();
 
-    bool routeQuery(GWBUF* buffer);
+    bool routeQuery(GWBUF* buffer) override;
 private:
     bool delayed_routeQuery(maxbase::Worker::Call::action_t action,
                             GWBUF* buffer);

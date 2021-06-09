@@ -323,8 +323,8 @@ public:
 
     bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                     const mxs::Reply& reply) override;
+    bool handleError(mxs::ErrorType type, GWBUF* error,
+                     mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
 
@@ -355,13 +355,13 @@ private:
         {
         }
 
-        bool routeQuery(GWBUF* pPacket)
+        bool routeQuery(GWBUF* pPacket) override
         {
             mxb_assert_message(false, "Should never be called");
             return 0;
         }
 
-        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
             return m_endpoint->send_upstream(pPacket, down, reply);
         }

@@ -65,8 +65,8 @@ private:
 
         bool routeQuery(GWBUF* buffer) override;
         bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) override;
-        bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                         const mxs::Reply& reply) override;
+        bool handleError(mxs::ErrorType type, GWBUF* error,
+                         mxs::Endpoint* down, const mxs::Reply& reply) override;
 
         bool connect() override
         {

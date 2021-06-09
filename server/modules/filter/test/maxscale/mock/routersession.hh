@@ -60,14 +60,14 @@ public:
         return this;
     }
 
-    bool routeQuery(GWBUF* pStatement);
+    bool routeQuery(GWBUF* pStatement) override;
 
     /**
      * Called by the backend to deliver a response.
      *
      * @return Whatever the upstream filter returns.
      */
-    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Causes the router to make its associated backend deliver a response

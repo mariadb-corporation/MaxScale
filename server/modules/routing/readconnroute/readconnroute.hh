@@ -44,11 +44,12 @@ public:
      *
      * @return Returns true on success and false on error
      */
-    bool routeQuery(GWBUF* queue);
+    bool routeQuery(GWBUF* queue) override;
 
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override
     {
         MXS_INFO("Server '%s' failed", pProblem->target()->name());
         return false;

@@ -42,10 +42,10 @@ public:
     SmartRouterSession(const SmartRouterSession&) = delete;
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
 
-    bool routeQuery(GWBUF* pBuf);
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool handleError(mxs::ErrorType type, GWBUF* pPacket, mxs::Endpoint* pProblem,
-                     const mxs::Reply& pReply);
+    bool routeQuery(GWBUF* pBuf) override;
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool handleError(mxs::ErrorType type, GWBUF* pPacket,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
 private:
     enum class Mode {Idle, Query, MeasureQuery, CollectResults};

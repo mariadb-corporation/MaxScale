@@ -163,7 +163,7 @@ public:
     std::string user() const;
     std::string remote() const;
 
-    bool        routeQuery(GWBUF* query);
+    bool        routeQuery(GWBUF* query) override;
     QuerySpeed* query_speed();      // TODO: Remove this, it exposes internals to a Rule
     fw_actions  get_action() const;
 

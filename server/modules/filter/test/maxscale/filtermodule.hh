@@ -58,12 +58,12 @@ public:
     private:
         friend class Session;
 
-        int routeQuery(mxs::Routable* pFilter_session, GWBUF* pStatement)
+        bool routeQuery(mxs::Routable* pFilter_session, GWBUF* pStatement)
         {
             return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
         }
 
-        int clientReply(mxs::Routable* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
+        bool clientReply(mxs::Routable* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
         {
             return m_module.clientReply(m_pInstance, pFilter_session, pStatement, reply);
         }
@@ -84,12 +84,12 @@ public:
         /**
          * The following member functions correspond to the MaxScale filter API.
          */
-        int routeQuery(GWBUF* pStatement)
+        bool routeQuery(GWBUF* pStatement)
         {
             return m_instance.routeQuery(m_pFilter_session, pStatement);
         }
 
-        int clientReply(GWBUF* pBuffer, const mxs::Reply& reply)
+        bool clientReply(GWBUF* pBuffer, const mxs::Reply& reply)
         {
             return m_instance.clientReply(m_pFilter_session, pBuffer, reply);
         }
@@ -128,15 +128,15 @@ private:
         return pInstance->newSession(pSession, pService);
     }
 
-    int routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
+    bool routeQuery(mxs::Filter* pInstance, mxs::Routable* pFilter_session, GWBUF* pStatement)
     {
         return pFilter_session->routeQuery(pStatement);
     }
 
-    int clientReply(mxs::Filter* pInstance,
-                    mxs::Routable* pFilter_session,
-                    GWBUF* pStatement,
-                    const mxs::Reply& reply)
+    bool clientReply(mxs::Filter* pInstance,
+                     mxs::Routable* pFilter_session,
+                     GWBUF* pStatement,
+                     const mxs::Reply& reply)
     {
         mxs::ReplyRoute route;
         return pFilter_session->clientReply(pStatement, route, reply);

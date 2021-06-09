@@ -122,12 +122,12 @@ public:
         return this;
     }
 
-    bool routeQuery(GWBUF* pPacket)
+    bool routeQuery(GWBUF* pPacket) override
     {
         return 0;
     }
 
-    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     static bool clientReply(mxs::Filter* pInstance,

@@ -60,14 +60,14 @@ public:
      *
      * @param pPacket  Buffer containing an MySQL protocol packet.
      */
-    bool routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket) override;
 
     /**
      * A response on its way to the client is delivered to this function.
      *
      * @param pData Response data.
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
      * Print diagnostics of the session cache.

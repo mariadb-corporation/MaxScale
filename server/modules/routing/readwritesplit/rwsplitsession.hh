@@ -92,7 +92,7 @@ public:
      *
      * @param pPacket A client packet.
      */
-    bool routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket) override;
 
     /**
      * Called when a packet is routed to the client. The router should
@@ -102,9 +102,10 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply information
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage,
+                     mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
     mariadb::QueryClassifier& qc()
     {
