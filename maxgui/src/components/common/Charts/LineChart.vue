@@ -45,7 +45,7 @@ export default {
                         ctx.moveTo(x, topY)
                         ctx.lineTo(x, bottomY)
                         ctx.lineWidth = 2
-                        ctx.strokeStyle = '#0b718c'
+                        ctx.strokeStyle = '#e5e1e5'
                         ctx.stroke()
                         ctx.restore()
                     }
@@ -57,15 +57,6 @@ export default {
     methods: {
         renderLineChart() {
             let chartOption = {
-                tooltips: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                elements: {
-                    point: {
-                        radius: 0,
-                    },
-                },
                 scales: {
                     xAxes: [
                         {

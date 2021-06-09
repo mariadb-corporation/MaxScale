@@ -71,6 +71,8 @@ export default {
                     onHover: e => this.onChartHover(e),
                 },
                 tooltips: {
+                    mode: 'index',
+                    intersect: false,
                     enabled: false,
                     custom: function(tooltipModel) {
                         const chartScope = this
@@ -92,6 +94,11 @@ export default {
                 },
                 legend: {
                     display: false,
+                },
+                elements: {
+                    point: {
+                        radius: 0,
+                    },
                 },
                 scales: {
                     xAxes: [
