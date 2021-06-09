@@ -376,6 +376,32 @@ void test_bad_change(TestConnections& test)
     test.expect(ok == 1, "One node should be in sync, got %d", ok);
     test.expect(error == 1, "One node should fail, got %d", error);
 
+    test.tprintf("Restart the second MaxScale and check that the good cached configuration is used");
+    test.maxscale2->restart();
+    version2 = get(api2, "maxscale", "/data/attributes/config_sync/version").get_int();
+    test.expect(version2 == version1, "Expected version %ld after restart, got %ld", version1, version2);
+
+    test.tprintf("Create a bad cached configuration and make sure it's discarded");
+    test.maxscale2->stop();
+
+    std::string BAD_CONFIG =
+        R"EOF({"config":[{"id":"server1","type":"servers","attributes":{"parameters":{"rank":"tertiary"}}}],"version":123,"cluster_name":"MariaDB-Monitor"})EOF";
+    test.maxscale2->ssh_node_f(0, true, "echo '%s' > /var/lib/maxscale/maxscale-config.json",
+                               BAD_CONFIG.c_str());
+    test.maxscale2->ssh_node_f(0, true, "chown maxscale:maxscale /var/lib/maxscale/maxscale-config.json");
+
+    test.maxscale2->start();
+    test.maxscale2->wait_for_monitor();
+
+    wait_for_sync();
+    version2 = get(api2, "maxscale", "/data/attributes/config_sync/version").get_int();
+    test.expect(version2 == version1,
+                "Expected version %ld after restart with bad cache, got %ld",
+                version1, version2);
+
+    int rc = test.maxscale2->ssh_node("test -f /var/lib/maxscale/maxscale-config.json", true);
+    test.expect(rc != 0, "Bad cached configuration should be discarded");
+
     test.tprintf("Fix the second MaxScale and do a configuration change that works");
     test.maxscale2->ssh_node(CREATE_DIR, false);
 
