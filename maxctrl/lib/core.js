@@ -260,7 +260,7 @@ function program() {
           }
         }
 
-        return askQuestion();
+        return askQuestion(argv);
       } else {
         maxctrl(argv, function () {
           msg = "Unknown command " + JSON.stringify(argv._);
@@ -298,7 +298,31 @@ module.exports.execute = function (argv, opts) {
   return doCommand(argv);
 };
 
-function askQuestion() {
+async function readCommands(argv) {
+  var rval = [];
+  var input = fs
+    .readFileSync(0)
+    .toString()
+    .split(os.EOL)
+    .map((str) => str.trim())
+    .filter((val) => val);
+
+  for (line of input) {
+    try {
+      rval.push(await doCommand(line));
+    } catch (e) {
+      rval.push(e);
+    }
+  }
+
+  argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
+}
+
+function askQuestion(argv) {
+  if (!process.stdin.isTTY) {
+    return readCommands(argv);
+  }
+
   const inquirer = require("inquirer");
   inquirer.registerPrompt("command", require("inquirer-command-prompt"));
 
@@ -311,7 +335,6 @@ function askQuestion() {
       message: "maxctrl",
     },
   ];
-  var running = true;
 
   return inquirer.prompt(question).then((answers) => {
     cmd = answers.maxctrl;
