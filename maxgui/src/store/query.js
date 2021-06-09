@@ -32,6 +32,7 @@ function initialState() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
     }
 }
 export default {
@@ -122,6 +123,10 @@ export default {
             Object.keys(initState).forEach(key => {
                 state[key] = initState[key]
             })
+        },
+        SET_QUERY_MAX_ROW(state, payload) {
+            state.query_max_rows = payload
+            localStorage.setItem('query_max_rows', payload)
         },
     },
     actions: {
@@ -367,7 +372,7 @@ export default {
 
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
-                    { sql, max_rows: 10000 }
+                    { sql, max_rows: state.query_max_rows }
                 )
                 commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
                 commit(`SET_LOADING_${prvwMode}`, false)
@@ -389,7 +394,7 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
-                        max_rows: 10000, //TODO: make this a configurable value
+                        max_rows: state.query_max_rows,
                     }
                 )
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))

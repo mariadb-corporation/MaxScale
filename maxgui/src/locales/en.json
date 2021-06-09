@@ -149,6 +149,7 @@
     "hide": "Hide",
     "show": "Show",
     "visualizedConfig": "{action} visualized configuration",
+    "maxRows": "Max rows",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -159,7 +160,8 @@
         "addressRequired": "address is required when using port",
         "addressRequiredEmpty": "address should be defined only when using port",
         "serviceUnavailable": "MaxScale is temporarily unavailable",
-        "refreshLater": "Please refresh in a few moments"
+        "refreshLater": "Please refresh in a few moments",
+        "largerThanZero": "{inputName} must be larger than zero"
     },
     "confirmations": {
         "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
@@ -178,7 +180,8 @@
         "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
-        "queryShowConfirm": "{action} confirmation before running the queries"
+        "queryShowConfirm": "{action} confirmation before running the queries",
+        "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code class='px-2 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set"
     },
 
     "$vuetify": {

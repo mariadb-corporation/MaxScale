@@ -166,8 +166,7 @@
                         }}
                     </span>
                 </v-tooltip>
-                <!-- TODO: Open modal to configure query max-rows and something more? -->
-                <v-list-item dense link>
+                <v-list-item dense link @click="queryConfigDialog = !queryConfigDialog">
                     <v-list-item-title class="color text-text">
                         {{ $t('queryConfig') }}
                     </v-list-item-title>
@@ -206,6 +205,8 @@
                 <v-spacer />
             </template>
         </confirm-dialog>
+
+        <query-config-dialog v-model="queryConfigDialog" />
     </v-toolbar>
 </template>
 
@@ -226,11 +227,13 @@
 import { mapActions, mapState, mapMutations } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
+import QueryConfigDialog from './QueryConfigDialog'
 export default {
     name: 'toolbar-container',
     components: {
         ConnectionManager,
         'readonly-query-editor': QueryEditor,
+        'query-config-dialog': QueryConfigDialog,
     },
     props: {
         isFullScreen: { type: Boolean, required: true },
@@ -242,6 +245,7 @@ export default {
             shouldShowConfirm: true,
             dontShowConfirm: false,
             showVisSidebar: false,
+            queryConfigDialog: false,
         }
     },
     computed: {
@@ -309,6 +313,7 @@ export default {
                     break
             }
         },
+        onSaveConfig() {},
     },
 }
 </script>

@@ -121,7 +121,7 @@
 import QueryEditor from '@/components/QueryEditor'
 import SidebarContainer from './SidebarContainer'
 import QueryResult from './QueryResult'
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
@@ -165,6 +165,7 @@ export default {
             checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
+            query_max_rows: state => state.query.query_max_rows,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -212,11 +213,13 @@ export default {
         },
     },
     async created() {
+        // set default max_row
+        if (this.$typy(this.query_max_rows).isNull) this.SET_QUERY_MAX_ROW(10000)
         await this.checkActiveConn()
         if (this.active_conn_state) await this.updateActiveDb()
         /*For development testing */
         if (process.env.NODE_ENV === 'development')
-            this.queryTxt = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic;'
+            this.queryTxt = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic'
     },
     async beforeDestroy() {
         if (process.env.NODE_ENV !== 'development' && this.curr_cnct_resource)
@@ -231,6 +234,7 @@ export default {
             checkActiveConn: 'query/checkActiveConn',
             updateActiveDb: 'query/updateActiveDb',
         }),
+        ...mapMutations({ SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW' }),
         setPanelsPct() {
             this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
             this.handleSetMinEditorPct()
