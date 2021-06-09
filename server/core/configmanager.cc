@@ -343,6 +343,11 @@ ConfigManager::Startup ConfigManager::process_cached_config()
 
         process_config(config);
 
+        if (!MonitorManager::find_monitor(m_cluster.c_str()))
+        {
+            throw error("Cluster '", m_cluster, "' is not a part of the cached configuration");
+        }
+
         m_version = config.get_int(CN_VERSION);
         m_current_config = std::move(config);
     }
