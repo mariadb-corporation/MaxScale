@@ -24,6 +24,18 @@ namespace maxtest
 class MariaDB;
 class TestLogger;
 
+/**
+ * Helper struct which defines a MariaDB user account.
+ */
+struct MariaDBUserDef
+{
+    std::string name;
+    std::string host {"%"};
+    std::string password;
+
+    std::vector<std::string> grants;
+};
+
 class MariaDBServer
 {
     friend class ::MariaDBCluster;
@@ -44,6 +56,14 @@ public:
         int64_t  server_id {-1};
         bool     read_only {false};
     };
+
+    struct Version
+    {
+        uint32_t major {0};
+        uint32_t minor {0};
+        uint32_t patch {0};
+    };
+    Version version();
 
     /**
      * Try to open a connection to the server. Failure is not a test error.
@@ -66,6 +86,15 @@ public:
 
     VMNode& vm_node();
     int     port();
+
+    /**
+     * Delete user, then create it with the grants listed.
+     *
+     * @param user User definition
+     * @param ssl Should user require ssl?
+     * @return True on success
+     */
+    bool create_user(const MariaDBUserDef& user, SslMode ssl);
 
 private:
     Status   m_status;
@@ -198,11 +227,6 @@ public:
      * @return  True on success
      */
     virtual bool start_replication() = 0;
-
-    /**
-     * Create the default users used by all tests
-     */
-    void create_users(int node);
 
     /**
      * Blocks `src` from communicating with `dest`
@@ -406,6 +430,8 @@ public:
     bool ssl() const;
     bool using_ipv6() const;
 
+    maxtest::MariaDBServer::SslMode ssl_mode() const;
+
     bool copy_logs(const std::string& dest_prefix);
 
 protected:
@@ -424,6 +450,11 @@ protected:
     virtual std::string anonymous_users_query() const;
 
     /**
+     * Create the default users used by all tests
+     */
+    bool create_base_users(int name);
+
+    /**
      * @param node Index of node to block.
      * @return The command used for blocking a node.
      */
@@ -434,6 +465,8 @@ protected:
      * @return The command used for unblocking a node.
      */
     virtual std::string unblock_command(int node) const;
+
+    mxt::MariaDBUserDef service_user_def() const;
 
     std::string extract_version_from_string(const std::string& version);
 
@@ -473,4 +506,6 @@ private:
     virtual bool reset_server(int i);
 
     bool check_normal_conns();
+
+    virtual bool create_users(int i) = 0;
 };

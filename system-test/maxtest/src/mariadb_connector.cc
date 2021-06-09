@@ -85,6 +85,15 @@ bool maxtest::MariaDB::cmd_f(const char* format, ...)
     return cmd(sql);
 }
 
+bool maxtest::MariaDB::try_cmd_f(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    std::string sql = mxb::string_vprintf(format, args);
+    va_end(args);
+    return cmd(sql, Expect::ANY);
+}
+
 std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& query, Expect expect)
 {
     auto ret = mxq::MariaDB::query(query);

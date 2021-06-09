@@ -668,4 +668,50 @@ std::string ReplicationCluster::gen_change_master_cmd(MariaDBServer* master)
                               "master_password='%s', master_use_gtid=slave_pos;",
                               master->vm_node().priv_ip(), master->port(), "repl", "repl");
 }
+
+bool ReplicationCluster::create_users(int i)
+{
+    bool rval = false;
+    if (create_base_users(i))
+    {
+        auto be = backend(i);
+        auto vrs = be->version();
+
+        mxt::MariaDBUserDef mdbmon_user = {"mariadbmon", "%", "mariadbmon"};
+        mdbmon_user.grants = {"SUPER, FILE, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.*",
+                              "SELECT ON mysql.user"};
+        if (vrs.major == 10 && vrs.minor >= 5)
+        {
+            mdbmon_user.grants.emplace_back("REPLICATION SLAVE ADMIN ON *.*");
+        }
+        else
+        {
+            mdbmon_user.grants.emplace_back("REPLICATION CLIENT ON *.*");
+        }
+
+        bool error = false;
+        auto ssl = ssl_mode();
+        if (!be->create_user(mdbmon_user, ssl)
+            || !be->create_user(service_user_def(), ssl)
+            || !be->admin_connection()->try_cmd("GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';"))
+        {
+            error = true;
+        }
+
+        if (vrs.major == 10 && ((vrs.minor == 5 && vrs.patch >= 8) || ( vrs.minor >= 6 )))
+        {
+            if (!be->admin_connection()->try_cmd("GRANT SLAVE MONITOR ON *.* TO 'repl'@'%';"))
+            {
+                error = true;
+            }
+        }
+
+        if (!error)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
 }
