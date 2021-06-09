@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <set>
 #include <string>
 #include <vector>
 #include <bsoncxx/builder/basic/array.hpp>
@@ -27,11 +28,18 @@ namespace nosql
 class NoSQLCursor
 {
 public:
-    NoSQLCursor(const std::string& ns);
-    NoSQLCursor(NoSQLCursor&& rhs) = default;
-    NoSQLCursor(const std::string& ns,
-                const std::vector<std::string>& extractions,
-                mxs::Buffer&& mariadb_response);
+    NoSQLCursor(const NoSQLCursor& rhs) = delete;
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns);
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
+                                               const std::vector<std::string>& extractions,
+                                               mxs::Buffer&& mariadb_response);
+
+    static std::unique_ptr<NoSQLCursor> get(const std::string& collection, int64_t id);
+    static void put(std::unique_ptr<NoSQLCursor> sCursor);
+    static std::set<int64_t> kill(const std::string& collection, const std::vector<int64_t>& ids);
+    static void kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
     const std::string& ns() const
     {
@@ -60,6 +68,12 @@ public:
     }
 
 private:
+    NoSQLCursor(const std::string& ns);
+
+    NoSQLCursor(const std::string& ns,
+                const std::vector<std::string>& extractions,
+                mxs::Buffer&& mariadb_response);
+
     void initialize();
 
     void touch();

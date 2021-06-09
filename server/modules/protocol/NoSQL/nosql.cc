@@ -1974,13 +1974,6 @@ std::atomic_int64_t nosql::NoSQL::Context::s_connection_id;
 namespace
 {
 
-void throw_cursor_not_found(int64_t id)
-{
-    stringstream ss;
-    ss << "cursor id " << id << " not found";
-    throw nosql::SoftError(ss.str(), nosql::error::CURSOR_NOT_FOUND);
-}
-
 class NoError : public nosql::LastError
 {
 public:
@@ -2008,27 +2001,6 @@ private:
 
 }
 
-nosql::NoSQLCursor& nosql::NoSQL::Context::get_cursor(const std::string& collection, int64_t id)
-{
-    auto it = m_collection_cursors.find(collection);
-
-    if (it == m_collection_cursors.end())
-    {
-        throw_cursor_not_found(id);
-    }
-
-    CursorsById& cursors = it->second;
-
-    auto jt = cursors.find(id);
-
-    if (jt == cursors.end())
-    {
-        throw_cursor_not_found(id);
-    }
-
-    return jt->second;
-}
-
 nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
                                mxs::Component* pDownstream)
     : m_client_connection(*pClient_connection)
@@ -2036,87 +2008,6 @@ nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
     , m_connection_id(++s_connection_id)
     , m_sLast_error(std::make_unique<NoError>())
 {
-}
-
-void nosql::NoSQL::Context::remove_cursor(const NoSQLCursor& cursor)
-{
-    auto it = m_collection_cursors.find(cursor.ns());
-    mxb_assert(it != m_collection_cursors.end());
-
-    if (it != m_collection_cursors.end())
-    {
-        CursorsById& cursors = it->second;
-
-        auto jt = cursors.find(cursor.id());
-        mxb_assert(jt != cursors.end());
-
-        if (jt != cursors.end())
-        {
-            cursors.erase(jt);
-        }
-    }
-}
-
-void nosql::NoSQL::Context::store_cursor(NoSQLCursor&& cursor)
-{
-    CursorsById& cursors = m_collection_cursors[cursor.ns()];
-
-    mxb_assert(cursors.find(cursor.id()) == cursors.end());
-
-    cursors.emplace(std::make_pair(cursor.id(), std::move(cursor)));
-}
-
-set<int64_t> nosql::NoSQL::Context::kill_cursors(const std::string& collection,
-                                                 const vector<int64_t>& ids)
-{
-    set<int64_t> removed;
-
-    auto it = m_collection_cursors.find(collection);
-
-    if (it != m_collection_cursors.end())
-    {
-        CursorsById& cursors = it->second;
-
-        for (auto id : ids)
-        {
-            auto jt = cursors.find(id);
-
-            if (jt != cursors.end())
-            {
-                cursors.erase(jt);
-                removed.insert(id);
-            }
-        }
-    }
-
-    return removed;
-}
-
-void nosql::NoSQL::Context::kill_idle_cursors(const mxb::TimePoint& now,
-                                              const std::chrono::seconds& timeout)
-{
-    for (auto& kv : m_collection_cursors)
-    {
-        CursorsById& cursors = kv.second;
-
-        auto it = cursors.begin();
-
-        while (it != cursors.end())
-        {
-            const NoSQLCursor& cursor = it->second;
-
-            auto idle = now - cursor.last_use();
-
-            if (idle > timeout)
-            {
-                it = cursors.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    }
 }
 
 void nosql::NoSQL::Context::get_last_error(DocumentBuilder& doc)

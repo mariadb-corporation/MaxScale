@@ -330,7 +330,8 @@ bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const 
 
 void ClientConnection::tick(std::chrono::seconds idle)
 {
-    m_nosql.context().kill_idle_cursors(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
+    // TODO: This can't be here. Every connection now kills idle cursors.
+    NoSQLCursor::kill_idle(m_session.worker()->epoll_tick_now(), m_config.cursor_timeout);
 
     mxs::ClientConnection::tick(idle);
 }

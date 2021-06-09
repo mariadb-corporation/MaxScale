@@ -734,12 +734,6 @@ public:
             return ++m_request_id;
         }
 
-        NoSQLCursor& get_cursor(const std::string& collection, int64_t id);
-        void remove_cursor(const NoSQLCursor& cursor);
-        void store_cursor(NoSQLCursor&& cursor);
-        std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids);
-        void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
-
         void set_last_error(std::unique_ptr<LastError>&& sLast_error)
         {
             m_sLast_error = std::move(sLast_error);
@@ -749,15 +743,10 @@ public:
         void reset_error(int32_t n = 0);
 
     private:
-        using CursorsById = std::unordered_map<int64_t, NoSQLCursor>;
-        using CollectionCursors = std::unordered_map<std::string, CursorsById>;
-
-
         mxs::ClientConnection&     m_client_connection;
         mxs::Component&            m_downstream;
         int32_t                    m_request_id { 1 };
         int64_t                    m_connection_id;
-        CollectionCursors          m_collection_cursors;
         std::unique_ptr<LastError> m_sLast_error;
 
         static std::atomic_int64_t s_connection_id;

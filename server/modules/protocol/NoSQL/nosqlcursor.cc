@@ -16,6 +16,7 @@
 #include <maxbase/worker.hh>
 #include "nosqlcommand.hh"
 
+using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -23,13 +24,137 @@ using std::vector;
 namespace
 {
 
-int64_t next_id()
-{
-    // TODO: Later we probably want to create a random id, not a guessable one.
-    static std::atomic<int64_t> id;
+using namespace nosql;
 
-    return ++id;
-}
+class ThisUnit
+{
+public:
+    ThisUnit()
+    {
+    }
+
+    ThisUnit(const ThisUnit&) = delete;
+    ThisUnit& operator=(const ThisUnit&) = delete;
+
+    int64_t next_id()
+    {
+        // TODO: Later we probably want to create a random id, not a guessable one.
+        return ++m_id;
+    }
+
+    void put_cursor(std::unique_ptr<NoSQLCursor> sCursor)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        CursorsById& cursors = m_collection_cursors[sCursor->ns()];
+
+        mxb_assert(cursors.find(sCursor->id()) == cursors.end());
+
+        cursors.insert(std::make_pair(sCursor->id(), std::move(sCursor)));
+    }
+
+    std::unique_ptr<NoSQLCursor> get_cursor(const std::string& collection, int64_t id)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        auto it = m_collection_cursors.find(collection);
+
+        if (it == m_collection_cursors.end())
+        {
+            throw_cursor_not_found(id);
+        }
+
+        CursorsById& cursors = it->second;
+
+        auto jt = cursors.find(id);
+
+        if (jt == cursors.end())
+        {
+            throw_cursor_not_found(id);
+        }
+
+        auto sCursor = std::move(jt->second);
+
+        cursors.erase(jt);
+
+        if (cursors.size() == 0)
+        {
+            m_collection_cursors.erase(it);
+        }
+
+        return std::move(sCursor);
+    }
+
+    std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        set<int64_t> removed;
+
+        auto it = m_collection_cursors.find(collection);
+
+        if (it != m_collection_cursors.end())
+        {
+            CursorsById& cursors = it->second;
+
+            for (auto id : ids)
+            {
+                auto jt = cursors.find(id);
+
+                if (jt != cursors.end())
+                {
+                    cursors.erase(jt);
+                    removed.insert(id);
+                }
+            }
+        }
+
+        return removed;
+    }
+
+    void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        for (auto& kv : m_collection_cursors)
+        {
+            CursorsById& cursors = kv.second;
+
+            auto it = cursors.begin();
+
+            while (it != cursors.end())
+            {
+                auto& sCursor = it->second;
+
+                auto idle = now - sCursor->last_use();
+
+                if (idle > timeout)
+                {
+                    it = cursors.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+    }
+
+private:
+    void throw_cursor_not_found(int64_t id)
+    {
+        stringstream ss;
+        ss << "cursor id " << id << " not found";
+        throw nosql::SoftError(ss.str(), nosql::error::CURSOR_NOT_FOUND);
+    }
+
+    using CursorsById = std::unordered_map<int64_t, std::unique_ptr<NoSQLCursor>>;
+    using CollectionCursors = std::unordered_map<std::string, CursorsById>;
+
+    std::atomic<int64_t> m_id;
+    std::mutex           m_mutex;
+    CollectionCursors    m_collection_cursors;
+} this_unit;
 
 // If bit 63 is 0 and bit 62 a 1, then the value is interpreted as a 'Long'.
 const int64_t BSON_LONG_BIT = (int64_t(1) << 62);
@@ -98,7 +223,7 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
                          const vector<string>& extractions,
                          mxs::Buffer&& mariadb_response)
     : m_ns(ns)
-    , m_id(next_id() | BSON_LONG_BIT)
+    , m_id(this_unit.next_id() | BSON_LONG_BIT)
     , m_exhausted(false)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
@@ -107,6 +232,44 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
 {
     initialize();
     touch();
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns)
+{
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursor(ns));
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns,
+                                                 const std::vector<std::string>& extractions,
+                                                 mxs::Buffer&& mariadb_response)
+{
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursor(ns, extractions, std::move(mariadb_response)));
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursor::get(const std::string& collection, int64_t id)
+{
+    return std::move(this_unit.get_cursor(collection, id));
+}
+
+//static
+void NoSQLCursor::put(std::unique_ptr<NoSQLCursor> sCursor)
+{
+    this_unit.put_cursor(std::move(sCursor));
+}
+
+//static
+std::set<int64_t> NoSQLCursor::kill(const std::string& collection, const std::vector<int64_t>& ids)
+{
+    return this_unit.kill_cursors(collection, ids);
+}
+
+//static
+void NoSQLCursor::kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
+{
+    this_unit.kill_idle_cursors(now, timeout);
 }
 
 void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,

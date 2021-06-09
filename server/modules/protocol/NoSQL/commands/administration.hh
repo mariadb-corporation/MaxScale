@@ -282,7 +282,7 @@ public:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        set<int64_t> removed = m_database.context().kill_cursors(collection, ids);
+        set<int64_t> removed = NoSQLCursor::kill(collection, ids);
 
         ArrayBuilder cursorsKilled;
         ArrayBuilder cursorsNotFound;

@@ -442,16 +442,18 @@ public:
         default:
             {
                 // Must be a result set.
-                NoSQLCursor cursor(table(Quoted::NO), m_extractions, std::move(mariadb_response));
+                unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
+                                                                      m_extractions,
+                                                                      std::move(mariadb_response));
 
                 DocumentBuilder doc;
-                cursor.create_first_batch(doc, m_batch_size, m_single_batch);
+                sCursor->create_first_batch(doc, m_batch_size, m_single_batch);
 
                 pResponse = create_response(doc.extract());
 
-                if (!cursor.exhausted())
+                if (!sCursor->exhausted())
                 {
-                    m_database.context().store_cursor(std::move(cursor));
+                    NoSQLCursor::put(std::move(sCursor));
                 }
             }
         }
@@ -508,13 +510,13 @@ public:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        NoSQLCursor& cursor = m_database.context().get_cursor(collection, id);
+        unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::get(collection, id);
 
-        cursor.create_next_batch(doc, batch_size);
+        sCursor->create_next_batch(doc, batch_size);
 
-        if (cursor.exhausted())
+        if (!sCursor->exhausted())
         {
-            m_database.context().remove_cursor(cursor);
+            NoSQLCursor::put(std::move(sCursor));
         }
     }
 };
