@@ -307,7 +307,7 @@ bool CDCClientConnection::write(const char* msg)
     return write(buf);
 }
 
-int32_t CDCClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
+bool CDCClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     return write(buffer);
 }

@@ -43,7 +43,7 @@ MirrorSession::~MirrorSession()
     }
 }
 
-int32_t MirrorSession::routeQuery(GWBUF* pPacket)
+bool MirrorSession::routeQuery(GWBUF* pPacket)
 {
     int rc = 0;
 
@@ -121,7 +121,7 @@ void MirrorSession::finalize_reply()
     route_queued_queries();
 }
 
-int32_t MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
     backend->process_result(pPacket, reply);

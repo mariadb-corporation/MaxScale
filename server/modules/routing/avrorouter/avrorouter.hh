@@ -174,11 +174,11 @@ public:
      *
      * @param Buffer The incoming request packet
      *
-     * @return 1 on success, 0 on error
+     * @return True on success, false on error
      */
-    int32_t routeQuery(GWBUF* buffer);
+    bool routeQuery(GWBUF* buffer);
 
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
     {
         mxb_assert(!true);
         return 0;

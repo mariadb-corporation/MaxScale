@@ -167,7 +167,7 @@ public:
     CCRSession& operator=(const CCRSession&) = delete;
 
     static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
-    int                routeQuery(GWBUF* queue);
+    bool               routeQuery(GWBUF* queue);
 
 private:
     CCRFilter& m_instance;
@@ -259,7 +259,7 @@ CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter
     return new CCRSession(session, service, instance);
 }
 
-int CCRSession::routeQuery(GWBUF* queue)
+bool CCRSession::routeQuery(GWBUF* queue)
 {
     if (modutil_is_SQL(queue))
     {

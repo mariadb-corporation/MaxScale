@@ -2517,7 +2517,7 @@ bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_af
     return write(buf);
 }
 
-int32_t
+bool
 MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_num_responses == 1)

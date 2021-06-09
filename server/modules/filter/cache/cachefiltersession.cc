@@ -356,7 +356,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
     return pCacheFilterSession;
 }
 
-int CacheFilterSession::routeQuery(GWBUF* pPacket)
+bool CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (m_processing)
     {
@@ -509,7 +509,7 @@ void CacheFilterSession::invalidate_handler(cache_result_t result)
     }
 }
 
-int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     m_res = m_res ? gwbuf_append(m_res, pData) : pData;
 

@@ -90,7 +90,7 @@ RWSplitSession::~RWSplitSession()
     m_router->local_avg_sescmd_sz().add(protocol_data()->history.size());
 }
 
-int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
+bool RWSplitSession::routeQuery(GWBUF* querybuf)
 {
     if (!querybuf)
     {
@@ -509,7 +509,7 @@ void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
     }
 }
 
-int32_t RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 

@@ -1635,7 +1635,7 @@ bool ServiceEndpoint::is_open() const
     return m_open;
 }
 
-int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
+bool ServiceEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
@@ -1647,7 +1647,7 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head->routeQuery(buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);

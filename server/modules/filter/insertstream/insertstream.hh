@@ -53,8 +53,8 @@ public:
 
     InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter);
 
-    int routeQuery(GWBUF* pPacket);
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* pPacket);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     InsertStream* m_filter;

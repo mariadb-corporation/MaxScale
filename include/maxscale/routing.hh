@@ -34,9 +34,9 @@ public:
      * Called when a packet is traveling downstream, towards a backend.
      *
      * @param pPacket Packet to route
-     * @return 1 for success, 0 for error
+     * @return True for success, false for error
      */
-    virtual int32_t routeQuery(GWBUF* pPacket) = 0;
+    virtual bool routeQuery(GWBUF* pPacket) = 0;
 
     /**
      * Called when a packet is traveling upstream, towards the client.
@@ -44,9 +44,9 @@ public:
      * @param pPacket Packet to route
      * @param down Response source
      * @param reply Reply information
-     * @return 1 for success, 0 for error
+     * @return True for success, false for error
      */
-    virtual int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
+    virtual bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 };
 }
 

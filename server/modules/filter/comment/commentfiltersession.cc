@@ -43,7 +43,7 @@ CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
     return new CommentFilterSession(pSession, pService, pFilter);
 }
 
-int CommentFilterSession::routeQuery(GWBUF* pPacket)
+bool CommentFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (modutil_is_SQL(pPacket))
     {
@@ -68,7 +68,7 @@ int CommentFilterSession::routeQuery(GWBUF* pPacket)
     return pPacket ? mxs::FilterSession::routeQuery(pPacket) : 1;
 }
 
-int CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return mxs::FilterSession::clientReply(pPacket, down, reply);
 }

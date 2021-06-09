@@ -47,7 +47,7 @@ enum
     AVRO_CLIENT_ERRORED,
 };
 
-int AvroSession::routeQuery(GWBUF* queue)
+bool AvroSession::routeQuery(GWBUF* queue)
 {
     int rval = 1;
 

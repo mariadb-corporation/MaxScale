@@ -245,7 +245,7 @@ InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pServic
 {
 }
 
-int32_t InsertStreamSession::routeQuery(GWBUF* queue)
+bool InsertStreamSession::routeQuery(GWBUF* queue)
 {
     std::string target;
     bool send_ok = false;
@@ -353,7 +353,7 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
     return rc;
 }
 
-int32_t InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     int rc = 1;
 

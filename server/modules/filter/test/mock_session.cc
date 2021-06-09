@@ -19,12 +19,12 @@ namespace maxscale
 namespace mock
 {
 
-int32_t Session::Endpoint::routeQuery(GWBUF* buffer)
+bool Session::Endpoint::routeQuery(GWBUF* buffer)
 {
     return m_session.routeQuery(buffer);
 }
 
-int32_t Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply)
+bool Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply)
 {
     return 0;
 }

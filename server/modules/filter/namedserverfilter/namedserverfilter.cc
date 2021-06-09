@@ -188,9 +188,9 @@ RegexHintFSession::~RegexHintFSession()
  * "Route to named server" with the name defined in the regex-server mapping
  *
  * @param queue     The query data
- * @return 1 on success, 0 on failure
+ * @return True on success, false on failure
  */
-int RegexHintFSession::routeQuery(GWBUF* queue)
+bool RegexHintFSession::routeQuery(GWBUF* queue)
 {
     char* sql = NULL;
     int sql_len = 0;

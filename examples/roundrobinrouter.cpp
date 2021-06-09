@@ -119,9 +119,9 @@ public:
     // The API functions must be public
     RRRouterSession(RRRouter*, const mxs::Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
-    int32_t routeQuery(GWBUF* buffer);
-    int32_t clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool    handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* buffer);
+    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
 
 private:
     bool         m_closed;              /* true when closeSession is called */
@@ -314,9 +314,9 @@ json_t* RRRouter::diagnostics() const
  * @param instance       Router instance
  * @param session        Router session associated with the client
  * @param buffer       Buffer containing the query (or command)
- * @return 1 on success, 0 on error
+ * @return True on success, false on error
  */
-int RRRouterSession::routeQuery(GWBUF* querybuf)
+bool RRRouterSession::routeQuery(GWBUF* querybuf)
 {
     int rval = 0;
     const bool print = m_router->m_config.print_on_routing;
@@ -397,7 +397,7 @@ int RRRouterSession::routeQuery(GWBUF* querybuf)
  * @param   queue       The GWBUF with reply data
  * @param   backend_dcb The backend DCB (data source)
  */
-int32_t RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (m_replies_to_ignore > 0)
     {

@@ -79,8 +79,8 @@ class TopSession : public mxs::FilterSession
 public:
     TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
     ~TopSession();
-    int32_t routeQuery(GWBUF* buffer);
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* buffer);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     json_t* diagnostics() const;
 
 private:
@@ -232,7 +232,7 @@ TopSession::~TopSession()
     }
 }
 
-int32_t TopSession::routeQuery(GWBUF* queue)
+bool TopSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {
@@ -252,7 +252,7 @@ int32_t TopSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int32_t TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (!m_current.empty())
     {

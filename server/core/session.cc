@@ -1276,7 +1276,7 @@ void Session::dump_session_log()
     }
 }
 
-int32_t Session::routeQuery(GWBUF* buffer)
+bool Session::routeQuery(GWBUF* buffer)
 {
     if (m_rebuild_chain && is_idle())
     {
@@ -1296,7 +1296,7 @@ int32_t Session::routeQuery(GWBUF* buffer)
     return rv;
 }
 
-int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return m_tail->clientReply(buffer, down, reply);
 }

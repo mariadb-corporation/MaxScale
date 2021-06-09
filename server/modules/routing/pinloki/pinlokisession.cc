@@ -75,7 +75,7 @@ PinlokiSession::~PinlokiSession()
     }
 }
 
-int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
+bool PinlokiSession::routeQuery(GWBUF* pPacket)
 {
     int rval = 0;
     GWBUF* response = nullptr;
@@ -148,7 +148,7 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-int32_t PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert_message(!true, "This should not happen");
     return 0;

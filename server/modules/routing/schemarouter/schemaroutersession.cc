@@ -255,7 +255,7 @@ static bool is_empty_packet(GWBUF* pPacket)
     return rval;
 }
 
-int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
+bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 {
     if (m_closed)
     {
@@ -505,7 +505,7 @@ GWBUF* erase_last_packet(GWBUF* input)
 }
 }
 
-int32_t SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 

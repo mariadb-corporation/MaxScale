@@ -126,8 +126,8 @@ public:
     HintSession& operator=(const HintSession&) = delete;
 
     HintSession(MXS_SESSION* session, SERVICE* service);
-    int routeQuery(GWBUF* queue);
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* queue);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
 

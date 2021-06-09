@@ -63,13 +63,13 @@ bool LocalClient::connect()
     return m_down->connect();
 }
 
-int32_t LocalClient::routeQuery(GWBUF* buffer)
+bool LocalClient::routeQuery(GWBUF* buffer)
 {
     mxb_assert(!true);
     return 0;
 }
 
-int32_t LocalClient::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool LocalClient::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     gwbuf_free(buffer);
     return 0;

@@ -62,10 +62,10 @@ public:
                                        const BinlogFilter* pFilter);
 
     // Handle a query from the client
-    int routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
     // Handle a reply from server
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     // Used in the create function

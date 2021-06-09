@@ -92,7 +92,7 @@ public:
      *
      * @param pPacket A client packet.
      */
-    int32_t routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
     /**
      * Called when a packet is routed to the client. The router should
@@ -102,7 +102,7 @@ public:
      * @param down    The route the reply took
      * @param reply   The reply information
      */
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 

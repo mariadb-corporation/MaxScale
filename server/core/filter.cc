@@ -307,12 +307,12 @@ void FilterSession::setUpstream(mxs::Routable* up)
     m_up = up;
 }
 
-int FilterSession::routeQuery(GWBUF* pPacket)
+bool FilterSession::routeQuery(GWBUF* pPacket)
 {
     return m_down->routeQuery(pPacket);
 }
 
-int FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return m_up->clientReply(pPacket, down, reply);
 }

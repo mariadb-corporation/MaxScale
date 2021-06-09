@@ -176,8 +176,8 @@ class TpmSession : public mxs::FilterSession
 public:
     TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance);
     ~TpmSession();
-    int32_t routeQuery(GWBUF* pPacket);
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* pPacket);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     bool                     m_active = true;
@@ -283,7 +283,7 @@ TpmSession::~TpmSession()
     m_instance->flush();
 }
 
-int32_t TpmSession::routeQuery(GWBUF* queue)
+bool TpmSession::routeQuery(GWBUF* queue)
 {
     if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
@@ -325,7 +325,7 @@ int32_t TpmSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int32_t TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool TpmSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     /* records latency of the SQL statement. */
     if (!m_sql.empty())

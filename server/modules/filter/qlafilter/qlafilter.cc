@@ -393,7 +393,7 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
     }
 }
 
-int QlaFilterSession::routeQuery(GWBUF* queue)
+bool QlaFilterSession::routeQuery(GWBUF* queue)
 {
     char* query = NULL;
     int query_len = 0;
@@ -440,7 +440,7 @@ int QlaFilterSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     LogEventData& event = m_event_data;
     if (event.has_message)

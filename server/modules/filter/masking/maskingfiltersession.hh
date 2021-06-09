@@ -33,9 +33,9 @@ public:
                                         SERVICE* pService,
                                         const MaskingFilter* pFilter);
 
-    int routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     MaskingFilterSession(MXS_SESSION* pSession, SERVICE* service, const MaskingFilter* pFilter);

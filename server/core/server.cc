@@ -928,7 +928,7 @@ bool ServerEndpoint::is_open() const
     return m_conn || m_conn_pooled;
 }
 
-int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
+bool ServerEndpoint::routeQuery(GWBUF* buffer)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
@@ -948,7 +948,7 @@ int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
     return rval;
 }
 
-int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());

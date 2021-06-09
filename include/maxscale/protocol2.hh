@@ -186,7 +186,7 @@ public:
      * @param reply Reply info
      * @return True on success
      */
-    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
+    virtual bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     virtual ClientDCB*       dcb() = 0;
     virtual const ClientDCB* dcb() const = 0;

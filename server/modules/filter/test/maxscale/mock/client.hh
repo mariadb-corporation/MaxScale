@@ -122,19 +122,19 @@ public:
         return this;
     }
 
-    int32_t routeQuery(GWBUF* pPacket)
+    bool routeQuery(GWBUF* pPacket)
     {
         return 0;
     }
 
-    int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
-    static int32_t clientReply(mxs::Filter* pInstance,
-                               mxs::Routable* pSession,
-                               GWBUF* pResponse,
-                               const mxs::ReplyRoute& down,
-                               const mxs::Reply& reply);
+    static bool clientReply(mxs::Filter* pInstance,
+                            mxs::Routable* pSession,
+                            GWBUF* pResponse,
+                            const mxs::ReplyRoute& down,
+                            const mxs::Reply& reply);
 
     // Dcb::Handler
     int32_t write(GWBUF* pBuffer);

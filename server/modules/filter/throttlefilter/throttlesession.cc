@@ -126,7 +126,7 @@ bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Call::action_t action,
     return false;
 }
 
-int ThrottleSession::routeQuery(GWBUF* buffer)
+bool ThrottleSession::routeQuery(GWBUF* buffer)
 {
     return real_routeQuery(buffer, false);
 }

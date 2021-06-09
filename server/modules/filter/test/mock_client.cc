@@ -68,7 +68,7 @@ void Client::reset()
     }
 }
 
-int32_t Client::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool Client::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     int32_t rv = 1;
 

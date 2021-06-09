@@ -123,9 +123,9 @@ static bool is_using_gtid(GWBUF* buffer)
  * event filtering is possible.
  *
  * @param pPacket    The inout data from client
- * @return           0 on errors, >0 otherwise.
+ * @return           False on errors, true otherwise.
  */
-int BinlogFilterSession::routeQuery(GWBUF* pPacket)
+bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
 {
     uint8_t* data = GWBUF_DATA(pPacket);
 
@@ -211,9 +211,9 @@ static void extract_header(register const uint8_t* event,
  * Reply data to client: Binlog events can be filtered
  *
  * @param pPacket    GWBUF with binlog event
- * @return           0 on error, >0 otherwise.
+ * @return           False on error, true otherwise.
  */
-int BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     uint8_t* event = GWBUF_DATA(pPacket);
     uint32_t len = MYSQL_GET_PAYLOAD_LEN(event);

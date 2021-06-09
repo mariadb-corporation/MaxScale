@@ -55,13 +55,13 @@ void RouterSession::discard_all_responses()
     return m_pBackend->discard_all_responses(this);
 }
 
-int32_t RouterSession::routeQuery(GWBUF* pStatement)
+bool RouterSession::routeQuery(GWBUF* pStatement)
 {
     m_pBackend->handle_statement(this, pStatement);
     return 1;
 }
 
-int32_t RouterSession::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool RouterSession::clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return m_pUpstream_filter_session->clientReply(pResponse, reply);
 }

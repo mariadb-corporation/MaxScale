@@ -319,9 +319,9 @@ public:
 
     bool is_open() const override;
 
-    int32_t routeQuery(GWBUF* buffer) override;
+    bool routeQuery(GWBUF* buffer) override;
 
-    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
                      const mxs::Reply& reply) override;
@@ -355,13 +355,13 @@ private:
         {
         }
 
-        int32_t routeQuery(GWBUF* pPacket)
+        bool routeQuery(GWBUF* pPacket)
         {
             mxb_assert_message(false, "Should never be called");
             return 0;
         }
 
-        int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+        bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
         {
             return m_endpoint->send_upstream(pPacket, down, reply);
         }

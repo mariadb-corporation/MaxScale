@@ -50,9 +50,9 @@ public:
      * this is called for each packet.
      *
      * @param pPacket Packet containing the query, or at least a part of it
-     * @return 0 on success. This typically depends on the later stages of the query processing chain.
+     * @return True on success. This typically depends on the later stages of the query processing chain.
      */
-    int routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
 
     /**
@@ -62,9 +62,9 @@ public:
      * replies is the same as for queries, just walked in the opposite direction.
      *
      * @param pPacket Packet containing results
-     * @return 0 on success. This typically depends on the later stages of the reply processing chain.
+     * @return True on success. This typically depends on the later stages of the reply processing chain.
      */
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     // Used in the create function

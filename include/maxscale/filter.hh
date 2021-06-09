@@ -128,9 +128,9 @@ public:
      *
      * @param pPacket A client packet.
      *
-     * @return 1 for success, 0 for error
+     * @return True for success, false for error
      */
-    int routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
     /**
      * Called when a packet is routed to the client. The filter should
@@ -140,9 +140,9 @@ public:
      * @param down    The downstream components where the response came from
      * @param reply   The reply information (@see target.hh)
      *
-     * @return 1 for success, 0 for error
+     * @return True for success, false for error
      */
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * Called for obtaining diagnostics about the filter session.

@@ -293,7 +293,7 @@ GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
     return pResponse;
 }
 
-int32_t ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     int32_t rv = 0;
 

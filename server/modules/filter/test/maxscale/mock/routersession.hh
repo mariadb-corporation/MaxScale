@@ -60,14 +60,14 @@ public:
         return this;
     }
 
-    int32_t routeQuery(GWBUF* pStatement);
+    bool routeQuery(GWBUF* pStatement);
 
     /**
      * Called by the backend to deliver a response.
      *
      * @return Whatever the upstream filter returns.
      */
-    int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * Causes the router to make its associated backend deliver a response

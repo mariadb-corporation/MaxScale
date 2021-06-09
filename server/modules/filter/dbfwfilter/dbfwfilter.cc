@@ -1445,7 +1445,7 @@ int DbfwSession::send_error()
     return 1;
 }
 
-int DbfwSession::routeQuery(GWBUF* buffer)
+bool DbfwSession::routeQuery(GWBUF* buffer)
 {
     int rval = 0;
     uint32_t type = 0;

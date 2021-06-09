@@ -70,12 +70,12 @@ MaxRowsConfig::MaxRowsConfig(const char* zName)
     add_native(&MaxRowsConfig::mode, &maxrows::max_resultset_return);
 }
 
-int MaxRowsSession::routeQuery(GWBUF* packet)
+bool MaxRowsSession::routeQuery(GWBUF* packet)
 {
     return FilterSession::routeQuery(packet);
 }
 
-int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxs::Buffer buffer(data);
     int rv = 1;

@@ -39,9 +39,9 @@ public:
 
     ~HintRouterSession();
 
-    int32_t routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket);
 
-    int32_t clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 

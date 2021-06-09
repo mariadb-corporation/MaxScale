@@ -168,17 +168,17 @@ public:
      * Route a query.
      *
      * @param query
-     * @return 0 on success
+     * @return True on success
      */
-    int routeQuery(GWBUF* query);
+    bool routeQuery(GWBUF* query);
 
     /**
      * Route a reply from backend. Required for measuring and printing query execution time.
      *
      * @param reply Reply from server
-     * @return 0 on success
+     * @return True on success
      */
-    int clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     json_t* diagnostics() const;
 

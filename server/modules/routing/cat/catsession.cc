@@ -43,7 +43,7 @@ bool CatSession::next_backend()
     return m_current != m_backends.end();
 }
 
-int32_t CatSession::routeQuery(GWBUF* pPacket)
+bool CatSession::routeQuery(GWBUF* pPacket)
 {
     int32_t rval = 0;
 
@@ -62,7 +62,7 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-int32_t CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto& backend = *m_current;
     mxb_assert(backend->backend() == down.back());

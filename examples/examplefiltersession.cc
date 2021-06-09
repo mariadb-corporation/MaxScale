@@ -42,7 +42,7 @@ void ExampleFilterSession::close()
     MXS_NOTICE("Session %lu routed %i queries and %i replies.", m_session_id, m_queries, m_replies);
 }
 
-int ExampleFilterSession::routeQuery(GWBUF* pPacket)
+bool ExampleFilterSession::routeQuery(GWBUF* pPacket)
 {
     m_queries++;
     m_filter.query_seen();
@@ -51,7 +51,7 @@ int ExampleFilterSession::routeQuery(GWBUF* pPacket)
     return mxs::FilterSession::routeQuery(pPacket);
 }
 
-int ExampleFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool ExampleFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     m_replies++;
     m_filter.reply_seen();

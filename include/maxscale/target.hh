@@ -139,9 +139,9 @@ class Component
 public:
     virtual ~Component() = default;
 
-    virtual int32_t routeQuery(GWBUF* buffer) = 0;
+    virtual bool routeQuery(GWBUF* buffer) = 0;
 
-    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
+    virtual bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     virtual bool handleError(ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
 };

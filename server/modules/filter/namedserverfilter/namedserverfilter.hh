@@ -120,7 +120,7 @@ public:
     ~RegexHintFSession();
 
     json_t* diagnostics() const;
-    int     routeQuery(GWBUF* buffer);
+    bool    routeQuery(GWBUF* buffer);
 
 private:
     RegexHintFilter&  m_fil_inst;

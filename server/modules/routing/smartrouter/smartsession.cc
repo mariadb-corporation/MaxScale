@@ -84,7 +84,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     return pSess;
 }
 
-int SmartRouterSession::routeQuery(GWBUF* pBuf)
+bool SmartRouterSession::routeQuery(GWBUF* pBuf)
 {
     bool ret = false;
 
@@ -149,7 +149,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-int32_t SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     using maxbase::operator<<;
 

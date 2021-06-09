@@ -65,7 +65,7 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 {
 }
 
-int HintSession::routeQuery(GWBUF* queue)
+bool HintSession::routeQuery(GWBUF* queue)
 {
     if (HINT* hint = process_hints(queue))
     {
@@ -75,7 +75,7 @@ int HintSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-int HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (reply.is_complete() && reply.error() && m_current_id)
     {

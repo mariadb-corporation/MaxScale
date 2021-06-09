@@ -77,7 +77,7 @@ HintRouterSession::~HintRouterSession()
     m_backends.clear();
 }
 
-int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
+bool HintRouterSession::routeQuery(GWBUF* pPacket)
 {
     HR_ENTRY();
 
@@ -124,7 +124,7 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-int32_t HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     HR_ENTRY();
 

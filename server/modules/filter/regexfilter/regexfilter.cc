@@ -148,12 +148,12 @@ public:
         return rval;
     }
 
-    int32_t clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
     {
         return mxs::FilterSession::clientReply(buffer, down, reply);
     }
 
-    int32_t routeQuery(GWBUF* buffer);
+    bool routeQuery(GWBUF* buffer);
 
 private:
     RegexInstance* m_instance;
@@ -196,7 +196,7 @@ bool RegexInstance::matching_connection(MXS_SESSION* session)
            && (m_config.user.empty() || session->user() == m_config.user);
 }
 
-int32_t RegexSession::routeQuery(GWBUF* queue)
+bool RegexSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {

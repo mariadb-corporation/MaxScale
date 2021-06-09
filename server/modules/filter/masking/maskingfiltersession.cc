@@ -261,7 +261,7 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
     return rv;
 }
 
-int MaskingFilterSession::routeQuery(GWBUF* pPacket)
+bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
     ComRequest request(pPacket);
 
@@ -329,7 +329,7 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(gwbuf_is_contiguous(pPacket));
 
