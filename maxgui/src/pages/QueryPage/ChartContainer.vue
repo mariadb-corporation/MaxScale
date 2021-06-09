@@ -15,6 +15,17 @@
             :chartData="chartData"
             :options="lineChartOptions"
         />
+        <scatter-chart
+            v-else-if="selectedChart === 'Scatter'"
+            class="scatter-chart-container py-2 px-3"
+            :style="{
+                minWidth: minLineChartWidth,
+                minHeight: `${chartHeight}px`,
+            }"
+            :chartData="chartData"
+            :options="scatterChartOptions"
+        />
+
         <!-- TODO: Add more charts, add fullscreen mode and export chart feat-->
     </div>
 </template>
@@ -57,22 +68,16 @@ export default {
                 return typeof this.chartData.datasets[0].data[0].x
             return null
         },
-        lineChartOptions() {
-            const isNum = this.getXAxisDataType === 'number'
+        chartOptions() {
             const componentScope = this
             return {
-                showLines: true,
                 responsive: true,
                 spanGaps: true,
                 maintainAspectRatio: false,
                 hover: {
-                    mode: 'index',
-                    intersect: false,
                     onHover: e => this.onChartHover(e),
                 },
                 tooltips: {
-                    mode: 'index',
-                    intersect: false,
                     enabled: false,
                     custom: function(tooltipModel) {
                         const chartScope = this
@@ -95,11 +100,6 @@ export default {
                 legend: {
                     display: false,
                 },
-                elements: {
-                    point: {
-                        radius: 0,
-                    },
-                },
                 scales: {
                     xAxes: [
                         {
@@ -110,16 +110,6 @@ export default {
                                 lineHeight: 1,
                                 padding: 0,
                                 fontColor: '#424f62',
-                            },
-                            ticks: {
-                                maxRotation: isNum ? 0 : 90,
-                                minRotation: isNum ? 0 : 90,
-                                //truncate tick
-                                callback: v => {
-                                    const toStr = `${v}`
-                                    if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
-                                    return v
-                                },
                             },
                         },
                     ],
@@ -135,6 +125,45 @@ export default {
                     ],
                 },
             }
+        },
+        lineChartOptions() {
+            const isNum = this.getXAxisDataType === 'number'
+            let lineOptions = {
+                showLines: true,
+                hover: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                tooltips: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                elements: {
+                    point: {
+                        radius: 0,
+                    },
+                },
+                scales: {
+                    xAxes: [
+                        {
+                            ticks: {
+                                maxRotation: isNum ? 0 : 90,
+                                minRotation: isNum ? 0 : 90,
+                                //truncate tick
+                                callback: v => {
+                                    const toStr = `${v}`
+                                    if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
+                                    return v
+                                },
+                            },
+                        },
+                    ],
+                },
+            }
+            return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
+        },
+        scatterChartOptions() {
+            return this.chartOptions
         },
     },
     beforeDestroy() {

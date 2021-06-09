@@ -13,6 +13,7 @@
 import Chart from 'chart.js'
 import LineChartStream from './LineChartStream.vue'
 import LineChart from './LineChart.vue'
+import ScatterChart from './ScatterChart.vue'
 import './customTooltip.scss'
 
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
@@ -28,4 +29,5 @@ Chart.defaults.scale.ticks.padding = 12
 export default {
     'line-chart-stream': LineChartStream,
     'line-chart': LineChart,
+    'scatter-chart': ScatterChart,
 }

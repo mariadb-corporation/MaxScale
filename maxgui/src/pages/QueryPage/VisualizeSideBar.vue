@@ -88,7 +88,13 @@ export default {
     data() {
         return {
             selectedChart: 'No Visualization',
-            chartTypes: ['No Visualization', 'Line', 'Bar - Horizontal', 'Bar - Vertical'],
+            chartTypes: [
+                'No Visualization',
+                'Line',
+                'Scatter',
+                'Bar - Horizontal',
+                'Bar - Vertical',
+            ],
             resSet: null,
             axis: {
                 x: '',
@@ -134,12 +140,8 @@ export default {
             }
             return resSets
         },
-        xAxisFields() {
-            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
-            return [this.numberSign, ...this.resSet.fields]
-        },
-        yAxisFields() {
-            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+
+        numericFields() {
             // Iterates the first row to get column type
             let types = []
             this.resSet.data[0].forEach(col => {
@@ -160,17 +162,39 @@ export default {
             ]
             return fields
         },
+
+        xAxisFields() {
+            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            switch (this.selectedChart) {
+                case 'Scatter':
+                    return this.numericFields
+                case 'Line':
+                default:
+                    return [this.numberSign, ...this.resSet.fields]
+            }
+        },
+        yAxisFields() {
+            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            switch (this.selectedChart) {
+                case 'Line':
+                case 'Scatter':
+                    return this.numericFields
+                default:
+                    return [this.numberSign, ...this.resSet.fields]
+            }
+        },
     },
     watch: {
         selectedChart(v) {
             this.$emit('selected-chart', v)
+            this.clearAxisVal()
         },
         resultSets: {
             deep: true,
             handler() {
                 this.clearAxisVal()
                 this.resSet = null
-                this.genChartData(this.axis)
+                this.genChartData({ axis: this.axis, chartType: this.selectedChart })
             },
         },
         resSet: {
@@ -182,7 +206,7 @@ export default {
         axis: {
             deep: true,
             handler(v) {
-                this.genChartData(v)
+                this.genChartData({ axis: v, chartType: this.selectedChart })
             },
         },
     },
@@ -190,22 +214,30 @@ export default {
         clearAxisVal() {
             this.axis = { x: '', y: '' }
         },
-        genDataset({ colorIndex, data }) {
+        genDataset({ colorIndex, data, chartType }) {
             const lineColor = this.$help.dynamicColors(colorIndex)
-            const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-            const backgroundColor = this.$help.strReplaceAt({
-                str: lineColor,
-                index: indexOfOpacity,
-                newChar: '0.1',
-            })
             let dataset = {
-                type: 'line',
-                // background of the line
-                backgroundColor: backgroundColor,
                 borderColor: lineColor,
                 borderWidth: 1,
-                lineTension: 0,
                 data,
+            }
+            switch (chartType) {
+                case 'Line':
+                    {
+                        const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+                        const backgroundColor = this.$help.strReplaceAt({
+                            str: lineColor,
+                            index: indexOfOpacity,
+                            newChar: '0.1',
+                        })
+                        dataset.backgroundColor = backgroundColor
+                        dataset.lineTension = 0
+                    }
+                    break
+                case 'Scatter': {
+                    dataset.backgroundColor = lineColor
+                    break
+                }
             }
             return dataset
         },
@@ -218,7 +250,7 @@ export default {
                 return obj
             })
         },
-        genChartData(axis) {
+        genChartData({ axis, chartType }) {
             let axisLabels = { x: '', y: '' }
             let chartData = {
                 labels: [],
@@ -248,7 +280,7 @@ export default {
                     })
                     xLabels.push(xAxisVal)
                 }
-                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
+                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints, chartType })
                 chartData = {
                     labels: xLabels,
                     datasets: [dataset],
