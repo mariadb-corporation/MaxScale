@@ -32,10 +32,8 @@ public:
                                         SERVICE* pService,
                                         const CommentFilter* pFilter);
 
-    // Handle a query from the client
     bool routeQuery(GWBUF* pPacket) override;
 
-    // Handle a reply from server
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:

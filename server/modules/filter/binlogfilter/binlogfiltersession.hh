@@ -61,10 +61,8 @@ public:
     static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService,
                                        const BinlogFilter* pFilter);
 
-    // Handle a query from the client
     bool routeQuery(GWBUF* pPacket) override;
 
-    // Handle a reply from server
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:

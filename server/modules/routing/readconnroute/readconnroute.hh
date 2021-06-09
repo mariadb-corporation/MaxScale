@@ -37,13 +37,6 @@ public:
                const mxs::Endpoints& endpoints, uint32_t bitvalue);
     ~RCRSession();
 
-    /**
-     * Route data from client to the backend.
-     *
-     * @param queue Buffer containing the data to route
-     *
-     * @return Returns true on success and false on error
-     */
     bool routeQuery(GWBUF* queue) override;
 
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply) override;

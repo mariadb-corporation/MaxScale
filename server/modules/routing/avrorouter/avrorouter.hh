@@ -169,13 +169,6 @@ public:
     static AvroSession* create(Avro* router, MXS_SESSION* session);
     virtual ~AvroSession();
 
-    /**
-     * Process a client request
-     *
-     * @param Buffer The incoming request packet
-     *
-     * @return True on success, false on error
-     */
     bool routeQuery(GWBUF* buffer) override;
 
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override

@@ -86,22 +86,8 @@ public:
      */
     static RWSplitSession* create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints);
 
-    /**
-     * Called when a packet being is routed to the backend. The router should
-     * forward the packet to the appropriate server(s).
-     *
-     * @param pPacket A client packet.
-     */
     bool routeQuery(GWBUF* pPacket) override;
 
-    /**
-     * Called when a packet is routed to the client. The router should
-     * forward the packet to the client using `RouterSession::clientReply`.
-     *
-     * @param pPacket A client packet.
-     * @param down    The route the reply took
-     * @param reply   The reply information
-     */
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,

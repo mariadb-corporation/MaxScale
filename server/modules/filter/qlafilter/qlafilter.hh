@@ -164,20 +164,8 @@ public:
      */
     bool prepare();
 
-    /**
-     * Route a query.
-     *
-     * @param query
-     * @return True on success
-     */
     bool routeQuery(GWBUF* query) override;
 
-    /**
-     * Route a reply from backend. Required for measuring and printing query execution time.
-     *
-     * @param reply Reply from server
-     * @return True on success
-     */
     bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     json_t* diagnostics() const;

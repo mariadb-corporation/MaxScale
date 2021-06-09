@@ -62,11 +62,6 @@ public:
      */
     bool routeQuery(GWBUF* pPacket) override;
 
-    /**
-     * A response on its way to the client is delivered to this function.
-     *
-     * @param pData Response data.
-     */
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
