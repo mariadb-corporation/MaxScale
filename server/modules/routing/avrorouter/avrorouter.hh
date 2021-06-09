@@ -122,16 +122,16 @@ class Avro : public mxs::Router
 public:
     static Avro* create(SERVICE* service);
 
-    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return RCAP_TYPE_NONE;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

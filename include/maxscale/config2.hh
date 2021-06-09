@@ -394,7 +394,7 @@ public:
     {
     }
 
-    std::string type() const
+    std::string type() const override
     {
         return "deprecated";
     }
@@ -404,12 +404,12 @@ public:
         return "deprecated";
     }
 
-    bool validate(const std::string& value_as_string, std::string* pMessage) const
+    bool validate(const std::string& value_as_string, std::string* pMessage) const override
     {
         return true;
     }
 
-    bool validate(json_t* value_as_json, std::string* pMessage) const
+    bool validate(json_t* value_as_json, std::string* pMessage) const override
     {
         return true;
     }
@@ -511,7 +511,7 @@ public:
         return rv;
     }
 
-    json_t* to_json() const
+    json_t* to_json() const override
     {
         auto rv = Param::to_json();
 
@@ -1347,13 +1347,13 @@ public:
 
     std::string type() const override;
 
-    std::string to_string(value_type value) const;
+    std::string to_string(value_type value) const override;
     bool        from_string(const std::string& value, value_type* pValue,
                             std::string* pMessage = nullptr) const override;
 
-    json_t* to_json(value_type value) const;
+    json_t* to_json(value_type value) const override;
     bool    from_json(const json_t* pJson, value_type* pValue,
-                      std::string* pMessage = nullptr) const;
+                      std::string* pMessage = nullptr) const override;
 
 private:
     ParamSize(Specification* pSpecification,

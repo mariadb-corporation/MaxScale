@@ -178,7 +178,7 @@ public:
     {
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         if (m_instance->task_handle)
         {

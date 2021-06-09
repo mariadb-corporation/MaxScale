@@ -200,7 +200,7 @@ public:
      *
      * @return New session or NULL on error
      */
-    DbfwSession* newSession(MXS_SESSION* session, SERVICE* service);
+    DbfwSession* newSession(MXS_SESSION* session, SERVICE* service) override;
 
     /**
      * Get the action mode of this instance
@@ -264,14 +264,14 @@ public:
     bool reload_rules(std::string filename);
 
     /** Diagnostic routine */
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return RCAP_TYPE_STMT_INPUT;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

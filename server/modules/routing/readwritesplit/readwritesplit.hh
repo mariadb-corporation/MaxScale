@@ -362,21 +362,21 @@ public:
      *
      * @return New router session or NULL on error
      */
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
 
     /**
      * @brief JSON diagnostics routine
      *
      * @return The JSON representation of this router instance
      */
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     /**
      * @brief Get router capabilities
      */
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

@@ -100,7 +100,7 @@ public:
 
         bool from_string(const std::string& value_as_string,
                          value_type* pValue,
-                         std::string* pMessage) const;
+                         std::string* pMessage) const override final;
     };
 
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;

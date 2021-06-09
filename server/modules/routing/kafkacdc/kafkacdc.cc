@@ -28,8 +28,8 @@ public:
     using cfg::Specification::Specification;
 
 protected:
-    bool post_validate(const mxs::ConfigParameters& params) const;
-    bool post_validate(json_t* json) const;
+    bool post_validate(const mxs::ConfigParameters& params) const override;
+    bool post_validate(json_t* json) const override;
 };
 
 KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
@@ -127,7 +127,7 @@ public:
         return rval;
     }
 
-    gtid_pos_t load_latest_gtid()
+    gtid_pos_t load_latest_gtid() override
     {
         gtid_pos_t rval;
 
@@ -191,7 +191,7 @@ public:
         return rval;
     }
 
-    bool create_table(const Table& table)
+    bool create_table(const Table& table) override
     {
         json_t* js = table.to_json();
         auto gtid = table.gtid.to_string();
@@ -200,17 +200,17 @@ public:
         return rval;
     }
 
-    bool open_table(const Table& table)
+    bool open_table(const Table& table) override
     {
         return true;
     }
 
-    bool prepare_table(const Table& table)
+    bool prepare_table(const Table& table) override
     {
         return true;
     }
 
-    void flush_tables()
+    void flush_tables() override
     {
         m_producer->poll(0);
     }
@@ -218,7 +218,7 @@ public:
     void prepare_row(const Table& create,
                      const gtid_pos_t& gtid,
                      const REP_HEADER& hdr,
-                     RowEvent event_type)
+                     RowEvent event_type) override
     {
         auto type = roweventtype_to_string(event_type);
 
@@ -236,7 +236,7 @@ public:
         json_object_set_new(m_obj, "table_name", json_string(create.table.c_str()));
     }
 
-    bool commit(const Table& create, const gtid_pos_t& gtid)
+    bool commit(const Table& create, const gtid_pos_t& gtid) override
     {
         bool rval = produce(m_obj, m_key.c_str(), m_key.length());
         json_decref(m_obj);
@@ -244,38 +244,38 @@ public:
         return rval;
     }
 
-    void column_int(const Table& create, int i, int32_t value)
+    void column_int(const Table& create, int i, int32_t value) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
     }
 
-    void column_long(const Table& create, int i, int64_t value)
+    void column_long(const Table& create, int i, int64_t value) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
     }
 
-    void column_float(const Table& create, int i, float value)
+    void column_float(const Table& create, int i, float value) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
     }
 
-    void column_double(const Table& create, int i, double value)
+    void column_double(const Table& create, int i, double value) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
     }
 
-    void column_string(const Table& create, int i, const std::string& value)
+    void column_string(const Table& create, int i, const std::string& value) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_string(value.c_str()));
     }
 
-    void column_bytes(const Table& create, int i, uint8_t* value, int len)
+    void column_bytes(const Table& create, int i, uint8_t* value, int len) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(),
                             json_stringn_nocheck((const char*)value, len));
     }
 
-    void column_null(const Table& create, int i)
+    void column_null(const Table& create, int i) override
     {
         json_object_set_new(m_obj, create.columns[i].name.c_str(), json_null());
     }

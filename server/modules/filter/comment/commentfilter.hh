@@ -29,20 +29,20 @@ public:
     static CommentFilter* create(const char* zName);
 
     // Creates a new session for this filter
-    CommentFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    CommentFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     // Returns JSON form diagnostic data
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     // Get filter capabilities
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
     const CommentConfig& config() const
     {
         return m_config;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

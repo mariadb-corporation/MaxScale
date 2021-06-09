@@ -632,7 +632,7 @@ public:
     {
     }
 
-    void populate(nosql::DocumentBuilder& doc)
+    void populate(nosql::DocumentBuilder& doc) override
     {
         doc.append(nosql::kvp("err", m_err));
         doc.append(nosql::kvp("code", m_code));
@@ -719,7 +719,7 @@ unique_ptr<nosql::LastError> nosql::MariaDBError::create_last_error() const
         {
         }
 
-        void populate(DocumentBuilder& doc)
+        void populate(DocumentBuilder& doc) override
         {
             ConcreteLastError::populate(doc);
 
@@ -1982,7 +1982,7 @@ public:
     {
     }
 
-    void populate(nosql::DocumentBuilder& doc)
+    void populate(nosql::DocumentBuilder& doc) override
     {
         nosql::DocumentBuilder writeConcern;
         writeConcern.append(kvp("w", 1));

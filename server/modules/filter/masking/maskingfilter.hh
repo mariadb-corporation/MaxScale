@@ -31,15 +31,15 @@ public:
     ~MaskingFilter();
     static MaskingFilter* create(const char* zName);
 
-    MaskingFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    MaskingFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
     bool reload();
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

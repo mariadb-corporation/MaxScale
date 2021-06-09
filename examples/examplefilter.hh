@@ -59,7 +59,7 @@ public:
      * @param pSession The generic MaxScale session object.
      * @return The new session, or NULL on failure.
      */
-    ExampleFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    ExampleFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     /*
      * Returns JSON form diagnostic data. This is called when the admin tool MaxCtrl asks for the status
@@ -67,7 +67,7 @@ public:
      *
      * @return Json object
      */
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     /*
      * Get filter capabilities. This is used by protocol code to find out what kind of data the filter
@@ -75,14 +75,14 @@ public:
      *
      * @return Capabilities as a bitfield
      */
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
     /**
      * Get filter configuration. Used by the MaxScale core to configure the instance.
      *
      * @return The configuration for this filter instance
      */
-    mxs::config::Configuration& getConfiguration();
+    mxs::config::Configuration& getConfiguration() override;
 
     // Specific to ExampleFilter. Called by a session when it sees a query.
     void query_seen();

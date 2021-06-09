@@ -49,11 +49,11 @@ public:
 
     ~Pinloki() = default;
     static Pinloki*     create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
-    json_t*             diagnostics() const;
-    uint64_t            getCapabilities() const;
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+    json_t*             diagnostics() const override;
+    uint64_t            getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

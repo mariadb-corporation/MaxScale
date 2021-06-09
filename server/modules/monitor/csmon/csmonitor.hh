@@ -107,8 +107,8 @@ private:
     void cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #endif
 
-    bool has_sufficient_permissions();
-    void update_server_status(mxs::MonitorServer* pServer);
+    bool has_sufficient_permissions() override;
+    void update_server_status(mxs::MonitorServer* pServer) override;
     int fetch_status_mask(const CsMonitorServer& server);
     void update_status_of_dynamic_servers();
 

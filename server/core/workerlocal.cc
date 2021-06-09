@@ -24,7 +24,7 @@ public:
     {
     }
 
-    void execute(mxb::Worker& worker)
+    void execute(mxb::Worker& worker) override final
     {
         m_cb();
     }

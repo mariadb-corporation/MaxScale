@@ -38,7 +38,7 @@ public:
     public:
         Config(const std::string& name, KafkaCDC* router);
 
-        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
         std::string bootstrap_servers;
         std::string topic;
@@ -68,19 +68,19 @@ public:
 
     static KafkaCDC* create(SERVICE* pService);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override
     {
         return nullptr;
     }
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return CAPS;
     }
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

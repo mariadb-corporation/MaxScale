@@ -35,10 +35,10 @@ class HintInstance : public mxs::Filter
 {
 public:
     static HintInstance*        create(const char* zName);
-    mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
-    json_t*                     diagnostics() const;
-    uint64_t                    getCapabilities() const;
-    mxs::config::Configuration& getConfiguration();
+    mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    json_t*                     diagnostics() const override;
+    uint64_t                    getCapabilities() const override;
+    mxs::config::Configuration& getConfiguration() override;
 
 private:
     HintInstance(const char* zName);

@@ -122,11 +122,11 @@ class TpmFilter : public mxs::Filter
 public:
     ~TpmFilter();
     static TpmFilter*   create(const char* name);
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
-    json_t*             diagnostics() const;
-    uint64_t            getCapabilities() const;
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override;
+    json_t*             diagnostics() const override;
+    uint64_t            getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }
@@ -176,8 +176,8 @@ class TpmSession : public mxs::FilterSession
 public:
     TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance);
     ~TpmSession();
-    bool routeQuery(GWBUF* pPacket);
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* pPacket) override;
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     bool                     m_active = true;

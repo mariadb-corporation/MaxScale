@@ -48,10 +48,10 @@ public:
     RegexHintFilter(const std::string& name);
 
     static RegexHintFilter*     create(const char* zName);
-    mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service);
-    json_t*                     diagnostics() const;
-    uint64_t                    getCapabilities() const;
-    mxs::config::Configuration& getConfiguration();
+    mxs::FilterSession*         newSession(MXS_SESSION* session, SERVICE* service) override;
+    json_t*                     diagnostics() const override;
+    uint64_t                    getCapabilities() const override;
+    mxs::config::Configuration& getConfiguration() override;
 
 
     MappingVector& mapping();

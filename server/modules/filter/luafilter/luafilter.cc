@@ -210,8 +210,8 @@ public:
     ~LuaFilterSession();
     bool prepare_session(const std::string& session_script);
 
-    int routeQuery(GWBUF* queue);
-    int clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* queue) override;
+    bool clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     LuaFilter*   m_filter {nullptr};
@@ -418,7 +418,7 @@ LuaFilterSession::~LuaFilterSession()
     }
 }
 
-int LuaFilterSession::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
+bool LuaFilterSession::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
     LuaFilterSession* my_session = this;
 
@@ -450,7 +450,7 @@ int LuaFilterSession::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down
     return FilterSession::clientReply(queue, down, reply);
 }
 
-int LuaFilterSession::routeQuery(GWBUF* queue)
+bool LuaFilterSession::routeQuery(GWBUF* queue)
 {
     auto my_session = this;
     char* fullquery = NULL;

@@ -236,8 +236,8 @@ public:
     {
     }
 
-    bool add_value(uint8_t value);
-    void update_value(uint8_t value);
+    bool add_value(uint8_t value) override;
+    void update_value(uint8_t value) override;
 };
 
 /**
@@ -250,8 +250,8 @@ public:
 
     AverageN(size_t n, Average* pDependant = nullptr);
 
-    bool add_value(uint8_t value);
-    void update_value(uint8_t value);
+    bool add_value(uint8_t value) override;
+    void update_value(uint8_t value) override;
 
     size_t size() const
     {

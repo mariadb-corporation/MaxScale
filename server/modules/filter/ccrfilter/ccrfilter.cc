@@ -167,7 +167,7 @@ public:
     CCRSession& operator=(const CCRSession&) = delete;
 
     static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
-    bool               routeQuery(GWBUF* queue);
+    bool               routeQuery(GWBUF* queue) override;
 
 private:
     CCRFilter& m_instance;
@@ -205,12 +205,12 @@ public:
         return m_config;
     }
 
-    CCRSession* newSession(MXS_SESSION* session, SERVICE* service)
+    CCRSession* newSession(MXS_SESSION* session, SERVICE* service) override
     {
         return CCRSession::create(session, service, this);
     }
 
-    json_t* diagnostics() const
+    json_t* diagnostics() const override
     {
         json_t* rval = json_object();
         m_config.fill(rval);
@@ -220,12 +220,12 @@ public:
         return rval;
     }
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return RCAP_TYPE_STMT_INPUT;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

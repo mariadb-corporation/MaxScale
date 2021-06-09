@@ -33,13 +33,13 @@ public:
 
     static NullFilter* create(const char* zName);
 
-    NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

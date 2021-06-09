@@ -1321,7 +1321,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
         {
         }
 
-        void execute(Worker&)
+        void execute(Worker&) override final
         {
             qc_get_cache_stats(&m_stats);
         }
@@ -1355,7 +1355,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
             m_all_stats.resize(config_threadcount());
         }
 
-        void execute(Worker& worker)
+        void execute(Worker& worker) override final
         {
             int id = mxs::RoutingWorker::get_current_id();
             mxb_assert(id >= 0);
@@ -1765,7 +1765,7 @@ public:
         m_data.resize(nThreads);
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
@@ -1849,7 +1849,7 @@ public:
     {
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         m_cb();
     }
@@ -1888,7 +1888,7 @@ public:
     {
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         // Success if this is called.
     }

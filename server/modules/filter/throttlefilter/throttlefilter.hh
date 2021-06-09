@@ -55,11 +55,11 @@ public:
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 
-    ThrottleSession* newSession(MXS_SESSION* mxsSession, SERVICE* service);
+    ThrottleSession* newSession(MXS_SESSION* mxsSession, SERVICE* service) override;
 
-    json_t*                     diagnostics() const;
-    uint64_t                    getCapabilities() const;
-    mxs::config::Configuration& getConfiguration();
+    json_t*                     diagnostics() const override;
+    uint64_t                    getCapabilities() const override;
+    mxs::config::Configuration& getConfiguration() override;
 
     const ThrottleConfig& config() const;
     void                  sessionClose(ThrottleSession* session);

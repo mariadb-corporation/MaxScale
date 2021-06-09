@@ -734,7 +734,7 @@ public:
 
     ~MonitorWorker() override = default;
 
-    bool is_running() const final;
+    bool is_running() const override final;
 
     /**
      * @brief Starts the monitor.
@@ -757,7 +757,7 @@ public:
      *
      * @return True, if the monitor started, false otherwise.
      */
-    bool start() final;
+    bool start() override final;
 
     /**
      * @brief Obtain diagnostics
@@ -794,7 +794,7 @@ public:
 protected:
     MonitorWorker(const std::string& name, const std::string& module);
 
-    void do_stop() final;
+    void do_stop() override final;
 
     /**
      * @brief Configure the monitor.
@@ -874,8 +874,8 @@ private:
     mxb::Semaphore    m_semaphore;      /**< Semaphore for synchronizing with monitor thread. */
     int64_t           m_loop_called;    /**< When was the loop called the last time. */
 
-    bool pre_run() final;
-    void post_run() final;
+    bool pre_run() override final;
+    void post_run() override final;
 
     bool call_run_one_tick(Worker::Call::action_t action);
     void run_one_tick();
@@ -952,7 +952,7 @@ private:
      * - Hangup failed servers
      * - Store monitor journal
      */
-    void tick() final;
+    void tick() override final;
 };
 
 /**

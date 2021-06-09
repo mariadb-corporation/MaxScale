@@ -30,12 +30,12 @@ public:
     /**
      * @see TesterStorage::run
      */
-    int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
+    int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items) override;
 
     /**
      * @see TesterStorage::get_storage
      */
-    Storage* get_storage(const Storage::Config& config) const;
+    Storage* get_storage(const Storage::Config& config) const override;
 
 private:
     TesterRawStorage(const TesterRawStorage&);

@@ -305,12 +305,12 @@ private:
         return sql.str();
     }
 
-    void interpret(const ComOK& response)
+    void interpret(const ComOK& response) override
     {
         m_n += response.affected_rows();
     }
 
-    void amend_response(DocumentBuilder&) final
+    void amend_response(DocumentBuilder&) override final
     {
         m_database.context().reset_error(m_n);
     }
@@ -327,7 +327,7 @@ public:
 
     using SingleCommand::SingleCommand;
 
-    void prepare()
+    void prepare() override
     {
         optional(key::BATCHSIZE, &m_batch_size, Conversion::RELAXED);
 
@@ -945,7 +945,7 @@ protected:
         return sql.str();
     }
 
-    void interpret(const ComOK& response)
+    void interpret(const ComOK& response) override
     {
         m_n += response.affected_rows();
     }
@@ -1006,7 +1006,7 @@ private:
         return err.code() == ER_NO_SUCH_TABLE;
     }
 
-    string convert_document(const bsoncxx::document::view& update)
+    string convert_document(const bsoncxx::document::view& update) override
     {
         stringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
@@ -1234,7 +1234,7 @@ private:
         return rv;
     }
 
-    void interpret(const ComOK& response)
+    void interpret(const ComOK& response) override
     {
         m_nModified += response.affected_rows();
 
@@ -1246,7 +1246,7 @@ private:
         }
     }
 
-    void amend_response(DocumentBuilder& doc)
+    void amend_response(DocumentBuilder& doc) override
     {
         doc.append(kvp("nModified", m_nModified));
 

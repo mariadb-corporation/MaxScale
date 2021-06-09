@@ -29,8 +29,8 @@ public:
     static GRMon* create(const std::string& name, const std::string& module);
 
 protected:
-    bool has_sufficient_permissions();
-    void update_server_status(mxs::MonitorServer* monitored_server);
+    bool has_sufficient_permissions() override;
+    void update_server_status(mxs::MonitorServer* monitored_server) override;
 
 private:
     GRMon(const std::string& name, const std::string& module);

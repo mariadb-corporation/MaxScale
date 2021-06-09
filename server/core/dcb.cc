@@ -1151,7 +1151,7 @@ public:
     {
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
         const auto& dcbs = rworker.dcbs();
@@ -1367,7 +1367,7 @@ public:
     {
     }
 
-    void execute(Worker& worker)
+    void execute(Worker& worker) override final
     {
         mxb_assert(&worker == RoutingWorker::get_current());
 

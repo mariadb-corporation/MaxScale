@@ -119,9 +119,10 @@ public:
     // The API functions must be public
     RRRouterSession(RRRouter*, const mxs::Endpoints&, mxs::Endpoint*, MXS_SESSION*);
     ~RRRouterSession();
-    bool routeQuery(GWBUF* buffer);
-    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* buffer) override;
+    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    bool handleError(mxs::ErrorType type, GWBUF* message,
+                     mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
     bool         m_closed;              /* true when closeSession is called */
@@ -158,15 +159,15 @@ public:
 
     ~RRRouter();
     static RRRouter*    create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints);
-    json_t*             diagnostics() const;
+    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
+    json_t*             diagnostics() const override;
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return CAPABILITIES;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

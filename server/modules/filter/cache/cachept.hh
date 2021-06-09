@@ -26,9 +26,9 @@ public:
 
     bool create_token(std::shared_ptr<Token>* psToken) override;
 
-    bool must_refresh(const CacheKey& key, const CacheFilterSession* pSession);
+    bool must_refresh(const CacheKey& key, const CacheFilterSession* pSession) override;
 
-    void refreshed(const CacheKey& key, const CacheFilterSession* pSession);
+    void refreshed(const CacheKey& key, const CacheFilterSession* pSession) override;
 
     void get_limits(Storage::Limits* pLimits) const override final;
 

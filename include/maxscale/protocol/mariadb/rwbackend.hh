@@ -77,9 +77,9 @@ public:
      *
      * @return True if writing was successful
      */
-    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
+    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE) override;
 
-    void close(close_type type = CLOSE_NORMAL);
+    void close(close_type type = CLOSE_NORMAL) override;
 
     maxbase::TimePoint last_write() const
     {

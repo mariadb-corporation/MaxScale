@@ -23,7 +23,7 @@
 class LogExporter : public Exporter
 {
 public:
-    void ship(json_t* obj) final
+    void ship(json_t* obj) override final
     {
         MXS_INFO("%s", mxs::json_dump(obj, JSON_COMPACT).c_str());
     }
@@ -43,7 +43,7 @@ public:
         close(m_fd);
     }
 
-    void ship(json_t* obj) final
+    void ship(json_t* obj) override final
     {
         auto str = mxs::json_dump(obj, JSON_COMPACT) + '\n';
         write(m_fd, str.c_str(), str.length());
@@ -68,7 +68,7 @@ public:
         m_producer->flush(10000);
     }
 
-    void ship(json_t* obj) final
+    void ship(json_t* obj) override final
     {
         char* json = json_dumps(obj, JSON_COMPACT);
 

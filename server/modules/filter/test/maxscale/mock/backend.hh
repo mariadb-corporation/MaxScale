@@ -98,13 +98,13 @@ class BufferBackend : public Backend
 public:
     ~BufferBackend();
 
-    virtual bool respond(RouterSession* pSession, const mxs::Reply& reply);
+    virtual bool respond(RouterSession* pSession, const mxs::Reply& reply) override;
 
-    bool idle(const RouterSession* pSession) const;
+    bool idle(const RouterSession* pSession) const override;
 
-    bool discard_one_response(const RouterSession* pSession);
+    bool discard_one_response(const RouterSession* pSession) override;
 
-    void discard_all_responses(const RouterSession* pSession);
+    void discard_all_responses(const RouterSession* pSession) override;
 
 protected:
     BufferBackend();
@@ -139,7 +139,7 @@ class OkBackend : public BufferBackend
 public:
     OkBackend();
 
-    void handle_statement(RouterSession* pSession, GWBUF* pStatement);
+    void handle_statement(RouterSession* pSession, GWBUF* pStatement) override;
 };
 
 /**
@@ -158,8 +158,8 @@ public:
         m_created = false;
     }
 
-    bool respond(RouterSession* pSession, const mxs::Reply& reply) final;
-    void handle_statement(RouterSession* pSession, GWBUF* pStatement);
+    bool respond(RouterSession* pSession, const mxs::Reply& reply) override final;
+    void handle_statement(RouterSession* pSession, GWBUF* pStatement) override;
 
     int  m_counter;
     bool m_created;

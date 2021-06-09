@@ -31,9 +31,9 @@ public:
 
     ~Mirror() = default;
     static Mirror*      create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
-    json_t*             diagnostics() const;
-    uint64_t            getCapabilities() const;
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+    json_t*             diagnostics() const override;
+    uint64_t            getCapabilities() const override;
 
     void ship(json_t* obj);
 
@@ -42,7 +42,7 @@ public:
         return m_config.main;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

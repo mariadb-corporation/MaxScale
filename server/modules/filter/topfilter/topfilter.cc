@@ -79,8 +79,8 @@ class TopSession : public mxs::FilterSession
 public:
     TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
     ~TopSession();
-    bool routeQuery(GWBUF* buffer);
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool routeQuery(GWBUF* buffer) override;
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     json_t* diagnostics() const;
 
 private:
@@ -147,22 +147,22 @@ public:
         return new TopFilter(name);
     }
 
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service)
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override
     {
         return new TopSession(this, session, service);
     }
 
-    json_t* diagnostics() const
+    json_t* diagnostics() const override
     {
         return nullptr;
     }
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return RCAP_TYPE_STMT_INPUT;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

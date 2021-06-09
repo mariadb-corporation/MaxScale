@@ -53,7 +53,7 @@ public:
          *
          * @return EXIT_SUCCESS or EXIT_FAILURE
          */
-        int run();
+        int run() override;
 
     private:
         HitTask(const HitTask&);

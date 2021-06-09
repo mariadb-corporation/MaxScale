@@ -148,12 +148,12 @@ public:
         return rval;
     }
 
-    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+    bool clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override
     {
         return mxs::FilterSession::clientReply(buffer, down, reply);
     }
 
-    bool routeQuery(GWBUF* buffer);
+    bool routeQuery(GWBUF* buffer) override;
 
 private:
     RegexInstance* m_instance;

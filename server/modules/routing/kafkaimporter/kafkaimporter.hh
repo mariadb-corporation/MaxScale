@@ -39,27 +39,27 @@ public:
         return new KafkaImporter(pService);
     }
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override
     {
         return nullptr;
     }
 
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return CAPS;
     }
 
-    json_t* diagnostics() const
+    json_t* diagnostics() const override
     {
         return nullptr;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }
 
-    bool post_configure() final;
+    bool post_configure() override final;
 
 private:
     KafkaImporter(SERVICE* pService)

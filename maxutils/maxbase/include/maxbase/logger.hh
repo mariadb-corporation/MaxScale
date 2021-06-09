@@ -111,7 +111,7 @@ public:
      *
      * @return True on success
      */
-    bool write(const char* msg, int len);
+    bool write(const char* msg, int len) override;
 
     /**
      * Rotate the logfile by reopening it
@@ -119,7 +119,7 @@ public:
      * @return True if the log was rotated. False if the opening of the new file
      *         descriptor failed in which case the old file descriptor will be used.
      */
-    bool rotate();
+    bool rotate() override;
 
 private:
     int        m_fd;
@@ -157,7 +157,7 @@ public:
      *
      * @return True on success
      */
-    bool write(const char* msg, int len)
+    bool write(const char* msg, int len) override
     {
         return ::write(STDOUT_FILENO, msg, len) != -1;
     }
@@ -167,7 +167,7 @@ public:
      *
      * @return Always true
      */
-    bool rotate()
+    bool rotate() override
     {
         return true;
     }

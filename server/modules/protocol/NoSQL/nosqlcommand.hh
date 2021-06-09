@@ -274,9 +274,9 @@ public:
 
     GWBUF* execute() override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response);
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response) override;
 
-    void diagnose(DocumentBuilder& doc);
+    void diagnose(DocumentBuilder& doc) override;
 
 protected:
     virtual void populate_response(DocumentBuilder& doc) = 0;
@@ -295,7 +295,7 @@ public:
 
     GWBUF* execute() override final;
 
-    void diagnose(DocumentBuilder& doc);
+    void diagnose(DocumentBuilder& doc) override;
 
 protected:
     virtual void prepare();
@@ -316,7 +316,7 @@ class MultiCommand : public Command
 public:
     using Command::Command;
 
-    void diagnose(DocumentBuilder& doc);
+    void diagnose(DocumentBuilder& doc) override;
 
 protected:
     virtual std::vector<std::string> generate_sql() = 0;

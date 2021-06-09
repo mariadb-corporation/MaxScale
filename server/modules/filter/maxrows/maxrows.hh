@@ -83,24 +83,24 @@ public:
     static MaxRows* create(const char* name);
 
     // Creates a new session for this filter
-    MaxRowsSession* newSession(MXS_SESSION* session, SERVICE* service)
+    MaxRowsSession* newSession(MXS_SESSION* session, SERVICE* service) override
     {
         return MaxRowsSession::create(session, service, this);
     }
 
     // Returns JSON form diagnostic data
-    json_t* diagnostics() const
+    json_t* diagnostics() const override
     {
         return nullptr;
     }
 
     // Get filter capabilities
-    uint64_t getCapabilities() const
+    uint64_t getCapabilities() const override
     {
         return CAPABILITIES;
     }
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

@@ -297,7 +297,7 @@ public:
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
-    std::unique_ptr<LastError> create_last_error() const final;
+    std::unique_ptr<LastError> create_last_error() const override final;
 };
 
 class HardError : public Exception
@@ -308,7 +308,7 @@ public:
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
-    std::unique_ptr<LastError> create_last_error() const final;
+    std::unique_ptr<LastError> create_last_error() const override final;
 };
 
 class MariaDBError : public Exception
@@ -319,7 +319,7 @@ public:
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
-    std::unique_ptr<LastError> create_last_error() const final;
+    std::unique_ptr<LastError> create_last_error() const override final;
 
 private:
     int         m_mariadb_code;

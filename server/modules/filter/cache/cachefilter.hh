@@ -40,13 +40,13 @@ public:
         return *m_sCache.get();
     }
 
-    CacheFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    CacheFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

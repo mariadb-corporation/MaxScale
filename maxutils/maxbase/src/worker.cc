@@ -487,7 +487,7 @@ bool Worker::execute(const function<void ()>& func, mxb::Semaphore* pSem, execut
     private:
         function<void ()> m_func;
 
-        void execute(maxbase::Worker& worker)
+        void execute(maxbase::Worker& worker) override final
         {
             m_func();
 

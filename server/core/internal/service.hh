@@ -135,7 +135,7 @@ public:
     mutable std::mutex lock;
 
     // Get the current cluster
-    mxs::Monitor* cluster() const
+    mxs::Monitor* cluster() const override
     {
         return m_monitor;
     }
@@ -149,7 +149,7 @@ public:
     // Changes the current cluster and updates the targets
     bool change_cluster(mxs::Monitor* monitor);
 
-    uint64_t get_version(service_version_which_t which) const
+    uint64_t get_version(service_version_which_t which) const override
     {
         auto versions = get_versions(m_data->servers);
         return which == SERVICE_VERSION_MAX ? versions.second : versions.first;
@@ -189,7 +189,7 @@ public:
         return m_config.values();
     }
 
-    std::vector<SERVER*> reachable_servers() const final
+    std::vector<SERVER*> reachable_servers() const override final
     {
         return m_data->servers;
     }

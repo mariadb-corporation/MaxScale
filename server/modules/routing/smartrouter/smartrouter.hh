@@ -67,12 +67,12 @@ public:
 
     static SmartRouter* create(SERVICE* pService);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
 
-    json_t*  diagnostics() const;
-    uint64_t getCapabilities() const;
+    json_t*  diagnostics() const override;
+    uint64_t getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

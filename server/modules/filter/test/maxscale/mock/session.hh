@@ -83,7 +83,7 @@ private:
             return m_open;
         }
 
-        mxs::Target* target() const
+        mxs::Target* target() const override
         {
             return nullptr;
         }

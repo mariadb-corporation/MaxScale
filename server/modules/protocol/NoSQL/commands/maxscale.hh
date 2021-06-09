@@ -27,7 +27,7 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
-    void populate_response(DocumentBuilder& doc)
+    void populate_response(DocumentBuilder& doc) override
     {
         auto command = value_as<bsoncxx::document::view>();
 
@@ -98,7 +98,7 @@ public:
         return IsAdmin<MxsGetConfig>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc)
+    void populate_response(DocumentBuilder& doc) override
     {
         populate_response(doc, m_database.config());
     }
@@ -143,7 +143,7 @@ public:
         return IsAdmin<MxsSetConfig>::is_admin;
     }
 
-    void populate_response(DocumentBuilder& doc)
+    void populate_response(DocumentBuilder& doc) override
     {
         using C = GlobalConfig;
         auto& c = m_database.config();

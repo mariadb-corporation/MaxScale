@@ -491,22 +491,22 @@ public:
         m_sum.fill(0);      // CentOS 6 doesn't like aggregate initialization...
     }
 
-    void update(uint8_t* ptr, size_t len)
+    void update(uint8_t* ptr, size_t len) override
     {
         SHA1_Update(&m_ctx, ptr, len);
     }
 
-    void finalize()
+    void finalize() override
     {
         SHA1_Final(&m_sum.front(), &m_ctx);
     }
 
-    void reset()
+    void reset() override
     {
         SHA1_Init(&m_ctx);
     }
 
-    std::string hex() const
+    std::string hex() const override
     {
         return mxs::to_hex(m_sum.begin(), m_sum.end());
     }
@@ -546,23 +546,23 @@ public:
         m_ctx = crc32(0L, NULL, 0);
     }
 
-    void update(uint8_t* ptr, size_t len)
+    void update(uint8_t* ptr, size_t len) override
     {
         m_ctx = crc32(m_ctx, ptr, len);
     }
 
-    void finalize()
+    void finalize() override
     {
         m_sum = m_ctx;
         reset();
     }
 
-    void reset()
+    void reset() override
     {
         m_ctx = crc32(0L, NULL, 0);
     }
 
-    std::string hex() const
+    std::string hex() const override
     {
         const uint8_t* start = reinterpret_cast<const uint8_t*>(&m_sum);
         const uint8_t* end = start + sizeof(m_sum);

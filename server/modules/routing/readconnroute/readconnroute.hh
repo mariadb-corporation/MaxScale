@@ -104,23 +104,23 @@ public:
      *
      * @return Router session or nullptr on error
      */
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints);
+    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
 
     /**
      * Get router diagnostics in JSON
      *
      * @return JSON data representing the router instance
      */
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     /**
      * Get router capability bits
      *
      * @return The router capability bits
      */
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_config;
     }

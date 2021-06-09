@@ -66,17 +66,17 @@ public:
         return shared_ptr<MaskingRules::Rule::Account>(new AccountVerbatim(user, host));
     }
 
-    string user() const
+    string user() const override
     {
         return m_user;
     }
 
-    string host() const
+    string host() const override
     {
         return m_host;
     }
 
-    bool matches(const char* zUser, const char* zHost) const
+    bool matches(const char* zUser, const char* zHost) const override
     {
         mxb_assert(zUser);
         mxb_assert(zHost);
@@ -151,17 +151,17 @@ public:
         return sAccount;
     }
 
-    string user() const
+    string user() const override
     {
         return m_user;
     }
 
-    string host() const
+    string host() const override
     {
         return m_host;
     }
 
-    bool matches(const char* zUser, const char* zHost) const
+    bool matches(const char* zUser, const char* zHost) const override
     {
         mxb_assert(zUser);
         mxb_assert(zHost);

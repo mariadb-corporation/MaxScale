@@ -40,12 +40,12 @@ protected:
     template<class Params>
     bool do_post_validate(Params params) const;
 
-    bool post_validate(const mxs::ConfigParameters& params) const
+    bool post_validate(const mxs::ConfigParameters& params) const override
     {
         return do_post_validate(params);
     }
 
-    bool post_validate(json_t* json) const
+    bool post_validate(json_t* json) const override
     {
         return do_post_validate(json);
     }

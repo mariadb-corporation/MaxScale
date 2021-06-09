@@ -268,27 +268,27 @@ public:
     {
     }
 
-    Async::status_t status() const
+    Async::status_t status() const override
     {
         return m_status;
     }
 
-    Async::status_t perform(long timeout_ms)
+    Async::status_t perform(long timeout_ms) override
     {
         return m_status;
     }
 
-    long wait_no_more_than() const
+    long wait_no_more_than() const override
     {
         return 0;
     }
 
-    const vector<Response>& responses() const
+    const vector<Response>& responses() const override
     {
         return m_responses;
     }
 
-    const vector<string>& urls() const
+    const vector<string>& urls() const override
     {
         return m_urls;
     }
@@ -492,17 +492,17 @@ public:
         return m_status;
     }
 
-    long wait_no_more_than() const
+    long wait_no_more_than() const override
     {
         return m_wait_no_more_than;
     }
 
-    const vector<Response>& responses() const
+    const vector<Response>& responses() const override
     {
         return m_responses;
     }
 
-    const vector<string>& urls() const
+    const vector<string>& urls() const override
     {
         return m_urls;
     }

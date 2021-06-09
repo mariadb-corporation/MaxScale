@@ -216,7 +216,7 @@ public:
          *
          * @param s     The column value to rewrite.
          */
-        void rewrite(LEncString& s) const;
+        void rewrite(LEncString& s) const override;
 
     private:
         std::string m_value;
@@ -263,7 +263,7 @@ public:
          *
          * @param s     The column value to obfuscate.
          */
-        void rewrite(LEncString& s) const;
+        void rewrite(LEncString& s) const override;
 
     private:
         ObfuscateRule(const ObfuscateRule&);
@@ -326,7 +326,7 @@ public:
          *
          * @param s     The column value to rewrite.
          */
-        void rewrite(LEncString& s) const;
+        void rewrite(LEncString& s) const override;
 
     private:
         pcre2_code* m_regexp;

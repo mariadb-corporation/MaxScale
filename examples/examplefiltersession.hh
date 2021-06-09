@@ -52,7 +52,7 @@ public:
      * @param pPacket Packet containing the query, or at least a part of it
      * @return True on success. This typically depends on the later stages of the query processing chain.
      */
-    bool routeQuery(GWBUF* pPacket);
+    bool routeQuery(GWBUF* pPacket) override;
 
 
     /**
@@ -64,7 +64,7 @@ public:
      * @param pPacket Packet containing results
      * @return True on success. This typically depends on the later stages of the reply processing chain.
      */
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     // Used in the create function

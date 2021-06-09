@@ -37,7 +37,7 @@ private:
                 size_t seconds,
                 size_t items,
                 size_t min_size,
-                size_t max_size)
+                size_t max_size) override
     {
         TesterLRUStorage tester(&out(), &factory);
 

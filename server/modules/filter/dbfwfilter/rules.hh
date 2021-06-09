@@ -92,12 +92,12 @@ public:
     {
     }
 
-    bool need_full_parsing(GWBUF* buffer) const
+    bool need_full_parsing(GWBUF* buffer) const override
     {
         return is_dml(buffer);
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 };
 
 /**
@@ -118,12 +118,12 @@ public:
     {
     }
 
-    bool need_full_parsing(GWBUF* buffer) const
+    bool need_full_parsing(GWBUF* buffer) const override
     {
         return is_dml(buffer);
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 };
 
 static void make_lower(std::string& value)
@@ -137,7 +137,7 @@ class ValueListRule : public Rule
     ValueListRule& operator=(const ValueListRule&);
 
 public:
-    bool need_full_parsing(GWBUF* buffer) const
+    bool need_full_parsing(GWBUF* buffer) const override
     {
         return is_dml(buffer);
     }
@@ -167,7 +167,7 @@ public:
     {
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 };
 
 /**
@@ -185,7 +185,7 @@ public:
     {
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 
 private:
     bool m_inverted;    /*< Should the match be inverted. */
@@ -205,7 +205,7 @@ public:
     {
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 };
 
 /**
@@ -224,7 +224,7 @@ public:
     {
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 
 private:
     ValueList m_columns;    /*< List of columns to match */
@@ -252,12 +252,12 @@ public:
     {
     }
 
-    bool need_full_parsing(GWBUF* buffer) const
+    bool need_full_parsing(GWBUF* buffer) const override
     {
         return is_dml(buffer);
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 
 private:
     int m_max;
@@ -284,12 +284,12 @@ public:
     {
     }
 
-    bool need_full_parsing(GWBUF* buffer) const
+    bool need_full_parsing(GWBUF* buffer) const override
     {
         return false;
     }
 
-    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const override;
 
 private:
     mxs::Closer<pcre2_code*> m_re;

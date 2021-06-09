@@ -222,9 +222,9 @@ private:
 
 private:
     // QueryClassifier::Handler
-    bool lock_to_master();
-    bool is_locked_to_master() const;
-    bool supports_hint(HINT_TYPE hint_type) const;
+    bool lock_to_master() override;
+    bool is_locked_to_master() const override;
+    bool supports_hint(HINT_TYPE hint_type) const override;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
 
     const mariadb::QueryClassifier::RouteInfo& route_info() const

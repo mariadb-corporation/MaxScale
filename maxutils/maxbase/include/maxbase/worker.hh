@@ -290,7 +290,7 @@ public:
         }
 
     private:
-        void tick()     /* final */
+        void tick() override final
         {
             (m_pDelegatee->*m_pMethod)();
         }
@@ -947,7 +947,7 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action)
+        bool do_call(Worker::Call::action_t action) override final
         {
             return m_pFunction(action, m_data);
         }
@@ -973,7 +973,7 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action)
+        bool do_call(Worker::Call::action_t action) override
         {
             return m_pFunction(action);
         }
@@ -1002,7 +1002,7 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action)
+        bool do_call(Worker::Call::action_t action) override final
         {
             return (m_pT->*m_pMethod)(action, m_data);
         }
@@ -1031,7 +1031,7 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action)
+        bool do_call(Worker::Call::action_t action) override final
         {
             return (m_pT->*m_pMethod)(action);
         }
@@ -1056,7 +1056,7 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action)
+        bool do_call(Worker::Call::action_t action) override
         {
             return m_f(action);
         }
@@ -1068,7 +1068,7 @@ private:
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);
     void     adjust_timer();
 
-    void handle_message(MessageQueue& queue, const MessageQueue::Message& msg);     // override
+    void handle_message(MessageQueue& queue, const MessageQueue::Message& msg) override;
 
     static void thread_main(Worker* pThis, mxb::Semaphore* pSem);
 

@@ -36,7 +36,7 @@ class Config : public mxs::config::Configuration
 public:
     Config(const std::string& name, PostConfigurable* router);
 
-    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
     static mxs::config::Specification* specification();
 

@@ -137,7 +137,7 @@ private:
                             const mxs::Reply& reply);
 
     // Dcb::Handler
-    int32_t write(GWBUF* pBuffer);
+    int32_t write(GWBUF* pBuffer) override;
 
 private:
     std::string    m_user;

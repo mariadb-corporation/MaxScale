@@ -150,8 +150,8 @@ private:
     }
 
     // XpandNode::Persister
-    void persist(const XpandNode& node);
-    void unpersist(const XpandNode& node);
+    void persist(const XpandNode& node) override;
+    void unpersist(const XpandNode& node) override;
 
 private:
     Config                   m_config;

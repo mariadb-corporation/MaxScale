@@ -61,7 +61,7 @@ public:
      * @param session   The generic session
      * @return          Router session on null on error
      */
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service);
+    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override;
 
     /**
      * Create an instance of the filter for a particular service within MaxScale.
@@ -82,14 +82,14 @@ public:
      */
     bool read_to_json(int start, int end, json_t** output) const;
 
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
-    mxs::config::Configuration& getConfiguration()
+    mxs::config::Configuration& getConfiguration() override
     {
         return m_settings;
     }
 
-    uint64_t getCapabilities() const;
+    uint64_t getCapabilities() const override;
 
     std::string generate_log_header(uint64_t data_flags) const;
 
