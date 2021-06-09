@@ -184,8 +184,9 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
     while (n < nBatch && ComResponse(m_pBuffer).type() != ComResponse::EOF_PACKET) // m_pBuffer not advanced
     {
         ++n;
-
-        CQRTextResultsetRow row(&m_pBuffer, m_types); // Advances pBuffer
+        // m_pBuffer cannot be advanced before we know whether the object will fit.
+        auto pBuffer = m_pBuffer;
+        CQRTextResultsetRow row(&pBuffer, m_types); // Advances pBuffer
 
         auto it = row.begin();
 
@@ -227,7 +228,15 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
         {
             auto doc = bsoncxx::from_json(json);
 
+            if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+            {
+                // TODO: Don't discard the converted doc, but store it somewhere for
+                // TODO: the next batch.
+                break;
+            }
+
             batch.append(doc);
+            m_pBuffer = pBuffer;
         }
         catch (const std::exception& x)
         {
