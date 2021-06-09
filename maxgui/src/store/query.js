@@ -32,7 +32,9 @@ function initialState() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
         query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
+        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
     }
 }
 export default {
@@ -127,6 +129,11 @@ export default {
         SET_QUERY_MAX_ROW(state, payload) {
             state.query_max_rows = payload
             localStorage.setItem('query_max_rows', payload)
+        },
+        // payload is either 0 or 1
+        SET_QUERY_CONFIRM_FLAG(state, payload) {
+            state.query_confirm_flag = payload
+            localStorage.setItem('query_confirm_flag', payload)
         },
     },
     actions: {

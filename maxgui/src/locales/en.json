@@ -143,7 +143,6 @@
     "connectedTo": "Connected to",
     "disconnectConn": "Disconnect connection",
     "incomplete": "Incomplete",
-    "queryShowConfirm": "{action} confirmation",
     "queryConfig": "Query configuration",
     "dontAskMeAgain": "Don't ask me again",
     "hide": "Hide",
@@ -181,7 +180,7 @@
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
         "queryShowConfirm": "{action} confirmation before running the queries",
-        "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code class='px-2 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set"
+        "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code style='line-height: unset;' class='pa-0 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set"
     },
 
     "$vuetify": {

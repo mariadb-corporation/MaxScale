@@ -16,7 +16,7 @@
                             {{ $t('maxRows') }}
                         </label>
                         <v-text-field
-                            v-model.number="maxRows"
+                            v-model.number="config.maxRows"
                             type="number"
                             :rules="rules.maxRows"
                             class="std error--text__bottom mb-2"
@@ -26,7 +26,23 @@
                             outlined
                             required
                         />
+                        <v-icon size="16" color="warning" class="mr-2">
+                            $vuetify.icons.alertWarning
+                        </v-icon>
                         <small v-html="$t('info.maxRows')" />
+                    </v-col>
+
+                    <v-col cols="12" class="pa-1 mt-3">
+                        <v-switch
+                            v-model="config.showQueryConfirm"
+                            :label="
+                                $t('info.queryShowConfirm', {
+                                    action: config.showQueryConfirm ? $t('show') : $t('hide'),
+                                })
+                            "
+                            hide-details="auto"
+                            class="show-confirm-switch mt-0 pa-0"
+                        />
                     </v-col>
                 </v-row>
             </v-container>
@@ -56,7 +72,6 @@ export default {
     },
     data() {
         return {
-            maxRows: 0,
             rules: {
                 maxRows: [
                     val => {
@@ -69,10 +84,18 @@ export default {
                     },
                 ],
             },
+            defConfig: {},
+            config: {
+                maxRows: 10000,
+                showQueryConfirm: true,
+            },
         }
     },
     computed: {
-        ...mapState({ query_max_rows: state => state.query.query_max_rows }),
+        ...mapState({
+            query_max_rows: state => state.query.query_max_rows,
+            query_confirm_flag: state => state.query.query_confirm_flag,
+        }),
         isOpened: {
             get() {
                 if (this.value) this.$emit('on-open')
@@ -83,20 +106,32 @@ export default {
             },
         },
         hasChanged() {
-            return this.query_max_rows !== this.maxRows
+            if (!this.isOpened) return false
+            return !this.$help.lodash.isEqual(this.defConfig, this.config)
         },
     },
     watch: {
         isOpened(v) {
-            if (v) this.maxRows = this.query_max_rows
-            // reset to initial state and bind this context
-            else Object.assign(this.$data, this.$options.data.apply(this))
+            if (v) {
+                this.handleSetDefConfig()
+                this.config = this.$help.lodash.cloneDeep(this.defConfig)
+            }
         },
     },
     methods: {
-        ...mapMutations({ SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW' }),
+        ...mapMutations({
+            SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW',
+            SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
+        }),
+        handleSetDefConfig() {
+            if (isNaN(this.query_max_rows)) this.SET_QUERY_MAX_ROW(10000)
+            if (isNaN(this.query_confirm_flag)) this.SET_QUERY_CONFIRM_FLAG(1)
+            this.defConfig.maxRows = this.query_max_rows
+            this.defConfig.showQueryConfirm = Boolean(this.query_confirm_flag)
+        },
         onSave() {
-            this.SET_QUERY_MAX_ROW(this.maxRows)
+            this.SET_QUERY_MAX_ROW(this.config.maxRows)
+            this.SET_QUERY_CONFIRM_FLAG(Number(this.config.showQueryConfirm))
         },
     },
 }
@@ -106,5 +141,11 @@ export default {
 $label-size: 0.75rem;
 .field__label {
     font-size: $label-size;
+}
+::v-deep .show-confirm-switch {
+    label {
+        font-size: $label-size;
+        color: $small-text;
+    }
 }
 </style>

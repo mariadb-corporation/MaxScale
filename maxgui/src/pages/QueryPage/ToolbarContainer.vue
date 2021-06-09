@@ -108,10 +108,8 @@
                 </v-btn>
             </template>
             <span class="text-capitalize">
-                {{
-                    $t('visualizedConfig', { action: showVisSidebar ? $t('hide') : $t('show') })
-                }}</span
-            >
+                {{ $t('visualizedConfig', { action: showVisSidebar ? $t('hide') : $t('show') }) }}
+            </span>
         </v-tooltip>
         <!-- Settings section-->
         <v-tooltip
@@ -120,7 +118,13 @@
             content-class="shadow-drop color text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
-                <v-btn id="setting-btn" class="ml-2" icon small v-on="on">
+                <v-btn
+                    class="ml-2"
+                    icon
+                    small
+                    v-on="on"
+                    @click="queryConfigDialog = !queryConfigDialog"
+                >
                     <v-icon size="16" color="accent-dark">
                         $vuetify.icons.settings
                     </v-icon>
@@ -128,53 +132,10 @@
             </template>
             <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
         </v-tooltip>
-        <v-menu
-            transition="slide-y-transition"
-            offset-y
-            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
-            activator="#setting-btn"
-            :max-width="350"
-            :menuMaxWidth="400"
-        >
-            <v-list>
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <v-list-item
-                            dense
-                            link
-                            @click="shouldShowConfirm = !shouldShowConfirm"
-                            v-on="on"
-                        >
-                            <v-list-item-title class="color text-text">
-                                {{
-                                    $t('queryShowConfirm', {
-                                        action: shouldShowConfirm ? $t('hide') : $t('show'),
-                                    })
-                                }}
-                            </v-list-item-title>
-                        </v-list-item>
-                    </template>
-                    <span>
-                        {{
-                            $t('info.queryShowConfirm', {
-                                action: shouldShowConfirm ? $t('hide') : $t('show'),
-                            })
-                        }}
-                    </span>
-                </v-tooltip>
-                <v-list-item dense link @click="queryConfigDialog = !queryConfigDialog">
-                    <v-list-item-title class="color text-text">
-                        {{ $t('queryConfig') }}
-                    </v-list-item-title>
-                </v-list-item>
-            </v-list>
-        </v-menu>
+        <query-config-dialog v-model="queryConfigDialog" />
+
         <confirm-dialog
-            v-if="shouldShowConfirm"
+            v-if="query_confirm_flag"
             ref="runConfirmDialog"
             :title="$t('confirmations.runQuery')"
             type="run"
@@ -205,8 +166,6 @@
                 <v-spacer />
             </template>
         </confirm-dialog>
-
-        <query-config-dialog v-model="queryConfigDialog" />
     </v-toolbar>
 </template>
 
@@ -242,7 +201,6 @@ export default {
     },
     data() {
         return {
-            shouldShowConfirm: true,
             dontShowConfirm: false,
             showVisSidebar: false,
             queryConfigDialog: false,
@@ -255,22 +213,18 @@ export default {
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,
+            query_confirm_flag: state => state.query.query_confirm_flag,
         }),
     },
     watch: {
-        shouldShowConfirm(v) {
-            localStorage.setItem('show_query_confirm', v)
-        },
         showVisSidebar(v) {
             this.$emit('show-vis-sidebar', v)
         },
     },
-    mounted() {
-        this.handleGetPreferredQueryConfirm()
-    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
@@ -279,17 +233,9 @@ export default {
         async handleSelectDb(db) {
             await this.useDb(db)
         },
-        handleGetPreferredQueryConfirm() {
-            const preferredQueryConfirm =
-                localStorage.getItem('show_query_confirm') === 'true' ? true : false
 
-            // Default to true
-            if (this.$typy(preferredQueryConfirm).isNull)
-                localStorage.setItem('show_query_confirm', true)
-            else this.shouldShowConfirm = preferredQueryConfirm
-        },
         async handleRun(mode) {
-            if (!this.shouldShowConfirm) await this.onRun(mode)
+            if (!this.query_confirm_flag) await this.onRun(mode)
             else {
                 this.dontShowConfirm = false // clear checkbox state
                 this.$refs.runConfirmDialog.open()
@@ -297,7 +243,7 @@ export default {
         },
         async confirmRunning() {
             await this.onRun(this.selectedQueryTxt ? 'selected' : 'all')
-            if (this.dontShowConfirm) this.shouldShowConfirm = false
+            if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
          * @param {String} mode Mode to execute query: All or selected
