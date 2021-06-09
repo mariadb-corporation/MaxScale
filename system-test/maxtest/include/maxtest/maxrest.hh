@@ -226,6 +226,14 @@ public:
 
     void raise(const std::string& message) const;
 
+    /**
+     * Enable or disable failing the test whenever an exception is thrown
+     */
+    void fail_on_error(bool value)
+    {
+        m_fail_on_error = value;
+    }
+
 private:
     enum Command
     {
@@ -238,6 +246,7 @@ private:
 private:
     TestConnections& m_test;
     Maxscales&       m_maxscale;
+    bool             m_fail_on_error  {true};
 };
 
 template<>
