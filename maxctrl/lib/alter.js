@@ -73,8 +73,8 @@ function updateParams(host, resource, key, value, extra) {
 
   if (arr.length % 2 != 0) {
     return error("No value defined for parameter `" + extra[extra.length - 1] + "`");
-  } else if (arr.findIndex((v) => v === "null" || v === "") != -1) {
-    return error("Found empty or null value in parameter list: " + JSON.stringify(arr));
+  } else if (arr.findIndex((v) => v === "null") != -1) {
+    return error("Found null value in parameter list: " + JSON.stringify(arr));
   }
 
   var keys = arr.filter((v, i) => i % 2 == 0);

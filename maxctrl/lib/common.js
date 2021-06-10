@@ -88,6 +88,10 @@ module.exports = function () {
   };
 
   this.parseValue = function (value) {
+    if (typeof value == "string" && value.length == 0) {
+      return value;
+    }
+
     if (value == "true") {
       // JSON true
       return true;
