@@ -26,6 +26,12 @@ Chart.defaults.scale.gridLines.drawTicks = false
 Chart.defaults.scale.gridLines.drawBorder = true
 Chart.defaults.scale.gridLines.zeroLineColor = 'rgba(234, 234, 234, 1)'
 Chart.defaults.scale.ticks.padding = 12
+
+/**
+ * show tooltip at cursor position.
+ * tooltips.position = 'cursor'
+ */
+Chart.Tooltip.positioners.cursor = (_, coordinates) => coordinates
 export default {
     'line-chart-stream': LineChartStream,
     'line-chart': LineChart,

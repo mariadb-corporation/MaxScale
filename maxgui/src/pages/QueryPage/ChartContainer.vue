@@ -22,6 +22,7 @@
                 minWidth: minLineChartWidth,
                 minHeight: `${chartHeight}px`,
             }"
+            hasVertCrossHair
             :chartData="chartData"
             :options="scatterChartOptions"
         />
@@ -61,7 +62,9 @@ export default {
     },
     computed: {
         minLineChartWidth() {
-            return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+            if (this.$typy(this.chartData, 'labels').isDefine)
+                return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+            return '0px'
         },
         getXAxisDataType() {
             if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
@@ -136,6 +139,7 @@ export default {
                 },
                 tooltips: {
                     mode: 'index',
+                    position: 'cursor',
                     intersect: false,
                 },
                 elements: {
@@ -163,7 +167,12 @@ export default {
             return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
         },
         scatterChartOptions() {
-            return this.chartOptions
+            return this.$help.lodash.deepMerge(this.chartOptions, {
+                tooltips: {
+                    position: 'cursor',
+                    intersect: false,
+                },
+            })
         },
     },
     beforeDestroy() {
