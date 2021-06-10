@@ -21,12 +21,16 @@ using RestApi = std::unique_ptr<MaxRest>;
 
 RestApi create_api1(TestConnections& test)
 {
-    return std::make_unique<MaxRest>(&test, test.maxscale);
+    auto rval = std::make_unique<MaxRest>(&test, test.maxscale);
+    rval->fail_on_error(false);
+    return rval;
 }
 
 RestApi create_api2(TestConnections& test)
 {
-    return std::make_unique<MaxRest>(&test, test.maxscale2);
+    auto rval = std::make_unique<MaxRest>(&test, test.maxscale2);
+    rval->fail_on_error(false);
+    return rval;
 }
 
 static inline mxb::Json get(const RestApi& api, const std::string& endpoint, const std::string& js_ptr)

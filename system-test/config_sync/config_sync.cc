@@ -4,6 +4,7 @@
 #include "config_sync_common.hh"
 
 using namespace std::chrono;
+using JsonType = mxb::Json::JsonType;
 
 const auto NORMAL = mxb::Json::Format::NORMAL;
 
@@ -139,6 +140,19 @@ void wait_for_sync(int version = 0)
             std::this_thread::sleep_for(milliseconds(100));
         }
     }
+}
+
+void create_config(Maxscales* mxs, const std::string& config)
+{
+    mxs->stop();
+    mxs->ssh_node_f(0, true,
+                    "echo '%s' > /var/lib/maxscale/maxscale-config.json;"
+                    "chown maxscale:maxscale /var/lib/maxscale/maxscale-config.json;",
+                    config.c_str());
+    mxs->start();
+
+    // This is a bit crude but it's needed in case maxscale ends up restarting
+    mxs->ssh_node("for ((i=0;i<10;i++)); do maxctrl show maxscale && break; done", true);
 }
 
 std::string get_diff(const mxb::Json& js_a, const mxb::Json& js_b)
@@ -381,27 +395,6 @@ void test_bad_change(TestConnections& test)
     version2 = get(api2, "maxscale", "/data/attributes/config_sync/version").get_int();
     test.expect(version2 == version1, "Expected version %ld after restart, got %ld", version1, version2);
 
-    test.tprintf("Create a bad cached configuration and make sure it's discarded");
-    test.maxscale2->stop();
-
-    std::string BAD_CONFIG =
-        R"EOF({"config":[{"id":"server1","type":"servers","attributes":{"parameters":{"rank":"tertiary"}}}],"version":123,"cluster_name":"MariaDB-Monitor"})EOF";
-    test.maxscale2->ssh_node_f(0, true, "echo '%s' > /var/lib/maxscale/maxscale-config.json",
-                               BAD_CONFIG.c_str());
-    test.maxscale2->ssh_node_f(0, true, "chown maxscale:maxscale /var/lib/maxscale/maxscale-config.json");
-
-    test.maxscale2->start();
-    test.maxscale2->wait_for_monitor();
-
-    wait_for_sync();
-    version2 = get(api2, "maxscale", "/data/attributes/config_sync/version").get_int();
-    test.expect(version2 == version1,
-                "Expected version %ld after restart with bad cache, got %ld",
-                version1, version2);
-
-    int rc = test.maxscale2->ssh_node("test -f /var/lib/maxscale/maxscale-config.json", true);
-    test.expect(rc != 0, "Bad cached configuration should be discarded");
-
     test.tprintf("Fix the second MaxScale and do a configuration change that works");
     test.maxscale2->ssh_node(CREATE_DIR, false);
 
@@ -506,6 +499,42 @@ void test_failures(TestConnections& test)
     reset(test);
 }
 
+void test_bad_cache(TestConnections& test)
+{
+    auto expect_empty = [&]() {
+            auto sync1 = get(api1, "maxscale", "/data/attributes/config_sync");
+            test.expect(sync1.type() == JsonType::JSON_NULL,
+                        "Wrong cached configuration should not be read.");
+        };
+
+    auto expect_discarded = [&]() {
+            int rc = test.maxscale->ssh_node("test -f /var/lib/maxscale/maxscale-config.json", true);
+            test.expect(rc != 0, "Bad cached configuration should be discarded");
+        };
+
+    test.tprintf("Create a cached configuration with no monitor");
+    std::string NO_MONITOR =
+        R"EOF({"config":[{"id":"server1","type":"servers","attributes":{"parameters":{"port":3306,"address":"127.0.0.1"}}}],"version":2,"cluster_name":"MariaDB-Monitor"})EOF";
+    create_config(test.maxscale, NO_MONITOR);
+    expect_empty();
+    expect_discarded();
+
+    test.tprintf("Create a cached configuration for the wrong cluster");
+    std::string WRONG_CONFIG =
+        R"EOF({"config":[{"id":"server1","type":"servers","attributes":{"parameters":{"port":3306,"address":"127.0.0.1"}}}],"version":2,"cluster_name":"Other-Cluster"})EOF";
+    create_config(test.maxscale, WRONG_CONFIG);
+    expect_empty();
+
+    test.tprintf("Create a bad cached configuration and make sure it's discarded");
+    std::string BAD_CONFIG =
+        R"EOF({"config":[{"id":"server1","type":"servers","attributes":{"parameters":{"rank":"tertiary"}}}],"version":123,"cluster_name":"MariaDB-Monitor"})EOF";
+    create_config(test.maxscale, BAD_CONFIG);
+    expect_empty();
+    expect_discarded();
+
+    reset(test);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -523,6 +552,9 @@ int main(int argc, char** argv)
 
     test.log_printf("4. test_failures");
     test_failures(test);
+
+    test.log_printf("5. test_bad_cache");
+    test_bad_cache(test);
 
     return test.global_result;
 }
