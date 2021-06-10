@@ -149,6 +149,7 @@
     "show": "Show",
     "visualizedConfig": "{action} visualized configuration",
     "maxRows": "Max rows",
+    "exportChart": "Export chart",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

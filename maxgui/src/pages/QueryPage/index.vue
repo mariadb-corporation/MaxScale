@@ -73,7 +73,7 @@
                                         <template slot="pane-right">
                                             <chart-container
                                                 :selectedChart="selectedChart"
-                                                :chartHeight="chartHeight"
+                                                :containerChartHeight="containerChartHeight"
                                                 :chartData="chartData"
                                                 :axisLabels="axisLabels"
                                             />
@@ -172,11 +172,11 @@ export default {
         showVisChart() {
             return this.selectedChart !== 'No Visualization'
         },
-        chartHeight() {
+        containerChartHeight() {
             const { height: paneHeight } = this.resultPaneDim
             if (this.$refs.editorResultPane) {
                 const { clientHeight } = this.$refs.editorResultPane.$el
-                return clientHeight - paneHeight - 18
+                return clientHeight - paneHeight - 2 // minus border
             }
             return 0
         },

@@ -4,9 +4,35 @@
         ref="chartContainer"
         class="chart-container fill-height"
     >
+        <div class="d-flex pa-2 pr-5">
+            <v-spacer />
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        x-small
+                        outlined
+                        depressed
+                        color="accent-dark"
+                        v-on="on"
+                        @click="exportToJpeg"
+                    >
+                        <v-icon size="14" color="accent-dark">
+                            file_download
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('exportChart') }}</span>
+            </v-tooltip>
+        </div>
+
         <line-chart
             v-if="selectedChart === 'Line'"
-            class="line-chart-container py-2 px-3"
+            id="query-chart"
+            class="line-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
             }"
@@ -16,7 +42,8 @@
         />
         <scatter-chart
             v-else-if="selectedChart === 'Scatter'"
-            class="scatter-chart-container py-2 px-3"
+            id="query-chart"
+            class="scatter-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
             }"
@@ -47,7 +74,7 @@ export default {
     name: 'chart-container',
     props: {
         selectedChart: { type: String, default: '' },
-        chartHeight: { type: Number, default: 0 },
+        containerChartHeight: { type: Number, default: 0 },
         chartData: { type: Object, default: () => {} },
         axisLabels: { type: Object, default: () => {} },
     },
@@ -59,6 +86,9 @@ export default {
         }
     },
     computed: {
+        chartHeight() {
+            return this.containerChartHeight - 36 // export button height
+        },
         isLinear() {
             if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
                 return typeof this.chartData.datasets[0].data[0].x === 'number'
@@ -119,7 +149,9 @@ export default {
                                 labelString: this.axisLabels.x,
                                 fontSize: 14,
                                 lineHeight: 1,
-                                padding: 16,
+                                padding: {
+                                    top: 16,
+                                },
                                 fontColor: '#424f62',
                             },
                         },
@@ -130,7 +162,9 @@ export default {
                                 display: true,
                                 labelString: this.axisLabels.y,
                                 fontSize: 14,
-                                padding: 16,
+                                padding: {
+                                    bottom: 16,
+                                },
                             },
                         },
                     ],
@@ -192,6 +226,43 @@ export default {
     methods: {
         onChartHover(e) {
             this.alignTooltipToLeft = e.offsetX >= this.$refs.chartContainer.clientWidth / 2
+        },
+        getDefFileName() {
+            return `MaxScale ${this.selectedChart} Chart - ${this.$help.dateFormat({
+                value: new Date(),
+                formatType: 'DATE_RFC2822',
+            })}`
+        },
+        createCanvasFrame() {
+            const chart = document.querySelector('#query-chart')
+            const srcCanvas = chart.getElementsByTagName('canvas')[0]
+
+            // create new canvas with white background
+            let desCanvas = document.createElement('canvas')
+
+            // set des canvas plus extra padding
+            desCanvas.width = srcCanvas.width + 24
+            desCanvas.height = srcCanvas.height + 36
+
+            let destCtx = desCanvas.getContext('2d')
+
+            destCtx.fillStyle = '#FFFFFF'
+            destCtx.fillRect(0, 0, desCanvas.width, desCanvas.height)
+
+            //draw the original canvas onto the destination canvas
+            destCtx.drawImage(srcCanvas, 12, 24) // center srcCanvas
+            destCtx.scale(2, 2)
+            return desCanvas
+        },
+        exportToJpeg() {
+            const desCanvas = this.createCanvasFrame()
+            const imageUrl = desCanvas.toDataURL('image/jpeg', 1.0)
+            let a = document.createElement('a')
+            a.href = imageUrl
+            a.download = `${this.getDefFileName()}.jpeg`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
         },
     },
 }
