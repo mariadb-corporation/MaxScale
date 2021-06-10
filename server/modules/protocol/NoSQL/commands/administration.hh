@@ -67,7 +67,7 @@ public:
 
                 if (err.code() == ER_TABLE_EXISTS_ERROR)
                 {
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "Collection already exists. NS: " << table(Quoted::NO);
                     throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
                 }
@@ -111,7 +111,7 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        ostringstream sql;
 
         sql << "DROP TABLE " << table();
 
@@ -176,7 +176,7 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        ostringstream sql;
 
         sql << "DROP DATABASE `" << m_database.name() << "`";
 
@@ -264,7 +264,7 @@ public:
         {
             if (element.type() != bsoncxx::type::k_int64)
             {
-                stringstream ss;
+                ostringstream ss;
                 ss << "Field 'cursors' contains an element that is not of type long: 0";
                 throw SoftError(ss.str(), error::FAILED_TO_PARSE);
             }
@@ -275,7 +275,7 @@ public:
 
         if (i == 0)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "Must specify at least one cursor id in: { killCursors: \"" << value_as<string>()
                << "\" cursors: [], $db: \"" << m_database.name() << "\" }";
 
@@ -330,7 +330,7 @@ public:
             MXS_WARNING("listCollections.filter is ignored.");
         }
 
-        stringstream sql;
+        ostringstream sql;
         sql << "SHOW TABLES FROM `" << m_database.name() << "`";
 
         return sql.str();
@@ -475,7 +475,7 @@ public:
     {
         optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
 
-        stringstream sql;
+        ostringstream sql;
         sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
             << "FROM information_schema.tables "
             << "WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'mysql') "
@@ -614,7 +614,7 @@ public:
 
         if (i == string::npos)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "Invalid namespace specified '" << m_from << "'";
             throw SoftError(ss.str(), error::INVALID_NAMESPACE);
         }
@@ -625,7 +625,7 @@ public:
 
         if (j == string::npos)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "Invalid target namespace: '" << m_to << "'";
             throw SoftError(ss.str(), error::INVALID_NAMESPACE);
         }
@@ -653,7 +653,7 @@ public:
                 {
                 case ER_NO_SUCH_TABLE:
                     {
-                        stringstream ss;
+                        ostringstream ss;
                         ss << "Source collection " << m_from << " does not exist";
                         throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
                     }
@@ -661,7 +661,7 @@ public:
 
                 case ER_ERROR_ON_RENAME:
                     {
-                        stringstream ss;
+                        ostringstream ss;
                         ss << "Rename failed, does target database exist?";
                         throw SoftError(ss.str(), error::COMMAND_FAILED);
                     }

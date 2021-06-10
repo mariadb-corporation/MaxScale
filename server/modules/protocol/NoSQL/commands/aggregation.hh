@@ -36,7 +36,7 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        ostringstream sql;
 
         string limit = convert_skip_and_limit();
 
@@ -151,7 +151,7 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        ostringstream sql;
 
         string key = required<string>(key::KEY);
 
@@ -193,7 +193,7 @@ public:
         ComResponse response(pBuffer);
 
         int32_t ok = 0;
-        stringstream json;
+        ostringstream json;
         json << "{ \"values\": [";
 
         switch (response.type())

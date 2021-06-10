@@ -243,7 +243,7 @@ public:
     {
         ClientDCB* pDcb = m_database.context().client_connection().dcb();
 
-        stringstream you;
+        ostringstream you;
         you << pDcb->client_remote() << ":" << pDcb->port();
 
         doc.append(kvp("you", you.str()));

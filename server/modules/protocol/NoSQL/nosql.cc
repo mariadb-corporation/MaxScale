@@ -71,7 +71,7 @@ int32_t alias::to_type(const string& alias)
 
     if (it == alias_type_mapping.end())
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "Unknown type name alias: " << alias;
 
         throw SoftError(ss.str(), error::BAD_VALUE);
@@ -181,7 +181,7 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const string& comman
 {
     if (element.type() != bsoncxx::type::k_document)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'object'";
 
@@ -199,7 +199,7 @@ bsoncxx::array::view element_as<bsoncxx::array::view>(const string& command,
 {
     if (element.type() != bsoncxx::type::k_array)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'array'";
 
@@ -217,7 +217,7 @@ string element_as<string>(const string& command,
 {
     if (element.type() != bsoncxx::type::k_utf8)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'string'";
 
@@ -238,7 +238,7 @@ int64_t element_as<int64_t>(const string& command,
 
     if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int64)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
 
@@ -261,7 +261,7 @@ int64_t element_as<int64_t>(const string& command,
 
     default:
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
                << bsoncxx::to_string(element.type()) << "', expected a number";
 
@@ -282,7 +282,7 @@ int32_t element_as<int32_t>(const string& command,
 
     if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int32)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'int32'";
 
@@ -305,7 +305,7 @@ int32_t element_as<int32_t>(const string& command,
 
     default:
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
                << bsoncxx::to_string(element.type()) << "', expected a number";
 
@@ -326,7 +326,7 @@ bool element_as<bool>(const string& command,
 
     if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
 
@@ -387,7 +387,7 @@ nosql::Query::Query(const Packet& packet)
         if (m_pEnd - pData != size)
         {
             mxb_assert(!true);
-            std::stringstream ss;
+            std::ostringstream ss;
             ss << "Malformed packet, expected " << size << " bytes for document, "
                << m_pEnd - pData << " found.";
 
@@ -400,7 +400,7 @@ nosql::Query::Query(const Packet& packet)
     if (pData != m_pEnd)
     {
         mxb_assert(!true);
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "Malformed packet, " << m_pEnd - pData << " trailing bytes found.";
 
         throw std::runtime_error(ss.str());
@@ -427,7 +427,7 @@ nosql::Msg::Msg(const Packet& packet)
 
         if (checksum != *pChecksum)
         {
-            std::stringstream ss;
+            std::ostringstream ss;
             ss << "Invalid checksum, expected " << checksum << ", got " << *pChecksum << ".";
             throw std::runtime_error(ss.str());
         }
@@ -452,7 +452,7 @@ nosql::Msg::Msg(const Packet& packet)
 
                 if (pData + size > pSections_end)
                 {
-                    std::stringstream ss;
+                    std::ostringstream ss;
                     ss << "Malformed packet, section(0) size " << size << " larger "
                        << "than available amount " << pSections_end - pData << " of data.";
                     throw std::runtime_error(ss.str());
@@ -470,7 +470,7 @@ nosql::Msg::Msg(const Packet& packet)
 
                 if (pData + total_size > pSections_end)
                 {
-                    std::stringstream ss;
+                    std::ostringstream ss;
                     ss << "Malformed packet, section(1) size " << total_size << " larger "
                        << "than available amount " << pSections_end - pData << " of data.";
                     throw std::runtime_error(ss.str());
@@ -506,7 +506,7 @@ nosql::Msg::Msg(const Packet& packet)
                         else
                         {
                             mxb_assert(!true);
-                            std::stringstream ss;
+                            std::ostringstream ss;
                             ss << "Malformed packet, expected " << size << " bytes for document, "
                                << pEnd - pData << " found.";
                             throw std::runtime_error(ss.str());
@@ -524,7 +524,7 @@ nosql::Msg::Msg(const Packet& packet)
         default:
             {
                 mxb_assert(!true);
-                std::stringstream ss;
+                std::ostringstream ss;
                 ss << "Malformed packet, expected a 'kind' of 0 or 1, received " << kind << ".";
                 throw std::runtime_error(ss.str());
             }
@@ -534,7 +534,7 @@ nosql::Msg::Msg(const Packet& packet)
     if (pData != pSections_end)
     {
         mxb_assert(!true);
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
         throw std::runtime_error(ss.str());
     }
@@ -1004,7 +1004,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "unknown top level operator: " << key;
 
         throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
@@ -1024,7 +1024,7 @@ struct ElementValueInfo
 template<class document_element_or_array_item>
 string element_to_value(const document_element_or_array_item& x, const string& op = "")
 {
-    stringstream ss;
+    ostringstream ss;
 
     switch (x.type())
     {
@@ -1136,7 +1136,7 @@ string element_to_array(const bsoncxx::document::element& element, const string&
     }
     else
     {
-        stringstream ss;
+        ostringstream ss;
         ss << op << " needs an array";
 
         throw SoftError(ss.str(), error::BAD_VALUE);
@@ -1337,7 +1337,7 @@ string get_op_and_value(const bsoncxx::document::view& doc)
         }
         else
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "unknown operator: " << op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
@@ -1353,7 +1353,7 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
         throw SoftError("$all needs an array", error::BAD_VALUE);
     }
 
-    stringstream ss;
+    ostringstream ss;
 
     bsoncxx::array::view all_elements = element.get_array();
 
@@ -1413,7 +1413,7 @@ string protocol_type_to_mariadb_type(int32_t number)
 
     default:
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "Invalid numerical type code: " << number;
             throw SoftError(ss.str(), error::BAD_VALUE);
         };
@@ -1424,7 +1424,7 @@ string protocol_type_to_mariadb_type(int32_t number)
 
 string type_to_condition_from_value(const string& field, int32_t number)
 {
-    stringstream ss;
+    ostringstream ss;
 
     ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = "
        << protocol_type_to_mariadb_type(number)
@@ -1439,7 +1439,7 @@ string type_to_condition_from_value(const string& field, const bsoncxx::stdx::st
 
     if (alias.compare("number") == 0)
     {
-        stringstream ss;
+        ostringstream ss;
 
         ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'DOUBLE' OR "
            << "JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'INTEGER')";
@@ -1472,7 +1472,7 @@ string type_to_condition_from_value(const string& field, const document_or_array
 
             if (d != (double)i)
             {
-                stringstream ss;
+                ostringstream ss;
                 ss << "Invalid numerical type code: " << d;
                 throw SoftError(ss.str(), error::BAD_VALUE);
             }
@@ -1510,7 +1510,7 @@ string type_to_condition(const string& field, const bsoncxx::document::element& 
             throw SoftError("a must match at least one type", error::FAILED_TO_PARSE);
         }
 
-        stringstream ss;
+        ostringstream ss;
         ss << "(";
 
         bool first = true;
@@ -1564,7 +1564,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         {
             if (element.type() != bsoncxx::type::k_document)
             {
-                stringstream ss;
+                ostringstream ss;
                 ss << "$not needs a document (regex not yet supported)";
 
                 throw SoftError(ss.str(), error::BAD_VALUE);
@@ -1595,7 +1595,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
         else
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "unknown operator: " << op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
@@ -1726,7 +1726,7 @@ string nosql::to_value(const bsoncxx::document::element& element)
 template<class document_element_or_array_item>
 string element_to_string(const document_element_or_array_item& x)
 {
-    stringstream ss;
+    ostringstream ss;
 
     switch (x.type())
     {
@@ -1867,7 +1867,7 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
 
         if (!nosql::get_number_as_integer(element, &value))
         {
-            stringstream ss;
+            ostringstream ss;
             // TODO: Should actually be the value itself, and not its type.
             ss << "Illegal key in $sort specification: "
                << element.key() << ": " << bsoncxx::to_string(element.type());
@@ -2060,7 +2060,7 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             case MONGOC_OPCODE_UPDATE:
                 {
                     mxb_assert(!true);
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());
                 }
@@ -2077,7 +2077,7 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             default:
                 {
                     mxb_assert(!true);
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "Unknown packet " << req.opcode() << " received.";
                     throw std::runtime_error(ss.str());
                 }
@@ -2218,7 +2218,7 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
 
 string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
 {
-    stringstream ss;
+    ostringstream ss;
     ss << "CREATE TABLE " << table_name << " ("
        << "id VARCHAR(" << id_length << ") "
        << "AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) UNIQUE KEY, "

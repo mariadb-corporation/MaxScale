@@ -168,7 +168,7 @@ protected:
             {
                 if (element.type() != bsoncxx::type::k_document)
                 {
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "BSON field '" << m_name << "." << m_key << "."
                        << i << "' is the wrong type '"
                        << bsoncxx::to_string(element.type())
@@ -249,7 +249,7 @@ private:
 
     string convert_document(const bsoncxx::document::view& doc) override
     {
-        stringstream sql;
+        ostringstream sql;
 
         sql << "DELETE FROM " << table() << " ";
 
@@ -263,7 +263,7 @@ private:
 
         if (q.type() != bsoncxx::type::k_document)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BSON field 'delete.deletes.q' is the wrong type '"
                << bsoncxx::to_string(q.type()) << "' expected type 'object'";
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
@@ -287,7 +287,7 @@ private:
             {
                 if (nLimit != 0 && nLimit != 1)
                 {
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "The limit field in delete objects must be 0 or 1. Got " << nLimit;
 
                     throw SoftError(ss.str(), error::FAILED_TO_PARSE);
@@ -333,7 +333,7 @@ public:
 
         if (m_batch_size < 0)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BatchSize value must be non-negative, but received: " << m_batch_size;
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
@@ -343,7 +343,7 @@ public:
 
     string generate_sql() override
     {
-        stringstream sql;
+        ostringstream sql;
         sql << "SELECT ";
 
         bsoncxx::document::view projection;
@@ -505,7 +505,7 @@ public:
 
         if (batch_size < 0)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BatchSize value must be non-negative, bit received: " << batch_size;
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
@@ -662,7 +662,7 @@ public:
                 duplicate = bsoncxx::to_json(keyValue);
             }
 
-            stringstream ss;
+            ostringstream ss;
             ss << "E" << error::DUPLICATE_KEY << " duplicate key error collection: "
                << m_database.name() << "." << value_as<string>()
                << " index: _id_ dup key: " << duplicate;
@@ -697,7 +697,7 @@ protected:
             }
             else
             {
-                stringstream ss;
+                ostringstream ss;
                 ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
                    << "is false.";
 
@@ -746,7 +746,7 @@ protected:
                     }
                     else
                     {
-                        stringstream ss;
+                        ostringstream ss;
                         ss << "Database " << m_database.name() << " does not exist, and "
                            << "'auto_create_databases' is false.";
 
@@ -847,7 +847,7 @@ protected:
 
                 if (action == Worker::Call::EXECUTE)
                 {
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "CREATE DATABASE `" << m_database.name() << "`";
 
                     send_downstream(ss.str());
@@ -869,7 +869,7 @@ protected:
         }
         else
         {
-            stringstream sql;
+            ostringstream sql;
             sql << "INSERT INTO " << table() << " (doc) VALUES ";
 
             bool first = true;
@@ -895,7 +895,7 @@ protected:
 
     string convert_document(const bsoncxx::document::view& doc) override
     {
-        stringstream sql;
+        ostringstream sql;
         sql << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc);
 
         return sql.str();
@@ -903,7 +903,7 @@ protected:
 
     string convert_document_data(const bsoncxx::document::view& doc)
     {
-        stringstream sql;
+        ostringstream sql;
 
         string json;
 
@@ -1008,7 +1008,7 @@ private:
 
     string convert_document(const bsoncxx::document::view& update) override
     {
-        stringstream sql;
+        ostringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
         auto upsert = false;
@@ -1029,7 +1029,7 @@ private:
 
         if (q.type() != bsoncxx::type::k_document)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "BSON field 'update.updates.q' is the wrong type '" << bsoncxx::to_string(q.type())
                << "', expected type 'object'";
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
@@ -1131,7 +1131,7 @@ private:
 
                             if (name != "$set" && name != "$unset")
                             {
-                                stringstream ss;
+                                ostringstream ss;
                                 ss << "Currently the only supported update operators are $set and $unset.";
                                 throw SoftError(ss.str(), error::COMMAND_FAILED);
                             }

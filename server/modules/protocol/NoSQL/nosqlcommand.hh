@@ -194,7 +194,7 @@ protected:
 
         if (!element)
         {
-            std::stringstream ss;
+            std::ostringstream ss;
             ss << "BSON field '" << m_name << "." << zKey << "' is missing but a required field";
             throw SoftError(ss.str(), error::LOCATION40414);
         }

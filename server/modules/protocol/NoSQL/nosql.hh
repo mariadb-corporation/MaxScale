@@ -484,7 +484,7 @@ public:
 
     std::string to_string() const
     {
-        std::stringstream ss;
+        std::ostringstream ss;
         out(ss);
         return ss.str();
     }

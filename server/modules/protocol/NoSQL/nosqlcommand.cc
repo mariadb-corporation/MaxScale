@@ -64,7 +64,7 @@ public:
             command = string(key.data(), key.length());
         }
 
-        stringstream ss;
+        ostringstream ss;
         ss << "no such command: '" << command << "'";
         auto s = ss.str();
 
@@ -279,7 +279,7 @@ void Command::check_write_batch_size(int size)
 {
     if (size < 1 || size > protocol::MAX_WRITE_BATCH_SIZE)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "Write batch sizes must be between 1 and " << protocol::MAX_WRITE_BATCH_SIZE
            << ". Got " << size << " operations.";
         throw nosql::SoftError(ss.str(), nosql::error::INVALID_LENGTH);
@@ -291,7 +291,7 @@ void Command::check_maximum_sql_length(int length)
 {
     if (length > MAX_QUERY_LEN)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "Generated SQL of " << length
            << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
            << " bytes.";
@@ -345,7 +345,7 @@ string Command::convert_skip_and_limit() const
         int64_t nSkip = 0;
         if (skip && (!get_number_as_integer(skip, &nSkip) || nSkip < 0))
         {
-            stringstream ss;
+            ostringstream ss;
             int code;
             if (nSkip < 0)
             {
@@ -364,7 +364,7 @@ string Command::convert_skip_and_limit() const
         int64_t nLimit = std::numeric_limits<int64_t>::max();
         if (limit && (!get_number_as_integer(limit, &nLimit) || nLimit < 0))
         {
-            stringstream ss;
+            ostringstream ss;
             int code;
 
             if (nLimit < 0)
@@ -381,7 +381,7 @@ string Command::convert_skip_and_limit() const
             throw SoftError(ss.str(), code);
         }
 
-        stringstream ss;
+        ostringstream ss;
         ss << "LIMIT ";
 
         if (nSkip != 0)
@@ -406,7 +406,7 @@ const string& Command::table(Quoted quoted) const
 
         if (element.type() != bsoncxx::type::k_utf8)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "collection name has invalid type " << bsoncxx::to_string(element.type());
             throw SoftError(ss.str(), error::BAD_VALUE);
         }

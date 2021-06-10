@@ -19,7 +19,7 @@
 
 using std::set;
 using std::string;
-using std::stringstream;
+using std::ostringstream;
 using std::vector;
 
 namespace
@@ -144,7 +144,7 @@ public:
 private:
     void throw_cursor_not_found(int64_t id)
     {
-        stringstream ss;
+        ostringstream ss;
         ss << "cursor id " << id << " not found";
         throw nosql::SoftError(ss.str(), nosql::error::CURSOR_NOT_FOUND);
     }
@@ -434,7 +434,7 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
         }
         catch (const std::exception& x)
         {
-            stringstream ss;
+            ostringstream ss;
             ss << "Could not convert assumed JSON data to BSON: " << x.what();
             MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
             throw SoftError(ss.str(), error::COMMAND_FAILED);

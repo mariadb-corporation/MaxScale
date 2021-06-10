@@ -196,7 +196,7 @@ public:
         {
             if (!specification.find_param(static_cast<string>(element.key())))
             {
-                stringstream ss;
+                ostringstream ss;
                 ss << "Unknown configuration key: '" << element.key() << "'";
                 throw SoftError(ss.str(), error::NO_SUCH_KEY);
             }
@@ -237,7 +237,7 @@ public:
     {
         m_name = value_as<string>();
 
-        stringstream sql;
+        ostringstream sql;
         sql << "CREATE DATABASE `" << m_name << "`";
 
         return sql.str();
@@ -263,7 +263,7 @@ public:
 
                 if (err.code() == ER_DB_CREATE_EXISTS)
                 {
-                    stringstream ss;
+                    ostringstream ss;
                     ss << "The database '" << m_name << "' exists already.";
 
                     throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
