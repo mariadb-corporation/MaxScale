@@ -187,7 +187,8 @@ bool Specification::validate(const mxs::ConfigParameters& params,
 
                 if (!message.empty())
                 {
-                    MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", name.c_str(), message.c_str());
+                    MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR,
+                                    "%s: %s", name.c_str(), message.c_str());
                 }
             }
             else if (!is_core_param(m_kind, name))
@@ -739,7 +740,6 @@ void insert_value(mxs::ConfigParameters& params, const char* zName, json_t* pVal
         break;
     }
 }
-
 }
 
 bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
@@ -765,7 +765,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
             json_t* pNested_value;
             json_object_foreach(value, zNested_key, pNested_value)
             {
-                //TODO: We throw away information here, but no can do for the time being.
+                // TODO: We throw away information here, but no can do for the time being.
                 insert_value(nested_parameters[key], zNested_key, pNested_value);
             }
         }
@@ -1179,7 +1179,7 @@ bool ParamHost::from_json(const json_t* pJson,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1238,7 +1238,7 @@ bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1347,7 +1347,7 @@ bool ParamRegex::from_json(const json_t* pJson,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1425,7 +1425,7 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1562,7 +1562,7 @@ bool ParamModule::from_json(const json_t* pJson, value_type* pValue,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1616,7 +1616,7 @@ bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1669,7 +1669,7 @@ bool ParamService::from_json(const json_t* pJson, value_type* pValue,
 
         rv = from_string(z, pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1732,7 +1732,7 @@ bool ParamSize::from_json(const json_t* pJson,
     {
         rv = from_string(json_string_value(pJson), pValue, pMessage);
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
@@ -1844,7 +1844,7 @@ bool ParamString::from_json(const json_t* pJson,
         *pValue = json_string_value(pJson);
         rv = true;
     }
-    else
+    else if (pMessage)
     {
         *pMessage = "Expected a json string, but got a json ";
         *pMessage += mxs::json_type_to_string(pJson);
