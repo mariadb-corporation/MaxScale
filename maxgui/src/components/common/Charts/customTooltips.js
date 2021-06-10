@@ -49,7 +49,6 @@ function createTooltipEle({ tooltipModel, tooltipId, position, className, alignT
     tooltipEl.style.top = `${position.top + tooltipModel.caretY + 10}px`
     tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily
     tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle
-    tooltipEl.style.padding = `${tooltipModel.yPadding}px ${tooltipModel.xPadding}px`
     return tooltipEl
 }
 

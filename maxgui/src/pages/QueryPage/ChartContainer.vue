@@ -1,6 +1,6 @@
 <template>
     <div
-        v-if="!$typy(chartData, 'datasets').isEmptyArray"
+        v-if="!$typy(sortedChartData, 'datasets').isEmptyArray"
         ref="chartContainer"
         class="chart-container fill-height"
     >
@@ -8,22 +8,20 @@
             v-if="selectedChart === 'Line'"
             class="line-chart-container py-2 px-3"
             :style="{
-                minWidth: minLineChartWidth,
                 minHeight: `${chartHeight}px`,
             }"
             hasVertCrossHair
-            :chartData="chartData"
+            :chartData="sortedChartData"
             :options="lineChartOptions"
         />
         <scatter-chart
             v-else-if="selectedChart === 'Scatter'"
             class="scatter-chart-container py-2 px-3"
             :style="{
-                minWidth: minLineChartWidth,
                 minHeight: `${chartHeight}px`,
             }"
             hasVertCrossHair
-            :chartData="chartData"
+            :chartData="sortedChartData"
             :options="scatterChartOptions"
         />
 
@@ -61,24 +59,34 @@ export default {
         }
     },
     computed: {
-        minLineChartWidth() {
-            if (this.$typy(this.chartData, 'labels').isDefine)
-                return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
-            return '0px'
-        },
-        getXAxisDataType() {
+        isLinear() {
             if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
-                return typeof this.chartData.datasets[0].data[0].x
+                return typeof this.chartData.datasets[0].data[0].x === 'number'
             return null
+        },
+        sortedChartData() {
+            if (this.isLinear) {
+                let chartData = this.$help.lodash.cloneDeep(this.chartData)
+                chartData.labels.sort((a, b) => a - b)
+                chartData.datasets[0].data.sort((a, b) => {
+                    if (a.x < b.x) return -1
+                    if (a.x > b.x) return 1
+                    return 0
+                })
+                return chartData
+            }
+            return this.chartData
         },
         chartOptions() {
             const componentScope = this
             return {
                 responsive: true,
-                spanGaps: true,
                 maintainAspectRatio: false,
                 hover: {
-                    onHover: e => this.onChartHover(e),
+                    onHover: (e, el) => {
+                        this.onChartHover(e)
+                        e.target.style.cursor = el[0] ? 'pointer' : 'default'
+                    },
                 },
                 tooltips: {
                     enabled: false,
@@ -111,7 +119,7 @@ export default {
                                 labelString: this.axisLabels.x,
                                 fontSize: 14,
                                 lineHeight: 1,
-                                padding: 0,
+                                padding: 16,
                                 fontColor: '#424f62',
                             },
                         },
@@ -130,15 +138,14 @@ export default {
             }
         },
         lineChartOptions() {
-            const isNum = this.getXAxisDataType === 'number'
             let lineOptions = {
                 showLines: true,
                 hover: {
-                    mode: 'index',
+                    mode: this.isLinear ? 'nearest' : 'index',
                     intersect: false,
                 },
                 tooltips: {
-                    mode: 'index',
+                    mode: this.isLinear ? 'nearest' : 'index',
                     position: 'cursor',
                     intersect: false,
                 },
@@ -150,9 +157,12 @@ export default {
                 scales: {
                     xAxes: [
                         {
+                            type: this.isLinear ? 'linear' : 'category',
                             ticks: {
-                                maxRotation: isNum ? 0 : 90,
-                                minRotation: isNum ? 0 : 90,
+                                autoSkip: !this.isLinear,
+                                autoSkipPadding: this.isLinear ? 0 : 15,
+                                maxRotation: this.isLinear ? 0 : 90,
+                                minRotation: this.isLinear ? 0 : 90,
                                 //truncate tick
                                 callback: v => {
                                     const toStr = `${v}`
