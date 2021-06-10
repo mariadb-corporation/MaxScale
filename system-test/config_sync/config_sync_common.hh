@@ -51,3 +51,8 @@ static inline mxb::Json get(const RestApi& api, const std::string& endpoint, con
 
     return rval;
 }
+
+static inline int64_t get_version(const RestApi& api)
+{
+    return get(api, "maxscale", "/data/attributes/config_sync/version").get_int();
+}

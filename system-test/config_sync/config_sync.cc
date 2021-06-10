@@ -282,6 +282,59 @@ void test_config_parameters(TestConnections& test)
         test.expect(test.maxscale->maxctrl(cmd).rc != 0,
                     "Command should fail: %s", cmd);
     }
+
+    test.tprintf("Disabling and then enabling config_sync_cluster should not increment version");
+    auto res = test.maxscale->maxctrl("alter maxscale config_sync_cluster \"\"");
+    test.expect(res.rc == 0, "Disabling config_sync_cluster failed: %s", res.output.c_str());
+
+    res = test.maxscale->maxctrl("alter maxscale config_sync_cluster MariaDB-Monitor");
+    test.expect(res.rc == 0, "Enabling config_sync_cluster failed: %s", res.output.c_str());
+
+    auto sync = get(api1, "maxscale", "/data/attributes/config_sync");
+    test.expect(sync.type() == JsonType::JSON_NULL,
+                "\"config_sync\" should be null after toggling config_sync_cluster: %s",
+                sync.to_string(NORMAL).c_str());
+
+    res = test.maxscale->maxctrl("alter maxscale config_sync_cluster \"\"");
+    test.expect(res.rc == 0, "Disabling config_sync_cluster failed: %s", res.output.c_str());
+
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    test.expect(res.rc == 0, "Config change without config_sync_cluster failed: %s", res.output.c_str());
+
+    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history 321");
+    test.expect(res.rc == 0, "Config change on second MaxScale should work: %s", res.output.c_str());
+
+    sync = get(api1, "maxscale", "/data/attributes/config_sync");
+    test.expect(sync.type() == JsonType::JSON_NULL,
+                "\"config_sync\" should be null after modification in the cluster: %s",
+                sync.to_string(NORMAL).c_str());
+
+    res = test.maxscale->maxctrl("alter maxscale config_sync_cluster MariaDB-Monitor");
+    test.expect(res.rc == 0, "Enabling config_sync_cluster failed: %s", res.output.c_str());
+
+    expect_sync(test, 1, 2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    test.expect(res.rc == 0, "Config change failed after enabling config_sync_cluster: %s",
+                res.output.c_str());
+
+    auto version0 = get_version(api1);
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    test.expect(res.rc == 0, "First no-op change failed: %s", res.output.c_str());
+
+    auto version1 = get_version(api1);
+    test.expect(version0 == version1, "First no-op change should not increment version: %ld != %ld",
+                version0, version1);
+
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    test.expect(res.rc == 0, "Second no-op change failed: %s", res.output.c_str());
+
+    auto version2 = get_version(api1);
+    test.expect(version0 == version2, "Second no-op change should not increment version: %ld != %ld",
+                version0, version2);
+
+    reset(test);
 }
 
 void test_sync(TestConnections& test)
@@ -314,7 +367,7 @@ void test_sync(TestConnections& test)
 
     test.tprintf("Start the second MaxScale and make sure it catches up");
 
-    version = get(api1, "maxscale", "/data/attributes/config_sync").get_int("version");
+    version = get_version(api1);
     test.maxscale2->start();
     expect_sync(test, version, 2);
 
@@ -392,7 +445,7 @@ void test_bad_change(TestConnections& test)
 
     test.tprintf("Restart the second MaxScale and check that the good cached configuration is used");
     test.maxscale2->restart();
-    version2 = get(api2, "maxscale", "/data/attributes/config_sync/version").get_int();
+    version2 = get_version(api2);
     test.expect(version2 == version1, "Expected version %ld after restart, got %ld", version1, version2);
 
     test.tprintf("Fix the second MaxScale and do a configuration change that works");
@@ -474,7 +527,7 @@ void test_failures(TestConnections& test)
                  EXPECTED.c_str());
     c.query("UPDATE mysql.maxscale_config SET version = " + EXPECTED);
     wait_for_sync(100);
-    auto mxs_version = get(api1, "maxscale", "/data/attributes/config_sync/version").get_int();
+    auto mxs_version = get_version(api1);
     auto db_version = c.field("SELECT version FROM mysql.maxscale_config");
 
     test.expect(db_version == EXPECTED,
@@ -490,7 +543,7 @@ void test_failures(TestConnections& test)
     test.tprintf("Delete configuration from database, next update should recreate the row");
     c.query("DELETE FROM mysql.maxscale_config");
     config_update(test.maxscale);
-    mxs_version = get(api1, "maxscale", "/data/attributes/config_sync/version").get_int();
+    mxs_version = get_version(api1);
     db_version = c.field("SELECT version FROM mysql.maxscale_config");
     test.expect(db_version == std::to_string(mxs_version),
                 "Database and MaxScale should be in sync: %s != %ld",
