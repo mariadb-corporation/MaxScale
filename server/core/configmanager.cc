@@ -373,6 +373,14 @@ bool ConfigManager::start()
     {
         try
         {
+            if (!m_current_config.valid())
+            {
+                // If we're using the static configuration, the initial configuration must be created. This
+                // makes sure that if the operation doesn't change anything or it changes config_sync_cluster,
+                // it won't be sent to the cluster.
+                m_current_config = create_config(m_version);
+            }
+
             verify_sync();
         }
         catch (const Exception& e)
@@ -440,7 +448,11 @@ bool ConfigManager::commit()
 mxb::Json ConfigManager::to_json() const
 {
     mxb::Json obj;
-    bool enabled = !get_cluster().empty() && m_current_config.valid();
+
+    // It's possible for m_current_config to be valid and m_version to be 0 if no actual changes have been
+    // made but modules were reconfigured. This can happen for example when the config_sync_cluster is changed
+    // before any other modifications have been done.
+    bool enabled = !get_cluster().empty() && m_current_config.valid() && m_version;
 
     if (enabled)
     {
@@ -524,7 +536,7 @@ mxb::Json ConfigManager::create_config(int64_t version)
     append_config(arr.get_json(), service_list_to_json(""));
     append_config(arr.get_json(), FilterDef::filter_list_to_json(""));
     append_config(arr.get_json(), Listener::to_json_collection(""));
-    append_config(arr.get_json(), config_maxscale_to_json(""));
+    append_config(arr.get_json(), remove_local_parameters(config_maxscale_to_json("")));
 
     mxb::Json rval(mxb::Json::Type::OBJECT);
 
@@ -880,6 +892,17 @@ void ConfigManager::append_config(json_t* arr, json_t* json)
     }
 
     json_decref(json);
+}
+
+json_t* ConfigManager::remove_local_parameters(json_t* json)
+{
+    json_t* params = mxb::json_ptr(json, "/data/attributes/parameters");
+    mxb_assert(params);
+
+    // TODO: Perhaps all the cluster parameters should be removed?
+    json_object_del(params, CN_CONFIG_SYNC_CLUSTER);
+
+    return json;
 }
 
 std::string ConfigManager::dynamic_config_filename() const

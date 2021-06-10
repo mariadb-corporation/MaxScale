@@ -157,6 +157,7 @@ private:
     mxb::Json create_config(int64_t version);
     void      remove_extra_data(json_t* data);
     void      append_config(json_t* arr, json_t* json);
+    json_t*   remove_local_parameters(json_t* json);
 
     const std::string& get_cluster() const;
 
