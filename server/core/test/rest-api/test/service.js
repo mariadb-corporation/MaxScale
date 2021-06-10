@@ -273,6 +273,16 @@ describe("Service", function () {
       .rejected;
   });
 
+  it("does not destroy a listener of a different service ", function () {
+    return request.delete(base_url + "/services/Read-Connection-Router/listeners/RW-Split-Listener-2").should
+      .be.rejected;
+  });
+
+  it("does not return a listener of a different service ", function () {
+    return request.get(base_url + "/services/Read-Connection-Router/listeners/RW-Split-Listener-2").should.be
+      .rejected;
+  });
+
   it("destroy a listener", function () {
     return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener-2").should.be
       .fulfilled;

@@ -35,6 +35,7 @@ public:
     bool stop_database();
     bool cleanup_database();
 
+    bool        copy_logs(const std::string& destination_prefix);
     std::string version_as_string();
 
     struct Status
@@ -404,6 +405,8 @@ public:
 
     bool ssl() const;
     bool using_ipv6() const;
+
+    bool copy_logs(const std::string& dest_prefix);
 
 protected:
     /**

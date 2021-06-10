@@ -55,8 +55,9 @@ struct Settings
  */
 struct SharedData
 {
-    TestLogger log;                     /**< Error log container */
-    Settings   settings;
+    TestLogger  log;        /**< Error log container */
+    Settings    settings;
+    std::string test_name;      /**< Test name */
 
     bool concurrent_run(const BoolFuncArray& funcs);
     bool run_shell_command(const std::string& cmd, const std::string& errmsg);

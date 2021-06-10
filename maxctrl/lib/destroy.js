@@ -70,7 +70,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, async function (host) {
           // The GET before the DELETE makes sure we're deleting a listener of the given servie
-          await simpleRequest(host, "services/" + argv.service + "/listeners/" + argv.name);
+          await doRequest(host, "services/" + argv.service + "/listeners/" + argv.name);
           return doRequest(host, "listeners/" + argv.name, { method: "DELETE" });
         });
       }

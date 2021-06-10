@@ -51,19 +51,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all servers in MaxScale.
 
@@ -90,19 +91,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all services and the servers they use.
 
@@ -128,19 +130,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List listeners of all services. If a service is given, only listeners for that service are listed.
 
@@ -166,19 +169,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all monitors in MaxScale.
 
@@ -196,9 +200,10 @@ List all monitors in MaxScale.
 Usage: list sessions
 
 Options:
-  --rdns     Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --rdns       Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -207,14 +212,14 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 List all client sessions.
@@ -242,19 +247,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all filters in MaxScale.
 
@@ -278,19 +284,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all currently loaded modules.
 
@@ -314,19 +321,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all worker threads.
 
@@ -353,19 +361,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List network the users that can be used to connect to the MaxScale REST API.
 
@@ -389,19 +398,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 List all available module commands.
 
@@ -426,19 +436,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about a server. The `Parameters` field contains the currently configured parameters for this server. See `--help alter server` for more details about altering server parameters.
 
@@ -476,19 +487,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about all servers.
 
@@ -526,19 +538,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about a service. The `Parameters` field contains the currently configured parameters for this service. See `--help alter service` for more details about altering service parameters.
 
@@ -572,19 +585,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about all services.
 
@@ -618,19 +632,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about a monitor. The `Parameters` field contains the currently configured parameters for this monitor. See `--help alter monitor` for more details about altering monitor parameters.
 
@@ -657,19 +672,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about all monitors.
 
@@ -690,9 +706,10 @@ Show detailed information about all monitors.
 Usage: show session <session>
 
 Options:
-  --rdns     Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --rdns       Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -701,14 +718,14 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Show detailed information about a single session. The list of sessions can be retrieved with the `list sessions` command. The <session> is the session ID of a particular session.
@@ -740,9 +757,10 @@ The `Connections` field lists the servers to which the session is connected and 
 Usage: show sessions
 
 Options:
-  --rdns     Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --rdns       Perform a reverse DNS lookup on client IPs  [boolean] [default: false]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -751,14 +769,14 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Show detailed information about all sessions. See `--help show session` for more details.
@@ -794,19 +812,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The list of services that use this filter is show in the `Services` field.
 
@@ -831,19 +850,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information of all filters.
 
@@ -868,19 +888,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 
 
@@ -904,19 +925,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information of all filters.
 
@@ -941,19 +963,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command shows all available parameters as well as detailed version information of a loaded module.
 
@@ -981,19 +1004,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Displays detailed information about all modules.
 
@@ -1021,19 +1045,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 See `--help alter maxscale` for more details about altering MaxScale parameters.
 
@@ -1045,6 +1070,7 @@ See `--help alter maxscale` for more details about altering MaxScale parameters.
   Started At   | Time when MaxScale was started
   Activated At | Time when MaxScale left passive mode
   Uptime       | Time MaxScale has been running
+  Config Sync  | MaxScale configuration synchronization
   Parameters   | Global MaxScale parameters
 ```
 
@@ -1060,19 +1086,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about a worker thread.
 
@@ -1113,19 +1140,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show detailed information about all worker threads.
 
@@ -1166,19 +1194,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 See `--help alter logging` for more details about altering logging parameters.
 
@@ -1202,19 +1231,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command shows the parameters the command expects with the parameter descriptions.
 
@@ -1238,19 +1268,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show contents (statement and hits) of query classifier cache.
 ```
@@ -1267,19 +1298,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Show information about the database users of the service
 ```
@@ -1298,22 +1330,23 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Set options:
-  --force  Forcefully close all connections to the target server  [boolean] [default: false]
+      --force  Forcefully close all connections to the target server  [boolean] [default: false]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 If <server> is monitored by a monitor, this command should only be used to set the server into the `maintenance` state. Any other states will be overridden by the monitor on the next monitoring interval. To manually control server states, use the `stop monitor <name>` command to stop the monitor before setting the server states manually.
 ```
@@ -1332,19 +1365,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command clears a server state set by the `set server <server> <state>` command
 ```
@@ -1363,22 +1397,23 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Drain options:
-  --drain-timeout  Timeout for the drain operation in seconds. If exceeded, the server is added back to all services without putting it into maintenance mode.  [number] [default: 90]
+      --drain-timeout  Timeout for the drain operation in seconds. If exceeded, the server is added back to all services without putting it into maintenance mode.  [number] [default: 90]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command drains the server of connections by first removing it from all services after which it waits until all connections are closed. When all connections are closed, the server is put into the `maintenance` state and added back to all the services where it was removed from. To take the server back into use, execute `clear server <server> maintenance`.
 
@@ -1399,19 +1434,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The `debug` log priority is only available for debug builds of MaxScale.
 ```
@@ -1430,19 +1466,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The `debug` log priority is only available for debug builds of MaxScale.
 ```
@@ -1455,19 +1492,19 @@ The `debug` log priority is only available for debug builds of MaxScale.
 Usage: create server <name> <host|socket> [port]
 
 Create server options:
-  --services                     Link the created server to these services  [array]
-  --monitors                     Link the created server to these monitors  [array]
-  --protocol                     Protocol module name  [string] [default: "mariadbbackend"]
-  --authenticator                Authenticator module name (deprecated)  [string]
-  --authenticator-options        Option string for the authenticator (deprecated)  [string]
-  --tls                          Enable TLS  [boolean]
-  --tls-key                      Path to TLS key  [string]
-  --tls-cert                     Path to TLS certificate  [string]
-  --tls-ca-cert                  Path to TLS CA certificate  [string]
-  --tls-version                  TLS version to use  [string]
-  --tls-cert-verify-depth        TLS certificate verification depth  [number]
-  --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
-  --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
+      --services                     Link the created server to these services  [array]
+      --monitors                     Link the created server to these monitors  [array]
+      --protocol                     Protocol module name  [string] [default: "mariadbbackend"]
+      --authenticator                Authenticator module name (deprecated)  [string]
+      --authenticator-options        Option string for the authenticator (deprecated)  [string]
+      --tls                          Enable TLS  [boolean]
+      --tls-key                      Path to TLS key  [string]
+      --tls-cert                     Path to TLS certificate  [string]
+      --tls-ca-cert                  Path to TLS CA certificate  [string]
+      --tls-version                  TLS version to use  [string]
+      --tls-cert-verify-depth        TLS certificate verification depth  [number]
+      --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
+      --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1476,19 +1513,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The created server will not be used by any services or monitors unless the --services or --monitors options are given. The list of servers a service or a monitor uses can be altered with the `link` and `unlink` commands. If the <host|socket> argument is an absolute path, the server will use a local UNIX domain socket connection. In this case the [port] argument is ignored.
 ```
@@ -1499,9 +1537,9 @@ The created server will not be used by any services or monitors unless the --ser
 Usage: create monitor <name> <module> [params...]
 
 Create monitor options:
-  --servers           Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
-  --monitor-user      Username for the monitor user  [string]
-  --monitor-password  Password for the monitor user  [string]
+      --servers           Link the created monitor to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
+      --monitor-user      Username for the monitor user  [string]
+      --monitor-password  Password for the monitor user  [string]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1510,19 +1548,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The list of servers given with the --servers option should not contain any servers that are already monitored by another monitor. The last argument to this command is a list of key=value parameters given as the monitor parameters.
 ```
@@ -1533,10 +1572,10 @@ The list of servers given with the --servers option should not contain any serve
 Usage: service <name> <router> <params...>
 
 Create service options:
-  --servers   Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
-  --filters   Link the created service to these filters. All non-option arguments after --filters are interpreted as filter names e.g. `--filters f1 f2 f3`.  [array]
-  --services  Link the created service to these services. All non-option arguments after --services are interpreted as service names e.g. `--services svc1 svc2 svc3`.  [array]
-  --cluster   Link the created service to this cluster (i.e. a monitor)  [string]
+      --servers   Link the created service to these servers. All non-option arguments after --servers are interpreted as server names e.g. `--servers srv1 srv2 srv3`.  [array]
+      --filters   Link the created service to these filters. All non-option arguments after --filters are interpreted as filter names e.g. `--filters f1 f2 f3`.  [array]
+      --services  Link the created service to these services. All non-option arguments after --services are interpreted as service names e.g. `--services svc1 svc2 svc3`.  [array]
+      --cluster   Link the created service to this cluster (i.e. a monitor)  [string]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1545,19 +1584,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The last argument to this command is a list of key=value parameters given as the service parameters. If the --servers, --services or --filters options are used, they must be defined after the service parameters. The --cluster option is mutually exclusive with the --servers and --services options.
 
@@ -1576,19 +1616,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The last argument to this command is a list of key=value parameters given as the filter parameters.
 ```
@@ -1599,18 +1640,18 @@ The last argument to this command is a list of key=value parameters given as the
 Usage: create listener <service> <name> <port>
 
 Create listener options:
-  --interface                    Interface to listen on  [string] [default: "::"]
-  --protocol                     Protocol module name  [string] [default: "mariadbclient"]
-  --authenticator                Authenticator module name  [string]
-  --authenticator-options        Option string for the authenticator  [string]
-  --tls-key                      Path to TLS key  [string]
-  --tls-cert                     Path to TLS certificate  [string]
-  --tls-ca-cert                  Path to TLS CA certificate  [string]
-  --tls-version                  TLS version to use  [string]
-  --tls-crl                      TLS CRL to use  [string]
-  --tls-cert-verify-depth        TLS certificate verification depth  [number]
-  --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
-  --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
+      --interface                    Interface to listen on  [string] [default: "::"]
+      --protocol                     Protocol module name  [string] [default: "mariadbclient"]
+      --authenticator                Authenticator module name  [string]
+      --authenticator-options        Option string for the authenticator  [string]
+      --tls-key                      Path to TLS key  [string]
+      --tls-cert                     Path to TLS certificate  [string]
+      --tls-ca-cert                  Path to TLS CA certificate  [string]
+      --tls-version                  TLS version to use  [string]
+      --tls-crl                      TLS CRL to use  [string]
+      --tls-cert-verify-depth        TLS certificate verification depth  [number]
+      --tls-verify-peer-certificate  Enable TLS peer certificate verification  [boolean]
+      --tls-verify-peer-host         Enable TLS peer host verification  [boolean]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1619,19 +1660,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The new listener will be taken into use immediately.
 ```
@@ -1642,7 +1684,7 @@ The new listener will be taken into use immediately.
 Usage: create user <name> <password>
 
 Create user options:
-  --type  Type of user to create  [string] [choices: "admin", "basic"] [default: "basic"]
+      --type  Type of user to create  [string] [choices: "admin", "basic"] [default: "basic"]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1651,19 +1693,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 By default the created user will have read-only privileges. To make the user an administrative user, use the `--type=admin` option. Basic users can only perform `list` and `show` commands.
 ```
@@ -1676,7 +1719,7 @@ By default the created user will have read-only privileges. To make the user an 
 Usage: destroy server <name>
 
 Destroy options:
-  --force  Remove the server from monitors and services before destroying it  [boolean] [default: false]
+      --force  Remove the server from monitors and services before destroying it  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1685,19 +1728,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The server must be unlinked from all services and monitor before it can be destroyed.
 ```
@@ -1708,7 +1752,7 @@ The server must be unlinked from all services and monitor before it can be destr
 Usage: destroy monitor <name>
 
 Destroy options:
-  --force  Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
+      --force  Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1717,19 +1761,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The monitor must be unlinked from all servers before it can be destroyed.
 ```
@@ -1746,19 +1791,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Destroying a listener closes the listening socket, opening it up for reuse.
 ```
@@ -1769,7 +1815,7 @@ Destroying a listener closes the listening socket, opening it up for reuse.
 Usage: destroy service <name>
 
 Destroy options:
-  --force  Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
+      --force  Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1778,19 +1824,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The service must be unlinked from all servers and filters. All listeners for the service must be destroyed before the service itself can be destroyed.
 ```
@@ -1801,7 +1848,7 @@ The service must be unlinked from all servers and filters. All listeners for the
 Usage: destroy filter <name>
 
 Destroy options:
-  --force  Automatically remove the filter from all services before destroying it  [boolean] [default: false]
+      --force  Automatically remove the filter from all services before destroying it  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -1810,19 +1857,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The filter must not be used by any service when it is destroyed.
 ```
@@ -1839,19 +1887,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The last remaining administrative user cannot be removed. Create a replacement administrative user before attempting to remove the last administrative user.
 ```
@@ -1870,19 +1919,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command links targets to a service, making them available for any connections that use the service. A target can be a server, another service or a cluster (i.e. a monitor). Before a server is linked to a service, it should be linked to a monitor so that the server state is up to date. Newly linked targets are only available to new connections, existing connections will use the old list of targets. If a monitor (a cluster of servers) is linked to a service, the service must not have any other targets linked to it.
 ```
@@ -1899,19 +1949,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Linking a server to a monitor will add it to the list of servers that are monitored by that monitor. A server can be monitored by only one monitor at a time.
 ```
@@ -1930,19 +1981,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command unlinks targets from a service, removing them from the list of available targets for that service. New connections to the service will not use the unlinked targets but existing connections can still use the targets. A target can be a server, another service or a cluster (a monitor).
 ```
@@ -1959,19 +2011,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command unlinks servers from a monitor, removing them from the list of monitored servers. The servers will be left in their current state when they are unlinked from a monitor.
 ```
@@ -1990,19 +2043,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This starts a service stopped by `stop service <name>`
 ```
@@ -2019,19 +2073,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This starts a listener stopped by `stop listener <name>`
 ```
@@ -2048,19 +2103,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This starts a monitor stopped by `stop monitor <name>`
 ```
@@ -2077,19 +2133,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command will execute the `start service` command for all services in MaxScale.
 ```
@@ -2102,7 +2159,7 @@ This command will execute the `start service` command for all services in MaxSca
 Usage: stop service <name>
 
 Stop options:
-  --force  Close existing connections after stopping the service  [boolean] [default: false]
+      --force  Close existing connections after stopping the service  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -2111,19 +2168,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Stopping a service will prevent all the listeners for that service from accepting new connections. Existing connections will still be handled normally until they are closed.
 ```
@@ -2134,7 +2192,7 @@ Stopping a service will prevent all the listeners for that service from acceptin
 Usage: stop listener <name>
 
 Stop options:
-  --force  Close existing connections after stopping the listener  [boolean] [default: false]
+      --force  Close existing connections after stopping the listener  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -2143,19 +2201,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Stopping a listener will prevent it from accepting new connections. Existing connections will still be handled normally until they are closed.
 ```
@@ -2172,19 +2231,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Stopping a monitor will pause the monitoring of the servers. This can be used to manually control server states with the `set server` command.
 ```
@@ -2195,7 +2255,7 @@ Stopping a monitor will pause the monitoring of the servers. This can be used to
 Usage: stop [services|maxscale]
 
 Stop options:
-  --force  Close existing connections after stopping all services  [boolean] [default: false]
+      --force  Close existing connections after stopping all services  [boolean] [default: false]
 
 Global Options:
   -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
@@ -2204,19 +2264,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command will execute the `stop service` command for all services in MaxScale.
 ```
@@ -2235,19 +2296,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the server parameters, execute `show server <server>`.
 ```
@@ -2264,19 +2326,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the monitor parameters, execute `show monitor <monitor>`
 ```
@@ -2293,19 +2356,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the service parameters, execute `show service <service>`. Some routers support runtime configuration changes to all parameters. Currently all readconnroute, readwritesplit and schemarouter parameters can be changed at runtime. In addition to module specific parameters, the following list of common service parameters can be altered at runtime:
 
@@ -2336,19 +2400,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The order of the filters given as the second parameter will also be the order in which queries pass through the filter chain. If no filters are given, all existing filters are removed from the service.
 
@@ -2367,19 +2432,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the filter parameters, execute `show filter <filter>`. Some filters support runtime configuration changes to all parameters. Refer to the filter documentation for details on whether it supports runtime configuration changes and which parameters can be altered.
 ```
@@ -2396,19 +2462,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the listener parameters, execute `show listener <listener>`
 ```
@@ -2425,19 +2492,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the logging parameters, execute `show logging`
 ```
@@ -2454,19 +2522,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To display the MaxScale parameters, execute `show maxscale`. The following list of parameters can be altered at runtime:
 
@@ -2498,19 +2567,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Changes the password for a user. To change the user type, destroy the user and then create it again.
 ```
@@ -2527,19 +2597,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Alter parameters of a session. To get the list of modifiable parameters, use `show session <session>`
 ```
@@ -2556,19 +2627,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The order of the filters given as the second parameter will also be the order in which queries pass through the filter chain. If no filters are given, all existing filters are removed from the session. The syntax is similar to `alter service-filters`.
 ```
@@ -2587,19 +2659,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command is intended to be used with the `logrotate` command.
 ```
@@ -2612,70 +2685,26 @@ This command is intended to be used with the `logrotate` command.
 Usage: reload service <service>
 
 Global Options:
-  -c, --config    MaxCtrl configuration file[string] [default: "~/.maxctrl.cnf"]
-  -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, use -p
-                  '' or --password=''              [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
-                  and each value must be separated by a comma.
-                                            [string] [default: "127.0.0.1:8989"]
-  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
-                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
-                                                     [string] [default: "10000"]
-  -q, --quiet     Silence all output. Ignored while in interactive mode.
-                                                      [boolean] [default: false]
-  --tsv           Print tab separated output          [boolean] [default: false]
+  -c, --config    MaxCtrl configuration file  [string] [default: "~/.maxctrl.cnf"]
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests [boolean] [default: false]
-  --tls-key                     Path to TLS private key                 [string]
-  --tls-passphrase              Password for the TLS private key        [string]
-  --tls-cert                    Path to TLS public certificate          [string]
-  --tls-ca-cert                 Path to TLS CA certificate              [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates
-                                                       [boolean] [default: true]
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number                                       [boolean]
-  --help     Show help                                                 [boolean]
-```
-
-### reload the
-
-```
-Usage: reload <command>
-
-Commands:
-  maxctrl reload service <service>  Reloads the database users of this service
-  maxctrl reload                    the default command                [default]
-
-Global Options:
-  -c, --config    MaxCtrl configuration file[string] [default: "~/.maxctrl.cnf"]
-  -u, --user      Username to use                    [string] [default: "admin"]
-  -p, --password  Password for the user. To input the password manually, use -p
-                  '' or --password=''              [string] [default: "mariadb"]
-  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
-                  and each value must be separated by a comma.
-                                            [string] [default: "127.0.0.1:8989"]
-  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as
-                  duration with suffix [h|m|s|ms], e.g. '-t 10s'
-                                                     [string] [default: "10000"]
-  -q, --quiet     Silence all output. Ignored while in interactive mode.
-                                                      [boolean] [default: false]
-  --tsv           Print tab separated output          [boolean] [default: false]
-
-HTTPS/TLS Options:
-  -s, --secure                  Enable HTTPS requests [boolean] [default: false]
-  --tls-key                     Path to TLS private key                 [string]
-  --tls-passphrase              Password for the TLS private key        [string]
-  --tls-cert                    Path to TLS public certificate          [string]
-  --tls-ca-cert                 Path to TLS CA certificate              [string]
-  -n, --tls-verify-server-cert  Whether to verify server TLS certificates
-                                                       [boolean] [default: true]
-
-Options:
-  --version  Show version number                                       [boolean]
-  --help     Show help                                                 [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 ```
 
 ## call
@@ -2692,19 +2721,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 To inspect the list of module commands, execute `list commands`
 ```
@@ -2723,19 +2753,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 The list of host servers is controlled with the --hosts option. The target server should not be in the host list. Value of <target> must be in HOST:PORT format
 ```
@@ -2752,19 +2783,20 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 This command will alter all MaxScale instances given in the --hosts option to represent the <target> MaxScale. Value of <target> must be in HOST:PORT format. Synchronization can be attempted again if a previous attempt failed due to a network failure or some other ephemeral error. Any other errors require manual synchronization of the MaxScale configuration files and a restart of the failed Maxscale.
 
@@ -2785,23 +2817,24 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 API options:
-  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
-  --pretty  Pretty-print output.  [boolean] [default: false]
+      --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+      --pretty  Pretty-print output.  [boolean] [default: false]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Perform a raw REST API call. The path definition uses JavaScript syntax to extract values. For example, the following command extracts all server states as an array of JSON values: maxctrl api get servers data[].attributes.state
 ```
@@ -2818,23 +2851,24 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 API options:
-  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
-  --pretty  Pretty-print output.  [boolean] [default: false]
+      --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+      --pretty  Pretty-print output.  [boolean] [default: false]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Perform a raw REST API call. The provided value is passed as-is to the REST API after building it with JSON.parse
 ```
@@ -2851,23 +2885,24 @@ Global Options:
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
   -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
   -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
-  --tsv           Print tab separated output  [boolean] [default: false]
+      --tsv       Print tab separated output  [boolean] [default: false]
 
 HTTPS/TLS Options:
   -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
-  --tls-key                     Path to TLS private key  [string]
-  --tls-passphrase              Password for the TLS private key  [string]
-  --tls-cert                    Path to TLS public certificate  [string]
-  --tls-ca-cert                 Path to TLS CA certificate  [string]
+      --tls-key                 Path to TLS private key  [string]
+      --tls-passphrase          Password for the TLS private key  [string]
+      --tls-cert                Path to TLS public certificate  [string]
+      --tls-ca-cert             Path to TLS CA certificate  [string]
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 API options:
-  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
-  --pretty  Pretty-print output.  [boolean] [default: false]
+      --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+      --pretty  Pretty-print output.  [boolean] [default: false]
 
 Options:
-  --version  Show version number  [boolean]
-  --help     Show help  [boolean]
+      --version    Show version number  [boolean]
+      --skip-sync  Disable configuration synchronization for this command  [boolean] [default: false]
+      --help       Show help  [boolean]
 
 Perform a raw REST API call. The provided value is passed as-is to the REST API after building it with JSON.parse
 ```

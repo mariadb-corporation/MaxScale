@@ -478,6 +478,7 @@ static void sigfatal_handler(int i)
 
     mxb::dump_stacktrace(cb);
 
+    print_alert("%s\n", msg.c_str());
     MXS_ALERT("\n%s", msg.c_str());
 
     /* re-raise signal to enforce core dump */
@@ -733,6 +734,7 @@ static void print_message(const char* tag, int eno, const char* message)
             eno == 0 ? "" : ": ",
             eno == 0 ? "" : mxs_strerror(eno),
             eno == 0 ? "" : ".");
+    fflush(stderr);
 }
 
 /**

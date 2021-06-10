@@ -77,19 +77,11 @@ public:
         return global_result != 0;
     }
 
-    /**
-     * @brief copy_mariadb_logs copies MariaDB logs from backend
-     * @param repl Mariadb_nodes object
-     * @param prefix file name prefix
-     * @return 0 if success
-     */
-    int copy_mariadb_logs(MariaDBCluster* nrepl, const char* prefix, std::vector<std::thread>& threads);
-
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
     GaleraCluster*           galera {nullptr};      /**< Galera cluster */
     XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
-    Maxscales*               maxscale {nullptr};   /**< MaxScale */
-    Maxscales*               maxscale2 {nullptr};  /**< Second MaxScale */
+    Maxscales*               maxscale {nullptr};    /**< MaxScale */
+    Maxscales*               maxscale2 {nullptr};   /**< Second MaxScale */
 
     int& global_result;     /**< Result of test, 0 if PASSED */
     bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */
@@ -385,15 +377,11 @@ public:
     int  n_maxscales() const;
 
 private:
-    void copy_one_mariadb_log(MariaDBCluster* nrepl, int i, std::string filename);
-
     bool read_test_info();
-
     bool log_matches(const char* pattern);
 
     mxt::SharedData m_shared;   /**< Data shared with other objects */
 
-    std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
 
     StringSet   m_required_mdbci_labels;    /**< MDBCI-labels required by test. Subset of test labels. */
@@ -418,8 +406,8 @@ private:
     bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
     bool m_fix_clusters_after {false};  /**< Fix clusters after test? */
 
-    /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
-    bool m_no_backend_log_copy {false};
+    /* If false, logs from backends are not copied (needed with Aurora RDS backend or similar) */
+    bool m_backend_log_copy {true};
     bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
 
     int m_threads {4};      /**< Number of Maxscale threads */

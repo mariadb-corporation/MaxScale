@@ -705,9 +705,13 @@ HttpResponse cb_get_service_listener(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     std::string listener = request.uri_part(3);
     mxb_assert(service);
-    mxb_assert(service_has_named_listener(service, listener.c_str()));
 
-    return HttpResponse(MHD_HTTP_OK, service_listener_to_json(service, listener.c_str(), request.host()));
+    if (service_has_named_listener(service, listener.c_str()))
+    {
+        return HttpResponse(MHD_HTTP_OK, service_listener_to_json(service, listener.c_str(), request.host()));
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
 HttpResponse cb_get_all_listeners(const HttpRequest& request)
