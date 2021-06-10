@@ -542,7 +542,7 @@ public:
     };
 
     ComPacket(uint8_t* pBuffer)
-        : ComPacket(pBuffer, MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer))
+        : ComPacket(pBuffer, packet_len(pBuffer))
     {
     }
 
@@ -592,6 +592,11 @@ public:
     uint32_t packet_len() const
     {
         return MYSQL_HEADER_LEN + m_payload_len;
+    }
+
+    static uint32_t packet_len(uint8_t* pBuffer)
+    {
+        return MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer);
     }
 
     uint8_t packet_no() const

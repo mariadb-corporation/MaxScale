@@ -8,6 +8,7 @@
 // more or less on the spot in the Mongo code and used for fringe cases.
 
 NOSQL_ERROR(OK,                         0, "OK")
+NOSQL_ERROR(INTERNAL_ERROR,             1, "InternalError")
 NOSQL_ERROR(BAD_VALUE,                  2, "BadValue")
 NOSQL_ERROR(NO_SUCH_KEY,                4, "NoSuchKey")
 NOSQL_ERROR(FAILED_TO_PARSE,            9, "FailedToParse")

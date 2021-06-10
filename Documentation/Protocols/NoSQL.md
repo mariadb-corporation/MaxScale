@@ -176,6 +176,10 @@ Enumeration values:
      (the default) then all documents are inserted using a _single_ INSERT statement,
      that is, either all insertions succeed or none will.
 
+What combination of `ordered_insert_behavior` and `ordered` (in the command document)
+is used, has a big impact on the performance. Please see the discussion at
+[insert](#insert).
+
 ## `cursor_timeout`
 
    * Type: duration
@@ -556,7 +560,7 @@ documents | array | An array of one or more documents to be inserted to the name
 ordered | boolean | Optional, with default being `true`. See below for description.
 
 #### `ordered`
-The impact of `ordered` is dependent upon the value of `ordered_insert_behavior'.
+The impact of `ordered` is dependent upon the value of `ordered_insert_behavior`.
 
 ##### `default`
 In this case `ordered` has the same impact as in MongoDB®. That is, if the value
@@ -569,6 +573,19 @@ If `ordered` is `true`, then all documents will be inserted using a single
 INSERT command. That is, if the insertion of any document fails, for instance,
 due to a duplicate id, then no document will be inserted. If `ordered` is `false`,
 then the behavior is identical with that of `default`.
+
+#### Performance
+
+What combination of `ordered_insert_behavior` and `ordered` is used, has a
+big impact on the performance.
+
+`ordered_insert_behavior` | `ordered = true` | `ordered = false`
+--------------------------|------------------|------------------
+`default`                 | Each document is inserted using an individual `INSERT` statement and roundtrip. | All documents are inserted in a single multi-statement transaction containing as many `INSERT IGNORE` statements as there are documents.
+`atomic`                  | All documents are inserted using a single `INSERT` statement. | _Same as above_
+
+Of these, `atomic + true` is the fastest, followed by `atomic|default + false`
+being twice as slow and `default + true` being an order of magnitude slower.
 
 ### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
 

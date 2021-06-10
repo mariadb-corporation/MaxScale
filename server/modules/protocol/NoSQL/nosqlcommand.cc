@@ -476,8 +476,6 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
     // TODO: Map MariaDB errors to something sensible from
     // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
 
-    bsoncxx::builder::basic::array array_builder;
-
     bsoncxx::builder::basic::document error;
 
     interpret_error(error, err, index);

@@ -336,23 +336,12 @@ protected:
         Query(Kind kind,
               std::vector<std::string>&& statements)
             : m_kind(kind)
-            , m_statements(std::move(statements))
+            , m_single_statements(std::move(statements))
         {
         }
 
         Query(Query&& rhs) = default;
         Query& operator = (Query&&) = default;
-
-        void set(Kind kind, std::vector<std::string>&& statements)
-        {
-            m_kind = kind;
-            m_statements = std::move(statements);
-        }
-
-        void push_back(const std::string& statement)
-        {
-            m_statements.emplace_back(statement);
-        }
 
         Kind kind() const
         {
@@ -361,12 +350,47 @@ protected:
 
         const std::vector<std::string>& statements() const
         {
-            return m_statements;
+            if (m_kind == Query::SINGLE)
+            {
+                return m_single_statements;
+            }
+            else
+            {
+                return m_multi_statements;
+            }
+        }
+
+        const std::vector<std::string>& single_statements() const
+        {
+            return m_single_statements;
+        }
+
+        void set(Kind kind)
+        {
+            m_kind = kind;
+        }
+
+        void set(Kind kind, std::vector<std::string>&& statements)
+        {
+            m_kind = kind;
+            m_single_statements = std::move(statements);
+        }
+
+        void push_back(const std::string& statement)
+        {
+            m_single_statements.emplace_back(statement);
+        }
+
+        void set_multi_statement(const std::string& multi)
+        {
+            m_multi_statements.clear();
+            m_multi_statements.push_back(multi);
         }
 
     private:
         Kind                     m_kind;
-        std::vector<std::string> m_statements;
+        std::vector<std::string> m_single_statements;
+        std::vector<std::string> m_multi_statements;
     };
 
     virtual Query generate_sql() = 0;
