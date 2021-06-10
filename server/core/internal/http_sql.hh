@@ -34,6 +34,9 @@ HttpResponse disconnect(const HttpRequest& request);
 bool is_query(const std::string& id);
 bool is_connection(const std::string& id);
 
+void start_cleanup();
+void stop_cleanup();
+
 //
 // The functions that implement the connection creation and query execution
 //

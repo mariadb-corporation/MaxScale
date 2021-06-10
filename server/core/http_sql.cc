@@ -309,6 +309,17 @@ ThisUnit this_unit;
 
 namespace HttpSql
 {
+
+void start_cleanup()
+{
+    this_unit.manager.start_cleanup_thread();
+}
+
+void stop_cleanup()
+{
+    this_unit.manager.stop_cleanup_thread();
+}
+
 HttpResponse connect(const HttpRequest& request)
 {
     mxb::Json json(request.get_json());

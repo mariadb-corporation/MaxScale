@@ -32,7 +32,7 @@ class ConnectionManager
 public:
     ConnectionManager(const ConnectionManager&) = delete;
     ConnectionManager& operator=(const ConnectionManager&) = delete;
-    ConnectionManager();
+    ConnectionManager() = default;
     ~ConnectionManager();
 
     struct Connection
@@ -77,6 +77,9 @@ public:
     bool is_connection(int64_t conn_id) const;
 
     std::vector<int64_t> get_connections();
+
+    void start_cleanup_thread();
+    void stop_cleanup_thread();
 
 private:
     mutable std::mutex m_connection_lock;   /**< Protects access to connections map and next id */

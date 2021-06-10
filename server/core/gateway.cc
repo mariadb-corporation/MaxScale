@@ -72,6 +72,7 @@
 #include "internal/admin.hh"
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
+#include "internal/http_sql.hh"
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
@@ -2113,6 +2114,8 @@ int main(int argc, char** argv)
                 {
                     MXS_NOTICE("Started REST API on [%s]:%d",
                                cnf.admin_host.c_str(), (int)cnf.admin_port);
+                    // Start HttpSql cleanup thread.
+                    HttpSql::start_cleanup();
                 }
                 else
                 {

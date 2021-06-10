@@ -98,11 +98,6 @@ std::vector<int64_t> ConnectionManager::get_connections()
     return conns;
 }
 
-ConnectionManager::ConnectionManager()
-{
-    m_cleanup_thread = std::thread(&ConnectionManager::cleanup_thread_func, this);
-}
-
 void ConnectionManager::cleanup_thread_func()
 {
     // TODO: make configurable?
@@ -171,12 +166,27 @@ void ConnectionManager::cleanup_thread_func()
 
 ConnectionManager::~ConnectionManager()
 {
+    mxb_assert(!m_cleanup_thread.joinable());
+}
+
+void ConnectionManager::start_cleanup_thread()
+{
+    m_cleanup_thread = std::thread(&ConnectionManager::cleanup_thread_func, this);
+}
+
+void ConnectionManager::stop_cleanup_thread()
+{
     {
         LockGuard guard(m_connection_lock);
         m_keep_running = false;
     }
-    m_stop_running_notifier.notify_one();
-    m_cleanup_thread.join();
+
+    // The cleanup thread may not have been created if MaxScale start failed.
+    if (m_cleanup_thread.joinable())
+    {
+        m_stop_running_notifier.notify_one();
+        m_cleanup_thread.join();
+    }
 }
 
 ConnectionManager::Connection::~Connection()

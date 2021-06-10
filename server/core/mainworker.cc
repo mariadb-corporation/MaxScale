@@ -21,8 +21,9 @@
 #include <maxscale/config.hh>
 #include <maxscale/routingworker.hh>
 
-#include "internal/modules.hh"
 #include "internal/admin.hh"
+#include "internal/http_sql.hh"
+#include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/listener.hh"
 
@@ -303,7 +304,12 @@ void MainWorker::start_shutdown()
             // creation of new sessions. Stop the REST API to prevent any conflicting changes from being
             // executed while we're shutting down.
             MonitorManager::stop_all_monitors();
-            mxs_admin_shutdown();
+            if (mxs::Config::get().admin_enabled)
+            {
+                mxs_admin_shutdown();
+                // Stop cleanup-thread only after rest-api is shut down, so that no queries are active.
+                HttpSql::stop_cleanup();
+            }
             Listener::stop_all();
 
             // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
