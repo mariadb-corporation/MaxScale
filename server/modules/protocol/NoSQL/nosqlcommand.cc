@@ -664,10 +664,10 @@ void SingleCommand::diagnose(DocumentBuilder& doc)
 void MultiCommand::diagnose(DocumentBuilder& doc)
 {
     doc.append(kvp("kind", "multi"));
-    auto statements = generate_sql();
+    const auto& query = generate_sql();
 
     ArrayBuilder sql;
-    for (const auto& statement : statements)
+    for (const auto& statement : query.statements())
     {
         sql.append(statement);
     }

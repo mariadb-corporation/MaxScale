@@ -319,7 +319,57 @@ public:
     void diagnose(DocumentBuilder& doc) override;
 
 protected:
-    virtual std::vector<std::string> generate_sql() = 0;
+    class Query
+    {
+    public:
+        enum Kind
+        {
+            SINGLE, // Each statement in the vector must be executed individually.
+            MULTI   // The statements in the vector can be combined into a multi-statement.
+        };
+
+        Query(Kind kind = SINGLE)
+            : m_kind(kind)
+        {
+        }
+
+        Query(Kind kind,
+              std::vector<std::string>&& statements)
+            : m_kind(kind)
+            , m_statements(std::move(statements))
+        {
+        }
+
+        Query(Query&& rhs) = default;
+        Query& operator = (Query&&) = default;
+
+        void set(Kind kind, std::vector<std::string>&& statements)
+        {
+            m_kind = kind;
+            m_statements = std::move(statements);
+        }
+
+        void push_back(const std::string& statement)
+        {
+            m_statements.emplace_back(statement);
+        }
+
+        Kind kind() const
+        {
+            return m_kind;
+        }
+
+        const std::vector<std::string>& statements() const
+        {
+            return m_statements;
+        }
+
+    private:
+        Kind                     m_kind;
+        std::vector<std::string> m_statements;
+    };
+
+    virtual Query generate_sql() = 0;
 };
 
 

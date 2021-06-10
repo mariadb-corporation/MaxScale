@@ -44,17 +44,17 @@ public:
 public:
     GWBUF* execute() override final
     {
-        auto statements = generate_sql();
+        auto query = generate_sql();
 
         int i = 0;
-        for (const auto& statement : statements)
+        for (const auto& statement : query.statements())
         {
             check_maximum_sql_length(statement);
         }
 
-        m_statements = std::move(statements);
+        m_query = std::move(query);
 
-        m_it = m_statements.begin();
+        m_it = m_query.statements().begin();
 
         execute_one_statement();
 
@@ -92,7 +92,7 @@ public:
                         abort = true;
                     }
 
-                    add_error(m_write_errors, err, m_it - m_statements.begin());
+                    add_error(m_write_errors, err, m_it - m_query.statements().begin());
                 }
             }
             break;
@@ -106,7 +106,7 @@ public:
 
         State rv = BUSY;
 
-        if (m_it == m_statements.end() || abort)
+        if (m_it == m_query.statements().end() || abort)
         {
             DocumentBuilder doc;
 
@@ -140,9 +140,9 @@ protected:
         return false;
     }
 
-    vector<string> generate_sql() override final
+    Query generate_sql() override final
     {
-        vector<string> statements;
+        Query query;
 
         optional(key::ORDERED, &m_ordered);
 
@@ -153,7 +153,7 @@ protected:
             const auto& documents = it->second;
             check_write_batch_size(documents.size());
 
-            statements = generate_sql(documents);
+            query = generate_sql(documents);
         }
         else
         {
@@ -180,13 +180,13 @@ protected:
                 documents2.push_back(element.get_document());
             }
 
-            statements = generate_sql(documents2);
+            query = generate_sql(documents2);
         }
 
-        return statements;
+        return query;
     }
 
-    virtual vector<string> generate_sql(const vector<bsoncxx::document::view>& documents)
+    virtual Query generate_sql(const vector<bsoncxx::document::view>& documents)
     {
         vector<string> statements;
 
@@ -195,7 +195,7 @@ protected:
             statements.push_back(convert_document(doc));
         }
 
-        return statements;
+        return Query(Query::SINGLE, std::move(statements));
     }
 
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
@@ -208,15 +208,15 @@ protected:
 
     void execute_one_statement()
     {
-        mxb_assert(m_it != m_statements.end());
+        mxb_assert(m_it != m_query.statements().end());
 
         send_downstream(*m_it);
     }
 
     string                         m_key;
     bool                           m_ordered { true };
-    vector<string>                 m_statements;
-    vector<string>::iterator       m_it;
+    Query                          m_query;
+    vector<string>::const_iterator m_it;
     int32_t                        m_n { 0 };
     int32_t                        m_ok { 0 };
     bsoncxx::builder::basic::array m_write_errors;
@@ -857,15 +857,15 @@ protected:
             });
     }
 
-    vector<string> generate_sql(const vector<bsoncxx::document::view>& documents) override
+    Query generate_sql(const vector<bsoncxx::document::view>& documents) override
     {
-        vector<string> statements;
+        Query query(Query::SINGLE);
 
         auto oib = m_database.config().ordered_insert_behavior;
 
         if (oib == GlobalConfig::OrderedInsertBehavior::DEFAULT || m_ordered == false)
         {
-            statements = OrderedCommand::generate_sql(documents);
+            query = OrderedCommand::generate_sql(documents);
         }
         else
         {
@@ -887,10 +887,10 @@ protected:
                 sql << convert_document_data(doc);
             }
 
-            statements.push_back(sql.str());
+            query.push_back(sql.str());
         }
 
-        return statements;
+        return query;
     }
 
     string convert_document(const bsoncxx::document::view& doc) override
