@@ -14,7 +14,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->reset_timeout();
 
     Test->repl->connect();
 
@@ -41,9 +41,8 @@ int main(int argc, char* argv[])
         conn[i] = Test->maxscale->open_rwsplit_connection();
     }
     Test->tprintf("Waiting %d seconds\n", 2 * Test->repl->N);
-    Test->stop_timeout();
     sleep(2 * Test->repl->N);
-    Test->set_timeout(30);
+    Test->reset_timeout();
 
     int ConnFloor = floor((float)TestConnNum / (Test->repl->N - 1));
     int ConnCell = ceil((float)TestConnNum / (Test->repl->N - 1));
@@ -63,7 +62,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Checking connections to each node\n");
     for (int i = 1; i < Test->repl->N; i++)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         conn_num =
             get_conn_num(Test->repl->nodes[i],
                          Test->maxscale->ip(),

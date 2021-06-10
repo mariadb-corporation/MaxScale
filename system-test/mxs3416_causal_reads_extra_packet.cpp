@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 1000 && test.ok(); i++)
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         test.expect(conn.query("SET @a = 1"), "SET should work: %s", conn.error());
         auto res = conn.field("SELECT 2 as two");
         test.expect(res == "2", "Iteration %d: SELECT retured: %s",

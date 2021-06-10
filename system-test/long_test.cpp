@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     //IP = Test->repl->IP[0];
 
 
-    Test->set_timeout(60);
+    Test->reset_timeout();
     Test->tprintf("Set big maximums\n");
 
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 300000;");
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("...ok\n");
 
-    Test->set_timeout(60);
+    Test->reset_timeout();
     // Create threads
     Test->tprintf("Starting threads\n");
 
@@ -130,8 +130,6 @@ int main(int argc, char *argv[])
 
     Test->set_log_copy_interval(100);
 
-    Test->stop_timeout();
-
     char * env = getenv("long_test_time");
     int test_time = 0;
     if (env != NULL)
@@ -146,7 +144,7 @@ int main(int argc, char *argv[])
     Test->tprintf("´test_time´ is %d\n", test_time);
     sleep(test_time);
 
-    Test->set_timeout(180);
+    Test->reset_timeout();
 
     Test->tprintf("Stopping threads\n");
 

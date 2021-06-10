@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     test.maxscale->wait_for_monitor();
 
     running = false;
-    test.set_timeout(120);
+    test.reset_timeout();
     test.tprintf("Waiting for all threads to exit");
 
     for (auto&& a : threads)

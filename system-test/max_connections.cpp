@@ -16,7 +16,6 @@ int main(int argc, char** argv)
 {
     MYSQL* mysql[CONNECTIONS];
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->stop_timeout();
     Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
     sleep(5);
     int limit = 0;
@@ -24,20 +23,18 @@ int main(int argc, char** argv)
     for (int i = 0; i < CONNECTIONS - 1; i++)
     {
         Test->tprintf("Opening connection %d\n", i + 1);
-        Test->set_timeout(30);
+        Test->reset_timeout();
         mysql[i] = Test->maxscale->open_rwsplit_connection();
         if (execute_query_silent(mysql[i], "select 1"))
         {
             /** Monitors and such take up some connections so we'll set the
              * limit to the point where we know it'll start failing.*/
-            Test->stop_timeout();
             limit = i;
             mysql_close(mysql[limit]);
             mysql_close(mysql[limit - 1]);
             Test->tprintf("Found limit, %d connections\n", limit);
             break;
         }
-        Test->stop_timeout();
         sleep(1);
     }
 
@@ -46,7 +43,7 @@ int main(int argc, char** argv)
                   ITER);
     for (int i = 0; i < ITER; i++)
     {
-        Test->set_timeout(30);
+        Test->reset_timeout();
         mysql[limit - 1] = Test->maxscale->open_rwsplit_connection();
         mysql[limit] = Test->maxscale->open_rwsplit_connection();
         Test->add_result(execute_query_silent(mysql[limit - 1], "select 1"), "Query should succeed\n");
@@ -56,14 +53,13 @@ int main(int argc, char** argv)
         sleep(2);
     }
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     for (int i = 0; i < limit - 1; i++)
     {
         mysql_close(mysql[i]);
     }
 
     sleep(5);
-    Test->stop_timeout();
     Test->check_maxscale_alive();
     Test->repl->execute_query_all_nodes((char*) "set global max_connections = 100;");
     int rval = Test->global_result;

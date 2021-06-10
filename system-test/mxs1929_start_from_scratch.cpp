@@ -103,7 +103,7 @@ int main(int argc, char** argv)
     {
         for (const auto& cmd : commands)
         {
-            test.set_timeout(60);
+            test.reset_timeout();
             test.check_maxctrl(cmd);
         }
 
@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 
     for (auto& a : threads)
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         a.join();
     }
 

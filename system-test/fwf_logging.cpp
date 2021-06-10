@@ -15,7 +15,6 @@ int main(int argc, char** argv)
     char rules_dir[4096];
 
     TestConnections* test = new TestConnections(argc, argv);
-    test->stop_timeout();
 
     sprintf(rules_dir, "%s/fw/", mxt::SOURCE_DIR);
 
@@ -24,21 +23,20 @@ int main(int argc, char** argv)
     test->maxscale->copy_fw_rules("rules_logging", rules_dir);
 
     test->maxscale->start_maxscale();
-    test->set_timeout(20);
+    test->reset_timeout();
     test->maxscale->connect_maxscale();
 
     test->tprintf("trying first: 'select 1'\n");
-    test->set_timeout(20);
+    test->reset_timeout();
     test->add_result(execute_query_silent(test->maxscale->conn_slave, "select 1"),
                      "First query should succeed\n");
 
     test->tprintf("trying second: 'select 2'\n");
-    test->set_timeout(20);
+    test->reset_timeout();
     test->add_result(execute_query_silent(test->maxscale->conn_slave, "select 2"),
                      "Second query should succeed\n");
 
     /** Check that MaxScale is alive */
-    test->stop_timeout();
     test->maxscale->expect_running_status(true);
 
     /** Check that MaxScale was terminated successfully */

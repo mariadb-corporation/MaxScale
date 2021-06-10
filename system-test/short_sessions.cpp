@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     int iterations = 100;
 
     TestConnections test(argc, argv);
-    test.set_timeout(20);
+    test.reset_timeout();
     test.repl->connect();
 
     MYSQL* conn = test.maxscale->open_rwsplit_connection();
@@ -36,37 +36,37 @@ int main(int argc, char* argv[])
         char sql[100];
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
 
-        test.set_timeout(15);
+        test.reset_timeout();
         conn = test.maxscale->open_rwsplit_connection();
         execute_query(conn, "%s", sql);
         mysql_close(conn);
     }
 
-    test.set_timeout(20);
+    test.reset_timeout();
     test.add_result(test.maxscale->connect_maxscale(), "Failed to connect to MaxScale");
 
     test.tprintf("Checking t1 table using RWSplit router");
-    test.set_timeout(240);
+    test.reset_timeout();
     test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0],
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in master mode");
-    test.set_timeout(240);
+    test.reset_timeout();
     test.add_result(execute_select_query_and_check(test.maxscale->conn_master,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in slave mode");
-    test.set_timeout(240);
+    test.reset_timeout();
     test.add_result(execute_select_query_and_check(test.maxscale->conn_slave,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");
 
-    test.set_timeout(20);
+    test.reset_timeout();
     test.maxscale->close_maxscale_connections();
     test.check_maxscale_alive();
 

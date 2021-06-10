@@ -9,7 +9,7 @@
 
 void test_rwsplit(TestConnections& test)
 {
-    test.set_timeout(300);
+    test.reset_timeout();
     test.repl->connect();
     std::string master_id = test.repl->get_server_id_str(0);
     test.repl->disconnect();

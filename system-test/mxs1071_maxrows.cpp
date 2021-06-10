@@ -207,7 +207,7 @@ int compare_expected(TestConnections* Test, const char* sql, my_ulonglong exp_i,
     vector<my_ulonglong> rows(30);
     my_ulonglong i;
 
-    Test->set_timeout(90);
+    Test->reset_timeout();
     execute_query_num_of_rows(Test->maxscale->conn_rwsplit[0], sql, rows.data(), &i);
 
     Test->tprintf("Result sets number is %llu\n", i);
@@ -252,7 +252,7 @@ int compare_stmt_expected(TestConnections* Test,
     vector<my_ulonglong> rows(30);
     my_ulonglong i;
 
-    Test->set_timeout(90);
+    Test->reset_timeout();
     execute_stmt_num_of_rows(stmt, rows.data(), &i);
 
     Test->tprintf("Result sets number is %llu\n", i);
@@ -305,14 +305,13 @@ int main(int argc, char* argv[])
     MYSQL_STMT* stmt;
 
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(30);
+    Test->reset_timeout();
     Test->maxscale->connect_rwsplit();
     Test->try_query(Test->maxscale->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     Test->maxscale->connect_rwsplit();
 
     create_t1(Test->maxscale->conn_rwsplit[0]);
     insert_into_t1(Test->maxscale->conn_rwsplit[0], 1);
-    Test->stop_timeout();
     Test->repl->sync_slaves();
 
     Test->tprintf("**** Test 1 ****\n");
@@ -327,10 +326,9 @@ int main(int argc, char* argv[])
     exp_rows[0] = 10;
     compare_expected(Test, (char*) "select * from t1 limit 10", 1, exp_rows.data());
 
-    Test->set_timeout(60);
+    Test->reset_timeout();
     create_t1(Test->maxscale->conn_rwsplit[0]);
     insert_into_t1(Test->maxscale->conn_rwsplit[0], 3);
-    Test->stop_timeout();
     Test->repl->sync_slaves();
 
 
@@ -379,7 +377,6 @@ int main(int argc, char* argv[])
 
 
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    Test->stop_timeout();
     Test->repl->connect();
     // test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char *) "LONGBLOB", 512 * 1024 / sizeof(long
     // int), 17 * 2, 25);
@@ -557,7 +554,7 @@ int main(int argc, char* argv[])
     Test->maxscale->ssh_node(
         "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf",
         true);
-    Test->set_timeout(100);
+    Test->reset_timeout();
     Test->maxscale->restart_maxscale();
 
     Test->maxscale->connect_rwsplit();

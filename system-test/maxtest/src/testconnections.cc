@@ -263,7 +263,10 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         create_logdir_cmd += "/LOGS/" + m_shared.test_name;
         if (run_shell_command(create_logdir_cmd, "Failed to create logs directory."))
         {
-            m_timeout_thread = std::thread(&TestConnections::timeout_thread, this);
+            if (m_enable_timeout)
+            {
+                m_timeout_thread = std::thread(&TestConnections::timeout_thread_func, this);
+            }
             tprintf("Starting test");
             logger().reset_timer();
             rc = 0;
@@ -861,7 +864,7 @@ void TestConnections::init_maxscale(int m)
  */
 void TestConnections::copy_all_logs()
 {
-    set_timeout(300);
+    reset_timeout();
 
     string str = mxb::string_printf("mkdir -p %s/LOGS/%s", mxt::BUILD_DIR, m_shared.test_name.c_str());
     call_system(str);
@@ -1061,23 +1064,22 @@ bool TestConnections::stop_all_maxscales()
 int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
-    set_timeout(10);
+    reset_timeout();
     tprintf("Connecting to Maxscale\n");
     add_result(maxscale->connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
-    set_timeout(10);
+    reset_timeout();
     try_query(maxscale->conn_rwsplit[0], "show databases;");
     tprintf("ReadConn Master \n");
-    set_timeout(10);
+    reset_timeout();
     try_query(maxscale->conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
-    set_timeout(10);
+    reset_timeout();
     try_query(maxscale->conn_slave, "show databases;");
-    set_timeout(10);
+    reset_timeout();
     maxscale->close_maxscale_connections();
     add_result(global_result - gr, "Maxscale is not alive\n");
-    stop_timeout();
     my_maxscale(0)->expect_running_status(true);
 
     return global_result - gr;
@@ -1129,7 +1131,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     tprintf("Opening %d connections to each router\n", conn_N);
     for (i = 0; i < conn_N; i++)
     {
-        set_timeout(20);
+        reset_timeout();
 
         if (verbose)
         {
@@ -1196,7 +1198,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     }
     for (i = 0; i < conn_N; i++)
     {
-        set_timeout(20);
+        reset_timeout();
 
         if (verbose)
         {
@@ -1241,7 +1243,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
     tprintf("Closing all connections\n");
     for (i = 0; i < conn_N; i++)
     {
-        set_timeout(20);
+        reset_timeout();
         if (rwsplit_flag)
         {
             mysql_close(rwsplit_conn[i]);
@@ -1259,23 +1261,13 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
             mysql_close(galera_conn[i]);
         }
     }
-    stop_timeout();
 
     return local_result;
 }
 
-int TestConnections::set_timeout(long int timeout_seconds)
+void TestConnections::reset_timeout()
 {
-    if (m_enable_timeouts)
-    {
-        m_timeout = timeout_seconds;
-    }
-    return 0;
-}
-
-void TestConnections::set_test_timeout(std::chrono::seconds timeout)
-{
-    m_test_timeout = timeout;
+    m_reset_timeout = true;
 }
 
 void TestConnections::set_log_copy_interval(uint32_t interval_seconds)
@@ -1287,12 +1279,6 @@ void TestConnections::set_log_copy_interval(uint32_t interval_seconds)
     // Assume that log copy thread not yet created. Start it. Calling this function twice in a test
     // will crash.
     m_log_copy_thread = std::thread(&TestConnections::log_copy_thread_func, this);
-}
-
-int TestConnections::stop_timeout()
-{
-    m_timeout = 999999999;
-    return 0;
 }
 
 void TestConnections::tprintf(const char* format, ...)
@@ -1343,22 +1329,31 @@ int TestConnections::get_master_server_id()
     return master_id;
 }
 
-void TestConnections::timeout_thread()
+/**
+ * Thread which terminates test application if it seems stuck.
+ */
+void TestConnections::timeout_thread_func()
 {
-    using Clock = std::chrono::steady_clock;
-    auto start = Clock::now();
+    auto timeout_start = mxb::Clock::now();
+    auto timeout_limit = mxb::from_secs(300);
+    auto relax = std::memory_order_relaxed;
 
-    while (!m_stop_threads && m_timeout > 0 && Clock::now() - start < m_test_timeout)
+    while (!m_stop_threads.load(relax))
     {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        m_timeout--;
-    }
+        auto now = mxb::Clock::now();
+        if (m_reset_timeout.load(relax))
+        {
+            timeout_start = now;
+            m_reset_timeout = false;
+        }
 
-    if (!m_stop_threads)
-    {
-        copy_all_logs();
-        tprintf("\n **** Timeout! *** \n");
-        exit(250);
+        if (now - timeout_start > timeout_limit)
+        {
+            logger().add_failure("**** Timeout reached! Copying logs and exiting. ****");
+            copy_all_logs();
+            exit(250);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
 
@@ -1371,7 +1366,7 @@ void TestConnections::log_copy_thread_func()
     auto last_log_copy = mxb::Clock::now();
     auto interval = mxb::from_secs(m_log_copy_interval);
 
-    while (!m_stop_threads)
+    while (!m_stop_threads.load(std::memory_order_relaxed))
     {
         auto now = mxb::Clock::now();
         if (now - last_log_copy > interval)
@@ -1391,25 +1386,24 @@ int TestConnections::insert_select(int N)
     int result = 0;
 
     tprintf("Create t1\n");
-    set_timeout(30);
+    reset_timeout();
     create_t1(maxscale->conn_rwsplit[0]);
 
     tprintf("Insert data into t1\n");
-    set_timeout(N * 16 + 30);
+    reset_timeout();
     insert_into_t1(maxscale->conn_rwsplit[0], N);
-    stop_timeout();
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
-    set_timeout(30);
+    reset_timeout();
     result += select_from_t1(maxscale->conn_rwsplit[0], N);
 
     tprintf("SELECT: master\n");
-    set_timeout(30);
+    reset_timeout();
     result += select_from_t1(maxscale->conn_master, N);
 
     tprintf("SELECT: slave\n");
-    set_timeout(30);
+    reset_timeout();
     result += select_from_t1(maxscale->conn_slave, N);
 
     return result;
@@ -1421,7 +1415,7 @@ int TestConnections::use_db(char* db)
     char sql[100];
 
     sprintf(sql, "USE %s;", db);
-    set_timeout(20);
+    reset_timeout();
     tprintf("selecting DB '%s' for rwsplit\n", db);
     local_result += execute_query(maxscale->conn_rwsplit[0], "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
@@ -1443,11 +1437,10 @@ int TestConnections::check_t1_table(bool presence, char* db)
     int start_result = global_result;
 
     add_result(use_db(db), "use db failed\n");
-    stop_timeout();
     repl->sync_slaves();
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
-    set_timeout(30);
+    reset_timeout();
     int exists = check_if_t1_exists(maxscale->conn_rwsplit[0]);
 
     if (exists == presence)
@@ -1459,7 +1452,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
         add_result(1, "Table t1 is %s found in '%s' database using RWSplit\n", actual, db);
     }
 
-    set_timeout(30);
+    reset_timeout();
     exists = check_if_t1_exists(maxscale->conn_master);
 
     if (exists == presence)
@@ -1474,7 +1467,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
                    db);
     }
 
-    set_timeout(30);
+    reset_timeout();
     exists = check_if_t1_exists(maxscale->conn_slave);
 
     if (exists == presence)
@@ -1492,7 +1485,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
 
     for (int i = 0; i < repl->N; i++)
     {
-        set_timeout(30);
+        reset_timeout();
         exists = check_if_t1_exists(repl->nodes[i]);
         if (exists == presence)
         {
@@ -1507,8 +1500,6 @@ int TestConnections::check_t1_table(bool presence, char* db)
                        i);
         }
     }
-
-    stop_timeout();
 
     return global_result - start_result;
 }
@@ -1572,7 +1563,7 @@ bool TestConnections::test_bad_config(const string& config)
     process_template(*maxscale, config, "/tmp/");
 
     // Set the timeout to prevent hangs with configurations that work
-    set_timeout(20);
+    reset_timeout();
 
     int ssh_rc = maxscale->ssh_node_f(0,
                                       true,
@@ -1845,7 +1836,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             break;
 
         case 'z':
-            m_enable_timeouts = false;
+            m_enable_timeout = false;
             break;
 
         case 'l':

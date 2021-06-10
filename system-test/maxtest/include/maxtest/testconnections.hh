@@ -90,11 +90,6 @@ public:
     int  maxscale_ssl {false};  /**< Use SSL when connecting to MaxScale */
     bool backend_ssl {false};   /**< Add SSL-settings to backend server configurations */
 
-    long int m_timeout {999999999};             /**< Seconds until test termination, default never */
-
-    // The total test timeout, not affected by set_timeout calls
-    std::chrono::seconds m_test_timeout {450};
-
     /** Skip initial start of MaxScale */
     static void skip_maxscale_start(bool value);
 
@@ -175,17 +170,9 @@ public:
                            bool galera_flag);
 
     /**
-     * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
-     * @param timeout_seconds timeout time
-     * @return 0 if success
+     * Restarts timeout counter to delay test shutdown.
      */
-    int set_timeout(long int timeout_seconds);
-
-    /**
-     * @brief Set total timeout for the whole test
-     * @param total_timeout The timeout for the test
-     */
-    void set_test_timeout(std::chrono::seconds total_timeout);
+    void reset_timeout();
 
     /**
      * Set interval for periodic log copying. Can only be called once per test.
@@ -193,12 +180,6 @@ public:
      * @param interval_seconds interval in seconds
      */
     void set_log_copy_interval(uint32_t interval_seconds);
-
-    /**
-     * @brief stop_timeout stops timeout thread
-     * @return 0
-     */
-    int stop_timeout();
 
     /**
      * @brief printf with automatic timestamps
@@ -377,15 +358,13 @@ private:
     std::string m_target;               /**< Name of Maxscale repository in the CI */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
 
-
-    bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
-
     // Basic options read at startup. Some of these can be set both as env vars or on
     // the command line. If both, the value read from command line takes priority.
     bool m_init_maxscale {true};        /**< Is MaxScale initialized normally? */
     bool m_check_nodes {true};          /**< Check nodes when preparing for test? */
     bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
     bool m_fix_clusters_after {false};  /**< Fix clusters after test? */
+    bool m_enable_timeout {true};       /**< Is timeout enabled? */
 
     /* If false, logs from backends are not copied (needed with Aurora RDS backend or similar) */
     bool m_backend_log_copy {true};
@@ -394,6 +373,7 @@ private:
     int m_threads {4};      /**< Number of Maxscale threads */
 
     std::thread      m_timeout_thread;  /**< Timeout thread */
+    std::atomic_bool m_reset_timeout {false};
     std::thread      m_log_copy_thread; /**< Log copying thread */
     std::atomic_bool m_stop_threads {false};
 
@@ -430,11 +410,7 @@ private:
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();
-
-    /**
-     * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
-     */
-    void timeout_thread();
+    void timeout_thread_func();
     void log_copy_thread_func();
     void copy_all_logs();
     void copy_all_logs_periodic();

@@ -149,17 +149,16 @@ int main(int argc, char* argv[])
 
         test.tprintf("Connecting with running redis/memcached.");
 
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         Connection redis = connect(test, PORT_RWS_REDIS);
         Connection memcached = connect(test, PORT_RWS_MEMCACHED);
 
         // There has been 1 insert so we should get 1 in all cases. As redis and memcached
         // are running, the caches will be populated as well.
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         select(test, "none", none, 1);
         select(test, "redis", redis, 1);
         select(test, "memcached", memcached, 1);
-        test.stop_timeout();
 
         test.tprintf("Stopping redis/memcached.");
         stop_redis(test);
@@ -169,28 +168,26 @@ int main(int argc, char* argv[])
 
         // Using a short timeout at connect-time ensure that if the async connecting
         // does not work, we'll get a quick failure.
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         redis = connect(test, PORT_RWS_REDIS);
         memcached = connect(test, PORT_RWS_MEMCACHED);
 
         // There has still been only one insert, so in all cases we should get just one row.
         // As redis and memcached are not running, the result comes from the backend.
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         select(test, "none", none, 1);
         select(test, "redis", redis, 1);
         select(test, "memcached", memcached, 1);
-        test.stop_timeout();
 
         // Lets add another row.
         insert(test, none);
 
         // There has been two inserts, and as redis/memcached are stopped, we should
         // get two in all cases.
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         select(test, "none", none, 2);
         select(test, "redis", redis, 2);
         select(test, "memcached", memcached, 2);
-        test.stop_timeout();
 
         test.tprintf("Starting redis/memcached.");
         start_redis(test);
@@ -201,11 +198,10 @@ int main(int argc, char* argv[])
         // will be triggered by the fetching and hence the first result will be fetched from
         // the backend and possibly cached as well, if the connection to the cache is established
         // faster that what getting the result from the backend is.
-        test.set_timeout(TIMEOUT);
+        test.reset_timeout();
         select(test, "none", none, 2);
         select(test, "redis", redis, 2);
         select(test, "memcache", memcached, 2);
-        test.stop_timeout();
 
         // To make sure the result ends up in the cache, we select again after having slept
         // for a short while.

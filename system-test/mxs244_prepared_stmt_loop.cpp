@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     long unsigned iterations = (Test->smoke) ? 1000 : 25000;
     int r = (Test->smoke) ? 1 : 3;
 
-    Test->set_timeout(5);
+    Test->reset_timeout();
     Test->maxscale->connect_maxscale();
     MYSQL* router[3];
     router[0] = Test->maxscale->conn_rwsplit[0];
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         Test->tprintf("Trying simple prepared statements in the loop, router %d\n", ir);
         for (long unsigned i = 0; i < iterations; i++)
         {
-            Test->set_timeout(10);
+            Test->reset_timeout();
             Test->try_query(router[ir], (char*) "SET NAMES \"UTF8\"");
             Test->try_query(router[ir],
                             (char*) "PREPARE s1 FROM 'SHOW GLOBAL STATUS WHERE variable_name = ?'");
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->set_timeout(20);
+    Test->reset_timeout();
 
     Test->maxscale->close_maxscale_connections();
     Test->check_maxscale_alive();

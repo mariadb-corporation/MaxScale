@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     }
 
     test.tprintf("Waiting for all threads to finish\n");
-    test.set_timeout(60);
+    test.reset_timeout();
     running = 2;
 
     for (auto& t : threads)

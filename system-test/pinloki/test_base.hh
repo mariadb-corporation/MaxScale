@@ -70,7 +70,7 @@ protected:
     // the master, MaxScale and a slave. Only override if custom test setup is needed.
     virtual void setup()
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         test.expect(maxscale.connect(), "Pinloki connection should work: %s", maxscale.error());
         test.expect(master.connect(), "Master connection should work: %s", master.error());
         test.expect(slave.connect(), "Slave connection should work: %s", slave.error());
@@ -85,15 +85,14 @@ protected:
         maxscale.query("START SLAVE");
 
         // Sync MaxScale with the master
-        test.set_timeout(60);
+        test.reset_timeout();
         sync(master, maxscale);
 
         // Configure the slave to replicate from MaxScale and sync it
-        test.set_timeout(60);
+        test.reset_timeout();
         slave.query(change_master_sql(test.maxscale->ip(), test.maxscale->rwsplit_port));
         slave.query("START SLAVE");
         sync(maxscale, slave);
-        test.stop_timeout();
     }
 
 protected:
@@ -105,7 +104,7 @@ protected:
     // Syncs the `dest` connection with the `src` connection
     void sync(Connection& src, Connection& dest)
     {
-        test.set_timeout(130);
+        test.reset_timeout();
         auto gtid = src.field("SELECT @@gtid_current_pos");
         auto start_gtid = dest.field("SELECT @@gtid_current_pos");
         auto res = dest.field("SELECT MASTER_GTID_WAIT('" + gtid + "', 30)");

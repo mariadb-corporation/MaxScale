@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.set_timeout(120);
+    test.reset_timeout();
     test.repl->connect();
 
     // This makes sure the binlogs don't have anything else
@@ -35,9 +35,8 @@ int main(int argc, char* argv[])
     test.maxscale->start();
 
     /** Give avrorouter some time to process the events */
-    test.stop_timeout();
     sleep(10);
-    test.set_timeout(120);
+    test.reset_timeout();
 
     auto res = test.maxscale->ssh_output("maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro");
 
@@ -50,7 +49,7 @@ int main(int argc, char* argv[])
     for (std::string line; std::getline(iss, line);)
     {
         long long int x1, fl;
-        test.set_timeout(20);
+        test.reset_timeout();
         mxt::get_x_fl_from_json(line.c_str(), &x1, &fl);
 
         if (x1 != x1_exp || fl != fl_exp)
@@ -75,7 +74,6 @@ int main(int argc, char* argv[])
     }
 
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1");
-    test.stop_timeout();
 
     return test.global_result;
 }

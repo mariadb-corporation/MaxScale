@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 1000; i++)
     {
-        test.set_timeout(30);
+        test.reset_timeout();
         auto c = test.maxscale->rwsplit();
         c.set_credentials("wrong-user", "wrong-pw");
         test.expect(!c.connect(), "Connection should fail");

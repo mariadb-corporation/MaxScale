@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
         iterations = 1;
     }
     char str[1024];
-    Test->set_timeout(60);
+    Test->reset_timeout();
 
     MYSQL*& rc_master = Test->maxscale->conn_master;
     Test->maxscale->connect_maxscale();
@@ -91,11 +91,10 @@ int main(int argc, char* argv[])
     Test->tprintf("Create t1\n");
     create_t1(Test->maxscale->conn_rwsplit[0]);
     Test->tprintf("Insert data into t1\n");
-    Test->set_timeout(60);
+    Test->reset_timeout();
     insert_into_t1(Test->maxscale->conn_rwsplit[0], N);
-    Test->stop_timeout();
     Test->repl->sync_slaves();
-    Test->set_timeout(200);
+    Test->reset_timeout();
 
     auto sudo = Test->repl->access_sudo(0);
     sprintf(str, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp", sudo, sudo);
@@ -123,21 +122,19 @@ int main(int argc, char* argv[])
     srv[1] = rc_master;
     for (int i = 0; i < iterations; i++)
     {
-        Test->set_timeout(100);
+        Test->reset_timeout();
         Test->tprintf("Dropping t1 \n");
         Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP TABLE t1;");
-        Test->stop_timeout();
         Test->repl->sync_slaves();
 
-        Test->set_timeout(200);
+        Test->reset_timeout();
         Test->tprintf("Create t1\n");
         create_t1(Test->maxscale->conn_rwsplit[0]);
         Test->tprintf("Loading data to t1 from file\n");
         Test->try_query(srv[i], (char*) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
-        Test->stop_timeout();
         Test->repl->sync_slaves();
 
-        Test->set_timeout(100);
+        Test->reset_timeout();
         Test->tprintf("SELECT: rwsplitter\n");
         Test->add_result(select_from_t1(Test->maxscale->conn_rwsplit[0], N), "Wrong data in 't1'");
         Test->tprintf("SELECT: master\n");

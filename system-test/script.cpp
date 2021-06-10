@@ -39,7 +39,7 @@
 
 void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* expected_filename)
 {
-    Test->set_timeout(200);
+    Test->reset_timeout();
     auto homedir = Test->maxscale->access_homedir();
     Test->maxscale->ssh_node_f(0,
                                true,
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 {
     TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(100);
+    Test->reset_timeout();
 
     auto repl_ip0 = Test->repl->ip_private(0);
     auto repl_ip1 = Test->repl->ip_private(1);
@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
     sprintf(str, "%s/script_output_expected_galera", homedir);
     test_script_monitor(Test, Test->galera, str);
 
-    Test->set_timeout(200);
+    Test->reset_timeout();
 
     Test->tprintf("Making script non-executable");
     Test->maxscale->ssh_node_f(0, true, "chmod a-x %s/script/script.sh", homedir);

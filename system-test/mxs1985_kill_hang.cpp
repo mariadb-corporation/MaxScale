@@ -18,7 +18,6 @@ static atomic<bool> running {true};
 
 void mxs1985(TestConnections& test)
 {
-    test.stop_timeout();
     running = true;
     vector<thread> threads;
 
@@ -50,13 +49,12 @@ void mxs1985(TestConnections& test)
     running = false;
 
     // If MaxScale hangs, at least one thread will not return in time
-    test.set_timeout(30);
+    test.reset_timeout();
     for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
 }
 
 void mxs3251(TestConnections& test)
 {
-    test.stop_timeout();
     running = true;
     vector<thread> threads;
 
@@ -78,7 +76,7 @@ void mxs3251(TestConnections& test)
     running = false;
 
     // If MaxScale hangs, at least one thread will not return in time
-    test.set_timeout(30);
+    test.reset_timeout();
     for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
 }
 

@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 
 void test_main(TestConnections& test)
 {
-    test.set_timeout(300);
+    test.reset_timeout();
     test.add_result(test.create_connections(70, true, true, true, false),
                     "Error creating connections");
     if (test.ok())
@@ -57,8 +57,6 @@ void test_main(TestConnections& test)
     // Test pre-emptive pooling.
     if (test.ok())
     {
-        test.set_timeout(60);
-
         // First, check idle connection count. Restart MaxScale to get rid of any previously pooled
         // connections.
         auto& mxs = test.maxscale->maxscale_b();

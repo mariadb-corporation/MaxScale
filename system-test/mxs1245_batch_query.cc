@@ -8,25 +8,21 @@ void send_batch(TestConnections& test, MYSQL* mysql, int num_query, const std::s
 {
     for (int i = 0; i < num_query && test.ok(); i++)
     {
-        test.set_timeout(10);
+        test.reset_timeout();
         test.expect(mysql_send_query(mysql, query.c_str(), query.length()) == 0,
                     "Batch query failed for '%s': %s", query.c_str(), mysql_error(mysql));
     }
-
-    test.stop_timeout();
 }
 
 void read_results(TestConnections& test, MYSQL* mysql, int num_query)
 {
     for (int i = 0; i < num_query && test.ok(); i++)
     {
-        test.set_timeout(10);
+        test.reset_timeout();
         test.expect(mysql_read_query_result(mysql) == 0,
                     "Reading batch result failed: %s", mysql_error(mysql));
         mysql_free_result(mysql_use_result(mysql));
     }
-
-    test.stop_timeout();
 }
 
 void run_test(TestConnections& test, MYSQL* mysql, const std::string& query)
@@ -43,7 +39,7 @@ void test_master_failure(TestConnections& test, MYSQL* mysql)
 
     send_batch(test, mysql, NUM_QUERY, query);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(0);
@@ -51,9 +47,8 @@ void test_master_failure(TestConnections& test, MYSQL* mysql)
 
     for (int i = 0; i < NUM_QUERY && test.ok(); i++)
     {
-        test.set_timeout(10);
+        test.reset_timeout();
         mysql_read_query_result(mysql);
-        test.stop_timeout();
     }
 }
 
@@ -74,7 +69,7 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     // Give the server some time to execute the queries
     sleep(5);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor(2);
     test.repl->unblock_node(0);
@@ -87,8 +82,6 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     // Revert the configuration change and reconnect
     test.check_maxctrl("alter service RW-Split-Router transaction_replay false");
     test.maxscale->connect_rwsplit();
-
-    test.stop_timeout();
 }
 
 void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
@@ -121,8 +114,6 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
     // Revert the configuration change and reconnect
     test.check_maxctrl("alter service RW-Split-Router optimistic_trx false");
     test.maxscale->connect_rwsplit();
-
-    test.stop_timeout();
 }
 
 int main(int argc, char** argv)

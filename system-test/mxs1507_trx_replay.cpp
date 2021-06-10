@@ -241,7 +241,7 @@ int main(int argc, char** argv)
 
     for (auto& a : tests)
     {
-        test.set_timeout(90);
+        test.reset_timeout();
         test.tprintf("%d: %s", i++, a.description.c_str());
 
         test.maxscale->connect_rwsplit();

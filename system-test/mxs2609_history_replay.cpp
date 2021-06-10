@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     test.log_printf("Block the master, wait for 5 second and then block it again");
     block(0);
 
-    test.set_timeout(90);
+    test.reset_timeout();
 
     std::thread([&]() {
                     sleep(5);
@@ -46,7 +46,6 @@ int main(int argc, char** argv)
 
     test.expect(conn.query("SELECT @@last_insert_id"), "Query should work: %s", conn.error());
 
-    test.stop_timeout();
     conn.disconnect();
 
     test.log_printf("Test 2: Exceed history limit and trigger a master reconnection");

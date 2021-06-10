@@ -9,7 +9,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->reset_timeout();
     Test->repl->connect();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip());

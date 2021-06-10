@@ -24,16 +24,15 @@ int main(int argc, char* argv[])
     Test->try_query(Test->maxscale->conn_rwsplit[0], "BEGIN");
     for (int i = 0; i < 2000; i++)
     {
-        Test->set_timeout(20);
+        Test->reset_timeout();
         create_insert_string(sql, 100, i);
         Test->try_query(Test->maxscale->conn_rwsplit[0], "%s", sql);
     }
     Test->try_query(Test->maxscale->conn_rwsplit[0], "COMMIT");
 
     Test->tprintf("done, syncing slaves");
-    Test->stop_timeout();
     Test->tprintf("Trying SELECT");
-    Test->set_timeout(60);
+    Test->reset_timeout();
     Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "SELECT * FROM t1");
 
     Test->check_maxscale_alive();

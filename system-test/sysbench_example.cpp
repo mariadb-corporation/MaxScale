@@ -25,10 +25,8 @@ int main(int argc, char* argv[])
     sprintf(&sys1[0], SYSBENCH_PREPARE_SHORT, mxs_ip);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
-    Test->set_timeout(10000);
+    Test->reset_timeout();
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
-
-    Test->stop_timeout();
 
     sprintf(&sys1[0], SYSBENCH_COMMAND_SHORT, mxs_ip, Test->maxscale->rwsplit_port);
     Test->set_log_copy_interval(300);

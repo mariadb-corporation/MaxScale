@@ -58,7 +58,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(30);
+    test.reset_timeout();
     MYSQL* conn_found_rows;
     my_ulonglong rows;
 
@@ -74,14 +74,14 @@ int main(int argc, char* argv[])
                                          CLIENT_FOUND_ROWS,
                                          test.maxscale_ssl);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
     execute_query(test.maxscale->conn_rwsplit[0],
                   "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
     execute_query(test.maxscale->conn_rwsplit[0],
                   "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
-    test.set_timeout(30);
+    test.reset_timeout();
     execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Affected rows is not 2\n");
     }
 
-    test.set_timeout(30);
+    test.reset_timeout();
     execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
         test.add_result(1, "Affected rows is not 0\n");
     }
 
-    test.set_timeout(30);
+    test.reset_timeout();
     execute_query_affected_rows(conn_found_rows, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
     test.tprintf("update #3: %ld  (expeced value is 2)\n", (long) rows);
     if (rows != 2)

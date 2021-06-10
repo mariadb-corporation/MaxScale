@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto maxctrl = [&](string cmd, bool print = true) {
-            test.set_timeout(60);
+            test.reset_timeout();
             auto rv = test.maxscale->ssh_output("maxctrl " + cmd);
 
             if (rv.rc != 0 && print)
@@ -57,9 +57,8 @@ int main(int argc, char** argv)
     maxctrl("destroy listener svc1 listener1");
     test.expect(maxctrl("destroy service svc1"), "Destroying valid service should work");
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.expect(!c1.connect(), "Connection should be rejected");
-    test.stop_timeout();
 
     cout << "Create the same service again and check that it still works" << endl;
 
@@ -101,7 +100,7 @@ int main(int argc, char** argv)
     // is opened before the old one is closed
     sleep(1);
 
-    test.set_timeout(60);
+    test.reset_timeout();
 
     // Disconnect the original connection and try to reconnect
     c1.disconnect();
@@ -110,8 +109,6 @@ int main(int argc, char** argv)
     // The connection should be rejected once the last connection is closed. If
     // it doesn't, we hit the test timeout before the connection timeout.
     t.join();
-
-    test.stop_timeout();
 
     return test.global_result;
 }

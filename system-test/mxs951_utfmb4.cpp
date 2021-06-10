@@ -19,7 +19,6 @@ using std::string;
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.stop_timeout();
     test.maxscale->stop_and_check_stopped();
 
     auto repl = test.repl;
@@ -43,13 +42,12 @@ int main(int argc, char* argv[])
     test.tprintf("Set names to utf8mb4 for backend");
     repl->execute_query_all_nodes("SET NAMES 'utf8mb4';");
 
-    test.set_timeout(120);
+    test.reset_timeout();
 
     test.tprintf("Restart Maxscale");
     test.maxscale->restart_maxscale();
     test.check_maxscale_alive();
 
-    test.stop_timeout();
     test.tprintf("Restore backend configuration\n");
 
     for (int i = 0; i < N; i++)

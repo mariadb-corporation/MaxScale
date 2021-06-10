@@ -101,7 +101,6 @@ bool cdc_com(TestConnections* Test)
         return false;
     }
 
-    Test->stop_timeout();
     int epfd = epoll_create(1);
     static struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP;
@@ -121,7 +120,7 @@ bool cdc_com(TestConnections* Test)
 
     while (inserted_val < max_inserted_val)
     {
-        Test->set_timeout(60);
+        Test->reset_timeout();
         // wait for something to do...
         Test->tprintf("epoll_wait");
         int nfds = epoll_wait(epfd, &events[0], 1, -1);
@@ -185,7 +184,7 @@ int main(int argc, char* argv[])
     TestConnections::skip_maxscale_start(true);
     Test = new TestConnections(argc, argv);
 
-    Test->set_timeout(60);
+    Test->reset_timeout();
     Test->repl->connect();
     Test->try_query(Test->repl->nodes[0], "RESET MASTER");
     create_t1(Test->repl->nodes[0]);
@@ -194,10 +193,9 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Waiting for binlogs to be processed...");
     Test->maxscale->start();
-    Test->stop_timeout();
     sleep(10);
 
-    Test->set_timeout(120);
+    Test->reset_timeout();
 
     pthread_t thread;
     pthread_create(&thread, NULL, query_thread, NULL);

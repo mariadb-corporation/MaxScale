@@ -41,7 +41,7 @@ void run_test(TestConnections& test, TestCase test_case)
 
     Bind bind;
 
-    test.set_timeout(30);
+    test.reset_timeout();
 
     if (mysql_stmt_prepare(stmt, query.c_str(), query.size()))
     {

@@ -38,7 +38,7 @@ void test_logins(TestConnections& test, bool expect_success);
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(60);
+    test.reset_timeout();
 
     test.repl->connect();
 

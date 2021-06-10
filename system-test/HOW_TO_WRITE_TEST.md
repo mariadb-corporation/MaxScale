@@ -83,12 +83,11 @@ Please check Doxygen comments for details
 * initialize internal structures
 
 #### Timeout functions
-
-int set_timeout(int timeout_seconds)
-stop_timeout()
-
-If after set_timeout() a new call of set_timeout() or stop_timeout() is not done the test execution terminated,
-logs from Maxscale are copied to host.
+```
+int reset_timeout(int timeout_seconds)
+```
+If a test does not call `reset_timeout()` within five minutes, the system
+assumes the test is stuck and terminates it.
 
 #### Open connection functions
 |Function|Short description|

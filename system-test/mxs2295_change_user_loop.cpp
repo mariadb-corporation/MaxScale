@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
             test.tprintf("Iteration: %d", i);
         }
 
-        test.set_timeout(60);
+        test.reset_timeout();
 
         // Interleaved session commands, reads and "writes" (`SELECT @@last_insert_id` is treated as a
         // master-only read)
@@ -64,7 +64,6 @@ int main(int argc, char* argv[])
 
     // Wait for the slaves to complete the session commands
     test.tprintf("Waiting for slaves to complete session commands");
-    test.stop_timeout();
     sleep(5);
 
     auto slave_response = conn.field("SELECT @a", 0);

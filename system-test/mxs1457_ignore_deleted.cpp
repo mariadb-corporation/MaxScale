@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE USER 'auth_test'@'%%' IDENTIFIED BY 'test'");
     execute_query(test.repl->nodes[0], "GRANT ALL ON *.* to 'auth_test'@'%%'");
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "DROP USER 'auth_test'@'%%'");
     test.repl->close_connections();
 
-    test.set_timeout(60);
+    test.reset_timeout();
     MYSQL* conn = open_conn_db(test.maxscale->rwsplit_port,
                                test.maxscale->ip(),
                                "test",
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     test.try_query(conn, "SELECT 1");
     mysql_close(conn);
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.repl->connect();
     execute_query(test.repl->nodes[1], "START SLAVE");
     execute_query(test.repl->nodes[2], "START SLAVE");

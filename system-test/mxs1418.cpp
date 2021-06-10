@@ -12,7 +12,7 @@ void* thr(void* data)
 
     while (running && test->global_result == 0)
     {
-        test->set_timeout(60);
+        test->reset_timeout();
         if (test->try_query(test->maxscale->conn_rwsplit[0], "SELECT 1"))
         {
             test->tprintf("Failed to select via readwritesplit");
@@ -26,8 +26,6 @@ void* thr(void* data)
             test->tprintf("Failed to select via readconnroute slave");
         }
     }
-
-    test->stop_timeout();
 
     return NULL;
 }

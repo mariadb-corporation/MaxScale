@@ -39,9 +39,8 @@ int main(int argc, char** argv)
 
     test.tprintf("Execute a query that is routed to a slave with a session command history");
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.expect(conn.query("SELECT 1"), "Query should work: %s", conn.error());
-    test.stop_timeout();
 
     test.tprintf("Cleanup");
 

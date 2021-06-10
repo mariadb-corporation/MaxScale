@@ -19,13 +19,13 @@ int main(int argc, char* argv[])
 {
     int i;
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->reset_timeout();
     Test->maxscale->connect_maxscale();
 
     Test->tprintf("Create /tmp/t1.csv on all backend nodes\n");
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->repl->ssh_node(i, (char*) "touch /tmp/t1.csv", true);
     }
 
@@ -44,11 +44,11 @@ int main(int argc, char* argv[])
     Test->tprintf("Remove /tmp/t1.csv from all backend nodes\n");
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->repl->ssh_node(i, (char*) "rm -rf /tmp/t1.csv", true);
     }
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     sleep(5);
 
     int rval = Test->global_result;

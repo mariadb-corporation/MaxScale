@@ -20,10 +20,9 @@ int main(int argc, char* argv[])
                         test.repl->unblock_node(0);
                     });
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.tprintf("SELECT SLEEP(10)");
     test.try_query(test.maxscale->conn_rwsplit[0], "SELECT SLEEP(10)");
-    test.stop_timeout();
 
     test.tprintf("disconnect");
     test.maxscale->disconnect();

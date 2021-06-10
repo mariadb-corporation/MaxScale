@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 {
 
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->reset_timeout();
     long int q;
     int threads_num = 25;
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
 
     Test->tprintf("Creating query load with %d threads...\n", threads_num);
-    Test->set_timeout(1200);
+    Test->reset_timeout();
     load(&new_inserts[0],
          &new_selects[0],
          &selects[0],

@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < 50 && test.ok(); i++)
     {
-        test.set_timeout(60);
+        test.reset_timeout();
         conn.connect();
         test.expect(conn.query("INSERT INTO test.t1 VALUES ('" + data + "')"),
                     "INSERT should work: %s", conn.error());
@@ -42,8 +42,6 @@ int main(int argc, char** argv)
         conn.disconnect();
 
     }
-
-    test.stop_timeout();
 
     conn.connect();
     test.expect(conn.query("DROP TABLE test.t1"),

@@ -11,7 +11,7 @@
 
 void run_test(TestConnections& test, size_t size, int chunks)
 {
-    test.set_timeout(600);
+    test.reset_timeout();
     const char* insert_stmt = "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
     MYSQL* conn = test.maxscale->conn_rwsplit[0];
     MYSQL_STMT* stmt = mysql_stmt_init(conn);
@@ -39,10 +39,9 @@ void run_test(TestConnections& test, size_t size, int chunks)
                         mysql_stmt_error(stmt));
     }
 
-    test.set_timeout(600);
+    test.reset_timeout();
     test.add_result(mysql_stmt_execute(stmt), "Execute failed: %s", mysql_stmt_error(stmt));
 
-    test.stop_timeout();
     sleep(5);
     test.check_current_operations(0);
     test.add_result(mysql_stmt_close(stmt), "Closing statement failed: %s", mysql_stmt_error(stmt));

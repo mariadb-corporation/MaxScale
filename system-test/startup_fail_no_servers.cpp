@@ -18,12 +18,12 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->tprintf("Setup firewall to block mysql on node %d\n", i);
         Test->repl->block_node(i);
     }
 
-    Test->set_timeout(200);
+    Test->reset_timeout();
     Test->tprintf("Restarting MaxScale");
     Test->maxscale->restart_maxscale();
 
@@ -32,14 +32,14 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->tprintf("Setup firewall back to allow mysql on node %d\n", i);
         Test->repl->unblock_node(i);
     }
 
     sleep(3);
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     Test->check_maxscale_alive();
 
     int rval = Test->global_result;

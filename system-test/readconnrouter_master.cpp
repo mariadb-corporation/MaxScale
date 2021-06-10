@@ -7,7 +7,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(25 * test.repl->N);
+    test.reset_timeout();
 
     test.repl->connect();
     test.tprintf("Connecting to ReadConnnRouter in 'master' mode");
@@ -18,13 +18,12 @@ int main(int argc, char* argv[])
     test.maxscale->close_readconn_master();
 
     test.tprintf("Changing master to node 1");
-    test.set_timeout(20 * test.repl->N);
+    test.reset_timeout();
     test.repl->change_master(1, 0);
-    test.stop_timeout();
     test.maxscale->wait_for_monitor();
 
     test.tprintf("Connecting to ReadConnnRouter in 'master' mode");
-    test.set_timeout(20  * test.repl->N);
+    test.reset_timeout();
     test.maxscale->connect_readconn_master();
     master = get_row(test.repl->nodes[1], "SELECT @@server_id");
     maxscale = get_row(test.maxscale->conn_master, "SELECT @@server_id");

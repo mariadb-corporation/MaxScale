@@ -27,10 +27,9 @@ int main(int argc, char** argv)
                   "UPDATE test.test1 SET some_id = 35, `desc` = NULL, some_date = NULL WHERE test1_id = 2;");
 
     /** Give avrorouter some time to process the events */
-    test.stop_timeout();
     test.maxscale->start();
     sleep(10);
-    test.set_timeout(120);
+    test.reset_timeout();
 
     CDC::Connection conn(test.maxscale->ip4(), 4001, "skysql", "skysql");
 

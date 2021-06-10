@@ -46,7 +46,7 @@ void test_binary_protocol(TestConnections& test, MYSQL* conn)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(30);
+    test.reset_timeout();
     test.repl->execute_query_all_nodes("STOP SLAVE");
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS shard_db");
     test.repl->execute_query_all_nodes("CREATE DATABASE shard_db");
@@ -77,8 +77,6 @@ int main(int argc, char* argv[])
 
     test.tprintf("Running binary protocol test");
     test_binary_protocol(test, conn);
-
-    test.stop_timeout();
 
     test.maxscale->close_maxscale_connections();
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS shard_db");

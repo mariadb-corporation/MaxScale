@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.maxscale->connect();
 
     test.tprintf("MXS-2490: PS direct execution");

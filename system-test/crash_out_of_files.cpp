@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
 
-    Test->set_timeout(20);
+    Test->reset_timeout();
     Test->repl->execute_query_all_nodes((char*) "set global max_connections = 20;");
 
     long int i1, i2;
@@ -22,11 +22,11 @@ int main(int argc, char* argv[])
     long int new_inserts[256];
 
     Test->tprintf("Start load\n");
-    Test->set_timeout(1200);
+    Test->reset_timeout();
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, false, false);
 
     Test->tprintf("restoring nodes\n");
-    Test->set_timeout(60);
+    Test->reset_timeout();
     Test->repl->connect();
 
     for (int i = 0; i < Test->repl->N; i++)
@@ -42,7 +42,6 @@ int main(int argc, char* argv[])
     }
 
     Test->repl->close_connections();
-    Test->stop_timeout();
 
     Test->log_excludes("Refresh rate limit exceeded");
     Test->check_maxscale_alive();

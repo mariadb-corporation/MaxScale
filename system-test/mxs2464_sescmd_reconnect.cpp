@@ -18,10 +18,9 @@ void run_test(TestConnections& test, const char* query)
                         test.repl->unblock_node(0);
                     });
 
-    test.set_timeout(60);
+    test.reset_timeout();
     test.tprintf("%s", query);
     test.try_query(test.maxscale->conn_rwsplit[0], "%s", query);
-    test.stop_timeout();
 
     test.tprintf("disconnect");
     test.maxscale->disconnect();

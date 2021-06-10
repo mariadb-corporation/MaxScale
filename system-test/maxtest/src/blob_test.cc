@@ -61,7 +61,7 @@ int test_longblob(TestConnections* Test,
             {
                 data[j] = j + i * size;
             }
-            Test->set_timeout(300);
+            Test->reset_timeout();
             Test->tprintf("Chunk #%d\n", i);
             if (mysql_stmt_send_long_data(stmt, 0, (char*) data, size * sizeof(unsigned long)) != 0)
             {
@@ -77,7 +77,7 @@ int test_longblob(TestConnections* Test,
         // for (int k = 0; k < rows; k++)
         // {
         Test->tprintf("Executing statement: %02d\n", k);
-        Test->set_timeout(3000);
+        Test->reset_timeout();
         Test->add_result(mysql_stmt_execute(stmt),
                          "INSERT Statement with %s failed, error is %s\n",
                          blob_name,

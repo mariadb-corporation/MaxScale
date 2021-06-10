@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(30);
+    test.reset_timeout();
 
     uint32_t caps = 1 | 8 | 512;
     uint32_t max_packet = 65535;

@@ -151,7 +151,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->reset_timeout();
 
     Test->repl->connect();
     Test->add_result(Test->maxscale->connect_maxscale(), "Failed to connect to MaxScale\n");
@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
         {
             if (j != 1)
             {
-                Test->set_timeout(5);
+                Test->reset_timeout();
                 sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j + 1);
 
                 find_field(Test->maxscale->conn_rwsplit[0], hint_sql, (char*) "@@server_id", &server_id[0]);
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->set_timeout(10);
+    Test->reset_timeout();
 
     Test->maxscale->close_maxscale_connections();
     Test->repl->close_connections();

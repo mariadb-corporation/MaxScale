@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 
     test.maxscale->connect_maxscale();
 
-    test.set_timeout(20);
+    test.reset_timeout();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
     const char* write_query = "SELECT @@server_id, @@last_insert_id";

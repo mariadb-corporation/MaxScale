@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < iterations; i++)
     {
 
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->tprintf("Connection to backend\n");
         Test->repl->connect();
         Test->tprintf("Connection to Maxscale\n");
@@ -81,10 +81,10 @@ int main(int argc, char* argv[])
         Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP TABLE t1");
         Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
         Test->try_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE test1;");
-        Test->set_timeout(10 * Test->repl->N);
+        Test->reset_timeout();
         Test->repl->sync_slaves();
 
-        Test->set_timeout(30);
+        Test->reset_timeout();
         Test->tprintf("Testing with database 'test1'\n");
         Test->add_result(Test->use_db((char*)"test1"), "use_db failed\n");
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");
@@ -104,7 +104,6 @@ int main(int argc, char* argv[])
         Test->repl->close_connections();
     }
 
-    Test->stop_timeout();
     Test->log_excludes("Length (0) is 0");
     Test->log_excludes("Unable to parse query");
     Test->log_excludes("query string allocation failed");

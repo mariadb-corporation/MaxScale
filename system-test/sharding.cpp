@@ -39,7 +39,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(30);
+    test.reset_timeout();
     const char opening_fmt[] = "Opening connection to sharding router using user '%s', "
                                "password '%s' and db '%s'.\n";
     const char common_db[] = "common_db"; // This db will be on all backends.
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
     test.repl->execute_query_all_nodes("STOP SLAVE");
     test.repl->connect();
-    test.set_timeout(30);
+    test.reset_timeout();
 
     // On every node...
     for (int i = 0; i < N; i++)
@@ -101,7 +101,6 @@ int main(int argc, char* argv[])
     test.tprintf("%s", "----------\n");
 
     test.repl->close_connections();
-    test.stop_timeout();
     sleep(6); // The router is configured to refresh the shard map if older than 5 seconds.
     auto mxs_ip = test.maxscale->ip4();
 
@@ -170,7 +169,6 @@ int main(int argc, char* argv[])
         test.tprintf("Connections succeeded.");
     }
 
-    test.stop_timeout();
     test.log_excludes("Length (0) is 0");
     test.log_excludes("Unable to parse query");
     test.log_excludes("query string allocation failed");

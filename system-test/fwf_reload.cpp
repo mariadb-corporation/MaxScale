@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     {
         char str[1024];
         sprintf(str, "rules%d", i);
-        Test->set_timeout(180);
+        Test->reset_timeout();
         mxs->copy_fw_rules(str, rules_dir);
         Test->maxctrl("call command dbfwfilter rules/reload Database-Firewall");
 
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
             while (!feof(file))
             {
-                Test->set_timeout(180);
+                Test->reset_timeout();
 
                 if (execute_query_from_file(Test->maxscale->conn_rwsplit[0], file) == 1)
                 {
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 
             while (!feof(file))
             {
-                Test->set_timeout(180);
+                Test->reset_timeout();
 
                 int rc = execute_query_from_file(Test->maxscale->conn_rwsplit[0], file);
 

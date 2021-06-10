@@ -14,27 +14,26 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->reset_timeout();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale->ip4());
     Test->maxscale->connect_rwsplit();
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0);
 
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    Test->set_timeout(30);
+    Test->reset_timeout();
     execute_query(Test->maxscale->conn_rwsplit[0], (char*) "show processlist;");
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0);
 
-    Test->stop_timeout();
     Test->maxscale->wait_for_monitor();
 
-    Test->set_timeout(30);
+    Test->reset_timeout();
     Test->tprintf("Reconnecting and trying query to RWSplit\n");
     Test->maxscale->connect_rwsplit();
     Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "show processlist;");

@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     char* sqlstr = (char*)malloc(sqlsize);
     gen_select_sqlstr(sqlstr, strsize, sqlsize);
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.maxscale->connect();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);

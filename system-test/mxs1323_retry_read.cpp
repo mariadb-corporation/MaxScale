@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     std::string slave = test.repl->get_server_id_str(1);
     test.repl->close_connections();
 
-    test.set_timeout(60);
+    test.reset_timeout();
     std::string res = do_query(test);
     test.add_result(res != slave, "The slave should respond to the first query: %s", res.c_str());
 

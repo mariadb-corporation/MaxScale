@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
     for (i = 1; i < N + 1; i++)
     {
-        Test->set_timeout(180);
+        Test->reset_timeout();
         local_result = 0;
 
         sprintf(str, "rules%d", i);
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
             }
             while (fgets(sql, sizeof(sql), file))
             {
-                Test->set_timeout(180);
+                Test->reset_timeout();
                 if (strlen(sql) > 1)
                 {
                     if (verbose)
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    Test->set_timeout(180);
+    Test->reset_timeout();
 
     // Test for at_times clause
     if (verbose)
@@ -171,9 +171,8 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Waiting 30 seconds and trying 'DELETE FROM t1', expecting OK");
 
-    Test->stop_timeout();
     sleep(30);
-    Test->set_timeout(180);
+    Test->reset_timeout();
     Test->try_query(Test->maxscale->conn_rwsplit[0], "DELETE FROM t1");
 
     Test->maxscale->stop();
@@ -217,7 +216,7 @@ int main(int argc, char* argv[])
         Test->add_result(1, "Queries were blocked during wrong time");
     }
 
-    Test->set_timeout(180);
+    Test->reset_timeout();
     Test->tprintf("Trying 12 quries, 1 query / second");
     for (i = 0; i < 12; i++)
     {

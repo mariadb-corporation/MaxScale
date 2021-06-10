@@ -92,8 +92,6 @@ int main(int argc, char* argv[])
         pthread_join(thr[i], NULL);
     }
 
-    Test->stop_timeout();
-
     Test->check_maxscale_alive();
     Test->check_current_operations(0);
 

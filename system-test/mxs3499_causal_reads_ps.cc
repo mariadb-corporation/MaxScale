@@ -20,11 +20,11 @@ void test_one_stmt(TestConnections& test, Connection& conn, MYSQL_STMT* stmt, in
     param[1].buffer_type = MYSQL_TYPE_LONG;
     param[1].is_null = &isnull[1];
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.expect(conn.query("INSERT INTO test.t1 VALUES (" + std::to_string(i) + ", repeat('a', 10000))"),
                 "Failed to insert: %s", conn.error());
 
-    test.set_timeout(30);
+    test.reset_timeout();
     test.expect(mysql_stmt_execute(stmt) == 0, "Execute failed: %s", mysql_stmt_error(stmt));
     mysql_stmt_bind_result(stmt, param.data());
 
@@ -34,7 +34,6 @@ void test_one_stmt(TestConnections& test, Connection& conn, MYSQL_STMT* stmt, in
 
     test.expect(mysql_stmt_fetch(stmt) == MYSQL_NO_DATA, "Fetch returned too many rows");
     test.expect(!mysql_stmt_more_results(stmt), "Got more than one result");
-    test.stop_timeout();
 }
 
 void run_test(TestConnections& test)
