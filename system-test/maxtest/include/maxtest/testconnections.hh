@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <set>
 #include <string>
 #include <vector>
@@ -90,8 +91,6 @@ public:
     bool backend_ssl {false};   /**< Add SSL-settings to backend server configurations */
 
     long int m_timeout {999999999};             /**< Seconds until test termination, default never */
-    long int m_log_copy_interval {999999999};   /**< Seconds between log copies, default never */
-    long int m_log_copy_to_go {999999999};      /**< Seconds until next log copy */
 
     // The total test timeout, not affected by set_timeout calls
     std::chrono::seconds m_test_timeout {450};
@@ -148,24 +147,6 @@ public:
     int start_mm();
 
     /**
-     * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
-     */
-    int copy_all_logs();
-
-    /**
-     * @brief copy_all_logs_periodic Copies all MaxScale logs and (if happens) core to current workspace and
-     * sends time stemp to log copying script
-     */
-    int copy_all_logs_periodic();
-
-    /**
-     * @brief copy_maxscale_logs Copies logs from all Maxscale nodes
-     * @param timestamp
-     * @return 0
-     */
-    int copy_maxscale_logs(double timestamp);
-
-    /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false
      * for no connection.
@@ -207,11 +188,11 @@ public:
     void set_test_timeout(std::chrono::seconds total_timeout);
 
     /**
-     * @brief set_log_copy_interval sets interval for periodic log copying
+     * Set interval for periodic log copying. Can only be called once per test.
+     *
      * @param interval_seconds interval in seconds
-     * @return 0 if success
      */
-    int set_log_copy_interval(long int interval_seconds);
+    void set_log_copy_interval(uint32_t interval_seconds);
 
     /**
      * @brief stop_timeout stops timeout thread
@@ -408,15 +389,15 @@ private:
 
     /* If false, logs from backends are not copied (needed with Aurora RDS backend or similar) */
     bool m_backend_log_copy {true};
-    bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
+    bool m_maxscale_log_copy {true};    /**< Copy MaxScale logs? */
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::thread m_timeout_thread;   /**< Timeout thread */
-    std::thread m_log_copy_thread;  /**< Log copying thread */
-    bool        m_stop_threads {false};
+    std::thread      m_timeout_thread;  /**< Timeout thread */
+    std::thread      m_log_copy_thread; /**< Log copying thread */
+    std::atomic_bool m_stop_threads {false};
 
-    timeval m_start_time {0, 0};    /**< Test object creation time. Used for log copying. */
+    std::atomic_uint32_t m_log_copy_interval {300};     /**< Seconds between log copies */
 
     /**
      * If true IPv6 addresses will be used to connect Maxscale and backed Also IPv6 addresses go to
@@ -454,11 +435,10 @@ private:
      * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
      */
     void timeout_thread();
-
-    /**
-     * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
-     */
-    void log_copy_thread();
+    void log_copy_thread_func();
+    void copy_all_logs();
+    void copy_all_logs_periodic();
+    void copy_maxscale_logs(int timestamp);
 
     int prepare_for_test(int argc, char* argv[]);
     int cleanup();

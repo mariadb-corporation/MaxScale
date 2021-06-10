@@ -119,6 +119,13 @@ void TestLogger::reset_timer()
     m_start_time_us = sec_to_us * now.tv_sec + now.tv_usec;
 }
 
+int TestLogger::time_elapsed_s() const
+{
+    auto now_s = time(nullptr);
+    auto start_s = m_start_time_us / sec_to_us;
+    return now_s - start_s;
+}
+
 bool SharedData::concurrent_run(const BoolFuncArray& funcs)
 {
     bool rval = true;

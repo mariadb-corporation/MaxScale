@@ -203,7 +203,7 @@ public:
      */
     long unsigned get_maxscale_memsize(int m = 0);
 
-    void copy_log(int i, double timestamp, const std::string& test_name);
+    void copy_log(int mxs_ind, int timestamp, const std::string& test_name);
 
     /**
      * @brief Get the set of labels that are assigned to server @c name
@@ -264,7 +264,7 @@ private:
     std::unique_ptr<mxt::VMNode>   m_vmnode;
     std::unique_ptr<mxt::MaxScale> m_maxscale_b;
 
-    std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
+    std::string      m_binlog_dir;  /**< Directory of binlog files (for binlog router) */
     mxt::SharedData& m_shared;
 
     mxt::TestLogger& log() const;
