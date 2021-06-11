@@ -46,24 +46,9 @@ public:
     {
         auto query = generate_sql();
 
-        string multi;
-
-        int i = 0;
-        for (const auto& statement : query.single_statements())
+        for (const auto& statement : query.statements())
         {
             check_maximum_sql_length(statement);
-
-            if (query.kind() == Query::MULTI)
-            {
-                multi += statement;
-            }
-        }
-
-        if (query.kind() == Query::MULTI)
-        {
-            check_maximum_sql_length(multi);
-
-            query.set_multi_statement(multi);
         }
 
         m_query = std::move(query);
@@ -87,7 +72,7 @@ public:
             uint8_t* pBuffer = mariadb_response.data();
             uint8_t* pEnd = pBuffer + mariadb_response.length();
 
-            pBuffer = interpret(pBuffer, pEnd, m_query.single_statements());
+            pBuffer = interpret(pBuffer, pEnd, m_query.nReplies());
 
             if (pBuffer != pEnd)
             {
@@ -227,14 +212,14 @@ protected:
             statements.push_back(convert_document(doc));
         }
 
-        return Query(Query::SINGLE, std::move(statements));
+        return Query(std::move(statements));
     }
 
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
 
     virtual void interpret(const ComOK& response) = 0;
 
-    virtual uint8_t* interpret(uint8_t* pBuffer, uint8_t* pEnd, const vector<string>& statements)
+    virtual uint8_t* interpret(uint8_t* pBuffer, uint8_t* pEnd, size_t nReplies)
     {
         mxb_assert(!true);
         return nullptr;
@@ -897,7 +882,7 @@ protected:
 
     Query generate_sql(const vector<bsoncxx::document::view>& documents) override
     {
-        Query query(Query::SINGLE);
+        Query query;
 
         auto oib = m_database.config().ordered_insert_behavior;
 
@@ -909,22 +894,23 @@ protected:
             }
             else
             {
-                query.set(Query::MULTI);
+                size_t nReplies = 0;
+                ostringstream ss;
 
-                query.push_back("BEGIN;");
+                ss << "BEGIN;";
+                ++nReplies;
 
                 for (const auto& doc : documents)
                 {
-                    string statement("INSERT IGNORE INTO ");
-                    statement += table();
-                    statement += " (doc) VALUES ";
-                    statement += convert_document_data(doc);
-                    statement += ";";
-
-                    query.push_back(statement);
+                    ss << "INSERT IGNORE INTO " << table() << " (doc) VALUES "
+                       << convert_document_data(doc) << ";";
+                    ++nReplies;
                 }
 
-                query.push_back("COMMIT;");
+                ss << "COMMIT;";
+                ++nReplies;
+
+                query = Query(nReplies, std::move(ss.str()));
             }
         }
         else
@@ -947,7 +933,7 @@ protected:
                 sql << convert_document_data(doc);
             }
 
-            query.push_back(sql.str());
+            query = Query(std::move(sql.str()));
         }
 
         return query;
@@ -1010,9 +996,9 @@ protected:
         m_n += response.affected_rows();
     }
 
-    uint8_t* interpret(uint8_t* pBuffer, uint8_t* pEnd, const vector<string>& statements) override
+    uint8_t* interpret(uint8_t* pBuffer, uint8_t* pEnd, size_t nReplies) override
     {
-        mxb_assert(statements.size() > 2);
+        mxb_assert(nReplies > 2);
 
         ComResponse begin(pBuffer);
 
@@ -1020,7 +1006,7 @@ protected:
         {
             pBuffer += ComPacket::packet_len(pBuffer);
 
-            size_t nInserts = statements.size() - 2; // The starting BEGIN and the ending COMMIT
+            size_t nInserts = nReplies - 2; // The starting BEGIN and the ending COMMIT
 
             for (size_t i = 0; i < nInserts; ++i)
             {

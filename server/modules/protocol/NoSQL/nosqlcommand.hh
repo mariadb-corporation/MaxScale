@@ -324,20 +324,35 @@ protected:
     public:
         enum Kind
         {
-            SINGLE, // Each statement in the vector must be executed individually.
-            MULTI   // The statements in the vector can be combined into a multi-statement.
+            UNDEFINED,
+            SINGLE,    // Each statement in the vector must be executed individually.
+            MULTI      // The statements in the vector can be combined into a multi-statement.
         };
 
-        Query(Kind kind = SINGLE)
-            : m_kind(kind)
+        Query()
+            : m_kind(UNDEFINED)
         {
         }
 
-        Query(Kind kind,
-              std::vector<std::string>&& statements)
-            : m_kind(kind)
-            , m_single_statements(std::move(statements))
+        Query(std::vector<std::string>&& statements)
+            : m_kind(SINGLE)
+            , m_nReplies(statements.size())
+            , m_statements(std::move(statements))
         {
+        }
+
+        Query(std::string&& statement)
+            : m_kind(SINGLE)
+            , m_nReplies(1)
+        {
+            m_statements.emplace_back(std::move(statement));
+        }
+
+        Query(size_t nReplies, std::string&& multi_statement)
+            : m_kind(MULTI)
+            , m_nReplies(nReplies)
+        {
+            m_statements.emplace_back(std::move(multi_statement));
         }
 
         Query(Query&& rhs) = default;
@@ -348,49 +363,22 @@ protected:
             return m_kind;
         }
 
+        size_t nReplies() const
+        {
+            return m_nReplies;
+        }
+
         const std::vector<std::string>& statements() const
         {
-            if (m_kind == Query::SINGLE)
-            {
-                return m_single_statements;
-            }
-            else
-            {
-                return m_multi_statements;
-            }
+            mxb_assert(m_kind != UNDEFINED);
+            return m_statements;
         }
 
-        const std::vector<std::string>& single_statements() const
-        {
-            return m_single_statements;
-        }
-
-        void set(Kind kind)
-        {
-            m_kind = kind;
-        }
-
-        void set(Kind kind, std::vector<std::string>&& statements)
-        {
-            m_kind = kind;
-            m_single_statements = std::move(statements);
-        }
-
-        void push_back(const std::string& statement)
-        {
-            m_single_statements.emplace_back(statement);
-        }
-
-        void set_multi_statement(const std::string& multi)
-        {
-            m_multi_statements.clear();
-            m_multi_statements.push_back(multi);
-        }
 
     private:
         Kind                     m_kind;
-        std::vector<std::string> m_single_statements;
-        std::vector<std::string> m_multi_statements;
+        size_t                   m_nReplies;
+        std::vector<std::string> m_statements;
     };
 
     virtual Query generate_sql() = 0;
