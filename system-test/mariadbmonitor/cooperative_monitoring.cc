@@ -3,6 +3,7 @@
 #include "failover_common.cpp"
 
 using std::string;
+using mxt::MaxScale;
 
 namespace
 {

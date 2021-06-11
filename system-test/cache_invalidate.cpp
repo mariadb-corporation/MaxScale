@@ -97,7 +97,7 @@ void run(TestConnections& test, int port, Expect expect)
 }
 }
 
-void install_and_start_redis(MaxScale& maxscales)
+void install_and_start_redis(mxt::MaxScale& maxscales)
 {
     setenv("maxscale_000_keyfile", maxscales.sshkey(), 0);
     setenv("maxscale_000_whoami", maxscales.access_user(), 0);

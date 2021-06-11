@@ -203,7 +203,7 @@ void run_test(TestConnections& test)
 {
     MaxRest maxrest(&test);
 
-    MaxScale* pMaxscales = test.maxscale;
+    mxt::MaxScale* pMaxscales = test.maxscale;
     test.add_result(pMaxscales->connect_rwsplit(), "Could not connect to RWS.");
 
     MYSQL* pMysql = pMaxscales->conn_rwsplit[0];

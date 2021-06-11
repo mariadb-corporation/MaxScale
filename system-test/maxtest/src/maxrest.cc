@@ -30,7 +30,7 @@ MaxRest::MaxRest(TestConnections* pTest)
 {
 }
 
-MaxRest::MaxRest(TestConnections* pTest, MaxScale* pMaxscale)
+MaxRest::MaxRest(TestConnections* pTest, mxt::MaxScale* pMaxscale)
     : m_test(*pTest)
     , m_maxscale(*pMaxscale)
 {
