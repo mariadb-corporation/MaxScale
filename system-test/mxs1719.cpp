@@ -84,7 +84,8 @@ int main(int argc, char* argv[])
     if (test.maxscale->copy_to_node(src.c_str(), dst.c_str()) == 0)
     {
         test.maxscale->ssh_node((std::string("chmod a+r ") + dst).c_str(), true);
-        if (test.maxscale->start() == 0)
+        test.maxscale->start();
+        if (test.ok())
         {
             sleep(10);
             test.maxscale->wait_for_monitor();
@@ -97,10 +98,6 @@ int main(int argc, char* argv[])
             {
                 test.expect(false, "Could not connect to RWS.");
             }
-        }
-        else
-        {
-            test.expect(false, "Could not start MaxScale.");
         }
     }
     else

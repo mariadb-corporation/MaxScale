@@ -8,8 +8,6 @@
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
-#include <cassert>
-#include <climits>
 
 
 using std::string;
@@ -22,7 +20,6 @@ const string my_prefix = "maxscale";
 Maxscales::Maxscales(mxt::SharedData* shared)
     : m_shared(*shared)
 {
-    m_maxscale_b = std::make_unique<mxt::MaxScale>(this, *shared);
 }
 
 Maxscales::~Maxscales()
@@ -285,9 +282,15 @@ int Maxscales::port(enum service type) const
 
 void Maxscales::wait_for_monitor(int intervals)
 {
-    ssh_node_f(false,
-               "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
-               intervals);
+    for (int i = 0; i < intervals; i++)
+    {
+        auto res = curl_rest_api("maxscale/debug/monitor_wait");
+        if (res.rc)
+        {
+            log().add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
+            break;
+        }
+    }
 }
 
 const char* Maxscales::ip() const
@@ -367,14 +370,16 @@ int Maxscales::restart()
 }
 
 
-int Maxscales::start()
+void Maxscales::start()
 {
-    return start_maxscale();
+    int res = start_maxscale();
+    log().expect(res == 0, "MaxScale start failed, error %i.", res);
 }
 
-bool Maxscales::stop()
+void Maxscales::stop()
 {
-    return stop_maxscale() == 0;
+    int res = stop_maxscale();
+    log().expect(res == 0, "MaxScale stop failed, error %i.", res);
 }
 
 bool Maxscales::prepare_for_test()
@@ -541,6 +546,24 @@ MYSQL* Maxscales::open_rwsplit_connection(const std::string& db)
     return open_conn(rwsplit_port, ip4(), user_name, password, m_ssl);
 }
 
+std::unique_ptr<mxt::MariaDB> Maxscales::open_rwsplit_connection2(const string& db)
+{
+    auto conn = std::make_unique<mxt::MariaDB>(log());
+    auto& sett = conn->connection_settings();
+    sett.user = user_name;
+    sett.password = password;
+    if (m_ssl)
+    {
+        auto base_dir = mxt::SOURCE_DIR;
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", base_dir);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
+    }
+
+    conn->open(ip(), rwsplit_port, db);
+    return conn;
+}
+
 Connection Maxscales::rwsplit(const std::string& db)
 {
     return Connection(ip4(), rwsplit_port, user_name, password, db, m_ssl);
@@ -631,45 +654,40 @@ int Maxscales::ssh_node(const string& cmd, bool sudo)
     return m_vmnode->run_cmd(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
-mxt::MaxScale& Maxscales::maxscale_b()
+void Maxscales::check_servers_status(const std::vector<mxt::ServerInfo::bitfield>& expected_status)
 {
-    return *m_maxscale_b;
+    auto data = get_servers();
+    data.check_servers_status(expected_status);
 }
 
-namespace maxtest
+void Maxscales::alter_monitor(const string& mon_name, const string& setting, const string& value)
 {
-
-void MaxScale::wait_monitor_ticks(int ticks)
-{
-    for (int i = 0; i < ticks; i++)
-    {
-        auto res = curl_rest_api("maxscale/debug/monitor_wait");
-        if (res.rc)
-        {
-            logger().add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
-            break;
-        }
-    }
+    string cmd = mxb::string_printf("alter monitor %s %s %s", mon_name.c_str(),
+                                    setting.c_str(), value.c_str());
+    auto res = maxctrl(cmd);
+    log().expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
 }
 
-mxt::CmdResult MaxScale::curl_rest_api(const std::string& path)
+void Maxscales::delete_log()
+{
+    vm_node().run_cmd_output("truncate -s 0 /var/log/maxscale/maxscale.log",
+                             mxt::VMNode::CmdPriv::SUDO);
+}
+
+mxt::CmdResult Maxscales::curl_rest_api(const std::string& path)
 {
     string cmd = mxb::string_printf("curl --silent --show-error http://%s:%s@%s:%s/v1/%s",
                                     m_rest_user.c_str(), m_rest_pw.c_str(),
                                     m_rest_ip.c_str(), m_rest_port.c_str(),
                                     path.c_str());
-    auto res = m_maxscales->ssh_output(cmd, true);
-    return res;
+    return ssh_output(cmd, true);
 }
 
-MaxScale::MaxScale(Maxscales* maxscales, SharedData& shared)
-    : m_maxscales(maxscales)
-    , m_shared(shared)
+mxt::ServersInfo Maxscales::get_servers()
 {
-}
+    using mxt::ServerInfo;
+    using mxt::ServersInfo;
 
-ServersInfo MaxScale::get_servers()
-{
     const string field_servers = "servers";
     const string field_data = "data";
     const string field_id = "id";
@@ -750,16 +768,18 @@ ServersInfo MaxScale::get_servers()
         }
         else
         {
-            logger().add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
+            log().add_failure("Invalid data from REST-API servers query: %s", all.error_msg().c_str());
         }
     }
     else
     {
-        logger().add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
+        log().add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
     }
     return rval;
 }
 
+namespace maxtest
+{
 void ServersInfo::add(const ServerInfo& info)
 {
     m_servers.push_back(info);
@@ -933,70 +953,6 @@ const std::vector<ServerInfo::bitfield>& ServersInfo::default_repl_states()
     {mxt::ServerInfo::master_st,
      mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st, mxt::ServerInfo::slave_st};
     return def_repl_states;
-}
-
-void MaxScale::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
-{
-    auto data = get_servers();
-    data.check_servers_status(expected_status);
-}
-
-void MaxScale::start()
-{
-    auto res = m_maxscales->start_maxscale();
-    logger().expect(res == 0, "MaxScale start failed, error %i.", res);
-}
-
-void MaxScale::stop()
-{
-    auto res = m_maxscales->stop_maxscale();
-    logger().expect(res == 0, "MaxScale stop failed, error %i.", res);
-}
-
-void MaxScale::delete_log()
-{
-    m_maxscales->vm_node().run_cmd_output("truncate -s 0 /var/log/maxscale/maxscale.log",
-                                          mxt::VMNode::CmdPriv::SUDO);
-}
-
-std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection(const std::string& db)
-{
-    auto conn = std::make_unique<mxt::MariaDB>(logger());
-    auto& sett = conn->connection_settings();
-    sett.user = m_maxscales->user_name;
-    sett.password = m_maxscales->password;
-    if (m_maxscales->ssl())
-    {
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", SOURCE_DIR);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", SOURCE_DIR);
-    }
-
-    conn->open(m_maxscales->ip(), m_maxscales->rwsplit_port, db);
-    return conn;
-}
-
-void MaxScale::alter_monitor(const string& mon_name, const string& setting, const string& value)
-{
-    string cmd = mxb::string_printf("alter monitor %s %s %s", mon_name.c_str(),
-                                    setting.c_str(), value.c_str());
-    auto res = m_maxscales->maxctrl(cmd);
-    logger().expect(res.rc == 0 && res.output == "OK", "Alter monitor command '%s' failed.", cmd.c_str());
-}
-
-TestLogger& MaxScale::logger()
-{
-    return m_shared.log;
-}
-
-mxt::CmdResult MaxScale::maxctrl(const string& cmd)
-{
-    return m_maxscales->maxctrl(cmd);
-}
-
-const std::string& MaxScale::name() const
-{
-    return m_maxscales->node_name();
 }
 
 void ServerInfo::status_from_string(const string& source)

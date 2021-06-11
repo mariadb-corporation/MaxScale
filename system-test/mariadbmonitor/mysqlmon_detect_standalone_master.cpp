@@ -33,20 +33,20 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    auto& mxs = test.maxscale->maxscale_b();
-    mxs.wait_monitor_ticks();
+    auto& mxs = *test.maxscale;
+    mxs.wait_for_monitor();
     mxs.get_servers().print();
     mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
 
     if (test.ok())
     {
-        auto conn = mxs.open_rwsplit_connection();
+        auto conn = mxs.open_rwsplit_connection2();
         test.tprintf(" Create the test table and insert some data ");
         conn->cmd("CREATE OR REPLACE TABLE test.t1 (id int);");
         conn->cmd("INSERT INTO test.t1 VALUES (1);");
         test.repl->sync_slaves();
 
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.get_servers().print();
     }
 
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
         srv4_conn->cmd("RESET SLAVE ALL;");
 
         test.tprintf("Wait for the monitor to detect it ");
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         auto down = mxt::ServerInfo::DOWN;
         auto master = mxt::ServerInfo::master_st;
         mxs.check_servers_status({down, down, down, master});
@@ -69,9 +69,9 @@ int main(int argc, char* argv[])
         if (test.ok())
         {
             test.tprintf("Connect and insert should work.");
-            auto conn = mxs.open_rwsplit_connection();
+            auto conn = mxs.open_rwsplit_connection2();
             conn->cmd("INSERT INTO test.t1 VALUES (1)");
-            mxs.wait_monitor_ticks();
+            mxs.wait_for_monitor();
             mxs.get_servers().print();
         }
 
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         test.repl->unblock_node(0);
         test.repl->unblock_node(1);
         test.repl->unblock_node(2);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
 
         if (test.ok())
         {

@@ -175,7 +175,6 @@ void run_ansi_quotes(TestConnections& test)
     test.expect(c.query("SET @@SQL_MODE = REPLACE(@@SQL_MODE, 'ANSI_QUOTES', '')"),
                 "Could not turn off 'ANSI_QUOTES'");
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -191,7 +190,8 @@ int main(int argc, char* argv[])
     if (test.maxscale->copy_to_node(from.c_str(), to.c_str()) == 0)
     {
         test.maxscale->ssh_node((std::string("chmod a+r ") + to).c_str(), true);
-        if (test.maxscale->start() == 0)
+        test.maxscale->start();
+        if (test.ok())
         {
             sleep(2);
             test.maxscale->wait_for_monitor();
@@ -206,10 +206,6 @@ int main(int argc, char* argv[])
             {
                 test.expect(false, "Could not connect to RWS.");
             }
-        }
-        else
-        {
-            test.expect(false, "Could not start MaxScale.");
         }
     }
     else

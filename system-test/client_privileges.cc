@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
 
     test.repl->connect();
 
-    auto& mxs = test.maxscale->maxscale_b();
-    auto conn = mxs.open_rwsplit_connection();
+    auto& mxs = *test.maxscale;
+    auto conn = mxs.open_rwsplit_connection2();
 
     auto create_user = [&](const char* user, const char* pass) {
             conn->cmd_f("DROP USER IF EXISTS '%s'@'%%'", user);

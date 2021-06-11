@@ -2,7 +2,7 @@
 
 void check_connections(TestConnections& test, const std::vector<int>& expected)
 {
-    test.maxscale->maxscale_b().get_servers().check_connections(expected);
+    test.maxscale->get_servers().check_connections(expected);
 }
 
 void cycle_master(TestConnections& test)

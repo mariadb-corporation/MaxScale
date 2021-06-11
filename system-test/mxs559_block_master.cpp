@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Check that replication works");
     sleep(1);
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
     mxs.check_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st});
     if (!test.ok())
     {

@@ -115,7 +115,7 @@ void test_main(TestConnections& test)
         cout << "Test preparations failed.\n";
     }
 
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
 
     if (test.ok())
     {
@@ -137,7 +137,7 @@ void test_main(TestConnections& test)
             mxs.stop();
             mxs.delete_log();
             mxs.start();
-            mxs.wait_monitor_ticks();
+            mxs.wait_for_monitor();
         };
 
     if (test.ok())

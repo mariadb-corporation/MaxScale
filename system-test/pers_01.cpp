@@ -13,8 +13,7 @@ void test_main(TestConnections& test);
 
 void check_conn_pool_size(TestConnections& test, const IntVector& expected)
 {
-    auto& mxs = test.maxscale->maxscale_b();
-    auto info = mxs.get_servers();
+    auto info = test.maxscale->get_servers();
     info.check_pool_connections(expected);
 }
 

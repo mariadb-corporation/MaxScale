@@ -59,8 +59,8 @@ void insert_data(TestConnections& test)
 
 void run(TestConnections& test)
 {
-    auto& mxs = test.maxscale->maxscale_b();
-    mxs.wait_monitor_ticks();
+    auto& mxs = *test.maxscale;
+    mxs.wait_for_monitor();
 
     const int N = 4;
 
@@ -84,7 +84,7 @@ void run(TestConnections& test)
     cout << "\nTrying to do manual switchover to server2" << endl;
     test.maxctrl("call command mysqlmon switchover MySQL-Monitor server2 server1");
 
-    mxs.wait_monitor_ticks();
+    mxs.wait_for_monitor();
     mxs.check_servers_status({slave, master, slave, slave});
 
     if (test.ok())
@@ -92,7 +92,7 @@ void run(TestConnections& test)
         cout << "\nSwitchover success. Resetting situation using async-switchover\n";
         test.maxctrl("call command mariadbmon async-switchover MySQL-Monitor server1");
         // Wait a bit so switch completes, then fetch results.
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
         const char cmdname[] = "fetch-cmd-results";
         test.expect(res.rc == 0, "%s failed: %s", cmdname, res.output.c_str());

@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     auto all_running = {running_st, running_st, running_st, running_st};
 
     TestConnections test(argc, argv);
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
 
     auto reset = [&]() {
             test.repl->stop_slaves();
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     auto alter_monitor = [&](const string& setting, const string& value) {
             test.tprintf("Set %s=%s.", setting.c_str(), value.c_str());
             mxs.alter_monitor(mon_name, setting, value);
-            mxs.wait_monitor_ticks();
+            mxs.wait_for_monitor();
         };
 
     auto check_io_connecting = [&test](const ServerInfo& srv_info) {
@@ -62,24 +62,24 @@ int main(int argc, char* argv[])
     {
         test.tprintf("Stop all slaves, first server should remain [Master].");
         test.repl->stop_slaves();
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(master_3running);
 
         alter_monitor(master_cond, "connected_slave,running_slave");
         test.tprintf("Should lose [Master], but gain [Slave].");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(slave_3running);
 
         test.tprintf("Have one slave start replicating. Should regain [Master].");
         const int slave_ind = 1;
         test.repl->connect(slave_ind);
         test.repl->replicate_from(slave_ind, master_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status({master_st, slave_st});
 
         test.tprintf("Shut down the slave. Should lose [Master].");
         test.repl->stop_node(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status({slave_st, down_st});
         test.repl->start_node(slave_ind);
 
@@ -87,14 +87,14 @@ int main(int argc, char* argv[])
         test.tprintf("Stopping replication should lose [Master].");
         test.repl->connect(slave_ind);
         test.try_query(test.repl->nodes[slave_ind], "STOP SLAVE;");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(slave_3running);
 
         test.tprintf("Restart replication, then shut down slave. Should keep [Master].");
         test.try_query(test.repl->nodes[slave_ind], "START SLAVE;");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         test.repl->stop_node(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status({master_st, down_st});
         test.repl->start_node(slave_ind);
 
@@ -103,14 +103,14 @@ int main(int argc, char* argv[])
         test.repl->stop_node(master_ind);
         ::sleep(2);
         test.repl->start_node(master_ind);
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         auto status = mxs.get_servers();
         check_io_connecting(status.get(slave_ind));
         status.check_servers_status({slave_st, slave_st});
 
         alter_monitor(master_cond, "connecting_slave");
         test.tprintf("Should get [Master] even when slave is not yet connected.");
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         status = mxs.get_servers();
         check_io_connecting(status.get(slave_ind));
         status.check_servers_status({master_st, slave_st});
@@ -135,49 +135,49 @@ int main(int argc, char* argv[])
         test.repl->connect();
         test.repl->replicate_from(2, 1);
         test.repl->replicate_from(3, 2);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(master_slave_chain);
 
         test.tprintf("Stop a slave connection, should lose [Slave]");
         const int slave_ind = 1;
         test.try_query(test.repl->nodes[slave_ind], "STOP SLAVE;");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(master_3running);
         test.try_query(test.repl->nodes[slave_ind], "START SLAVE;");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
 
         test.tprintf("Shut down a relay, should keep [Slave]");
         test.repl->stop_node(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status({master_st, down_st, slave_st, slave_st});     // also loses relay
         start_node_refresh_slave(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
 
         test.tprintf("Shut down master, should keep [Slave]");
         test.repl->stop_node(master_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(down_3slaves);
         start_node_refresh_slave(master_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
 
         alter_monitor(slave_cond, "linked_master");
         test.tprintf("Replication chain should still be valid");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(master_slave_chain);
 
         test.tprintf("Shut down a relay, should lose [Slave]s");
         test.repl->stop_node(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status({master_st, down_st, running_st, running_st});
         start_node_refresh_slave(slave_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
 
         test.tprintf("Stop master, then start it. If slave does not reconnect quickly, "
                      "should not get any [Slave]s");
         test.repl->stop_node(master_ind);
         ::sleep(2);
         test.repl->start_node(master_ind);
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         auto status = mxs.get_servers();
         check_io_connecting(status.get(slave_ind));
         status.check_servers_status(master_3running);
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
 
         test.tprintf("Shut down master, should lose [Slave]");
         test.repl->stop_node(master_ind);
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(down_3running);
         start_node_refresh_slave(master_ind);
 
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
         test.tprintf("Set master to read_only, should lose [Slave]");
         test.repl->connect(master_ind);
         test.try_query(test.repl->nodes[master_ind], set_readonly_query, "ON");
-        mxs.wait_monitor_ticks();
+        mxs.wait_for_monitor();
         mxs.check_servers_status(all_running);
         test.try_query(test.repl->nodes[master_ind], set_readonly_query, "OFF");
     }

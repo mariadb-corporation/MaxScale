@@ -21,13 +21,13 @@ int main(int argc, char** argv)
     // Set up test table
     basic_test(test);
 
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
     // Advance gtid:s a bit to so gtid variables are updated.
     MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 10);
     mysql_close(maxconn);
     test.tprintf(LINE);
-    mxs.wait_monitor_ticks();
+    mxs.wait_for_monitor();
     mxs.get_servers().print();
     mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
     auto old_master = test.get_repl_master();
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
         test.tprintf("Stopping master and waiting for failover. Check that another server is promoted.");
         test.tprintf(LINE);
         old_master->stop_database();
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
         new_master = test.get_repl_master();
         test.expect(new_master && new_master != old_master, "Master did not change or no master detected.");
 
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
             test.tprintf("Sending more inserts.");
             maxconn = test.maxscale->open_rwsplit_connection();
             generate_traffic_and_check(test, maxconn, 5);
-            mxs.wait_monitor_ticks(1);
+            mxs.wait_for_monitor(1);
             auto status_before_rejoin = mxs.get_servers();
             status_before_rejoin.print();
             gtid_final_master = status_before_rejoin.get(new_master->cnf_name()).gtid;
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         test.tprintf("Bringing old master back online. It should rejoin the cluster and catch up in events.");
         test.tprintf(LINE);
         old_master->start_database();
-        mxs.wait_monitor_ticks(2);
+        mxs.wait_for_monitor(2);
 
         if (test.ok())
         {
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 
             test.tprintf("Switchover back to server1");
             mxs.maxctrl("call command mysqlmon switchover MySQL-Monitor server1 server2");
-            mxs.wait_monitor_ticks(2);
+            mxs.wait_for_monitor(2);
             mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
         }
     }
