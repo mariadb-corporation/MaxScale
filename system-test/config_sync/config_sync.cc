@@ -487,8 +487,8 @@ void test_bad_change(TestConnections& test)
     expect_sync(test, version1 + 1, 2);
 
     // Remove the directory in case we repeat the test
-    test.maxscale->ssh_node(CREATE_DIR, false);
-    test.maxscale2->ssh_node(CREATE_DIR, false);
+    test.maxscale->ssh_node(REMOVE_DIR, false);
+    test.maxscale2->ssh_node(REMOVE_DIR, false);
 
     test.tprintf("Make /var/lib/maxscale unwritable, update should still succeed");
     auto version_start = get_version(api1);
