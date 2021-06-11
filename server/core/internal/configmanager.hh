@@ -52,6 +52,11 @@ public:
     ~ConfigManager();
 
     /**
+     * Reconnect to the cluster during the next update
+     */
+    void reconnect();
+
+    /**
      * Start synchronizing with the cluster
      */
     void start_sync();
@@ -193,6 +198,7 @@ private:
     int64_t m_version {0};
 
     mxq::MariaDB m_conn;
+    bool         m_reconnect {false};
     bool         m_row_exists {false};
     SERVER*      m_server {nullptr};
     uint32_t     m_dcid {0};

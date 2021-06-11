@@ -629,6 +629,14 @@ struct ThisUnit
     bool           is_root_config_file = true;  /**< The first one will be. */
     bool           mask_passwords = true;
 } this_unit;
+
+void reconnect_config_manager(const std::string& ignored)
+{
+    if (auto manager = mxs::ConfigManager::get())
+    {
+        manager->reconnect();
+    }
+}
 }
 
 static bool get_milliseconds(const char* zName,
@@ -734,8 +742,8 @@ Config::Config(int argc, char** argv)
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
     add_native(&Config::config_sync_cluster, &s_config_sync_cluster);
-    add_native(&Config::config_sync_user, &s_config_sync_user);
-    add_native(&Config::config_sync_password, &s_config_sync_password);
+    add_native(&Config::config_sync_user, &s_config_sync_user, reconnect_config_manager);
+    add_native(&Config::config_sync_password, &s_config_sync_password, reconnect_config_manager);
     add_native(&Config::config_sync_timeout, &s_config_sync_timeout);
     add_native(&Config::config_sync_interval, &s_config_sync_interval);
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);

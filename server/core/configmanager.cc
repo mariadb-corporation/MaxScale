@@ -180,6 +180,11 @@ ConfigManager::~ConfigManager()
     }
 }
 
+void ConfigManager::reconnect()
+{
+    m_reconnect = true;
+}
+
 void ConfigManager::start_sync()
 {
     auto ms = duration_cast<milliseconds>(mxs::Config::get().config_sync_interval);
@@ -955,7 +960,7 @@ void ConfigManager::connect()
     {
         throw error("No valid servers in cluster '", m_cluster, "'.");
     }
-    else if (server != m_server)
+    else if (server != m_server || m_reconnect)
     {
         // New server, close old connection
         m_conn.close();
@@ -979,6 +984,7 @@ void ConfigManager::connect()
         }
 
         m_server = server;
+        m_reconnect = false;
     }
 
     mxb_assert(m_server);
