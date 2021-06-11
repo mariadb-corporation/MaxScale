@@ -116,6 +116,26 @@ std::vector<TestCase> tests
         "Destroy listener",
         "destroy listener RW-Split-Router test-listener"
     },
+    {
+        "Create monitor",
+        "create monitor test-monitor galeramon user=maxskysql password=skysql",
+        "monitors/test-monitor",
+        "/data/attributes/parameters"
+    },
+    {
+        "Create service that uses the monitor",
+        "create service test-service2 readconnroute user=maxskysql password=skysql router_options=master --cluster test-monitor",
+        "services/test-service2",
+        "/data/attributes/parameters"
+    },
+    {
+        "Destroy monitor",
+        "destroy monitor --force test-monitor"
+    },
+    {
+        "Destroy service that uses the monitor",
+        "destroy service --force test-service2"
+    },
 };
 
 void wait_for_sync(int version = 0)
