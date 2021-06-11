@@ -912,8 +912,9 @@ json_t* ConfigManager::remove_local_parameters(json_t* json)
     json_t* params = mxb::json_ptr(json, "/data/attributes/parameters");
     mxb_assert(params);
 
-    // TODO: Perhaps all the cluster parameters should be removed?
     json_object_del(params, CN_CONFIG_SYNC_CLUSTER);
+    json_object_del(params, CN_CONFIG_SYNC_USER);
+    json_object_del(params, CN_CONFIG_SYNC_PASSWORD);
 
     return json;
 }
