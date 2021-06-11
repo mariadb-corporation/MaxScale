@@ -492,7 +492,8 @@ void ConfigManager::save_config(const std::string& payload)
     if (!file.write(payload.c_str(), payload.size()) || !file.flush()
         || rename(tmpname.c_str(), filename.c_str()) != 0)
     {
-        throw error("Failed to save configuration to disk: ", errno, ", ", mxb_strerror(errno));
+        MXS_WARNING("Failed to save configuration at '%s': %d, %s",
+                    filename.c_str(), errno, mxb_strerror(errno));
     }
 }
 
