@@ -40,7 +40,7 @@ void sleep(int s)
     cout << endl;
 }
 
-int get_server_id(Maxscales& maxscales)
+int get_server_id(MaxScale& maxscales)
 {
     MYSQL* conn = maxscales.open_rwsplit_connection();
     int id = -1;

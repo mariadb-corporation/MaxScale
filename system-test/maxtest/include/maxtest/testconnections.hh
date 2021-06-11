@@ -81,8 +81,8 @@ public:
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
     GaleraCluster*           galera {nullptr};      /**< Galera cluster */
     XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
-    Maxscales*               maxscale {nullptr};    /**< MaxScale */
-    Maxscales*               maxscale2 {nullptr};   /**< Second MaxScale */
+    MaxScale*                maxscale {nullptr};    /**< MaxScale */
+    MaxScale*                maxscale2 {nullptr};   /**< Second MaxScale */
 
     int& global_result;     /**< Result of test, 0 if PASSED */
     bool smoke {true};      /**< Run tests in quick mode. Only affects some long tests. */
@@ -405,7 +405,7 @@ private:
     bool check_create_vm_dir();
     bool read_network_config();
     bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
-    bool process_template(Maxscales& mxs, const std::string& config_file_path, const char* dest);
+    bool process_template(MaxScale& mxs, const std::string& config_file_path, const char* dest);
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();
@@ -418,7 +418,7 @@ private:
     int prepare_for_test(int argc, char* argv[]);
     int cleanup();
 
-    Maxscales* my_maxscale(int m) const;
+    MaxScale* my_maxscale(int m) const;
 
     void init_maxscale(int m = 0);
     void init_maxscales();

@@ -644,7 +644,7 @@ bool TestConnections::read_test_info()
  * @return True on success
  */
 bool
-TestConnections::process_template(Maxscales& mxs, const string& config_file_path, const char* dest)
+TestConnections::process_template(MaxScale& mxs, const string& config_file_path, const char* dest)
 {
     tprintf("Processing MaxScale config file %s\n", config_file_path.c_str());
     std::ifstream config_file(config_file_path);
@@ -1879,12 +1879,12 @@ bool TestConnections::initialize_nodes()
         initialize_cluster(xpand, 4, false, backend_ssl);
     }
 
-    auto initialize_maxscale = [this, &funcs](Maxscales*& mxs_storage, int vm_ind) {
+    auto initialize_maxscale = [this, &funcs](MaxScale*& mxs_storage, int vm_ind) {
             delete mxs_storage;
             mxs_storage = nullptr;
-            string vm_name = mxb::string_printf("%s_%03d", Maxscales::prefix().c_str(), vm_ind);
+            string vm_name = mxb::string_printf("%s_%03d", MaxScale::prefix().c_str(), vm_ind);
 
-            auto new_maxscale = std::make_unique<Maxscales>(&m_shared);
+            auto new_maxscale = std::make_unique<MaxScale>(&m_shared);
             if (new_maxscale->setup(m_network_config, vm_name))
             {
                 new_maxscale->set_use_ipv6(m_use_ipv6);
@@ -2090,9 +2090,9 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
  * @param m Index, 0 or 1.
  * @return MaxScale object
  */
-Maxscales* TestConnections::my_maxscale(int m) const
+MaxScale* TestConnections::my_maxscale(int m) const
 {
-    Maxscales* rval = nullptr;
+    MaxScale* rval = nullptr;
     if (m == 0)
     {
         rval = maxscale;
