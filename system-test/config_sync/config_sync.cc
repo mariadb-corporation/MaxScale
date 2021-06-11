@@ -481,9 +481,31 @@ void test_bad_change(TestConnections& test)
     test.expect(sync1 == sync2, "Expected \"config_sync\" values to be equal: %s",
                 get_diff(sync1, sync2).c_str());
 
+    res = test.maxscale->maxctrl("destroy filter test-filter");
+    test.expect(res.rc == 0, "Destroying the filter should work");
+    version1 = sync1.get_int("version");
+    expect_sync(test, version1 + 1, 2);
+
     // Remove the directory in case we repeat the test
     test.maxscale->ssh_node(CREATE_DIR, false);
     test.maxscale2->ssh_node(CREATE_DIR, false);
+
+    test.tprintf("Make /var/lib/maxscale unwritable, update should still succeed");
+    auto version_start = get_version(api1);
+    test.maxscale->ssh_node("chown root:root /var/lib/maxscale", true);
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 21");
+    test.expect(res.rc == 0, "Command should succeed even if the config cannot be saved");
+
+    wait_for_sync(version_start + 1);
+    expect_sync(test, version_start + 1, 2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+
+    test.tprintf("Make /var/lib/maxscale writable again, update should work on both nodes");
+    test.maxscale->ssh_node("chown maxscale:maxscale /var/lib/maxscale", true);
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 22");
+    test.expect(res.rc == 0, "Command should work: %s", res.output.c_str());
+    expect_sync(test, version_start + 2, 2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
 
     reset(test);
 }
