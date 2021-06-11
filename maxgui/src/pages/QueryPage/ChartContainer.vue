@@ -81,7 +81,6 @@ export default {
     data() {
         return {
             uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
-            alignTooltipToLeft: false,
             dataPoint: null,
         }
     },
@@ -114,7 +113,6 @@ export default {
                 maintainAspectRatio: false,
                 hover: {
                     onHover: (e, el) => {
-                        this.onChartHover(e)
                         e.target.style.cursor = el[0] ? 'pointer' : 'default'
                     },
                 },
@@ -128,7 +126,9 @@ export default {
                             tooltipId: componentScope.uniqueTooltipId,
                             position,
                             dataPoint: componentScope.dataPoint,
-                            alignTooltipToLeft: componentScope.alignTooltipToLeft,
+                            alignTooltipToLeft:
+                                tooltipModel.caretX >=
+                                componentScope.$refs.chartContainer.clientWidth / 2,
                         })
                     },
                     callbacks: {
@@ -224,9 +224,6 @@ export default {
         if (tooltipEl) tooltipEl.remove()
     },
     methods: {
-        onChartHover(e) {
-            this.alignTooltipToLeft = e.offsetX >= this.$refs.chartContainer.clientWidth / 2
-        },
         getDefFileName() {
             return `MaxScale ${this.selectedChart} Chart - ${this.$help.dateFormat({
                 value: new Date(),
