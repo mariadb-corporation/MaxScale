@@ -35,6 +35,7 @@
             class="line-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
+                minWidth,
             }"
             hasVertCrossHair
             :chartData="sortedChartData"
@@ -46,6 +47,7 @@
             class="scatter-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
+                minWidth,
             }"
             hasVertCrossHair
             :chartData="sortedChartData"
@@ -85,13 +87,19 @@ export default {
         }
     },
     computed: {
+        minWidth() {
+            if (this.isLinear) return 'unset'
+            if (this.$typy(this.chartData, 'labels').isDefined)
+                return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+            return '0px'
+        },
         chartHeight() {
             return this.containerChartHeight - 36 // export button height
         },
         isLinear() {
             if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
                 return typeof this.chartData.datasets[0].data[0].x === 'number'
-            return null
+            return false
         },
         sortedChartData() {
             if (this.isLinear) {
@@ -193,7 +201,7 @@ export default {
                         {
                             type: this.isLinear ? 'linear' : 'category',
                             ticks: {
-                                autoSkip: !this.isLinear,
+                                autoSkip: this.isLinear,
                                 autoSkipPadding: this.isLinear ? 0 : 15,
                                 maxRotation: this.isLinear ? 0 : 90,
                                 minRotation: this.isLinear ? 0 : 90,

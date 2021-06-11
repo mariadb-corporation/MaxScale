@@ -45,7 +45,6 @@
                         <label class="field__label color text-small-text text-capitalize">
                             {{ a }} axis
                         </label>
-                        <!-- TODO: Show only numeric value field in y axis -->
                         <v-select
                             v-model="axis[a]"
                             :items="a === 'y' ? yAxisFields : xAxisFields"
