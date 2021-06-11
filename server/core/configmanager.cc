@@ -445,6 +445,19 @@ bool ConfigManager::commit()
     return ok;
 }
 
+std::string ConfigManager::checksum() const
+{
+    std::string rval;
+
+    if (m_current_config)
+    {
+        auto cnf = m_current_config.get_object(CN_CONFIG).to_string(mxb::Json::Format::COMPACT);
+        rval = mxs::checksum<mxs::SHA1Checksum>(cnf);
+    }
+
+    return rval;
+}
+
 mxb::Json ConfigManager::to_json() const
 {
     mxb::Json obj;
@@ -456,8 +469,7 @@ mxb::Json ConfigManager::to_json() const
 
     if (enabled)
     {
-        auto cnf = m_current_config.to_string(mxb::Json::Format::COMPACT);
-        obj.set_string(CN_CHECKSUM, mxs::checksum<mxs::SHA1Checksum>(cnf));
+        obj.set_string(CN_CHECKSUM, checksum());
         obj.set_int(CN_VERSION, m_version);
         obj.set_object(CN_NODES, m_nodes);
         obj.set_string(CN_ORIGIN, m_origin);
