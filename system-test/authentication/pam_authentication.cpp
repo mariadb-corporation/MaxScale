@@ -273,7 +273,7 @@ void test_main(TestConnections& test)
     }
 
     // Remove the linux user from the MaxScale node. Required for next test cases.
-    test.maxscale->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
+    test.maxscale->ssh_node_f(true, "%s", remove_user_cmd.c_str());
 
     int normal_port = test.maxscale->rwsplit_port;
     int skip_auth_port = 4007;
@@ -472,8 +472,8 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             // The user needs to be recreated on the MaxScale node.
-            test.maxscale->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
-            test.maxscale->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", add_user_cmd.c_str());
+            test.maxscale->ssh_node_f(true, "%s", add_pw_cmd.c_str());
 
             cout << "Testing listener with " << setting_val << "\n";
             MYSQL* conn = test.repl->nodes[0];

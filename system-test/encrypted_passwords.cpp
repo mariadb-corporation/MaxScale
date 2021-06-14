@@ -47,7 +47,7 @@ int hash_password(TestConnections* test)
     }
 
     test->tprintf("Encrypted password is: %s\n", enc_pw.c_str());
-    test->maxscale->ssh_node_f(0, true,
+    test->maxscale->ssh_node_f(true,
                                "sed -i -e 's/password[[:space:]]*=[[:space:]]*skysql/password=%s/' /etc/maxscale.cnf",
                                enc_pw.c_str());
 

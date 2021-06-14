@@ -445,7 +445,7 @@ int TestConnections::setup_vms()
         {
             string src = string(mxt::SOURCE_DIR) + "/mdbci/add_core_cnf.sh";
             maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
-            maxscale->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
+            maxscale->ssh_node_f(true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
                                  verbose() ? "verbose" : "");
         }
     }
@@ -804,10 +804,10 @@ void TestConnections::init_maxscale(int m)
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
-    if (mxs->ssh_node_f(0, true, "test -d %s/certs", homedir))
+    if (mxs->ssh_node_f(true, "test -d %s/certs", homedir))
     {
         tprintf("SSL certificates not found, copying to maxscale");
-        mxs->ssh_node_f(0, true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
+        mxs->ssh_node_f(true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
 
         char str[4096];
         char dtr[4096];
@@ -816,10 +816,10 @@ void TestConnections::init_maxscale(int m)
         mxs->copy_to_node(str, dtr);
         sprintf(str, "cp %s/ssl-cert/* .", mxt::SOURCE_DIR);
         call_system(str);
-        mxs->ssh_node_f(0, true, "chmod -R a+rx %s;", homedir);
+        mxs->ssh_node_f(true, "chmod -R a+rx %s;", homedir);
     }
 
-    mxs->ssh_node_f(0, true,
+    mxs->ssh_node_f(true,
                     "cp maxscale.cnf %s;"
                     "iptables -F INPUT;"
                     "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
@@ -829,7 +829,7 @@ void TestConnections::init_maxscale(int m)
     if (maxscale::start)
     {
         mxs->restart_maxscale();
-        mxs->ssh_node_f(0, true, "maxctrl api get maxscale/debug/monitor_wait");
+        mxs->ssh_node_f(true, "maxctrl api get maxscale/debug/monitor_wait");
     }
     else
     {
@@ -945,7 +945,7 @@ bool TestConnections::log_matches(const char* pattern)
         }
     }
 
-    return maxscale->ssh_node_f(0, true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
+    return maxscale->ssh_node_f(true, "grep '%s' /var/log/maxscale/maxscale*.log", p.c_str()) == 0;
 }
 
 void TestConnections::log_includes(const char* pattern)
@@ -1274,7 +1274,7 @@ void TestConnections::log_printf(const char* format, ...)
         *c = '^';
     }
 
-    maxscale->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+    maxscale->ssh_node_f(true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 int TestConnections::get_master_server_id()
@@ -1518,8 +1518,7 @@ bool TestConnections::test_bad_config(const string& config)
 {
     process_template(*maxscale, config, "/tmp/");
 
-    int ssh_rc = maxscale->ssh_node_f(0,
-                                      true,
+    int ssh_rc = maxscale->ssh_node_f(true,
                                       "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
                                       "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
     return (ssh_rc == 0) || (ssh_rc == 256);

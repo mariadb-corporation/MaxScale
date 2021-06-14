@@ -54,9 +54,9 @@ int main(int argc, char** argv)
     {
         for (int x = 1; x <= 2; x++)
         {
-            test.maxscale->ssh_node_f(0, true, "maxctrl set server server%d maintenance", x);
+            test.maxscale->ssh_node_f(true, "maxctrl set server server%d maintenance", x);
             sleep(1);
-            test.maxscale->ssh_node_f(0, true, "maxctrl clear server server%d maintenance", x);
+            test.maxscale->ssh_node_f(true, "maxctrl clear server server%d maintenance", x);
             sleep(2);
         }
     }

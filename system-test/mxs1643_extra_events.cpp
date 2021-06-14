@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     test.tprintf("Check that the current master now has the slave label");
     test.log_excludes("server1.*\\[Master, Running\\] -> \\[Running\\]");
     test.log_includes("server1.*\\[Master, Running\\] -> \\[Slave, Running\\]");
-    test.maxscale->ssh_node_f(0, true, "truncate -s 0 /var/log/maxscale/maxscale.log");
+    test.maxscale->ssh_node_f(true, "truncate -s 0 /var/log/maxscale/maxscale.log");
 
     // Check that the Master and Slave status aren't both set
     execute_query(test.repl->nodes[0], "SET GLOBAL read_only=OFF");

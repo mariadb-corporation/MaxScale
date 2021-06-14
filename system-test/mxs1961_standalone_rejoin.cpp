@@ -37,8 +37,8 @@ int main(int argc, char* argv[])
 
     auto comment = [&](const char* comment) {
             cout << comment << endl;
-            test.maxscale->ssh_node_f(0, true,
-                                      "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
+        test.maxscale->ssh_node_f(true,
+                                  "echo '----- %s -----' >> /var/log/maxscale/maxscale.log", comment);
         };
 
     auto slave = [&](const char* name) {

@@ -28,21 +28,18 @@ int main(int argc, char** argv)
     }
 
     test.maxscale->copy_to_node(filename, filename);
-    test.maxscale->ssh_node_f(0,
-                              true,
-                               "mkdir -p /var/lib/maxscale/maxscale.cnf.d/;"
-                               "chown maxscale:maxscale /var/lib/maxscale/maxscale.cnf.d/;"
-                               "cp %s /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf",
+    test.maxscale->ssh_node_f(true,
+                              "mkdir -p /var/lib/maxscale/maxscale.cnf.d/;"
+                              "chown maxscale:maxscale /var/lib/maxscale/maxscale.cnf.d/;"
+                              "cp %s /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf",
                               filename);
-    test.maxscale->ssh_node_f(0,
-                              true,
+    test.maxscale->ssh_node_f(true,
                               "chmod a+r /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
 
     test.maxscale->restart();
     test.check_maxscale_alive();
 
-    int rc = test.maxscale->ssh_node_f(0,
-                                       true,
+    int rc = test.maxscale->ssh_node_f(true,
                                        "grep 'version_string' /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
     test.expect(rc == 0,
                 "Generated configuration should have version_string defined and MaxScale should ignore it.");
@@ -53,8 +50,7 @@ int main(int argc, char** argv)
     test.maxscale->restart();
     test.check_maxscale_alive();
 
-    rc = test.maxscale->ssh_node_f(0,
-                                   true,
+    rc = test.maxscale->ssh_node_f(true,
                                    "grep 'version_string' /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
     test.expect(rc != 0, "Generated configuration should not have version_string defined.");
 

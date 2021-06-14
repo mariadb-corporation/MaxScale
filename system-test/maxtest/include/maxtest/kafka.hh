@@ -10,7 +10,7 @@ public:
     Kafka(TestConnections& test)
         : m_test(test)
     {
-        if (m_test.maxscale->ssh_node_f(0, false, "test -d kafka") != 0)
+        if (m_test.maxscale->ssh_node_f(false, "test -d kafka") != 0)
         {
             if (!install_kafka())
             {
@@ -29,7 +29,7 @@ public:
         std::string cmd = "kafka/bin/kafka-topics.sh --create --topic " + topic
             + " --bootstrap-server 127.0.0.1:4008";
 
-        m_test.expect(m_test.maxscale->ssh_node_f(0, false, "%s", cmd.c_str()) == 0,
+        m_test.expect(m_test.maxscale->ssh_node_f(false, "%s", cmd.c_str()) == 0,
                       "Failed to create topic '%s'", topic.c_str());
     }
 
@@ -58,11 +58,11 @@ private:
             "kafka/bin/zookeeper-shell.sh localhost:2181"
             " ls -R /brokers/ids|grep /brokers/ids/0";
 
-        if (m_test.maxscale->ssh_node_f(0, false, "%s", (zookeeper + kafka).c_str()) == 0)
+        if (m_test.maxscale->ssh_node_f(false, "%s", (zookeeper + kafka).c_str()) == 0)
         {
             for (int i = 0; i < 10; i++)
             {
-                if (m_test.maxscale->ssh_node_f(0, false, "%s", check.c_str()) == 0)
+                if (m_test.maxscale->ssh_node_f(false, "%s", check.c_str()) == 0)
                 {
                     ok = true;
                     break;
@@ -80,7 +80,7 @@ private:
     void stop_kafka()
     {
         m_test.maxscale->ssh_node_f(
-            0, false,
+            false,
             "kafka/bin/kafka-server-stop.sh;"
             "kafka/bin/zookeeper-server-stop.sh;"
             "rm -rf /tmp/zookeeper /tmp/kafka-logs;");
@@ -101,7 +101,7 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
         }
 
         // TODO: Install java with mdbci, this is a dumb workaround that will fail at some point.
-        if (m_test.maxscale->ssh_node_f(0, false, "sudo yum -y install java-latest-openjdk;"))
+        if (m_test.maxscale->ssh_node_f(false, "sudo yum -y install java-latest-openjdk;"))
         {
             return false;
         }
@@ -115,7 +115,7 @@ rm kafka_2.13-2.7.0.tgz;
 mv kafka_2.13-2.7.0 kafka;
         )EOF";
 
-        return m_test.maxscale->ssh_node_f(0, false, "%s", command.c_str()) == 0;
+        return m_test.maxscale->ssh_node_f(false, "%s", command.c_str()) == 0;
     }
 
     TestConnections& m_test;
