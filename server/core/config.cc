@@ -591,7 +591,7 @@ config::ParamMilliseconds Config::s_config_sync_interval(
     CN_CONFIG_SYNC_INTERVAL,
     "How often to synchronize the configuration.",
     mxs::config::NO_INTERPRETATION,
-    std::chrono::seconds(5));
+    std::chrono::seconds(5), mxs::config::Param::AT_RUNTIME);
 
 config::ParamBool Config::s_log_warn_super_user(
     &Config::s_specification,

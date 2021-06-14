@@ -173,6 +173,7 @@ private:
     SERVER* get_server() const;
 
     void      sync();
+    bool      sync_callback(mxb::Worker::Call::action_t action);
     void      queue_sync();
     mxb::Json fetch_config();
     void      try_update_status(const std::string& msg);

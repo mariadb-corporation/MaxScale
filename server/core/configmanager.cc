@@ -185,19 +185,27 @@ void ConfigManager::reconnect()
     m_reconnect = true;
 }
 
+bool ConfigManager::sync_callback(mxb::Worker::Call::action_t action)
+{
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
+        sync();
+
+        m_dcid = m_worker->delayed_call(mxs::Config::get().config_sync_interval,
+                                        &ConfigManager::sync_callback, this);
+    }
+    else
+    {
+        m_dcid = 0;
+    }
+
+    return false;
+}
+
 void ConfigManager::start_sync()
 {
-    auto ms = duration_cast<milliseconds>(mxs::Config::get().config_sync_interval);
-
-    m_dcid = m_worker->delayed_call(
-        ms.count(), [this](auto action) {
-            if (action == mxb::Worker::Call::EXECUTE)
-            {
-                sync();
-            }
-
-            return true;
-        });
+    m_dcid = m_worker->delayed_call(mxs::Config::get().config_sync_interval,
+                                    &ConfigManager::sync_callback, this);
 
     // Queue a sync to take place right after startup
     queue_sync();
