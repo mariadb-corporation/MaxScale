@@ -326,7 +326,8 @@ protected:
         {
             UNDEFINED,
             SINGLE,    // Each statement in the vector must be executed individually.
-            MULTI      // The statements in the vector can be combined into a multi-statement.
+            MULTI,     // There is just one multi-statement, but there will be many replies.
+            COMPOUND   // There is just one compound statement, and there is just one reply.
         };
 
         Query()
@@ -336,21 +337,21 @@ protected:
 
         Query(std::vector<std::string>&& statements)
             : m_kind(SINGLE)
-            , m_nReplies(statements.size())
+            , m_nStatements(statements.size())
             , m_statements(std::move(statements))
         {
         }
 
         Query(std::string&& statement)
             : m_kind(SINGLE)
-            , m_nReplies(1)
+            , m_nStatements(1)
         {
             m_statements.emplace_back(std::move(statement));
         }
 
-        Query(size_t nReplies, std::string&& multi_statement)
-            : m_kind(MULTI)
-            , m_nReplies(nReplies)
+        Query(Kind kind, size_t nStatements, std::string&& multi_statement)
+            : m_kind(kind)
+            , m_nStatements(nStatements)
         {
             m_statements.emplace_back(std::move(multi_statement));
         }
@@ -363,9 +364,9 @@ protected:
             return m_kind;
         }
 
-        size_t nReplies() const
+        size_t nStatements() const
         {
-            return m_nReplies;
+            return m_nStatements;
         }
 
         const std::vector<std::string>& statements() const
@@ -377,7 +378,7 @@ protected:
 
     private:
         Kind                     m_kind;
-        size_t                   m_nReplies;
+        size_t                   m_nStatements;
         std::vector<std::string> m_statements;
     };
 
