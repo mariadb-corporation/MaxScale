@@ -53,7 +53,8 @@ public:
     int run_cmd_sudo(const std::string& cmd);
 
     /**
-     * Run a command on the VM, either through ssh or local terminal. Fetches output.
+     * Run a command on the VM, either through ssh or local terminal. Fetches output. Should only
+     * be used for singular commands, as "sudo" only affects the first command in the string.
      *
      * @param cmd Command string
      * @param priv Sudo or normal user

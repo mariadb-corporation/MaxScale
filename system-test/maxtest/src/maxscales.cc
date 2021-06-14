@@ -179,7 +179,7 @@ int MaxScale::restart_maxscale()
     }
     else
     {
-        res = ssh_node("service maxscale restart", true);
+        res = ssh_output("service maxscale restart", true).rc;
     }
     return res;
 }
@@ -212,7 +212,7 @@ int MaxScale::start_maxscale()
     }
     else
     {
-        res = ssh_node("service maxscale restart", true);
+        res = ssh_output("service maxscale restart", true).rc;
     }
     return res;
 }
@@ -234,7 +234,7 @@ int MaxScale::stop_maxscale()
     }
     else
     {
-        res = ssh_node("service maxscale stop", true);
+        res = ssh_output("service maxscale stop", true).rc;
     }
     return res;
 }
