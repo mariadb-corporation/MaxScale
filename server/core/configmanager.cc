@@ -268,31 +268,10 @@ void ConfigManager::sync()
 
             if (next_version > m_version)
             {
-                try
+                if (revert_changes())
                 {
-                    // Try to revert any changes that might've been done
-                    auto prev_config = std::move(m_current_config);
-                    m_current_config = create_config(m_version);
-                    process_config(prev_config);
-
                     MXS_WARNING("Successfully reverted the failed configuration change, "
                                 "ignoring configuration version %ld.", next_version);
-                }
-                catch (const ConfigManager::Exception& e)
-                {
-                    MXS_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
-                              "is in an indeterminate state. The error that caused the failure was: %s",
-                              e.what());
-
-                    if (discard_config())
-                    {
-                        MXS_ALERT("Aborting the MaxScale process...");
-                        raise(SIGABRT);
-                    }
-                    else
-                    {
-                        MXS_ERROR("Cached configuration was not removed, cannot safely abort the process.");
-                    }
                 }
 
                 // Regardless of what happens, re-calculate the current configuration and update the version.
@@ -303,6 +282,38 @@ void ConfigManager::sync()
             }
         }
     }
+}
+
+bool ConfigManager::revert_changes()
+{
+    bool rval = false;
+
+    try
+    {
+        // Try to revert any changes that might've been done
+        auto prev_config = std::move(m_current_config);
+        m_current_config = create_config(m_version);
+        process_config(prev_config);
+        rval = true;
+    }
+    catch (const ConfigManager::Exception& e)
+    {
+        MXS_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
+                  "is in an indeterminate state. The error that caused the failure was: %s",
+                  e.what());
+
+        if (discard_config())
+        {
+            MXS_ALERT("Aborting the MaxScale process...");
+            raise(SIGABRT);
+        }
+        else
+        {
+            MXS_ERROR("Cached configuration was not removed, cannot safely abort the process.");
+        }
+    }
+
+    return rval;
 }
 
 bool ConfigManager::load_cached_config()
@@ -453,6 +464,10 @@ bool ConfigManager::commit()
     {
         MXS_ERROR("Cannot complete configuration change: %s", e.what());
         rollback();
+
+        // Try to revert any changes that were applied
+        revert_changes();
+        m_current_config = create_config(m_version);
     }
 
     return ok;
