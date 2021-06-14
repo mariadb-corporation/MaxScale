@@ -53,7 +53,17 @@
             :chartData="sortedChartData"
             :options="scatterChartOptions"
         />
-
+        <vert-bar-chart
+            v-else-if="selectedChart === 'Bar - Vertical'"
+            id="query-chart"
+            class="vert-bar-chart-container pa-3"
+            :style="{
+                minHeight: `${chartHeight}px`,
+                minWidth,
+            }"
+            :chartData="sortedChartData"
+            :options="vertBarChartOptions"
+        />
         <!-- TODO: Add more charts, add fullscreen mode and export chart feat-->
     </div>
 </template>
@@ -123,9 +133,13 @@ export default {
                     onHover: (e, el) => {
                         e.target.style.cursor = el[0] ? 'pointer' : 'default'
                     },
+                    animationDuration: 0,
+                    intersect: false,
                 },
                 tooltips: {
                     enabled: false,
+                    intersect: false,
+                    position: 'cursor',
                     custom: function(tooltipModel) {
                         const chartScope = this
                         const position = chartScope._chart.canvas.getBoundingClientRect()
@@ -179,59 +193,68 @@ export default {
                 },
             }
         },
+        cartesianAxes() {
+            return {
+                type: this.isLinear ? 'linear' : 'category',
+                ticks: {
+                    autoSkip: this.isLinear,
+                    autoSkipPadding: this.isLinear ? 0 : 15,
+                    maxRotation: this.isLinear ? 0 : 90,
+                    minRotation: this.isLinear ? 0 : 90,
+                    //truncate tick
+                    callback: v => {
+                        const toStr = `${v}`
+                        if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
+                        return v
+                    },
+                },
+            }
+        },
         lineChartOptions() {
             let lineOptions = {
                 showLines: true,
                 hover: {
                     mode: this.isLinear ? 'nearest' : 'index',
-                    intersect: false,
                 },
                 tooltips: {
                     mode: this.isLinear ? 'nearest' : 'index',
-                    position: 'cursor',
-                    intersect: false,
-                },
-                elements: {
-                    point: {
-                        radius: 0,
-                    },
                 },
                 scales: {
-                    xAxes: [
-                        {
-                            type: this.isLinear ? 'linear' : 'category',
-                            ticks: {
-                                autoSkip: this.isLinear,
-                                autoSkipPadding: this.isLinear ? 0 : 15,
-                                maxRotation: this.isLinear ? 0 : 90,
-                                minRotation: this.isLinear ? 0 : 90,
-                                //truncate tick
-                                callback: v => {
-                                    const toStr = `${v}`
-                                    if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
-                                    return v
-                                },
-                            },
-                        },
-                    ],
+                    xAxes: [this.cartesianAxes],
                 },
             }
             return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
         },
         scatterChartOptions() {
+            return this.chartOptions
+        },
+        vertBarChartOptions() {
             return this.$help.lodash.deepMerge(this.chartOptions, {
+                hover: {
+                    mode: 'index',
+                },
                 tooltips: {
-                    position: 'cursor',
-                    intersect: false,
+                    mode: 'index',
+                },
+                scales: {
+                    xAxes: [this.cartesianAxes],
                 },
             })
         },
     },
+    watch: {
+        chartData(v) {
+            if (!this.$typy(v, 'datasets[0].data[0]').safeObject) this.removeTooltip()
+        },
+    },
     beforeDestroy() {
-        let tooltipEl = document.getElementById(this.uniqueTooltipId)
-        if (tooltipEl) tooltipEl.remove()
+        this.removeTooltip()
     },
     methods: {
+        removeTooltip() {
+            let tooltipEl = document.getElementById(this.uniqueTooltipId)
+            if (tooltipEl) tooltipEl.remove()
+        },
         getDefFileName() {
             return `MaxScale ${this.selectedChart} Chart - ${this.$help.dateFormat({
                 value: new Date(),

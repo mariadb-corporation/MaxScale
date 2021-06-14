@@ -161,12 +161,16 @@ export default {
             ]
             return fields
         },
-
+        stringFields() {
+            return this.resSet.fields.filter(field => !this.numericFields.includes(field))
+        },
         xAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             switch (this.selectedChart) {
                 case 'Scatter':
                     return this.numericFields
+                case 'Bar - Vertical':
+                    return this.stringFields
                 case 'Line':
                 default:
                     return [this.numberSign, ...this.resSet.fields]
@@ -177,6 +181,7 @@ export default {
             switch (this.selectedChart) {
                 case 'Line':
                 case 'Scatter':
+                case 'Bar - Vertical':
                     return this.numericFields
                 default:
                     return [this.numberSign, ...this.resSet.fields]
@@ -216,25 +221,53 @@ export default {
         genDataset({ colorIndex, data, chartType }) {
             const lineColor = this.$help.dynamicColors(colorIndex)
             let dataset = {
-                borderColor: lineColor,
-                borderWidth: 1,
                 data,
             }
+            const indexOfOpacity = lineColor.lastIndexOf(')') - 1
+            const backgroundColor = this.$help.strReplaceAt({
+                str: lineColor,
+                index: indexOfOpacity,
+                newChar: '0.1',
+            })
             switch (chartType) {
                 case 'Line':
                     {
-                        const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-                        const backgroundColor = this.$help.strReplaceAt({
-                            str: lineColor,
-                            index: indexOfOpacity,
-                            newChar: '0.1',
-                        })
-                        dataset.backgroundColor = backgroundColor
-                        dataset.lineTension = 0
+                        dataset = {
+                            ...dataset,
+                            backgroundColor: backgroundColor,
+                            borderColor: lineColor,
+                            lineTension: 0,
+                            borderWidth: 1,
+                            fill: false,
+                            pointBorderColor: 'transparent',
+                            pointBackgroundColor: 'transparent',
+                            pointHoverBorderColor: lineColor,
+                            pointHoverBackgroundColor: backgroundColor,
+                        }
                     }
                     break
                 case 'Scatter': {
-                    dataset.backgroundColor = lineColor
+                    dataset = {
+                        ...dataset,
+                        backgroundColor: lineColor,
+                        borderColor: lineColor,
+                        borderWidth: 1,
+                    }
+                    break
+                }
+                case 'Bar - Vertical': {
+                    dataset = {
+                        ...dataset,
+                        barPercentage: 0.5,
+                        categoryPercentage: 1,
+                        barThickness: 'flex',
+                        maxBarThickness: 48,
+                        minBarLength: 2,
+                        backgroundColor: backgroundColor,
+                        borderColor: lineColor,
+                        borderWidth: 1,
+                        hoverBackgroundColor: lineColor,
+                    }
                     break
                 }
             }
