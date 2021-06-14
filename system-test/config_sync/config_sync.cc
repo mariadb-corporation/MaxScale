@@ -354,6 +354,23 @@ void test_config_parameters(TestConnections& test)
     test.expect(version0 == version2, "Second no-op change should not increment version: %ld != %ld",
                 version0, version2);
 
+    res = test.maxscale->maxctrl("alter maxscale config_sync_user bob");
+    test.expect(res.rc == 0, "Changing config_sync_user to a bad user failed: %s", res.output.c_str());
+    test.expect(version0 == get_version(api1), "Changing config_sync_user should not increment version");
+
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 124");
+    test.expect(res.rc != 0, "Config change with bad credentials should fail");
+    test.expect(version0 == get_version(api1),
+                "Config update with bad credentials should not increment version");
+
+    res = test.maxscale->maxctrl("alter maxscale --skip-sync config_sync_user maxskysql");
+    test.expect(res.rc == 0, "Changing config_sync_user back failed: %s", res.output.c_str());
+    test.expect(version0 == get_version(api1), "Changing config_sync_user should not increment version");
+
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 124");
+    test.expect(res.rc == 0, "Config change with good credentials should work");
+    expect_sync(test, version0 + 1, 2);
+
     reset(test);
 }
 
@@ -389,6 +406,22 @@ void test_sync(TestConnections& test)
 
     version = get_version(api1);
     test.maxscale2->start();
+    expect_sync(test, version, 2);
+
+    test.tprintf("Sync new monitor with service relationship");
+    test.maxscale2->stop();
+    test.maxscale->maxctrl("create monitor test-monitor galeramon user=maxskysql password=skysql");
+    test.maxscale->maxctrl("create service test-service2 readconnroute "
+                           "user=maxskysql password=skysql router_options=master --cluster test-monitor");
+    test.maxscale2->start();
+
+    version += 2;
+    expect_sync(test, version, 2);
+
+    test.maxscale->maxctrl("destroy monitor --force test-monitor");
+    test.maxscale->maxctrl("destroy service --force test-service2");
+
+    version += 2;
     expect_sync(test, version, 2);
 
     reset(test);
@@ -590,6 +623,13 @@ void test_failures(TestConnections& test)
     test.expect(db_version == std::to_string(mxs_version),
                 "Database and MaxScale should be in sync: %s != %ld",
                 db_version.c_str(), mxs_version);
+
+    test.tprintf("Store bad configation data in database");
+    c.query("ALTER TABLE mysql.maxscale_config MODIFY COLUMN config TEXT");
+    c.query("UPDATE mysql.maxscale_config SET config = 'hello world', version = 105");
+    wait_for_sync(105);
+    mxs_version = get_version(api1);
+    test.expect(mxs_version != 105, "Configuration with bad JSON should not increment version");
 
     reset(test);
 }
