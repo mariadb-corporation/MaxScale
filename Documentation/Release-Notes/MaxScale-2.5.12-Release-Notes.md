@@ -1,5 +1,10 @@
 # MariaDB MaxScale 2.5.12 Release Notes -- 2021-05-26
 
+**NOTE** After 2.5.12 was released, a serious
+[regression](https://jira.mariadb.org/browse/MXS-3585)
+was noticed. Do not use MaxScale 2.5.12, but install or upgrade to
+MaxScale 2.5.13 that contains a fix for the regression.
+
 Release 2.5.12 is a GA release.
 
 This document describes the changes in release 2.5.12, when compared to the
