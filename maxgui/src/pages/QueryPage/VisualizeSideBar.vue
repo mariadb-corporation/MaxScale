@@ -168,6 +168,7 @@ export default {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             switch (this.selectedChart) {
                 case 'Scatter':
+                case 'Bar - Horizontal':
                     return this.numericFields
                 case 'Bar - Vertical':
                     return this.stringFields
@@ -183,6 +184,8 @@ export default {
                 case 'Scatter':
                 case 'Bar - Vertical':
                     return this.numericFields
+                case 'Bar - Horizontal':
+                    return this.stringFields
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
@@ -227,7 +230,7 @@ export default {
             const backgroundColor = this.$help.strReplaceAt({
                 str: lineColor,
                 index: indexOfOpacity,
-                newChar: '0.1',
+                newChar: '0.2',
             })
             switch (chartType) {
                 case 'Line':
@@ -238,7 +241,6 @@ export default {
                             borderColor: lineColor,
                             lineTension: 0,
                             borderWidth: 1,
-                            fill: false,
                             pointBorderColor: 'transparent',
                             pointBackgroundColor: 'transparent',
                             pointHoverBorderColor: lineColor,
@@ -255,7 +257,8 @@ export default {
                     }
                     break
                 }
-                case 'Bar - Vertical': {
+                case 'Bar - Vertical':
+                case 'Bar - Horizontal': {
                     dataset = {
                         ...dataset,
                         barPercentage: 0.5,

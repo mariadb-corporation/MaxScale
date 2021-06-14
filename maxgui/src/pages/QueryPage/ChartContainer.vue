@@ -62,9 +62,20 @@
                 minWidth,
             }"
             :chartData="sortedChartData"
-            :options="vertBarChartOptions"
+            :options="barChartOptions"
         />
-        <!-- TODO: Add more charts, add fullscreen mode and export chart feat-->
+        <horiz-bar-chart
+            v-else-if="selectedChart === 'Bar - Horizontal'"
+            id="query-chart"
+            class="vert-bar-chart-container pa-3"
+            :style="{
+                minHeight: `${chartHeight}px`,
+                minWidth,
+            }"
+            :chartData="sortedChartData"
+            :options="barChartOptions"
+        />
+        <!-- TODO: Addfullscreen mode feat-->
     </div>
 </template>
 
@@ -104,7 +115,21 @@ export default {
             return '0px'
         },
         chartHeight() {
-            return this.containerChartHeight - 36 // export button height
+            switch (this.selectedChart) {
+                case 'Bar - Horizontal':
+                    /** When there is too many data points,
+                     * first, get min value between "overflow" height (this.chartData.labels.length * 15)
+                     * and max height threshold 15000. However, when there is too little data points,
+                     * the "overflow" height is smaller than container height, container height
+                     * should be chosen to make chart fit to its container
+                     */
+                    return Math.max(
+                        this.containerChartHeight - 36,
+                        Math.min(this.chartData.labels.length * 15, 15000)
+                    )
+                default:
+                    return this.containerChartHeight - 36 // export button height
+            }
         },
         isLinear() {
             if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
@@ -228,7 +253,7 @@ export default {
         scatterChartOptions() {
             return this.chartOptions
         },
-        vertBarChartOptions() {
+        barChartOptions() {
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',

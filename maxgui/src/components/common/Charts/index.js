@@ -15,6 +15,7 @@ import LineChartStream from './LineChartStream.vue'
 import LineChart from './LineChart.vue'
 import ScatterChart from './ScatterChart.vue'
 import VertBarChart from './VertBarChart.vue'
+import HorizBarChart from './HorizBarChart.vue'
 import './customTooltip.scss'
 
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
@@ -38,4 +39,5 @@ export default {
     'line-chart': LineChart,
     'scatter-chart': ScatterChart,
     'vert-bar-chart': VertBarChart,
+    'horiz-bar-chart': HorizBarChart,
 }
