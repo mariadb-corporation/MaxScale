@@ -63,11 +63,9 @@ void set_max_packet(TestConnections* Test, bool binlog, char* cmd)
 
 void different_packet_size(TestConnections* Test, bool binlog)
 {
-    Test->reset_timeout();
     Test->tprintf("Set big max_allowed_packet\n");
     set_max_packet(Test, binlog, (char*) "set global max_allowed_packet = 200000000;");
 
-    Test->reset_timeout();
     Test->tprintf("Create table\n");
     MYSQL* conn = connect_to_serv(Test, binlog);
     Test->try_query(conn,
@@ -84,7 +82,6 @@ void different_packet_size(TestConnections* Test, bool binlog)
         {
             size_t size = 0x0ffffff * i + j;
             Test->tprintf("Trying event app. %lu bytes", size);
-            Test->reset_timeout();
 
             char* event = create_event_size(size);
             conn = connect_to_serv(Test, binlog);
@@ -95,11 +92,9 @@ void different_packet_size(TestConnections* Test, bool binlog)
         }
     }
 
-    Test->reset_timeout();
     Test->tprintf("Restoring max_allowed_packet");
     set_max_packet(Test, binlog, (char*) "set global max_allowed_packet = 16777216;");
 
-    Test->reset_timeout();
     conn = connect_to_serv(Test, binlog);
     Test->try_query(conn, "DROP TABLE test.large_event");
     mysql_close(conn);

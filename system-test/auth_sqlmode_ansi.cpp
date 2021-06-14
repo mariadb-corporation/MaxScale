@@ -278,7 +278,6 @@
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
 
     auto node_ip = Test->repl->ip4(0);
     printf("Connecting to backend %s\n", node_ip);
@@ -292,7 +291,6 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Restarting MaxScale\n");
 
-    Test->reset_timeout();
     Test->maxscale->restart_maxscale();
 
     Test->log_excludes("Loading database names");

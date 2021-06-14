@@ -31,7 +31,6 @@ void create_drop_bad_user(MYSQL* conn, TestConnections* Test)
 int main(int argc, char* argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
 
     Test->repl->connect();
     Test->maxscale->connect_maxscale();

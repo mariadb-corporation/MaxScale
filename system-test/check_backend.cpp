@@ -14,8 +14,6 @@ int main(int argc, char *argv[])
     // Reset server settings by replacing the config files
     Test->repl->reset_all_servers_settings();
 
-    Test->reset_timeout();
-
     Test->tprintf("Connecting to Maxscale maxscales->routers[0] with Master/Slave backend\n");
     Test->maxscale->connect_maxscale();
     Test->tprintf("Testing connections\n");

@@ -30,7 +30,6 @@ int main(int argc, char* argv[])
 
     std::thread parall_traffic1[100];
 
-    Test->reset_timeout();
     Test->repl->connect();
     Test->repl->execute_query_all_nodes((char*) "set global max_connect_errors=1000;");
     Test->repl->execute_query_all_nodes((char*) "set global max_connections=1000;");
@@ -52,7 +51,6 @@ int main(int argc, char* argv[])
     Test->tprintf("Doing change_user in the loop");
     for (int i = 0; i < iterations; i++)
     {
-        Test->reset_timeout();
         Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0], "user", "pass2", (char*) "test"),
                          "change_user failed! %s", mysql_error(Test->maxscale->conn_rwsplit[0]));
         Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0],
@@ -66,14 +64,12 @@ int main(int argc, char* argv[])
     exit_flag = 1;
     for (int j = 0; j < 25; j++)
     {
-        Test->reset_timeout();
         parall_traffic1[j].join();
     }
     Test->tprintf("All threads are finished");
 
     Test->tprintf("Change user to '%s' in order to be able to DROP user",
                   Test->maxscale->user_name.c_str());
-    Test->reset_timeout();
     mysql_change_user(Test->maxscale->conn_rwsplit[0],
                       Test->maxscale->user_name.c_str(),
                       Test->maxscale->password.c_str(),

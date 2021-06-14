@@ -14,7 +14,6 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "FLUSH PRIVILEGES");
     test.repl->sync_slaves();
 
-    test.reset_timeout();
     test.tprintf("Trying to connect using user with old style password");
 
     MYSQL* conn = open_conn(test.maxscale->rwsplit_port,

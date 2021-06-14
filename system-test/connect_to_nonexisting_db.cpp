@@ -37,7 +37,6 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.reset_timeout();
     test.tprintf("Connection to non-existing DB (all maxscales->routers[0])");
     test.add_result(try_connect(test), "Connection with dropped database should fail");
 
@@ -68,7 +67,6 @@ int main(int argc, char* argv[])
                            test.maxscale_ssl);
     test.try_query(conn, "USE test_db");
     test.try_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1)");
-    test.reset_timeout();
     test.add_result(execute_select_query_and_check(conn, "SELECT * FROM t1", 1),
                     "Error execution SELECT * FROM t1;");
     test.try_query(conn, "DROP DATABASE test_db");

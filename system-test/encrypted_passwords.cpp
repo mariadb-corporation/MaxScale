@@ -10,8 +10,6 @@
 int create_key(TestConnections* test)
 {
     int res = 0;
-    int exit_code;
-    test->reset_timeout();
     test->tprintf("Creating new encryption keys\n");
     test->maxscale->ssh_node(
         "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets",

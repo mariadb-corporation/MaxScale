@@ -23,7 +23,6 @@ int main(int argc, char* argv[])
 
 void test_main(TestConnections& test)
 {
-    test.reset_timeout();
     test.add_result(test.create_connections(70, true, true, true, false),
                     "Error creating connections");
     if (test.ok())

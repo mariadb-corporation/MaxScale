@@ -92,7 +92,6 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
-    test.reset_timeout();
     int i;
 
     test.repl->connect();

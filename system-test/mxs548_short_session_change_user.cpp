@@ -43,7 +43,6 @@ void query_thread(TestConnections& test)
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-    test.reset_timeout();
 
     test.repl->connect();
     test.maxscale->connect_maxscale();
@@ -72,7 +71,6 @@ int main(int argc, char** argv)
     sleep(RUN_TIME);
     keep_running = false;
 
-    test.reset_timeout();
     test.tprintf("Waiting for all threads to exit");
 
     for (auto& a : threads)
@@ -81,12 +79,10 @@ int main(int argc, char** argv)
     }
 
     test.tprintf("Dropping tables and users");
-    test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1;");
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP USER user@'%%'");
     test.maxscale->close_maxscale_connections();
 
-    test.reset_timeout();
     test.check_maxscale_alive();
     test.log_excludes("due to authentication failure");
     test.log_excludes("due to handshake failure");
