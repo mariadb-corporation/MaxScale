@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     Test->try_query(Test->maxscale->conn_slave, (char*) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     Test->tprintf("Copying t1.cvs from Maxscale machine:\n");
-    Test->repl->copy_from_node_legacy("/tmp/t1.csv", "./t1.csv", 0);
+    Test->repl->copy_from_node(0, "/tmp/t1.csv", "./t1.csv");
 
     MYSQL* srv[2];
 

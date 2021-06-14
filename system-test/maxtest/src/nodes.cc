@@ -248,11 +248,6 @@ bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
     return rc == 0;
 }
 
-int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
-{
-    return copy_from_node(i, src, dest);
-}
-
 void Nodes::clear_vms()
 {
     m_vms.clear();

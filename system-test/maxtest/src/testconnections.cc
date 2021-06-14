@@ -1,19 +1,12 @@
 #include <getopt.h>
 #include <libgen.h>
-#include <pthread.h>
 #include <stdarg.h>
-#include <sys/time.h>
 #include <time.h>
-#include <signal.h>
-#include <execinfo.h>
-#include <sys/stat.h>
+#include <csignal>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <fstream>
-#include <iostream>
 #include <future>
-#include <limits.h>
 #include <algorithm>
 
 #include <maxbase/assert.h>
@@ -31,7 +24,6 @@
 #include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
 
-using namespace mxb;
 using std::cout;
 using std::endl;
 using std::string;
@@ -60,18 +52,9 @@ namespace maxscale
 
 static bool start = true;
 static std::string required_repl_version;
-static std::string required_galera_version;
 static bool restart_galera = false;
 static bool require_galera = false;
 static bool require_columnstore = false;
-}
-
-static void perform_manual_action(const char* zMessage)
-{
-    std::cout << zMessage << " (press enter when done)." << std::endl;
-    std::string not_used;
-    std::getline(std::cin, not_used);
-    std::cout << "Ok" << std::endl;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -100,7 +83,7 @@ static int call_system(const string& command)
 
 void sigfatal_handler(int i)
 {
-    dump_stacktrace();
+    mxb::dump_stacktrace();
     signal_set(i, SIG_DFL);
     raise(i);
 }
@@ -113,11 +96,6 @@ void TestConnections::skip_maxscale_start(bool value)
 void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
-}
-
-void TestConnections::require_galera_version(const char* version)
-{
-    maxscale::required_galera_version = version;
 }
 
 void TestConnections::require_galera(bool value)
@@ -1957,8 +1935,7 @@ bool TestConnections::check_backend_versions()
         };
 
     auto repl_ok = tester(repl, maxscale::required_repl_version);
-    auto galera_ok = tester(galera, maxscale::required_galera_version);
-    return repl_ok && galera_ok;
+    return repl_ok;
 }
 
 bool TestConnections::required_machines_are_running()
