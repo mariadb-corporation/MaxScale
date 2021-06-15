@@ -22,7 +22,7 @@ namespace command
 class MxsDiagnose final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::MXSDIAGNOSE;
+    static constexpr const char* const KEY = "mxsDiagnose";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -88,7 +88,7 @@ struct IsAdmin<MxsGetConfig>
 class MxsGetConfig final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::MXSGETCONFIG;
+    static constexpr const char* const KEY = "mxsGetConfig";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -133,7 +133,7 @@ struct IsAdmin<MxsSetConfig>
 class MxsSetConfig final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::MXSSETCONFIG;
+    static constexpr const char* const KEY = "mxsSetConfig";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -223,7 +223,7 @@ struct IsAdmin<MxsCreateDatabase>
 class MxsCreateDatabase : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::MXSCREATEDATABASE;
+    static constexpr const char* const KEY = "mxsCreateDatabase";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;

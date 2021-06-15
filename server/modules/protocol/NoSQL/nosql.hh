@@ -331,58 +331,26 @@ namespace key
 
 // Mongo Commands
 const char BATCHSIZE[]               = "batchSize";
-const char BUILDINFO[]               = "buildInfo";
 const char COLLECTION[]              = "collection";
-const char COUNT[]                   = "count";
-const char CREATE[]                  = "create";
-const char DELETE[]                  = "delete";
 const char DELETES[]                 = "deletes";
-const char DISTINCT[]                = "distinct";
 const char DOCUMENTS[]               = "documents";
-const char DROP[]                    = "drop";
-const char DROPDATABASE[]            = "dropDatabase";
-const char ENDSESSIONS[]             = "endSessions";
 const char FILTER[]                  = "filter";
-const char FIND[]                    = "find";
 const char FIRSTBATCH[]              = "firstBatch";
-const char GETCMDLINEOPTS[]          = "getCmdLineOpts";
-const char GETFREEMONITORINGSTATUS[] = "getFreeMonitoringStatus";
-const char GETLASTERROR[]            = "getLastError";
-const char GETLOG[]                  = "getLog";
-const char GETMORE[]                 = "getMore";
-const char INSERT[]                  = "insert";
-const char ISMASTER[]                = "isMaster";
 const char KEY[]                     = "key";
-const char KILLCURSORS[]             = "killCursors";
 const char LIMIT[]                   = "limit";
-const char LISTCOMMANDS[]            = "listCommands";
-const char LISTCOLLECTIONS[]         = "listCollections";
-const char LISTDATABASES[]           = "listDatabases";
 const char MULTI[]                   = "multi";
 const char NAMEONLY[]                = "nameOnly";
 const char NEXTBATCH[]               = "nextBatch";
 const char ORDERED[]                 = "ordered";
-const char PING[]                    = "ping";
 const char PROJECTION[]              = "projection";
 const char Q[]                       = "q";
 const char QUERY[]                   = "query";
-const char REPLSETGETSTATUS[]        = "replSetGetStatus";
-const char RENAMECOLLECTION[]        = "renameCollection";
-const char RESETERROR[]              = "resetError";
 const char SINGLEBATCH[]             = "singleBatch";
 const char SKIP[]                    = "skip";
 const char SORT[]                    = "sort";
 const char U[]                       = "u";
-const char UPDATE[]                  = "update";
 const char UPDATES[]                 = "updates";
 const char UPSERT[]                  = "upsert";
-const char WHATSMYURI[]              = "whatsmyuri";
-
-// MaxScale Commands
-const char MXSDIAGNOSE[]             = "mxsDiagnose";
-const char MXSCREATEDATABASE[]       = "mxsCreateDatabase";
-const char MXSGETCONFIG[]            = "mxsGetConfig";
-const char MXSSETCONFIG[]            = "mxsSetConfig";
 
 };
 

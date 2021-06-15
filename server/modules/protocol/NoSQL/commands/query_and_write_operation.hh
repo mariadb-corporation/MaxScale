@@ -275,7 +275,7 @@ protected:
 class Delete final : public OrderedCommand
 {
 public:
-    static constexpr const char* const KEY = key::DELETE;
+    static constexpr const char* const KEY = "delete";
     static constexpr const char* const HELP = "";
 
     template<class ConcretePacket>
@@ -371,7 +371,7 @@ private:
 class Find final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::FIND;
+    static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -521,7 +521,7 @@ private:
 class GetLastError final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::GETLASTERROR;
+    static constexpr const char* const KEY = "getLastError";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -536,7 +536,7 @@ public:
 class GetMore final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::GETMORE;
+    static constexpr const char* const KEY = "getMore";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -571,7 +571,7 @@ public:
 class Insert final : public OrderedCommand
 {
 public:
-    static constexpr const char* const KEY = key::INSERT;
+    static constexpr const char* const KEY = "insert";
     static constexpr const char* const HELP = "";
 
     template<class ConcretePacket>
@@ -1173,7 +1173,7 @@ protected:
 class ResetError final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::RESETERROR;
+    static constexpr const char* const KEY = "resetError";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -1189,7 +1189,7 @@ public:
 class Update final : public OrderedCommand
 {
 public:
-    static constexpr const char* const KEY = key::UPDATE;
+    static constexpr const char* const KEY = "update";
     static constexpr const char* const HELP = "";
 
     template<class ConcretePacket>

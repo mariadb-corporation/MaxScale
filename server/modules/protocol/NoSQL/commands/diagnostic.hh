@@ -31,7 +31,7 @@ namespace command
 class BuildInfo final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::BUILDINFO;
+    static constexpr const char* const KEY = "buildInfo";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -99,7 +99,7 @@ public:
 class GetCmdLineOpts final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::GETCMDLINEOPTS;
+    static constexpr const char* const KEY = "getCmdLineOpts";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -134,7 +134,7 @@ struct IsAdmin<command::GetLog>
 class GetLog final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::GETLOG;
+    static constexpr const char* const KEY = "getLog";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -185,7 +185,7 @@ public:
 class ListCommands final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::LISTCOMMANDS;
+    static constexpr const char* const KEY = "listCommands";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -209,7 +209,7 @@ public:
 class Ping final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::PING;
+    static constexpr const char* const KEY = "ping";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -234,7 +234,7 @@ public:
 class WhatsMyUri final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::WHATSMYURI;
+    static constexpr const char* const KEY = "whatsmyuri";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;

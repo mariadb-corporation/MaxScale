@@ -29,7 +29,7 @@ namespace command
 class Count final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::COUNT;
+    static constexpr const char* const KEY = "count";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -141,7 +141,7 @@ private:
 class Distinct final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::DISTINCT;
+    static constexpr const char* const KEY = "distinct";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;

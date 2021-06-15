@@ -16,6 +16,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <bsoncxx/exception/exception.hpp>
 #include "config.hh"
+#include "commands/query_and_write_operation.hh"
 
 using namespace std;
 
@@ -111,7 +112,7 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
                             error::UNAUTHORIZED);
         }
 
-        if (sCommand->name() != key::GETLASTERROR)
+        if (sCommand->name() != command::GetLastError::KEY)
         {
             m_context.reset_error();
         }

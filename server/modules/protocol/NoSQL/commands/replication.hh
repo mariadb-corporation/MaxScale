@@ -29,7 +29,7 @@ namespace command
 class IsMaster final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::ISMASTER;
+    static constexpr const char* const KEY = "isMaster";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -62,7 +62,7 @@ public:
 class ReplSetGetStatus final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::REPLSETGETSTATUS;
+    static constexpr const char* const KEY = "replSetGetStatus";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;

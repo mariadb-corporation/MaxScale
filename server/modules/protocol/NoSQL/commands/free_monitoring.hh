@@ -35,7 +35,7 @@ struct IsAdmin<command::GetFreeMonitoringStatus>
 class GetFreeMonitoringStatus final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::GETFREEMONITORINGSTATUS;
+    static constexpr const char* const KEY = "getFreeMonitoringStatus";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;

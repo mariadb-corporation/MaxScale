@@ -37,7 +37,7 @@ namespace command
 class Create final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::CREATE;
+    static constexpr const char* const KEY = "create";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -101,7 +101,7 @@ public:
 class Drop final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::DROP;
+    static constexpr const char* const KEY = "drop";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -163,7 +163,7 @@ public:
 class DropDatabase final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::DROPDATABASE;
+    static constexpr const char* const KEY = "dropDatabase";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -238,7 +238,7 @@ public:
 class KillCursors final : public ImmediateCommand
 {
 public:
-    static constexpr const char* const KEY = key::KILLCURSORS;
+    static constexpr const char* const KEY = "killCursors";
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
@@ -306,7 +306,7 @@ public:
 class ListCollections final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::LISTCOLLECTIONS;
+    static constexpr const char* const KEY = "listCollections";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -449,7 +449,7 @@ struct IsAdmin<command::ListDatabases>
 class ListDatabases final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::LISTDATABASES;
+    static constexpr const char* const KEY = "listDatabases";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
@@ -579,7 +579,7 @@ struct IsAdmin<command::RenameCollection>
 class RenameCollection final : public SingleCommand
 {
 public:
-    static constexpr const char* const KEY = key::RENAMECOLLECTION;
+    static constexpr const char* const KEY = "renameCollection";
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;

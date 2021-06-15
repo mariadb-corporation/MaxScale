@@ -156,39 +156,44 @@ using InfosByName = const map<string, CommandInfo>;
 
 struct ThisUnit
 {
+    static std::string tolower(const char* zString)
+    {
+        return mxb::tolower(zString);
+    }
+
     InfosByName infos_by_name =
     {
-        { mxb::tolower(key::BUILDINFO),               create_info<command::BuildInfo>() },
-        { mxb::tolower(key::COUNT),                   create_info<command::Count>() },
-        { mxb::tolower(key::CREATE),                  create_info<command::Create>() },
-        { mxb::tolower(key::DELETE),                  create_info<command::Delete>() },
-        { mxb::tolower(key::DISTINCT),                create_info<command::Distinct>() },
-        { mxb::tolower(key::DROP),                    create_info<command::Drop>() },
-        { mxb::tolower(key::DROPDATABASE),            create_info<command::DropDatabase>() },
-        { mxb::tolower(key::ENDSESSIONS),             create_info<command::EndSessions>() },
-        { mxb::tolower(key::FIND),                    create_info<command::Find>() },
-        { mxb::tolower(key::GETCMDLINEOPTS),          create_info<command::GetCmdLineOpts>() },
-        { mxb::tolower(key::GETFREEMONITORINGSTATUS), create_info<command::GetFreeMonitoringStatus>() },
-        { mxb::tolower(key::GETLASTERROR),            create_info<command::GetLastError>() },
-        { mxb::tolower(key::GETLOG),                  create_info<command::GetLog>() },
-        { mxb::tolower(key::GETMORE),                 create_info<command::GetMore>() },
-        { mxb::tolower(key::INSERT),                  create_info<command::Insert>() },
-        { mxb::tolower(key::ISMASTER),                create_info<command::IsMaster>() },
-        { mxb::tolower(key::KILLCURSORS),             create_info<command::KillCursors>() },
-        { mxb::tolower(key::LISTCOMMANDS),            create_info<command::ListCommands>() },
-        { mxb::tolower(key::LISTCOLLECTIONS),         create_info<command::ListCollections>() },
-        { mxb::tolower(key::LISTDATABASES),           create_info<command::ListDatabases>() },
-        { mxb::tolower(key::PING),                    create_info<command::Ping>() },
-        { mxb::tolower(key::REPLSETGETSTATUS),        create_info<command::ReplSetGetStatus>() },
-        { mxb::tolower(key::RENAMECOLLECTION),        create_info<command::RenameCollection>() },
-        { mxb::tolower(key::RESETERROR),              create_info<command::ResetError>() },
-        { mxb::tolower(key::UPDATE),                  create_info<command::Update>() },
-        { mxb::tolower(key::WHATSMYURI),              create_info<command::WhatsMyUri>() },
+        { tolower(command::BuildInfo::KEY),               create_info<command::BuildInfo>() },
+        { tolower(command::Count::KEY),                   create_info<command::Count>() },
+        { tolower(command::Create::KEY),                  create_info<command::Create>() },
+        { tolower(command::Delete::KEY),                  create_info<command::Delete>() },
+        { tolower(command::Distinct::KEY),                create_info<command::Distinct>() },
+        { tolower(command::Drop::KEY),                    create_info<command::Drop>() },
+        { tolower(command::DropDatabase::KEY),            create_info<command::DropDatabase>() },
+        { tolower(command::EndSessions::KEY),             create_info<command::EndSessions>() },
+        { tolower(command::Find::KEY),                    create_info<command::Find>() },
+        { tolower(command::GetCmdLineOpts::KEY),          create_info<command::GetCmdLineOpts>() },
+        { tolower(command::GetFreeMonitoringStatus::KEY), create_info<command::GetFreeMonitoringStatus>() },
+        { tolower(command::GetLastError::KEY),            create_info<command::GetLastError>() },
+        { tolower(command::GetLog::KEY),                  create_info<command::GetLog>() },
+        { tolower(command::GetMore::KEY),                 create_info<command::GetMore>() },
+        { tolower(command::Insert::KEY),                  create_info<command::Insert>() },
+        { tolower(command::IsMaster::KEY),                create_info<command::IsMaster>() },
+        { tolower(command::KillCursors::KEY),             create_info<command::KillCursors>() },
+        { tolower(command::ListCommands::KEY),            create_info<command::ListCommands>() },
+        { tolower(command::ListCollections::KEY),         create_info<command::ListCollections>() },
+        { tolower(command::ListDatabases::KEY),           create_info<command::ListDatabases>() },
+        { tolower(command::Ping::KEY),                    create_info<command::Ping>() },
+        { tolower(command::ReplSetGetStatus::KEY),        create_info<command::ReplSetGetStatus>() },
+        { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
+        { tolower(command::ResetError::KEY),              create_info<command::ResetError>() },
+        { tolower(command::Update::KEY),                  create_info<command::Update>() },
+        { tolower(command::WhatsMyUri::KEY),              create_info<command::WhatsMyUri>() },
 
-        { mxb::tolower(key::MXSDIAGNOSE),             create_info<command::MxsDiagnose>() },
-        { mxb::tolower(key::MXSCREATEDATABASE),       create_info<command::MxsCreateDatabase>() },
-        { mxb::tolower(key::MXSGETCONFIG),            create_info<command::MxsGetConfig>() },
-        { mxb::tolower(key::MXSSETCONFIG),            create_info<command::MxsSetConfig>() },
+        { tolower(command::MxsDiagnose::KEY),             create_info<command::MxsDiagnose>() },
+        { tolower(command::MxsCreateDatabase::KEY),       create_info<command::MxsCreateDatabase>() },
+        { tolower(command::MxsGetConfig::KEY),            create_info<command::MxsGetConfig>() },
+        { tolower(command::MxsSetConfig::KEY),            create_info<command::MxsSetConfig>() },
     };
 } this_unit;
 
