@@ -588,6 +588,17 @@ void test_failures(TestConnections& test)
     test.maxscale->wait_for_monitor();
     expect_equal(test, "maxscale", "/data/attributes/config_sync/version");
     config_update(test.maxscale2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
+
+    res = test.maxscale->maxctrl("destroy service --skip-sync --force RW-Split-Router");
+    test.expect(res.rc == 0, "Command with --skip-sync should work: %s", res.output.c_str());
+    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history "
+                                  + std::to_string(value++));
+    test.expect(res.rc == 0, "Normal command after --skip-sync should work: %s", res.output.c_str());
+    ++version;
+
+    config_update(test.maxscale2);
+    expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
 
     test.tprintf("Set the version field in the database to 1, new changes should fail");
     auto c = test.repl->get_connection(0);
