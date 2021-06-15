@@ -1707,14 +1707,14 @@ static HttpResponse handle_request(const HttpRequest& request)
     const Resource* resource = this_unit.resources.find_resource(request);
     bool modifies_data = request_modifies_data(request.get_verb());
     bool requires_sync = false;
+    bool skip_sync = request.get_option("sync") == "false";
 
     if (resource)
     {
         requires_sync = resource->requires_sync();
 
-        if (requires_sync && request.get_option("sync") == "false")
+        if (requires_sync && skip_sync)
         {
-            requires_sync = false;
             MXS_NOTICE("Disabling configuration sync for: %s %s",
                        request.get_verb().c_str(), request.get_uri().c_str());
         }
@@ -1728,7 +1728,7 @@ static HttpResponse handle_request(const HttpRequest& request)
     auto manager = mxs::ConfigManager::get();
     mxb_assert(manager);
 
-    if (requires_sync && !manager->start())
+    if (requires_sync && !skip_sync && !manager->start())
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
@@ -1750,14 +1750,22 @@ static HttpResponse handle_request(const HttpRequest& request)
             case MHD_HTTP_CREATED:
                 this_unit.watcher.modify(request.get_uri());
 
-                if (requires_sync && !manager->commit())
+                if (requires_sync)
                 {
-                    rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+                    if (skip_sync)
+                    {
+                        // No synchronization, just update the JSON representation of the configuration
+                        manager->refresh();
+                    }
+                    else if (!manager->commit())
+                    {
+                        rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+                    }
                 }
                 break;
 
             default:
-                if (requires_sync)
+                if (requires_sync && !skip_sync)
                 {
                     manager->rollback();
                 }

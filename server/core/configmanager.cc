@@ -211,6 +211,11 @@ void ConfigManager::start_sync()
     queue_sync();
 }
 
+void ConfigManager::refresh()
+{
+    m_current_config = create_config(m_version);
+}
+
 void ConfigManager::queue_sync()
 {
     m_worker->execute(

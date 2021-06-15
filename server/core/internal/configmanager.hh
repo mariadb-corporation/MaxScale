@@ -62,6 +62,14 @@ public:
     void start_sync();
 
     /**
+     * Refresh the current configuration representation
+     *
+     * This function is called whenever the configuration state is changed without it being synchronized with
+     * the cluster.
+     */
+    void refresh();
+
+    /**
      * Check if a cached configuration is available and load it if it is
      *
      * @return True if a cached configuration was loaded
