@@ -49,7 +49,6 @@
                 minHeight: `${chartHeight}px`,
                 minWidth: isLinear ? 'unset' : minWidth,
             }"
-            hasVertCrossHair
             :chartData="chartData"
             :options="scatterChartOptions"
         />
@@ -228,7 +227,14 @@ export default {
             return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
         },
         scatterChartOptions() {
-            return this.chartOptions
+            return this.$help.lodash.deepMerge(this.chartOptions, {
+                hover: {
+                    mode: 'nearest',
+                },
+                tooltips: {
+                    mode: 'nearest',
+                },
+            })
         },
         vertBarChartOptions() {
             return this.$help.lodash.deepMerge(this.chartOptions, {

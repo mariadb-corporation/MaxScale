@@ -12,13 +12,11 @@
  * Public License.
  */
 import { Scatter } from 'vue-chartjs'
-import vertCrossHair from './vertCrossHair'
 export default {
     extends: Scatter,
     props: {
         chartData: { type: Object, required: true },
         options: { type: Object },
-        hasVertCrossHair: { type: Boolean, default: false },
     },
     watch: {
         chartData() {
@@ -30,12 +28,6 @@ export default {
         if (this.$data._chart) this.$data._chart.destroy()
     },
     mounted() {
-        if (this.hasVertCrossHair) {
-            this.addPlugin({
-                id: 'vert-cross-hair',
-                afterDatasetsDraw: vertCrossHair,
-            })
-        }
         this.renderScatterChart()
     },
     methods: {

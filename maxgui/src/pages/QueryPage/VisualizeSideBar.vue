@@ -248,9 +248,11 @@ export default {
                 case 'Scatter': {
                     dataset = {
                         ...dataset,
-                        backgroundColor: lineColor,
-                        borderColor: lineColor,
                         borderWidth: 1,
+                        backgroundColor: backgroundColor,
+                        borderColor: lineColor,
+                        pointHoverBackgroundColor: lineColor,
+                        pointHoverRadius: 5,
                     }
                     break
                 }
