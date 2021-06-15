@@ -169,15 +169,17 @@ Specifies the length of the id column in tables that are automatically created.
 
 Enumeration values:
 
-   * `default`: Each document is inserted using a _separate_ INSERT statement
-     and whether an error causes the remaining insertions to be aborted, depends
-     on the value of `ordered` specified in the command document.
-   * `atomic`: If the value of `ordered` in the command document is `true`
-     (the default) then all documents are inserted using a _single_ INSERT statement,
-     that is, either all insertions succeed or none will.
+   * `default`: Each document is inserted using a _separate_ `INSERT`, either in a
+     multi-statement or in a compound statement. Whether an error causes the remaining
+     insertions to be aborted, depends on the value of `ordered` specified in the
+     insert command.
+   * `atomic`: If the value of `ordered` in the insert command is `true`
+     (the default) then all documents are inserted using a _single_ `INSERT` statement,
+     that is, either all insertions succeed or none will. If `ordered` is false, then
+     the behavior is as in the `default` case.
 
-What combination of `ordered_insert_behavior` and `ordered` (in the command document)
-is used, has a big impact on the performance. Please see the discussion at
+What combination of `ordered_insert_behavior` and `ordered` (in the insert command
+document) is used, has an impact on the performance. Please see the discussion at
 [insert](#insert).
 
 ## `cursor_timeout`
@@ -576,16 +578,17 @@ then the behavior is identical with that of `default`.
 
 #### Performance
 
-What combination of `ordered_insert_behavior` and `ordered` is used, has a
-big impact on the performance.
+What combination of `ordered_insert_behavior` and `ordered` is used, has an
+impact on the performance.
 
 `ordered_insert_behavior` | `ordered = true` | `ordered = false`
 --------------------------|------------------|------------------
-`default`                 | Each document is inserted using an individual `INSERT` statement and roundtrip. | All documents are inserted in a single multi-statement transaction containing as many `INSERT IGNORE` statements as there are documents.
+`default`                 | All documents are inserted within a compound statement, in a transaction containing as many `INSERT` statements as there are documents. | All documents are inserted in a single multi-statement transaction containing as many `INSERT IGNORE` statements as there are documents.
 `atomic`                  | All documents are inserted using a single `INSERT` statement. | _Same as above_
 
-Of these, `atomic + true` is the fastest, followed by `atomic|default + false`
-being twice as slow and `default + true` being an order of magnitude slower.
+Of these, `atomic + true` is the fastest and `atomic|default + false` the slowest,
+being roughly twice as slow. The performance of 'default + true' is halfway between
+the two.
 
 ### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
 
