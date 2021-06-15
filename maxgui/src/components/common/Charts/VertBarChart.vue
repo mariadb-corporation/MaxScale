@@ -39,18 +39,12 @@ export default {
                             gridLines: {
                                 drawBorder: true,
                             },
-                            ticks: {
-                                beginAtZero: true,
-                            },
                         },
                     ],
                     yAxes: [
                         {
                             gridLines: {
                                 drawBorder: false,
-                            },
-                            ticks: {
-                                beginAtZero: true,
                             },
                         },
                     ],

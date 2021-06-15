@@ -116,6 +116,7 @@ export default {
         chartHeight() {
             switch (this.selectedChart) {
                 case 'Bar - Horizontal':
+                    if (this.isLinear) return this.containerChartHeight - 36
                     /** When there is too many data points,
                      * first, get min value between "overflow" height (this.chartData.labels.length * 15)
                      * and max height threshold 15000. However, when there is too little data points,
@@ -247,13 +248,12 @@ export default {
                 scales: {
                     xAxes: [
                         {
-                            type: 'category',
                             ticks: {
+                                autoSkip: this.isLinear,
+                                maxTicksLimit: this.isLinear ? 10 : 0,
                                 maxRotation: this.isLinear ? 0 : 90,
                                 minRotation: this.isLinear ? 0 : 90,
-                                callback: this.isLinear
-                                    ? (tick, index) => (index % 3 ? '' : tick)
-                                    : this.truncateLabel,
+                                callback: this.truncateLabel,
                             },
                         },
                     ],
@@ -271,11 +271,12 @@ export default {
                 scales: {
                     yAxes: [
                         {
-                            type: 'category',
                             ticks: {
-                                callback: this.isLinear
-                                    ? (tick, index) => (index % 3 ? '' : tick)
-                                    : this.truncateLabel,
+                                autoSkip: this.isLinear,
+                                maxTicksLimit: this.isLinear ? 10 : 0,
+                                callback: this.truncateLabel,
+                                reverse: true,
+                                beginAtZero: this.isLinear,
                             },
                         },
                     ],
