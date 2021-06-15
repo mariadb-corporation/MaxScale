@@ -70,7 +70,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
     m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
     uint32_t len = mxs_mysql_get_packet_len(buffer);
     bool was_large_query = m_large_query;
-    m_large_query = len == MYSQL_PACKET_LENGTH_MAX;
+    m_large_query = len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
     if (was_large_query)
     {
