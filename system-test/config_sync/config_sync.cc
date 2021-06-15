@@ -165,7 +165,7 @@ void wait_for_sync(int version = 0)
 void create_config(Maxscales* mxs, const std::string& config)
 {
     mxs->stop();
-    mxs->ssh_node_f(0, true,
+    mxs->ssh_node_f(true,
                     "echo '%s' > /var/lib/maxscale/maxscale-config.json;"
                     "chown maxscale:maxscale /var/lib/maxscale/maxscale-config.json;",
                     config.c_str());
@@ -399,7 +399,7 @@ void test_sync(TestConnections& test)
     }
 
     auto res = test.maxscale->ssh_node_f(
-        0, false, "for cmd in %s; do echo $cmd; done|maxctrl", commands.c_str());
+        false, "for cmd in %s; do echo $cmd; done|maxctrl", commands.c_str());
     test.expect(res == 0, "MaxCtrl commands failed");
 
     test.tprintf("Start the second MaxScale and make sure it catches up");
