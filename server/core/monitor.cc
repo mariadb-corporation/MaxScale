@@ -2358,9 +2358,20 @@ void MonitorWorker::run_one_tick()
     m_ticks.store(ticks() + 1, std::memory_order_release);
 }
 
-bool MonitorWorker::immediate_tick_required() const
+bool MonitorWorker::immediate_tick_required()
 {
-    return false;
+    bool rval = false;
+    if (m_immediate_tick_requested.load(std::memory_order_relaxed))
+    {
+        m_immediate_tick_requested.store(false, std::memory_order_relaxed);
+        rval = true;
+    }
+    return rval;
+}
+
+void MonitorWorker::request_immediate_tick()
+{
+    m_immediate_tick_requested.store(true, std::memory_order_relaxed);
 }
 
 MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)

@@ -385,6 +385,8 @@ public:
      */
     void stop();
 
+    virtual void request_immediate_tick() = 0;
+
     /**
      * @brief The monitor should populate associated services.
      */
@@ -694,6 +696,8 @@ public:
      */
     bool start() final;
 
+    void request_immediate_tick() override;
+
     /**
      * @brief Obtain diagnostics
      *
@@ -800,7 +804,7 @@ protected:
      *
      * @return True if tick should be ran
      */
-    virtual bool immediate_tick_required() const;
+    virtual bool immediate_tick_required();
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
@@ -808,6 +812,8 @@ private:
     bool              m_checked;        /**< Whether server access has been checked. */
     mxb::Semaphore    m_semaphore;      /**< Semaphore for synchronizing with monitor thread. */
     int64_t           m_loop_called;    /**< When was the loop called the last time. */
+
+    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
 
     bool pre_run() final;
     void post_run() final;

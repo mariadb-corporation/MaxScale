@@ -388,7 +388,7 @@ private:
                                 json_t** error_out);
     bool schedule_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
                                  json_t** error_out);
-    bool immediate_tick_required() const override;
+    bool immediate_tick_required() override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);
     void execute_task_on_servers(const ServerFunction& task, const ServerArray& servers);
