@@ -1201,6 +1201,71 @@ authenticated by PAM. If only `admin_pam_readonly_service` is configured, only r
 operations can be authenticated by PAM. If both are set, the service used is determined by
 the requested operation. Leave or set both empty to disable PAM for REST-API.
 
+### `config_sync_cluster`
+
+- **Type**: monitor
+- **Default**: No default value
+- **Dynamic**: Yes
+
+This parameter controls which cluster is used to synchronize configuration
+changes between MaxScale instances. By default configuration synchronization is
+not enabled and it must be explicitly enabled by defining a monitor name for
+`config_sync_cluster`.
+
+When `config_sync_cluster` is defined, `config_sync_user` and
+`config_sync_password` must also be defined.
+
+For a detailed description of this feature, refer to the [Configuration
+Synchronization](#configuration-synchronization) section.
+
+### `config_sync_user`
+
+- **Type**: string
+- **Default**: No default value
+- **Dynamic**: Yes
+
+The username for the account that is used to synchronize configuration changes
+across MaxScale instances. Both this parameter and `config_sync_password` are
+required if `config_sync_cluster` is configured.
+
+This account must have the following grants:
+
+```
+GRANT SELECT, INSERT, UPDATE, CREATE ON `mysql`.`maxscale_config`
+```
+
+### `config_sync_password`
+
+- **Type**: string
+- **Default**: No default value
+- **Dynamic**: Yes
+
+The password for `config_sync_user`. Both this parameter and `config_sync_user`
+are required if `config_sync_cluster` is configured.
+
+### `config_sync_interval`
+
+- **Type**: duration
+- **Default**: 5s
+- **Dynamic**: Yes
+
+How often to synchronize the configuration with the cluster.
+
+As the synchronization involves selecting the configuration version from the
+database, this value should not be set to an unreasonably low value. The default
+value of 5 second should provide a good compromise between responsiveness and
+how much load it places on the database.
+
+### `config_sync_timeout`
+
+- **Type**: duration
+- **Default**: 10s
+- **Dynamic**: Yes
+
+Timeout for all SQL operations done during the configuration synchronization. If
+an operation exceeds this timeout, the configuration change is treated as failed
+and an error is reported to the client that did the change.
+
 ## Events
 
 MaxScale logs warnings and errors for various reasons and often it is self-
@@ -2320,6 +2385,10 @@ in `/var/lib/maxscale/maxscale.cnf.d/`. These files are applied after the main
 configuration file and all auxiliary configurations have been loaded. This means
 that once runtime configurations have been made, they need to be incorporated
 into the main configuration files.
+
+## Configuration Synchronization
+
+ TODO: Write this
 
 ## Backing Up Configuration Changes
 
