@@ -308,8 +308,8 @@ public:
     const mxs::SSLProvider& ssl() const override;
     mxs::SSLProvider&       ssl() override;
 
-    void        set_variables(std::unordered_map<std::string, std::string>&& variables) override;
-    std::string get_variable(const std::string& key) const override;
+    void        set_session_track_system_variables(std::string&& value) override;
+    std::string get_session_track_system_variables() const override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
@@ -418,8 +418,8 @@ private:
     // can be used to detect servers we haven't connected to.
     uint8_t m_charset = 0;
 
-    // Server side global variables
-    std::unordered_map<std::string, std::string> m_variables;
+    // Latest value of server global variable 'session_track_system_variables'. Updated every 10min
+    std::string m_session_track_system_variables;
     // Lock that protects m_variables
     mutable std::mutex m_var_lock;
 

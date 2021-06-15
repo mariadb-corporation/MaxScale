@@ -79,7 +79,7 @@ static bool handle_max_slaves(RWSConfig& config, const char* str)
 
 bool RWSplit::check_causal_reads(SERVER* server) const
 {
-    auto var = server->get_variable("session_track_system_variables");
+    auto var = server->get_session_track_system_variables();
     return var.empty() || var == "*" || var.find("last_gtid") != std::string::npos;
 }
 

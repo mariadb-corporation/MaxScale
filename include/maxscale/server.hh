@@ -275,20 +275,19 @@ public:
     virtual mxs::SSLProvider&       ssl() = 0;
 
     /**
-     * Set server variables
+     * Set value of 'session_track_system_variables'.
      *
-     * @param variables Variables and their values to set
+     * @param value Value found in the MariaDB Server
      */
-    virtual void set_variables(std::unordered_map<std::string, std::string>&& variables) = 0;
+    virtual void set_session_track_system_variables(std::string&& value) = 0;
 
     /**
-     * Get server variable
+     * Get server variable 'session_track_system_variables'.
      *
      * @param key Variable name to get
-     *
-     * @return Variable value or empty string if it was not found
+     * @return Variable value
      */
-    virtual std::string get_variable(const std::string& key) const = 0;
+    virtual std::string get_session_track_system_variables() const = 0;
 
     /**
      * Set GTID positions
