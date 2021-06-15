@@ -935,6 +935,9 @@ add_test_executable(mxs3479_no_maxlog.cc mxs3479_no_maxlog mxs3479_no_maxlog LAB
 # MXS-3536: max_slave_connections=0 doesn't work as expected
 add_test_executable(mxs3536_rwsplit_no_slaves.cc mxs3536_rwsplit_no_slaves mxs3536_rwsplit_no_slaves LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3588: Packet with length of 0xfffffb is treated as a large packet
+add_test_executable(mxs3588_almost_large_packet.cc mxs3588_almost_large_packet replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
