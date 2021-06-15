@@ -1,10 +1,6 @@
 <template>
-    <div
-        v-if="!$typy(chartData, 'datasets').isEmptyArray"
-        ref="chartContainer"
-        class="chart-container fill-height"
-    >
-        <div class="d-flex pa-2 pr-5">
+    <div v-if="!$typy(chartData, 'datasets').isEmptyArray" class="chart-container fill-height">
+        <div ref="chartTool" class="d-flex pt-2 pr-5">
             <v-spacer />
             <v-tooltip
                 top
@@ -29,52 +25,54 @@
             </v-tooltip>
         </div>
 
-        <line-chart
-            v-if="selectedChart === 'Line'"
-            id="query-chart"
-            class="line-chart-container pa-3"
-            :style="{
-                minHeight: `${chartHeight}px`,
-                minWidth: isLinear ? 'unset' : minWidth,
-            }"
-            hasVertCrossHair
-            :chartData="chartData"
-            :options="lineChartOptions"
-        />
-        <scatter-chart
-            v-else-if="selectedChart === 'Scatter'"
-            id="query-chart"
-            class="scatter-chart-container pa-3"
-            :style="{
-                minHeight: `${chartHeight}px`,
-                minWidth: isLinear ? 'unset' : minWidth,
-            }"
-            :chartData="chartData"
-            :options="scatterChartOptions"
-        />
-        <vert-bar-chart
-            v-else-if="selectedChart === 'Bar - Vertical'"
-            id="query-chart"
-            class="vert-bar-chart-container pa-3"
-            :style="{
-                minHeight: `${chartHeight}px`,
-                minWidth: isLinear ? 'unset' : minWidth,
-            }"
-            :chartData="chartData"
-            :options="vertBarChartOptions"
-        />
-        <horiz-bar-chart
-            v-else-if="selectedChart === 'Bar - Horizontal'"
-            id="query-chart"
-            class="vert-bar-chart-container pa-3"
-            :style="{
-                minHeight: `${chartHeight}px`,
-                minWidth: isLinear ? 'unset' : minWidth,
-            }"
-            :chartData="chartData"
-            :options="horizBarChartOptions"
-        />
-        <!-- TODO: Addfullscreen mode feat-->
+        <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
+            <line-chart
+                v-if="selectedChart === 'Line'"
+                id="query-chart"
+                class="line-chart"
+                :style="{
+                    minHeight: `${chartHeight}px`,
+                    minWidth: isLinear ? 'unset' : minWidth,
+                }"
+                hasVertCrossHair
+                :chartData="chartData"
+                :options="lineChartOptions"
+            />
+            <scatter-chart
+                v-else-if="selectedChart === 'Scatter'"
+                id="query-chart"
+                class="scatter-chart"
+                :style="{
+                    minHeight: `${chartHeight}px`,
+                    minWidth: isLinear ? 'unset' : minWidth,
+                }"
+                :chartData="chartData"
+                :options="scatterChartOptions"
+            />
+            <vert-bar-chart
+                v-else-if="selectedChart === 'Bar - Vertical'"
+                id="query-chart"
+                class="vert-bar-chart"
+                :style="{
+                    minHeight: `${chartHeight}px`,
+                    minWidth: isLinear ? 'unset' : minWidth,
+                }"
+                :chartData="chartData"
+                :options="vertBarChartOptions"
+            />
+            <horiz-bar-chart
+                v-else-if="selectedChart === 'Bar - Horizontal'"
+                id="query-chart"
+                class="vert-bar-chart"
+                :style="{
+                    minHeight: `${chartHeight}px`,
+                    minWidth: 'unset',
+                }"
+                :chartData="chartData"
+                :options="horizBarChartOptions"
+            />
+            <!-- TODO: Addfullscreen mode feat-->
+        </div>
     </div>
 </template>
 
@@ -105,6 +103,7 @@ export default {
         return {
             uniqueTooltipId: this.$help.lodash.uniqueId('tooltip_'),
             dataPoint: null,
+            chartToolHeight: 0,
         }
     },
     computed: {
@@ -116,7 +115,8 @@ export default {
         chartHeight() {
             switch (this.selectedChart) {
                 case 'Bar - Horizontal':
-                    if (this.isLinear) return this.containerChartHeight - 36
+                    if (this.isLinear)
+                        return this.containerChartHeight - (this.chartToolHeight + 10)
                     /** When there is too many data points,
                      * first, get min value between "overflow" height (this.chartData.labels.length * 15)
                      * and max height threshold 15000. However, when there is too little data points,
@@ -124,16 +124,25 @@ export default {
                      * should be chosen to make chart fit to its container
                      */
                     return Math.max(
-                        this.containerChartHeight - 36,
+                        this.containerChartHeight - (this.chartToolHeight + 10),
                         Math.min(this.chartData.labels.length * 15, 15000)
                     )
                 default:
-                    return this.containerChartHeight - 36 // export button height
+                    // 10px of scrollbar height
+                    return this.containerChartHeight - (this.chartToolHeight + 10)
             }
         },
         chartOptions() {
             const componentScope = this
             return {
+                layout: {
+                    padding: {
+                        left: 12,
+                        bottom: 12,
+                        right: 24,
+                        top: 24,
+                    },
+                },
                 responsive: true,
                 maintainAspectRatio: false,
                 hover: {
@@ -157,7 +166,7 @@ export default {
                             dataPoint: componentScope.dataPoint,
                             alignTooltipToLeft:
                                 tooltipModel.caretX >=
-                                componentScope.$refs.chartContainer.clientWidth / 2,
+                                componentScope.$refs.chartWrapper.clientWidth / 2,
                         })
                     },
                     callbacks: {
@@ -289,6 +298,11 @@ export default {
             if (!this.$typy(v, 'datasets[0].data[0]').safeObject) this.removeTooltip()
         },
     },
+    mounted() {
+        this.$nextTick(() => {
+            this.chartToolHeight = this.$refs.chartTool.offsetHeight
+        })
+    },
     beforeDestroy() {
         this.removeTooltip()
     },
@@ -315,9 +329,8 @@ export default {
             // create new canvas with white background
             let desCanvas = document.createElement('canvas')
 
-            // set des canvas plus extra padding
-            desCanvas.width = srcCanvas.width + 24
-            desCanvas.height = srcCanvas.height + 36
+            desCanvas.width = srcCanvas.width
+            desCanvas.height = srcCanvas.height
 
             let destCtx = desCanvas.getContext('2d')
 
@@ -325,7 +338,7 @@ export default {
             destCtx.fillRect(0, 0, desCanvas.width, desCanvas.height)
 
             //draw the original canvas onto the destination canvas
-            destCtx.drawImage(srcCanvas, 12, 24) // center srcCanvas
+            destCtx.drawImage(srcCanvas, 0, 0)
             destCtx.scale(2, 2)
             return desCanvas
         },
@@ -344,12 +357,15 @@ export default {
 </script>
 <style lang="scss" scoped>
 .chart-container {
-    width: 100%;
     overflow: auto;
-    canvas {
-        position: absolute;
-        left: 0;
-        top: 0;
+    .chart-wrapper {
+        width: 100%;
+        overflow: auto;
+        canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
     }
 }
 </style>
