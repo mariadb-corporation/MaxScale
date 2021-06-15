@@ -54,7 +54,7 @@ describe(name, function () {
     });
 
     it('Can update in non-existing collection/table.', async function () {
-        drop();
+        await drop();
 
         var command = {
             update: name,
@@ -68,7 +68,7 @@ describe(name, function () {
     });
 
     it('A replacement update does not nuke the id.', async function () {
-        drop();
+        await drop();
 
         var doc = {
             _id: "hello",
