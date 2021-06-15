@@ -76,6 +76,7 @@
                                                 :containerChartHeight="containerChartHeight"
                                                 :chartData="chartData"
                                                 :axisLabels="axisLabels"
+                                                :isLinear="isLinear"
                                             />
                                         </template>
                                     </split-pane>
@@ -96,6 +97,7 @@
                                 @selected-chart="selectedChart = $event"
                                 @get-chart-data="chartData = $event"
                                 @get-axis-labels="axisLabels = $event"
+                                @is-linear-chart="isLinear = $event"
                             />
                         </template>
                     </split-pane>
@@ -155,9 +157,11 @@ export default {
             minMainPanePct: 0,
             queryPanePct: 100,
             minQueryPanePct: 0,
+            // chart-container states
             selectedChart: '',
             chartData: {},
             axisLabels: { x: '', y: '' },
+            isLinear: false,
         }
     },
     computed: {

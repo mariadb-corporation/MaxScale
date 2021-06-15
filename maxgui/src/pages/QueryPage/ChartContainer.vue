@@ -1,6 +1,6 @@
 <template>
     <div
-        v-if="!$typy(sortedChartData, 'datasets').isEmptyArray"
+        v-if="!$typy(chartData, 'datasets').isEmptyArray"
         ref="chartContainer"
         class="chart-container fill-height"
     >
@@ -35,10 +35,10 @@
             class="line-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
-                minWidth,
+                minWidth: isLinear ? 'unset' : minWidth,
             }"
             hasVertCrossHair
-            :chartData="sortedChartData"
+            :chartData="chartData"
             :options="lineChartOptions"
         />
         <scatter-chart
@@ -47,10 +47,10 @@
             class="scatter-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
-                minWidth,
+                minWidth: isLinear ? 'unset' : minWidth,
             }"
             hasVertCrossHair
-            :chartData="sortedChartData"
+            :chartData="chartData"
             :options="scatterChartOptions"
         />
         <vert-bar-chart
@@ -59,10 +59,10 @@
             class="vert-bar-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
-                minWidth,
+                minWidth: isLinear ? 'unset' : minWidth,
             }"
-            :chartData="sortedChartData"
-            :options="barChartOptions"
+            :chartData="chartData"
+            :options="vertBarChartOptions"
         />
         <horiz-bar-chart
             v-else-if="selectedChart === 'Bar - Horizontal'"
@@ -70,10 +70,10 @@
             class="vert-bar-chart-container pa-3"
             :style="{
                 minHeight: `${chartHeight}px`,
-                minWidth,
+                minWidth: isLinear ? 'unset' : minWidth,
             }"
-            :chartData="sortedChartData"
-            :options="barChartOptions"
+            :chartData="chartData"
+            :options="horizBarChartOptions"
         />
         <!-- TODO: Addfullscreen mode feat-->
     </div>
@@ -100,6 +100,7 @@ export default {
         containerChartHeight: { type: Number, default: 0 },
         chartData: { type: Object, default: () => {} },
         axisLabels: { type: Object, default: () => {} },
+        isLinear: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -109,7 +110,6 @@ export default {
     },
     computed: {
         minWidth() {
-            if (this.isLinear) return 'unset'
             if (this.$typy(this.chartData, 'labels').isDefined)
                 return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
             return '0px'
@@ -130,24 +130,6 @@ export default {
                 default:
                     return this.containerChartHeight - 36 // export button height
             }
-        },
-        isLinear() {
-            if (this.$typy(this.chartData, 'datasets[0].data[0]').safeObject)
-                return typeof this.chartData.datasets[0].data[0].x === 'number'
-            return false
-        },
-        sortedChartData() {
-            if (this.isLinear) {
-                let chartData = this.$help.lodash.cloneDeep(this.chartData)
-                chartData.labels.sort((a, b) => a - b)
-                chartData.datasets[0].data.sort((a, b) => {
-                    if (a.x < b.x) return -1
-                    if (a.x > b.x) return 1
-                    return 0
-                })
-                return chartData
-            }
-            return this.chartData
         },
         chartOptions() {
             const componentScope = this
@@ -218,23 +200,6 @@ export default {
                 },
             }
         },
-        cartesianAxes() {
-            return {
-                type: this.isLinear ? 'linear' : 'category',
-                ticks: {
-                    autoSkip: this.isLinear,
-                    autoSkipPadding: this.isLinear ? 0 : 15,
-                    maxRotation: this.isLinear ? 0 : 90,
-                    minRotation: this.isLinear ? 0 : 90,
-                    //truncate tick
-                    callback: v => {
-                        const toStr = `${v}`
-                        if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
-                        return v
-                    },
-                },
-            }
-        },
         lineChartOptions() {
             let lineOptions = {
                 showLines: true,
@@ -245,7 +210,19 @@ export default {
                     mode: this.isLinear ? 'nearest' : 'index',
                 },
                 scales: {
-                    xAxes: [this.cartesianAxes],
+                    xAxes: [
+                        {
+                            type: this.isLinear ? 'linear' : 'category',
+                            ticks: {
+                                autoSkip: this.isLinear,
+                                autoSkipPadding: this.isLinear ? 0 : 15,
+                                maxRotation: this.isLinear ? 0 : 90,
+                                minRotation: this.isLinear ? 0 : 90,
+                                //truncate tick
+                                callback: this.truncateLabel,
+                            },
+                        },
+                    ],
                 },
             }
             return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
@@ -253,7 +230,7 @@ export default {
         scatterChartOptions() {
             return this.chartOptions
         },
-        barChartOptions() {
+        vertBarChartOptions() {
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',
@@ -262,7 +239,40 @@ export default {
                     mode: 'index',
                 },
                 scales: {
-                    xAxes: [this.cartesianAxes],
+                    xAxes: [
+                        {
+                            type: 'category',
+                            ticks: {
+                                maxRotation: this.isLinear ? 0 : 90,
+                                minRotation: this.isLinear ? 0 : 90,
+                                callback: this.isLinear
+                                    ? (tick, index) => (index % 3 ? '' : tick)
+                                    : this.truncateLabel,
+                            },
+                        },
+                    ],
+                },
+            })
+        },
+        horizBarChartOptions() {
+            return this.$help.lodash.deepMerge(this.chartOptions, {
+                hover: {
+                    mode: 'index',
+                },
+                tooltips: {
+                    mode: 'index',
+                },
+                scales: {
+                    yAxes: [
+                        {
+                            type: 'category',
+                            ticks: {
+                                callback: this.isLinear
+                                    ? (tick, index) => (index % 3 ? '' : tick)
+                                    : this.truncateLabel,
+                            },
+                        },
+                    ],
                 },
             })
         },
@@ -279,6 +289,11 @@ export default {
         removeTooltip() {
             let tooltipEl = document.getElementById(this.uniqueTooltipId)
             if (tooltipEl) tooltipEl.remove()
+        },
+        truncateLabel(v) {
+            const toStr = `${v}`
+            if (toStr.length > 10) return `${toStr.substr(0, 10)}...`
+            return v
         },
         getDefFileName() {
             return `MaxScale ${this.selectedChart} Chart - ${this.$help.dateFormat({

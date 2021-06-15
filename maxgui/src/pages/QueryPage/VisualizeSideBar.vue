@@ -91,8 +91,8 @@ export default {
                 'No Visualization',
                 'Line',
                 'Scatter',
-                'Bar - Horizontal',
                 'Bar - Vertical',
+                'Bar - Horizontal',
             ],
             resSet: null,
             axis: {
@@ -161,18 +161,15 @@ export default {
             ]
             return fields
         },
-        stringFields() {
-            return this.resSet.fields.filter(field => !this.numericFields.includes(field))
-        },
         xAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             switch (this.selectedChart) {
                 case 'Scatter':
                 case 'Bar - Horizontal':
                     return this.numericFields
-                case 'Bar - Vertical':
-                    return this.stringFields
+                // Either linear or category cartesian axes
                 case 'Line':
+                case 'Bar - Vertical':
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
@@ -184,8 +181,8 @@ export default {
                 case 'Scatter':
                 case 'Bar - Vertical':
                     return this.numericFields
+                // Either linear or category cartesian axes
                 case 'Bar - Horizontal':
-                    return this.stringFields
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
@@ -270,6 +267,7 @@ export default {
                         borderColor: lineColor,
                         borderWidth: 1,
                         hoverBackgroundColor: lineColor,
+                        hoverBorderColor: '#4f5051',
                     }
                     break
                 }
@@ -285,7 +283,26 @@ export default {
                 return obj
             })
         },
+        isLinearAxes(axisVal) {
+            return typeof axisVal === 'number'
+        },
+
+        /** This mutates sorting chart data for linear axes
+         * @param {Object} chartData - ChartData object
+         * @param {String} linearAxisId - axis id: x or y
+         */
+        sortingLinearData(chartData, linearAxisId) {
+            chartData.labels.sort((a, b) => a - b)
+            chartData.datasets[0].data.sort((a, b) => {
+                if (a[linearAxisId] < b[linearAxisId]) return -1
+                if (a[linearAxisId] > b[linearAxisId]) return 1
+                return 0
+            })
+        },
+
         genChartData({ axis, chartType }) {
+            let isLinear = false
+            let linearAxisId = 'x'
             let axisLabels = { x: '', y: '' }
             let chartData = {
                 labels: [],
@@ -294,11 +311,12 @@ export default {
             if (axis.x && axis.y) {
                 axisLabels = { x: axis.x, y: axis.y }
                 let dataPoints = []
-                let xLabels = []
+                let labels = []
                 const dataRows = this.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
+
                 for (const [i, row] of dataRows.entries()) {
                     const rowNumber = i + 1
                     const isXAxisARowNum = axis.x === this.numberSign
@@ -313,16 +331,37 @@ export default {
                         xLabel: axis.x,
                         yLabel: axis.y,
                     })
-                    xLabels.push(xAxisVal)
+
+                    switch (chartType) {
+                        case 'Bar - Horizontal':
+                            labels.push(yAxisVal)
+                            break
+                        default:
+                            labels.push(xAxisVal)
+                    }
                 }
+
                 const dataset = this.genDataset({ colorIndex: 0, data: dataPoints, chartType })
+
                 chartData = {
-                    labels: xLabels,
+                    labels,
                     datasets: [dataset],
                 }
+
+                switch (chartType) {
+                    case 'Bar - Horizontal':
+                        linearAxisId = 'y'
+                        break
+                    default:
+                        linearAxisId = 'x'
+                }
+                isLinear = this.isLinearAxes(dataset.data[0][linearAxisId])
+                if (isLinear) this.sortingLinearData(chartData, linearAxisId)
             }
+
             this.$emit('get-chart-data', chartData)
             this.$emit('get-axis-labels', axisLabels)
+            this.$emit('is-linear-chart', isLinear)
         },
     },
 }
