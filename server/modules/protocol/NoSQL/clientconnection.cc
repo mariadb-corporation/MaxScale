@@ -197,7 +197,6 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 
 json_t* ClientConnection::diagnostics() const
 {
-    mxb_assert(!true);
     return nullptr;
 }
 
@@ -209,8 +208,7 @@ void ClientConnection::set_dcb(DCB* dcb)
 
 bool ClientConnection::is_movable() const
 {
-    mxb_assert(!true);
-    return true; // Ok?
+    return true;
 }
 
 bool ClientConnection::setup_session()

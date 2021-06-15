@@ -573,7 +573,7 @@ const char* nosql::opcode_to_string(int code)
 
     default:
         mxb_assert(!true);
-        return "MONGOC_OPCODE_UKNOWN";
+        return "MONGOC_OPCODE_UNKNOWN";
     }
 }
 

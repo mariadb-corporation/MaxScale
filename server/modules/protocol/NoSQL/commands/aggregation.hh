@@ -73,10 +73,6 @@ public:
 
         switch (response.type())
         {
-        case ComResponse::OK_PACKET:
-            mxb_assert(!true);
-            break;
-
         case ComResponse::ERR_PACKET:
             {
                 ComERR err(response);
@@ -94,9 +90,10 @@ public:
             }
             break;
 
+        case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
             mxb_assert(!true);
-            break;
+            throw_unexpected_packet();
 
         default:
             ok = 1;
@@ -198,10 +195,6 @@ public:
 
         switch (response.type())
         {
-        case ComResponse::OK_PACKET:
-            mxb_assert(!true);
-            break;
-
         case ComResponse::ERR_PACKET:
             {
                 ComERR err(response);
@@ -219,9 +212,10 @@ public:
             }
             break;
 
+        case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
             mxb_assert(!true);
-            break;
+            throw_unexpected_packet();
 
         default:
             {

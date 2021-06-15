@@ -324,6 +324,14 @@ void Command::list_commands(DocumentBuilder& commands)
     }
 }
 
+void Command::throw_unexpected_packet()
+{
+    ostringstream ss;
+    ss << m_name << " received unexpected packet from backend.";
+
+    throw HardError(ss.str(), error::INTERNAL_ERROR);
+}
+
 void Command::require_admin_db()
 {
     if (m_database.name() != "admin")
@@ -621,7 +629,7 @@ Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF
 {
     // This will never be called.
     mxb_assert(!true);
-    *ppProtocol_response = nullptr;
+    throw std::runtime_error("ImmediateCommand::translate(...) should not be called.");
     return READY;
 }
 

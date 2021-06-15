@@ -231,8 +231,7 @@ protected:
 
         default:
             mxb_assert(!true);
-            throw HardError("Expected OK or ERROR packet from MariaDB server, but "
-                            "received something else.", error::INTERNAL_ERROR);
+            throw_unexpected_packet();
         }
 
         return rv;
@@ -459,9 +458,6 @@ public:
 
         switch (response.type())
         {
-        case ComResponse::OK_PACKET:
-            break;
-
         case ComResponse::ERR_PACKET:
             {
                 ComERR err(response);
@@ -484,10 +480,10 @@ public:
             }
             break;
 
+        case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
-            // This should not happen as the respon
             mxb_assert(!true);
-            break;
+            throw_unexpected_packet();
 
         default:
             {
@@ -812,10 +808,7 @@ protected:
 
         default:
             mxb_assert(!true);
-            MXB_ERROR("Expected OK or ERR packet, received something else.");
-
-            throw HardError("Unexpected response received from backend.",
-                            error::COMMAND_FAILED).create_response(*this);
+            throw_unexpected_packet();
         }
 
         *ppResponse = pResponse;
@@ -858,10 +851,7 @@ protected:
 
         default:
             mxb_assert(!true);
-            MXB_ERROR("Expected OK or ERR packet, received something else.");
-
-            throw HardError("Unexpected response received from backend.",
-                            error::COMMAND_FAILED).create_response(*this);
+            throw_unexpected_packet();
         }
 
         *ppResponse = pResponse;
@@ -1096,8 +1086,7 @@ protected:
 
                 default:
                     mxb_assert(!true);
-                    throw HardError("Expected OK or ERROR packet from MariaDB server, but "
-                                    "received something else.", error::INTERNAL_ERROR);
+                    throw_unexpected_packet();
                 }
 
                 pBuffer += ComPacket::packet_len(pBuffer);
@@ -1415,6 +1404,8 @@ private:
             }
             else
             {
+                // In get_update_kind() it is established that it is either $set or $unset.
+                // This is to catch a changed there without a change here.
                 mxb_assert(!true);
             }
 

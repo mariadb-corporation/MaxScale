@@ -277,6 +277,7 @@ public:
 
         default:
             mxb_assert(!true);
+            throw_unexpected_packet();
         }
 
         doc.append(kvp("ok", ok));

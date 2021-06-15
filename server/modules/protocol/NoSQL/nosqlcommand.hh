@@ -120,11 +120,7 @@ public:
         check_maximum_sql_length(s.length());
     }
 
-    virtual void diagnose(DocumentBuilder& doc)
-    {
-        // TODO: To be made pure virtual.
-        mxb_assert(!true);
-    }
+    virtual void diagnose(DocumentBuilder& doc) = 0;
 
     enum Quoted
     {
@@ -149,6 +145,8 @@ public:
     static void list_commands(DocumentBuilder& commands);
 
 protected:
+    void throw_unexpected_packet();
+
     void require_admin_db();
 
     template<class Type>
@@ -274,7 +272,7 @@ public:
 
     GWBUF* execute() override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response) override;
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 

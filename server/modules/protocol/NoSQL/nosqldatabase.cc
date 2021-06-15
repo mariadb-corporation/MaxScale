@@ -30,7 +30,6 @@ nosql::Database::Database(const std::string& name,
 
 nosql::Database::~Database()
 {
-    mxb_assert(m_state == READY);
 }
 
 //static

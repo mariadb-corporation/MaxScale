@@ -78,12 +78,9 @@ public:
             }
             break;
 
-        case ComResponse::LOCAL_INFILE_PACKET:
-            mxb_assert(!true);
-            break;
-
         default:
             mxb_assert(!true);
+            throw_unexpected_packet();
         }
 
         DocumentBuilder doc;
@@ -145,12 +142,9 @@ public:
             }
             break;
 
-        case ComResponse::LOCAL_INFILE_PACKET:
-            mxb_assert(!true);
-            break;
-
         default:
             mxb_assert(!true);
+            throw_unexpected_packet();
         }
 
         DocumentBuilder doc;
@@ -213,12 +207,9 @@ public:
             }
             break;
 
-        case ComResponse::LOCAL_INFILE_PACKET:
-            mxb_assert(!true);
-            break;
-
         default:
             mxb_assert(!true);
+            throw_unexpected_packet();
         }
 
         doc.append(kvp("ok", ok));
@@ -344,10 +335,6 @@ public:
 
         switch (response.type())
         {
-        case ComResponse::OK_PACKET:
-            mxb_assert(!true);
-            break;
-
         case ComResponse::ERR_PACKET:
             {
                 ComERR err(response);
@@ -364,9 +351,10 @@ public:
             }
             break;
 
+        case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
             mxb_assert(!true);
-            break;
+            throw_unexpected_packet();
 
         default:
             {
@@ -495,17 +483,14 @@ public:
 
         switch (response.type())
         {
-        case ComResponse::OK_PACKET:
-            mxb_assert(!true);
-            break;
-
         case ComResponse::ERR_PACKET:
             throw MariaDBError(ComERR(response));
             break;
 
+        case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
             mxb_assert(!true);
-            break;
+            throw_unexpected_packet();
 
         default:
             {
@@ -680,11 +665,9 @@ public:
             break;
 
         case ComResponse::LOCAL_INFILE_PACKET:
-            mxb_assert(!true);
-            break;
-
         default:
             mxb_assert(!true);
+            throw_unexpected_packet();
         }
 
         DocumentBuilder doc;
