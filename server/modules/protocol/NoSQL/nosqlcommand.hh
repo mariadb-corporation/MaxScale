@@ -324,14 +324,14 @@ protected:
     public:
         enum Kind
         {
-            UNDEFINED,
             SINGLE,    // Each statement in the vector must be executed individually.
             MULTI,     // There is just one multi-statement, but there will be many replies.
             COMPOUND   // There is just one compound statement, and there is just one reply.
         };
 
         Query()
-            : m_kind(UNDEFINED)
+            : m_kind(SINGLE)
+            , m_nStatements(0)
         {
         }
 
@@ -371,7 +371,6 @@ protected:
 
         const std::vector<std::string>& statements() const
         {
-            mxb_assert(m_kind != UNDEFINED);
             return m_statements;
         }
 

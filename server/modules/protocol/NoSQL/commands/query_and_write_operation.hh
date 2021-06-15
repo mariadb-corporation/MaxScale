@@ -67,56 +67,33 @@ public:
 
         bool abort = false;
 
-        if (m_query.kind() != Query::SINGLE)
+        uint8_t* pBuffer = mariadb_response.data();
+        uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+        switch (m_query.kind())
         {
-            uint8_t* pBuffer = mariadb_response.data();
-            uint8_t* pEnd = pBuffer + mariadb_response.length();
-
-            pBuffer = interpret(m_query.kind(), pBuffer, pEnd, m_query.nStatements());
-
-            if (pBuffer != pEnd)
-            {
-                MXS_WARNING("%ld bytes of unexpected extra data received, ignoring.", pEnd - pBuffer);
-            }
-
+        case Query::MULTI:
+            pBuffer = interpret_multi(pBuffer, pEnd, m_query.nStatements());
             m_ok = 1;
-        }
-        else
-        {
-            ComResponse response(mariadb_response.data());
+            break;
 
-            switch (response.type())
+        case Query::COMPOUND:
+            pBuffer = interpret_compound(pBuffer, pEnd, m_query.nStatements());
+            m_ok = 1;
+            break;
+
+        case Query::SINGLE:
+            if (!interpret_single(pBuffer))
             {
-            case ComResponse::OK_PACKET:
-                m_ok = 1;
-                interpret(ComOK(response));
-                break;
-
-            case ComResponse::ERR_PACKET:
-                {
-                    ComERR err(response);
-
-                    if (is_acceptable_error(err))
-                    {
-                        m_ok = true;
-                    }
-                    else
-                    {
-                        if (m_ordered)
-                        {
-                            abort = true;
-                        }
-
-                        add_error(m_write_errors, err, m_it - m_query.statements().begin());
-                    }
-                }
-                break;
-
-            default:
-                mxb_assert(!true);
-                throw HardError("Expected OK or ERROR packet from MariaDB server, but "
-                                "received something else.", error::INTERNAL_ERROR);
+                abort = true;
             }
+
+            pBuffer += ComPacket::packet_len(pBuffer);
+        }
+
+        if (pBuffer != pEnd)
+        {
+            MXS_WARNING("Received %ld excess bytes, ignoring.", pEnd - pBuffer);
         }
 
         ++m_it;
@@ -219,10 +196,60 @@ protected:
 
     virtual void interpret(const ComOK& response) = 0;
 
-    virtual uint8_t* interpret(Query::Kind kind, uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements)
+    virtual bool interpret_single(uint8_t* pBuffer)
     {
+        bool rv = true;
+
+        ComResponse response(pBuffer);
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            m_ok = 1;
+            interpret(ComOK(response));
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (is_acceptable_error(err))
+                {
+                    m_ok = true;
+                }
+                else
+                {
+                    if (m_ordered)
+                    {
+                        rv = false;
+                    }
+
+                    add_error(m_write_errors, err, m_it - m_query.statements().begin());
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            throw HardError("Expected OK or ERROR packet from MariaDB server, but "
+                            "received something else.", error::INTERNAL_ERROR);
+        }
+
+        return rv;
+    }
+
+    virtual uint8_t* interpret_multi(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    {
+        // This is not going to happen outside development.
         mxb_assert(!true);
-        return nullptr;
+        throw std::runtime_error("Multi query, but no multi handler.");
+    }
+
+    virtual uint8_t* interpret_compound(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    {
+        // This is not going to happen outside development.
+        mxb_assert(!true);
+        throw std::runtime_error("Compound query, but no compound handler.");
     }
 
     virtual void amend_response(DocumentBuilder& response)
@@ -1018,128 +1045,122 @@ protected:
         m_n += response.affected_rows();
     }
 
-    uint8_t* interpret(Query::Kind kind, uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    uint8_t* interpret_multi(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
     {
-        switch (kind)
+        mxb_assert(nStatements > 2);
+
+        ComResponse begin(pBuffer);
+
+        if (begin.is_ok())
         {
-        case Query::MULTI:
-            {
-                mxb_assert(nStatements > 2);
+            pBuffer += ComPacket::packet_len(pBuffer);
 
-                ComResponse begin(pBuffer);
+            size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
 
-                if (begin.is_ok())
-                {
-                    pBuffer += ComPacket::packet_len(pBuffer);
-
-                    size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
-
-                    for (size_t i = 0; i < nInserts; ++i)
-                    {
-                        ComResponse response(pBuffer);
-
-                        switch (response.type())
-                        {
-                        case ComResponse::OK_PACKET:
-                            {
-                                ComOK ok(response);
-
-                                auto n = ok.affected_rows();
-
-                                if (n == 0)
-                                {
-                                    ostringstream ss;
-                                    ss << "E" << (int)error::COMMAND_FAILED << " error collection "
-                                       << table(Quoted::NO)
-                                       << ", possibly duplicate id.";
-
-                                    DocumentBuilder error;
-                                    error.append(kvp("index", (int)i));
-                                    error.append(kvp("code", error::COMMAND_FAILED));
-                                    error.append(kvp("errmsg", ss.str()));
-
-                                    m_write_errors.append(error.extract());
-                                }
-                                else
-                                {
-                                    m_n += n;
-                                }
-                            }
-                            break;
-
-                        case ComResponse::ERR_PACKET:
-                            // An error packet in the middle of everything is a complete failure.
-                            throw MariaDBError(ComERR(response));
-                            break;
-
-                        default:
-                            mxb_assert(!true);
-                            throw HardError("Expected OK or ERROR packet from MariaDB server, but "
-                                            "received something else.", error::INTERNAL_ERROR);
-                        }
-
-                        pBuffer += ComPacket::packet_len(pBuffer);
-                        mxb_assert(pBuffer < pEnd);
-                    }
-
-                    ComResponse commit(pBuffer);
-
-                    if (!commit.is_ok())
-                    {
-                        mxb_assert(commit.is_err());
-                        throw MariaDBError(ComERR(commit));
-                    }
-
-                    pBuffer += ComPacket::packet_len(pBuffer);
-                    mxb_assert(pBuffer == pEnd);
-                }
-                else
-                {
-                    mxb_assert(begin.is_err());
-                    throw MariaDBError(ComERR(begin));
-                }
-            }
-            break;
-
-        case Query::COMPOUND:
+            for (size_t i = 0; i < nInserts; ++i)
             {
                 ComResponse response(pBuffer);
 
-                if (response.is_ok())
+                switch (response.type())
                 {
-                    ComOK ok(response);
-
-                    m_n = ok.affected_rows();
-
-                    if (m_n != (int64_t)nStatements)
+                case ComResponse::OK_PACKET:
                     {
-                        ostringstream ss;
-                        ss << "E" << (int)error::COMMAND_FAILED << " error collection "
-                           << table(Quoted::NO)
-                           << ", possibly duplicate id.";
+                        ComOK ok(response);
 
-                        DocumentBuilder error;
-                        error.append(kvp("index", (int)m_n));
-                        error.append(kvp("code", error::COMMAND_FAILED));
-                        error.append(kvp("errmsg", ss.str()));
+                        auto n = ok.affected_rows();
 
-                        m_write_errors.append(error.extract());
+                        if (n == 0)
+                        {
+                            ostringstream ss;
+                            ss << "E" << (int)error::COMMAND_FAILED << " error collection "
+                               << table(Quoted::NO)
+                               << ", possibly duplicate id.";
+
+                            DocumentBuilder error;
+                            error.append(kvp("index", (int)i));
+                            error.append(kvp("code", error::COMMAND_FAILED));
+                            error.append(kvp("errmsg", ss.str()));
+
+                            m_write_errors.append(error.extract());
+                        }
+                        else
+                        {
+                            m_n += n;
+                        }
                     }
-                }
-                else
-                {
-                    // We always expect a successful COMMIT
+                    break;
+
+                case ComResponse::ERR_PACKET:
+                    // An error packet in the middle of everything is a complete failure.
                     throw MariaDBError(ComERR(response));
+
+                default:
+                    mxb_assert(!true);
+                    throw HardError("Expected OK or ERROR packet from MariaDB server, but "
+                                    "received something else.", error::INTERNAL_ERROR);
                 }
 
                 pBuffer += ComPacket::packet_len(pBuffer);
-            }
-            break;
 
-        default:
-            mxb_assert(!true);
-            throw HardError("Invalid internal state.", error::INTERNAL_ERROR);
+                if (pBuffer >= pEnd)
+                {
+                    mxb_assert(!true);
+                    throw HardError("Too few packets in received data.", error::INTERNAL_ERROR);
+                }
+            }
+
+            ComResponse commit(pBuffer);
+
+            if (!commit.is_ok())
+            {
+                mxb_assert(commit.is_err());
+                throw MariaDBError(ComERR(commit));
+            }
+
+            pBuffer += ComPacket::packet_len(pBuffer);
+            mxb_assert(pBuffer == pEnd);
         }
+        else
+        {
+            mxb_assert(begin.is_err());
+            throw MariaDBError(ComERR(begin));
+        }
+
+        return pBuffer;
+    }
+
+    uint8_t* interpret_compound(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    {
+        ComResponse response(pBuffer);
+
+        if (response.is_ok())
+        {
+            ComOK ok(response);
+
+            m_n = ok.affected_rows();
+
+            if (m_n != (int64_t)nStatements)
+            {
+                ostringstream ss;
+                ss << "E" << (int)error::COMMAND_FAILED << " error collection "
+                   << table(Quoted::NO)
+                   << ", possibly duplicate id.";
+
+                DocumentBuilder error;
+                error.append(kvp("index", (int)m_n));
+                error.append(kvp("code", error::COMMAND_FAILED));
+                error.append(kvp("errmsg", ss.str()));
+
+                m_write_errors.append(error.extract());
+            }
+        }
+        else
+        {
+            // We always expect an OK.
+            throw MariaDBError(ComERR(response));
+        }
+
+        pBuffer += ComPacket::packet_len(pBuffer);
 
         return pBuffer;
     }
