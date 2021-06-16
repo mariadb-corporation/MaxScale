@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
 #include <maxbase/ccdefs.hh>
 #include <condition_variable>
@@ -52,7 +53,7 @@ public:
          *
          * @param task  The task to enqueue.
          */
-        void execute(Task task);
+        void execute(const Task& task);
 
         /**
          * Stop the thread.
@@ -79,7 +80,7 @@ public:
         bool                    m_abandon_tasks { false };
     };
 
-    static const int UNLIMITED = std::numeric_limits<int>::max();
+    static constexpr int UNLIMITED = std::numeric_limits<int>::max();
 
     /**
      * Creates a thread pool with at most the specified number of threads.
@@ -127,7 +128,7 @@ public:
      *
      * @param task  The task to execute.
      */
-    void execute(Task task);
+    void execute(const Task& task);
 
     /**
      * Stop the pool.

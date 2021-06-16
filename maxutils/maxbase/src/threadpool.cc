@@ -32,7 +32,7 @@ ThreadPool::Thread::~Thread()
     m_thread.join();
 }
 
-void ThreadPool::Thread::execute(Task task)
+void ThreadPool::Thread::execute(const Task& task)
 {
     mxb_assert(!m_stop);
 
@@ -102,7 +102,7 @@ int ThreadPool::num_of_threads() const
     return m_nThreads;
 }
 
-void ThreadPool::execute(Task task)
+void ThreadPool::execute(const Task& task)
 {
     mxb_assert(!m_stop);
 
