@@ -4,7 +4,7 @@
         elevation="0"
         height="45"
         class="query-toolbar"
-        :class="{ 'ml-0': isFullScreen }"
+        :class="{ 'ml-0': isFullscreen }"
     >
         <connection-manager />
         <!-- Use database section-->
@@ -132,6 +132,22 @@
             </template>
             <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
         </v-tooltip>
+
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn icon small v-on="on" @click="$emit('is-fullscreen', !isFullscreen)">
+                    <v-icon size="20" color="accent-dark">
+                        fullscreen{{ isFullscreen ? '_exit' : '' }}
+                    </v-icon>
+                </v-btn>
+            </template>
+            <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
+        </v-tooltip>
+
         <query-config-dialog v-model="queryConfigDialog" />
 
         <confirm-dialog
@@ -195,7 +211,7 @@ export default {
         'query-config-dialog': QueryConfigDialog,
     },
     props: {
-        isFullScreen: { type: Boolean, required: true },
+        isFullscreen: { type: Boolean, required: true },
         queryTxt: { type: String, required: true },
         selectedQueryTxt: { type: String, required: true },
     },

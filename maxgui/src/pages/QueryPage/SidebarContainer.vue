@@ -5,23 +5,9 @@
             <div
                 v-if="!loading_db_tree"
                 class="db-tb-list"
-                :class="[isLeftPaneCollapsed ? 'pa-1' : 'pa-3']"
+                :class="[isSidebarCollapsed ? 'pa-1' : 'pa-3']"
             >
                 <portal to="toggle-pane">
-                    <v-tooltip
-                        top
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
-                    >
-                        <template v-slot:activator="{ on }">
-                            <v-btn icon small v-on="on" @click="isFullscreen = !isFullscreen">
-                                <v-icon size="18" color="deep-ocean">
-                                    fullscreen{{ isFullscreen ? '_exit' : '' }}
-                                </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
-                    </v-tooltip>
                     <v-tooltip
                         top
                         transition="slide-y-transition"
@@ -32,32 +18,32 @@
                                 icon
                                 small
                                 v-on="on"
-                                @click="isLeftPaneCollapsed = !isLeftPaneCollapsed"
+                                @click="$emit('is-sidebar-collapsed', !isSidebarCollapsed)"
                             >
                                 <v-icon
                                     size="16"
                                     color="deep-ocean"
                                     class="collapse-icon"
-                                    :class="{ 'collapse-icon--active': isLeftPaneCollapsed }"
+                                    :class="{ 'collapse-icon--active': isSidebarCollapsed }"
                                 >
                                     double_arrow
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ isLeftPaneCollapsed ? $t('expand') : $t('collapse') }}</span>
+                        <span>{{ isSidebarCollapsed ? $t('expand') : $t('collapse') }}</span>
                     </v-tooltip>
                 </portal>
                 <div class="visible-when-expand fill-height">
                     <div class="schema-list-tools">
                         <div class="d-flex align-center justify-end">
                             <span
-                                v-if="!isLeftPaneCollapsed"
+                                v-if="!isSidebarCollapsed"
                                 class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
                             >
                                 {{ $t('schemas') }}
                             </span>
                             <v-tooltip
-                                v-if="!isLeftPaneCollapsed"
+                                v-if="!isSidebarCollapsed"
                                 top
                                 transition="slide-y-transition"
                                 content-class="shadow-drop color text-navigation py-1 px-4"
@@ -80,7 +66,7 @@
                             <portal-target name="toggle-pane" />
                         </div>
                         <v-text-field
-                            v-if="!isLeftPaneCollapsed"
+                            v-if="!isSidebarCollapsed"
                             id="searchSchema"
                             v-model="searchSchema"
                             name="searchSchema"
@@ -94,7 +80,7 @@
                         />
                     </div>
                     <db-list-tree
-                        v-if="!isLeftPaneCollapsed"
+                        v-if="!isSidebarCollapsed"
                         :schemaList="db_tree"
                         class="schema-list-wrapper"
                         @preview-data="
@@ -141,11 +127,13 @@ export default {
     components: {
         DbListTree,
     },
+    props: {
+        isSidebarCollapsed: { type: Boolean, required: true },
+    },
+
     data() {
         return {
             searchSchema: '',
-            isLeftPaneCollapsed: false,
-            isFullscreen: false,
         }
     },
     computed: {
@@ -158,12 +146,6 @@ export default {
         }),
     },
     watch: {
-        isLeftPaneCollapsed(v) {
-            this.$emit('is-collapsed', v)
-        },
-        isFullscreen(v) {
-            this.$emit('is-fullscreen', v)
-        },
         checking_active_conn: async function(v) {
             // after finish checking active connection
             if (!v && this.active_conn_state)

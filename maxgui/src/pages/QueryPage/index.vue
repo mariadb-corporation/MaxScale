@@ -3,13 +3,14 @@
         <div
             ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
-            :class="{ 'query-page--fullscreen': isFullScreen }"
+            :class="{ 'query-page--fullscreen': isFullscreen }"
         >
             <toolbar-container
                 ref="toolbarContainer"
                 :queryTxt="queryTxt"
                 :selectedQueryTxt="selectedQueryTxt"
-                :isFullScreen="isFullScreen"
+                :isFullscreen="isFullscreen"
+                @is-fullscreen="isFullscreen = $event"
                 @show-vis-sidebar="showVisSidebar = $event"
             />
             <split-pane
@@ -18,13 +19,13 @@
                 class="query-page__content"
                 :minPercent="minSidebarPct"
                 split="vert"
-                :disable="isCollapsed"
+                :disable="isSidebarCollapsed"
             >
                 <template slot="pane-left">
                     <sidebar-container
+                        :isSidebarCollapsed="isSidebarCollapsed"
                         @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
-                        @is-fullscreen="isFullScreen = $event"
-                        @is-collapsed="isCollapsed = $event"
+                        @is-sidebar-collapsed="isSidebarCollapsed = $event"
                         @place-to-editor="placeToEditor"
                     />
                 </template>
@@ -146,8 +147,8 @@ export default {
             sidebarPct: 0,
             editorPct: 60,
             minEditorPct: 0,
-            isFullScreen: false,
-            isCollapsed: false,
+            isFullscreen: false,
+            isSidebarCollapsed: false,
             resultPaneDim: {
                 height: 0,
                 width: 0,
@@ -190,9 +191,9 @@ export default {
         },
     },
     watch: {
-        isFullScreen() {
+        isFullscreen() {
             this.$nextTick(() => {
-                this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+                this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })
                 this.handleSetMinEditorPct()
             })
         },
@@ -200,8 +201,8 @@ export default {
             if (v) this.queryPanePct = this.minQueryPanePct
             else this.queryPanePct = 50
         },
-        isCollapsed(v) {
-            this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: v }))
+        isSidebarCollapsed(v) {
+            this.$nextTick(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
         },
         sidebarPct() {
             this.$nextTick(() => this.setResultPaneDim())
@@ -244,7 +245,7 @@ export default {
             updateActiveDb: 'query/updateActiveDb',
         }),
         setPanelsPct() {
-            this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
+            this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })
             this.handleSetMinEditorPct()
         },
         setResultPaneDim() {
@@ -260,9 +261,9 @@ export default {
             const containerHeight = this.$refs.paneContainer.clientHeight
             this.minEditorPct = this.pxToPct({ px: 26, containerPx: containerHeight })
         },
-        handleSetSidebarPct({ isCollapsed }) {
+        handleSetSidebarPct({ isSidebarCollapsed }) {
             const containerWidth = this.$refs.paneContainer.clientWidth
-            if (isCollapsed) {
+            if (isSidebarCollapsed) {
                 this.minSidebarPct = this.pxToPct({ px: 40, containerPx: containerWidth })
                 this.sidebarPct = this.minSidebarPct
             } else {
