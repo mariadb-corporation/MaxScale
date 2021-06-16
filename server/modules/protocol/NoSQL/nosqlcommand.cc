@@ -460,11 +460,11 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
 
     switch (m_req.opcode())
     {
-    case Packet::QUERY:
+    case MONGOC_OPCODE_QUERY:
         pResponse = create_reply_response(doc);
         break;
 
-    case Packet::MSG:
+    case MONGOC_OPCODE_MSG:
         pResponse = create_msg_response(doc);
         break;
 
@@ -477,8 +477,6 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
 
 void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
-    MXB_WARNING("Mongo request to backend failed: (%d), %s", err.code(), err.message().c_str());
-
     bsoncxx::builder::basic::document mariadb;
 
     mariadb.append(bsoncxx::builder::basic::kvp("index", index));
@@ -516,9 +514,9 @@ void Command::interpret_error(bsoncxx::builder::basic::document& error, const Co
 pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
 {
     // TODO: In the following is assumed that whatever is returned will
-    // TODO: fit into a Mongo packet.
+    // TODO: fit into a MongoDB packet.
 
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA; // Dunno if this should be on.
+    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
     int64_t cursor_id = 0;
     int32_t starting_from = 0;
     int32_t number_returned = nDocuments;

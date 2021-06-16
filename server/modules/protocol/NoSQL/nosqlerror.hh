@@ -5,7 +5,7 @@
 #endif
 
 // The "location" errors are not documented, but appears to be created
-// more or less on the spot in the Mongo code and used for fringe cases.
+// more or less on the spot in the MongoDB code and used for fringe cases.
 
 NOSQL_ERROR(OK,                         0, "OK")
 NOSQL_ERROR(INTERNAL_ERROR,             1, "InternalError")

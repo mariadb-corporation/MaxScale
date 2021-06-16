@@ -39,9 +39,9 @@ public:
     void populate_response(DocumentBuilder& doc) override
     {
         ArrayBuilder versionArray;
-        versionArray.append(MONGO_VERSION_MAJOR);
-        versionArray.append(MONGO_VERSION_MINOR);
-        versionArray.append(MONGO_VERSION_PATCH);
+        versionArray.append(NOSQL_VERSION_MAJOR);
+        versionArray.append(NOSQL_VERSION_MINOR);
+        versionArray.append(NOSQL_VERSION_PATCH);
         versionArray.append(0);
 
         ArrayBuilder storageEngines;
@@ -58,7 +58,7 @@ public:
         // Order the same as that in the documentation.
         doc.append(kvp("gitVersion", MAXSCALE_COMMIT));
         doc.append(kvp("versionArray", versionArray.extract()));
-        doc.append(kvp("version", MONGO_ZVERSION));
+        doc.append(kvp("version", NOSQL_ZVERSION));
         doc.append(kvp("storageEngines", storageEngines.extract()));
         doc.append(kvp("javascriptEngine", "mozjs")); // We lie
         doc.append(kvp("bits", 64));

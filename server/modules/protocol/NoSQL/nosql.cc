@@ -1544,7 +1544,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 {
     string rv;
 
-    // We will ignore all but the last field. That's what Mongo does
+    // We will ignore all but the last field. That's what MongoDB does
     // but as it is unlikely that there will be more fields than one,
     // explicitly ignoring fields at the beginning would just make
     // things messier without adding much benefit.
@@ -1644,7 +1644,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
             if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
             {
-                // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is Mongo,
+                // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is MongoDB,
                 // latter is MariaDB JSON.
                 field = field.substr(0, i);
                 field += "[" + tail + "]";
@@ -2012,7 +2012,7 @@ nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
 
 void nosql::NoSQL::Context::get_last_error(DocumentBuilder& doc)
 {
-    int32_t connection_id = m_connection_id; // Mongo returns this as a 32-bit integer.
+    int32_t connection_id = m_connection_id; // MongoDB returns this as a 32-bit integer.
 
     doc.append(kvp("connectionId", connection_id));
     m_sLast_error->populate(doc);

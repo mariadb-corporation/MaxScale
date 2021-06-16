@@ -473,8 +473,6 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("Mongo request to backend failed: (%d), %s", code, err.message().c_str());
-
                     pResponse = MariaDBError(err).create_response(*this);
                 }
             }

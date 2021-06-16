@@ -97,14 +97,14 @@ const int MAX_WRITE_BATCH_SIZE = 100000;
 
 }
 
-// The Mongo version we claim to be.
-const int MONGO_VERSION_MAJOR = 4;
-const int MONGO_VERSION_MINOR = 4;
-const int MONGO_VERSION_PATCH = 1;
+// The MongoDB version we claim to be.
+const int NOSQL_VERSION_MAJOR = 4;
+const int NOSQL_VERSION_MINOR = 4;
+const int NOSQL_VERSION_PATCH = 1;
 
-const char* const MONGO_ZVERSION = "4.4.1";
+const char* const NOSQL_ZVERSION = "4.4.1";
 
-// See mongo: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
+// See MongoDB: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
 const int MIN_WIRE_VERSION = 6;
 const int MAX_WIRE_VERSION = 6;
 
@@ -329,7 +329,6 @@ private:
 namespace key
 {
 
-// Mongo Commands
 const char BATCHSIZE[]               = "batchSize";
 const char COLLECTION[]              = "collection";
 const char DELETES[]                 = "deletes";
@@ -382,19 +381,6 @@ std::string sort_to_order_by(const bsoncxx::document::view& sort);
 class Packet
 {
 public:
-    enum OpCode
-    {
-        REPLY = MONGOC_OPCODE_REPLY,
-        UPDATE = MONGOC_OPCODE_UPDATE,
-        INSERT = MONGOC_OPCODE_INSERT,
-        QUERY = MONGOC_OPCODE_QUERY,
-        GET = MONGOC_OPCODE_GET_MORE,
-        DELETE = MONGOC_OPCODE_DELETE,
-        KILL = MONGOC_OPCODE_KILL_CURSORS,
-        COMPRESSED = MONGOC_OPCODE_COMPRESSED,
-        MSG = MONGOC_OPCODE_MSG,
-    };
-
     Packet(const Packet&) = default;
     Packet& operator = (const Packet&) = default;
 

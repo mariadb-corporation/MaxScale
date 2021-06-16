@@ -106,7 +106,7 @@ public:
 
     virtual GWBUF* execute() = 0;
 
-    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response) = 0;
+    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
     GWBUF* create_empty_response() const;
 
@@ -272,7 +272,7 @@ public:
 
     GWBUF* execute() override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppMongo_response) override final;
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 

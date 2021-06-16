@@ -38,7 +38,7 @@ public:
             DocumentArguments arguments;
             unique_ptr<Command> sCommand;
 
-            if (m_req.opcode() == Packet::QUERY)
+            if (m_req.opcode() == MONGOC_OPCODE_QUERY)
             {
                 Query& query = static_cast<Query&>(m_req);
 

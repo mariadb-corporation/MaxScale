@@ -70,7 +70,7 @@ public:
     /**
      * Create a new instance.
      *
-     * @param name      The Mongo database in question.
+     * @param name      The database in question.
      * @param pContext  The context to be used, a reference will be stored.
      * @param pConfig   The configuration.
      *
@@ -81,27 +81,27 @@ public:
                                             Config* pConfig);
 
     /**
-     * Handle a Mongo query.
+     * Handle a NoSQL query.
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The query request; *must* be intended for the database this
      *              instance represents.
      *
-     * @return A GWBUF containing a Mongo response, or nullptr. In the former case
+     * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
 
     /**
-     * Handle a Mongo command.
+     * Handle a NoSQL command.
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The message request.
      * @doc         The document containing the command; *must* be intended for the
      *              database this instance represents.
      *
-     * @return A GWBUF containing a Mongo response, or nullptr. In the former case
+     * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
@@ -110,13 +110,13 @@ public:
                           const bsoncxx::document::view& doc);
 
     /**
-     * Convert a MariaDB response to a Mongo response. Must only be called
+     * Convert a MariaDB response to a NoSQL response. Must only be called
      * if an earlier call to @c run_command returned @ nullptr and only with
      * the buffer delivered to @c clientReply of the client protocol.
      *
      * @param mariadb_response  A response as received from downstream.
      *
-     * @return @c mariadb_response translated into the equivalent Mongo response.
+     * @return @c mariadb_response translated into the equivalent NoSQL response.
      */
     GWBUF* translate(mxs::Buffer&& mariadb_response);
 
