@@ -33,6 +33,9 @@ export default {
     methods: {
         renderHorizBarChart() {
             let chartOption = {
+                plugins: {
+                    streaming: false,
+                },
                 scales: {
                     xAxes: [
                         {

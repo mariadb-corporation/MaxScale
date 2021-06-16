@@ -41,6 +41,9 @@ export default {
     methods: {
         renderLineChart() {
             let chartOption = {
+                plugins: {
+                    streaming: false,
+                },
                 scales: {
                     xAxes: [
                         {

@@ -33,6 +33,9 @@ export default {
     methods: {
         renderScatterChart() {
             let chartOption = {
+                plugins: {
+                    streaming: false,
+                },
                 scales: {
                     xAxes: [
                         {

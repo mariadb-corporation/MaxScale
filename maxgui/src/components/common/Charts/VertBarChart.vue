@@ -33,6 +33,9 @@ export default {
     methods: {
         renderBarChart() {
             let chartOption = {
+                plugins: {
+                    streaming: false,
+                },
                 scales: {
                     xAxes: [
                         {
