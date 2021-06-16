@@ -615,10 +615,10 @@ GWBUF* nosql::SoftError::create_response(const Command& command) const
 
 void nosql::SoftError::create_response(const Command&, DocumentBuilder& doc) const
 {
-    doc.append(kvp("ok", 0));
-    doc.append(kvp("errmsg", what()));
-    doc.append(kvp("code", m_code));
-    doc.append(kvp("codeName", nosql::error::name(m_code)));
+    doc.append(kvp(key::OK, 0));
+    doc.append(kvp(key::ERRMSG, what()));
+    doc.append(kvp(key::CODE, m_code));
+    doc.append(kvp(key::CODE_NAME, nosql::error::name(m_code)));
 }
 
 namespace
@@ -634,9 +634,9 @@ public:
 
     void populate(nosql::DocumentBuilder& doc) override
     {
-        doc.append(nosql::kvp("err", m_err));
-        doc.append(nosql::kvp("code", m_code));
-        doc.append(nosql::kvp("codeName", nosql::error::name(m_code)));
+        doc.append(nosql::kvp(nosql::key::ERR, m_err));
+        doc.append(nosql::kvp(nosql::key::CODE, m_code));
+        doc.append(nosql::kvp(nosql::key::CODE_NAME, nosql::error::name(m_code)));
     }
 
 private:
@@ -662,7 +662,7 @@ GWBUF* nosql::HardError::create_response(const nosql::Command& command) const
 void nosql::HardError::create_response(const Command&, DocumentBuilder& doc) const
 {
     doc.append(kvp("$err", what()));
-    doc.append(kvp("code", m_code));
+    doc.append(kvp(key::CODE, m_code));
 }
 
 unique_ptr<nosql::LastError> nosql::HardError::create_last_error() const
@@ -691,16 +691,16 @@ void nosql::MariaDBError::create_response(const Command& command, DocumentBuilde
     string sql = command.last_statement();
 
     DocumentBuilder mariadb;
-    mariadb.append(kvp("code", m_mariadb_code));
-    mariadb.append(kvp("message", m_mariadb_message));
-    mariadb.append(kvp("command", json));
-    mariadb.append(kvp("sql", sql));
+    mariadb.append(kvp(key::CODE, m_mariadb_code));
+    mariadb.append(kvp(key::MESSAGE, m_mariadb_message));
+    mariadb.append(kvp(key::COMMAND, json));
+    mariadb.append(kvp(key::SQL, sql));
 
     doc.append(kvp("$err", what()));
     auto protocol_code = error::from_mariadb_code(m_mariadb_code);;
-    doc.append(kvp("code", protocol_code));
-    doc.append(kvp("codeName", nosql::error::name(protocol_code)));
-    doc.append(kvp("mariadb", mariadb.extract()));
+    doc.append(kvp(key::CODE, protocol_code));
+    doc.append(kvp(key::CODE_NAME, nosql::error::name(protocol_code)));
+    doc.append(kvp(key::MARIADB, mariadb.extract()));
 
     MXS_ERROR("Protocol command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
               m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
@@ -724,10 +724,10 @@ unique_ptr<nosql::LastError> nosql::MariaDBError::create_last_error() const
             ConcreteLastError::populate(doc);
 
             DocumentBuilder mariadb;
-            mariadb.append(kvp("code", m_mariadb_code));
-            mariadb.append(kvp("message", m_mariadb_message));
+            mariadb.append(kvp(key::CODE, m_mariadb_code));
+            mariadb.append(kvp(key::MESSAGE, m_mariadb_message));
 
-            doc.append(kvp("mariadb", mariadb.extract()));
+            doc.append(kvp(key::MARIADB, mariadb.extract()));
         }
 
     private:
@@ -1985,14 +1985,14 @@ public:
     void populate(nosql::DocumentBuilder& doc) override
     {
         nosql::DocumentBuilder writeConcern;
-        writeConcern.append(kvp("w", 1));
-        writeConcern.append(kvp("wtimeout", 0));
+        writeConcern.append(kvp(key::W, 1));
+        writeConcern.append(kvp(key::WTIMEOUT, 0));
 
-        doc.append(kvp("n", m_n));
-        doc.append(kvp("syncMillis", 0));
-        doc.append(kvp("writtenTo", bsoncxx::types::b_null()));
-        doc.append(kvp("writeConcern", writeConcern.extract()));
-        doc.append(kvp("err", bsoncxx::types::b_null()));
+        doc.append(kvp(key::N, m_n));
+        doc.append(kvp(key::SYNC_MILLIS, 0));
+        doc.append(kvp(key::WRITTEN_TO, bsoncxx::types::b_null()));
+        doc.append(kvp(key::WRITE_CONCERN, writeConcern.extract()));
+        doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
     }
 
 private:
@@ -2014,9 +2014,9 @@ void nosql::NoSQL::Context::get_last_error(DocumentBuilder& doc)
 {
     int32_t connection_id = m_connection_id; // MongoDB returns this as a 32-bit integer.
 
-    doc.append(kvp("connectionId", connection_id));
+    doc.append(kvp(key::CONNECTION_ID, connection_id));
     m_sLast_error->populate(doc);
-    doc.append(kvp("ok", 1));
+    doc.append(kvp(key::OK, 1));
 }
 
 void nosql::NoSQL::Context::reset_error(int32_t n)

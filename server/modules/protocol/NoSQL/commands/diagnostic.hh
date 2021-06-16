@@ -46,8 +46,8 @@ public:
 
         ArrayBuilder storageEngines;
         DocumentBuilder openssl;
-        openssl.append(kvp("running", OPENSSL_VERSION_TEXT));
-        openssl.append(kvp("compiled", OPENSSL_VERSION_TEXT));
+        openssl.append(kvp(key::RUNNING, OPENSSL_VERSION_TEXT));
+        openssl.append(kvp(key::COMPILED, OPENSSL_VERSION_TEXT));
         ArrayBuilder modules;
 
 #if defined(SS_DEBUG)
@@ -56,19 +56,19 @@ public:
         bool debug = false;
 #endif
         // Order the same as that in the documentation.
-        doc.append(kvp("gitVersion", MAXSCALE_COMMIT));
-        doc.append(kvp("versionArray", versionArray.extract()));
-        doc.append(kvp("version", NOSQL_ZVERSION));
-        doc.append(kvp("storageEngines", storageEngines.extract()));
-        doc.append(kvp("javascriptEngine", "mozjs")); // We lie
-        doc.append(kvp("bits", 64));
-        doc.append(kvp("debug", debug));
-        doc.append(kvp("maxBsonObjectSize", protocol::MAX_BSON_OBJECT_SIZE));
-        doc.append(kvp("openssl", openssl.extract()));
-        doc.append(kvp("modules", modules.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::GIT_VERSION, MAXSCALE_COMMIT));
+        doc.append(kvp(key::VERSION_ARRAY, versionArray.extract()));
+        doc.append(kvp(key::VERSION, NOSQL_ZVERSION));
+        doc.append(kvp(key::STORAGE_ENGINES, storageEngines.extract()));
+        doc.append(kvp(key::JAVASCRIPT_ENGINE, value::MOZJS)); // We lie
+        doc.append(kvp(key::BITS, 64));
+        doc.append(kvp(key::DEBUG, debug));
+        doc.append(kvp(key::MAX_BSON_OBJECT_SIZE, protocol::MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp(key::OPENSSL, openssl.extract()));
+        doc.append(kvp(key::MODULES, modules.extract()));
+        doc.append(kvp(key::OK, 1));
 
-        doc.append(kvp("maxscale", MAXSCALE_VERSION));
+        doc.append(kvp(key::MAXSCALE, MAXSCALE_VERSION));
     }
 };
 
@@ -116,9 +116,9 @@ public:
 
         ArrayBuilder parsed;
 
-        doc.append(kvp("argv", argv.extract()));
-        doc.append(kvp("parsed", parsed.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::ARGV, argv.extract()));
+        doc.append(kvp(key::PARSED, parsed.extract()));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -154,24 +154,24 @@ public:
             names.append("global");
             names.append("startupWarnings");
 
-            doc.append(kvp("names", names.extract()));
-            doc.append(kvp("ok", 1));
+            doc.append(kvp(key::NAMES, names.extract()));
+            doc.append(kvp(key::OK, 1));
         }
         else if (value == "global" || value == "startupWarnings")
         {
             ArrayBuilder log;
 
-            doc.append(kvp("totalLinesWritten", 0));
-            doc.append(kvp("log", log.extract()));
-            doc.append(kvp("ok", 1));
+            doc.append(kvp(key::TOTAL_LINES_WRITTEN, 0));
+            doc.append(kvp(key::LOG, log.extract()));
+            doc.append(kvp(key::OK, 1));
         }
         else
         {
             string message("No RamLog named: ");
             message += value;
 
-            doc.append(kvp("ok", 0));
-            doc.append(kvp("errmsg", value));
+            doc.append(kvp(key::OK, 0));
+            doc.append(kvp(key::ERRMSG, value));
         }
     }
 };
@@ -196,8 +196,8 @@ public:
 
         Command::list_commands(commands);
 
-        doc.append(kvp("commands", commands.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::COMMANDS, commands.extract()));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -216,7 +216,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -246,8 +246,8 @@ public:
         ostringstream you;
         you << pDcb->client_remote() << ":" << pDcb->port();
 
-        doc.append(kvp("you", you.str()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::YOU, you.str()));
+        doc.append(kvp(key::OK, 1));
     }
 };
 

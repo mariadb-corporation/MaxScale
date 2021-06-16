@@ -307,12 +307,12 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
                                      int32_t nBatch,
                                      bool single_batch)
 {
-    create_batch(doc, key::FIRSTBATCH, nBatch, single_batch);
+    create_batch(doc, key::FIRST_BATCH, nBatch, single_batch);
 }
 
 void NoSQLCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
-    create_batch(doc, key::NEXTBATCH, nBatch, false);
+    create_batch(doc, key::NEXT_BATCH, nBatch, false);
 }
 
 //static
@@ -324,12 +324,12 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
     int64_t id = 0;
 
     DocumentBuilder cursor;
-    cursor.append(kvp("firstBatch", batch.extract()));
-    cursor.append(kvp("id", id));
-    cursor.append(kvp("ns", ns));
+    cursor.append(kvp(key::FIRST_BATCH, batch.extract()));
+    cursor.append(kvp(key::ID, id));
+    cursor.append(kvp(key::NS, ns));
 
-    doc.append(kvp("cursor", cursor.extract()));
-    doc.append(kvp("ok", 1));
+    doc.append(kvp(key::CURSOR, cursor.extract()));
+    doc.append(kvp(key::OK, 1));
 }
 
 void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
@@ -363,11 +363,11 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
 
     DocumentBuilder cursor;
     cursor.append(kvp(which_batch, batch.extract()));
-    cursor.append(kvp("id", id));
-    cursor.append(kvp("ns", m_ns));
+    cursor.append(kvp(key::ID, id));
+    cursor.append(kvp(key::NS, m_ns));
 
-    doc.append(kvp("cursor", cursor.extract()));
-    doc.append(kvp("ok", 1));
+    doc.append(kvp(key::CURSOR, cursor.extract()));
+    doc.append(kvp(key::OK, 1));
 
     touch();
 }

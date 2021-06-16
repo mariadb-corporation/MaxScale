@@ -102,8 +102,8 @@ public:
 
         DocumentBuilder doc;
 
-        doc.append(kvp("n", n));
-        doc.append(kvp("ok", ok));
+        doc.append(kvp(key::N, n));
+        doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
         return READY;

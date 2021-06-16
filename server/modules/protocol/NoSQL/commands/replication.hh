@@ -36,18 +36,18 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp("ismaster", true));
-        doc.append(kvp("topologyVersion", topology_version()));
-        doc.append(kvp("maxBsonObjectSize", protocol::MAX_BSON_OBJECT_SIZE));
-        doc.append(kvp("maxMessageSizeBytes", protocol::MAX_MSG_SIZE));
-        doc.append(kvp("maxWriteBatchSize", protocol::MAX_WRITE_BATCH_SIZE));
-        doc.append(kvp("localTime", bsoncxx::types::b_date(std::chrono::system_clock::now())));
-        doc.append(kvp("logicalSessionTimeoutMinutes", 30));
-        doc.append(kvp("connectionId", m_database.context().connection_id()));
-        doc.append(kvp("minWireVersion", MIN_WIRE_VERSION));
-        doc.append(kvp("maxWireVersion", MAX_WIRE_VERSION));
-        doc.append(kvp("readOnly", false));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::ISMASTER, true));
+        doc.append(kvp(key::TOPOLOGY_VERSION, topology_version()));
+        doc.append(kvp(key::MAX_BSON_OBJECT_SIZE, protocol::MAX_BSON_OBJECT_SIZE));
+        doc.append(kvp(key::MAX_MESSAGE_SIZE_BYTES, protocol::MAX_MSG_SIZE));
+        doc.append(kvp(key::MAX_WRITE_BATCH_SIZE, protocol::MAX_WRITE_BATCH_SIZE));
+        doc.append(kvp(key::LOCALTIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
+        doc.append(kvp(key::LOGICAL_SESSION_TIMEOUT_MINUTES, 30));
+        doc.append(kvp(key::CONNECTION_ID, m_database.context().connection_id()));
+        doc.append(kvp(key::MIN_WIRE_VERSION, MIN_WIRE_VERSION));
+        doc.append(kvp(key::MAX_WIRE_VERSION, MAX_WIRE_VERSION));
+        doc.append(kvp(key::READ_ONLY, false));
+        doc.append(kvp(key::OK, 1));
     }
 };
 

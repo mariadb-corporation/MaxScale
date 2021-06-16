@@ -106,14 +106,14 @@ public:
 
             auto write_errors = m_write_errors.extract();
 
-            doc.append(kvp("n", m_n));
-            doc.append(kvp("ok", m_ok));
+            doc.append(kvp(key::N, m_n));
+            doc.append(kvp(key::OK, m_ok));
 
             amend_response(doc);
 
             if (!write_errors.view().empty())
             {
-                doc.append(kvp("writeErrors", write_errors));
+                doc.append(kvp(key::WRITE_ERRORS, write_errors));
             }
 
             pResponse = create_response(doc.extract());
@@ -378,7 +378,7 @@ public:
 
     void prepare() override
     {
-        optional(key::BATCHSIZE, &m_batch_size, Conversion::RELAXED);
+        optional(key::BATCH_SIZE, &m_batch_size, Conversion::RELAXED);
 
         if (m_batch_size < 0)
         {
@@ -387,7 +387,7 @@ public:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        optional(key::SINGLEBATCH, &m_single_batch);
+        optional(key::SINGLE_BATCH, &m_single_batch);
     }
 
     string generate_sql() override
@@ -545,7 +545,7 @@ public:
         string collection = m_database.name() + "." + required<string>(key::COLLECTION);
         int32_t batch_size = 101;
 
-        optional(key::BATCHSIZE, &batch_size, Conversion::RELAXED);
+        optional(key::BATCH_SIZE, &batch_size, Conversion::RELAXED);
 
         if (batch_size < 0)
         {
@@ -688,20 +688,20 @@ public:
                 }
             }
 
-            error.append(kvp("code", error::DUPLICATE_KEY));
+            error.append(kvp(key::CODE, error::DUPLICATE_KEY));
 
             // If we did not find the entry, we don't add any details.
             if (index < (int)m_ids.size())
             {
-                error.append(kvp("index", index));
+                error.append(kvp(key::INDEX, index));
                 DocumentBuilder keyPattern;
-                keyPattern.append(kvp("_id", 1));
-                error.append(kvp("keyPattern", keyPattern.extract()));
+                keyPattern.append(kvp(key::_ID, 1));
+                error.append(kvp(key::KEY_PATTERN, keyPattern.extract()));
                 DocumentBuilder keyValue_builder;
                 mxb_assert(index < (int)m_ids.size());
-                append(keyValue_builder, "_id", m_ids[index]);
+                append(keyValue_builder, key::_ID, m_ids[index]);
                 auto keyValue = keyValue_builder.extract();
-                error.append(kvp("keyValue", keyValue));
+                error.append(kvp(key::KEY_VALUE, keyValue));
 
                 duplicate = bsoncxx::to_json(keyValue);
             }
@@ -711,7 +711,7 @@ public:
                << m_database.name() << "." << value_as<string>()
                << " index: _id_ dup key: " << duplicate;
 
-            error.append(kvp("errmsg", ss.str()));
+            error.append(kvp(key::ERRMSG, ss.str()));
         }
         else
         {
@@ -1004,7 +1004,7 @@ protected:
             bsoncxx::oid oid;
 
             DocumentBuilder builder;
-            builder.append(kvp("_id", oid));
+            builder.append(kvp(key::_ID, oid));
 
             for (const auto& e : doc)
             {
@@ -1065,9 +1065,9 @@ protected:
                                << ", possibly duplicate id.";
 
                             DocumentBuilder error;
-                            error.append(kvp("index", (int)i));
-                            error.append(kvp("code", error::COMMAND_FAILED));
-                            error.append(kvp("errmsg", ss.str()));
+                            error.append(kvp(key::INDEX, (int)i));
+                            error.append(kvp(key::CODE, error::COMMAND_FAILED));
+                            error.append(kvp(key::ERRMSG, ss.str()));
 
                             m_write_errors.append(error.extract());
                         }
@@ -1134,9 +1134,9 @@ protected:
                    << ", possibly duplicate id.";
 
                 DocumentBuilder error;
-                error.append(kvp("index", (int)m_n));
-                error.append(kvp("code", error::COMMAND_FAILED));
-                error.append(kvp("errmsg", ss.str()));
+                error.append(kvp(key::INDEX, (int)m_n));
+                error.append(kvp(key::CODE, error::COMMAND_FAILED));
+                error.append(kvp(key::ERRMSG, ss.str()));
 
                 m_write_errors.append(error.extract());
             }
@@ -1179,7 +1179,7 @@ public:
     void populate_response(DocumentBuilder& doc) override
     {
         // No action needed, the error is reset on each command but for getLastError.
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -1452,7 +1452,7 @@ private:
 
     void amend_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp("nModified", m_nModified));
+        doc.append(kvp(key::N_MODIFIED, m_nModified));
 
         m_database.context().reset_error(m_n);
     }

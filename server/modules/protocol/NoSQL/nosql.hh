@@ -329,29 +329,116 @@ private:
 namespace key
 {
 
-const char BATCHSIZE[]               = "batchSize";
-const char COLLECTION[]              = "collection";
-const char DELETES[]                 = "deletes";
-const char DOCUMENTS[]               = "documents";
-const char FILTER[]                  = "filter";
-const char FIRSTBATCH[]              = "firstBatch";
-const char KEY[]                     = "key";
-const char LIMIT[]                   = "limit";
-const char MULTI[]                   = "multi";
-const char NAMEONLY[]                = "nameOnly";
-const char NEXTBATCH[]               = "nextBatch";
-const char ORDERED[]                 = "ordered";
-const char PROJECTION[]              = "projection";
-const char Q[]                       = "q";
-const char QUERY[]                   = "query";
-const char SINGLEBATCH[]             = "singleBatch";
-const char SKIP[]                    = "skip";
-const char SORT[]                    = "sort";
-const char U[]                       = "u";
-const char UPDATES[]                 = "updates";
-const char UPSERT[]                  = "upsert";
+const char ADMIN_ONLY[]                      = "adminOnly";
+const char ARGV[]                            = "argv";
+const char BATCH_SIZE[]                      = "batchSize";
+const char BITS[]                            = "bits";
+const char CODE_NAME[]                       = "codeName";
+const char CODE[]                            = "code";
+const char COLLECTION[]                      = "collection";
+const char COMMANDS[]                        = "commands";
+const char COMMAND[]                         = "command";
+const char COMPILED[]                        = "compiled";
+const char CONFIG[]                          = "config";
+const char CONNECTION_ID[]                   = "connectionId";
+const char CURSORS_ALIVE[]                   = "cursorsAlive";
+const char CURSORS_KILLED[]                  = "cursorsKilled";
+const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";
+const char CURSORS_UNKNOWN[]                 = "cursorsUnknown";
+const char CURSOR[]                          = "cursor";
+const char DATABASES[]                       = "databases";
+const char DEBUG[]                           = "debug";
+const char DELETES[]                         = "deletes";
+const char DOCUMENTS[]                       = "documents";
+const char DROPPED[]                         = "dropped";
+const char EMPTY[]                           = "empty";
+const char ERRMSG[]                          = "errmsg";
+const char ERROR[]                           = "error";
+const char ERR[]                             = "err";
+const char FILTER[]                          = "filter";
+const char FIRST_BATCH[]                     = "firstBatch";
+const char GIT_VERSION[]                     = "gitVersion";
+const char HELP[]                            = "help";
+const char ID[]                              = "id";
+const char INDEX[]                           = "index";
+const char INFO[]                            = "info";
+const char ISMASTER[]                        = "ismaster";
+const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
+const char KEY_PATTERN[]                     = "keyPattern";
+const char KEY_VALUE[]                       = "keyValue";
+const char KEY[]                             = "key";
+const char KIND[]                            = "kind";
+const char LIMIT[]                           = "limit";
+const char LOCALTIME[]                       = "localTime";
+const char LOGICAL_SESSION_TIMEOUT_MINUTES[] = "logicalSessionTimeoutMinutes";
+const char LOG[]                             = "log";
+const char MARIADB[]                         = "mariadb";
+const char MAX_BSON_OBJECT_SIZE[]            = "maxBsonObjectSize";
+const char MAX_MESSAGE_SIZE_BYTES[]          = "maxMessageSizeBytes";
+const char MAXSCALE[]                        = "maxscale";
+const char MAX_WIRE_VERSION[]                = "maxWireVersion";
+const char MAX_WRITE_BATCH_SIZE[]            = "maxWriteBatchSize";
+const char MESSAGE[]                         = "message";
+const char MIN_WIRE_VERSION[]                = "minWireVersion";
+const char MODULES[]                         = "modules";
+const char MULTI[]                           = "multi";
+const char NAME_ONLY[]                       = "nameOnly";
+const char NAMES[]                           = "names";
+const char NAME[]                            = "name";
+const char NEXT_BATCH[]                      = "nextBatch";
+const char N_INDEXES_WAS[]                   = "nIndexesWas";
+const char N_MODIFIED[]                      = "nModified";
+const char NS[]                              = "ns";
+const char N[]                               = "n";
+const char OK[]                              = "ok";
+const char OPENSSL[]                         = "openssl";
+const char OPTIONS[]                         = "options";
+const char ORDERED[]                         = "ordered";
+const char PARSED[]                          = "parsed";
+const char PROJECTION[]                      = "projection";
+const char QUERY[]                           = "query";
+const char Q[]                               = "q";
+const char READ_ONLY[]                       = "readOnly";
+const char RESPONSE[]                        = "response";
+const char RUNNING[]                         = "running";
+const char SINGLE_BATCH[]                    = "singleBatch";
+const char SIZE_ON_DISK[]                    = "sizeOnDisk";
+const char SKIP[]                            = "skip";
+const char SORT[]                            = "sort";
+const char SQL[]                             = "sql";
+const char STATE[]                           = "state";
+const char STORAGE_ENGINES[]                 = "storageEngines";
+const char SYNC_MILLIS[]                     = "syncMillis";
+const char TOPOLOGY_VERSION[]                = "topologyVersion";
+const char TOTAL_LINES_WRITTEN[]             = "totalLinesWritten";
+const char TOTAL_SIZE[]                      = "totalSize";
+const char TYPE[]                            = "type";
+const char UPDATES[]                         = "updates";
+const char UPSERT[]                          = "upsert";
+const char U[]                               = "u";
+const char VERSION_ARRAY[]                   = "versionArray";
+const char VERSION[]                         = "version";
+const char WRITE_CONCERN[]                   = "writeConcern";
+const char WRITE_ERRORS[]                    = "writeErrors";
+const char WRITTEN_TO[]                      = "writtenTo";
+const char WTIMEOUT[]                        = "wtimeout";
+const char W[]                               = "w";
+const char YOU[]                             = "you";
+const char _ID[]                             = "_id";
 
-};
+}
+
+namespace value
+{
+
+const char COLLECTION[] = "collection";
+const char IMMEDIATE[]  = "immediate";
+const char MOZJS[]      = "mozjs";
+const char MULTI[]      = "multi";
+const char SINGLE[]     = "single";
+const char UNDECIDED[]  = "undecided";
+
+}
 
 bool get_integer(const bsoncxx::document::element& element, int64_t* pInt);
 bool get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt);

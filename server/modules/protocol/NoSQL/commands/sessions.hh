@@ -38,7 +38,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::OK, 1));
     }
 };
 

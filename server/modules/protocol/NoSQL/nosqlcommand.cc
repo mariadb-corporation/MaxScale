@@ -320,8 +320,8 @@ void Command::list_commands(DocumentBuilder& commands)
         }
 
         DocumentBuilder command;
-        command.append(kvp("help", zHelp));
-        command.append(kvp("adminOnly", info.is_admin));
+        command.append(kvp(key::HELP, zHelp));
+        command.append(kvp(key::ADMIN_ONLY, info.is_admin));
 
         // Yes, passing a literal string to kvp as first argument works, but
         // passing a 'const char*' does not.
@@ -479,10 +479,10 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
 {
     bsoncxx::builder::basic::document mariadb;
 
-    mariadb.append(bsoncxx::builder::basic::kvp("index", index));
-    mariadb.append(bsoncxx::builder::basic::kvp("code", err.code()));
-    mariadb.append(bsoncxx::builder::basic::kvp("state", err.state()));
-    mariadb.append(bsoncxx::builder::basic::kvp("message", err.message()));
+    mariadb.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
+    mariadb.append(bsoncxx::builder::basic::kvp(key::CODE, err.code()));
+    mariadb.append(bsoncxx::builder::basic::kvp(key::STATE, err.state()));
+    mariadb.append(bsoncxx::builder::basic::kvp(key::MESSAGE, err.message()));
 
     // TODO: Map MariaDB errors to something sensible from
     // TODO: https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml
@@ -490,7 +490,7 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
     bsoncxx::builder::basic::document error;
 
     interpret_error(error, err, index);
-    error.append(bsoncxx::builder::basic::kvp("mariadb", mariadb.extract()));
+    error.append(bsoncxx::builder::basic::kvp(key::MARIADB, mariadb.extract()));
 
     array.append(error.extract());
 }
@@ -501,14 +501,14 @@ void Command::add_error(bsoncxx::builder::basic::document& response, const ComER
 
     add_error(array, err, 0);
 
-    response.append(bsoncxx::builder::basic::kvp("writeErrors", array.extract()));
+    response.append(bsoncxx::builder::basic::kvp(key::WRITE_ERRORS, array.extract()));
 }
 
 void Command::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
-    error.append(bsoncxx::builder::basic::kvp("index", index));
-    error.append(bsoncxx::builder::basic::kvp("code", error::from_mariadb_code(err.code())));
-    error.append(bsoncxx::builder::basic::kvp("errmsg", err.message()));
+    error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
+    error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));
+    error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
 }
 
 pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
@@ -638,12 +638,12 @@ Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF
 
 void ImmediateCommand::diagnose(DocumentBuilder& doc)
 {
-    doc.append(kvp("kind", "immediate"));
+    doc.append(kvp(key::KIND, value::IMMEDIATE));
 
     DocumentBuilder response;
     populate_response(response);
 
-    doc.append(kvp("response", response.extract()));
+    doc.append(kvp(key::RESPONSE, response.extract()));
 }
 
 GWBUF* SingleCommand::execute()
@@ -666,13 +666,13 @@ void SingleCommand::prepare()
 
 void SingleCommand::diagnose(DocumentBuilder& doc)
 {
-    doc.append(kvp("kind", "single"));
-    doc.append(kvp("sql", generate_sql()));
+    doc.append(kvp(key::KIND, value::SINGLE));
+    doc.append(kvp(key::SQL, generate_sql()));
 }
 
 void MultiCommand::diagnose(DocumentBuilder& doc)
 {
-    doc.append(kvp("kind", "multi"));
+    doc.append(kvp(key::KIND, value::MULTI));
     const auto& query = generate_sql();
 
     ArrayBuilder sql;
@@ -681,7 +681,7 @@ void MultiCommand::diagnose(DocumentBuilder& doc)
         sql.append(statement);
     }
 
-    doc.append(kvp("sql", sql.extract()));
+    doc.append(kvp(key::SQL, sql.extract()));
 }
 
 }

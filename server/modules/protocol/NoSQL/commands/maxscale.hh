@@ -62,17 +62,17 @@ public:
                 DocumentBuilder error;
                 x.create_response(*sCommand, error);
 
-                doc.append(kvp("error", error.extract()));
+                doc.append(kvp(key::ERROR, error.extract()));
             }
             catch (const std::exception& x)
             {
                 doc.clear();
 
-                doc.append(kvp("error", x.what()));
+                doc.append(kvp(key::ERROR, x.what()));
             }
         }
 
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -116,8 +116,8 @@ public:
         config.append(kvp(C::s_ordered_insert_behavior.name(),
                           C::s_ordered_insert_behavior.to_string(c.ordered_insert_behavior)));
 
-        doc.append(kvp("config", config.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::CONFIG, config.extract()));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -280,7 +280,7 @@ public:
             throw_unexpected_packet();
         }
 
-        doc.append(kvp("ok", ok));
+        doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
 

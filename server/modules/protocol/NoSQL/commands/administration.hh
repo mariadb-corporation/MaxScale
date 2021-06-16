@@ -85,7 +85,7 @@ public:
 
         DocumentBuilder doc;
 
-        doc.append(kvp("ok", ok));
+        doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
         return READY;
@@ -149,9 +149,9 @@ public:
 
         DocumentBuilder doc;
 
-        doc.append(kvp("ok", ok));
-        doc.append(kvp("ns", table(Quoted::NO)));
-        doc.append(kvp("nIndexesWas", 1)); // TODO: Report real value.
+        doc.append(kvp(key::OK, ok));
+        doc.append(kvp(key::NS, table(Quoted::NO)));
+        doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
         *ppResponse = create_response(doc.extract());
         return READY;
@@ -187,7 +187,7 @@ public:
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            doc.append(kvp("dropped", m_database.name()));
+            doc.append(kvp(key::DROPPED, m_database.name()));
             ok = 1;
             break;
 
@@ -212,7 +212,7 @@ public:
             throw_unexpected_packet();
         }
 
-        doc.append(kvp("ok", ok));
+        doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
         return READY;
@@ -292,11 +292,11 @@ public:
             }
         }
 
-        doc.append(kvp("cursorsKilled", cursorsKilled.extract()));
-        doc.append(kvp("cursorsNotFound", cursorsNotFound.extract()));
-        doc.append(kvp("cursorsAlive", cursorsAlive.extract()));
-        doc.append(kvp("cursorsUnknown", cursorsUnknown.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::CURSORS_KILLED, cursorsKilled.extract()));
+        doc.append(kvp(key::CURSORS_NOT_FOUND, cursorsNotFound.extract()));
+        doc.append(kvp(key::CURSORS_ALIVE, cursorsAlive.extract()));
+        doc.append(kvp(key::CURSORS_UNKNOWN, cursorsUnknown.extract()));
+        doc.append(kvp(key::OK, 1));
     }
 };
 
@@ -313,7 +313,7 @@ public:
 
     string generate_sql() override
     {
-        optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
+        optional(key::NAME_ONLY, &m_name_only, Conversion::RELAXED);
 
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
@@ -387,22 +387,22 @@ public:
                     mxb_assert(it == row.end());
 
                     DocumentBuilder collection;
-                    collection.append(kvp("name", table));
-                    collection.append(kvp("type", "collection"));
+                    collection.append(kvp(key::NAME, table));
+                    collection.append(kvp(key::TYPE, value::COLLECTION));
                     if (!m_name_only)
                     {
                         DocumentBuilder options;
                         DocumentBuilder info;
-                        info.append(kvp("readOnly", false));
-                        //info.append(kvp("uuid", ...); // TODO: Could something meaningful be added here?
+                        info.append(kvp(key::READ_ONLY, false));
+                        //info.append(kvp(key::UUID, ...); // TODO: Could something meaningful be added here?
                         // DocumentBuilder idIndex;
-                        // idIndex.append(kvp("v", ...));
-                        // idIndex.append(kvp("key", ...));
-                        // idIndex.append(kvp("name", ...));
+                        // idIndex.append(kvp(key::V, ...));
+                        // idIndex.append(kvp(key::KEY, ...));
+                        // idIndex.append(kvp(key::NAME, ...));
 
-                        collection.append(kvp("options", options.extract()));
-                        collection.append(kvp("info", info.extract()));
-                        //collection.append(kvp("idIndex", idIndex.extract()));
+                        collection.append(kvp(key::OPTIONS, options.extract()));
+                        collection.append(kvp(key::INFO, info.extract()));
+                        //collection.append(kvp(key::IDINDEX, idIndex.extract()));
                     }
 
                     firstBatch.append(collection.extract());
@@ -422,13 +422,13 @@ private:
         string ns = m_database.name() + ".$cmd.listCollections";
 
         DocumentBuilder cursor;
-        cursor.append(kvp("id", int64_t(0)));
-        cursor.append(kvp("ns", ns));
-        cursor.append(kvp("firstBatch", firstBatch.extract()));
+        cursor.append(kvp(key::ID, int64_t(0)));
+        cursor.append(kvp(key::NS, ns));
+        cursor.append(kvp(key::FIRST_BATCH, firstBatch.extract()));
 
         DocumentBuilder doc;
-        doc.append(kvp("cursor", cursor.extract()));
-        doc.append(kvp("ok", 1));
+        doc.append(kvp(key::CURSOR, cursor.extract()));
+        doc.append(kvp(key::OK, 1));
 
         return create_response(doc.extract());
     }
@@ -461,7 +461,7 @@ public:
 
     string generate_sql() override
     {
-        optional(key::NAMEONLY, &m_name_only, Conversion::RELAXED);
+        optional(key::NAME_ONLY, &m_name_only, Conversion::RELAXED);
 
         ostringstream sql;
         sql << "SELECT table_schema, table_name, (data_length + index_length) `bytes` "
@@ -536,20 +536,20 @@ public:
                     const auto& bytes = kv.second;
 
                     DocumentBuilder database;
-                    database.append(kvp("name", name));
+                    database.append(kvp(key::NAME, name));
 
                     if (!m_name_only)
                     {
-                        database.append(kvp("sizeOnDisk", bytes));
-                        database.append(kvp("empty", bytes == 0));
+                        database.append(kvp(key::SIZE_ON_DISK, bytes));
+                        database.append(kvp(key::EMPTY, bytes == 0));
                     }
 
                     databases.append(database.extract());
                 }
 
-                doc.append(kvp("databases", databases.extract()));
-                doc.append(kvp("totalSize", total_size));
-                doc.append(kvp("ok", 1));
+                doc.append(kvp(key::DATABASES, databases.extract()));
+                doc.append(kvp(key::TOTAL_SIZE, total_size));
+                doc.append(kvp(key::OK, 1));
             }
         }
 
@@ -672,7 +672,7 @@ public:
 
         DocumentBuilder doc;
 
-        doc.append(kvp("ok", ok));
+        doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
         return READY;
