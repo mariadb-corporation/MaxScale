@@ -428,7 +428,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
     if (session->state() == MXS_SESSION::State::STARTED)
     {
         ClientDCB* client_dcb = session->client_connection()->dcb();
-        if (client_dcb && client_dcb->state() == DCB::State::POLLING)
+        if (client_dcb && client_dcb->state() != DCB::State::DISCONNECTED)
         {
             auto client_protocol = static_cast<MariaDBClientConnection*>(client_dcb->protocol());
             if (client_protocol)
