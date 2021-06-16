@@ -1164,11 +1164,11 @@ void MariaDBMonitor::save_monitor_specific_journal_data(mxb::Json& data)
 void MariaDBMonitor::load_monitor_specific_journal_data(const mxb::Json& data)
 {
     string master_name = data.get_string(journal_fields::MASTER);
-    for (auto& elem : m_servers_by_id)
+    for (auto* elem : servers())
     {
-        if (strcmp(elem.second->name(), master_name.c_str()) == 0)
+        if (strcmp(elem->name(), master_name.c_str()) == 0)
         {
-            assign_new_master(elem.second);
+            assign_new_master(elem);
             break;
         }
     }

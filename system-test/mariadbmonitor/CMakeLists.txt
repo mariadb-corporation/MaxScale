@@ -106,6 +106,9 @@ add_test_executable_ex(NAME verify_master_failure SOURCE verify_master_failure.c
 add_test_executable_ex(NAME mysqlmon_enforce_simple SOURCE mysqlmon_enforce_simple.cpp
         CONFIG mysqlmon_enforce_simple.cnf VMS repl_backend LABELS mysqlmon)
 
+add_test_executable_ex(NAME mariadbmon_enforce_writable_master SOURCE mariadbmon_enforce_writable_master.cc
+        CONFIG mariadbmon_enforce_writable_master.cnf VMS repl_backend LABELS mysqlmon)
+
 # MariaDB-Monitor multimaster failover/switchover
 add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_switch_multi.cpp
         CONFIG mysqlmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon)
