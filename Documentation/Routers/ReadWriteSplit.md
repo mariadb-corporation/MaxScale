@@ -584,8 +584,8 @@ prevents replication lag from affecting the results. This only applies to the
 modifications done by the client itself.
 
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
-  addition to this, the `session_track_system_variables` parameter must be set
-  to `last_gtid`.
+  addition to this, the `session_track_system_variables` parameter must include
+  `last_gtid` in its list of tracked system variables.
 
 **Note:** This feature does not work with prepared statements. Only SQL
   statements executed individually (inside a COM_QUERY packet) can be handled by
