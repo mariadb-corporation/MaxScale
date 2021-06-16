@@ -952,7 +952,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             queue = gwbuf_make_contiguous(queue);
             prepare_for_write(queue);
 
-            if (m_reply.command() == MXS_COM_CHANGE_USER)
+            if (!gwbuf_is_ignorable(queue) && m_reply.command() == MXS_COM_CHANGE_USER)
             {
                 return change_user(queue);
             }
