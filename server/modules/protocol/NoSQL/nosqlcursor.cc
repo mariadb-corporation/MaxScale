@@ -83,7 +83,7 @@ public:
             m_collection_cursors.erase(it);
         }
 
-        return std::move(sCursor);
+        return sCursor;
     }
 
     std::set<int64_t> kill_cursors(const std::string& collection, const std::vector<int64_t>& ids)
