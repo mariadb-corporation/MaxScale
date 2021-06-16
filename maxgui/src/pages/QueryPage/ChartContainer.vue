@@ -1,6 +1,6 @@
 <template>
     <div v-if="!$typy(chartData, 'datasets').isEmptyArray" class="chart-container fill-height">
-        <div ref="chartTool" class="d-flex pt-2 pr-5">
+        <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
             <v-tooltip
                 top
@@ -10,18 +10,38 @@
                 <template v-slot:activator="{ on }">
                     <v-btn
                         x-small
-                        outlined
+                        text
                         depressed
                         color="accent-dark"
                         v-on="on"
                         @click="exportToJpeg"
                     >
-                        <v-icon size="14" color="accent-dark">
+                        <v-icon size="16" color="accent-dark">
                             file_download
                         </v-icon>
                     </v-btn>
                 </template>
                 <span>{{ $t('exportChart') }}</span>
+            </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        x-small
+                        text
+                        depressed
+                        v-on="on"
+                        @click="$emit('is-chart-maximized', !isChartMaximized)"
+                    >
+                        <v-icon size="18" color="accent-dark">
+                            fullscreen{{ isChartMaximized ? '_exit' : '' }}
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ isChartMaximized ? $t('minimize') : $t('maximize') }}</span>
             </v-tooltip>
         </div>
 
@@ -71,7 +91,6 @@
                 :chartData="chartData"
                 :options="horizBarChartOptions"
             />
-            <!-- TODO: Addfullscreen mode feat-->
         </div>
     </div>
 </template>
@@ -98,6 +117,7 @@ export default {
         chartData: { type: Object, default: () => {} },
         axisLabels: { type: Object, default: () => {} },
         isLinear: { type: Boolean, required: true },
+        isChartMaximized: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -192,6 +212,7 @@ export default {
                                 },
                                 fontColor: '#424f62',
                             },
+                            beginAtZero: this.isLinear,
                         },
                     ],
                     yAxes: [
@@ -203,6 +224,9 @@ export default {
                                 padding: {
                                     bottom: 16,
                                 },
+                            },
+                            ticks: {
+                                beginAtZero: this.isLinear,
                             },
                         },
                     ],
@@ -285,7 +309,6 @@ export default {
                                 maxTicksLimit: this.isLinear ? 10 : 0,
                                 callback: this.truncateLabel,
                                 reverse: true,
-                                beginAtZero: this.isLinear,
                             },
                         },
                     ],

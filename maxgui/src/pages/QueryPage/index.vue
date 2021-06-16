@@ -51,7 +51,7 @@
                                         class="editor__content"
                                         :minPercent="minQueryPanePct"
                                         split="vert"
-                                        :disable="!showVisChart"
+                                        :disable="isChartMaximized || !showVisChart"
                                     >
                                         <!-- Editor pane contains editor and chart pane -->
                                         <template slot="pane-left">
@@ -72,11 +72,14 @@
                                         </template>
                                         <template slot="pane-right">
                                             <chart-container
+                                                class="chart-pane"
                                                 :selectedChart="selectedChart"
                                                 :containerChartHeight="containerChartHeight"
                                                 :chartData="chartData"
                                                 :axisLabels="axisLabels"
                                                 :isLinear="isLinear"
+                                                :isChartMaximized="isChartMaximized"
+                                                @is-chart-maximized="isChartMaximized = $event"
                                             />
                                         </template>
                                     </split-pane>
@@ -162,6 +165,7 @@ export default {
             chartData: {},
             axisLabels: { x: '', y: '' },
             isLinear: false,
+            isChartMaximized: false,
         }
     },
     computed: {
@@ -191,6 +195,10 @@ export default {
                 this.handleSetSidebarPct({ isCollapsed: this.isCollapsed })
                 this.handleSetMinEditorPct()
             })
+        },
+        isChartMaximized(v) {
+            if (v) this.queryPanePct = this.minQueryPanePct
+            else this.queryPanePct = 50
         },
         isCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isCollapsed: v }))
@@ -282,7 +290,8 @@ export default {
 <style lang="scss" scoped>
 .editor,
 .visualize-sidebar,
-.query-result {
+.query-result,
+.chart-pane {
     border: 1px solid $table-border;
     width: 100%;
     height: 100%;
