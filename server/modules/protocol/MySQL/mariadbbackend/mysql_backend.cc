@@ -675,7 +675,7 @@ static inline bool session_ok_to_route(DCB* dcb)
 
     if (dcb->session->state == SESSION_STATE_STARTED
         && dcb->session->client_dcb != NULL
-        && dcb->session->client_dcb->state == DCB_STATE_POLLING
+        && dcb->session->client_dcb->state != DCB_STATE_DISCONNECTED
         && (dcb->session->router_session
             || service_get_capabilities(dcb->session->service) & RCAP_TYPE_NO_RSESSION))
     {
