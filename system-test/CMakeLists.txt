@@ -938,6 +938,9 @@ add_test_executable(mxs3536_rwsplit_no_slaves.cc mxs3536_rwsplit_no_slaves mxs35
 # MXS-3588: Packet with length of 0xfffffb is treated as a large packet
 add_test_executable(mxs3588_almost_large_packet.cc mxs3588_almost_large_packet replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3617: Large batch causes response packets to be lost
+add_test_executable(mxs3617_lost_packets.cc mxs3617_lost_packets replication LABELS REPL_BACKEND readconnroute)
+
 ############################################
 # END: Normal tests                        #
 ############################################
