@@ -146,7 +146,7 @@ export default {
             switch (this.selectedChart) {
                 case 'Bar - Horizontal':
                     if (this.autoSkipXTick)
-                        return this.containerChartHeight - (this.chartToolHeight + 10)
+                        return this.containerChartHeight - (this.chartToolHeight + 12)
                     /** When there is too many data points,
                      * first, get min value between "overflow" height (this.chartData.labels.length * 15)
                      * and max height threshold 15000. However, when there is too little data points,
@@ -154,12 +154,12 @@ export default {
                      * should be chosen to make chart fit to its container
                      */
                     return Math.max(
-                        this.containerChartHeight - (this.chartToolHeight + 10),
+                        this.containerChartHeight - (this.chartToolHeight + 12),
                         Math.min(this.chartData.labels.length * 15, 15000)
                     )
                 default:
-                    // 10px of scrollbar height
-                    return this.containerChartHeight - (this.chartToolHeight + 10)
+                    // 10px of scrollbar height plus border
+                    return this.containerChartHeight - (this.chartToolHeight + 12)
             }
         },
         chartOptions() {
@@ -256,9 +256,10 @@ export default {
                     xAxes: [
                         {
                             type: this.xAxisType,
+                            bounds: 'ticks',
                             ticks: {
                                 autoSkip: this.autoSkipXTick,
-                                autoSkipPadding: this.autoSkipXTick ? 0 : 15,
+                                autoSkipPadding: 15,
                                 maxRotation: this.autoSkipXTick ? 0 : 90,
                                 minRotation: this.autoSkipXTick ? 0 : 90,
                                 //truncate tick
@@ -282,8 +283,10 @@ export default {
                     xAxes: [
                         {
                             type: this.xAxisType,
+                            bounds: 'ticks',
                             ticks: {
                                 autoSkip: this.autoSkipXTick,
+                                autoSkipPadding: 15,
                                 maxRotation: this.autoSkipXTick ? 0 : 90,
                                 minRotation: this.autoSkipXTick ? 0 : 90,
                             },
@@ -293,9 +296,6 @@ export default {
             })
         },
         vertBarChartOptions() {
-            let xAxisType = this.xAxisType
-            // linear won't render bar chart
-            if (xAxisType === 'linear') xAxisType = 'category'
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',
@@ -306,10 +306,9 @@ export default {
                 scales: {
                     xAxes: [
                         {
-                            type: xAxisType,
                             ticks: {
                                 autoSkip: this.autoSkipXTick,
-                                maxTicksLimit: this.autoSkipXTick ? 10 : 0,
+                                autoSkipPadding: 15,
                                 maxRotation: this.autoSkipXTick ? 0 : 90,
                                 minRotation: this.autoSkipXTick ? 0 : 90,
                                 callback: this.truncateLabel,
@@ -320,9 +319,6 @@ export default {
             })
         },
         horizBarChartOptions() {
-            let xAxisType = this.xAxisType
-            // linear won't render bar chart
-            if (xAxisType === 'linear') xAxisType = 'category'
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',
@@ -333,10 +329,9 @@ export default {
                 scales: {
                     yAxes: [
                         {
-                            type: xAxisType,
                             ticks: {
                                 autoSkip: this.autoSkipXTick,
-                                maxTicksLimit: this.autoSkipXTick ? 10 : 0,
+                                autoSkipPadding: 15,
                                 callback: this.truncateLabel,
                                 reverse: true,
                             },

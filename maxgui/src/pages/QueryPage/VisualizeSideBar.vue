@@ -114,7 +114,9 @@ export default {
         resultSets() {
             let resSets = []
 
-            let resSetArr = this.$typy(this.query_result, 'attributes.results').safeArray
+            let resSetArr = this.cloneRes(
+                this.$typy(this.query_result, 'attributes.results').safeArray
+            )
             let resSetCount = 0
             for (const res of resSetArr) {
                 if (res.data) {
@@ -124,16 +126,17 @@ export default {
                 }
             }
 
-            let prvwData = this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA))
-                .safeObject
+            let prvwData = this.cloneRes(
+                this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA)).safeObject
+            )
             if (!this.$typy(prvwData).isEmptyObject) {
                 prvwData.id = this.$t('previewData')
                 resSets.push(prvwData)
             }
 
-            let prvwDataDetails = this.$typy(
-                this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)
-            ).safeObject
+            let prvwDataDetails = this.cloneRes(
+                this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)).safeObject
+            )
 
             if (!this.$typy(prvwDataDetails).isEmptyObject) {
                 prvwDataDetails.id = this.$t('viewDetails')
@@ -217,6 +220,9 @@ export default {
         },
     },
     methods: {
+        cloneRes(res) {
+            return JSON.parse(JSON.stringify(res))
+        },
         clearAxisVal() {
             this.axis = { x: '', y: '' }
         },
@@ -296,20 +302,21 @@ export default {
 
         /** This mutates sorting chart data for linear axes
          * @param {Object} chartData - ChartData object
-         * @param {String} linearAxisId - axis id: x or y
+         * @param {String} labelAxisId - axis id: x or y
+         * @param {Boolean} isDate - if data is date string
          */
-        sortingLinearData(chartData, linearAxisId) {
-            chartData.labels.sort((a, b) => a - b)
-            chartData.datasets[0].data.sort((a, b) => {
-                if (a[linearAxisId] < b[linearAxisId]) return -1
-                if (a[linearAxisId] > b[linearAxisId]) return 1
-                return 0
-            })
+        sortingChartData({ chartData, labelAxisId, isDate = false }) {
+            chartData.labels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
+            chartData.datasets[0].data.sort((a, b) =>
+                isDate
+                    ? this.$moment(a[labelAxisId]) - this.$moment(b[labelAxisId])
+                    : a[labelAxisId] - b[labelAxisId]
+            )
         },
 
         genChartData({ axis, chartType }) {
             let xAxisType = 'category'
-            let linearAxisId = 'x'
+            let labelAxisId = 'x'
             let axisLabels = { x: '', y: '' }
             let chartData = {
                 labels: [],
@@ -357,19 +364,21 @@ export default {
 
                 switch (chartType) {
                     case 'Bar - Horizontal':
-                        linearAxisId = 'y'
+                        labelAxisId = 'y'
                         break
                     default:
-                        linearAxisId = 'x'
+                        labelAxisId = 'x'
                 }
 
-                if (this.isLinearAxes(dataset.data[0][linearAxisId])) xAxisType = 'linear'
-                else if (this.isTimeAxes(dataset.data[0][linearAxisId])) xAxisType = 'time'
+                if (this.isLinearAxes(dataset.data[0][labelAxisId])) xAxisType = 'linear'
+                else if (this.isTimeAxes(dataset.data[0][labelAxisId])) xAxisType = 'time'
 
                 switch (xAxisType) {
                     case 'linear':
+                        this.sortingChartData({ chartData, labelAxisId })
+                        break
                     case 'time':
-                        this.sortingLinearData(chartData, linearAxisId)
+                        this.sortingChartData({ chartData, labelAxisId, isDate: true })
                         break
                 }
             }
