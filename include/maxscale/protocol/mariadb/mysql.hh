@@ -301,14 +301,19 @@ enum gw_mysql_capabilities_t
  * Since we only use these in the non-shifted form, the definitions declared here
  * are right shifted by 32 bytes and can be directly copied into the extra capabilities.
  */
-#define MXS_MARIA_CAP_PROGRESS             (1 << 0)
-#define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
-#define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
+#define MXS_MARIA_CAP_PROGRESS             (1UL << 0)
+#define MXS_MARIA_CAP_COM_MULTI            (1UL << 1)
+#define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1UL << 2)
+#define MXS_MARIA_CAP_EXTENDED_TYPES       (1UL << 3)   // Added in 10.5
+#define MXS_MARIA_CAP_CACHE_METADATA       (1UL << 4)   // Added in 10.6
 
 // Default extended flags that MaxScale supports
-constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER =
+    MXS_MARIA_CAP_STMT_BULK_OPERATIONS
+    | MXS_MARIA_CAP_CACHE_METADATA;
+
 // Same as above, for uint64.
-constexpr const uint64_t MXS_EXTRA_CAPS_SERVER64 = (1ul << 34u);
+constexpr const uint64_t MXS_EXTRA_CAPS_SERVER64 = ((uint64_t)MXS_EXTRA_CAPABILITIES_SERVER << 32);
 
 enum mxs_mysql_cmd_t
 {

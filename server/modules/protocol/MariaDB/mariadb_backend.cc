@@ -2411,7 +2411,15 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         // Start of a result set
         m_num_coldefs = get_encoded_int(it);
         m_reply.add_field_count(m_num_coldefs);
-        set_reply_state(ReplyState::RSET_COLDEF);
+
+        if ((mysql_session()->extra_capabilitites() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
+        {
+            set_reply_state(ReplyState::RSET_COLDEF_EOF);
+        }
+        else
+        {
+            set_reply_state(ReplyState::RSET_COLDEF);
+        }
         break;
     }
 }

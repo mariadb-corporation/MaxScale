@@ -509,6 +509,14 @@ bool MariaDBClientConnection::send_server_handshake()
         // extended capabilities.
         caps &= ~GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
         caps |= MXS_EXTRA_CAPS_SERVER64;
+
+        if (service->capabilities() & RCAP_TYPE_OLD_PROTOCOL)
+        {
+            // Some module requires that only the base protocol is used, most likely due to the fact
+            // that it processes the contents of the resultset.
+            caps &= ~(MXS_MARIA_CAP_CACHE_METADATA << 32);
+            mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32));
+        }
     }
 
     if (cap_types == CapTypes::XPAND)
