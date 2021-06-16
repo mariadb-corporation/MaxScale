@@ -115,9 +115,11 @@ export default {
             let resSets = []
 
             let resSetArr = this.$typy(this.query_result, 'attributes.results').safeArray
-            for (const [i, res] of resSetArr.entries()) {
+            let resSetCount = 0
+            for (const res of resSetArr) {
                 if (res.data) {
-                    res.id = `RESULT SET ${i + 1}`
+                    ++resSetCount
+                    res.id = `RESULT SET ${resSetCount}`
                     resSets.push(res)
                 }
             }
