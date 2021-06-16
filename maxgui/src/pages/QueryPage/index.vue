@@ -78,7 +78,7 @@
                                                 :containerChartHeight="containerChartHeight"
                                                 :chartData="chartData"
                                                 :axisLabels="axisLabels"
-                                                :isLinear="isLinear"
+                                                :xAxisType="xAxisType"
                                                 :isChartMaximized="isChartMaximized"
                                                 @is-chart-maximized="isChartMaximized = $event"
                                             />
@@ -101,7 +101,7 @@
                                 @selected-chart="selectedChart = $event"
                                 @get-chart-data="chartData = $event"
                                 @get-axis-labels="axisLabels = $event"
-                                @is-linear-chart="isLinear = $event"
+                                @x-axis-type="xAxisType = $event"
                             />
                         </template>
                     </split-pane>
@@ -165,7 +165,7 @@ export default {
             selectedChart: '',
             chartData: {},
             axisLabels: { x: '', y: '' },
-            isLinear: false,
+            xAxisType: '',
             isChartMaximized: false,
         }
     },

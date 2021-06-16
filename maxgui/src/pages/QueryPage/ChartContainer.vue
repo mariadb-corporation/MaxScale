@@ -52,7 +52,7 @@
                 class="line-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: isLinear ? 'unset' : minWidth,
+                    minWidth: minWidth,
                 }"
                 hasVertCrossHair
                 :chartData="chartData"
@@ -64,7 +64,7 @@
                 class="scatter-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: isLinear ? 'unset' : minWidth,
+                    minWidth: minWidth,
                 }"
                 :chartData="chartData"
                 :options="scatterChartOptions"
@@ -75,7 +75,7 @@
                 class="vert-bar-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: isLinear ? 'unset' : minWidth,
+                    minWidth: minWidth,
                 }"
                 :chartData="chartData"
                 :options="vertBarChartOptions"
@@ -116,7 +116,7 @@ export default {
         containerChartHeight: { type: Number, default: 0 },
         chartData: { type: Object, default: () => {} },
         axisLabels: { type: Object, default: () => {} },
-        isLinear: { type: Boolean, required: true },
+        xAxisType: { type: String, required: true },
         isChartMaximized: { type: Boolean, required: true },
     },
     data() {
@@ -127,7 +127,17 @@ export default {
         }
     },
     computed: {
+        isTimeChart() {
+            return this.xAxisType === 'time'
+        },
+        isLinear() {
+            return this.xAxisType === 'linear'
+        },
+        autoSkipXTick() {
+            return this.isLinear || this.isTimeChart
+        },
         minWidth() {
+            if (this.autoSkipXTick) return 'unset'
             if (this.$typy(this.chartData, 'labels').isDefined)
                 return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
             return '0px'
@@ -135,7 +145,7 @@ export default {
         chartHeight() {
             switch (this.selectedChart) {
                 case 'Bar - Horizontal':
-                    if (this.isLinear)
+                    if (this.autoSkipXTick)
                         return this.containerChartHeight - (this.chartToolHeight + 10)
                     /** When there is too many data points,
                      * first, get min value between "overflow" height (this.chartData.labels.length * 15)
@@ -212,7 +222,7 @@ export default {
                                 },
                                 fontColor: '#424f62',
                             },
-                            beginAtZero: this.isLinear,
+                            beginAtZero: true,
                         },
                     ],
                     yAxes: [
@@ -226,7 +236,7 @@ export default {
                                 },
                             },
                             ticks: {
-                                beginAtZero: this.isLinear,
+                                beginAtZero: true,
                             },
                         },
                     ],
@@ -245,12 +255,12 @@ export default {
                 scales: {
                     xAxes: [
                         {
-                            type: this.isLinear ? 'linear' : 'category',
+                            type: this.xAxisType,
                             ticks: {
-                                autoSkip: this.isLinear,
-                                autoSkipPadding: this.isLinear ? 0 : 15,
-                                maxRotation: this.isLinear ? 0 : 90,
-                                minRotation: this.isLinear ? 0 : 90,
+                                autoSkip: this.autoSkipXTick,
+                                autoSkipPadding: this.autoSkipXTick ? 0 : 15,
+                                maxRotation: this.autoSkipXTick ? 0 : 90,
+                                minRotation: this.autoSkipXTick ? 0 : 90,
                                 //truncate tick
                                 callback: this.truncateLabel,
                             },
@@ -268,9 +278,24 @@ export default {
                 tooltips: {
                     mode: 'nearest',
                 },
+                scales: {
+                    xAxes: [
+                        {
+                            type: this.xAxisType,
+                            ticks: {
+                                autoSkip: this.autoSkipXTick,
+                                maxRotation: this.autoSkipXTick ? 0 : 90,
+                                minRotation: this.autoSkipXTick ? 0 : 90,
+                            },
+                        },
+                    ],
+                },
             })
         },
         vertBarChartOptions() {
+            let xAxisType = this.xAxisType
+            // linear won't render bar chart
+            if (xAxisType === 'linear') xAxisType = 'category'
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',
@@ -281,11 +306,12 @@ export default {
                 scales: {
                     xAxes: [
                         {
+                            type: xAxisType,
                             ticks: {
-                                autoSkip: this.isLinear,
-                                maxTicksLimit: this.isLinear ? 10 : 0,
-                                maxRotation: this.isLinear ? 0 : 90,
-                                minRotation: this.isLinear ? 0 : 90,
+                                autoSkip: this.autoSkipXTick,
+                                maxTicksLimit: this.autoSkipXTick ? 10 : 0,
+                                maxRotation: this.autoSkipXTick ? 0 : 90,
+                                minRotation: this.autoSkipXTick ? 0 : 90,
                                 callback: this.truncateLabel,
                             },
                         },
@@ -294,6 +320,9 @@ export default {
             })
         },
         horizBarChartOptions() {
+            let xAxisType = this.xAxisType
+            // linear won't render bar chart
+            if (xAxisType === 'linear') xAxisType = 'category'
             return this.$help.lodash.deepMerge(this.chartOptions, {
                 hover: {
                     mode: 'index',
@@ -304,9 +333,10 @@ export default {
                 scales: {
                     yAxes: [
                         {
+                            type: xAxisType,
                             ticks: {
-                                autoSkip: this.isLinear,
-                                maxTicksLimit: this.isLinear ? 10 : 0,
+                                autoSkip: this.autoSkipXTick,
+                                maxTicksLimit: this.autoSkipXTick ? 10 : 0,
                                 callback: this.truncateLabel,
                                 reverse: true,
                             },

@@ -166,10 +166,10 @@ export default {
         xAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
             switch (this.selectedChart) {
-                case 'Scatter':
                 case 'Bar - Horizontal':
                     return this.numericFields
-                // Either linear or category cartesian axes
+                // linear, category or time cartesian axes
+                case 'Scatter':
                 case 'Line':
                 case 'Bar - Vertical':
                 default:
@@ -183,7 +183,7 @@ export default {
                 case 'Scatter':
                 case 'Bar - Vertical':
                     return this.numericFields
-                // Either linear or category cartesian axes
+                // linear, category or time cartesian axes
                 case 'Bar - Horizontal':
                 default:
                     return [this.numberSign, ...this.resSet.fields]
@@ -290,6 +290,9 @@ export default {
         isLinearAxes(axisVal) {
             return typeof axisVal === 'number'
         },
+        isTimeAxes(axisVal) {
+            return this.$moment(axisVal).isValid()
+        },
 
         /** This mutates sorting chart data for linear axes
          * @param {Object} chartData - ChartData object
@@ -305,7 +308,7 @@ export default {
         },
 
         genChartData({ axis, chartType }) {
-            let isLinear = false
+            let xAxisType = 'category'
             let linearAxisId = 'x'
             let axisLabels = { x: '', y: '' }
             let chartData = {
@@ -359,13 +362,21 @@ export default {
                     default:
                         linearAxisId = 'x'
                 }
-                isLinear = this.isLinearAxes(dataset.data[0][linearAxisId])
-                if (isLinear) this.sortingLinearData(chartData, linearAxisId)
+
+                if (this.isLinearAxes(dataset.data[0][linearAxisId])) xAxisType = 'linear'
+                else if (this.isTimeAxes(dataset.data[0][linearAxisId])) xAxisType = 'time'
+
+                switch (xAxisType) {
+                    case 'linear':
+                    case 'time':
+                        this.sortingLinearData(chartData, linearAxisId)
+                        break
+                }
             }
 
             this.$emit('get-chart-data', chartData)
             this.$emit('get-axis-labels', axisLabels)
-            this.$emit('is-linear-chart', isLinear)
+            this.$emit('x-axis-type', xAxisType)
         },
     },
 }
