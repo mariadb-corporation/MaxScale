@@ -535,10 +535,10 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
 
     uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
 
-    pData += set_byte4(pData, response_flags);
-    pData += set_byte8(pData, cursor_id);
-    pData += set_byte4(pData, starting_from);
-    pData += set_byte4(pData, number_returned);
+    pData += protocol::set_byte4(pData, response_flags);
+    pData += protocol::set_byte8(pData, cursor_id);
+    pData += protocol::set_byte4(pData, starting_from);
+    pData += protocol::set_byte4(pData, number_returned);
 
     return make_pair(pResponse, pData);
 }
@@ -606,16 +606,16 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
 
-    pData += set_byte4(pData, flag_bits);
+    pData += protocol::set_byte4(pData, flag_bits);
 
-    pData += set_byte1(pData, kind);
+    pData += protocol::set_byte1(pData, kind);
     memcpy(pData, doc.view().data(), doc_length);
     pData += doc_length;
 
     if (m_append_checksum)
     {
         uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
-        pData += set_byte4(pData, checksum);
+        pData += protocol::set_byte4(pData, checksum);
     }
 
     return pResponse;

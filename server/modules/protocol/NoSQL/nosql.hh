@@ -95,21 +95,6 @@ const int MAX_BSON_OBJECT_SIZE = 16 * 1024 * 1024;
 const int MAX_MSG_SIZE         = 48 * 1000* 1000;
 const int MAX_WRITE_BATCH_SIZE = 100000;
 
-}
-
-// The MongoDB version we claim to be.
-const int NOSQL_VERSION_MAJOR = 4;
-const int NOSQL_VERSION_MINOR = 4;
-const int NOSQL_VERSION_PATCH = 1;
-
-const char* const NOSQL_ZVERSION = "4.4.1";
-
-// See MongoDB: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
-const int MIN_WIRE_VERSION = 6;
-const int MAX_WIRE_VERSION = 6;
-
-bsoncxx::document::value& topology_version();
-
 inline int32_t get_byte1(const uint8_t* pBuffer, uint8_t* pHost8)
 {
     *pHost8 = *pBuffer;
@@ -188,6 +173,21 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
     *ple64 = le64;
     return 8;
 }
+
+}
+
+// The MongoDB version we claim to be.
+const int NOSQL_VERSION_MAJOR = 4;
+const int NOSQL_VERSION_MINOR = 4;
+const int NOSQL_VERSION_PATCH = 1;
+
+const char* const NOSQL_ZVERSION = "4.4.1";
+
+// See MongoDB: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
+const int MIN_WIRE_VERSION = 6;
+const int MAX_WIRE_VERSION = 6;
+
+bsoncxx::document::value& topology_version();
 
 const char* opcode_to_string(int code);
 
@@ -609,15 +609,15 @@ public:
 
         const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-        pData += nosql::get_byte4(pData, &m_flags);
-        pData += nosql::get_byte8(pData, &m_cursor_id);
-        pData += nosql::get_byte4(pData, &m_start_from);
-        pData += nosql::get_byte4(pData, &m_nReturned);
+        pData += protocol::get_byte4(pData, &m_flags);
+        pData += protocol::get_byte8(pData, &m_cursor_id);
+        pData += protocol::get_byte4(pData, &m_start_from);
+        pData += protocol::get_byte4(pData, &m_nReturned);
 
         while (pData < m_pEnd)
         {
             uint32_t size;
-            nosql::get_byte4(pData, &size);
+            protocol::get_byte4(pData, &size);
             m_documents.push_back(bsoncxx::document::view { pData, size });
             pData += size;
         }

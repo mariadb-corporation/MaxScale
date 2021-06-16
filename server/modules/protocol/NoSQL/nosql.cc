@@ -371,19 +371,19 @@ nosql::Query::Query(const Packet& packet)
 
     const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-    pData += nosql::get_byte4(pData, &m_flags);
-    pData += nosql::get_zstring(pData, &m_zCollection);
-    pData += nosql::get_byte4(pData, &m_nSkip);
-    pData += nosql::get_byte4(pData, &m_nReturn);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_nSkip);
+    pData += protocol::get_byte4(pData, &m_nReturn);
 
     uint32_t size;
-    nosql::get_byte4(pData, &size);
+    protocol::get_byte4(pData, &size);
     m_query = bsoncxx::document::view { pData, size };
     pData += size;
 
     if (pData < m_pEnd)
     {
-        nosql::get_byte4(pData, &size);
+        protocol::get_byte4(pData, &size);
         if (m_pEnd - pData != size)
         {
             mxb_assert(!true);
@@ -414,7 +414,7 @@ nosql::Msg::Msg(const Packet& packet)
 
     const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
 
-    pData += nosql::get_byte4(pData, &m_flags);
+    pData += protocol::get_byte4(pData, &m_flags);
 
     if (checksum_present())
     {
@@ -439,7 +439,7 @@ nosql::Msg::Msg(const Packet& packet)
     while (pData < pSections_end)
     {
         uint8_t kind;
-        pData += nosql::get_byte1(pData, &kind);
+        pData += protocol::get_byte1(pData, &kind);
 
         switch (kind)
         {
@@ -448,7 +448,7 @@ nosql::Msg::Msg(const Packet& packet)
             {
                 mxb_assert(m_document.empty());
                 uint32_t size;
-                nosql::get_byte4(pData, &size);
+                protocol::get_byte4(pData, &size);
 
                 if (pData + size > pSections_end)
                 {
@@ -466,7 +466,7 @@ nosql::Msg::Msg(const Packet& packet)
         case 1:
             {
                 uint32_t total_size;
-                nosql::get_byte4(pData, &total_size);
+                protocol::get_byte4(pData, &total_size);
 
                 if (pData + total_size > pSections_end)
                 {
@@ -495,7 +495,7 @@ nosql::Msg::Msg(const Packet& packet)
                     while (pData < pEnd)
                     {
                         uint32_t size;
-                        nosql::get_byte4(pData, &size);
+                        protocol::get_byte4(pData, &size);
                         if (pData + size <= pEnd)
                         {
                             bsoncxx::document::view doc { pData, size };
