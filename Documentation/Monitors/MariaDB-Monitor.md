@@ -358,6 +358,17 @@ This setting is separate from the global MaxScale setting *passive*. If
 acquired the locks. Generally, it's best not to mix cooperative monitoring with
 the *passive*-setting.
 
+### `script_max_replication_lag`
+
+Integer, default: -1. Defines a replication lag limit in seconds for
+launching the monitor script configured in the *script*-parameter. If the
+replication lag of a server goes above this limit, the script is ran with the
+$EVENT-placeholder replaced by "rlag_above". If the lag goes back below the
+limit, the script is ran again with replacement "rlag_below".
+
+Negative values disable this feature. For more information on monitor scripts,
+see [general monitor documentation](./Monitor-Common.md#script).
+
 ## Cluster manipulation operations
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
