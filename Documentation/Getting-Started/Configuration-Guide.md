@@ -2508,17 +2508,18 @@ cluster.
 
 ### Limitations in Configuration Synchronization
 
-* If an object is recreated with the same name but with a different module, it
-  is possible that MaxScale instances will fail to apply the configuration
-  update if they are lagging behind by at least one configuration version. This
-  same limitation applies to any parameters that can only be defined during
-  object creation. To prevent this, use unique names for objects that are being
-  recreated or make sure that all MaxScale instances have synchronized the
-  deletion before creating the new version of the object.
+* ([MXS-3618](https://jira.mariadb.org/browse/MXS-3618)) If an object is
+  recreated with the same name but with a different module, it is possible that
+  MaxScale instances will fail to apply the configuration update if they are
+  lagging behind by at least one configuration version. This same limitation
+  applies to any parameters that can only be defined during object creation. To
+  prevent this, use unique names for objects that are being recreated or make
+  sure that all MaxScale instances have synchronized the deletion before
+  creating the new version of the object.
 
-* The synchronization only affects the MaxScale configuration. The state of
-  objects or any external files (e.g. TLS certificates) are not synchronized by
-  this mechanism.
+* ([MXS-3619](https://jira.mariadb.org/browse/MXS-3619)) The synchronization
+  only affects the MaxScale configuration. The state of objects or any external
+  files (e.g. TLS certificates) are not synchronized by this mechanism.
 
 ## Backing Up Configuration Changes
 
