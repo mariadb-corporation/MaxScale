@@ -252,11 +252,13 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
+    std::string errmsg = mxb::string_printf(
+        "Authentication to '%s' failed: %hu, %s",
+        dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
 
     if (m_session->service->config()->log_auth_warnings)
     {
-        MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
-                  "Msg : %s", dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
+        MXS_ERROR("%s", errmsg.c_str());
     }
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
@@ -275,6 +277,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                   "'max_connect_errors' to a larger value in the backend server.",
                   server->name(), server->address(), server->port());
     }
+
+    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
 }
 
 /**
