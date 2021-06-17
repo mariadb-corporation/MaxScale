@@ -1612,7 +1612,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     string field = static_cast<string>(element.key());
     auto type = element.type();
 
-    if (field == "_id")
+    if (field == "_id" && type != bsoncxx::type::k_document)
     {
         condition = "( id = '";
 
