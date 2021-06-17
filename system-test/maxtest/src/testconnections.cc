@@ -53,7 +53,6 @@ namespace maxscale
 static bool start = true;
 static std::string required_repl_version;
 static bool restart_galera = false;
-static bool require_galera = false;
 static bool require_columnstore = false;
 }
 
@@ -96,11 +95,6 @@ void TestConnections::skip_maxscale_start(bool value)
 void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
-}
-
-void TestConnections::require_galera(bool value)
-{
-    maxscale::require_galera = value;
 }
 
 void TestConnections::require_columnstore(bool value)

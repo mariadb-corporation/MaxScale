@@ -105,9 +105,6 @@ public:
     /** Test requires a certain backend version  */
     static void require_repl_version(const char* version);
 
-    /** Require that galera is present*/
-    static void require_galera(bool value);
-
     /** Require that columnstore is present*/
     static void require_columnstore(bool value);
 
