@@ -183,27 +183,62 @@ export default {
         // go to bottom on mounted
         this.toBottom('auto')
         await this.openConnection()
-        // call fetchPrevLog to get prev logs one step ahead
-        await this.fetchPrevLog()
     },
     beforeDestroy() {
-        if (this.connection) this.disconnect()
-        window.removeEventListener('resize', this.setContainerHeight)
+        this.cleanUp()
     },
 
     methods: {
         ...mapMutations('maxscale', ['SET_PREV_FILTERED_LOG_LINK']),
         ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog', 'fetchPrevFilteredLog']),
-
+        cleanUp() {
+            if (this.connection) this.disconnect()
+            window.removeEventListener('resize', this.setContainerHeight)
+        },
         /**
-         * This function get latest 50 log lines.
+         * This function get latest 1000 log lines.
          * It assigns latest_logs to allLogData
          */
         async getLatestLogs() {
             this.isLoading = true
             await this.fetchLatestLogs()
-            await this.$help.delay(300).then(() => (this.isLoading = false))
+            this.isLoading = false
             this.allLogData = Object.freeze(this.latest_logs)
+        },
+
+        /**
+         * This function gets older logs than current until the log content div
+         * is scrollable. This allows user to scroll up to get old logs if
+         * current logs received are to small which make it unable to scroll.
+         * This may happen when log_source is maxlog and log_debug=1 as
+         * multiple log lines in maxscale is now ignored.
+         */
+        async loopGetOlderLogs() {
+            while (!this.isScrollable() && this.prev_log_link) {
+                this.isLoading = true
+                await this.handleUnionPrevLogs()
+            }
+            this.isLoading = false
+        },
+
+        /**
+         * This function handles unioning prevLogData to current allLogData.
+         * and preserves current scrolling position
+         */
+        async handleUnionPrevLogs() {
+            const { scrollableContent } = this.$refs
+            // store current scroll height before unioning prevLogData to allLogData
+            const scrollHeight = scrollableContent.scrollHeight
+            if (this.prev_log_link) await this.fetchPrevLog()
+            if (this.prevLogData.length) {
+                this.allLogData = Object.freeze(
+                    this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
+                )
+                this.prevLogData = [] // clear logs as it has been prepended to allLogData
+                this.$nextTick(() => {
+                    this.preserveScrollHeight(scrollHeight)
+                })
+            }
         },
 
         /**
@@ -229,45 +264,6 @@ export default {
             this.isLoading = true
             if (this.isFiltering) await this.handleUnionPrevFilteredLogs()
             else await this.handleUnionPrevLogs()
-            this.isLoading = false
-        },
-        /**
-         * This function handles unioning prevLogData to current allLogData.
-         * It delays for 300ms before unioning log data
-         * It also preserves current scrolling position
-         */
-        async handleUnionPrevLogs() {
-            const { scrollableContent } = this.$refs
-            // store current scroll height before unioning prevLogData to allLogData
-            const scrollHeight = scrollableContent.scrollHeight
-            if (this.prevLogData.length) {
-                await this.$help.delay(300) // delay adding for better UX
-
-                this.allLogData = Object.freeze(
-                    this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
-                )
-                this.prevLogData = [] // clear logs have been prepended to allLogData
-
-                await this.$nextTick(() => {
-                    this.preserveScrollHeight(scrollHeight)
-                })
-            }
-            // prefetch fetchPrevLog one step a head so a delay time is always 300ms
-            if (this.prev_log_link) await this.fetchPrevLog()
-        },
-
-        /**
-         * This function gets older logs than current until the log content div
-         * is scrollable. This allows user to scroll up to get old logs if
-         * current logs received are to small which make it unable to scroll.
-         * This may happen when log_source is maxlog and log_debug=1 as
-         * multiple log lines in maxscale is now ignored.
-         */
-        async loopGetOlderLogs() {
-            while (!this.isScrollable() && this.prev_log_link) {
-                this.isLoading = true
-                await this.handleUnionPrevLogs()
-            }
             this.isLoading = false
         },
 
@@ -318,7 +314,7 @@ export default {
                     this.filteredLog = Object.freeze([...this.filteredLog, newEntry])
                 }
                 if (!this.isFiltering || this.isMatchedFilter(newEntry))
-                    await this.$nextTick(() => {
+                    this.$nextTick(() => {
                         this.showNotifHandler()
                     })
             }

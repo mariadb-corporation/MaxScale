@@ -137,7 +137,7 @@ export default {
         },
         async fetchLatestLogs({ commit }) {
             try {
-                const res = await this.vue.$axios.get(`/maxscale/logs/data`)
+                const res = await this.vue.$axios.get(`/maxscale/logs/data?page[size]=1000`)
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
                     links: { prev = null } = {},

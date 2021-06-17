@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO: Replace with v-virtual-scroll once it supports dynamic height -->
     <transition-group v-if="logToShow.length" name="log-lines-wrapper" tag="pre">
         <code
             v-for="{ timestamp, priority, message, id } in logToShow"
