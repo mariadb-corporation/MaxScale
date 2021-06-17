@@ -197,6 +197,10 @@ private:
     bool        m_changing_user {false};
     mxs::Reply  m_reply;
 
+    // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
+    // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
+    mariadb::ClientAuthenticator::ByteVec m_current_auth_token;
+
     std::queue<TrackedQuery> m_track_queue;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */

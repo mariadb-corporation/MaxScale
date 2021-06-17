@@ -1121,6 +1121,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
             const string& hex_hash2 = m_auth_data.client_data->user_entry.entry.password;
             if (hex_hash2.empty())
             {
+                m_current_auth_token.clear();
                 return rval;    // Empty password -> empty token
             }
 
@@ -1142,6 +1143,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
                 auto& hash1 = m_auth_data.client_data->auth_token_phase2;
                 if (hash1.size() == SHA_DIGEST_LENGTH)
                 {
+                    m_current_auth_token = hash1;
                     // Compute the XOR */
                     uint8_t new_token[SHA_DIGEST_LENGTH];
                     mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
@@ -1493,7 +1495,7 @@ int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb, GWBU
     gwbuf_copy_data(reply, MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name),
                     sizeof(m_auth_data.scramble), m_auth_data.scramble);
 
-    const auto& sha1_pw = m_auth_data.client_data->auth_token_phase2;
+    const auto& sha1_pw = m_current_auth_token;
     const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
