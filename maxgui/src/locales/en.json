@@ -90,7 +90,7 @@
     "monitors": "monitor | monitors",
 
     "listeners": "listener | listeners",
-
+    "relationships": "relationship | relationships",
     "maxScaleParameters": "MaxScale Parameters",
     "maxscaleLogs": "MaxScale Logs",
     "newMessagesAvailable": "New messages available",

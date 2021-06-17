@@ -18,6 +18,7 @@ export default {
         current_service: {},
         service_connections_datasets: [],
         service_connection_info: {},
+        current_service_diagnostics: {},
     },
     mutations: {
         SET_ALL_SERVICES(state, payload) {
@@ -32,6 +33,9 @@ export default {
         SET_SERVICE_CONNECTIONS_INFO(state, payload) {
             state.service_connection_info = payload
         },
+        SET_CURRENT_SERVICE_DIAGNOSTICS(state, payload) {
+            state.current_service_diagnostics = payload
+        },
     },
     actions: {
         async fetchServiceById({ commit }, id) {
@@ -45,7 +49,19 @@ export default {
                 logger.error(e)
             }
         },
-
+        async fetchServiceDiagnostics({ commit }, serviceId) {
+            try {
+                let res = await this.vue.$axios.get(
+                    `/services/${serviceId}?fields[services]=router_diagnostics`
+                )
+                if (res.data.data) {
+                    commit('SET_CURRENT_SERVICE_DIAGNOSTICS', Object.freeze(res.data.data))
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-service-fetchServiceDiagnostics')
+                logger.error(e)
+            }
+        },
         genDataSets({ commit, state }) {
             const {
                 current_service: { attributes: { connections = null } = {} },

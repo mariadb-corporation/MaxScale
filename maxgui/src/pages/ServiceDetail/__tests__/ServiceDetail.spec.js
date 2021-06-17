@@ -64,15 +64,19 @@ const EXPECT_SESSIONS_HEADER = [
     { text: 'IDLE (s)', value: 'idle' },
 ]
 
-const routerDiagnosticsStub = {
-    queries: 0,
-    replayed_transactions: 0,
-    ro_transactions: 0,
-    route_all: 0,
-    route_master: 0,
-    route_slave: 0,
-    rw_transactions: 0,
-    server_query_statistics: [],
+const routerDiagnosticsResStub = {
+    attributes: {
+        router_diagnostics: {
+            queries: 0,
+            replayed_transactions: 0,
+            ro_transactions: 0,
+            route_all: 0,
+            route_master: 0,
+            route_slave: 0,
+            rw_transactions: 0,
+            server_query_statistics: [],
+        },
+    },
 }
 
 const toServicePage = async () => {
@@ -85,6 +89,7 @@ const defaultComputed = {
     service_connections_datasets: () => dummy_service_connection_datasets,
     service_connection_info: () => dummy_service_connection_info,
     sessions_by_service: () => dummy_sessions_by_service,
+    current_service_diagnostics: () => routerDiagnosticsResStub,
 }
 const shallowMountOptions = {
     shallow: true,
@@ -113,7 +118,7 @@ describe('ServiceDetail index', () => {
     })
 
     it(`Should send request to get current service, then requests to get service
-      connections and sessions created by this service. After that fetch parallelly
+      connections, sessions and diagnostics created by this service. After that fetch parallelly
       relationships type servers, filters and listener state.`, async () => {
         await wrapper.vm.$nextTick(async () => {
             let {
@@ -135,7 +140,11 @@ describe('ServiceDetail index', () => {
             await axiosGetStub.should.have.been.calledWith(
                 `/sessions?filter=/relationships/services/data/0/id="${id}"`
             )
-            let count = 3
+            // diagnostics
+            await axiosGetStub.should.have.been.calledWith(
+                `/services/${id}?fields[services]=router_diagnostics`
+            )
+            let count = 4
             await serversData.forEach(async server => {
                 await axiosGetStub.should.have.been.calledWith(
                     `/servers/${server.id}?fields[servers]=state`
@@ -160,9 +169,9 @@ describe('ServiceDetail index', () => {
     })
 
     it(`Should send GET requests to get router module parameters
-      if current active tab is 'Parameters & Diagnostics tab'`, async () => {
+      if current active tab is 'Parameters & Relationships tab'`, async () => {
         await wrapper.setData({
-            currentActiveTab: 1,
+            currentActiveTab: 0,
         })
         const router = dummy_all_services[0].attributes.router
         await axiosGetStub.should.have.been.calledWith(
@@ -195,7 +204,7 @@ describe('ServiceDetail index', () => {
     describe('Props passes to child components test assertions', () => {
         before(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchConnectionsAndSession').returns(
+            sinon.stub(wrapper.vm, 'fetchConnSessDiag').returns(
                 Promise.resolve({
                     data: {},
                 })
@@ -282,7 +291,9 @@ describe('ServiceDetail index', () => {
         })
 
         it(`Should compute router diagnostics with accurate data format`, async () => {
-            expect(wrapper.vm.routerDiagnostics).to.be.deep.equals(routerDiagnosticsStub)
+            expect(wrapper.vm.routerDiagnostics).to.be.deep.equals(
+                routerDiagnosticsResStub.attributes.router_diagnostics
+            )
         })
 
         it(`Should pass necessary props to details-parameters-table`, async () => {
@@ -318,7 +329,7 @@ describe('ServiceDetail index', () => {
 
         beforeEach(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchConnectionsAndSession').returns(
+            sinon.stub(wrapper.vm, 'fetchConnSessDiag').returns(
                 Promise.resolve({
                     data: {},
                 })

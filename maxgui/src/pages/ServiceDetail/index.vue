@@ -9,7 +9,7 @@
                 :currentService="current_service"
                 :serviceConnectionsDatasets="service_connections_datasets"
                 :serviceConnectionInfo="service_connection_info"
-                @update-chart="fetchConnectionsAndSession"
+                @update-chart="fetchConnSessDiag"
             />
 
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
@@ -18,8 +18,17 @@
                 </v-tab>
 
                 <v-tabs-items v-model="currentActiveTab">
+                    <!-- Parameters & relationships tab -->
                     <v-tab-item class="pt-5">
                         <v-row>
+                            <v-col class="py-0 ma-0" cols="8">
+                                <details-parameters-table
+                                    :resourceId="current_service.id"
+                                    :parameters="current_service.attributes.parameters"
+                                    :updateResourceParameters="updateServiceParameters"
+                                    :onEditSucceeded="fetchService"
+                                />
+                            </v-col>
                             <v-col class="py-0 my-0" cols="4">
                                 <v-row class="pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
@@ -53,7 +62,20 @@
                                     </v-col>
                                 </v-row>
                             </v-col>
-                            <v-col class="py-0 ma-0" cols="8">
+                        </v-row>
+                    </v-tab-item>
+                    <!-- Sessions & Diagnostics tab -->
+                    <v-tab-item class="pt-5">
+                        <v-row>
+                            <v-col class="py-0 my-0" cols="6">
+                                <details-readonly-table
+                                    ref="diagnostics-table"
+                                    :title="`${$t('routerDiagnostics')}`"
+                                    :tableData="routerDiagnostics"
+                                    isTree
+                                />
+                            </v-col>
+                            <v-col class="py-0 my-0" cols="6">
                                 <details-readonly-table
                                     ref="sessions-table"
                                     :tdBorderLeft="false"
@@ -62,27 +84,6 @@
                                     :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
                                     :tableData="sessionsTableRows"
                                     :customTableHeaders="sessionsTableHeader"
-                                />
-                            </v-col>
-                        </v-row>
-                    </v-tab-item>
-                    <!-- Parameters & Diagnostics tab -->
-                    <v-tab-item class="pt-5">
-                        <v-row>
-                            <v-col class="py-0 my-0" cols="6">
-                                <details-parameters-table
-                                    :resourceId="current_service.id"
-                                    :parameters="current_service.attributes.parameters"
-                                    :updateResourceParameters="updateServiceParameters"
-                                    :onEditSucceeded="fetchService"
-                                />
-                            </v-col>
-                            <v-col class="py-0 my-0" cols="6">
-                                <details-readonly-table
-                                    ref="diagnostics-table"
-                                    :title="`${$t('routerDiagnostics')}`"
-                                    :tableData="routerDiagnostics"
-                                    isTree
                                 />
                             </v-col>
                         </v-row>
@@ -122,8 +123,8 @@ export default {
             FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
-                { name: `${this.$tc('servers', 2)} & ${this.$tc('sessions', 2)}` },
-                { name: `${this.$tc('parameters', 2)} & ${this.$tc('diagnostics', 2)}` },
+                { name: `${this.$tc('parameters', 2)} & ${this.$tc('relationships', 2)}` },
+                { name: `${this.$tc('sessions', 2)} & ${this.$tc('diagnostics', 2)}` },
             ],
             serversTableRows: [],
             listenersTableRows: [],
@@ -140,13 +141,16 @@ export default {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
             current_service: state => state.service.current_service,
+            current_service_diagnostics: state => state.service.current_service_diagnostics,
             service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
             sessions_by_service: state => state.session.sessions_by_service,
         }),
 
         routerDiagnostics: function() {
-            const { attributes: { router_diagnostics = {} } = {} } = this.current_service
+            const {
+                attributes: { router_diagnostics = {} } = {},
+            } = this.current_service_diagnostics
             return router_diagnostics
         },
         routerModule: function() {
@@ -171,13 +175,13 @@ export default {
             }
         },
         currentActiveTab: async function(val) {
-            // when active tab is Parameters & Diagnostics
-            if (val === 1) await this.fetchModuleParameters(this.routerModule)
+            // when active tab is Parameters & Relationships
+            if (val === 0) await this.fetchModuleParameters(this.routerModule)
         },
         // re-fetch when the route changes
         $route: async function() {
             await this.initialFetch()
-            if (this.currentActiveTab === 1) await this.fetchModuleParameters(this.routerModule)
+            if (this.currentActiveTab === 0) await this.fetchModuleParameters(this.routerModule)
         },
     },
     async created() {
@@ -188,6 +192,7 @@ export default {
             getResourceState: 'getResourceState',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
+            fetchServiceDiagnostics: 'service/fetchServiceDiagnostics',
             fetchServiceConnections: 'service/fetchServiceConnections',
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
@@ -203,7 +208,7 @@ export default {
         async initialFetch() {
             await this.fetchService()
             await this.genServiceConnectionsDataSets()
-            await this.fetchConnectionsAndSession()
+            await this.fetchConnSessDiag()
             await Promise.all([
                 this.processingRelationshipTable('servers'),
                 this.processingRelationshipTable('filters'),
@@ -215,12 +220,16 @@ export default {
             await this.fetchServiceById(this.$route.params.id)
         },
 
-        async fetchConnectionsAndSession() {
+        /**
+         * This function fetch current connection, session and service router_diagnostics
+         */
+        async fetchConnSessDiag() {
             const serviceId = this.$route.params.id
             // fetching connections chart info should be at the same time with fetchSessionsFilterByService
             await Promise.all([
                 this.fetchServiceConnections(serviceId),
                 this.fetchSessionsFilterByService(serviceId),
+                this.fetchServiceDiagnostics(serviceId),
             ])
         },
 
