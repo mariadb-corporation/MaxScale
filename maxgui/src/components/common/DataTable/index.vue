@@ -254,6 +254,15 @@ export default {
         hasValidChild: function(val) {
             if (val) this.expandAllNodes(this.tableRows)
         },
+        data: {
+            handler(newV, oV) {
+                if (this.isTree && this.hasValidChild) {
+                    // keep all nodes expanding when data props changes
+                    if (!this.$help.lodash.isEqual(newV, oV)) this.expandAllNodes(this.tableRows)
+                }
+            },
+            deep: true,
+        },
     },
 
     methods: {
