@@ -22,6 +22,13 @@ add_custom_command(
   COMMAND cp -R ${CMAKE_CURRENT_SOURCE_DIR}/test .)
 add_custom_target(copy_test_files ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/test)
 
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/compare
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/compare
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMAND cp -R ${CMAKE_CURRENT_SOURCE_DIR}/compare .)
+add_custom_target(copy_compare_files ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/compare)
+
 #
 # Tests
 #
