@@ -76,6 +76,69 @@ popup three icons allowing a monitor to be started, stopped, and deleted.
 For Servers, the monitor relationship can be modified by hovering
 over the rectangular _Monitor_ block section at the top of the page.
 
+## SQL editor page
+The query editor page can be accessed via the sidebar navigation menu.
+If no active connection exists, a dialog to setup one is displayed.
+A connection can target a server, service or listener.
+
+The query layout editor interface comprises the following sections:
+### The taskbar
+Located at the top of the page, the taskbar contains resource quick action
+buttons, query action buttons to run and manipulate the result.
+* Resource quick action buttons are used to configure current active
+connection and active database.
+* Query action buttons are used to run SQL statements, visualize
+query result in graphs and configure query settings.
+* In addition, on the right corner of the taskbar, there is a
+maximize/minimize button to set the page to full screen mode.
+
+###  The schema sidebar
+List databases, tables and columns of the server.
+The list is fetched when needed and provided with
+dedicated options which can be accessed by clicking the more
+options (...) icon.
+For example,  for table, it has options to _Preview Data_
+and _View Details_ which internally executes `SELECT * FROM database.table_name`
+and `DESCRIBE database.table_name`, respectively.
+
+### The sql editor
+* Writing SQL statements and executing all statements
+or selected statements by using shortcut keys. In general, the editor
+provides some of the most famous editor features of Visual Studio Code
+* All the command palette can be shown by pressing F1 or right click
+on the editor section to open context menu and choose _Command Palette_
+
+### The query result
+Located at the bottom of the page, the result section is comprised of two
+tabs which are _Results_ and _Data Preview_.
+* The _Results_ tab shows the query results of the SQL statements from
+the sql editor.
+* The _Data Preview_ contains two sub-tabs _DATA_ and _DETAILS_ showing
+the results of _Preview Data_ and _View Details_, respectively.
+
+Result tables can be filtered, sorted (only when total rows <= 10000)
+and exported. The result can be exported as `json`, `csv` with custom delimiter.
+
+The table result can be converted to vertical mode by clicking the _transform_ icon
+on the right corner above the table. In addition, table columns visibility can be
+toggled and resized.
+
+### Query result visualization
+The query result can be visualized into line, scatter, vertical bar and horizontal
+bar graphs. In order to see the graph, simply clicking the _graph_ icon next to
+the _gear_ icon in the task bar, then fill in the inputs.
+
+The graph can be resized by clicking the border of the pane and exported as `jpeg`
+format with same ratio.
+
+### Current limitations
+Only one connection can be created at a time and there is no option to save the
+connection. Once user leaves the page, the connection will be disconnected.
+The hard limit rows of each result is set to 10000 rows. Though it can be increased,
+it can cause MaxScale to run out of memory. In addition, pagination of query result
+set is not supported. To workaround this, use LIMIT offset, row_count to navigate
+through the result set.
+
 ## Resource creation
 
 A resource can be created by clicking the _+ Create New_ button at
