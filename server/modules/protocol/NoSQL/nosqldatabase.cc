@@ -106,24 +106,27 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
 
     try
     {
-        if (sCommand->is_admin() && m_name != "admin")
+        m_sCommand = std::move(sCommand);
+        set_pending();
+
+        if (m_sCommand->is_admin() && m_name != "admin")
         {
-            throw SoftError(sCommand->name() + " may only be run against the admin database.",
+            throw SoftError(m_sCommand->name() + " may only be run against the admin database.",
                             error::UNAUTHORIZED);
         }
 
-        if (sCommand->name() != command::GetLastError::KEY)
+        if (m_sCommand->name() != command::GetLastError::KEY)
         {
             m_context.reset_error();
         }
 
-        pResponse = sCommand->execute();
+        pResponse = m_sCommand->execute();
     }
     catch (const nosql::Exception& x)
     {
         m_context.set_last_error(x.create_last_error());
 
-        pResponse = x.create_response(*sCommand.get());
+        pResponse = x.create_response(*m_sCommand.get());
     }
     catch (const bsoncxx::exception& x)
     {
@@ -132,7 +135,7 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
         HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*sCommand);
+        pResponse = error.create_response(*m_sCommand);
     }
     catch (const std::exception& x)
     {
@@ -141,13 +144,12 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
         HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*sCommand);
+        pResponse = error.create_response(*m_sCommand);
     }
 
-    if (!pResponse)
+    if (pResponse)
     {
-        m_sCommand = std::move(sCommand);
-        set_pending();
+        set_ready();
     }
 
     return pResponse;

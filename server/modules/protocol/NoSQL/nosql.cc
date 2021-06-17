@@ -2159,14 +2159,14 @@ GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
-    auto sDatabase = Database::create(req.collection(), &m_context, &m_config);
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(req.collection(), &m_context, &m_config));
 
-    GWBUF* pResponse = sDatabase->handle_query(pRequest, req);
+    GWBUF* pResponse = m_sDatabase->handle_query(pRequest, req);
 
-    if (!pResponse)
+    if (pResponse)
     {
-        mxb_assert(!m_sDatabase.get());
-        m_sDatabase = std::move(sDatabase);
+        m_sDatabase.reset();
     }
 
     return pResponse;
@@ -2189,14 +2189,15 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
             auto utf8 = element.get_utf8();
 
             string name(utf8.value.data(), utf8.value.size());
-            auto sDatabase = Database::create(name, &m_context, &m_config);
 
-            pResponse = sDatabase->handle_command(pRequest, req, doc);
+            mxb_assert(!m_sDatabase.get());
+            m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
 
-            if (!pResponse)
+            pResponse = m_sDatabase->handle_command(pRequest, req, doc);
+
+            if (pResponse)
             {
-                // TODO: See handle_query()
-                m_sDatabase = std::move(sDatabase);
+                m_sDatabase.reset();
             }
         }
         else
