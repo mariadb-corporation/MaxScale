@@ -191,7 +191,7 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         if (add_node(nwconfig, node_name))
         {
             string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
-            auto srv = std::make_unique<mxt::MariaDBServer>(cnf_name, *node(i), *this, i);
+            auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *node(i), *this, i);
             string key_port = node_name + "_port";
             port[i] = readenv_int(key_port.c_str(), 3306);
 
@@ -1144,12 +1144,13 @@ mxt::MariaDBUserDef MariaDBCluster::service_user_def() const
 
 namespace maxtest
 {
-maxtest::MariaDBServer::MariaDBServer(const string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
-                                      int ind)
+maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
+                                      MariaDBCluster& cluster, int ind)
     : m_cnf_name(cnf_name)
     , m_vm(vm)
     , m_cluster(cluster)
     , m_ind(ind)
+    , m_shared(*shared)
 {
 }
 
@@ -1193,7 +1194,7 @@ bool MariaDBServer::update_status()
     return rval;
 }
 
-MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl, const std::string& db)
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
@@ -1207,13 +1208,21 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
     }
     sett.timeout = 10;
     auto& ip = m_cluster.using_ipv6() ? m_vm.ip6s() : m_vm.ip4s();
-    conn->try_open(ip, port());
+    conn->try_open(ip, port(), db);
     return conn;
 }
 
-MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection(const std::string& db)
 {
-    return try_open_connection(m_cluster.ssl_mode());
+    return try_open_connection(m_cluster.ssl_mode(), db);
+}
+
+
+MariaDBServer::SMariaDB MariaDBServer::open_connection(const string& db)
+{
+    auto conn = try_open_connection(m_cluster.ssl_mode());
+    m_shared.log.expect(conn->is_open(), "Failed to open MySQL connection to '%s'.", m_vm.m_name.c_str());
+    return conn;
 }
 
 bool MariaDBServer::ping_or_open_admin_connection()
