@@ -8,13 +8,11 @@
  * - check MaxScale is alive
  */
 
-#include <iostream>
 #include <maxtest/testconnections.hh>
 #include <maxtest/galera_cluster.hh>
 
 int main(int argc, char* argv[])
 {
-    TestConnections::require_galera(true);
     TestConnections test(argc, argv);
 
     test.reset_timeout();

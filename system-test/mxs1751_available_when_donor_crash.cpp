@@ -16,7 +16,6 @@
 
 int main(int argc, char* argv[])
 {
-    TestConnections::require_galera(true);
     TestConnections test(argc, argv);
 
     for (int i = 0; i < 2; i++)

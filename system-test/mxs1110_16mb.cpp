@@ -11,7 +11,6 @@
 int main(int argc, char* argv[])
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections::require_galera(true);
     TestConnections* Test = new TestConnections(argc, argv);
     Test->maxscale->stop();
     Test->reset_timeout();
