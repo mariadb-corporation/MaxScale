@@ -27,14 +27,14 @@ describe('OutlinedOverviewCard.vue', () => {
     })
 
     it(`Should remove border-radius - i.e tile props is true by default`, async () => {
-        expect(wrapper.find('.v-sheet--tile').exists()).to.be.equal(true)
+        expect(wrapper.find('.rounded-0').exists()).to.be.equal(true)
     })
 
     it(`Should have border-radius - i.e tile props is false`, async () => {
         await wrapper.setProps({
             tile: false,
         })
-        expect(wrapper.find('.v-sheet--tile').exists()).to.be.equal(false)
+        expect(wrapper.find('.rounded-0').exists()).to.be.equal(false)
     })
 
     it(`Should add wrapperClass`, async () => {

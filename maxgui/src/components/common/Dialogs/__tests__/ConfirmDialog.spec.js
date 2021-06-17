@@ -42,7 +42,7 @@ describe('ConfirmDialog.vue', () => {
     it(`Testing component renders accurate confirmation text`, async () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
-            shallow: true,
+            shallow: false,
             component: ConfirmDialog,
             props: initialProps,
         })
@@ -66,7 +66,7 @@ describe('ConfirmDialog.vue', () => {
     it(`Testing component renders accurate slot if body-append slot is used`, async () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
-            shallow: true,
+            shallow: false,
             component: ConfirmDialog,
             props: initialProps,
             slots: {

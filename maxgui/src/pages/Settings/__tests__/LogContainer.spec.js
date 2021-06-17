@@ -83,17 +83,12 @@ describe('LogContainer', () => {
         await wrapper.destroy()
     })
 
-    it(`Should send request to get maxscale log on mounted`, async () => {
-        await axiosStub.should.have.been.calledOnceWith('/maxscale/logs/data')
-        axiosStub.should.have.been.calledOnce
-    })
-    it(`Should send request to get maxscale log when shouldFetchLogs is true`, async () => {
-        await wrapper.setData({
+    it(`Should send requests to get maxscale log when shouldFetchLogs is true`, async () => {
+        await wrapper.setProps({
             shouldFetchLogs: true,
-            prevPageLink: null,
         })
-        await axiosStub.should.have.been.calledWith('/maxscale/logs/data')
-        axiosStub.should.have.been.calledTwice
+        await axiosStub.should.have.been.calledWith('/maxscale/logs/data?page[size]=1000')
+        axiosStub.should.have.been.called
     })
 
     it(`Should pass necessary props to log-lines component`, async () => {
