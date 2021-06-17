@@ -941,6 +941,9 @@ add_test_executable(mxs3588_almost_large_packet.cc mxs3588_almost_large_packet r
 # MXS-3617: Large batch causes response packets to be lost
 add_test_executable(mxs3617_lost_packets.cc mxs3617_lost_packets replication LABELS REPL_BACKEND readconnroute)
 
+# MXS-3623: Race condition in COM_CHANGE_USER handling
+add_test_executable(mxs3623_persistent_change_user.cc mxs3623_persistent_change_user mxs3623_persistent_change_user LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
