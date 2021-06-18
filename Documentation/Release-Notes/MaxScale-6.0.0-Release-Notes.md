@@ -31,6 +31,13 @@ the protocol module, this functionality can be used together with
 all MaxScale routers and filters. Please see the `nosqlprotocol`
 [documentation](../Protocols/NoSQL.md) for more information.
 
+### Defaults can be specified for `maxctrl`
+
+If the file `~/.maxctrl.cnf` exists, maxctrl will use any values
+in the section `[maxctrl]` as defaults for command line arguments.
+Please see the `maxctrl` [documentation](../Reference/MaxCtrl.md)
+for details.
+
 ## Bug fixes
 
 ## Known Issues and Limitations

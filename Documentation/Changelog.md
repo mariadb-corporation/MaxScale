@@ -13,6 +13,7 @@ connection fails due to too low *extra_max_connections*-setting on the backend.
 * Backend connection multiplexing added. See
 [idle_session_pool_time](Getting-Started/Configuration-Guide.md#idle_session_pool_time)
 for more information.
+* Defaults for `maxctrl` can now be specified in the file `~/maxctrl.cnf`
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.0.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)
