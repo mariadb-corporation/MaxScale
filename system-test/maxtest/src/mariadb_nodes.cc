@@ -11,26 +11,27 @@
  */
 
 #include <maxtest/mariadb_nodes.hh>
-#include <climits>
-#include <string>
-#include <sstream>
-#include <iostream>
-#include <vector>
+#include <algorithm>
+#include <cassert>
 #include <future>
 #include <functional>
-#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include <maxbase/format.hh>
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/test_dir.hh>
-#include <cassert>
-#include <fstream>
+
 
 using std::cout;
 using std::endl;
 using std::string;
 using std::move;
+using SslMode = mxt::MariaDBServer::SslMode;
 
 namespace
 {
@@ -278,23 +279,64 @@ int MariaDBCluster::stop_slaves()
     return global_result;
 }
 
-void MariaDBCluster::create_users(int node)
+bool MariaDBCluster::create_base_users(int node)
 {
-    // Create users for replication as well as the users that are used by the tests
-    string str = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
-    copy_to_node(node, str.c_str(), access_homedir(node));
+    using mxt::MariaDBServer;
 
-    ssh_node_f(node, true,
-               "export require_ssl=\"%s\"; "
-               "export node_user=\"%s\"; "
-               "export node_password=\"%s\"; "
-               "%s/create_user.sh \"%s\" %s",
-               m_ssl ? "REQUIRE SSL" : "",
-               user_name.c_str(),
-               password.c_str(),
-               access_homedir(0),
-               m_socket_cmd[0].c_str(),
-               type_string().c_str());
+    // Create users for replication as well as the users that are used by the tests
+    string script_file = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
+    copy_to_node(node, script_file.c_str(), access_homedir(node));
+
+    string cmd = mxb::string_printf("export require_ssl=\"%s\"; export node_user=\"%s\"; "
+                                    "export node_password=\"%s\"; "
+                                    "%s/create_user.sh \"%s\" %s",
+                                    m_ssl ? "REQUIRE SSL" : "", user_name.c_str(),
+                                    password.c_str(),
+                                    access_homedir(0), m_socket_cmd[0].c_str(), type_string().c_str());
+    int rc = ssh_node_f(node, true, "%s", cmd.c_str());
+
+    bool rval = false;
+    if (rc == 0)
+    {
+        auto be = backend(node);
+        be->update_status();
+
+        auto gen_all_grants_user = [be](const string& name, const string& pw, SslMode ssl_mode) {
+                mxt::MariaDBUserDef user_def;
+                user_def.name = name;
+                user_def.password = pw;
+
+                bool rval = false;
+                if (be->create_user(user_def, ssl_mode)
+                    && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
+                                                         name.c_str()))
+                {
+                    rval = true;
+                }
+                return rval;
+            };
+
+        auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
+
+        if (gen_all_grants_user("repl", "repl", SslMode::OFF)
+            && gen_all_grants_user("skysql", "skysql", ssl_mode)
+            && gen_all_grants_user("maxskysql", "skysql", ssl_mode)
+            && gen_all_grants_user("maxuser", "maxuser", ssl_mode))
+        {
+            rval = true;
+        }
+        else
+        {
+            logger().log_msgf("Failed to generate all users on cluster %s node %i.",
+                              name().c_str(), node);
+        }
+    }
+    else
+    {
+        logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i.",
+                          cmd.c_str(), name().c_str(), node, rc);
+    }
+    return rval;
 }
 
 int MariaDBCluster::clean_iptables(int node)
@@ -574,13 +616,20 @@ bool MariaDBCluster::prepare_servers_for_test()
         {
             // Try to regenerate users. The user generation script replaces users. As the cluster
             // is replicating, doing this on the master should be enough.
+            auto vmname = m_backends[0]->m_vm.m_name.c_str();
             logger().log_msgf("Recreating users on '%s' with SSL %s.",
-                              m_backends[0]->m_vm.m_name.c_str(), m_ssl ? "on" : "off");
-            create_users(0);
-            sleep(1);   // Wait for cluster sync. Could come up with something better.
-            normal_conn_ok = check_normal_conns();
-            logger().log_msgf("Connections to %s %s after recreating users.",
-                              name().c_str(), normal_conn_ok ? "worked" : "failed");
+                              vmname, m_ssl ? "on" : "off");
+            if (create_users(0))
+            {
+                sleep(1);   // Wait for cluster sync. Could come up with something better.
+                normal_conn_ok = check_normal_conns();
+                logger().log_msgf("Connections to %s %s after recreating users.",
+                                  name().c_str(), normal_conn_ok ? "worked" : "failed");
+            }
+            else
+            {
+                logger().log_msgf("User recreation on '%s' failed.", vmname);
+            }
         }
 
         if (normal_conn_ok)
@@ -984,8 +1033,6 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
 
 bool MariaDBCluster::check_normal_conns()
 {
-    using SslMode = mxt::MariaDBServer::SslMode;
-
     // Check that normal connections to backends work. If ssl-mode is on, the connector refuses non-ssl
     // connections.
     bool rval = true;
@@ -1034,6 +1081,10 @@ bool MariaDBCluster::ssl() const
     return m_ssl;
 }
 
+SslMode MariaDBCluster::ssl_mode() const
+{
+    return m_ssl ? SslMode::ON : SslMode::OFF;
+}
 void MariaDBCluster::set_use_ssl(bool use_ssl)
 {
     m_ssl = use_ssl;
@@ -1077,6 +1128,18 @@ bool MariaDBCluster::copy_logs(const std::string& dest_prefix)
         };
 
     return run_on_every_backend(func);
+}
+
+mxt::MariaDBUserDef MariaDBCluster::service_user_def() const
+{
+    mxt::MariaDBUserDef rval;
+    rval.name = "maxservice";
+    rval.password = "maxservice";
+    rval.grants = {"SELECT ON mysql.user",          "SELECT ON mysql.db",
+                   "SELECT ON mysql.tables_priv",   "SELECT ON mysql.columns_priv",
+                   "SELECT ON mysql.procs_priv",    "SELECT ON mysql.proxies_priv",
+                   "SELECT ON mysql.roles_mapping", "SHOW DATABASES ON *.*"};
+    return rval;
 }
 
 namespace maxtest
@@ -1151,7 +1214,7 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl)
 
 MariaDBServer::SMariaDB MariaDBServer::try_open_connection()
 {
-    return try_open_connection(m_cluster.ssl() ? SslMode::ON : SslMode::OFF);
+    return try_open_connection(m_cluster.ssl_mode());
 }
 
 bool MariaDBServer::ping_or_open_admin_connection()
@@ -1181,13 +1244,19 @@ bool MariaDBServer::ping_or_open_admin_connection()
     return rval;
 }
 
-std::string MariaDBServer::version_as_string()
+MariaDBServer::Version MariaDBServer::version()
 {
     auto v = m_status.version_num;
     uint32_t major = v / 10000;
     uint32_t minor = (v - major * 10000) / 100;
     uint32_t patch = v - major * 10000 - minor * 100;
-    return mxb::string_printf("%i.%i.%i", major, minor, patch);
+    return {major, minor, patch};
+}
+
+std::string MariaDBServer::version_as_string()
+{
+    auto v = version();
+    return mxb::string_printf("%i.%i.%i", v.major, v.minor, v.patch);
 }
 
 const string& MariaDBServer::cnf_name() const
@@ -1234,5 +1303,33 @@ bool MariaDBServer::copy_logs(const std::string& destination_prefix)
         }
     }
     return true;
+}
+
+bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl)
+{
+    auto c = m_admin_conn.get();
+    string userhost = mxb::string_printf("'%s'@'%s'", user.name.c_str(), user.host.c_str());
+    auto userhostc = userhost.c_str();
+
+    bool create_ok = false;
+    bool grant_error = false;
+
+    // Xpand does not support "if exists" so simply disregard any errors on the "drop" query.
+    c->try_cmd_f("drop user %s;", userhostc);
+    if (c->try_cmd_f("create user %s identified by '%s' require %s;",
+                     userhostc, user.password.c_str(), ssl == SslMode::ON ? "ssl" : "none"))
+    {
+        create_ok = true;
+
+        for (auto& e : user.grants)
+        {
+            if (!c->try_cmd_f("grant %s to %s;", e.c_str(), userhostc))
+            {
+                grant_error = true;
+            }
+        }
+    }
+
+    return create_ok && !grant_error;
 }
 }

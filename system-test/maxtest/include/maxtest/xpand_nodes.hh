@@ -24,6 +24,7 @@ public:
     const std::string& type_string() const override;
 
     bool start_replication() override;
+    bool create_users(int i) override;
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;

@@ -19,6 +19,7 @@
 using std::cout;
 using std::endl;
 using std::string;
+using mxt::MariaDBServer;
 
 namespace
 {
@@ -203,5 +204,23 @@ bool GaleraCluster::reset_server(int i)
     }
 
     // Cannot start server yet, Galera is not properly configured.
+    return rval;
+}
+
+bool GaleraCluster::create_users(int i)
+{
+    bool rval = false;
+    if (create_base_users(i))
+    {
+        mxt::MariaDBUserDef galmon_user = {"galeramon", "%", "galeramon"};
+        galmon_user.grants = {"SUPER, REPLICATION CLIENT ON *.*"};
+
+        auto be = backend(i);
+        if (be->create_user(galmon_user, ssl_mode())
+            && be->create_user(service_user_def(), ssl_mode()))
+        {
+            rval = true;
+        }
+    }
     return rval;
 }

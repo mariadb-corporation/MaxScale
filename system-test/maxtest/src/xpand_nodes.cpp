@@ -304,3 +304,24 @@ std::string XpandCluster::get_srv_cnf_filename(int node)
     assert(!true);
     return "";
 }
+
+bool XpandCluster::create_users(int i)
+{
+    bool rval = false;
+    if (create_base_users(i))
+    {
+        mxt::MariaDBUserDef xpmon_user = {"xpandmon", "%", "xpandmon"};
+        xpmon_user.grants = {"SELECT ON system.membership",       "SELECT ON system.nodeinfo",
+                             "SELECT ON system.softfailed_nodes", "SUPER ON *.*"};
+
+        mxt::MariaDBUserDef service_user = {"maxservice", "%", "maxservice"};
+        xpmon_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
+
+        auto be = backend(i);
+        if (be->create_user(xpmon_user, ssl_mode()) && be->create_user(service_user, ssl_mode()))
+        {
+            rval = true;
+        }
+    }
+    return rval;
+}

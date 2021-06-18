@@ -37,6 +37,7 @@ public:
     bool cmd(const std::string& sql, Expect expect = Expect::OK);
     bool try_cmd(const std::string& sql);
     bool cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+    bool try_cmd_f(const char* format, ...) mxb_attribute((format (printf, 2, 3)));
 
     std::unique_ptr<mxq::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
     std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
