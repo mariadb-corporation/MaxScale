@@ -219,11 +219,13 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
+    std::string errmsg = mxb::string_printf(
+        "Authentication to '%s' failed: %hu, %s",
+        dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
 
     if (m_session->service->config()->log_auth_warnings)
     {
-        MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
-                  "Msg : %s", dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
+        MXS_ERROR("%s", errmsg.c_str());
     }
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
@@ -242,6 +244,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                   "'max_connect_errors' to a larger value in the backend server.",
                   server->name(), server->address(), server->port());
     }
+
+    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
 }
 
 /**
@@ -492,7 +496,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
     if (session->state() == MXS_SESSION::State::STARTED)
     {
         ClientDCB* client_dcb = session->client_connection()->dcb();
-        if (client_dcb && client_dcb->state() == DCB::State::POLLING)
+        if (client_dcb && client_dcb->state() != DCB::State::DISCONNECTED)
         {
             auto client_protocol = client_dcb->protocol();
             if (client_protocol)
@@ -1217,6 +1221,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
             const string& hex_hash2 = m_auth_data.client_data->user_entry.entry.password;
             if (hex_hash2.empty())
             {
+                m_current_auth_token.clear();
                 return rval;    // Empty password -> empty token
             }
 
@@ -1238,6 +1243,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
                 auto& hash1 = m_auth_data.client_data->backend_token;
                 if (hash1.size() == SHA_DIGEST_LENGTH)
                 {
+                    m_current_auth_token = hash1;
                     // Compute the XOR */
                     uint8_t new_token[SHA_DIGEST_LENGTH];
                     mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
@@ -1573,7 +1579,7 @@ int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb, GWBU
     gwbuf_copy_data(reply, MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name),
                     sizeof(m_auth_data.scramble), m_auth_data.scramble);
 
-    const auto& sha1_pw = m_auth_data.client_data->backend_token;
+    const auto& sha1_pw = m_current_auth_token;
     const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);

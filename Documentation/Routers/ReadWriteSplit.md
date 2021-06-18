@@ -524,8 +524,8 @@ prevents replication lag from affecting the results. This only applies to the
 modifications done by the client itself.
 
 **Note:** This feature requires MariaDB 10.2.16 or newer to function. In
-  addition to this, the `session_track_system_variables` parameter must be set
-  to `last_gtid`.
+  addition to this, the `session_track_system_variables` parameter must include
+  `last_gtid` in its list of tracked system variables.
 
 **Note:** Support for binary protocol prepared statements was added in MaxScale
   6.0. When `causal_reads` is used with binary protocol prepared statements,

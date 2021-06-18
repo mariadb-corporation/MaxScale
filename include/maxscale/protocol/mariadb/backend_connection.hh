@@ -198,6 +198,10 @@ private:
     bool        m_large_query = false;
     mxs::Reply  m_reply;
 
+    // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
+    // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
+    mariadb::ClientAuthenticator::ByteVec m_current_auth_token;
+
     std::queue<TrackedQuery> m_track_queue;
 
     // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
