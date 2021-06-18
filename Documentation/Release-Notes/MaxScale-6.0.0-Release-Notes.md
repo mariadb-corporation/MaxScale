@@ -1,5 +1,9 @@
 # MariaDB MaxScale 6.0 Release Notes
 
+The versioning scheme has changed; the major number will now change at
+every release which is not only a maintenance release. According to the
+old scheme, the version number would have been 2.6.
+
 Release 6.0 is a Beta release.
 
 This document describes the changes in release 6, when compared to
@@ -9,6 +13,18 @@ For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
+
+### Columnstore monitor
+
+The Columnstore monitor that in this release only supports Columnstore
+version 1.5, is now capable of adjusting itself automatically to any
+changes in the the cluster. In the configuration it is only specified
+a node using which the monitor get in contact with the cluster, but
+after that the monitor autonomously figures out the cluster configuration
+and automatically adapts to any changes in the configuration. For more
+details, please consult the
+[monitor](../Monitors/ColumnStore-Monitor.md)
+documentation.
 
 ## Dropped Features
 
