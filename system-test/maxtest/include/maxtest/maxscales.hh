@@ -123,7 +123,6 @@ private:
 
     void check_servers_property(size_t n_expected, const std::function<void(size_t)>& tester);
 };
-}
 
 class MaxScale
 {
@@ -176,7 +175,7 @@ public:
 
     /**< conn_rwsplit, conn_master, conn_slave */
     MYSQL* routers[3] {nullptr, nullptr, nullptr};
-    int    ports[3] {-1, -1, -1};           /**< rwsplit_port, readconn_master_port, readconn_slave_port */
+    int    ports[3] {-1, -1, -1};   /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
     std::string maxscale_cnf;       /**< full name of Maxscale configuration file */
     std::string maxscale_log_dir;   /**< name of log files directory */
@@ -400,5 +399,4 @@ private:
     bool             verbose() const;
     mxt::CmdResult   curl_rest_api(const std::string& path);
 };
-
-class TestConnections;
+}

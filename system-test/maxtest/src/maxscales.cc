@@ -17,6 +17,8 @@ namespace
 const string my_prefix = "maxscale";
 }
 
+namespace maxtest
+{
 MaxScale::MaxScale(mxt::SharedData* shared)
     : m_shared(*shared)
 {
@@ -795,8 +797,6 @@ mxt::ServersInfo MaxScale::get_servers()
     return rval;
 }
 
-namespace maxtest
-{
 void ServersInfo::add(const ServerInfo& info)
 {
     m_servers.push_back(info);
