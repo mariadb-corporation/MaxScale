@@ -59,7 +59,6 @@ using maxscale::Monitor;
 using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;
 using namespace std::literals::chrono_literals;
-using std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
@@ -542,7 +541,7 @@ bool Monitor::test_permissions(const string& query)
                 mysql_free_result(res);
             }
 
-            mondb->maybe_fetch_server_variables();
+            mondb->maybe_fetch_session_track();
         }
     }
 
@@ -1095,31 +1094,31 @@ ConnectResult MonitorServer::ping_or_connect()
     return res;
 }
 
-static constexpr seconds variable_update_interval = 10min;
+static constexpr seconds session_track_update_interval = 10min;
 
-bool MonitorServer::should_fetch_server_variables()
+bool MonitorServer::should_fetch_session_track()
 {
     bool rval = false;
     // Only fetch variables from real servers.
     return is_database()
-           && (steady_clock::now() - m_last_variable_update) > variable_update_interval;
+           && (mxb::Clock::now() - m_last_session_track_update) > session_track_update_interval;
 }
 
-void MonitorServer::fetch_server_variables()
+/**
+ * Fetch 'session_track_system_variables' from the server and store it in the SERVER object.
+ */
+void MonitorServer::fetch_session_track()
 {
-    if (auto r = mxs::execute_query(con, "SHOW GLOBAL VARIABLES"))
+    if (auto r = mxs::execute_query(con, "select @@session_track_system_variables;"))
     {
-        MXS_INFO("Server variables loaded from '%s', next update in %ld seconds.",
-                 server->name(), variable_update_interval.count());
-        m_last_variable_update = steady_clock::now();
-        std::unordered_map<std::string, std::string> variables;
+        MXS_INFO("'session_track_system_variables' loaded from '%s', next update in %ld seconds.",
+                 server->name(), session_track_update_interval.count());
+        m_last_session_track_update = mxb::Clock::now();
 
-        while (r->next_row())
+        if (r->next_row() && r->get_col_count() > 0)
         {
-            variables.emplace(r->get_string(0), r->get_string(1));
+            server->set_session_track_system_variables(r->get_string(0));
         }
-
-        server->set_variables(std::move(variables));
     }
 }
 
@@ -1917,7 +1916,7 @@ void MonitorWorkerSimple::tick()
 
         if (connection_is_ok(rval))
         {
-            pMs->maybe_fetch_server_variables();
+            pMs->maybe_fetch_session_track();
             pMs->clear_pending_status(SERVER_AUTH_ERROR);
             pMs->set_pending_status(SERVER_RUNNING);
 
@@ -2061,6 +2060,8 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
     : server(server)
     , m_shared(shared)
 {
+    // Initialize 'm_last_session_track_update' so that an update is performed 1s after monitor start.
+    m_last_session_track_update = mxb::Clock::now() - session_track_update_interval + 1s;
 }
 
 MonitorServer::~MonitorServer()
@@ -2115,6 +2116,14 @@ void MonitorServer::add_status_request(StatusRequest request)
 bool MonitorServer::is_database() const
 {
     return server->info().is_database();
+}
+
+void MonitorServer::maybe_fetch_session_track()
+{
+    if (should_fetch_session_track())
+    {
+        fetch_session_track();
+    }
 }
 
 const MonitorServer::EventList& MonitorServer::new_custom_events() const

@@ -588,17 +588,16 @@ void Server::set_charset(uint8_t charset)
     m_charset = charset;
 }
 
-void Server::set_variables(std::unordered_map<std::string, std::string>&& variables)
+void Server::set_session_track_system_variables(std::string&& value)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
-    m_variables = variables;
+    m_session_track_system_variables = std::move(value);
 }
 
-std::string Server::get_variable(const std::string& key) const
+std::string Server::get_session_track_system_variables() const
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
-    auto it = m_variables.find(key);
-    return it == m_variables.end() ? "" : it->second;
+    return m_session_track_system_variables;
 }
 
 uint64_t Server::status_from_string(const char* str)

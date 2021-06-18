@@ -231,20 +231,9 @@ public:
     ConnectResult ping_or_connect();
 
     /**
-     * Fetch global variables from the server and store them in the SERVER object.
+     * Fetch 'session_track_system_variables' from the server if it has not been fetched recently.
      */
-    void fetch_server_variables();
-
-    /**
-     * Fetch global variables from the server if they haven't been fetched recently.
-     */
-    void maybe_fetch_server_variables()
-    {
-        if (should_fetch_server_variables())
-        {
-            fetch_server_variables();
-        }
-    }
+    void maybe_fetch_session_track();
 
     const char* get_event_name();
 
@@ -318,12 +307,13 @@ private:
     std::atomic_int m_status_request {NO_CHANGE};       /**< Status change request from admin */
     bool            m_ok_to_check_disk_space {true};    /**< Set to false if check fails */
 
-    std::chrono::steady_clock::time_point m_last_variable_update;
+    mxb::TimePoint m_last_session_track_update;
 
     // Latest connection error
     std::string m_latest_error;
 
-    bool should_fetch_server_variables();
+    bool should_fetch_session_track();
+    void fetch_session_track();
 };
 
 /**
