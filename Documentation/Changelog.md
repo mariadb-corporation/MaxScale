@@ -2,6 +2,8 @@
 
 ## MariaDB MaxScale 6
 
+* A `nosqlprotocol` protocol module that implements the MongoDB® wire protocol
+  has been introduced.
 * The Columnstore monitor no longer supports Columnstore versions prior to 1.5.
 * The Database Firewall filter has been deprecated.
 * If *extra_port* is defined for a server, it's used by default for monitor and
