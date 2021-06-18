@@ -543,7 +543,7 @@ public:
     {
         int64_t id = value_as<int64_t>();
         string collection = m_database.name() + "." + required<string>(key::COLLECTION);
-        int32_t batch_size = 101;
+        int32_t batch_size = std::numeric_limits<int32_t>::max();
 
         optional(key::BATCH_SIZE, &batch_size, Conversion::RELAXED);
 
