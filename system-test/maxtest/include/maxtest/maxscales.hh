@@ -12,7 +12,6 @@
 namespace maxtest
 {
 class MariaDB;
-class MaxScale;
 
 class TestLogger;
 
@@ -126,7 +125,7 @@ private:
 };
 }
 
-class Maxscales
+class MaxScale
 {
 public:
     enum service
@@ -136,9 +135,8 @@ public:
         READCONN_SLAVE
     };
 
-    Maxscales(mxt::SharedData* shared);
-
-    ~Maxscales();
+    MaxScale(mxt::SharedData* shared);
+    ~MaxScale();
 
     bool setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name);
 

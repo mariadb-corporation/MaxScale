@@ -117,7 +117,7 @@ void run_test(TestConnections& test)
     test.tprintf("Running test with default user.");
     select_for_update(test, test.maxscale->conn_rwsplit[0]);
 
-    Maxscales& maxscales = *test.maxscale;
+    MaxScale& maxscales = *test.maxscale;
 
     MYSQL* pMysql = open_conn(maxscales.rwsplit_port, maxscales.ip4(),
                               ZUSER, ZPASSWORD);
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    Maxscales& maxscales = *test.maxscale;
+    MaxScale& maxscales = *test.maxscale;
 
     maxscales.connect();
 

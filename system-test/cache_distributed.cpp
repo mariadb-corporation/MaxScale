@@ -114,7 +114,7 @@ void select(TestConnections& test, const char* zName, Connection& c, size_t n)
     test.expect(rows.size() == n, "%s: Expected %lu rows, but got %lu.", zName, n, rows.size());
 }
 
-void install_and_start_redis_and_memcached(Maxscales& maxscales)
+void install_and_start_redis_and_memcached(MaxScale& maxscales)
 {
     setenv("maxscale_000_keyfile", maxscales.sshkey(), 0);
     setenv("maxscale_000_whoami", maxscales.access_user(), 0);

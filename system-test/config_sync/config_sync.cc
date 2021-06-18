@@ -18,7 +18,7 @@ struct TestCase
     std::string endpoint;   // REST API endpoint to check, optional
     std::string ptr;        // JSON Pointer to field to check, optional
 
-    void execute(TestConnections& test, Maxscales* maxscale) const
+    void execute(TestConnections& test, MaxScale* maxscale) const
     {
         test.tprintf("  %s", desc.c_str());
         auto res = maxscale->maxctrl(cmd);
@@ -162,7 +162,7 @@ void wait_for_sync(int version = 0)
     }
 }
 
-void create_config(Maxscales* mxs, const std::string& config)
+void create_config(MaxScale* mxs, const std::string& config)
 {
     mxs->stop();
     mxs->ssh_node_f(true,

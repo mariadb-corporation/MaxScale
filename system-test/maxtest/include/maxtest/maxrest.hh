@@ -49,7 +49,7 @@ public:
      *               of the MaxRest instance.
      */
     MaxRest(TestConnections* pTest);
-    MaxRest(TestConnections* pTest, Maxscales* pMaxscale);
+    MaxRest(TestConnections* pTest, MaxScale* pMaxscale);
 
     /**
      * @return  The TestConnections instance used by this instance.
@@ -245,7 +245,7 @@ private:
 
 private:
     TestConnections& m_test;
-    Maxscales&       m_maxscale;
+    MaxScale&        m_maxscale;
     bool             m_fail_on_error  {true};
 };
 
