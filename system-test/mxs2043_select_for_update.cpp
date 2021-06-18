@@ -90,7 +90,7 @@ bool set_read_only_on_slaves(TestConnections& test, bool set)
 
     auto& ms = *test.repl;
     ms.update_status();
-    auto master_id = test.maxscale->maxscale_b().get_servers().get_master().server_id;
+    auto master_id = test.maxscale->get_servers().get_master().server_id;
 
     for (int i = 0; i < ms.N; ++i)
     {

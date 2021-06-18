@@ -40,8 +40,8 @@ private:
         auto regular_slave_ip = regular_slave.host();   // the second regular slave doesn't come into play
 
         // Check initial server setup
-        auto& mxs = test.maxscale->maxscale_b();
-        mxs.wait_monitor_ticks(2);
+        auto& mxs = *test.maxscale;
+        mxs.wait_for_monitor(2);
         mxs.check_servers_status(initial_stats);
 
         // Pinloki should be replicating from the master
@@ -54,7 +54,7 @@ private:
 
         // Check that the server setup is as expected
         auto new_stats = {stat_slave, stat_ext_slave, stat_master, stat_slave, stat_pinloki};
-        mxs.wait_monitor_ticks(5);
+        mxs.wait_for_monitor(5);
         mxs.check_servers_status(new_stats);
 
         // Check that pinloki was redirected

@@ -1029,7 +1029,7 @@ bool TestConnections::stop_all_maxscales()
     bool rval = true;
     for (int i = 0; i < n_maxscales(); i++)
     {
-        if (!my_maxscale(i)->stop())
+        if (my_maxscale(i)->stop_maxscale() != 0)
         {
             rval = false;
         }
@@ -2063,7 +2063,7 @@ mxt::MariaDBServer* TestConnections::get_repl_master()
     mxt::MariaDBServer* rval = nullptr;
     if (repl)
     {
-        auto server_info = maxscale->maxscale_b().get_servers();
+        auto server_info = maxscale->get_servers();
         for (size_t i = 0; i < server_info.size() && !rval; i++)
         {
             auto& info = server_info.get(i);

@@ -58,7 +58,7 @@ void test_main(TestConnections& test)
     {
         // First, check idle connection count. Restart MaxScale to get rid of any previously pooled
         // connections.
-        auto& mxs = test.maxscale->maxscale_b();
+        auto& mxs = *test.maxscale;
         mxs.stop();
         mxs.start();
         sleep(2);
@@ -68,7 +68,7 @@ void test_main(TestConnections& test)
                 std::vector<std::unique_ptr<mxt::MariaDB>> conns;
                 for (int i = 0; i < n_conns; i++)
                 {
-                    conns.push_back(mxs.open_rwsplit_connection());
+                    conns.push_back(mxs.open_rwsplit_connection2());
                 }
                 return conns;
             };
@@ -134,7 +134,7 @@ void test_main(TestConnections& test)
 
 void check_conn_pool_size(TestConnections& test, const IntVector& expected)
 {
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
     auto info = mxs.get_servers();
     info.check_pool_connections(expected);
 }

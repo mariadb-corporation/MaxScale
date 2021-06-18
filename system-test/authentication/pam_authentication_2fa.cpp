@@ -152,7 +152,7 @@ R"(\" RATE_LIMIT 3 30
     if (test.ok())
     {
         test.tprintf("PAM-plugin installed and users created on all servers.");
-        auto& mxs = test.maxscale->maxscale_b();
+        auto& mxs = *test.maxscale;
         auto expected_states = {ServerInfo::master_st, ServerInfo::slave_st};
         mxs.check_servers_status(expected_states);
 
@@ -161,7 +161,7 @@ R"(\" RATE_LIMIT 3 30
             const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' "
                                                "IDENTIFIED VIA pam USING '%s';";
             auto create_user_query = mxb::string_printf(create_pam_user_fmt, pam_user, pam_config_name);
-            auto admin_conn = mxs.open_rwsplit_connection();
+            auto admin_conn = mxs.open_rwsplit_connection2();
             admin_conn->cmd(create_user_query);
             auto grant_query = mxb::string_printf("GRANT SELECT on test.* TO '%s'@'%%';", pam_user);
             admin_conn->cmd(grant_query);

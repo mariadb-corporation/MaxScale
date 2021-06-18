@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
 
-    auto& mxs = test.maxscale->maxscale_b();
+    auto& mxs = *test.maxscale;
 
     test.tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
     int max_rlag = 100;
@@ -61,10 +61,10 @@ int main(int argc, char* argv[])
     change_master(test, 2, 0);
     change_master(test, 3, 2, "", max_rlag);
 
-    mxs.wait_monitor_ticks(2);
-    auto maxconn = mxs.open_rwsplit_connection();
+    mxs.wait_for_monitor(2);
+    auto maxconn = mxs.open_rwsplit_connection2();
     maxconn->cmd(flush);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     auto servers_info = mxs.get_servers();
     auto phase1_2_groups = {1, 1, 1, grp_none};
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 
     execute_query(test.repl->nodes[0], readonly_on_query);
     execute_query(test.repl->nodes[1], readonly_on_query);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     servers_info = mxs.get_servers();
     servers_info.check_servers_status({mm_slave_status, mm_slave_status, mm_master_status, slave_status});
@@ -101,10 +101,10 @@ int main(int argc, char* argv[])
 
     mxs.start();
     sleep(2);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     maxconn->cmd(flush);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     servers_info = mxs.get_servers();
     auto phase3_4_groups = {grp_none, 1, 1, grp_none};
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
     test.tprintf("Test 4 - Set node 1 into read-only mode");
 
     execute_query(test.repl->nodes[1], readonly_on_query);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     servers_info = mxs.get_servers();
     servers_info.check_servers_status({slave_status, mm_slave_status, mm_master_status, slave_status});
@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
 
     mxs.start();
     sleep(2);
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     // Even though the servers are in two distinct groups, only one of them
     // contains a master and a slave. Only one master may exist in a cluster
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[1], readonly_on_query);
     execute_query(test.repl->nodes[3], readonly_on_query);
 
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
 
     servers_info = mxs.get_servers();
     servers_info.check_servers_status(phase5_6_status);
@@ -168,9 +168,9 @@ int main(int argc, char* argv[])
     change_master(test, 1, 3);
     change_master(test, 2, 3);
 
-    mxs.wait_monitor_ticks(1);
+    mxs.wait_for_monitor(1);
     maxconn->cmd(flush);
-    mxs.wait_monitor_ticks(2);
+    mxs.wait_for_monitor(2);
     maxconn->query(show);
 
     servers_info = mxs.get_servers();
@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
     test.tprintf("Test 8 - Diamond topology with no delay");
 
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
-    mxs.wait_monitor_ticks(2);
+    mxs.wait_for_monitor(2);
 
     servers_info = mxs.get_servers();
     servers_info.check_servers_status(phase7_8_status);
