@@ -155,6 +155,22 @@ cluster. For more information, refer to the
 [KafkaCDC](../Routers/KafkaCDC.md#cooperative_replication) and
 [Avrorouter](../Routers/Avrorouter.md#cooperative_replication) documentation.
 
+### MariaDB-Monitor
+
+Can launch monitor script when slave server exceeds replication lag limit.
+See [documentation](../Monitors/MariaDB-Monitor.md#script_max_replication_lag)
+for more information.
+
+Can disable *read_only* on master if it's set. See
+[documentation](../Monitors/MariaDB-Monitor.md#enforce_writable_master)
+for more information.
+
+### PAM user mapping
+
+PAM-Authenticator supports mapping incoming PAM users to MariaDB users. See
+[documentation](../Authenticators/PAM-Authenticator.md#pam_backend_mapping) for
+more information.
+
 ## Bug fixes
 
 * [MXS-3592](https://jira.mariadb.org/browse/MXS-3592) MaxCtrl object creation doesn't convert values to JSON

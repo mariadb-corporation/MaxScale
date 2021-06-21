@@ -17,6 +17,11 @@ connection fails due to too low *extra_max_connections*-setting on the backend.
 [idle_session_pool_time](Getting-Started/Configuration-Guide.md#idle_session_pool_time)
 for more information.
 * Defaults for `maxctrl` can now be specified in the file `~/maxctrl.cnf`
+* PAM Authenticator can map PAM users to MariaDB users.
+* MariaDB-Monitor can launch monitor script when slave server exceeds replication
+lag limit (`script_max_replication_lag`).
+* MariaDB-Monitor can disable *read_only* on master server
+(`enforce_writable_master`).
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.0.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)
