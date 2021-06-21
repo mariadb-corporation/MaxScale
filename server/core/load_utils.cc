@@ -703,7 +703,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 
     if (core_params)
     {
-        json_object_update(params, core_params);
+        json_array_extend(params, core_params);
         json_decref(core_params);
     }
 
