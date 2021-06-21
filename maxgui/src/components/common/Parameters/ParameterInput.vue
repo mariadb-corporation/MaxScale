@@ -118,7 +118,9 @@
         :disabled="targetItem.disabled"
         autocomplete="off"
         @keypress="
-            targetItem.type === 'int' ? preventNonInteger($event) : preventNonNumericalVal($event)
+            targetItem.type === 'int' || targetItem.type === 'duration'
+                ? preventNonInteger($event)
+                : preventNonNumericalVal($event)
         "
         @input="handleChange"
     >
@@ -449,19 +451,22 @@ export default {
             // required param validation
             let moduleParamRequired = isEmptyVal && this.targetItem.mandatory
             // type validation
-            const intType = this.targetItem.type === 'int'
-            const naturalType =
-                this.targetItem.type === 'count' || this.targetItem.type === 'duration'
-
             const isValidInt = /^[-]?\d*$/g.test(val)
             const isValidNaturalNum = /^\d*$/g.test(val)
 
             if (moduleParamRequired) {
                 return this.$t('errors.requiredInput', { inputName: this.targetItem.id })
-            } else if ((intType && !isValidInt && !isEmptyVal) || val === '-') {
-                return this.$t('errors.nonInteger')
-            } else if (naturalType && !isValidNaturalNum && !isEmptyVal) {
-                return this.$t('errors.negativeNum')
+            } else {
+                switch (this.targetItem.type) {
+                    case 'int':
+                    case 'duration':
+                        if ((!isValidInt && !isEmptyVal) || val === '-')
+                            return this.$t('errors.nonInteger')
+                        break
+                    case 'count':
+                        if (!isValidNaturalNum && !isEmptyVal) return this.$t('errors.negativeNum')
+                        break
+                }
             }
             return true
         },
