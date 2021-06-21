@@ -55,17 +55,24 @@ async function reset(db)
     await delete_all(db);
 }
 
-async function find_with_command(db, heading, command) {
+async function find_with_command(db, heading, command, n) {
+    if (!n) {
+        n = 1;
+    }
+
     var start = new Date();
-    var rv = await db.runCommand(command);
+    for (var i = 0; i < n; ++i) {
+        var rv = await db.runCommand(command);
+    }
     var stop = new Date();
 
-    console.log(heading + ": " + (stop - start) + ", " + rv.cursor.firstBatch.length);
+    console.log(heading + ": " + (stop - start)/n + ", " + rv.cursor.firstBatch.length);
 }
 
 async function fetch_all(db, heading) {
     var command = {
         find: name,
+        batchSize: 10000
     };
     var start = new Date();
     var rv = await db.runCommand(command);
@@ -101,7 +108,8 @@ async function find_all(db, heading) {
 async function find_some(db, heading) {
     var command = {
         find: name,
-        filter : { "Make": "Toyota" }
+        filter : { "Make": "Toyota" },
+        batchSize: 10000
     };
 
     await find_with_command(db, heading, command);
@@ -113,7 +121,7 @@ async function find_one(db, heading) {
         filter : { "_id": { "$eq": 4711 }}
     };
 
-    await find_with_command(db, heading, command);
+    await find_with_command(db, heading, command, 1000);
 }
 
 async function find_by_id(db, heading) {
@@ -122,7 +130,7 @@ async function find_by_id(db, heading) {
         filter : { "_id": 4711 }
     };
 
-    await find_with_command(db, heading, command);
+    await find_with_command(db, heading, command, 1000);
 }
 
 async function compare_find_all(mongo, nosql) {
