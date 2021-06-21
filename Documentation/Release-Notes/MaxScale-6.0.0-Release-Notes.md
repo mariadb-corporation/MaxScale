@@ -56,6 +56,10 @@ The TLS parameters for listeners and servers can now be modified at
 runtime. Previously the parameters were only modifiable when the object was
 being created.
 
+### [MXS-3537](https://jira.mariadb.org/browse/MXS-3537) Default Value of `threads`
+
+The default value of `threads` was changed from 1 to `auto`.
+
 ## Dropped Features
 
 ### `ssl=required` and `ssl=disabled`
@@ -68,6 +72,12 @@ removed. Replace them with `ssl=true` and `ssl=false`.
 ### Database Firewall filter
 
 The filter is deprecated in MaxScale 6 and will be removed in MaxScale 7.
+
+### Multi-line Configuration Parameters
+
+The ability to define a single configuration parameter
+[on multiple lines](../Getting-Started/Configuration-Guide.md#configuration)
+is deprecated and will be removed in MaxScale 7.
 
 ## New Features
 
