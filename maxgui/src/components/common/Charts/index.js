@@ -17,7 +17,7 @@ import ScatterChart from './ScatterChart.vue'
 import VertBarChart from './VertBarChart.vue'
 import HorizBarChart from './HorizBarChart.vue'
 import './customTooltip.scss'
-
+import 'chartjs-plugin-trendline'
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
 Chart.defaults.global.defaultFontColor = '#424F62'
 Chart.defaults.global.defaultFontSize = 10
