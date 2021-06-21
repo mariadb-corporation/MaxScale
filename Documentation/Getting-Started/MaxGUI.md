@@ -139,6 +139,10 @@ it can cause MaxScale to run out of memory. In addition, pagination of query res
 set is not supported. To workaround this, use LIMIT offset, row_count to navigate
 through the result set.
 
+## Logs Viewer
+To access logs viewer, clicking the gear icon in the sidebar navigation
+and choose _MaxScale Logs_ tab.
+
 ## Resource creation
 
 A resource can be created by clicking the _+ Create New_ button at
@@ -150,7 +154,7 @@ module has been loaded by MaxScale.
 ## Viewing and modifying Maxscale parameters
 
 MaxScale parameters can be viewed and modified at runtime on the Settings
-page, which can be accessed by clicking the settings icon in the sidebar
+page, which can be accessed by clicking the gear icon in the sidebar
 navigation.
 
 ## Global search
