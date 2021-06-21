@@ -150,6 +150,7 @@
     "visualizedConfig": "{action} visualized configuration",
     "maxRows": "Max rows",
     "exportChart": "Export chart",
+    "showTrendline": "Show Trendline",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

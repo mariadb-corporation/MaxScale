@@ -61,6 +61,15 @@
                         />
                     </div>
                 </template>
+                <v-checkbox
+                    v-if="supportTrendLine"
+                    v-model="showTrendline"
+                    dense
+                    color="primary"
+                    class="mt-2 show-trendline"
+                    hide-details
+                    :label="$t('showTrendline')"
+                />
             </template>
             <!-- TODO: add more graph configurations -->
         </div>
@@ -100,6 +109,7 @@ export default {
                 y: '',
             },
             numberSign: '#',
+            showTrendline: false,
         }
     },
     computed: {
@@ -192,6 +202,13 @@ export default {
                     return [this.numberSign, ...this.resSet.fields]
             }
         },
+        supportTrendLine() {
+            return (
+                this.selectedChart === 'Line' ||
+                this.selectedChart === 'Scatter' ||
+                this.selectedChart.includes('Bar')
+            )
+        },
     },
     watch: {
         selectedChart(v) {
@@ -217,6 +234,9 @@ export default {
             handler(v) {
                 this.genChartData({ axis: v, chartType: this.selectedChart })
             },
+        },
+        showTrendline() {
+            this.genChartData({ axis: this.axis, chartType: this.selectedChart })
         },
     },
     methods: {
@@ -282,6 +302,13 @@ export default {
                     break
                 }
             }
+
+            if (this.showTrendline && this.supportTrendLine)
+                dataset.trendlineLinear = {
+                    style: '#2d9cdb',
+                    lineStyle: 'solid',
+                    width: 2,
+                }
             return dataset
         },
         getObjectRows({ columns, rows }) {
@@ -395,5 +422,10 @@ export default {
 $label-size: 0.75rem;
 .field__label {
     font-size: $label-size;
+}
+::v-deep .show-trendline label {
+    @extend .field__label;
+    color: $small-text;
+    font-weight: 400;
 }
 </style>
