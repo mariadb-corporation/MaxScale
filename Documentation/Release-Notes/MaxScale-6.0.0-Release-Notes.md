@@ -157,16 +157,10 @@ cluster. For more information, refer to the
 
 ## Bug fixes
 
-* [MXS-3621](https://jira.mariadb.org/browse/MXS-3621) The presence of a filter may cause a nosqlprotocol session to hang
-* [MXS-3600](https://jira.mariadb.org/browse/MXS-3600) The cursor must be visible from all connections
 * [MXS-3592](https://jira.mariadb.org/browse/MXS-3592) MaxCtrl object creation doesn't convert values to JSON
 * [MXS-3537](https://jira.mariadb.org/browse/MXS-3537) Default value of threads is not optimal
-* [MXS-3530](https://jira.mariadb.org/browse/MXS-3530) Maxctrl is not buildable with aarch64 and latest nodes
 * [MXS-3515](https://jira.mariadb.org/browse/MXS-3515) COM_STMT_EXECUTE with ID -1 isn't handled correctly
-* [MXS-3513](https://jira.mariadb.org/browse/MXS-3513) Fix canonical tests to match new get_canonical
 * [MXS-3443](https://jira.mariadb.org/browse/MXS-3443) Query performance degradation in 2.5
-* [MXS-3294](https://jira.mariadb.org/browse/MXS-3294) Fix module loading
-* [MXS-3232](https://jira.mariadb.org/browse/MXS-3232) `test_event`@develop fails on debian
 * [MXS-3184](https://jira.mariadb.org/browse/MXS-3184) COM_STMT_EXECUTE with FOUND_ROWS not routed to previous target
 * [MXS-3028](https://jira.mariadb.org/browse/MXS-3028) Node wrongly in Maintenance, Running when the node is actually Down
 * [MXS-2915](https://jira.mariadb.org/browse/MXS-2915) TLS version not used by mxq::MariaDB
