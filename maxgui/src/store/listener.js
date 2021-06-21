@@ -84,7 +84,39 @@ export default {
                 logger.error(e)
             }
         },
-
+        /**
+         * @param {Object} payload payload object
+         * @param {String} payload.id Name of the listener
+         * @param {Object} payload.parameters Parameters for the listener
+         * @param {Function} payload.callback callback function after successfully updated
+         */
+        async updateListenerParameters({ commit }, payload) {
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'listeners',
+                        attributes: { parameters: payload.parameters },
+                    },
+                }
+                let res = await this.vue.$axios.patch(`/listeners/${payload.id}`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [`Parameters of ${payload.id} is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-listener-updateListenerParameters')
+                logger.error(e)
+            }
+        },
         async destroyListener({ dispatch, commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/listeners/${id}`)

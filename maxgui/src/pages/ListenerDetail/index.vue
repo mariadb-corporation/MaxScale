@@ -8,7 +8,9 @@
                     <details-parameters-table
                         :resourceId="current_listener.id"
                         :parameters="current_listener.attributes.parameters"
-                        :editable="false"
+                        :updateResourceParameters="updateListenerParameters"
+                        usePortOrSocket
+                        :onEditSucceeded="dispatchFetchListener"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -69,9 +71,13 @@ export default {
             fetchModuleParameters: 'fetchModuleParameters',
             getResourceState: 'getResourceState',
             fetchListenerById: 'listener/fetchListenerById',
+            updateListenerParameters: 'listener/updateListenerParameters',
         }),
-        async initialFetch() {
+        async dispatchFetchListener() {
             await this.fetchListenerById(this.$route.params.id)
+        },
+        async initialFetch() {
+            await this.dispatchFetchListener()
             // wait until get current_listener to fetch service state and module parameters
             const {
                 attributes: { parameters: { protocol = null } = {} } = {},
