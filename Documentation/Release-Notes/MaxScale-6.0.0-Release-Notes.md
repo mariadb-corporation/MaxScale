@@ -14,7 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-### Columnstore monitor
+### [MXS-3107](https://jira.mariadb.org/browse/MXS-3107) Columnstore monitor
 
 The Columnstore monitor that in this release only supports Columnstore
 version 1.5, is now capable of adjusting itself automatically to any
@@ -81,7 +81,7 @@ is deprecated and will be removed in MaxScale 7.
 
 ## New Features
 
-### `nosqlprotocol` protocol module
+### [MXS-2646](https://jira.mariadb.org/browse/MXS-2646) `nosqlprotocol` protocol module
 
 This module implements a subset of the MongoDB® wire protocol and
 transparently converts MongoDB commands into the equivalent SQL
@@ -157,15 +157,17 @@ cluster. For more information, refer to the
 
 ### MariaDB-Monitor
 
+[MXS-2723](https://jira.mariadb.org/browse/MXS-2723)
 Can launch monitor script when slave server exceeds replication lag limit.
 See [documentation](../Monitors/MariaDB-Monitor.md#script_max_replication_lag)
 for more information.
 
+[MXS-3268](https://jira.mariadb.org/browse/MXS-3268)
 Can disable *read_only* on master if it's set. See
 [documentation](../Monitors/MariaDB-Monitor.md#enforce_writable_master)
 for more information.
 
-### PAM user mapping
+### [MXS-3475](https://jira.mariadb.org/browse/MXS-3475) PAM user mapping
 
 PAM-Authenticator supports mapping incoming PAM users to MariaDB users. See
 [documentation](../Authenticators/PAM-Authenticator.md#pam_backend_mapping) for
