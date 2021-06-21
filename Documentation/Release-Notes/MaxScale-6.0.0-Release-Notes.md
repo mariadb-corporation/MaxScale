@@ -155,6 +155,19 @@ cluster. For more information, refer to the
 [KafkaCDC](../Routers/KafkaCDC.md#cooperative_replication) and
 [Avrorouter](../Routers/Avrorouter.md#cooperative_replication) documentation.
 
+### [MXS-2748](https://jira.mariadb.org/browse/MXS-2748) Session command history to RWS
+
+Readwritesplit statistics now has two new entries:
+`avg_sescmd_history_length` and `max_sescmd_history_length`.
+These are helpful when tuning `max_sescmd_history` to avoid session command history
+to be too short, leading to potential inconsistencies, or to become too large,
+leading to wasted memory.
+
+### [MXS-3091](https://jira.mariadb.org/browse/MXS-3091) Restrict RCR reads to slaves
+
+Readconnroute has a new option `master_accept_reads` similar to the one in Readwritesplit.
+When `master_accept_reads=false` RCR will not route reads to the current master.
+
 ### MariaDB-Monitor
 
 [MXS-2723](https://jira.mariadb.org/browse/MXS-2723)
