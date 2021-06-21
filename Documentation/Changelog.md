@@ -22,6 +22,8 @@ for more information.
 lag limit (`script_max_replication_lag`).
 * MariaDB-Monitor can disable *read_only* on master server
 (`enforce_writable_master`).
+* A graphical user interface SQL queries tool for writing, running SQL queries and visualizing
+the results has been introduced.
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.0.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)

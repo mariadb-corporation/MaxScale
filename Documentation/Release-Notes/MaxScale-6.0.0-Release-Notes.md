@@ -167,6 +167,13 @@ leading to wasted memory.
 
 Readconnroute has a new option `master_accept_reads` similar to the one in Readwritesplit.
 When `master_accept_reads=false` RCR will not route reads to the current master.
+### [MXS-3257](https://jira.mariadb.org/browse/MXS-3257) SQL queries tool
+A graphical user interface tool to write, run SQL queries and visualize the results.
+For more information, refer to the [MAXGUI](../Getting-Started/MaxGUI.md#sql-editor-page) documentation.
+
+### [MXS-3154](https://jira.mariadb.org/browse/MXS-3154) Logs viewer
+A graphical user interface for reading and filtering MaxScale's log.
+For more information, refer to the [MAXGUI](../Getting-Started/MaxGUI.md#logs-viewer) documentation.
 
 ### MariaDB-Monitor
 
