@@ -16,7 +16,8 @@ int main(int argc, char* argv[])
     test.log_includes("If master does not return in .* monitor tick(s), failover begins.");
 
     test.tprintf("Waiting to see if failover is performed.");
-    test.maxscale->wait_for_monitor(5);
+    sleep(15);
+    test.maxscale->wait_for_monitor(2);
 
     test.log_includes("Performing.*failover");
 
