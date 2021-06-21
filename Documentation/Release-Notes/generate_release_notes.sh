@@ -33,7 +33,7 @@ For more information, please refer to the [Limitations](../About/Limitations.md)
 
 ## Packaging
 
-RPM and Debian packages are provided for supported the Linux distributions.
+RPM and Debian packages are provided for the supported Linux distributions.
 
 Packages can be downloaded [here](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale).
 

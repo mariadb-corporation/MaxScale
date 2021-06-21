@@ -1,4 +1,4 @@
-# MariaDB MaxScale 6.0 Release Notes
+# MariaDB MaxScale 6.0.0 Release Notes
 
 The versioning scheme has changed; the major number will now change at
 every release which is not only a maintenance release. According to the
@@ -10,7 +10,7 @@ This document describes the changes in release 6, when compared to
 release 2.5.
 
 For any problems you encounter, please consider submitting a bug
-report at [Jira](https://jira.mariadb.org).
+report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
@@ -56,6 +56,20 @@ for details.
 
 ## Bug fixes
 
+* [MXS-3621](https://jira.mariadb.org/browse/MXS-3621) The presence of a filter may cause a nosqlprotocol session to hang
+* [MXS-3600](https://jira.mariadb.org/browse/MXS-3600) The cursor must be visible from all connections
+* [MXS-3592](https://jira.mariadb.org/browse/MXS-3592) MaxCtrl object creation doesn't convert values to JSON
+* [MXS-3537](https://jira.mariadb.org/browse/MXS-3537) Default value of threads is not optimal
+* [MXS-3530](https://jira.mariadb.org/browse/MXS-3530) Maxctrl is not buildable with aarch64 and latest nodes
+* [MXS-3515](https://jira.mariadb.org/browse/MXS-3515) COM_STMT_EXECUTE with ID -1 isn't handled correctly
+* [MXS-3513](https://jira.mariadb.org/browse/MXS-3513) Fix canonical tests to match new get_canonical
+* [MXS-3443](https://jira.mariadb.org/browse/MXS-3443) Query performance degradation in 2.5
+* [MXS-3294](https://jira.mariadb.org/browse/MXS-3294) Fix module loading
+* [MXS-3232](https://jira.mariadb.org/browse/MXS-3232) `test_event`@develop fails on debian
+* [MXS-3184](https://jira.mariadb.org/browse/MXS-3184) COM_STMT_EXECUTE with FOUND_ROWS not routed to previous target
+* [MXS-3028](https://jira.mariadb.org/browse/MXS-3028) Node wrongly in Maintenance, Running when the node is actually Down
+* [MXS-2915](https://jira.mariadb.org/browse/MXS-2915) TLS version not used by mxq::MariaDB
+
 ## Known Issues and Limitations
 
 There are some limitations and known issues within this version of MaxScale.
@@ -63,15 +77,15 @@ For more information, please refer to the [Limitations](../About/Limitations.md)
 
 ## Packaging
 
-RPM and Debian packages are provided for the Linux distributions supported
-by MariaDB Enterprise.
+RPM and Debian packages are provided for the supported Linux distributions.
 
-Packages can be downloaded [here](https://mariadb.com/resources/downloads).
+Packages can be downloaded [here](https://mariadb.com/downloads/#mariadb_platform-mariadb_maxscale).
 
 ## Source Code
 
 The source code of MaxScale is tagged at GitHub with a tag, which is identical
 with the version of MaxScale. For instance, the tag of version X.Y.Z of MaxScale
-is X.Y.Z. Further, *master* always refers to the latest released non-beta version.
+is `maxscale-X.Y.Z`. Further, the default branch is always the latest GA version
+of MaxScale.
 
 The source code is available [here](https://github.com/mariadb-corporation/MaxScale).
