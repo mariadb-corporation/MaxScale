@@ -134,3 +134,57 @@ Get all sessions.
     ]
 }
 ```
+
+### Update a Session
+
+```
+PATCH /v1/sessions/:id
+```
+
+The request body must be a JSON object which represents the new configuration of
+the session. The `:id` must be a valid session ID that is active.
+
+The `log_debug`, `log_info`, `log_notice`, `log_warning` and `log_error` boolean
+parameters control whether the associated logging level is enabled:
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "parameters": {
+                "log_info": true
+            }
+        }
+    }
+}
+```
+
+The filters that a session uses can be updated by re-defining the filter
+relationship of the session. This causes new filter sessions to be opened
+immediately. The old filter session are closed and replaced with the new filter
+session the next time the session is idle. The order in which the filters are
+defined in the request body is the order in which the filters are installed,
+similar to how the filter relationship for services behaves.
+
+```javascript
+{
+    "data": {
+        "attributes": {
+            "relationships": {
+                "filters": {
+                    "data": [
+                        { "id": "my-cache-filter" },
+                        { "id": "my-log-filter" }
+                    ]
+                }
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+Session is modified:
+
+`Status: 204 No Content`

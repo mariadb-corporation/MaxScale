@@ -1483,7 +1483,9 @@ bool Session::update(json_t* json)
 
             if (json_is_string(name))
             {
-                if (auto f = filter_find(json_string_value(name)))
+                const char* filter_name = json_string_value(name);
+
+                if (auto f = filter_find(filter_name))
                 {
                     new_filters.emplace_back(f);
                     auto& sf = new_filters.back();
@@ -1495,6 +1497,16 @@ bool Session::update(json_t* json)
                         return false;
                     }
                 }
+                else
+                {
+                    MXS_ERROR("Not a valid filter: %s", filter_name);
+                    return false;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Not a JSON string but a %s", mxb::json_type_to_string(name));
+                return false;
             }
         }
 
