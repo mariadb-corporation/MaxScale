@@ -70,6 +70,10 @@ VTreeviewNode.mixin({
                         dblclick: () => {
                             this.treeview.emitDblclick(this.item)
                         },
+                        contextmenu: e => {
+                            e.preventDefault()
+                            this.treeview.emitCtxClick({ e, item: this.item })
+                        },
                     },
                 }),
                 children
@@ -90,6 +94,9 @@ export default VTreeview.mixin({
     methods: {
         emitDblclick(item) {
             this.$emit('item:dblclick', item)
+        },
+        emitCtxClick({ e, item }) {
+            this.$emit('item:contextmenu', { e, item })
         },
     },
 })
