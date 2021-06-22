@@ -26,16 +26,18 @@ VTreeviewNode.mixin({
                 indeterminate: this.isIndeterminate,
                 active: this.isActive,
                 open: this.isOpen,
-                hover: this.isHover,
+                isHover: this.isHover,
             }
         },
     },
     methods: {
-        onMouseEnter() {
+        onMouseEnter(item) {
             this.isHover = true
+            this.treeview.emitItemHovered(item)
         },
         onMouseLeave() {
             this.isHover = false
+            this.treeview.emitItemHovered(null)
         },
         genNode() {
             const children = [this.genContent()]
@@ -81,8 +83,8 @@ VTreeviewNode.mixin({
 
             element.data = element.data || {}
             this._g(element.data, {
-                mouseenter: this.onMouseEnter,
-                mouseleave: this.onMouseLeave,
+                mouseenter: () => this.onMouseEnter(this.item),
+                mouseleave: () => this.onMouseLeave(this.item),
             })
 
             return element
@@ -97,6 +99,9 @@ export default VTreeview.mixin({
         },
         emitCtxClick({ e, item }) {
             this.$emit('item:contextmenu', { e, item })
+        },
+        emitItemHovered(item) {
+            this.$emit('item:hovered', item)
         },
     },
 })

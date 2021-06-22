@@ -11,55 +11,59 @@
             transition
             :load-children="handleLoadChildren"
             @item:contextmenu="onContextMenu"
+            @item:hovered="hoveredItem = $event"
         >
-            <template v-slot:label="{ item, hover }">
-                <v-tooltip
-                    :value="hover"
-                    right
-                    :nudge-right="45"
-                    transition="slide-x-transition"
-                    content-class="shadow-drop"
+            <template v-slot:label="{ item }">
+                <div
+                    :id="`item-label-${activatorIdTransform(item.id)}`"
+                    class="d-flex align-center node-label"
                 >
-                    <template v-slot:activator="{ on }">
-                        <div class="d-flex align-center node-label" v-on="on">
-                            <v-icon class="mr-1" size="12" color="deep-ocean">
-                                {{ iconSheet(item) }}
-                            </v-icon>
-                            <span class="text-truncate d-inline-block">{{ item.name }}</span>
-                        </div>
-                    </template>
-                    <v-list class="mariadb-v-list" dense>
-                        <v-list-item
-                            v-for="(value, key) in $help.lodash.pick(item, [
-                                'type',
-                                'name',
-                                'dataType',
-                            ])"
-                            :key="key"
-                            class="color text-text"
-                            dense
-                        >
-                            <v-list-item-title>
-                                <span class="font-weight-bold text-capitalize"> {{ key }}: </span>
-                                <span> {{ value }}</span>
-                            </v-list-item-title>
-                        </v-list-item>
-                    </v-list>
-                </v-tooltip>
+                    <v-icon class="mr-1" size="12" color="deep-ocean">
+                        {{ iconSheet(item) }}
+                    </v-icon>
+                    <span class="text-truncate d-inline-block">{{ item.name }}</span>
+                </div>
             </template>
 
-            <template v-slot:append="{ hover, item }">
+            <template v-slot:append="{ isHover, item }">
                 <v-btn
-                    v-show="hover || showCtxBtn(item)"
+                    v-show="isHover || showCtxBtn(item)"
                     :id="activatorIdTransform(item.id)"
                     icon
                     x-small
-                    @click="e => openNodeMenu({ e, item })"
+                    @click="e => handleOpenCtxMenu({ e, item })"
                 >
                     <v-icon size="12" color="deep-ocean">more_horiz</v-icon>
                 </v-btn>
             </template>
         </m-treeview>
+        <v-tooltip
+            v-if="hoveredItem"
+            :value="Boolean(hoveredItem)"
+            right
+            :nudge-right="45"
+            transition="slide-x-transition"
+            content-class="shadow-drop"
+            :activator="`#item-label-${activatorIdTransform(hoveredItem.id)}`"
+        >
+            <v-list class="mariadb-v-list" dense>
+                <v-list-item
+                    v-for="(value, key) in $help.lodash.pick(hoveredItem, [
+                        'type',
+                        'name',
+                        'dataType',
+                    ])"
+                    :key="key"
+                    class="color text-text"
+                    dense
+                >
+                    <v-list-item-title>
+                        <span class="font-weight-bold text-capitalize"> {{ key }}: </span>
+                        <span> {{ value }}</span>
+                    </v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-tooltip>
         <v-menu
             v-if="activeCtxItem"
             :key="activeCtxItem.id"
@@ -116,6 +120,7 @@ export default {
             columnOptions: [this.$t('placeColumnNameInEditor')],
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
+            hoveredItem: null,
         }
     },
     computed: {
@@ -151,10 +156,15 @@ export default {
             }
             return false
         },
-        openNodeMenu({ e, item }) {
+        handleOpenCtxMenu({ e, item }) {
             e.stopPropagation()
-            if (!this.showCtxMenu) this.showCtxMenu = true
-            this.activeCtxItem = item
+            if (this.activeCtxItem === item) {
+                this.showCtxMenu = false
+                this.activeCtxItem = null
+            } else {
+                if (!this.showCtxMenu) this.showCtxMenu = true
+                this.activeCtxItem = item
+            }
         },
         optionHandler({ item, option }) {
             const schema = item.id
@@ -188,7 +198,7 @@ export default {
             return this[`${type}Options`]
         },
         onContextMenu({ e, item }) {
-            this.openNodeMenu({ e, item })
+            this.handleOpenCtxMenu({ e, item })
         },
     },
 }
