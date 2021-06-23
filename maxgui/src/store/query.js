@@ -66,14 +66,31 @@ export default {
         SET_DB_TREE(state, payload) {
             state.db_tree = payload
         },
-        UPDATE_DB_CHILDREN(state, { dbIndex, children }) {
+        UPDATE_DB_TABLES_CHILDREN(state, { dbIndex, idxOfTablesNode, children }) {
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
-                [dbIndex]: { children: { $set: children } },
+                [dbIndex]: { children: { [idxOfTablesNode]: { children: { $set: children } } } },
             })
         },
-        UPDATE_DB_GRAND_CHILDREN(state, { dbIndex, tableIndex, children }) {
+        UPDATE_COLUMNS_CHILDREN(state, { dbIndex, idxOfTablesNode, tableIndex, children }) {
+            const dbChildNodes = state.db_tree[dbIndex].children
+            const idxOfColsNode = dbChildNodes[idxOfTablesNode].children[
+                tableIndex
+            ].children.findIndex(tblChildNode => tblChildNode.type === 'columns')
+
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
-                [dbIndex]: { children: { [tableIndex]: { children: { $set: children } } } },
+                [dbIndex]: {
+                    children: {
+                        [idxOfTablesNode]: {
+                            children: {
+                                [tableIndex]: {
+                                    children: {
+                                        [idxOfColsNode]: { children: { $set: children } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             })
         },
 
@@ -248,7 +265,14 @@ export default {
                         type: 'schema',
                         name: db,
                         id: db,
-                        children: [],
+                        children: [
+                            {
+                                type: 'tables',
+                                name: 'Tables',
+                                id: `${db}.tables`,
+                                children: [],
+                            },
+                        ],
                     })
                     dbCmplList.push({
                         label: db,
@@ -268,11 +292,12 @@ export default {
             }
         },
         /**
-         * @param {Object} db - Database node object.
+         * @param {Object} tablesObj - tables node object.
          */
-        async fetchTables({ state, commit }, db) {
+        async fetchTables({ state, commit, getters }, tablesObj) {
             try {
-                const query = `SHOW TABLES FROM ${this.vue.$help.escapeIdentifiers(db.id)};`
+                const dbName = tablesObj.id.replace(/\.tables/g, '')
+                const query = `SHOW TABLES FROM ${this.vue.$help.escapeIdentifiers(dbName)};`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -280,14 +305,21 @@ export default {
                     }
                 )
                 const tables = res.data.data.attributes.results[0].data.flat()
-                let dbChilren = []
+                let tblsChildren = []
                 let dbCmplList = []
                 tables.forEach(tbl => {
-                    dbChilren.push({
+                    tblsChildren.push({
                         type: 'table',
                         name: tbl,
-                        id: `${db.id}.${tbl}`,
-                        children: [],
+                        id: `${dbName}.${tbl}`,
+                        children: [
+                            {
+                                type: 'columns',
+                                name: 'Columns',
+                                id: `${dbName}.${tbl}.columns`,
+                                children: [],
+                            },
+                        ],
                     })
                     dbCmplList.push({
                         label: tbl,
@@ -297,23 +329,27 @@ export default {
                     })
                 })
                 commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                commit('UPDATE_DB_CHILDREN', {
-                    dbIndex: state.db_tree.indexOf(db),
-                    children: dbChilren,
+                const dbIndex = getters.getDbIdx(dbName)
+                commit('UPDATE_DB_TABLES_CHILDREN', {
+                    dbIndex,
+                    idxOfTablesNode: getters.getIdxOfTablesNode(dbIndex),
+                    children: tblsChildren,
                 })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchTables')
                 logger.error(e)
             }
         },
+
         /**
-         * @param {Object} tbl - Table node object.
+         * @param {Object} columnsObj - columns node object.
          */
-        async fetchCols({ state, commit }, tbl) {
+        async fetchCols({ state, commit, getters }, columnsObj) {
             try {
-                const dbId = tbl.id.split('.')[0]
+                const dbName = columnsObj.id.split('.')[0]
+                const tblName = columnsObj.id.split('.')[1]
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbId}" AND TABLE_NAME = "${tbl.name}";`
+                const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -322,7 +358,7 @@ export default {
                 )
                 if (res.data) {
                     const cols = res.data.data.attributes.results[0].data
-                    const dbIndex = state.db_tree.findIndex(db => db.id === dbId)
+                    const dbIndex = getters.getDbIdx(dbName)
 
                     let tblChildren = []
                     let dbCmplList = []
@@ -332,7 +368,7 @@ export default {
                             name: colName,
                             dataType: colType,
                             type: 'column',
-                            id: `${tbl.id}.${colName}`,
+                            id: `${dbName}.${tblName}.${colName}`,
                         })
                         dbCmplList.push({
                             label: colName,
@@ -343,12 +379,15 @@ export default {
                     })
 
                     commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-
+                    const idxOfTablesNode = getters.getIdxOfTablesNode(dbIndex)
                     commit(
-                        'UPDATE_DB_GRAND_CHILDREN',
+                        'UPDATE_COLUMNS_CHILDREN',
                         Object.freeze({
                             dbIndex,
-                            tableIndex: state.db_tree[dbIndex].children.indexOf(tbl),
+                            idxOfTablesNode: idxOfTablesNode,
+                            tableIndex: state.db_tree[dbIndex].children[
+                                idxOfTablesNode
+                            ].children.findIndex(tbl => tbl.name === tblName),
                             children: tblChildren,
                         })
                     )
@@ -468,6 +507,11 @@ export default {
         },
     },
     getters: {
+        getIdxOfTablesNode: state => dbIndex =>
+            state.db_tree[dbIndex].children.findIndex(
+                dbChildrenNode => dbChildrenNode.type === 'tables'
+            ),
+        getDbIdx: state => dbName => state.db_tree.findIndex(db => db.name === dbName),
         getDbCmplList: state => {
             // remove duplicated labels
             return uniqBy(state.db_completion_list, 'label')

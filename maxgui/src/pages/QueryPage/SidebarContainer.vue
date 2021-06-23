@@ -183,8 +183,14 @@ export default {
             }
         },
         async handleLoadChildren(item) {
-            if (!item.id.includes('.')) await this.fetchTables(item)
-            else await this.fetchCols(item)
+            switch (item.type) {
+                case 'tables':
+                    await this.fetchTables(item)
+                    break
+                case 'columns':
+                    await this.fetchCols(item)
+                    break
+            }
         },
     },
 }
