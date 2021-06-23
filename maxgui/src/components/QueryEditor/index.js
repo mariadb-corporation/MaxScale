@@ -107,9 +107,10 @@ export default {
             const dist = this.$help.lodash.cloneDeep(this.cmplList)
             for (const item of dist) {
                 switch (item.type) {
-                    case 'table':
-                    case 'column':
-                    case 'schema':
+                    case 'Table':
+                    case 'Column':
+                    case 'Schema':
+                    case 'Stored Procedure':
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }

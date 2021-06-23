@@ -66,16 +66,16 @@ export default {
         SET_DB_TREE(state, payload) {
             state.db_tree = payload
         },
-        UPDATE_DB_TABLES_CHILDREN(state, { dbIndex, idxOfTablesNode, children }) {
+        UPDATE_DB_GRAND_CHILD(state, { dbIndex, childIndex, grandChild }) {
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
-                [dbIndex]: { children: { [idxOfTablesNode]: { children: { $set: children } } } },
+                [dbIndex]: { children: { [childIndex]: { children: { $set: grandChild } } } },
             })
         },
         UPDATE_COLUMNS_CHILDREN(state, { dbIndex, idxOfTablesNode, tableIndex, children }) {
             const dbChildNodes = state.db_tree[dbIndex].children
             const idxOfColsNode = dbChildNodes[idxOfTablesNode].children[
                 tableIndex
-            ].children.findIndex(tblChildNode => tblChildNode.type === 'columns')
+            ].children.findIndex(tblChildNode => tblChildNode.type === 'Columns')
 
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: {
@@ -262,14 +262,20 @@ export default {
                 let dbTree = []
                 res.data.data.attributes.results[0].data.flat().forEach(db => {
                     dbTree.push({
-                        type: 'schema',
+                        type: 'Schema',
                         name: db,
                         id: db,
                         children: [
                             {
-                                type: 'tables',
+                                type: 'Tables',
                                 name: 'Tables',
-                                id: `${db}.tables`,
+                                id: `${db}.Tables`, // only use to identify active node
+                                children: [],
+                            },
+                            {
+                                type: 'Stored Procedures',
+                                name: 'Stored Procedures',
+                                id: `${db}.Stored Procedures`, // only use to identify active node
                                 children: [],
                             },
                         ],
@@ -278,7 +284,7 @@ export default {
                         label: db,
                         detail: 'SCHEMA',
                         insertText: `\`${db}\``,
-                        type: 'schema',
+                        type: 'Schema',
                     })
                 })
                 commit('SET_DB_TREE', dbTree)
@@ -296,7 +302,7 @@ export default {
          */
         async fetchTables({ state, commit, getters }, tablesObj) {
             try {
-                const dbName = tablesObj.id.replace(/\.tables/g, '')
+                const dbName = tablesObj.id.replace(/\.Tables/g, '')
                 const query = `SHOW TABLES FROM ${this.vue.$help.escapeIdentifiers(dbName)};`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
@@ -309,14 +315,14 @@ export default {
                 let dbCmplList = []
                 tables.forEach(tbl => {
                     tblsChildren.push({
-                        type: 'table',
+                        type: 'Table',
                         name: tbl,
                         id: `${dbName}.${tbl}`,
                         children: [
                             {
-                                type: 'columns',
+                                type: 'Columns',
                                 name: 'Columns',
-                                id: `${dbName}.${tbl}.columns`,
+                                id: `${dbName}.${tbl}.Columns`, // only use to identify active node
                                 children: [],
                             },
                         ],
@@ -325,15 +331,15 @@ export default {
                         label: tbl,
                         detail: 'TABLE',
                         insertText: `\`${tbl}\``,
-                        type: 'table',
+                        type: 'Table',
                     })
                 })
                 commit('UPDATE_DB_CMPL_LIST', dbCmplList)
                 const dbIndex = getters.getDbIdx(dbName)
-                commit('UPDATE_DB_TABLES_CHILDREN', {
+                commit('UPDATE_DB_GRAND_CHILD', {
                     dbIndex,
-                    idxOfTablesNode: getters.getIdxOfTablesNode(dbIndex),
-                    children: tblsChildren,
+                    childIndex: getters.getIdxOfTablesNode(dbIndex),
+                    grandChild: tblsChildren,
                 })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchTables')
@@ -341,6 +347,48 @@ export default {
             }
         },
 
+        /**
+         * @param {Object} storedProceduresNode - storedProceduresNode node object.
+         */
+        async fetchStoredProcedures({ state, commit, getters }, storedProceduresNode) {
+            try {
+                const dbName = storedProceduresNode.id.replace(/\.Stored Procedures/g, '')
+                // eslint-disable-next-line vue/max-len
+                const query = `SELECT routine_name FROM information_schema.routines WHERE routine_type = 'PROCEDURE' AND routine_schema = '${dbName}';`
+                const res = await this.vue.$axios.post(
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
+                    {
+                        sql: query,
+                    }
+                )
+                const storedProcedures = res.data.data.attributes.results[0].data.flat()
+                let spChildren = []
+                let dbCmplList = []
+                storedProcedures.forEach(sp => {
+                    spChildren.push({
+                        type: 'Stored Procedure',
+                        name: sp,
+                        id: `${dbName}.${sp}`,
+                    })
+                    dbCmplList.push({
+                        label: sp,
+                        detail: 'STORED PROCEDURE',
+                        insertText: sp,
+                        type: 'Stored Procedure',
+                    })
+                })
+                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
+                const dbIndex = getters.getDbIdx(dbName)
+                commit('UPDATE_DB_GRAND_CHILD', {
+                    dbIndex,
+                    childIndex: getters.getIdxOfSPNode(dbIndex),
+                    grandChild: spChildren,
+                })
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchStoredProcedures')
+                logger.error(e)
+            }
+        },
         /**
          * @param {Object} columnsObj - columns node object.
          */
@@ -367,14 +415,14 @@ export default {
                         tblChildren.push({
                             name: colName,
                             dataType: colType,
-                            type: 'column',
+                            type: 'Column',
                             id: `${dbName}.${tblName}.${colName}`,
                         })
                         dbCmplList.push({
                             label: colName,
                             insertText: `\`${colName}\``,
                             detail: 'COLUMN',
-                            type: 'column',
+                            type: 'Column',
                         })
                     })
 
@@ -509,9 +557,13 @@ export default {
     getters: {
         getIdxOfTablesNode: state => dbIndex =>
             state.db_tree[dbIndex].children.findIndex(
-                dbChildrenNode => dbChildrenNode.type === 'tables'
+                dbChildrenNode => dbChildrenNode.type === 'Tables'
             ),
         getDbIdx: state => dbName => state.db_tree.findIndex(db => db.name === dbName),
+        getIdxOfSPNode: state => dbIndex =>
+            state.db_tree[dbIndex].children.findIndex(
+                dbChildrenNode => dbChildrenNode.type === 'Stored Procedures'
+            ),
         getDbCmplList: state => {
             // remove duplicated labels
             return uniqBy(state.db_completion_list, 'label')

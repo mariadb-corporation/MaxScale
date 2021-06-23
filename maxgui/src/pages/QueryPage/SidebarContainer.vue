@@ -162,6 +162,7 @@ export default {
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
             fetchTables: 'query/fetchTables',
+            fetchStoredProcedures: 'query/fetchStoredProcedures',
             fetchCols: 'query/fetchCols',
             useDb: 'query/useDb',
         }),
@@ -184,11 +185,14 @@ export default {
         },
         async handleLoadChildren(item) {
             switch (item.type) {
-                case 'tables':
+                case 'Tables':
                     await this.fetchTables(item)
                     break
-                case 'columns':
+                case 'Columns':
                     await this.fetchCols(item)
+                    break
+                case 'Stored Procedures':
+                    await this.fetchStoredProcedures(item)
                     break
             }
         },

@@ -27,7 +27,7 @@
 
             <template v-slot:append="{ isHover, item }">
                 <v-btn
-                    v-show="isHover || showCtxBtn(item)"
+                    v-show="nodesHasCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
                     :id="activatorIdTransform(item.id)"
                     icon
                     x-small
@@ -38,7 +38,7 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="hoveredItem"
+            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
             right
             :nudge-right="45"
@@ -75,10 +75,8 @@
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
             :activator="`#${activatorIdTransform(activeCtxItem.id)}`"
         >
-            <v-list>
+            <v-list v-for="option in getOptions(activeCtxItem.type)" :key="option">
                 <v-list-item
-                    v-for="option in getOptions(activeCtxItem.type)"
-                    :key="option"
                     dense
                     link
                     @click="() => optionHandler({ item: activeCtxItem, option })"
@@ -118,9 +116,11 @@ export default {
             ],
             schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
             columnOptions: [this.$t('placeColumnNameInEditor')],
+            spOptions: [this.$t('placeSchemaInEditor')],
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
+            nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column'],
         }
     },
     computed: {
@@ -188,20 +188,30 @@ export default {
         },
         iconSheet(item) {
             switch (item.type) {
-                case 'schema':
+                case 'Schema':
                     return '$vuetify.icons.database'
-                //TODO: a separate icon for tables
-                case 'tables':
-                case 'table':
+                //TODO: a separate icon for Tables
+                case 'Tables':
                     return '$vuetify.icons.table'
-                //TODO: an icon for column
+                case 'Stored Procedures':
+                    return '$vuetify.icons.storedProcedures'
+                //TODO: an icon for Column
             }
         },
         getOptions(type) {
-            return this[`${type}Options`]
+            switch (type) {
+                case 'Schema':
+                    return this.schemaOptions
+                case 'Table':
+                    return this.tableOptions
+                case 'Stored Procedure':
+                    return this.spOptions
+                case 'Column':
+                    return this.columnOptions
+            }
         },
         onContextMenu({ e, item }) {
-            this.handleOpenCtxMenu({ e, item })
+            if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
     },
 }
