@@ -635,12 +635,12 @@ mxt::CmdResult MaxScale::ssh_output(const std::string& cmd, bool sudo)
     return m_vmnode->run_cmd_output(cmd, sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
 }
 
-int MaxScale::copy_to_node(const char* src, const char* dest)
+bool MaxScale::copy_to_node(const char* src, const char* dest)
 {
     return m_vmnode->copy_to_node(src, dest);
 }
 
-int MaxScale::copy_from_node(const char* src, const char* dest)
+bool MaxScale::copy_from_node(const char* src, const char* dest)
 {
     return m_vmnode->copy_from_node(src, dest);
 }
