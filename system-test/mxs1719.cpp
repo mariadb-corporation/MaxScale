@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
     src += "/mxs1719.json";
     std::string dst = std::string(test.maxscale->access_homedir()) + "/mxs1719.json";
 
-    if (test.maxscale->copy_to_node(src.c_str(), dst.c_str()) == 0)
+    if (test.maxscale->copy_to_node(src.c_str(), dst.c_str()))
     {
         test.maxscale->ssh_node((std::string("chmod a+r ") + dst).c_str(), true);
         test.maxscale->start();
