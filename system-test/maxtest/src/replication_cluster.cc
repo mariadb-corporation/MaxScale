@@ -691,8 +691,9 @@ bool ReplicationCluster::create_users(int i)
 
         bool error = false;
         auto ssl = ssl_mode();
-        if (!be->create_user(mdbmon_user, ssl)
-            || !be->create_user(service_user_def(), ssl)
+        bool sr = supports_require();
+        if (!be->create_user(mdbmon_user, ssl, sr)
+            || !be->create_user(service_user_def(), ssl, sr)
             || !be->admin_connection()->try_cmd("GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';"))
         {
             error = true;

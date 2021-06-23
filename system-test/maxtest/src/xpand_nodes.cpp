@@ -315,10 +315,11 @@ bool XpandCluster::create_users(int i)
                              "SELECT ON system.softfailed_nodes", "SUPER ON *.*"};
 
         mxt::MariaDBUserDef service_user = {"maxservice", "%", "maxservice"};
-        xpmon_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
+        service_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
 
         auto be = backend(i);
-        if (be->create_user(xpmon_user, ssl_mode()) && be->create_user(service_user, ssl_mode()))
+        bool sr = supports_require();
+        if (be->create_user(xpmon_user, ssl_mode(), sr) && be->create_user(service_user, ssl_mode(), sr))
         {
             rval = true;
         }

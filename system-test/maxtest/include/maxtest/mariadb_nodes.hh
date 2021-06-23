@@ -92,9 +92,10 @@ public:
      *
      * @param user User definition
      * @param ssl Should user require ssl?
+     * @param supports_require Does the backend support REQUIRE.
      * @return True on success
      */
-    bool create_user(const MariaDBUserDef& user, SslMode ssl);
+    bool create_user(const MariaDBUserDef& user, SslMode ssl, bool supports_require);
 
 private:
     Status   m_status;
@@ -433,6 +434,13 @@ public:
     maxtest::MariaDBServer::SslMode ssl_mode() const;
 
     bool copy_logs(const std::string& dest_prefix);
+
+    /**
+     * Is "CREATE USER ... REQUIRE ..." supported?
+     *
+     * @return True, if it is, false otherwise.
+     */
+    virtual bool supports_require() const { return true; }
 
 protected:
     /**
