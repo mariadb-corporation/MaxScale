@@ -22,7 +22,7 @@ namespace
 {
 
 const char* zUser = "maxuser";
-const char* zPwd  = "maxpwd";
+const char* zPwd  = "maxuser";
 
 void drop(TestConnections& test)
 {
