@@ -34,6 +34,7 @@ import StatusInfo from 'icons/StatusInfo'
 import StatusOk from 'icons/StatusOk'
 import StatusWarning from 'icons/StatusWarning'
 import Stopped from 'icons/Stopped'
+import StoredProcedures from 'icons/StoredProcedures'
 import Tachometer from 'icons/Tachometer'
 import Table from 'icons/Table'
 import Unlink from 'icons/Unlink'
@@ -111,6 +112,9 @@ export default {
     },
     stopped: {
         component: Stopped,
+    },
+    storedProcedures: {
+        component: StoredProcedures,
     },
     tachometer: {
         component: Tachometer,
