@@ -190,8 +190,11 @@ export default {
             switch (item.type) {
                 case 'schema':
                     return '$vuetify.icons.database'
+                //TODO: a separate icon for tables
+                case 'tables':
                 case 'table':
                     return '$vuetify.icons.table'
+                //TODO: an icon for column
             }
         },
         getOptions(type) {
