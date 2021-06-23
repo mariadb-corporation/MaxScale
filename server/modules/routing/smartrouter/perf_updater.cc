@@ -31,7 +31,7 @@ PerformanceInfoContainer* PerformanceInfoUpdater::create_new_copy(const Performa
 void PerformanceInfoUpdater::make_updates(PerformanceInfoContainer* pData,
                                           std::vector<typename SharedPerformanceInfo::InternalUpdate>& queue)
 {
-    for (auto e : queue)
+    for (const auto& e : queue)
     {
         auto res = pData->emplace(e.update.key, e.update.value);
         if (!res.second)

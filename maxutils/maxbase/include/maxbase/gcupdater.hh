@@ -181,7 +181,7 @@ public:
 
     // ... alternatively, if the threads using SharedDataType are ordered [0, num_clients[,
     // this may be more convenient.
-    SharedDataType* get_shared_data_by_order(int thread_id);
+    SharedDataType* get_shared_data_by_index(int thread_id);
 
     // Only for testing. The pointed to data may be collected (deleted) at any time, the caller
     // must know what it is doing.
@@ -461,7 +461,7 @@ std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
 }
 
 template<typename SD>
-SD* GCUpdater<SD>::get_shared_data_by_order(int thread_id)
+SD* GCUpdater<SD>::get_shared_data_by_index(int thread_id)
 {
     return &m_shared_data[thread_id];
 }

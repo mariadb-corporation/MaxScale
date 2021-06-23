@@ -234,6 +234,7 @@ SharedDataPtr<SD> make_shared_data_ptr(SD* sd, bool stable_read = false)
 /// IMPLEMENTATION
 ///
 
+extern CachelineAtomic<int64_t> num_updater_updates;
 extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
 extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
 extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
@@ -326,11 +327,13 @@ bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me,
     }
     else if (!guard.try_lock())
     {
-        num_shareddata_updater_blocks.fetch_add(1, std::memory_order_relaxed);
+        num_shareddata_updater_blocks.fetch_add(1, std::memory_order_release);
         return false;
     }
 
     swap_me.swap(m_queue);
+
+    num_updater_updates.fetch_add(swap_me.size(), std::memory_order_release);
 
     m_data_swapped_out = true;
     m_worker_wakeup.notify_one();
