@@ -272,37 +272,46 @@ export default {
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
-                        sql: 'SHOW DATABASES',
+                        sql: 'SELECT * FROM information_schema.SCHEMATA;',
                     }
                 )
                 await this.vue.$help.delay(200)
                 let dbCmplList = []
                 let dbTree = []
                 const nodeType = 'Schema'
-                res.data.data.attributes.results[0].data.flat().forEach(db => {
+
+                const dataRows = this.vue.$help.getObjectRows({
+                    columns: res.data.data.attributes.results[0].fields,
+                    rows: res.data.data.attributes.results[0].data,
+                })
+
+                dataRows.forEach(row => {
                     dbTree.push({
                         type: nodeType,
-                        name: db,
-                        id: db,
+                        name: row.SCHEMA_NAME,
+                        id: row.SCHEMA_NAME,
+                        data: row,
                         children: [
                             {
                                 type: 'Tables',
                                 name: 'Tables',
-                                id: `${db}.Tables`, // only use to identify active node
+                                // only use to identify active node
+                                id: `${row.SCHEMA_NAME}.Tables`,
                                 children: [],
                             },
                             {
                                 type: 'Stored Procedures',
                                 name: 'Stored Procedures',
-                                id: `${db}.Stored Procedures`, // only use to identify active node
+                                // only use to identify active node
+                                id: `${row.SCHEMA_NAME}.Stored Procedures`,
                                 children: [],
                             },
                         ],
                     })
                     dbCmplList.push({
-                        label: db,
+                        label: row.SCHEMA_NAME,
                         detail: 'SCHEMA',
-                        insertText: `\`${db}\``,
+                        insertText: `\`${row.SCHEMA_NAME}\``,
                         type: nodeType,
                     })
                 })
@@ -322,41 +331,49 @@ export default {
         async fetchTables({ state, commit, getters }, tablesObj) {
             try {
                 const dbName = tablesObj.id.replace(/\.Tables/g, '')
-                const query = `SHOW TABLES FROM ${this.vue.$help.escapeIdentifiers(dbName)};`
+                // eslint-disable-next-line vue/max-len
+                const query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
                 )
-                const tables = res.data.data.attributes.results[0].data.flat()
+
+                const dataRows = this.vue.$help.getObjectRows({
+                    columns: res.data.data.attributes.results[0].fields,
+                    rows: res.data.data.attributes.results[0].data,
+                })
                 let tblsChildren = []
                 let dbCmplList = []
                 const nodeType = 'Table'
-                tables.forEach(tbl => {
+                dataRows.forEach(row => {
                     tblsChildren.push({
                         type: nodeType,
-                        name: tbl,
-                        id: `${dbName}.${tbl}`,
+                        name: row.TABLE_NAME,
+                        id: `${dbName}.${row.TABLE_NAME}`,
+                        data: row,
                         children: [
                             {
                                 type: 'Columns',
                                 name: 'Columns',
-                                id: `${dbName}.${tbl}.Columns`, // only use to identify active node
+                                // only use to identify active node
+                                id: `${dbName}.${row.TABLE_NAME}.Columns`,
                                 children: [],
                             },
                             {
                                 type: 'Triggers',
                                 name: 'Triggers',
-                                id: `${dbName}.${tbl}.Triggers`, // only use to identify active node
+                                // only use to identify active node
+                                id: `${dbName}.${row.TABLE_NAME}.Triggers`,
                                 children: [],
                             },
                         ],
                     })
                     dbCmplList.push({
-                        label: tbl,
+                        label: row.TABLE_NAME,
                         detail: 'TABLE',
-                        insertText: `\`${tbl}\``,
+                        insertText: `\`${row.TABLE_NAME}\``,
                         type: nodeType,
                     })
                 })
@@ -380,27 +397,32 @@ export default {
             try {
                 const dbName = storedProceduresNode.id.replace(/\.Stored Procedures/g, '')
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT routine_name FROM information_schema.routines WHERE routine_type = 'PROCEDURE' AND routine_schema = '${dbName}';`
+                const query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
                 )
-                const storedProcedures = res.data.data.attributes.results[0].data.flat()
+                const dataRows = this.vue.$help.getObjectRows({
+                    columns: res.data.data.attributes.results[0].fields,
+                    rows: res.data.data.attributes.results[0].data,
+                })
+
                 let spChildren = []
                 let dbCmplList = []
                 const nodeType = 'Stored Procedure'
-                storedProcedures.forEach(sp => {
+                dataRows.forEach(row => {
                     spChildren.push({
                         type: nodeType,
-                        name: sp,
-                        id: `${dbName}.${sp}`,
+                        name: row.ROUTINE_NAME,
+                        id: `${dbName}.${row.ROUTINE_NAME}`,
+                        data: row,
                     })
                     dbCmplList.push({
-                        label: sp,
+                        label: row.ROUTINE_NAME,
                         detail: 'STORED PROCEDURE',
-                        insertText: sp,
+                        insertText: row.ROUTINE_NAME,
                         type: nodeType,
                     })
                 })
@@ -425,7 +447,7 @@ export default {
                 const dbName = columnsObj.id.split('.')[0]
                 const tblName = columnsObj.id.split('.')[1]
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
+                const query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -433,21 +455,24 @@ export default {
                     }
                 )
                 if (res.data) {
-                    const cols = res.data.data.attributes.results[0].data
-
+                    const dataRows = this.vue.$help.getObjectRows({
+                        columns: res.data.data.attributes.results[0].fields,
+                        rows: res.data.data.attributes.results[0].data,
+                    })
                     let tblChildren = []
                     let dbCmplList = []
                     const nodeType = 'Column'
-                    cols.forEach(([colName, colType]) => {
+                    dataRows.forEach(row => {
                         tblChildren.push({
-                            name: colName,
-                            dataType: colType,
+                            name: row.COLUMN_NAME,
+                            dataType: row.COLUMN_TYPE,
                             type: nodeType,
-                            id: `${dbName}.${tblName}.${colName}`,
+                            id: `${dbName}.${tblName}.${row.COLUMN_NAME}`,
+                            data: row,
                         })
                         dbCmplList.push({
-                            label: colName,
-                            insertText: `\`${colName}\``,
+                            label: row.COLUMN_NAME,
+                            insertText: `\`${row.COLUMN_NAME}\``,
                             detail: 'COLUMN',
                             type: nodeType,
                         })
@@ -476,27 +501,32 @@ export default {
                 const dbName = triggersNode.id.split('.')[0]
                 const tblName = triggersNode.id.split('.')[1]
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT TRIGGER_NAME FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
+                const query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
                 )
-                const triggers = res.data.data.attributes.results[0].data.flat()
+                const dataRows = this.vue.$help.getObjectRows({
+                    columns: res.data.data.attributes.results[0].fields,
+                    rows: res.data.data.attributes.results[0].data,
+                })
+
                 let tblChildren = []
                 let dbCmplList = []
                 const nodeType = 'Trigger'
-                triggers.forEach(trigger => {
+                dataRows.forEach(row => {
                     tblChildren.push({
                         type: nodeType,
-                        name: trigger,
-                        id: `${dbName}.${tblName}.${trigger}`,
+                        name: row.TRIGGER_NAME,
+                        id: `${dbName}.${row.TRIGGER_NAME}`,
+                        data: row,
                     })
                     dbCmplList.push({
-                        label: trigger,
+                        label: row.TRIGGER_NAME,
                         detail: 'TRIGGERS',
-                        insertText: trigger,
+                        insertText: row.TRIGGER_NAME,
                         type: nodeType,
                     })
                 })

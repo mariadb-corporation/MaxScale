@@ -540,6 +540,22 @@ export function escapeIdentifiers(str) {
         .map(identifier => `\`${identifier}\``)
         .join('.')
 }
+
+/**
+ * @param {Array} payload.columns table fields
+ * @param {Array} payload.rows table rows
+ * @return {Array} Return object rows
+ */
+export function getObjectRows({ columns, rows }) {
+    return rows.map(row => {
+        const obj = {}
+        columns.forEach((c, index) => {
+            obj[c] = row[index]
+        })
+        return obj
+    })
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -580,6 +596,7 @@ Object.defineProperties(Vue.prototype, {
                 ciStrIncludes,
                 doubleRAF,
                 escapeIdentifiers,
+                getObjectRows,
             }
         },
     },
