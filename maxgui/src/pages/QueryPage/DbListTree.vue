@@ -46,23 +46,14 @@
             content-class="shadow-drop"
             :activator="`#item-label-${activatorIdTransform(hoveredItem.id)}`"
         >
-            <v-list class="mariadb-v-list" dense>
-                <v-list-item
-                    v-for="(value, key) in $help.lodash.pick(hoveredItem, [
-                        'type',
-                        'name',
-                        'dataType',
-                    ])"
-                    :key="key"
-                    class="color text-text"
-                    dense
-                >
-                    <v-list-item-title>
-                        <span class="font-weight-bold text-capitalize"> {{ key }}: </span>
-                        <span> {{ value }}</span>
-                    </v-list-item-title>
-                </v-list-item>
-            </v-list>
+            <table class="node-tooltip color text-text py-2 px-4">
+                <tbody>
+                    <tr v-for="(value, key) in hoveredItem.data" :key="key">
+                        <td class="font-weight-bold pr-2">{{ key }}:</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </v-tooltip>
         <v-menu
             v-if="activeCtxItem"
@@ -121,7 +112,7 @@ export default {
             schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
             columnOptions: [this.$t('placeColumnNameInEditor')],
             spOptions: [this.$t('placeSchemaInEditor')],
-            triggerOption: [this.$t('placeSchemaInEditor')],
+            triggerOptions: [this.$t('placeSchemaInEditor')],
 
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
@@ -213,9 +204,9 @@ export default {
                 case 'Stored Procedure':
                     return this.spOptions
                 case 'Column':
-                    return this.columnOption
+                    return this.columnOptions
                 case 'Trigger':
-                    return this.triggerOption
+                    return this.triggerOptions
             }
         },
         onContextMenu({ e, item }) {
@@ -235,5 +226,8 @@ export default {
 }
 .node-label {
     height: 40px;
+}
+.node-tooltip {
+    font-size: 0.75rem;
 }
 </style>

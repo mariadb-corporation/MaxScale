@@ -311,15 +311,7 @@ export default {
                 }
             return dataset
         },
-        getObjectRows({ columns, rows }) {
-            return rows.map(row => {
-                const obj = {}
-                columns.forEach((c, index) => {
-                    obj[c] = row[index]
-                })
-                return obj
-            })
-        },
+
         isLinearAxes(axisVal) {
             return typeof axisVal === 'number'
         },
@@ -353,7 +345,7 @@ export default {
                 axisLabels = { x: axis.x, y: axis.y }
                 let dataPoints = []
                 let labels = []
-                const dataRows = this.getObjectRows({
+                const dataRows = this.$help.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
