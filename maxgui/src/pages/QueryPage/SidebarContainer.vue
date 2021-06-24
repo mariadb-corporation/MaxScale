@@ -164,6 +164,7 @@ export default {
             fetchTables: 'query/fetchTables',
             fetchStoredProcedures: 'query/fetchStoredProcedures',
             fetchCols: 'query/fetchCols',
+            fetchTriggers: 'query/fetchTriggers',
             useDb: 'query/useDb',
         }),
         async loadSchema() {
@@ -193,6 +194,9 @@ export default {
                     break
                 case 'Stored Procedures':
                     await this.fetchStoredProcedures(item)
+                    break
+                case 'Triggers':
+                    await this.fetchTriggers(item)
                     break
             }
         },
