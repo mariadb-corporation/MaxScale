@@ -109,6 +109,10 @@ export default {
     },
     data() {
         return {
+            /**
+             *  TODO: Refactor and dry ctx menu. A menu option named `Insert to editor`
+             *  has sub-menu `insertSchemaToEditor` and `insertNameToEditor`
+             */
             tableOptions: [
                 this.$t('previewData'),
                 this.$t('viewDetails'),
@@ -117,10 +121,12 @@ export default {
             schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
             columnOptions: [this.$t('placeColumnNameInEditor')],
             spOptions: [this.$t('placeSchemaInEditor')],
+            triggerOption: [this.$t('placeSchemaInEditor')],
+
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
-            nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column'],
+            nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
         }
     },
     computed: {
@@ -207,7 +213,9 @@ export default {
                 case 'Stored Procedure':
                     return this.spOptions
                 case 'Column':
-                    return this.columnOptions
+                    return this.columnOption
+                case 'Trigger':
+                    return this.triggerOption
             }
         },
         onContextMenu({ e, item }) {

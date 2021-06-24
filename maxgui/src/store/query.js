@@ -66,25 +66,44 @@ export default {
         SET_DB_TREE(state, payload) {
             state.db_tree = payload
         },
-        UPDATE_DB_GRAND_CHILD(state, { dbIndex, childIndex, grandChild }) {
+        UPDATE_DB_GRAND_CHILD(state, { dbName, childType, grandChild, getters }) {
+            const dbIndex = getters.getDbIdx(dbName)
+
+            let childIndex
+            switch (childType) {
+                case 'Tables':
+                    childIndex = getters.getIdxOfTablesNode(dbIndex)
+                    break
+                case 'Stored Procedures':
+                    childIndex = getters.getIdxOfSPNode(dbIndex)
+                    break
+            }
+
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: { children: { [childIndex]: { children: { $set: grandChild } } } },
             })
         },
-        UPDATE_COLUMNS_CHILDREN(state, { dbIndex, idxOfTablesNode, tableIndex, children }) {
+
+        UPDATE_TABLE_CHILD(state, { dbName, tblName, children, childType, getters }) {
+            const dbIndex = getters.getDbIdx(dbName)
+            const idxOfTablesNode = getters.getIdxOfTablesNode(dbIndex)
+            const tblIdx = state.db_tree[dbIndex].children[idxOfTablesNode].children.findIndex(
+                tbl => tbl.name === tblName
+            )
             const dbChildNodes = state.db_tree[dbIndex].children
-            const idxOfColsNode = dbChildNodes[idxOfTablesNode].children[
-                tableIndex
-            ].children.findIndex(tblChildNode => tblChildNode.type === 'Columns')
+
+            const idxOfTriggersNode = dbChildNodes[idxOfTablesNode].children[
+                tblIdx
+            ].children.findIndex(tblChildNode => tblChildNode.type === childType)
 
             state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: {
                     children: {
                         [idxOfTablesNode]: {
                             children: {
-                                [tableIndex]: {
+                                [tblIdx]: {
                                     children: {
-                                        [idxOfColsNode]: { children: { $set: children } },
+                                        [idxOfTriggersNode]: { children: { $set: children } },
                                     },
                                 },
                             },
@@ -93,7 +112,6 @@ export default {
                 },
             })
         },
-
         // editor mutations
         UPDATE_DB_CMPL_LIST(state, payload) {
             state.db_completion_list = [...state.db_completion_list, ...payload]
@@ -260,9 +278,10 @@ export default {
                 await this.vue.$help.delay(200)
                 let dbCmplList = []
                 let dbTree = []
+                const nodeType = 'Schema'
                 res.data.data.attributes.results[0].data.flat().forEach(db => {
                     dbTree.push({
-                        type: 'Schema',
+                        type: nodeType,
                         name: db,
                         id: db,
                         children: [
@@ -284,7 +303,7 @@ export default {
                         label: db,
                         detail: 'SCHEMA',
                         insertText: `\`${db}\``,
-                        type: 'Schema',
+                        type: nodeType,
                     })
                 })
                 commit('SET_DB_TREE', dbTree)
@@ -313,9 +332,10 @@ export default {
                 const tables = res.data.data.attributes.results[0].data.flat()
                 let tblsChildren = []
                 let dbCmplList = []
+                const nodeType = 'Table'
                 tables.forEach(tbl => {
                     tblsChildren.push({
-                        type: 'Table',
+                        type: nodeType,
                         name: tbl,
                         id: `${dbName}.${tbl}`,
                         children: [
@@ -325,20 +345,26 @@ export default {
                                 id: `${dbName}.${tbl}.Columns`, // only use to identify active node
                                 children: [],
                             },
+                            {
+                                type: 'Triggers',
+                                name: 'Triggers',
+                                id: `${dbName}.${tbl}.Triggers`, // only use to identify active node
+                                children: [],
+                            },
                         ],
                     })
                     dbCmplList.push({
                         label: tbl,
                         detail: 'TABLE',
                         insertText: `\`${tbl}\``,
-                        type: 'Table',
+                        type: nodeType,
                     })
                 })
                 commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                const dbIndex = getters.getDbIdx(dbName)
                 commit('UPDATE_DB_GRAND_CHILD', {
-                    dbIndex,
-                    childIndex: getters.getIdxOfTablesNode(dbIndex),
+                    dbName,
+                    childType: 'Tables',
+                    getters,
                     grandChild: tblsChildren,
                 })
             } catch (e) {
@@ -364,9 +390,10 @@ export default {
                 const storedProcedures = res.data.data.attributes.results[0].data.flat()
                 let spChildren = []
                 let dbCmplList = []
+                const nodeType = 'Stored Procedure'
                 storedProcedures.forEach(sp => {
                     spChildren.push({
-                        type: 'Stored Procedure',
+                        type: nodeType,
                         name: sp,
                         id: `${dbName}.${sp}`,
                     })
@@ -374,14 +401,15 @@ export default {
                         label: sp,
                         detail: 'STORED PROCEDURE',
                         insertText: sp,
-                        type: 'Stored Procedure',
+                        type: nodeType,
                     })
                 })
                 commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                const dbIndex = getters.getDbIdx(dbName)
+
                 commit('UPDATE_DB_GRAND_CHILD', {
-                    dbIndex,
-                    childIndex: getters.getIdxOfSPNode(dbIndex),
+                    dbName,
+                    childType: 'Stored Procedures',
+                    getters,
                     grandChild: spChildren,
                 })
             } catch (e) {
@@ -406,42 +434,82 @@ export default {
                 )
                 if (res.data) {
                     const cols = res.data.data.attributes.results[0].data
-                    const dbIndex = getters.getDbIdx(dbName)
 
                     let tblChildren = []
                     let dbCmplList = []
-
+                    const nodeType = 'Column'
                     cols.forEach(([colName, colType]) => {
                         tblChildren.push({
                             name: colName,
                             dataType: colType,
-                            type: 'Column',
+                            type: nodeType,
                             id: `${dbName}.${tblName}.${colName}`,
                         })
                         dbCmplList.push({
                             label: colName,
                             insertText: `\`${colName}\``,
                             detail: 'COLUMN',
-                            type: 'Column',
+                            type: nodeType,
                         })
                     })
 
                     commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                    const idxOfTablesNode = getters.getIdxOfTablesNode(dbIndex)
-                    commit(
-                        'UPDATE_COLUMNS_CHILDREN',
-                        Object.freeze({
-                            dbIndex,
-                            idxOfTablesNode: idxOfTablesNode,
-                            tableIndex: state.db_tree[dbIndex].children[
-                                idxOfTablesNode
-                            ].children.findIndex(tbl => tbl.name === tblName),
-                            children: tblChildren,
-                        })
-                    )
+
+                    commit('UPDATE_TABLE_CHILD', {
+                        dbName,
+                        tblName,
+                        childType: 'Columns',
+                        children: tblChildren,
+                        getters,
+                    })
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-fetchCols')
+                logger.error(e)
+            }
+        },
+        /**
+         * @param {Object} triggersNode - triggersNode node object.
+         */
+        async fetchTriggers({ state, commit, getters }, triggersNode) {
+            try {
+                const dbName = triggersNode.id.split('.')[0]
+                const tblName = triggersNode.id.split('.')[1]
+                // eslint-disable-next-line vue/max-len
+                const query = `SELECT TRIGGER_NAME FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
+                const res = await this.vue.$axios.post(
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
+                    {
+                        sql: query,
+                    }
+                )
+                const triggers = res.data.data.attributes.results[0].data.flat()
+                let tblChildren = []
+                let dbCmplList = []
+                const nodeType = 'Trigger'
+                triggers.forEach(trigger => {
+                    tblChildren.push({
+                        type: nodeType,
+                        name: trigger,
+                        id: `${dbName}.${tblName}.${trigger}`,
+                    })
+                    dbCmplList.push({
+                        label: trigger,
+                        detail: 'TRIGGERS',
+                        insertText: trigger,
+                        type: nodeType,
+                    })
+                })
+                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
+                commit('UPDATE_TABLE_CHILD', {
+                    dbName,
+                    tblName,
+                    childType: 'Triggers',
+                    children: tblChildren,
+                    getters,
+                })
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchTriggers')
                 logger.error(e)
             }
         },
