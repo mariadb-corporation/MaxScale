@@ -445,7 +445,8 @@ int GCUpdater<SD>::gc()
         delete trash;
     }
 
-    return m_all_ptrs.size() - 1;
+    auto sz = m_all_ptrs.size();    // one pointer is the latest, everything else may be gc:ed anytime
+    return sz ? sz - 1 : 0;
 }
 
 template<typename SD>
