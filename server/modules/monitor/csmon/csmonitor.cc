@@ -459,6 +459,11 @@ CsMonitor::~CsMonitor()
     sqlite3_close_v2(m_pDb);
 }
 
+bool CsMonitor::is_dynamic() const
+{
+    return m_context.config().dynamic_node_detection;
+}
+
 // static
 CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 {

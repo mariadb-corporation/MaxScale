@@ -2079,9 +2079,19 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
 
 void Service::set_cluster(mxs::Monitor* monitor)
 {
-    for (auto a : monitor->servers())
+    // TODO: There is a mxs::Monitor::populate_services() function. There seem to be
+    // TODO: some overlap betwen that function and this.
+
+    if (!monitor->is_dynamic())
     {
-        m_data->targets.push_back(a->server);
+        // Only if a monitor is not dynamic, should its servers be added to the service
+        // If it is dynamic, the monitor will later create volatile servers that will
+        // be added to relevant services.
+
+        for (auto a : monitor->servers())
+        {
+            m_data->targets.push_back(a->server);
+        }
     }
 
     m_monitor = monitor;

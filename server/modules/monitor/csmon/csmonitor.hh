@@ -36,6 +36,8 @@ public:
     ~CsMonitor();
     static CsMonitor* create(const std::string& name, const std::string& module);
 
+    bool is_dynamic() const override;
+
 public:
     using ServerVector = std::vector<CsMonitorServer*>;
 
