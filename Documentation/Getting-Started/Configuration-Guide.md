@@ -50,8 +50,8 @@ of cluster and making that state available to the routers of MaxScale.
 Examples of monitor modules are `mariadbmon` that is capable of monitoring
 a regular master-slave cluster and in addition of performing both _switchover_
 and _failover_, `galeramon` that is capable of monitoring a Galera cluster,
-`csmon` that is capable of monitoring a Columnstore cluster and `clustrixmon`
-that is capable of monitoring a Clustrix cluster.
+`csmon` that is capable of monitoring a Columnstore cluster and `xpandmon`
+that is capable of monitoring a Xpand cluster.
 
 Monitor modules have sections of their own in the MaxScale configuration
 file.
