@@ -274,6 +274,7 @@ TestConnections::~TestConnections()
     delete galera;
     delete xpand;
     delete maxscale;
+    delete maxscale2;
 }
 
 int TestConnections::cleanup()
@@ -804,7 +805,8 @@ void TestConnections::init_maxscale(int m)
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
-    if (mxs->ssh_node_f(true, "test -d %s/certs", homedir))
+    string test_cmd = mxb::string_printf("test -d %s/certs", homedir);
+    if (mxs->ssh_output(test_cmd, true).rc != 0)
     {
         tprintf("SSL certificates not found, copying to maxscale");
         mxs->ssh_node_f(true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
@@ -829,7 +831,7 @@ void TestConnections::init_maxscale(int m)
     if (maxscale::start)
     {
         mxs->restart_maxscale();
-        mxs->ssh_node_f(true, "maxctrl api get maxscale/debug/monitor_wait");
+        mxs->wait_for_monitor();
     }
     else
     {

@@ -188,6 +188,8 @@ public:
 
     /**
      * Waits until all running monitors have advanced one tick.
+     *
+     * @return True on success
      */
-    static void wait_one_tick();
+    static bool wait_one_tick();
 };

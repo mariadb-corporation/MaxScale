@@ -42,7 +42,7 @@ public:
      *
      * @param apply The function to apply. If the function returns false, iteration is discontinued.
      */
-    void foreach_monitor(std::function<bool(Monitor*)> apply)
+    void foreach_monitor(const std::function<bool(Monitor*)>& apply)
     {
         Guard guard(m_all_monitors_lock);
         for (Monitor* monitor : m_all_monitors)
@@ -133,40 +133,65 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     return new_monitor;
 }
 
-void MonitorManager::wait_one_tick()
+bool MonitorManager::wait_one_tick()
 {
     mxb_assert(Monitor::is_main_worker());
-    using namespace std::chrono;
-    std::map<Monitor*, long> ticks;
+    std::map<Monitor*, long> tick_counts;
 
-    // Get tick values for all monitors
+    // Get tick values for all monitors and instruct monitors to skip normal waiting.
     this_unit.foreach_monitor(
-        [&ticks](Monitor* mon) {
-            ticks[mon] = mon->ticks();
+        [&tick_counts](Monitor* mon) {
+            if (mon->is_running())
+            {
+                tick_counts[mon] = mon->ticks();
+                mon->request_immediate_tick();
+            }
             return true;
         });
 
+    bool wait_success = true;
+    auto wait_start = maxbase::Clock::now();
+    // Due to immediate tick, monitors should generally run within 100ms. Slow-running operations on
+    // backends may cause delay.
+    auto time_limit = mxb::from_secs(10);
+
+    auto sleep_time = std::chrono::milliseconds(30);
+    std::this_thread::sleep_for(sleep_time);
+
     // Wait for all running monitors to advance at least one tick.
     this_unit.foreach_monitor(
-        [&ticks](Monitor* mon) {
+        [&](Monitor* mon) {
             if (mon->is_running())
             {
-                auto start = maxbase::Clock::now();
-                // A monitor may have been added in between the two foreach-calls (not
-                // if config changes are
-                // serialized). Check if entry exists.
-                if (ticks.count(mon) > 0)
+                // Monitors may (in theory) have been modified between the two 'foreach_monitor'-calls.
+                // Check if entry exists.
+                auto it = tick_counts.find(mon);
+                if (it != tick_counts.end())
                 {
-                    auto tick = ticks[mon];
-                    while (mon->ticks() == tick
-                           && (maxbase::Clock::now() - start < seconds(60)))
+                    auto prev_tick_count = it->second;
+                    while (true)
                     {
-                        std::this_thread::sleep_for(milliseconds(100));
+                        if (mon->ticks() != prev_tick_count)
+                        {
+                            break;
+                        }
+                        else if (maxbase::Clock::now() - wait_start > time_limit)
+                        {
+                            wait_success = false;
+                            break;
+                        }
+                        else
+                        {
+                            // Not ideal to sleep while holding a mutex.
+                            std::this_thread::sleep_for(sleep_time);
+                        }
                     }
                 }
             }
             return true;
         });
+
+    return wait_success;
 }
 
 void MonitorManager::destroy_all_monitors()

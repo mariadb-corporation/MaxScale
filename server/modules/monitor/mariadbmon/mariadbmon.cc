@@ -875,10 +875,10 @@ bool MariaDBMonitor::schedule_manual_command(ManualCommand::CmdMethod command, c
     return cmd_sent;
 }
 
-bool MariaDBMonitor::immediate_tick_required() const
+bool MariaDBMonitor::immediate_tick_required()
 {
-    return (m_manual_cmd.exec_state.load(mo_relaxed) == ManualCommand::ExecState::SCHEDULED)
-           || m_cluster_modified;
+    return mxs::MonitorWorker::immediate_tick_required() || m_cluster_modified
+           || (m_manual_cmd.exec_state.load(mo_relaxed) == ManualCommand::ExecState::SCHEDULED);
 }
 
 bool MariaDBMonitor::server_locks_in_use() const
