@@ -157,7 +157,7 @@ mxb::Json MaxRest::curl(Command command, const string& path) const
 
     mxb::Json rv;
 
-    if (!rv.load_string(result.output))
+    if (!result.output.empty() && !rv.load_string(result.output))
     {
         raise("JSON parsing failed: " + rv.error_msg());
     }
