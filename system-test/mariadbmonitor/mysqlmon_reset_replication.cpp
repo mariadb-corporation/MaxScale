@@ -12,37 +12,32 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
+#include <maxtest/mariadb_connector.hh>
 
 using std::string;
 using std::cout;
 
+void test_main(TestConnections& test);
+
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    auto expect_server_status = [&test](const string& server_name, const string& status) {
-            bool found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 1);
-            test.expect(found, "%s was not %s as was expected.", server_name.c_str(), status.c_str());
-        };
-
-    auto expect_not_server_status = [&test](const string& server_name, const string& status) {
-            bool not_found = (test.maxscale->get_server_status(server_name.c_str()).count(status) == 0);
-            test.expect(not_found, "%s was %s contrary to expectation.", server_name.c_str(), status.c_str());
-        };
-
-    auto read_sum = [&test](int server_ind) -> int {
-            int sum = -1;
-            const char query[] = "SELECT SUM(c1) FROM test.t1;";
-            const char field[] = "SUM(c1)";
-            char value[100];
-            if ((find_field(test.repl->nodes[server_ind], query, field, value) == 0) && strlen(value) > 0)
+void test_main(TestConnections& test)
+{
+    auto read_sum = [&test](int server_ind) {
+            int rval = -1;
+            auto conn = test.repl->backend(server_ind)->open_connection();
+            auto res = conn->query("SELECT SUM(c1) FROM test.t1;");
+            if (res && res->next_row() && res->get_col_count() == 1)
             {
-                sum = atoi(value);
+                rval = res->get_int(0);
             }
-            return sum;
+            return rval;
         };
 
     const char insert_query[] = "INSERT INTO test.t1 VALUES (%i);";
@@ -50,32 +45,28 @@ int main(int argc, char** argv)
     const char strict_mode[] = "SET GLOBAL gtid_strict_mode=%i;";
 
     const int N = 4;
-    string server_names[] = {"server1", "server2", "server3", "server4"};
-    string master = "Master";
-    string slave = "Slave";
+
+    auto& mxs = *test.maxscale;
 
     // Set up test table
-    MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
+    auto maxconn = mxs.open_rwsplit_connection2("test");
     test.tprintf("Creating table and inserting data.");
-    test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
+    maxconn->cmd("CREATE OR REPLACE TABLE test.t1(c1 INT)");
     int insert_val = 1;
-    test.try_query(maxconn, insert_query, insert_val++);
-    cout << "Setting gitd_strict_mode to ON.\n";
-    test.try_query(maxconn, strict_mode, 1);
+    maxconn->cmd_f(insert_query, insert_val++);
+    test.tprintf("Setting gitd_strict_mode to ON.");
+    maxconn->cmd_f(strict_mode, 1);
     test.repl->sync_slaves();
-    mysql_close(maxconn);
 
-    get_output(test);
-    print_gtids(test);
-    expect_server_status(server_names[0], master);
-    expect_server_status(server_names[1], slave);
-    expect_server_status(server_names[2], slave);
-    expect_server_status(server_names[3], slave);
+    auto status = mxs.get_servers();
+    status.print();
+    status.check_servers_status(mxt::ServersInfo::default_repl_states());
 
     // Stop MaxScale and mess with the nodes.
-    cout << "Inserting events directly to nodes while MaxScale is stopped.\n";
-    test.maxscale->stop_maxscale();
+    test.tprintf("Inserting events directly to nodes while MaxScale is stopped.");
+    mxs.stop();
     test.repl->connect();
+
     // Modify the databases of backends identically. This will unsync gtid:s but not the actual data.
     for (; insert_val <= 9; insert_val++)
     {
@@ -85,36 +76,34 @@ int main(int argc, char** argv)
         test.try_query(test.repl->nodes[3], insert_query, insert_val);
         test.try_query(test.repl->nodes[0], insert_query, insert_val);
     }
+
     // Restart MaxScale, there should be no slaves. Master is still ok.
-    test.maxscale->start_maxscale();
-    test.maxscale->wait_for_monitor(2);
-    cout << "Restarted MaxScale.\n";
-    print_gtids(test);
-    get_output(test);
+    mxs.start();
+    mxs.wait_for_monitor(2);
+    status = mxs.get_servers();
+    status.print();
 
-    expect_server_status(server_names[0], master);
-    expect_not_server_status(server_names[1], slave);
-    expect_not_server_status(server_names[2], slave);
-    expect_not_server_status(server_names[3], slave);
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto running = mxt::ServerInfo::RUNNING;
+    status.check_servers_status({mxt::ServerInfo::master_st, running, running, running});
 
-    if (test.global_result == 0)
+    if (test.ok())
     {
         // Use the reset-replication command to magically fix the situation.
-        cout << "Running reset-replication to fix the situation.\n";
+        test.tprintf("Running reset-replication to fix the situation.");
         test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server2");
-        test.maxscale->wait_for_monitor(1);
+        mxs.wait_for_monitor();
         // Add another event to force gtid forward.
-        maxconn = test.maxscale->open_rwsplit_connection();
-        test.try_query(maxconn, "FLUSH TABLES;");
-        test.try_query(maxconn, insert_query, insert_val);
-        mysql_close(maxconn);
+        maxconn = mxs.open_rwsplit_connection2();
+        maxconn->cmd("FLUSH TABLES;");
+        maxconn->cmd_f(insert_query, insert_val);
 
-        test.maxscale->wait_for_monitor(1);
-        get_output(test);
-        expect_server_status(server_names[0], slave);
-        expect_server_status(server_names[1], master);
-        expect_server_status(server_names[2], slave);
-        expect_server_status(server_names[3], slave);
+        mxs.wait_for_monitor();
+        status = mxs.get_servers();
+        status.print();
+        status.check_servers_status({slave, master, slave, slave});
+
         // Check that the values on the databases are identical by summing the values.
         int expected_sum = 55;      // 11 * 5
         for (int i = 0; i < N; i++)
@@ -126,19 +115,15 @@ int main(int argc, char** argv)
         }
 
         // Finally, switchover back and erase table
-        cout << "Running switchover.\n";
-        test.maxctrl("call command mariadbmon switchover MySQL-Monitor");
-        test.maxscale->wait_for_monitor(1);
-        get_output(test);
-        expect_server_status(server_names[0], master);
-        expect_server_status(server_names[1], slave);
-        expect_server_status(server_names[2], slave);
-        expect_server_status(server_names[3], slave);
+        test.tprintf("Running switchover.");
+        mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor");
+        mxs.wait_for_monitor();
+        status = mxs.get_servers();
+        status.print();
+        status.check_servers_status(mxt::ServersInfo::default_repl_states());
     }
 
-    maxconn = test.maxscale->open_rwsplit_connection();
-    test.try_query(maxconn, strict_mode, 0);
-    test.try_query(maxconn, drop_query);
-    mysql_close(maxconn);
-    return test.global_result;
+    maxconn = mxs.open_rwsplit_connection2();
+    maxconn->cmd_f(strict_mode, 0);
+    maxconn->cmd(drop_query);
 }

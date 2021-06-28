@@ -5,11 +5,14 @@
 #include <sys/time.h>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
+#include <maxbase/threadpool.hh>
+#include <maxbase/semaphore.hh>
 
 using std::string;
 namespace
 {
 const int sec_to_us = std::micro::den;
+mxb::ThreadPool threadpool;
 }
 
 namespace maxtest
@@ -132,17 +135,24 @@ bool SharedData::concurrent_run(const BoolFuncArray& funcs)
     bool rval = true;
     if (settings.allow_concurrent_run)
     {
-        std::vector<std::future<bool>> futures;
-        futures.reserve(funcs.size());
+        auto n = funcs.size();
+        bool results[n];
+        mxb::Semaphore sem;
 
-        for (auto& func : funcs)
+        for (size_t i = 0; i < n; i++)
         {
-            futures.emplace_back(std::async(std::launch::async, func));
+            auto pool_task = [&funcs, &results, &sem, i]() {
+                    results[i] = funcs[i]();
+                    sem.post();
+                };
+            threadpool.execute(pool_task);
         }
 
-        for (auto& fut : futures)
+        sem.wait_n(n);
+
+        for (auto res : results)
         {
-            if (!fut.get())
+            if (!res)
             {
                 rval = false;
             }

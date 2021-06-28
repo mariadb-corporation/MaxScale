@@ -41,7 +41,8 @@ class MariaDBServer
     friend class ::MariaDBCluster;
 public:
     using SMariaDB = std::unique_ptr<mxt::MariaDB>;
-    MariaDBServer(const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster, int ind);
+    MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
+                  int ind);
 
     bool start_database();
     bool stop_database();
@@ -71,11 +72,12 @@ public:
      *
      * @return The connection. Success can be checked by 'is_open'.
      */
-    SMariaDB try_open_connection();
+    SMariaDB try_open_connection(const std::string& db = "");
 
     enum class SslMode {ON, OFF};
-    SMariaDB try_open_connection(SslMode ssl);
+    SMariaDB try_open_connection(SslMode ssl, const std::string& db = "");
 
+    SMariaDB      open_connection(const std::string& db = "");
     mxt::MariaDB* admin_connection();
 
     bool ping_or_open_admin_connection();
@@ -112,6 +114,7 @@ private:
     VMNode&           m_vm;
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
+    mxt::SharedData&  m_shared;
 };
 }
 
