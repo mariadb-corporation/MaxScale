@@ -381,6 +381,7 @@ void GCUpdater<SD>::run()
         }
 
         m_pLatest_data = create_new_copy(m_pLatest_data);
+        num_updater_copies.fetch_add(1, std::memory_order_relaxed);
 
         m_all_ptrs.push_back(m_pLatest_data);
 

@@ -235,6 +235,7 @@ SharedDataPtr<SD> make_shared_data_ptr(SD* sd, bool stable_read = false)
 ///
 
 extern CachelineAtomic<int64_t> num_updater_updates;
+extern CachelineAtomic<int64_t> num_updater_copies;
 extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
 extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
 extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong

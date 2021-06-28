@@ -17,6 +17,7 @@ namespace maxbase
 {
 
 CachelineAtomic<int64_t> num_updater_updates {0};
+CachelineAtomic<int64_t> num_updater_copies {0};
 CachelineAtomic<int64_t> num_shareddata_updater_blocks {0};
 CachelineAtomic<int64_t> num_shareddata_worker_blocks {0};
 // this one rightfully belongs in gcupdater.hh/cc, but there is no cc
