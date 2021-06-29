@@ -311,9 +311,6 @@ add_test_executable(max_connections.cpp max_connections replication LABELS MySQL
 # Checks tha Maxscale processis running as 'maxscale' user
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
 
-# Test of multi master monitor
-add_test_executable(mm.cpp mm mm LABELS mysqlmon REPL_BACKEND)
-
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
 

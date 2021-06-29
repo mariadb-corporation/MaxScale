@@ -1,3 +1,7 @@
+# Two-server multimaster topology
+add_test_executable_ex(NAME mariadbmon_multimaster_simple SOURCE mariadbmon_multimaster_simple.cc
+        CONFIG mariadbmon_multimaster_simple.cnf VMS repl_backend LABELS mysqlmon)
+
 # MySQL Monitor with Multi-master configurations
 add_test_executable_ex(NAME mysqlmon_multimaster SOURCE mysqlmon_multimaster.cpp
         CONFIG mysqlmon_multimaster.cnf VMS repl_backend LABELS mysqlmon)
