@@ -790,7 +790,7 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
 
-        static std::atomic_int64_t s_connection_id;
+        static std::atomic<int64_t> s_connection_id;
     };
 
     enum State
