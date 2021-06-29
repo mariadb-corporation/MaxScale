@@ -11,8 +11,10 @@
  * Public License.
  */
 
-#include "canonical_impl.hh"
-#include <maxsimd/simd256.hh>
+#if defined (__x86_64__)
+
+#include "../canonical_impl.hh"
+#include "simd256.hh"
 #include <maxbase/assert.h>
 
 #include <string>
@@ -449,3 +451,4 @@ break_out:
     return pSql;
 }
 }
+#endif

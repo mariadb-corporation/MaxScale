@@ -11,7 +11,9 @@
  * Public License.
  */
 
-#include <maxsimd/simd256.hh>
+#if defined (__x86_64__)
+
+#include "simd256.hh"
 
 #include <maxbase/assert.h>
 #include <iostream>
@@ -73,3 +75,4 @@ __m256i make_ascii_bitmap(const std::string& chars)
     return _mm256_loadu_si256((__m256i*) bitmap.data());
 }
 }
+#endif

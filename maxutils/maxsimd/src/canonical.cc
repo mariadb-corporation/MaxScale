@@ -13,7 +13,7 @@
 
 #include <maxsimd/canonical.hh>
 #include <maxbase/cpuinfo.hh>
-#include "impl/canonical_impl.hh"
+#include "canonical_impl.hh"
 
 #include <string>
 
@@ -25,6 +25,7 @@ namespace
 const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
+#if defined (__x86_64__)
 std::string* get_canonical(std::string* pSql, Markers* pMarkers)
 {
     if (cpu_info.has_avx2)
@@ -36,4 +37,12 @@ std::string* get_canonical(std::string* pSql, Markers* pMarkers)
         return maxsimd::generic::get_canonical_impl(pSql, pMarkers);
     }
 }
+#else
+
+std::string* get_canonical(std::string* pSql, Markers* pMarkers)
+{
+    return maxsimd::generic::get_canonical_impl(pSql, pMarkers);
+}
+
+#endif
 }
