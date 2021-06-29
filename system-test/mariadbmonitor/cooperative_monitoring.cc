@@ -33,7 +33,7 @@ MonitorInfo monitors[] = {
 };
 
 const int failover_mon_ticks = 3;
-const int maxscale_switch_mon_ticks = 2;
+const int maxscale_switch_mon_ticks = 4;
 }
 
 bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
@@ -189,7 +189,7 @@ bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info)
 {
     string cmd = "call command mariadbmon release-locks " + mon_info.name;
     auto res = mon_info.maxscale->maxctrl(cmd);
-    bool success = res.rc == 0 && res.output == "OK";
+    bool success = res.rc == 0 && (res.output == "OK" || res.output == "\"OK\"");
     test.expect(success, "MaxCtrl command failed.");
     return success;
 }

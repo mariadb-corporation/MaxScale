@@ -301,13 +301,15 @@ bool MariaDBCluster::create_base_users(int node)
         auto be = backend(node);
         be->update_status();
 
-        auto gen_all_grants_user = [be](const string& name, const string& pw, SslMode ssl_mode) {
+        auto sr = supports_require();
+
+        auto gen_all_grants_user = [be, sr](const string& name, const string& pw, SslMode ssl_mode) {
                 mxt::MariaDBUserDef user_def;
                 user_def.name = name;
                 user_def.password = pw;
 
                 bool rval = false;
-                if (be->create_user(user_def, ssl_mode)
+                if (be->create_user(user_def, ssl_mode, sr)
                     && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
                                                          name.c_str()))
                 {
@@ -1314,7 +1316,7 @@ bool MariaDBServer::copy_logs(const std::string& destination_prefix)
     return true;
 }
 
-bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl)
+bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool supports_require)
 {
     auto c = m_admin_conn.get();
     string userhost = mxb::string_printf("'%s'@'%s'", user.name.c_str(), user.host.c_str());
@@ -1325,8 +1327,15 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl)
 
     // Xpand does not support "if exists" so simply disregard any errors on the "drop" query.
     c->try_cmd_f("drop user %s;", userhostc);
-    if (c->try_cmd_f("create user %s identified by '%s' require %s;",
-                     userhostc, user.password.c_str(), ssl == SslMode::ON ? "ssl" : "none"))
+    string require;
+    if (supports_require)
+    {
+        require += "require ";
+        require += (ssl == SslMode::ON ? "ssl" : "none");
+    }
+
+    if (c->try_cmd_f("create user %s identified by '%s' %s;",
+                     userhostc, user.password.c_str(), require.c_str()))
     {
         create_ok = true;
 

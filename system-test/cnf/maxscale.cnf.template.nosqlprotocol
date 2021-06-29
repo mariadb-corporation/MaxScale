@@ -25,11 +25,10 @@ service=RCR-Master
 protocol=mariadbclient
 port=4008
 
-[Mongo-Listener]
+[NoSQL-Listener]
 type=listener
 service=RCR-Master
-protocol=mongodbclient
-mongodbclient.user=maxskysql
-mongodbclient.password=skysql
-mongodbclient.continue_on_unknown=true
-port=4711
+protocol=nosqlprototol
+nosqlprototol.user=maxskysql
+nosqlprototol.password=skysql
+port=17017

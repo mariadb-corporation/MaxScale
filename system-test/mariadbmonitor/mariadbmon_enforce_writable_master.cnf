@@ -23,4 +23,4 @@ service=RW-Split-Router
 protocol=MySQLClient
 port=4006
 
-###servers###
+###server###

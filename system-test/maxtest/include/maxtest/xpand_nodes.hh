@@ -31,6 +31,8 @@ public:
 
     std::string get_srv_cnf_filename(int node) override;
 
+    bool supports_require() const override { return true; }
+
 private:
     bool check_replication() override;
     bool reset_server(int i) override;

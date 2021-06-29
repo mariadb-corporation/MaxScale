@@ -216,8 +216,9 @@ bool GaleraCluster::create_users(int i)
         galmon_user.grants = {"SUPER, REPLICATION CLIENT ON *.*"};
 
         auto be = backend(i);
-        if (be->create_user(galmon_user, ssl_mode())
-            && be->create_user(service_user_def(), ssl_mode()))
+        bool sr = supports_require();
+        if (be->create_user(galmon_user, ssl_mode(), sr)
+            && be->create_user(service_user_def(), ssl_mode(), sr))
         {
             rval = true;
         }

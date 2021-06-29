@@ -481,6 +481,18 @@ public:
         return true;
     }
 
+    /**
+     * Check if monitor is dynamic
+     *
+     * A dynamic monitor only uses the servers specified in the configuration as "bootstrap"
+     * servers, that is, for connecting to the cluster. The monitor will create a volatile
+     * server instance for each server in the cluster.
+     */
+    virtual bool is_dynamic() const
+    {
+        return false;
+    }
+
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
 

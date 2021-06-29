@@ -16,6 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
+- [Upgrading MariaDB MaxScale from 2.5 to 6](Upgrading/Upgrading-To-MaxScale-6.md)
 - [Upgrading MariaDB MaxScale from 2.4 to 2.5](Upgrading/Upgrading-To-MaxScale-2.5.md)
 - [Upgrading MariaDB MaxScale from 2.3 to 2.4](Upgrading/Upgrading-To-MaxScale-2.4.md)
 - [Upgrading MariaDB MaxScale from 2.2 to 2.3](Upgrading/Upgrading-To-MaxScale-2.3.md)
@@ -110,7 +111,6 @@ Documentation for MaxScale protocol modules.
 
  - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
  - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
- - [MongoDB](Protocols/Mongo.md)
  - [NoSQL](Protocols/NoSQL.md)
 
 The MaxScale CDC Connector provides a C++ API for consuming data from a CDC system.

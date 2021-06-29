@@ -70,6 +70,8 @@ public:
 
     bool configure(const mxs::ConfigParameters* pParams) override;
 
+    bool is_dynamic() const override;
+
     bool softfail(SERVER* pServer, json_t** ppError);
     bool unsoftfail(SERVER* pServer, json_t** ppError);
 
