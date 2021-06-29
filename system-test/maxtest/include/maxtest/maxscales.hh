@@ -374,6 +374,8 @@ public:
      */
     void check_servers_status(const std::vector<mxt::ServerInfo::bitfield>& expected_status);
 
+    void check_print_servers_status(const std::vector<mxt::ServerInfo::bitfield>& expected_status);
+
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
 
 private:

@@ -47,12 +47,6 @@ public:
     void change_master(int NewMaster, int OldMaster);
 
     /**
-     * @brief Creates 'repl' user on all nodes
-     * @return 0 if everything is ok
-     */
-    int set_repl_user();
-
-    /**
      * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
      * @param MYSQL conn struct of slave node
      * @param master_host IP address of master node

@@ -135,12 +135,6 @@ public:
     void revert_replicate_from_master();
 
     /**
-     * @brief start_mm configure first node as Master for second, Second as Master for first
-     * @return  0 in case of success
-     */
-    int start_mm();
-
-    /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false
      * for no connection.

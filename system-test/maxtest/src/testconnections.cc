@@ -900,40 +900,6 @@ void TestConnections::revert_replicate_from_master()
     }
 }
 
-int TestConnections::start_mm()
-{
-    tprintf("Stopping maxscale\n");
-    int rval = maxscale->stop_maxscale();
-
-    tprintf("Stopping all backend nodes\n");
-    rval += repl->stop_nodes() ? 0 : 1;
-
-    for (int i = 0; i < 2; i++)
-    {
-        tprintf("Starting back node %d\n", i);
-        rval += repl->start_node(i, (char*) "");
-    }
-
-    repl->connect();
-    for (int i = 0; i < 2; i++)
-    {
-        execute_query(repl->nodes[i], "stop slave");
-        execute_query(repl->nodes[i], "reset master");
-    }
-
-    execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
-
-    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1]);
-    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0]);
-
-    repl->close_connections();
-
-    tprintf("Starting back Maxscale\n");
-    rval += maxscale->start_maxscale();
-
-    return rval;
-}
-
 bool TestConnections::log_matches(const char* pattern)
 {
 

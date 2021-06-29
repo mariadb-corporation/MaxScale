@@ -1,108 +1,100 @@
 /**
- * @file mm test of mariadbmon in a multimaster situation
- *
- * - use mariadbmon as monitor
- * - reset master, stop slaves, stop all nodes
- * - start 2 nodes
- * - execute SET MASTER TO on node0 to point to node1 and on node1 to point to node0
- * - execute SET GLOBAL READ_ONLY=ON on node0
- * - check server status using maxctrl, expect Master on node1 and Slave on node0
- * - put data to DB using RWSplit, check data using RWSplit and directrly from backend nodes
- * - block node0 (slave)
- * - check server status using maxctrl, expect node0 Down
- * - put data and check it
- * - unblock node0
- * - block node1 (master)
- * - check server status using maxctrl, expect node1 Down
- * - execute SET GLOBAL READ_ONLY=OFF on node0
- * - unblock node0
- * - execute SET GLOBAL READ_ONLY=ON on node1
- * - check server status using maxctrl, expect Master on node0 and Slave on node1
+ * Test a simple two-server multimaster topology with MariaDB-Monitor.
  */
 
-
-#include <iostream>
 #include <maxtest/testconnections.hh>
-#include <maxtest/sql_t1.hh>
+
+using mxt::ServerInfo;
+
+void test_main(TestConnections& test);
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    test.repl->set_repl_user();
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    auto master = ServerInfo::master_st;
+    auto slave = ServerInfo::slave_st;
+    auto down = ServerInfo::DOWN;
+    auto relay = ServerInfo::RELAY;
 
-    test.start_mm();   // first node - slave, second - master
+    mxs.stop();
 
-    auto res = test.maxctrl("api get servers/server1 data.attributes.state").output;
-
-    if (strstr(res.c_str(), "Slave, Running") == NULL)
+    const int n = 2;    // Use only two backends for this test.
+    const int extras_begin = repl.N - n;
+    for (int i = extras_begin; i < repl.N; i++)
     {
-        test.add_result(1, "Node0 is not slave, status is %s\n", res.c_str());
+        test.tprintf("Stopping %s.", repl.backend(i)->cnf_name().c_str());
+        repl.stop_node(i);
     }
 
-    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
-
-    if (strstr(res.c_str(), "Master, Running") == NULL)
+    repl.connect();
+    auto& conns = repl.nodes;
+    for (int i = 0; i < n; i++)
     {
-        test.add_result(1, "Node1 is not master, status is %s\n", res.c_str());
+        execute_query(conns[i], "stop slave; reset slave all;");
     }
 
-    test.tprintf("Block slave\n");
-    test.repl->block_node(0);
-    test.maxscale->wait_for_monitor();
+    execute_query(conns[0], "SET GLOBAL READ_ONLY=ON");
 
-    res = test.maxctrl("api get servers/server1 data.attributes.state").output;
+    repl.replicate_from(0, 1);
+    repl.replicate_from(1, 0);
+    repl.close_connections();
 
-    if (strstr(res.c_str(), "Down") == NULL)
+    mxs.start();
+    mxs.check_print_servers_status({slave | relay, master});
+
+    if (test.ok())
     {
-        test.add_result(1, "Node0 is not down, status is %s\n", res.c_str());
+        test.tprintf("Block slave");
+        repl.block_node(0);
+        mxs.wait_for_monitor();
+
+        mxs.check_print_servers_status({down, master});
+
+        test.tprintf("Unblock slave");
+        repl.unblock_node(0);
+        mxs.wait_for_monitor();
+
+        test.tprintf("Block master");
+        repl.block_node(1);
+        mxs.wait_for_monitor();
+
+        mxs.check_print_servers_status({slave, down});
+
+        test.tprintf("Make node 1 master");
+        repl.connect();
+        execute_query(conns[0], "SET GLOBAL READ_ONLY=OFF");
+        repl.close_connections();
+        mxs.wait_for_monitor();
+
+        test.tprintf("Unblock slave");
+        repl.unblock_node(1);
+        mxs.wait_for_monitor();
+
+        test.tprintf("Make node 2 slave");
+        repl.connect();
+        execute_query(conns[1], "SET GLOBAL READ_ONLY=ON");
+        repl.close_connections();
+        mxs.wait_for_monitor();
+
+        mxs.check_print_servers_status({master, slave | relay});
     }
 
-    test.tprintf("Unlock slave\n");
-    test.repl->unblock_node(0);
-    test.maxscale->wait_for_monitor();
-
-    test.tprintf("Block master\n");
-    test.repl->block_node(1);
-    test.maxscale->wait_for_monitor();
-
-    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
-
-    if (strstr(res.c_str(), "Down") == NULL)
+    // Since no data was written to backends, it should be possible to reset the situation.
+    for (int i = extras_begin; i < repl.N; i++)
     {
-        test.add_result(1, "Node1 is not down, status is %s\n", res.c_str());
+        test.tprintf("Starting %s.", repl.backend(i)->cnf_name().c_str());
+        repl.start_node(i);
     }
-    test.tprintf("Make node 1 master\n");
-
-    test.repl->connect();
-    execute_query(test.repl->nodes[0], (char*) "SET GLOBAL READ_ONLY=OFF");
-    test.repl->close_connections();
-
-    test.maxscale->wait_for_monitor();
-
-    printf("Unlock slave\n");
-    test.repl->unblock_node(1);
-    test.maxscale->wait_for_monitor();
-
-    printf("Make node 2 slave\n");
-    test.repl->connect();
-    execute_query(test.repl->nodes[1], (char*) "SET GLOBAL READ_ONLY=ON");
-    test.repl->close_connections();
-    test.maxscale->wait_for_monitor();
-
-    res = test.maxctrl("api get servers/server2 data.attributes.state").output;
-
-    if (strstr(res.c_str(), "Slave, Running") == NULL)
+    repl.connect();
+    for (int i = extras_begin; i < repl.N; i++)
     {
-        test.add_result(1, "Node1 is not slave, status is %s\n", res.c_str());
+        repl.replicate_from(i, 0);
     }
-
-    res = test.maxctrl("api get servers/server1 data.attributes.state").output;
-
-    if (strstr(res.c_str(), "Master, Running") == NULL)
-    {
-        test.add_result(1, "Node0 is not master, status is %s\n", res.c_str());
-    }
-
-    return test.global_result;
 }
