@@ -1969,7 +1969,7 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
     return rv;
 }
 
-std::atomic_int64_t nosql::NoSQL::Context::s_connection_id;
+std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
 namespace
 {
