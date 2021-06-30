@@ -7,5 +7,8 @@ add_library(simdimpl STATIC
 
 add_dependencies(simdimpl maxbase)
 
-target_compile_options(simdimpl PRIVATE "-mavx2")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    target_compile_options(simdimpl PRIVATE "-mavx2")
+endif()
+
 set_target_properties(simdimpl PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
