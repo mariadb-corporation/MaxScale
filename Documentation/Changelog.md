@@ -1,5 +1,10 @@
 # Changelog
 
+## MariaDB MaxScale 7
+
+For more details, please refer to:
+* [MariaDB MaxScale 7.0.0 Release Notes](Release-Notes/MaxScale-7.0.0-Release-Notes.md)
+
 ## MariaDB MaxScale 6
 
 * The versioning scheme has changed; earlier this would have been version 2.6.
