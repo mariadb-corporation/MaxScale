@@ -1,8 +1,10 @@
-# MariaDB MaxScale 6.0.0 Release Notes
+# MariaDB MaxScale 6.0 Release Notes -- 2021-06-30
 
 The versioning scheme has changed; the major number will now change at
-every release which is not only a maintenance release. According to the
-old scheme, the version number would have been 2.6.
+every release, which is not only a maintenance release and the minor
+number will change at every release. According to the old scheme, this
+MaxScale release would have been called 2.6 and the version number would
+have been 2.6.0.
 
 Release 6.0 is a Beta release.
 
