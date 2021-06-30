@@ -30,18 +30,18 @@ std::string* get_canonical(std::string* pSql, Markers* pMarkers)
 {
     if (cpu_info.has_avx2)
     {
-        return maxsimd::simd256::get_canonical_impl(pSql, pMarkers);
+        return simd256::get_canonical_impl(pSql, pMarkers);
     }
     else
     {
-        return maxsimd::generic::get_canonical_impl(pSql, pMarkers);
+        return generic::get_canonical_impl(pSql, pMarkers);
     }
 }
 #else
 
 std::string* get_canonical(std::string* pSql, Markers* pMarkers)
 {
-    return maxsimd::generic::get_canonical_impl(pSql, pMarkers);
+    return generic::get_canonical_impl(pSql, pMarkers);
 }
 
 #endif

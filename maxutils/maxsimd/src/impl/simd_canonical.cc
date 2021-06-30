@@ -23,7 +23,9 @@
 #include <vector>
 #include <limits>
 
-namespace maxsimd::simd256
+namespace maxsimd
+{
+namespace simd256
 {
 namespace
 {
@@ -449,6 +451,7 @@ break_out:
     sql.resize(write_ptr - write_begin);
 
     return pSql;
+}
 }
 }
 #endif
