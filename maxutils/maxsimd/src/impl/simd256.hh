@@ -20,7 +20,9 @@
 #include <vector>
 #include <immintrin.h>
 
-namespace maxsimd::simd256
+namespace maxsimd
+{
+namespace simd256
 {
 
 const int SIMD_BYTES = 32;
@@ -167,5 +169,6 @@ inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Marke
     }
 
     return pMarkers;
+}
 }
 }

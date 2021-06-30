@@ -177,7 +177,9 @@ inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 }
 }
 
-namespace maxsimd::generic
+namespace maxsimd
+{
+namespace generic
 {
 
 #define likely(x)   __builtin_expect (!!(x), 1)
@@ -333,5 +335,6 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
     sql.resize(it_out - it_out_begin);
 
     return pSql;
+}
 }
 }

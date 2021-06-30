@@ -17,12 +17,18 @@
 #include <vector>
 
 /** The concrete implementations of get_canonical */
-namespace maxsimd::generic
+namespace maxsimd
+{
+namespace generic
 {
 std::string* get_canonical_impl(std::string* pSql, std::vector<const char*>* pMarkers);
 }
+}
 
-namespace maxsimd::simd256
+namespace maxsimd
+{
+namespace simd256
 {
 std::string* get_canonical_impl(std::string* pSql, std::vector<const char*>* pMarkers);
+}
 }

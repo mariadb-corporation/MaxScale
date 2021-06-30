@@ -21,7 +21,9 @@
 
 using namespace std::string_literals;
 
-namespace maxsimd::simd256
+namespace maxsimd
+{
+namespace simd256
 {
 
 std::string to_string(__m256i reg)
@@ -73,6 +75,7 @@ __m256i make_ascii_bitmap(const std::string& chars)
     }
 
     return _mm256_loadu_si256((__m256i*) bitmap.data());
+}
 }
 }
 #endif
