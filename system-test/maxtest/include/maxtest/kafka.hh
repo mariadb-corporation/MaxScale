@@ -94,15 +94,22 @@ private:
 wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
 )EOF";
 
-        if (system(download.c_str()) != 0
-            || m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz") != 0)
+        if (system(download.c_str()) != 0)
         {
+            m_test.add_failure("Failed to wget kafka sources.");
+            return false;
+        }
+
+        if (!m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", "~/kafka_2.13-2.7.0.tgz"))
+        {
+            m_test.add_failure("Failed to copy kafka sources to node.");
             return false;
         }
 
         // TODO: Install java with mdbci, this is a dumb workaround that will fail at some point.
-        if (m_test.maxscale->ssh_node_f(false, "sudo yum -y install java-latest-openjdk;"))
+        if (m_test.maxscale->ssh_node_f(false, "sudo yum -y install java-latest-openjdk;") != 0)
         {
+            m_test.add_failure("Failed to install java-latest-openjdk");
             return false;
         }
 
@@ -115,7 +122,13 @@ rm kafka_2.13-2.7.0.tgz;
 mv kafka_2.13-2.7.0 kafka;
         )EOF";
 
-        return m_test.maxscale->ssh_node_f(false, "%s", command.c_str()) == 0;
+        if (m_test.maxscale->ssh_node_f(false, "%s", command.c_str()) != 0)
+        {
+            m_test.add_failure("Failed to untar and rename kafka directory.");
+            return false;
+        }
+
+        return true;
     }
 
     TestConnections& m_test;
