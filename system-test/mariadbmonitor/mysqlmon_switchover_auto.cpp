@@ -46,7 +46,7 @@ int main(int argc, char** argv)
         cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
                 "Starting MaxScale.\n";
         test.maxscale->start_and_check_started();
-        test.maxscale->wait_for_monitor(2);
+        test.maxscale->wait_for_monitor(4);
         disks_plugin_loaded = true;
     }
     else
@@ -101,8 +101,8 @@ int main(int argc, char** argv)
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
         test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:1");
-        sleep(2);   // The disk space is checked depending on wall clock time.
-        test.maxscale->wait_for_monitor(2);
+        sleep(4);   // The disk space is checked depending on wall clock time.
+        test.maxscale->wait_for_monitor(4);
 
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
         // still replicating from server1. server1 was redirected to the new master. Although server1
@@ -122,16 +122,16 @@ int main(int argc, char** argv)
 
         cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
         test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:100");
-        sleep(2);   // To update disk space status
-        test.maxscale->wait_for_monitor(1);
+        sleep(4);   // To update disk space status
+        test.maxscale->wait_for_monitor(2);
         get_output(test);
     }
 
     // Use the reset-replication command to fix the situation.
     cout << "Running reset-replication to fix the situation.\n";
     test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
-    sleep(2);
-    test.maxscale->wait_for_monitor(2);
+    sleep(4);
+    test.maxscale->wait_for_monitor(4);
     get_output(test);
     // Check that no auto switchover has happened.
     expect_server_status(server_names[0], master);
