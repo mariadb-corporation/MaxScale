@@ -127,7 +127,7 @@ void check_state_change(const MaxRest& maxrest)
     cout << "Blocking node: " << node << endl;
     test.xpand->block_node(node);
 
-    int cycles = 3;
+    int cycles = 5;
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
     test.maxscale->wait_for_monitor(cycles);
 
