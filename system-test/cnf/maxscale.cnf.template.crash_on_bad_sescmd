@@ -25,7 +25,7 @@ address=###node_server_IP_4###
 port=###node_server_port_4###
 protocol=MySQLBackend
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3,server4
@@ -33,7 +33,7 @@ user=maxskysql
 password=skysql
 monitor_interval=1000
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -42,8 +42,8 @@ password=skysql
 max_sescmd_history=20
 disable_sescmd_history=false
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
+service=RW-Split-Router
 protocol=MySQLClient
 port=4006
