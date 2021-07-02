@@ -181,7 +181,7 @@ public:
 
     // ... alternatively, if the threads using SharedDataType are ordered [0, num_clients[,
     // this may be more convenient.
-    SharedDataType* get_shared_data_by_order(int thread_id);
+    SharedDataType* get_shared_data_by_index(int thread_id);
 
     // Only for testing. The pointed to data may be collected (deleted) at any time, the caller
     // must know what it is doing.
@@ -381,6 +381,7 @@ void GCUpdater<SD>::run()
         }
 
         m_pLatest_data = create_new_copy(m_pLatest_data);
+        num_updater_copies.fetch_add(1, std::memory_order_relaxed);
 
         m_all_ptrs.push_back(m_pLatest_data);
 
@@ -445,7 +446,8 @@ int GCUpdater<SD>::gc()
         delete trash;
     }
 
-    return m_all_ptrs.size() - 1;
+    auto sz = m_all_ptrs.size();    // one pointer is the latest, everything else may be gc:ed anytime
+    return sz ? sz - 1 : 0;
 }
 
 template<typename SD>
@@ -461,7 +463,7 @@ std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
 }
 
 template<typename SD>
-SD* GCUpdater<SD>::get_shared_data_by_order(int thread_id)
+SD* GCUpdater<SD>::get_shared_data_by_index(int thread_id)
 {
     return &m_shared_data[thread_id];
 }

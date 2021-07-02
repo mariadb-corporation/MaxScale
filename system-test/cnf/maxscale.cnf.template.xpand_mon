@@ -52,14 +52,4 @@ service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
-
 ###xpand_server###
