@@ -1363,6 +1363,8 @@ using ParamBitMask = ParamCount;
  *
  * Walks hand in hand with Specification.
  */
+template<class ParamType> class Native;
+
 class Configuration
 {
 public:
@@ -1487,7 +1489,7 @@ protected:
      * @param pParam  Pointer to paramter describing value.
      * @param onSet   Optional functor to be called when value is set (at startup).
      */
-    template<class ParamType>
+    template<class ParamType, class NativeParamType = Native<ParamType> >
     void add_native(typename ParamType::value_type* pValue,
                     ParamType* pParam,
                     std::function<void(typename ParamType::value_type)> on_set = nullptr);
@@ -1652,7 +1654,7 @@ public:
     }
 
     bool set_from_string(const std::string& value_as_string,
-                         std::string* pMessage = nullptr) override final
+                         std::string* pMessage = nullptr) override
     {
         value_type value;
         bool rv = parameter().from_string(value_as_string, &value, pMessage);
@@ -2467,13 +2469,13 @@ void ParamEnumMask<T>::populate(MXS_MODULE_PARAM& param) const
 }
 
 
-template<class ParamType>
+template<class ParamType, class NativeParamType = Native<ParamType> >
 void Configuration::add_native(typename ParamType::value_type* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)
 {
     *pValue = pParam->default_value();
-    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
+    m_natives.push_back(std::unique_ptr<Type>(new NativeParamType(this, pParam, pValue, on_set)));
 }
 }
 }
