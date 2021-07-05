@@ -546,6 +546,22 @@ static int get_release_string(char* release);
 namespace maxscale
 {
 
+string Config::ThreadsCount::to_string() const
+{
+    std::string rv;
+
+    if (m_value_as_string == CN_AUTO)
+    {
+        rv = m_value_as_string;
+    }
+    else
+    {
+        rv = config::Native<ParamThreadsCount>::to_string();
+    }
+
+    return rv;
+}
+
 Config::Config()
     : config::Configuration(CN_MAXSCALE, &s_specification)
     , log_debug(this, &s_log_debug, [](bool enable) {
@@ -620,7 +636,7 @@ Config::Config()
     substitute_variables(false),
     promoted_at(0)
 {
-    add_native(&n_threads, &s_n_threads);
+    add_native<ParamThreadsCount, ThreadsCount>(&n_threads, &s_n_threads);
     add_native(&qc_name, &s_qc_name);
     add_native(&qc_args, &s_qc_args);
     add_native(&qc_sql_mode, &s_qc_sql_mode);

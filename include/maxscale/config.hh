@@ -90,6 +90,30 @@ public:
                          std::string* pMessage) const;
     };
 
+    class ThreadsCount : public config::Native<ParamThreadsCount>
+    {
+    public:
+        using config::Native<ParamThreadsCount>::Native;
+
+        bool set_from_string(const std::string& value_as_string,
+                             std::string* pMessage = nullptr) override final
+        {
+            bool rv = config::Native<ParamThreadsCount>::set_from_string(value_as_string, pMessage);
+
+            if (rv)
+            {
+                m_value_as_string = value_as_string;
+            }
+
+            return rv;
+        }
+
+        std::string to_string() const override;
+
+    private:
+        std::string m_value_as_string;
+    };
+
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
 
     // RUNTIME-modifiable automatically configured parameters.
