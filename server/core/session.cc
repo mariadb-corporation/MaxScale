@@ -1354,6 +1354,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
     }
 
     BackendDCB* dcb = nullptr;
+    mxs::BackendConnection* ret = nullptr;
     if (conn)
     {
         dcb = BackendDCB::connect(server, this, manager);
@@ -1369,6 +1370,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
+                ret = dcb->protocol();
             }
             else
             {
@@ -1378,7 +1380,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
             }
         }
     }
-    return dcb->protocol();
+    return ret;
 }
 
 void Session::tick(int64_t idle)
