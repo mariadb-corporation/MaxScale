@@ -4,13 +4,13 @@ License text copyright (c) 2020 MariaDB Corporation Ab, All Rights Reserved.
 Parameters
 
 Licensor:             MariaDB Corporation Ab
-Licensed Work:        MariaDB MaxScale (TM) v.6.0.
+Licensed Work:        MariaDB MaxScale (TM) v.6.1.
                       The Licensed Work is (c) 2021 MariaDB Corporation Ab
 Additional Use Grant: You may use the Licensed Work when your application
                       uses the Licensed Work with a total of less than three
                       server instances for any purpose.
 
-Change Date:          2025-06-21
+Change Date:          2025-07-14
 
 Change License:       Version 2 or later of the GNU General Public License as
                       published by the Free Software Foundation.
