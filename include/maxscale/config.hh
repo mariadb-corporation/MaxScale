@@ -104,6 +104,8 @@ public:
                          std::string* pMessage) const override final;
     };
 
+    class ThreadsCount;
+
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
 
     std::vector<std::string> argv;                  /**< Copy of the argv array given to main. */

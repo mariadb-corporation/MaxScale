@@ -15,13 +15,12 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
-    Test->maxscale->connect_maxscale();
+    TestConnections::skip_maxscale_start(true);
+    TestConnections test(argc, argv);
 
-    Test->log_includes("is already monitored by");
+    test.maxscale->restart_maxscale();
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    test.log_includes("is already monitored by");
+
+    return test.global_result;
 }

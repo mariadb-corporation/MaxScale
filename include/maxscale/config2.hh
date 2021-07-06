@@ -1574,6 +1574,8 @@ using ParamBitMask = ParamCount;
  *
  * Walks hand in hand with Specification.
  */
+template<class ParamType, class ConfigurationType> class Native;
+
 class Configuration
 {
 public:
@@ -1722,7 +1724,9 @@ protected:
      * @param pParam  Pointer to paramter describing value.
      * @param onSet   Optional functor to be called when value is set (at startup).
      */
-    template<class ParamType, class ConcreteConfiguration>
+template<class ParamType,
+         class ConcreteConfiguration,
+         class NativeParamType = Native<ParamType, ConcreteConfiguration>>
     void add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                     ParamType* pParam,
                     std::function<void(typename ParamType::value_type)> on_set = nullptr);
@@ -1929,7 +1933,7 @@ public:
     }
 
     bool set_from_string(const std::string& value_as_string,
-                         std::string* pMessage = nullptr) override final
+                         std::string* pMessage = nullptr) override
     {
         value_type value;
         bool rv = parameter().from_string(value_as_string, &value, pMessage);
@@ -3024,15 +3028,16 @@ bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-template<class ParamType, class ConcreteConfiguration>
+template<class ParamType,
+         class ConcreteConfiguration,
+         class NativeParamType = Native<ParamType, ConcreteConfiguration>>
 void Configuration::add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                                ParamType* pParam,
                                std::function<void(typename ParamType::value_type)> on_set)
 {
     ConcreteConfiguration* pThis = static_cast<ConcreteConfiguration*>(this);
     pThis->*pValue = pParam->default_value();
-    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType, ConcreteConfiguration>(
-                                                  pThis, pParam, pValue, on_set)));
+    m_natives.push_back(std::unique_ptr<Type>(new NativeParamType(pThis, pParam, pValue, on_set)));
 }
 
 template<class ParamType, class ConcreteConfiguration, class Container>

@@ -650,6 +650,46 @@ static int get_release_string(char* release);
 namespace maxscale
 {
 
+class Config::ThreadsCount : public config::Native<ParamThreadsCount, Config>
+{
+    using Base = config::Native<ParamThreadsCount, Config>;
+public:
+    using config::Native<ParamThreadsCount, Config>::Native;
+
+    bool set_from_string(const std::string& value_as_string,
+                         std::string* pMessage = nullptr) override final
+    {
+        bool rv = Base::set_from_string(value_as_string, pMessage);
+
+        if (rv)
+        {
+            m_value_as_string = value_as_string;
+        }
+
+        return rv;
+    }
+
+    std::string to_string() const override
+    {
+        std::string rv;
+
+        if (m_value_as_string == CN_AUTO)
+        {
+            rv = m_value_as_string;
+        }
+        else
+        {
+            rv = Base::to_string();
+        }
+
+        return rv;
+    }
+
+private:
+    std::string m_value_as_string;
+};
+
+
 Config::Config(int argc, char** argv)
     : config::Configuration(CN_MAXSCALE, &s_specification)
     , argv(argv, argv + argc)
@@ -725,7 +765,7 @@ Config::Config(int argc, char** argv)
     substitute_variables(false),
     promoted_at(0)
 {
-    add_native(&Config::n_threads, &s_n_threads);
+    add_native<ParamThreadsCount, Config, ThreadsCount>(&Config::n_threads, &s_n_threads);
     add_native(&Config::qc_name, &s_qc_name);
     add_native(&Config::qc_args, &s_qc_args);
     add_native(&Config::qc_sql_mode, &s_qc_sql_mode);
