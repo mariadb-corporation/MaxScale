@@ -1800,8 +1800,11 @@ void Service::remove_target(Service* target)
 
 void Service::add_target(SERVER* target)
 {
-    m_data->targets.push_back(target);
-    propagate_target_update();
+    if (std::find(begin(m_data->targets), end(m_data->targets), target) == end(m_data->targets))
+    {
+        m_data->targets.push_back(target);
+        propagate_target_update();
+    }
 }
 
 void Service::add_target(Service* target)
