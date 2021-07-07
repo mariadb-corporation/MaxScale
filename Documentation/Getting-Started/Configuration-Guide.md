@@ -1856,9 +1856,6 @@ A DCB placed in the persistent pool for a server will only be reused if the
 elapsed time since it joined the pool is less than the given value. Otherwise,
 the DCB will be discarded and the connection closed.
 
-For more information about persistent connections, please read the
-[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
-
 ### `proxy_protocol`
 
 If `proxy_protocol` is set to `on`, MaxScale will send a
