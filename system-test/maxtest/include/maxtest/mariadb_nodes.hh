@@ -77,6 +77,11 @@ public:
     enum class SslMode {ON, OFF};
     SMariaDB try_open_connection(SslMode ssl, const std::string& db = "");
 
+    SMariaDB try_open_connection(SslMode ssl,
+                                 const std::string& user,
+                                 const std::string& password,
+                                 const std::string& db = "");
+
     SMariaDB      open_connection(const std::string& db = "");
     mxt::MariaDB* admin_connection();
 
@@ -483,6 +488,10 @@ protected:
 
     mxt::TestLogger& logger();
 
+    virtual bool check_normal_conns();
+
+    bool check_conns(const std::string& user, const std::string& password);
+
     std::string m_test_dir;             /**< path to test application */
     /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
     std::string m_cnf_server_prefix;
@@ -515,8 +524,6 @@ private:
      * @return True on success
      */
     virtual bool reset_server(int i);
-
-    bool check_normal_conns();
 
     virtual bool create_users(int i) = 0;
 };

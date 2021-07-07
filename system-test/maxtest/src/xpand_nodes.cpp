@@ -226,6 +226,11 @@ bool XpandCluster::start_replication()
     return rv == 0;
 }
 
+bool XpandCluster::check_normal_conns()
+{
+    return MariaDBCluster::check_normal_conns() && check_conns("xpandmon", "xpandmon");
+}
+
 bool XpandCluster::check_replication()
 {
     bool res = true;
