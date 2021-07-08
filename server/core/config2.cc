@@ -749,7 +749,6 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
     mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
-    bool changed = false;
 
     map<string, mxs::ConfigParameters> nested_parameters;
 
@@ -777,7 +776,6 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
 
                 if (!json_equal(old_val, value))
                 {
-                    changed = true;
                     string message;
 
                     if (!pValue->set_from_json(value, &message))
@@ -805,7 +803,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         }
     }
 
-    if (configured && (changed || !nested_parameters.empty()))
+    if (configured)
     {
         configured = post_configure(nested_parameters);
     }
