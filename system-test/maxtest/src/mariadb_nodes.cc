@@ -1035,6 +1035,15 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
 
 bool MariaDBCluster::check_normal_conns()
 {
+    return check_conns(this->user_name, this->password);
+}
+
+bool MariaDBCluster::check_conns(const std::string& a_user_name, const std::string& a_password)
+{
+    // NOTE: There is a this->user_name and this->password and that's the reason for
+    // NOTE: 'a_user_name' and 'a_password'. Even without the prefix they would hide,
+    // NOTE: but that would be confusing.
+
     // Check that normal connections to backends work. If ssl-mode is on, the connector refuses non-ssl
     // connections.
     bool rval = true;
@@ -1043,32 +1052,32 @@ bool MariaDBCluster::check_normal_conns()
         auto srv = backend(i);
         if (m_ssl)
         {
-            auto conn = srv->try_open_connection(SslMode::ON);
+            auto conn = srv->try_open_connection(SslMode::ON, a_user_name, a_password);
             if (!conn->is_open())
             {
                 logger().log_msgf("Connecting to '%s' as '%s' with SSL failed when SSL should be enabled.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), a_user_name.c_str());
                 rval = false;
             }
 
             // Normal connections without ssl should not work.
-            conn = srv->try_open_connection(SslMode::OFF);
+            conn = srv->try_open_connection(SslMode::OFF, a_user_name, a_password);
             if (conn->is_open())
             {
                 logger().log_msgf("Connecting to '%s' as '%s' without SSL succeeded when "
                                   "SSL should be required.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), a_user_name.c_str());
                 rval = false;
             }
         }
         else
         {
-            auto conn = srv->try_open_connection(SslMode::OFF);
+            auto conn = srv->try_open_connection(SslMode::OFF, a_user_name, a_password);
             if (!conn->is_open())
             {
                 logger().log_msgf("Connecting to '%s' as '%s' without SSL failed when SSL should not "
                                   "be required.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), a_user_name.c_str());
                 rval = false;
             }
             // SSL-connections would likely work as well, as server is always configured for it. No need to
@@ -1198,10 +1207,18 @@ bool MariaDBServer::update_status()
 
 MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl, const std::string& db)
 {
+    return try_open_connection(ssl, m_cluster.user_name, m_cluster.password, db);
+}
+
+MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl,
+                                                           const std::string& user,
+                                                           const std::string& password,
+                                                           const std::string& db)
+{
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
-    sett.user = m_cluster.user_name;
-    sett.password = m_cluster.password;
+    sett.user = user;
+    sett.password = password;
     if (ssl == SslMode::ON)
     {
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-06-21
+ * Change Date: 2025-07-14
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1800,8 +1800,11 @@ void Service::remove_target(Service* target)
 
 void Service::add_target(SERVER* target)
 {
-    m_data->targets.push_back(target);
-    propagate_target_update();
+    if (std::find(begin(m_data->targets), end(m_data->targets), target) == end(m_data->targets))
+    {
+        m_data->targets.push_back(target);
+        propagate_target_update();
+    }
 }
 
 void Service::add_target(Service* target)

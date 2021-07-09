@@ -1755,7 +1755,7 @@ connection is actually ready for a query. If the session command history size
 exceeds the value of *max_sescmd_history*, pre-emptive pooling is disabled for
 the session.
 
-This feature is currently experimental. There are several situations where
+There are several situations where
 pooling needs to be disabled (temporarily or permanently) to avoid interfering
 with session state. MaxScale only detects the most obvious cases, e.g.
 transactions. When using pre-emptive pooling, avoid commands such as "LOCK
