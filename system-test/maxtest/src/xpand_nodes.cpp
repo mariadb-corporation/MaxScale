@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-06-21
+ * Change Date: 2025-07-14
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -224,6 +224,11 @@ bool XpandCluster::start_replication()
     }
 
     return rv == 0;
+}
+
+bool XpandCluster::check_normal_conns()
+{
+    return MariaDBCluster::check_normal_conns() && check_conns("xpandmon", "xpandmon");
 }
 
 bool XpandCluster::check_replication()

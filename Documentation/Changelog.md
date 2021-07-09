@@ -26,7 +26,8 @@ lag limit (`script_max_replication_lag`).
 the results has been introduced.
 
 For more details, please refer to:
-* [MariaDB MaxScale 6.0.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)
+* [MariaDB MaxScale 6.1 Release Notes](Release-Notes/MaxScale-6.1.0-Release-Notes.md)
+* [MariaDB MaxScale 6.0 Release Notes](Release-Notes/MaxScale-6.0.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.5
 

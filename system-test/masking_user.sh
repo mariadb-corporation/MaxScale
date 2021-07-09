@@ -20,7 +20,7 @@ fi
 
 echo $source copied to $target, restarting maxscale
 
-ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo service maxscale restart'
+ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo systemctl restart maxscale'
 
 test_dir=`pwd`
 
