@@ -20,7 +20,7 @@ fi
 
 echo $source copied to $target, restarting Maxscale
 
-ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo service maxscale restart'
+ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo systemctl restart maxscale'
 
 # [Read Connection Listener Master] in cnf/maxscale.maxscale.cnf.template.$1
 port=4008
