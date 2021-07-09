@@ -14,6 +14,8 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3661](https://jira.mariadb.org/browse/MXS-3661) The list of servers might get duplicated for routers using mariadbmon
+* [MXS-3660](https://jira.mariadb.org/browse/MXS-3660) MaxScale crashes if backend connection creation fails on a system error
 * [MXS-3658](https://jira.mariadb.org/browse/MXS-3658) If the monitor is dynamic, both static and volatile servers will be used.
 
 ## Known Issues and Limitations
