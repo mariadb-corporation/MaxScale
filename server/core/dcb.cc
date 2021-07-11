@@ -709,6 +709,11 @@ int DCB::writeq_drain()
         this->trigger_read_event();
     }
 
+    if (m_writeq == nullptr)
+    {
+        return 0;
+    }
+
     int total_written = 0;
     GWBUF* local_writeq = m_writeq;
     m_writeq = NULL;
