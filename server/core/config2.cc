@@ -749,6 +749,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
     mxb_assert(m_pSpecification->size() >= size());
 
     bool configured = true;
+    bool changed = false;
 
     map<string, mxs::ConfigParameters> nested_parameters;
 
@@ -776,6 +777,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
 
                 if (!json_equal(old_val, value))
                 {
+                    changed = true;
                     string message;
 
                     if (!pValue->set_from_json(value, &message))
@@ -803,8 +805,17 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         }
     }
 
-    if (configured)
+    if (configured && (m_first_time || changed || !nested_parameters.empty()))
     {
+        // If this is the first time a configuration is being configured, call post_configure() even if no
+        // changes were done. This makes sure that it is always called during object construction.
+        //
+        // If the configuration was given to the object being constructed, the initial configuration could be
+        // done in the constructor of the object. This would remove the need for a variable that tracks
+        // whether the configuration has been configured. The problem with this is that post_configure() would
+        // have to be manually called in the constructor of each object that uses a Configuration.
+        m_first_time = false;
+
         configured = post_configure(nested_parameters);
     }
 
