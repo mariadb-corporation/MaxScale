@@ -754,12 +754,6 @@ int DCB::writeq_drain()
         }
     }
 
-    if (m_writeq == NULL)
-    {
-        /* The write queue has drained, potentially need to call a callback function */
-        call_callback(Reason::DRAINED);
-    }
-
     mxb_assert(m_writeqlen >= (uint32_t)total_written);
     m_writeqlen -= total_written;
 
