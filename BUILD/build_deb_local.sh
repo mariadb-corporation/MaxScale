@@ -24,7 +24,7 @@ then
 fi
 
 export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-make -j${NCPU} package
+make package
 res=$?
 if [ $res != 0 ] ; then
         echo "Make package failed"
@@ -36,7 +36,7 @@ sudo rm CMakeCache.txt
 
 echo "Building tarball..."
 cmake .. $cmake_flags -DTARBALL=Y
-sudo make -j${NCPU} package
+sudo make package
 
 
 cp _CPack_Packages/Linux/DEB/*.deb ../
@@ -58,7 +58,7 @@ then
         export LD_LIBRARY_PATH=""
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
         export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-        make -j${NCPU} package
+        make package
         cp _CPack_Packages/Linux/DEB/*.deb ../
         cd ..
         cp _build/*.deb .
