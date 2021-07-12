@@ -26,6 +26,7 @@ struct ServerInfo
     static constexpr bitfield MASTER = (1 << 1);
     static constexpr bitfield SLAVE = (1 << 2);
     static constexpr bitfield RELAY = (1 << 3);
+    static constexpr bitfield MAINT = (1 << 4);
     static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
     static constexpr bitfield BLR = (1 << 12);
     static constexpr bitfield DOWN = (1 << 13);
@@ -338,7 +339,7 @@ public:
 
     int ssh_node(const std::string& cmd, bool sudo);
 
-    int ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
+    int  ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
     bool copy_to_node(const char* src, const char* dest);
     bool copy_from_node(const char* src, const char* dest);
 

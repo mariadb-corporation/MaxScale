@@ -995,6 +995,10 @@ void ServerInfo::status_from_string(const string& source)
         {
             status |= SLAVE;
         }
+        else if (flag == "Maintenance")
+        {
+            status |= MAINT;
+        }
         else if (flag == "Relay Master")
         {
             status |= RELAY;
@@ -1028,6 +1032,10 @@ std::string ServerInfo::status_to_string(bitfield status)
         if (status & SLAVE)
         {
             items.emplace_back("Slave");
+        }
+        if (status & MAINT)
+        {
+            items.emplace_back("Maintenance");
         }
         if (status & SERVER_SLAVE_OF_EXT_MASTER)
         {
