@@ -53,8 +53,6 @@ MYSQL* open_conn_db_flags(int port,
 
     unsigned int timeout = 15;
     mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-    mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
-    mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
     // MXS-2568: This fixes mxs1828_double_local_infile
     mysql_optionsv(conn, MYSQL_OPT_LOCAL_INFILE, (void*)"1");
