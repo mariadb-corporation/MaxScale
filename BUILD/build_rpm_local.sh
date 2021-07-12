@@ -9,6 +9,11 @@ cd ./MaxScale
 
 NCPU=$(grep -c processor /proc/cpuinfo)
 
+if test -f /opt/rh/devtoolset-7/enable
+then
+    source /opt/rh/devtoolset-7/enable
+fi
+
 mkdir _build
 cd _build
 cmake ..  $cmake_flags
