@@ -2,7 +2,7 @@
     <!-- TODO: Virtual scroll treeview -->
     <div>
         <m-treeview
-            :items="schemaList"
+            :items="schemaTree"
             :search="$parent.searchSchema"
             :filter="filter"
             hoverable
@@ -10,6 +10,7 @@
             open-on-click
             transition
             :load-children="handleLoadChildren"
+            :active.sync="activeNode"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
         >
@@ -118,6 +119,7 @@ export default {
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
+            activeNode: [],
         }
     },
     computed: {
@@ -127,10 +129,16 @@ export default {
         showCtxBtn() {
             return item => this.activeCtxItem && item.id === this.activeCtxItem.id
         },
+        schemaTree() {
+            return this.schemaList
+        },
     },
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
+        },
+        activeNode(v, oV) {
+            if (v.length && v[0] !== oV[0]) this.$emit('preview-data', v[0])
         },
     },
     methods: {
@@ -168,9 +176,11 @@ export default {
             switch (option) {
                 case this.$t('previewData'):
                     this.$emit('preview-data', schema)
+                    this.activeNode = [item.id]
                     break
                 case this.$t('viewDetails'):
                     this.$emit('view-details', schema)
+                    this.activeNode = [item.id]
                     break
                 case this.$t('placeSchemaInEditor'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))

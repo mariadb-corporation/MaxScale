@@ -100,5 +100,6 @@ export default {
 .truncate-text-menu {
     background: $background;
     font-size: 14px;
+    overflow: auto;
 }
 </style>

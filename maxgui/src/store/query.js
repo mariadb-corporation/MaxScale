@@ -353,6 +353,7 @@ export default {
                         name: row.TABLE_NAME,
                         id: `${dbName}.${row.TABLE_NAME}`,
                         data: row,
+                        canBeHighlighted: true,
                         children: [
                             {
                                 type: 'Columns',
