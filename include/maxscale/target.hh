@@ -267,14 +267,17 @@ public:
     {
         // NOTE: Currently mutable as various parts of the system modify these when they should only be
         //       modified by the inherited objects.
-        mutable int      n_connections = 0;     /**< Number of connections */
-        mutable int      n_max_connections = 0; /**< Maximum number of connections */
-        mutable int      n_current = 0;         /**< Current connections */
-        mutable int      n_current_ops = 0;     /**< Current active operations */
+        mutable int      n_connections = 0;     /**< Total number of client connections */
+        mutable int      n_max_connections = 0; /**< Maximum number of client connections */
+        mutable int      n_current = 0;         /**< Current number of db connections */
+        mutable int      n_current_ops = 0;     /**< Current number of active db operations */
         mutable uint64_t packets = 0;           /**< Number of packets routed to this server */
+        mutable int      n_clients_conns = 0;   /**< Current number of client connections */
 
         void add_connection() const;
         void remove_connection() const;
+        void add_client_connection() const;
+        void remove_client_connection() const;
 
         json_t* to_json() const;
     };

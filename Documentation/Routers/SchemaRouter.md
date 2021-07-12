@@ -8,6 +8,19 @@ database-based sharding, the schemarouter also enables cross-node
 session variable usage by routing all queries that modify the session to all
 nodes.
 
+By default the SchemaRouter assumes that each database and table is only located
+on one server. If it finds the same database or table on multiple servers, it
+will close the session with the following error:
+
+```
+ERROR 5000 (DUPDB): Error: duplicate tables found on two different shards.
+```
+
+If duplicate tables are expected, use the
+[`ignore_tables_regex`](#ignore_tables_regex) parameter to controls which
+duplicate tables are allowed. To disable the duplicate database detection, use
+`ignore_tables_regex=.*`.
+
 The main limitation of SchemaRouter is that aside from session variable writes
 and some specific queries, a query can only target one server. This means that
 queries which depend on results from multiple servers give incorrect results.

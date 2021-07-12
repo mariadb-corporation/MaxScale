@@ -107,7 +107,6 @@ public:
 
     enum class Reason
     {
-        DRAINED,        /*< The write delay queue has drained */
         HIGH_WATER,     /*< Cross high water mark */
         LOW_WATER       /*< Cross low water mark */
     };

@@ -598,18 +598,6 @@ void ReplicationCluster::change_master(int NewMaster, int OldMaster)
     }
 }
 
-int ReplicationCluster::set_repl_user()
-{
-    int global_result = 0;
-    global_result += connect();
-    for (int i = 0; i < N; i++)
-    {
-        global_result += execute_query(nodes[i], "%s", create_repl_user);
-    }
-    close_connections();
-    return global_result;
-}
-
 int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int master_port)
 {
     char str[1024];

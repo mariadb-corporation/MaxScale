@@ -1482,7 +1482,8 @@ ServiceEndpoint::ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Co
     , m_service(service)
     , m_upstream(this)
 {
-    service->incref();
+    m_service->incref();
+    m_service->stats().add_client_connection();
 }
 
 ServiceEndpoint::~ServiceEndpoint()
@@ -1492,6 +1493,7 @@ ServiceEndpoint::~ServiceEndpoint()
         close();
     }
 
+    m_service->stats().remove_client_connection();
     m_service->decref();
 }
 
@@ -1525,6 +1527,8 @@ mxs::Target* ServiceEndpoint::target() const
 
 bool ServiceEndpoint::connect()
 {
+    mxb_assert(!m_open);
+
     mxb::LogScope scope(m_service->name());
     std::vector<mxs::Endpoint*> endpoints;
     endpoints.reserve(m_down.size());

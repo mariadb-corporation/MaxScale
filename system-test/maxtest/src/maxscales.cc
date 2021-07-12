@@ -662,6 +662,13 @@ void MaxScale::check_servers_status(const std::vector<mxt::ServerInfo::bitfield>
     data.check_servers_status(expected_status);
 }
 
+void MaxScale::check_print_servers_status(const std::vector<uint32_t>& expected_status)
+{
+    auto data = get_servers();
+    data.print();
+    data.check_servers_status(expected_status);
+}
+
 void MaxScale::alter_monitor(const string& mon_name, const string& setting, const string& value)
 {
     string cmd = mxb::string_printf("alter monitor %s %s %s", mon_name.c_str(),
@@ -995,6 +1002,10 @@ void ServerInfo::status_from_string(const string& source)
         {
             status |= SLAVE;
         }
+        else if (flag == "Maintenance")
+        {
+            status |= MAINT;
+        }
         else if (flag == "Relay Master")
         {
             status |= RELAY;
@@ -1028,6 +1039,10 @@ std::string ServerInfo::status_to_string(bitfield status)
         if (status & SLAVE)
         {
             items.emplace_back("Slave");
+        }
+        if (status & MAINT)
+        {
+            items.emplace_back("Maintenance");
         }
         if (status & SERVER_SLAVE_OF_EXT_MASTER)
         {

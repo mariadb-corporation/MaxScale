@@ -203,6 +203,18 @@ void Target::Stats::remove_connection() const
     mxb_assert(rc > 0);
 }
 
+void Target::Stats::add_client_connection() const
+{
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_clients_conns, 1, mxb::atomic::RELAXED);
+    mxb_assert(rc >= 0);
+}
+
+void Target::Stats::remove_client_connection() const
+{
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_clients_conns, -1, mxb::atomic::RELAXED);
+    mxb_assert(rc > 0);
+}
+
 json_t* Target::Stats::to_json() const
 {
     json_t* stats = json_object();

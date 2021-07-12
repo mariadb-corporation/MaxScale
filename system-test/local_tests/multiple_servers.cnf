@@ -13,8 +13,6 @@
 [mysqld1]
 log-bin=mar-bin
 binlog-format=row
-#max_long_data_size=1000000000
-#innodb_log_file_size=2000000000
 slave-skip-errors=all
 server_id=1
 user            = mysql
@@ -26,8 +24,6 @@ datadir         = /data/mysql/mysql1
 [mysqld2]
 log-bin=mar-bin
 binlog-format=row
-#max_long_data_size=1000000000
-#innodb_log_file_size=2000000000
 slave-skip-errors=all
 server_id=2
 user            = mysql
@@ -39,8 +35,6 @@ datadir         = /data/mysql/mysql2
 [mysqld3]
 log-bin=mar-bin
 binlog-format=row
-#max_long_data_size=1000000000
-#innodb_log_file_size=2000000000
 slave-skip-errors=all
 server_id=3
 user            = mysql
@@ -52,8 +46,6 @@ datadir         = /data/mysql/mysql3
 [mysqld4]
 log-bin=mar-bin
 binlog-format=row
-#max_long_data_size=1000000000
-#innodb_log_file_size=2000000000
 slave-skip-errors=all
 server_id=4
 user            = mysql

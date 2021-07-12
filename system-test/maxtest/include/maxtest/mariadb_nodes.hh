@@ -333,11 +333,6 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * Disables the server SSL configuration
-     */
-    void disable_ssl();
-
-    /**
      * @brief Close all connections to this node
      *
      * This will kill all connections that have been created to this node.

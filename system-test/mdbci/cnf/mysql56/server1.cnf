@@ -19,8 +19,6 @@ server_id=1
 #slave_parallel_threads=2
 user=mysql
 ## x001
-#max_long_data_size=1000000000
-#innodb_log_file_size=2000000000
 
 # this is only for embedded server
 [embedded]
