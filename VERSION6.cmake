@@ -4,7 +4,7 @@
 # number.
 
 set(MAXSCALE_VERSION_MAJOR "6" CACHE STRING "Major version")
-set(MAXSCALE_VERSION_MINOR "1" CACHE STRING "Minor version")
+set(MAXSCALE_VERSION_MINOR "2" CACHE STRING "Minor version")
 set(MAXSCALE_VERSION_PATCH "0" CACHE STRING "Patch version")
 
 # This should only be incremented if a package is rebuilt
