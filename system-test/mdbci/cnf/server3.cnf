@@ -19,8 +19,6 @@ binlog_row_image=full
 server_id=3
 user=mysql
 ## x001
-max_long_data_size=1000000000
-innodb_log_file_size=2000000000
 slave-skip-errors=all
 
 # this is only for embedded server
