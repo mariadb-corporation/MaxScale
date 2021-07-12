@@ -433,7 +433,7 @@ add_test_script(masking_user masking_user.sh masking_mysqltest LABELS maskingfil
 add_test_executable(masking_auto_firewall.cpp masking_auto_firewall masking_auto_firewall LABELS masking REPL_BACKEND)
 
 # Test of Cache filter - basics
-add_test_script(cache_basic cache_basic.sh cache_basic LABELS cachefilter REPL_BACKEND)
+add_test_executable(cache_basic.cpp cache_basic cache_basic LABELS cachefilter REPL_BACKEND)
 
 # Test of Cache filter - runtime configuration
 add_test_executable(cache_runtime.cpp cache_runtime cache_runtime LABELS cachefilter REPL_BACKEND)

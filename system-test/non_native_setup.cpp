@@ -24,7 +24,6 @@ void print_usage(const char* zProgram)
          << "  <name>    is the name of the test, and\n"
          << "  <script>  is the program that will be invoked." << endl;
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -52,18 +51,7 @@ int main(int argc, char* argv[])
     if (zName && zScript)
     {
         TestConnections test(argc, argv);
-        test.write_node_env_vars();
-        auto test_dir = mxt::SOURCE_DIR;
-
-        sleep(3);
-        setenv("src_dir", test_dir, 1);
-
-        string script_cmd = mxb::string_printf("%s %s", zScript, zName);
-        int script_res = system(script_cmd.c_str());
-
-        test.expect(script_res == 0, "Test %s FAILED!", argv[1]);
-
-        rv = test.global_result;
+        test.run_test_script(zScript, zName);
     }
     else
     {

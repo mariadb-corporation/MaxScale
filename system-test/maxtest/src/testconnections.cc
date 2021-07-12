@@ -2033,6 +2033,20 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<void(T
     return rval;
 }
 
+int TestConnections::run_test_script(const char* script, const char* name)
+{
+    write_node_env_vars();
+    auto test_dir = mxt::SOURCE_DIR;
+    setenv("src_dir", test_dir, 1);
+
+    string script_cmd = mxb::string_printf("%s/%s %s", test_dir, script, name);
+    int script_res = system(script_cmd.c_str());
+
+    expect(script_res == 0, "Test %s FAILED!", name);
+
+    return global_result;
+}
+
 void TestConnections::set_signal_handlers()
 {
     signal_set(SIGSEGV, sigfatal_handler);

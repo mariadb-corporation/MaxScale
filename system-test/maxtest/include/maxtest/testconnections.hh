@@ -57,6 +57,15 @@ public:
      */
     int run_test(int argc, char* argv[], const std::function<void(TestConnections&)>& testfunc);
 
+    /**
+     * Run a test from a script
+     *
+     * @param The script to run. The file should be located in the test source directory.
+     * @param The name of the test. This is passed as the first argument to the script.
+     *
+     * @return The test result
+     */
+    int run_test_script(const char* script, const char* name);
 
     /**
      * @brief Is the test still ok?
