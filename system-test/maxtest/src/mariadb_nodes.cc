@@ -888,16 +888,6 @@ const char* MariaDBCluster::ip4(int i) const
     return Nodes::ip4(i);
 }
 
-void MariaDBCluster::disable_ssl()
-{
-    for (int i = 0; i < N; i++)
-    {
-        stop_node(i);
-        ssh_node(i, "rm -f /etc/my.cnf.d/ssl.cnf", true);
-        start_node(i);
-    }
-}
-
 bool MariaDBCluster::using_ipv6() const
 {
     return m_use_ipv6;
