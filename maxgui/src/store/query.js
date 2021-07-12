@@ -291,12 +291,14 @@ export default {
                         name: row.SCHEMA_NAME,
                         id: row.SCHEMA_NAME,
                         data: row,
+                        draggable: true,
                         children: [
                             {
                                 type: 'Tables',
                                 name: 'Tables',
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Tables`,
+                                draggable: false,
                                 children: [],
                             },
                             {
@@ -304,6 +306,7 @@ export default {
                                 name: 'Stored Procedures',
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                draggable: false,
                                 children: [],
                             },
                         ],
@@ -354,12 +357,14 @@ export default {
                         id: `${dbName}.${row.TABLE_NAME}`,
                         data: row,
                         canBeHighlighted: true,
+                        draggable: true,
                         children: [
                             {
                                 type: 'Columns',
                                 name: 'Columns',
                                 // only use to identify active node
                                 id: `${dbName}.${row.TABLE_NAME}.Columns`,
+                                draggable: false,
                                 children: [],
                             },
                             {
@@ -367,6 +372,7 @@ export default {
                                 name: 'Triggers',
                                 // only use to identify active node
                                 id: `${dbName}.${row.TABLE_NAME}.Triggers`,
+                                draggable: false,
                                 children: [],
                             },
                         ],
@@ -418,6 +424,7 @@ export default {
                         type: nodeType,
                         name: row.ROUTINE_NAME,
                         id: `${dbName}.${row.ROUTINE_NAME}`,
+                        draggable: true,
                         data: row,
                     })
                     dbCmplList.push({
@@ -469,6 +476,7 @@ export default {
                             dataType: row.COLUMN_TYPE,
                             type: nodeType,
                             id: `${dbName}.${tblName}.${row.COLUMN_NAME}`,
+                            draggable: true,
                             data: row,
                         })
                         dbCmplList.push({
@@ -522,6 +530,7 @@ export default {
                         type: nodeType,
                         name: row.TRIGGER_NAME,
                         id: `${dbName}.${row.TRIGGER_NAME}`,
+                        draggable: true,
                         data: row,
                     })
                     dbCmplList.push({

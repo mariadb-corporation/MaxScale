@@ -27,6 +27,8 @@
                         @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
                         @is-sidebar-collapsed="isSidebarCollapsed = $event"
                         @place-to-editor="placeToEditor"
+                        @dragging-schema="draggingSchema"
+                        @drop-schema-to-editor="dropSchemaToEditor"
                     />
                 </template>
                 <template slot="pane-right">
@@ -282,7 +284,24 @@ export default {
         },
         pxToPct: ({ px, containerPx }) => (px / containerPx) * 100,
         placeToEditor(schemaId) {
-            this.$refs.queryEditor.insertAtCursor(schemaId)
+            this.$refs.queryEditor.insertAtCursor({ text: schemaId })
+        },
+        draggingSchema() {
+            //TODO: add cursor widget to indicate dragging position
+        },
+        dropSchemaToEditor({ e, schemaId }) {
+            if (schemaId) {
+                const dropTarget = this.$refs.queryEditor.editor.getTargetAtClientPoint(
+                    e.clientX,
+                    e.clientY
+                )
+                if (dropTarget) {
+                    this.$refs.queryEditor.insertAtCursor({
+                        text: schemaId,
+                        range: dropTarget.range,
+                    })
+                }
+            }
         },
     },
 }

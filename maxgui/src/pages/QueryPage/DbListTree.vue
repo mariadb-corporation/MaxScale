@@ -22,7 +22,14 @@
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span class="text-truncate d-inline-block">{{ item.name }}</span>
+                    <span
+                        :draggable="item.draggable"
+                        class="text-truncate d-inline-block"
+                        @drag="e => onNodeDragging(e)"
+                        @dragend="e => onNodeDragEnd({ e, schemaId: item.id })"
+                    >
+                        {{ item.name }}
+                    </span>
                 </div>
             </template>
 
@@ -39,7 +46,7 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
+            v-if="!isDragging && hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
             right
             :nudge-right="45"
@@ -120,6 +127,7 @@ export default {
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             activeNode: [],
+            isDragging: false,
         }
     },
     computed: {
@@ -221,6 +229,19 @@ export default {
         },
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
+        },
+        onNodeDragging(e) {
+            this.isDragging = true
+            this.$emit('dragging-schema', e)
+        },
+        onNodeDragEnd({ e, schemaId }) {
+            if (this.isDragging) {
+                this.$emit('drop-schema-to-editor', {
+                    e,
+                    schemaId: this.$help.escapeIdentifiers(schemaId),
+                })
+                this.isDragging = false
+            }
         },
     },
 }
