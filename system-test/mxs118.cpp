@@ -15,7 +15,9 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+    TestConnections::skip_maxscale_start(true);
     TestConnections* Test = new TestConnections(argc, argv);
+    Test->maxscale->restart();
     Test->reset_timeout();
     Test->maxscale->connect_maxscale();
 
