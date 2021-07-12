@@ -830,7 +830,7 @@ void TestConnections::init_maxscale(int m)
                     mxs->maxscale_log_dir.c_str());
     if (maxscale::start)
     {
-        mxs->restart_maxscale();
+        expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
         mxs->wait_for_monitor();
     }
     else
