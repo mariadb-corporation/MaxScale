@@ -709,6 +709,11 @@ int DCB::writeq_drain()
         this->trigger_read_event();
     }
 
+    if (m_writeq == nullptr)
+    {
+        return 0;
+    }
+
     int total_written = 0;
     GWBUF* local_writeq = m_writeq;
     m_writeq = NULL;
@@ -747,12 +752,6 @@ int DCB::writeq_drain()
             local_writeq = gwbuf_consume(local_writeq, written);
             total_written += written;
         }
-    }
-
-    if (m_writeq == NULL)
-    {
-        /* The write queue has drained, potentially need to call a callback function */
-        call_callback(Reason::DRAINED);
     }
 
     mxb_assert(m_writeqlen >= (uint32_t)total_written);

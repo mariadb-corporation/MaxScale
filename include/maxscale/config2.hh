@@ -1778,6 +1778,7 @@ private:
     const Specification* m_pSpecification;
     ValuesByName         m_values;
     Natives              m_natives;
+    bool                 m_first_time {true};
 };
 
 

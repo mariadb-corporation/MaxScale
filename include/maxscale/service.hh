@@ -234,7 +234,7 @@ public:
     bool has_too_many_connections() const
     {
         auto limit = config()->max_connections;
-        return limit && mxb::atomic::load(&stats().n_current, mxb::atomic::RELAXED) >= limit;
+        return limit && mxb::atomic::load(&stats().n_clients_conns, mxb::atomic::RELAXED) > limit;
     }
 
     /**
