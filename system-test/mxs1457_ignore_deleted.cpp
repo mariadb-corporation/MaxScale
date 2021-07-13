@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
     test.repl->close_connections();
 
     test.reset_timeout();
+    test.check_maxctrl("reload service RW-Split-Router");
     MYSQL* conn = open_conn_db(test.maxscale->rwsplit_port,
                                test.maxscale->ip(),
                                "test",
