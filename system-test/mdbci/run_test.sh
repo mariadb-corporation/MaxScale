@@ -70,7 +70,8 @@ rm -rf build
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug
 cd system-test
-make
+NCPU=$(grep -c processor /proc/cpuinfo)
+make -j $NCPU
 if [ $? != 0 ] ; then
     echo "Test code build FAILED! exiting"
     exit 1
