@@ -306,6 +306,7 @@ export default {
          */
         insertAtCursor(editOptions) {
             if (this.editor) {
+                // default position is at current cursor position
                 const p = this.editor.getPosition()
                 this.editor.executeEdits('', [
                     {

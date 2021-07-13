@@ -312,19 +312,23 @@ export default {
                 editor.addContentWidget(this.mouseDropWidget)
             } else if (this.mouseDropDOM) editor.removeContentWidget(this.mouseDropWidget)
         },
-        dropSchemaToEditor({ e, schemaId }) {
-            if (schemaId) {
+        dropSchemaToEditor({ e, name }) {
+            if (name) {
                 const dropTarget = this.$refs.queryEditor.editor.getTargetAtClientPoint(
                     e.clientX,
                     e.clientY
                 )
                 if (dropTarget) {
-                    const range = {
-                        ...dropTarget.range,
-                        startColumn: dropTarget.range.endColumn, // offset mouseDropDOM
-                    }
+                    const dropPos = dropTarget.position
+                    // create range
+                    const range = new this.$refs.queryEditor.monaco.Range(
+                        dropPos.lineNumber,
+                        dropPos.column,
+                        dropPos.lineNumber,
+                        dropPos.column
+                    )
                     this.$refs.queryEditor.insertAtCursor({
-                        text: schemaId,
+                        text: name,
                         range,
                     })
                     this.$refs.queryEditor.editor.removeContentWidget(this.mouseDropWidget)

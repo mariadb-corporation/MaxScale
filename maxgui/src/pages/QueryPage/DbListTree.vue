@@ -26,7 +26,7 @@
                         :draggable="item.draggable"
                         class="text-truncate d-inline-block"
                         @drag="e => onNodeDragging(e)"
-                        @dragend="e => onNodeDragEnd({ e, schemaId: item.id })"
+                        @dragend="e => onNodeDragEnd({ e, name: item.name })"
                     >
                         {{ item.name }}
                     </span>
@@ -242,12 +242,11 @@ export default {
                 this.$emit('dragging-schema', this.draggingEvt)
             }
         },
-        onNodeDragEnd({ e, schemaId }) {
-            //TODO: get only the name of the node instead of schemaId
+        onNodeDragEnd({ e, name }) {
             if (this.isDragging) {
                 this.$emit('drop-schema-to-editor', {
                     e,
-                    schemaId: this.$help.escapeIdentifiers(schemaId),
+                    name: this.$help.escapeIdentifiers(name),
                 })
                 this.isDragging = false
             }
