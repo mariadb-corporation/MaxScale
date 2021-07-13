@@ -169,6 +169,8 @@ export default {
             axisLabels: { x: '', y: '' },
             xAxisType: '',
             isChartMaximized: false,
+            mouseDropDOM: null, // mouse drop DOM node
+            mouseDropWidget: null, // mouse drop widget while dragging to editor
         }
     },
     computed: {
@@ -286,8 +288,29 @@ export default {
         placeToEditor(schemaId) {
             this.$refs.queryEditor.insertAtCursor({ text: schemaId })
         },
-        draggingSchema() {
-            //TODO: add cursor widget to indicate dragging position
+        draggingSchema(e) {
+            const { editor, monaco } = this.$refs.queryEditor
+            // build mouseDropWidget
+            const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
+            const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
+            if (dropTarget) {
+                if (!this.mouseDropDOM) {
+                    this.mouseDropDOM = document.createElement('div')
+                    this.mouseDropDOM.style.pointerEvents = 'none'
+                    this.mouseDropDOM.style.borderLeft = '2px solid #424f62'
+                    this.mouseDropDOM.innerHTML = '&nbsp;'
+                }
+                this.mouseDropWidget = {
+                    mouseDropDOM: null,
+                    getId: () => 'drag',
+                    getDomNode: () => this.mouseDropDOM,
+                    getPosition: () => ({
+                        position: dropTarget.position,
+                        preference: [preference, preference],
+                    }),
+                }
+                editor.addContentWidget(this.mouseDropWidget)
+            } else if (this.mouseDropDOM) editor.removeContentWidget(this.mouseDropWidget)
         },
         dropSchemaToEditor({ e, schemaId }) {
             if (schemaId) {
@@ -296,10 +319,15 @@ export default {
                     e.clientY
                 )
                 if (dropTarget) {
+                    const range = {
+                        ...dropTarget.range,
+                        startColumn: dropTarget.range.endColumn, // offset mouseDropDOM
+                    }
                     this.$refs.queryEditor.insertAtCursor({
                         text: schemaId,
-                        range: dropTarget.range,
+                        range,
                     })
+                    this.$refs.queryEditor.editor.removeContentWidget(this.mouseDropWidget)
                 }
             }
         },

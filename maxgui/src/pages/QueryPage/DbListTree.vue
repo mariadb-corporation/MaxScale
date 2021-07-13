@@ -128,6 +128,7 @@ export default {
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             activeNode: [],
             isDragging: false,
+            draggingEvt: null,
         }
     },
     computed: {
@@ -231,10 +232,18 @@ export default {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
         onNodeDragging(e) {
-            this.isDragging = true
-            this.$emit('dragging-schema', e)
+            if (!this.isDragging) this.isDragging = true
+            if (
+                this.$typy(this.draggingEvt).isNull ||
+                this.draggingEvt.clientX !== e.clientX ||
+                this.draggingEvt.clientY !== e.clientY
+            ) {
+                this.draggingEvt = e
+                this.$emit('dragging-schema', this.draggingEvt)
+            }
         },
         onNodeDragEnd({ e, schemaId }) {
+            //TODO: get only the name of the node instead of schemaId
             if (this.isDragging) {
                 this.$emit('drop-schema-to-editor', {
                     e,
