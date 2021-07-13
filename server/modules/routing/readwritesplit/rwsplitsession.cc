@@ -1016,7 +1016,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         {
             mxb_assert(!m_config.transaction_replay || m_trx.target() == backend);
 
-            if (backend->is_waiting_result())
+            if (backend->is_waiting_result() && !backend->has_session_commands())
             {
                 mxb_assert(m_expected_responses == 1);
                 m_expected_responses--;
