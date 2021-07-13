@@ -13,8 +13,14 @@
 #include <maxtest/testconnections.hh>
 
 #define THREADS 16
+using Clock = std::chrono::steady_clock;
 
 static std::atomic<int> running {0};
+
+int64_t diff_to_ms(Clock::time_point t)
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - t).count();
+}
 
 void query_thread(TestConnections& test)
 {
@@ -28,7 +34,7 @@ void query_thread(TestConnections& test)
     while (running.load() == 1 && test.ok())
     {
         auto conn = counter % 2 == 0 ?
-                    test.maxscale->readconn_slave() : test.maxscale->readconn_master();
+            test.maxscale->readconn_slave() : test.maxscale->readconn_master();
         const char* type = counter % 2 == 0 ?
             "master_failure_mode=error_on_write" : "master_failure_mode=fail_on_write";
 
@@ -37,9 +43,10 @@ void query_thread(TestConnections& test)
 
         for (int i = 0; i < 100 && test.ok(); i++)
         {
+            auto start = Clock::now();
             test.expect(conn.query("select repeat('a', 1000)"),
-                        "Query failed (iteration %d, query %d) for %s: %s",
-                        i, counter, type, conn.error());
+                        "Query failed (iteration %d, query %d) for %s, waited for %lums: %s",
+                        i, counter, type, diff_to_ms(start), conn.error());
         }
 
         ++counter;

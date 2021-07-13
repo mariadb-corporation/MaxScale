@@ -59,7 +59,7 @@ fi
 
 echo $source copied to $target, restarting Maxscale
 
-ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo service maxscale restart'
+ssh  -i $maxscale_000_keyfile -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} 'sudo systemctl restart maxscale'
 
 # We sleep slightly longer than the TTL to ensure that the TTL mechanism
 # kicks in.
