@@ -24,6 +24,8 @@
 #include <maxscale/config2.hh>
 #include <maxscale/server.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/measurements.hh>
+#include <maxscale/response_distribution.hh>
 
 // Private server implementation
 class Server : public SERVER
@@ -309,6 +311,18 @@ public:
     void       set_proxy_protocol(bool proxy_protocol) override;
     bool       is_mxs_service() const override;
 
+    // response distribution for this thread and server
+    maxscale::ResponseDistribution&       response_distribution(mxb::MeasureTime::Operation opr);
+    const maxscale::ResponseDistribution& response_distribution(mxb::MeasureTime::Operation opr) const;
+
+    // Tallied up ResponseDistribution over all threads for this server
+    maxscale::ResponseDistribution get_complete_response_distribution(mxb::MeasureTime::Operation opr) const;
+
+    bool is_resp_distribution_enabled() const
+    {
+        return true; // TODO make configurable before first release
+    }
+
 private:
     bool create_server_config(const char* filename) const;
 
@@ -421,6 +435,11 @@ private:
 
     mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 
+    using GlobalDistributions = mxs::WorkerGlobal<maxscale::ResponseDistribution>;
+    GlobalDistributions m_read_distributions;
+    GlobalDistributions m_write_distributions;
+    json_t* response_distribution_to_json(mxb::MeasureTime::Operation opr) const;
+
     bool           post_configure();
     mxb::SSLConfig create_ssl_config();
 };
@@ -458,4 +477,10 @@ private:
     bool            m_can_try_pooling {true};   /**< If pooling fails, don't try it again */
 
     mxs::BackendConnection* m_conn {nullptr};
+
+    bool                 m_resp_distribution_enabled;
+    maxbase::MeasureTime m_query_time;
+
+    maxscale::ResponseDistribution& m_read_distribution;   // reference to entry in WorkerGlobal
+    maxscale::ResponseDistribution& m_write_distribution;  // reference to entry in WorkerGlobal
 };

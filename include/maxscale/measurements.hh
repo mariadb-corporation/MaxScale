@@ -32,14 +32,14 @@ namespace maxbase
 class MeasureTime
 {
 public:
-    enum class OPR {NOP, READ, WRITE};
+    enum class Operation {NOP, READ, WRITE};
 
     MeasureTime(mxb::Worker* pWorker)
         : m_pWorker(pWorker)
     {
     }
 
-    void start(OPR opr)
+    void start(Operation opr)
     {
         m_start = m_pWorker->epoll_tick_now();
         m_opr = opr;
@@ -55,13 +55,13 @@ public:
         return m_stop - m_start;
     }
 
-    OPR opr()
+    Operation opr()
     {
         return m_opr;
     }
 private:
     mxb::Worker*   m_pWorker;
-    OPR            m_opr;
+    Operation            m_opr;
     mxb::TimePoint m_start;
     mxb::TimePoint m_stop;
 };

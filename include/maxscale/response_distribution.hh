@@ -22,8 +22,6 @@ using namespace std::chrono_literals;
 namespace maxscale
 {
 
-class Target;
-
 /**
  * Distribution of queries into buckets of response time, similar to
  * the Query Response Time Plugin in mariadb.
@@ -100,6 +98,4 @@ private:
     // the underlying array (size) remains unchanged
     std::vector<Element> m_elements;
 };
-
-using ResponseDistributions = std::map<const maxscale::Target*, ResponseDistribution>;
 }
