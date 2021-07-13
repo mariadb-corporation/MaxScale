@@ -42,11 +42,12 @@ add_test_executable(config_test.cpp config_test replication LABELS LIGHT CONFIG)
 add_subdirectory(cdc_datatypes)
 
 ############################################
-# BEGIN: Tests that require GTID           #
+# BEGIN: Normal tests                      #
 ############################################
 
 add_subdirectory(mariadbmonitor)
 add_subdirectory(pinloki)
+add_subdirectory(schemarouter)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
@@ -108,14 +109,6 @@ add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrit
 # KafkaCDC test case
 add_test_executable(test_kafkacdc.cpp test_kafkacdc test_kafkacdc LABELS kafkacdc REPL_BACKEND)
 target_link_libraries(test_kafkacdc ${RDKAFKA_LIBRARIES})
-
-############################################
-# END: Tests that require GTID             #
-############################################
-
-############################################
-# BEGIN: Normal tests                      #
-############################################
 
 # Routing sanity check. Also acts as the regression test case the following issues:
 #
@@ -295,9 +288,6 @@ add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwri
 # Test with extremely big blob inserting
 add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
 
-# Schemarouter implicit database detection
-add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit_db LABELS schemarouter REPL_BACKEND)
-
 # Retry reads with persistent connections
 add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
@@ -339,9 +329,6 @@ add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BAC
 # Test users with different level privileges: database, table, column and procedure.
 # MXS-37, MXS-3303
 add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
-
-# Connect repeatedly to Schema router and execute simple query, check if auth is ok
-add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol readwritesplit REPL_BACKEND)
@@ -522,10 +509,6 @@ add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS
 # MXS-1678: Stopping IO thread on relay master causes it to be promoted as master
 # https://jira.mariadb.org/browse/MXS-1678
 add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS mysqlmon REPL_BACKEND)
-
-# MXS-1713: SchemaRouter unable to process SHOW DATABASES for a lot of schemas
-# https://jira.mariadb.org/browse/MXS-1713
-add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS schemarouter REPL_BACKEND)
 
 # MXS-1731: Empty version_string is not detected
 # https://jira.mariadb.org/browse/MXS-1731
