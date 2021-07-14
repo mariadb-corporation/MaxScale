@@ -470,6 +470,14 @@ protected:
 
     mxt::TestLogger& logger();
 
+    /**
+     * Run a function on every backend concurrently.
+     *
+     * @param func Function which take backend index and returns true on success.
+     * @return True if all function executions returned success.
+     */
+    bool run_on_every_backend(const std::function<bool(int)>& func);
+
     std::string m_test_dir;             /**< path to test application */
     /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
     std::string m_cnf_server_prefix;
@@ -485,7 +493,6 @@ private:
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
     bool reset_servers();
-    bool run_on_every_backend(const std::function<bool(int)>& func);
 
     /**
      * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.

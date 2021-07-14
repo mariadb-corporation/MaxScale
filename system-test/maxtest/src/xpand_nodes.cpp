@@ -12,6 +12,9 @@
  */
 
 #include <maxtest/xpand_nodes.hh>
+#include <maxtest/log.hh>
+#include <maxtest/mariadb_connector.hh>
+#include <maxbase/format.hh>
 #include <iostream>
 #include <cassert>
 
@@ -31,199 +34,211 @@ XpandCluster::XpandCluster(mxt::SharedData* shared)
 
 bool XpandCluster::reset_server(int m)
 {
-    bool rv = false;
-    int ec;
+    // TODO: currently this function just checks the process can be started and connected with root privs.
+    // To be in sync with other 'reset_server'-functions, something similar to 'mysql_install_db' is
+    // required. Check other cluster types for more info.
 
-    bool running = false;
+    auto& vm = backend(m)->vm_node();
+    auto name = vm.m_name.c_str();
 
-    ec = ssh_node(m, "systemctl status clustrix", true);
+    bool try_query = false;
 
-    if (ec == 0)
+    // First, check if Xpand is installed. If not, fail immediately.
+    string status_cmd = "systemctl status clustrix";
+    auto res_status = vm.run_cmd_output_sudo(status_cmd);
+    // "status" returns 0 for running, 1-3 for stopped, 4 for unknown.
+    if (res_status.rc == 0)
     {
-        printf("Xpand running on node %d.\n", m);
-
-        ec = ssh_node(m, "mysql -e 'SELECT @@server_id'", true);
-        if (ec == 0)
+        try_query = true;
+    }
+    else if (res_status.rc >= 1 && res_status.rc <= 3)
+    {
+        logger().log_msgf("Xpand installed but not running on '%s'. Trying to start.", name);
+        string start_cmd = "systemctl start clustrix";
+        auto res = vm.run_cmd_output_sudo(start_cmd);
+        if (res.rc == 0)
         {
-            running = true;
+            try_query = true;
         }
         else
         {
-            printf("Could not connect as root to Xpand on node %d, restarting.\n", m);
-
-            ec = ssh_node(m, "systemctl restart clustrix", true);
-
-            if (ec == 0)
-            {
-                printf("Successfully restarted Xpand on node %d.\n", m);
-                running = true;
-            }
-            else
-            {
-                printf("Could not restart Xpand on node %d.\n", m);
-            }
+            logger().log_msgf("Xpand start failed on '%s'. Command '%s' returned %i: '%s'",
+                              name, start_cmd.c_str(), res.rc, res.output.c_str());
         }
     }
     else
     {
-        printf("Xpand not running on node %d, starting.\n", m);
+        logger().log_msgf("Xpand is not installed on '%s'. Command '%s' returned %i: '%s'",
+                          name, status_cmd.c_str(), res_status.rc, res_status.output.c_str());
+    }
 
-        ec = ssh_node(m, "systemctl start clustrix", true);
+    bool running = false;
+    if (try_query)
+    {
+        logger().log_msgf("Xpand running on '%s'. Testing a simple query as root...", name);
 
-        if (ec == 0)
+        auto query_test = [&vm]() {
+                return vm.run_cmd_sudo("mysql -e 'SELECT @@server_id;'");
+            };
+
+        if (query_test() == 0)
         {
-            printf("Successfully started Xpand on node %d.\n", m);
             running = true;
         }
         else
         {
-            printf("Could not start Xpand on node %d.\n", m);
-        }
-    }
-
-    bool check_users = false;
-
-    if (running)
-    {
-        int start = time(NULL);
-        int now;
-
-        do
-        {
-            ec = ssh_node(m, "mysql -e 'SELECT @@server_id'", true);
-            now = time(NULL);
-
-            if (ec != 0)
+            int i = 0;
+            while (i < 6)
             {
-                printf("Could not connect to Xpand as root on node %d, "
-                       "sleeping a while (totally at most ~1 minute) and retrying.\n", m);
-                sleep(10);
+                logger().log_msgf("Query test failed on '%s'. Restarting, waiting a bit and retrying.", name);
+                string restart_cmd = "systemctl restart clustrix";
+                auto res = vm.run_cmd_output_sudo(restart_cmd);
+                sleep(5);
+                if (res.rc == 0)
+                {
+                    if (query_test() == 0)
+                    {
+                        running = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    logger().log_msgf("Xpand restart failed on '%s'. Command '%s' returned %i: '%s'",
+                                      name, restart_cmd.c_str(), res.rc, res.output.c_str());
+                }
+                i++;
             }
         }
-        while (ec != 0 && now - start < 60);
-
-        if (ec == 0)
-        {
-            printf("Could connect as root to Xpand on node %d.\n", m);
-            check_users = true;
-        }
-        else
-        {
-            printf("Could not connect as root to Xpand on node %d within given timeframe.\n", m);
-        }
     }
 
-    if (check_users)
-    {
-        std::string command("mysql ");
-        command += "-u ";
-        command += "xpandmon";
-        command += " ";
-        command += "-p";
-        command += "xpandmon";
-
-        ec = ssh_node(m, command.c_str(), false);
-
-        if (ec == 0)
-        {
-            printf("Can access Xpand using user '%s'.\n", this->user_name.c_str());
-            rv = true;
-        }
-        else
-        {
-            printf("Cannot access Xpand using user '%s', creating users.\n", this->user_name.c_str());
-            // TODO: We need an return code here.
-            create_users(m);
-            rv = true;
-        }
-    }
-
-    return rv;
+    return running;
 }
 
-/**
- * @brief start_cluster Intstalls Xpand on all nodes, configure license, form cluster
- * @return True on success
- */
 bool XpandCluster::start_replication()
 {
-    int rv = 0;
+    const int n = N;
+    // Generate base users on every node, form cluster, generate rest of users on just one node.
+    auto func = [this](int node) {
+            return create_base_users(node);
+        };
 
-    if (connect() == 0)
+    bool rval = false;
+    if (run_on_every_backend(func))
     {
-        // The nodes must be added one by one to the cluster. An attempt to add them
-        // all with one ALTER command will fail, if one or more of them already are in
-        // the cluster.
-
-        for (int i = 1; i < N; ++i)
+        // Check that admin user can connect too all nodes.
+        if (update_status())
         {
-            std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-                + std::string(ip_private(i))
-                + std::string("'");
+            // The nodes must be added one by one to the cluster. An attempt to add them
+            // all with one ALTER command will fail, if one or more of them already are in
+            // the cluster.
+            int failed_nodes = 0;
+            auto conn = backend(0)->admin_connection();
 
-            bool retry = false;
-            int attempts = 0;
-
-            do
+            for (int new_node = 1; new_node < n; new_node++)
             {
-                ++attempts;
-
-                rv = execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
-
-                if (rv != 0)
+                string add_cmd = mxb::string_printf("ALTER CLUSTER ADD '%s';", ip_private(new_node));
+                bool node_added = false;
+                int attempts = 0;
+                while (!node_added)
                 {
-                    std::string error(mysql_error(nodes[0]));
-
-                    if (error.find("already in cluster") != std::string::npos)
+                    if (conn->try_cmd(add_cmd))
                     {
-                        // E.g. '[25609] Bad parameter.: Host "10.166.0.171" already in cluster'
-                        // That's ok and can be ignored.
-                        rv = 0;
-                    }
-                    else if (error.find("addition is pending") != std::string::npos
-                             || error.find("group change in progress") != std::string::npos)
-                    {
-                        // E.g. '[50180] Multiple nodes cannot be added when an existing addition is pending'
-                        // E.g. '[16388] Group change during GTM operation: group change in progress,
-                        //       try restarting transaction'
-                        // Sleep and retry.
-
-                        if (attempts < 5)
-                        {
-                            printf("Retrying after %d seconds.", attempts);
-                            sleep(attempts);
-                            retry = true;
-                        }
-                        else
-                        {
-                            printf("After %d attempts, still could not add node to cluster, bailing out.",
-                                   attempts);
-                            retry = false;
-                        }
+                        node_added = true;
                     }
                     else
                     {
-                        printf("Fatal error when setting up xpand: %s", error.c_str());
-                        retry = false;
+                        string error = conn->error();
+                        if (error.find("already in cluster") != string::npos)
+                        {
+                            // E.g. '[25609] Bad parameter.: Host "10.166.0.171" already in cluster'
+                            // That's ok and can be ignored.
+                            node_added = true;
+                        }
+                        else if (error.find("addition is pending") != string::npos
+                                 || error.find("group change in progress") != string::npos)
+                        {
+                            // E.g. '[50180] Multiple nodes cannot be added when an existing addition is
+                            // pending'
+                            // E.g. '[16388] Group change during GTM operation: group change in progress,
+                            //       try restarting transaction'
+                            // Sleep and retry.
+
+                            if (attempts < 5)
+                            {
+                                int sleep_s = attempts + 2;
+                                logger().log_msgf("Received error '%s' when adding '%s' to %s. "
+                                                  "Retrying after %d seconds.",
+                                                  error.c_str(), node(new_node)->m_name.c_str(),
+                                                  name().c_str(), sleep_s);
+                                sleep(sleep_s);
+                            }
+                            else
+                            {
+                                logger().log_msgf("After %d attempts, still could not add '%s' to %s, "
+                                                  "bailing out.",
+                                                  attempts, node(new_node)->m_name.c_str(),
+                                                  name().c_str());
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            logger().log_msgf("Fatal error when adding '%s' to %s: %s",
+                                              node(new_node)->m_name.c_str(),
+                                              name().c_str(), error.c_str());
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+
+                if (!node_added)
+                {
+                    failed_nodes++;
+                }
+            }
+
+            if (failed_nodes == 0)
+            {
+                // At this point, the last cluster add operation may still be going on, and writes will fail.
+                // Sleep for a while to let it complete. There is probably some better way to do this...
+                sleep(5);
+                logger().log_msgf("All nodes added to %s. Generating some more users...", name().c_str());
+
+                // Generate the rest of the users.
+                if (create_xpand_users(0))
+                {
+                    rval = true;
+                }
+                else
+                {
+                    // Perhaps group change is still going on. Wait some more and try again.
+                    logger().log_msgf("User generation failed, maybe group change is still going on. "
+                                      "Retry after 10s.");
+                    sleep(10);
+                    if (create_xpand_users(0))
+                    {
+                        rval = true;
+                    }
+                    else
+                    {
+                        logger().log_msgf("User generation failed again, %s must be broken.", name().c_str());
                     }
                 }
             }
-            while (rv != 0 && retry);
-
-            if (rv != 0)
-            {
-                break;
-            }
         }
-
-        close_connections();
+        else
+        {
+            logger().log_msgf("Failed to query status of %s.", name().c_str());
+        }
     }
     else
     {
-        rv = 1;
+        logger().log_msgf("Failed to generate base users on %s.", name().c_str());
     }
 
-    return rv == 0;
+    return rval;
 }
 
 bool XpandCluster::check_replication()
@@ -307,21 +322,24 @@ std::string XpandCluster::get_srv_cnf_filename(int node)
 
 bool XpandCluster::create_users(int i)
 {
+    return create_base_users(i) && create_xpand_users(i);
+}
+
+bool XpandCluster::create_xpand_users(int node)
+{
     bool rval = false;
-    if (create_base_users(i))
+    mxt::MariaDBUserDef xpmon_user = {"xpandmon", "%", "xpandmon"};
+    xpmon_user.grants = {"SELECT ON system.membership",       "SELECT ON system.nodeinfo",
+                         "SELECT ON system.softfailed_nodes", "SUPER ON *.*"};
+
+    // Xpand service-user requires special grants.
+    mxt::MariaDBUserDef service_user = {"maxservice", "%", "maxservice"};
+    service_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
+
+    auto be = backend(node);
+    if (be->create_user(xpmon_user, ssl_mode()) && be->create_user(service_user, ssl_mode()))
     {
-        mxt::MariaDBUserDef xpmon_user = {"xpandmon", "%", "xpandmon"};
-        xpmon_user.grants = {"SELECT ON system.membership",       "SELECT ON system.nodeinfo",
-                             "SELECT ON system.softfailed_nodes", "SUPER ON *.*"};
-
-        mxt::MariaDBUserDef service_user = {"maxservice", "%", "maxservice"};
-        xpmon_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
-
-        auto be = backend(i);
-        if (be->create_user(xpmon_user, ssl_mode()) && be->create_user(service_user, ssl_mode()))
-        {
-            rval = true;
-        }
+        rval = true;
     }
     return rval;
 }
