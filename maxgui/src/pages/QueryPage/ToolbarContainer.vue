@@ -72,9 +72,9 @@
                     small
                     color="accent-dark"
                     :loading="loading_query_result"
-                    :disabled="!queryTxt || !active_conn_state"
+                    :disabled="!queryTxt.all || !active_conn_state"
                     v-on="on"
-                    @click="() => handleRun(selectedQueryTxt ? 'selected' : 'all')"
+                    @click="() => handleRun(queryTxt.selected ? 'selected' : 'all')"
                 >
                     <v-icon size="16" class="mr-2">
                         $vuetify.icons.running
@@ -83,7 +83,7 @@
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ selectedQueryTxt ? $t('runSelectedStatements') : $t('runAllStatements') }}
+                {{ queryTxt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
             </span>
         </v-tooltip>
         <!-- Visualize section-->
@@ -161,7 +161,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="selectedQueryTxt ? selectedQueryTxt : queryTxt"
+                        :value="queryTxt.selected ? queryTxt.selected : queryTxt.all"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -212,8 +212,7 @@ export default {
     },
     props: {
         isFullscreen: { type: Boolean, required: true },
-        queryTxt: { type: String, required: true },
-        selectedQueryTxt: { type: String, required: true },
+        queryTxt: { type: Object, required: true },
     },
     data() {
         return {
@@ -258,7 +257,7 @@ export default {
             }
         },
         async confirmRunning() {
-            await this.onRun(this.selectedQueryTxt ? 'selected' : 'all')
+            await this.onRun(this.queryTxt.selected ? 'selected' : 'all')
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
@@ -268,10 +267,10 @@ export default {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.queryTxt) await this.fetchQueryResult(this.queryTxt)
+                    if (this.queryTxt.all) await this.fetchQueryResult(this.queryTxt.all)
                     break
                 case 'selected':
-                    if (this.selectedQueryTxt) await this.fetchQueryResult(this.selectedQueryTxt)
+                    if (this.queryTxt.selected) await this.fetchQueryResult(this.queryTxt.selected)
                     break
             }
         },
