@@ -318,7 +318,7 @@ bool LuaFilter::post_configure()
 
 uint64_t LuaFilter::getCapabilities() const
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
