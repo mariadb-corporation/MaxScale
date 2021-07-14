@@ -2008,7 +2008,7 @@ int TestConnections::run_test_script(const char* script, const char* name)
     string script_cmd = mxb::string_printf("%s/%s %s", test_dir, script, name);
     int script_res = system(script_cmd.c_str());
 
-    expect(script_res == 0, "Test %s FAILED!", name);
+    expect(script_res == 0, "Test %s exited with return code %d", name, script_res);
 
     return global_result;
 }
