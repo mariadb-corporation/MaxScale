@@ -335,6 +335,15 @@ public:
      */
     void wait_for_monitor(int intervals = 1);
 
+    /**
+     * First sleep a given number of seconds, then wait for monitor. This is required in some cases
+     * where the test needs to wait for some external effect along with the monitor.
+     *
+     * @param sleep_s Sleep time in seconds
+     * @param intervals Monitor intervals
+     */
+    void sleep_and_wait_for_monitor(int sleep_s, int intervals);
+
     mxt::CmdResult ssh_output(const std::string& cmd, bool sudo = true);
 
     int ssh_node(const std::string& cmd, bool sudo);
