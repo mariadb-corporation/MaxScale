@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     if (zName && zScript)
     {
         TestConnections test(argc, argv);
-        test.run_test_script(zScript, zName);
+        rv = test.run_test_script(zScript, zName);
     }
     else
     {
