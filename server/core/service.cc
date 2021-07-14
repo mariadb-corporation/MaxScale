@@ -144,7 +144,7 @@ static std::string get_version_string(mxs::ConfigParameters* params)
 {
     std::string version_string = params->get_string(CN_VERSION_STRING);
 
-    if (!version_string.empty() && version_string[0] != '5')
+    if (!version_string.empty() && version_string[0] != '5' && version_string[0] != '8')
     {
         /**
          * Add the 5.5.5- string to the start of the version string if the version
