@@ -1312,10 +1312,11 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl)
     bool create_ok = false;
     bool grant_error = false;
 
-    // Xpand does not support "if exists" so simply disregard any errors on the "drop" query.
+    // Xpand lacks support for "if exists" so avoid it and simply disregard any errors on the "drop" query.
+    // Xpand also does not understand "require none", so instead use empty string.
     c->try_cmd_f("drop user %s;", userhostc);
-    if (c->try_cmd_f("create user %s identified by '%s' require %s;",
-                     userhostc, user.password.c_str(), ssl == SslMode::ON ? "ssl" : "none"))
+    if (c->try_cmd_f("create user %s identified by '%s' %s;",
+                     userhostc, user.password.c_str(), ssl == SslMode::ON ? "require ssl" : ""))
     {
         create_ok = true;
 
