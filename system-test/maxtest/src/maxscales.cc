@@ -295,6 +295,12 @@ void MaxScale::wait_for_monitor(int intervals)
     }
 }
 
+void MaxScale::sleep_and_wait_for_monitor(int sleep_s, int intervals)
+{
+    sleep(sleep_s);
+    wait_for_monitor(intervals);
+}
+
 const char* MaxScale::ip() const
 {
     return m_use_ipv6 ? m_vmnode->ip6s().c_str() : m_vmnode->ip4();
