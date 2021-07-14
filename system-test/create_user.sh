@@ -55,16 +55,16 @@ echo
 
 ##
 ## "Legacy" users. The "test-admin"-user is used by the test system itself to manage clusters and should
-## never require ssl. Tests should not remove or modify it.
+## never require ssl. Tests should not remove or modify it. Avoid "IF EXISTS" as Xpand doesn't support it.
 ##
 
 mysql --force $socket <<EOF
 
-DROP USER IF EXISTS 'test-admin'@'%';
+DROP USER 'test-admin'@'%';
 CREATE USER 'test-admin'@'%' IDENTIFIED BY 'test-admin-pw';
 GRANT ALL ON *.* TO 'test-admin'@'%' WITH GRANT OPTION;
 
-DROP USER IF EXISTS '$node_user'@'%';
+DROP USER '$node_user'@'%';
 CREATE USER '$node_user'@'%' IDENTIFIED BY '$node_password' $require_ssl;
 GRANT ALL ON *.* TO '$node_user'@'%' WITH GRANT OPTION;
 
