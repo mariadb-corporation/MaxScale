@@ -60,7 +60,9 @@ VTreeviewNode.mixin({
                         [this.activeClass]: this.isActive,
                     },
                     on: {
-                        click: () => {
+                        click: e => {
+                            e.preventDefault()
+                            e.stopPropagation()
                             if (this.openOnClick && this.hasChildren) {
                                 this.checkChildren().then(this.open)
                             } else if (this.activatable && !this.disabled) {
@@ -75,12 +77,14 @@ VTreeviewNode.mixin({
                                 this.treeview.updateActive(this.key, this.isActive)
                                 this.treeview.emitActive()
                             }
+                            this.treeview.emitClick(this.item)
                         },
                         dblclick: () => {
                             this.treeview.emitDblclick(this.item)
                         },
                         contextmenu: e => {
                             e.preventDefault()
+                            e.stopPropagation()
                             this.treeview.emitCtxClick({ e, item: this.item })
                         },
                     },
@@ -101,6 +105,9 @@ VTreeviewNode.mixin({
 
 export default VTreeview.mixin({
     methods: {
+        emitClick(item) {
+            this.$emit('item:click', item)
+        },
         emitDblclick(item) {
             this.$emit('item:dblclick', item)
         },

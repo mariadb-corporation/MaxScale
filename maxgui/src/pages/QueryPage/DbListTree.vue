@@ -11,6 +11,7 @@
             transition
             :load-children="handleLoadChildren"
             :active.sync="activeNode"
+            @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
         >
@@ -127,6 +128,7 @@ export default {
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             activeNode: [],
+            activeNodeByClicking: false,
             isDragging: false,
             draggingEvt: null,
         }
@@ -146,8 +148,13 @@ export default {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
         },
+        /**
+         * Emit fetching preview-data only when node is activated by clicking.
+         * Node is activated by choosing option in context menu won't emit the event
+         */
         activeNode(v, oV) {
-            if (v.length && v[0] !== oV[0]) this.$emit('preview-data', v[0])
+            if (v.length && v[0] !== oV[0] && this.activeNodeByClicking)
+                this.$emit('preview-data', v[0])
         },
     },
     methods: {
@@ -180,16 +187,20 @@ export default {
                 this.activeCtxItem = item
             }
         },
+        updateActiveNode(item) {
+            this.activeNode = [item.id]
+            this.activeNodeByClicking = false
+        },
         optionHandler({ item, option }) {
             const schema = item.id
             switch (option) {
                 case this.$t('previewData'):
                     this.$emit('preview-data', schema)
-                    this.activeNode = [item.id]
+                    this.updateActiveNode(item)
                     break
                 case this.$t('viewDetails'):
                     this.$emit('view-details', schema)
-                    this.activeNode = [item.id]
+                    this.updateActiveNode(item)
                     break
                 case this.$t('placeSchemaInEditor'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
@@ -227,6 +238,9 @@ export default {
                 case 'Trigger':
                     return this.triggerOptions
             }
+        },
+        onNodeClick(item) {
+            if (item.canBeHighlighted) this.activeNodeByClicking = true
         },
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
