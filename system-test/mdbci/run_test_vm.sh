@@ -41,8 +41,9 @@ key=`mdbci show keyfile --silent test_vm`
 sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTimeout=120  "
 
 # TODO: Expose the variable that BuildBot uses
+branch=$(git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
 repository=https://github.com/mariadb-corporation/MaxScale.git
-ssh -i $key $sshopt $me@$ip "mkdir -p .ssh; mkdir -p ${MDBCI_VM_PATH}; mkdir -p mdbci; git clone --depth 1 --branch $target $repository"
+ssh -i $key $sshopt $me@$ip "mkdir -p .ssh; mkdir -p ${MDBCI_VM_PATH}; mkdir -p mdbci; git clone --depth 1 --branch $branch $repository"
 
 scp -i $key $sshopt $HOME/.config/mdbci/max-tst.key $me@$ip:~/.ssh/id_rsa
 ssh -i $key $sshopt $me@$ip "chmod 400 .ssh/id_rsa"
