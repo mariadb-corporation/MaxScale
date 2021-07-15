@@ -98,4 +98,17 @@ private:
     // the underlying array (size) remains unchanged
     std::vector<Element> m_elements;
 };
+
+inline void ResponseDistribution::add(mxb::Duration dur)
+{
+    for (auto& element : m_elements)
+    {
+        if (dur <= element.limit)
+        {
+            ++element.count;
+            element.total += dur;
+            break;
+        }
+    }
+}
 }

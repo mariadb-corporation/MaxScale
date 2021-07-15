@@ -42,19 +42,6 @@ ResponseDistribution::ResponseDistribution(int range_base)
     }
 }
 
-void ResponseDistribution::add(maxbase::Duration dur)
-{
-    for (auto& element : m_elements)
-    {
-        if (dur <= element.limit)
-        {
-            ++element.count;
-            element.total += dur;
-            break;
-        }
-    }
-}
-
 const std::vector<ResponseDistribution::Element>& ResponseDistribution::get() const
 {
     return m_elements;

@@ -478,7 +478,6 @@ private:
 
     mxs::BackendConnection* m_conn {nullptr};
 
-    bool                 m_resp_distribution_enabled;
     maxbase::MeasureTime m_query_time;
 
     maxscale::ResponseDistribution& m_read_distribution;   // reference to entry in WorkerGlobal

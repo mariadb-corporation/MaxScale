@@ -952,7 +952,6 @@ ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server*
     : m_up(up)
     , m_session(session)
     , m_server(server)
-    , m_resp_distribution_enabled(server->is_resp_distribution_enabled())
     , m_query_time(RoutingWorker::get_current())
     , m_read_distribution(server->response_distribution(Operation::READ))
     , m_write_distribution(server->response_distribution(Operation::WRITE))
@@ -1013,21 +1012,17 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     int32_t rval = 0;
-    Operation opr = Operation::NOP;
 
-    if (m_resp_distribution_enabled)
-    {
-        const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
+    const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
             | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
 
-        auto type_mask = (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)) ?
-                    qc_get_type_mask(buffer) : 0;
+    auto type_mask = (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)) ?
+                qc_get_type_mask(buffer) : 0;
 
-        auto is_read_only = !(type_mask & ~read_only_types);
-        auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
-        auto not_master = !(m_server->status() & SERVER_MASTER);
-        opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
-    }
+    auto is_read_only = !(type_mask & ~read_only_types);
+    auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
+    auto not_master = !(m_server->status() & SERVER_MASTER);
+    auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
 
     if (m_conn_pooled && connect())
     {
@@ -1054,16 +1049,13 @@ bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs
 
     m_query_time.stop(); // always measure
 
-    if (m_resp_distribution_enabled)
+    if (m_query_time.opr() == Operation::READ)
     {
-        if (m_query_time.opr() == Operation::READ)
-        {
-            m_read_distribution.add(m_query_time.duration());
-        }
-        else
-        {
-            m_write_distribution.add(m_query_time.duration());
-        }
+        m_read_distribution.add(m_query_time.duration());
+    }
+    else
+    {
+        m_write_distribution.add(m_query_time.duration());
     }
 
     return m_up->clientReply(buffer, down, reply);
