@@ -57,14 +57,19 @@ int main(int argc, char* argv[])
         test.expect(res == cipher, "Cipher should be '%s' but is '%s'", cipher.c_str(), res.c_str());
     }
 
-    for (int i = 1; i <= 4; i++)
-    {
-        test.check_maxctrl("alter server server" + std::to_string(i) + " ssl_version TLSv13");
-    }
+    auto result = test.maxctrl("alter server server1 ssl_version TLSv13").output;
 
-    test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
-    res = conn.field(query);
-    test.expect(res == "TLSv1.3", "TLSv1.3 should be in use: %s", res.c_str());
+    if (result.find("TLSv1.3 is not supported") == std::string::npos)
+    {
+        for (int i = 1; i <= 4; i++)
+        {
+            test.check_maxctrl("alter server server" + std::to_string(i) + " ssl_version TLSv13");
+        }
+
+        test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
+        res = conn.field(query);
+        test.expect(res == "TLSv1.3", "TLSv1.3 should be in use: %s", res.c_str());
+    }
 
     for (int i = 1; i <= 4; i++)
     {
