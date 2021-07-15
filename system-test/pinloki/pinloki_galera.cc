@@ -50,7 +50,6 @@ void check_table(TestConnections& test, Connection& conn, int n)
 
 int main(int argc, char** argv)
 {
-    TestConnections::require_galera(true);
     TestConnections::restart_galera(true);
     TestConnections test(argc, argv);
     test.galera->connect();
