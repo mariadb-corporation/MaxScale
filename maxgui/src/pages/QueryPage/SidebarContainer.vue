@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="fill-height">
         <v-card v-if="loading_db_tree" class="fill-height db-tb-list" :loading="loading_db_tree" />
         <v-fade-transition>
@@ -207,6 +208,7 @@ export default {
 <style lang="scss" scoped>
 .db-tb-list {
     border: 1px solid $table-border;
+    border-top: none;
     width: 100%;
     height: 100%;
     .db-tb-list__title {

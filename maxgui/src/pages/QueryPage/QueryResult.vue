@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
@@ -73,9 +74,9 @@ export default {
         componentDynDim() {
             /* Use ref to calculate the dim
              * width: dynDim.width - px-5
-             * height: dynDim.height - $tab-bar-height - pt-2 - border thickness
+             * height: dynDim.height - $tab-bar-height - pt-2
              */
-            return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 - 2 }
+            return { width: this.dynDim.width - 40, height: this.dynDim.height - 24 - 8 }
         },
         activeTab: {
             get() {

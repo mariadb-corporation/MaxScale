@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  Create a tab component wrapping this component that control adding/deleting worksheet -->
     <!-- Main panel contains editor pane and visualize-sidebar pane -->
     <split-pane
         v-model="mainPanePct"
@@ -50,7 +49,6 @@
                     </split-pane>
                 </template>
                 <template slot="pane-right">
-                    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
                     <query-result
                         ref="queryResultPane"
                         :dynDim="resultPaneDim"
@@ -61,7 +59,6 @@
             </split-pane>
         </template>
         <template slot="pane-right">
-            <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
             <visualize-sidebar
                 class="visualize-sidebar"
                 @selected-chart="selectedChart = $event"

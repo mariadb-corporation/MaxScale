@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="pa-4">
         <h5 class="mb-4">Visualization</h5>
         <label class="field__label color text-small-text"> Graph</label>

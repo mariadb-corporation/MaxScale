@@ -10,7 +10,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie, uniqBy } from 'utils/helpers'
+import { getCookie, uniqBy, uniqueId, cloneDeep } from 'utils/helpers'
+function defWorksheetState() {
+    return {
+        id: uniqueId('wke_'),
+        name: 'worksheet',
+        loading_prvw_data: false,
+        prvw_data: {},
+        prvw_data_request_sent_time: 0,
+        loading_prvw_data_details: false,
+        prvw_data_details: {},
+        prvw_data_details_request_sent_time: 0,
+        loading_query_result: false,
+        query_request_sent_time: 0,
+        query_result: {},
+        curr_query_mode: 'QUERY_VIEW',
+    }
+}
 function initialState() {
     return {
         // connection related states
@@ -21,9 +37,11 @@ function initialState() {
         //Sidebar tree schema states
         loading_db_tree: false,
         db_tree: [],
-        //TODO: create an array of worksheet object states
-        // worksheet states
         db_completion_list: [],
+        // worksheet states
+        worksheets_arr: [],
+        active_wke_id: '',
+        // TODO: remove below states and change to use vuex worksheet state
         loading_prvw_data: false,
         prvw_data: {},
         prvw_data_request_sent_time: 0,
@@ -47,25 +65,25 @@ export default {
     namespaced: true,
     state: initialState,
     mutations: {
+        RESET_STATE(state) {
+            const initState = initialState()
+            Object.keys(initState).forEach(key => {
+                state[key] = initState[key]
+            })
+        },
+
+        // connection related mutations
         SET_CHECKING_ACTIVE_CONN(state, payload) {
             state.checking_active_conn = payload
         },
-        // connection mutations
         SET_ACTIVE_CONN_STATE(state, payload) {
             state.active_conn_state = payload
-        },
-        SET_RC_TARGET_NAMES_MAP(state, payload) {
-            state.rc_target_names_map = payload
-        },
-        SET_CURR_CNCT_RESOURCE(state, payload) {
-            state.curr_cnct_resource = payload
-            localStorage.setItem('curr_cnct_resource', JSON.stringify(payload))
         },
         SET_CONN_ERR_STATE(state, payload) {
             state.conn_err_state = payload
         },
 
-        // treeview mutations
+        // Sidebar tree schema mutations
         SET_LOADING_DB_TREE(state, payload) {
             state.loading_db_tree = payload
         },
@@ -89,7 +107,6 @@ export default {
                 [dbIndex]: { children: { [childIndex]: { children: { $set: grandChild } } } },
             })
         },
-
         UPDATE_TABLE_CHILD(state, { dbName, tblName, children, childType, getters }) {
             const dbIndex = getters.getDbIdx(dbName)
             const idxOfTablesNode = getters.getIdxOfTablesNode(dbIndex)
@@ -126,6 +143,44 @@ export default {
             state.db_completion_list = []
         },
 
+        // Toolbar mutations
+        SET_RC_TARGET_NAMES_MAP(state, payload) {
+            state.rc_target_names_map = payload
+        },
+        SET_CURR_CNCT_RESOURCE(state, payload) {
+            state.curr_cnct_resource = payload
+            localStorage.setItem('curr_cnct_resource', JSON.stringify(payload))
+        },
+        SET_QUERY_MAX_ROW(state, payload) {
+            state.query_max_rows = payload
+            localStorage.setItem('query_max_rows', payload)
+        },
+        SET_QUERY_CONFIRM_FLAG(state, payload) {
+            state.query_confirm_flag = payload // payload is either 0 or 1
+            localStorage.setItem('query_confirm_flag', payload)
+        },
+        SET_ACTIVE_DB(state, payload) {
+            state.active_db = payload
+            localStorage.setItem('active_db', JSON.stringify(payload))
+        },
+
+        // worksheet mutations
+        ADD_NEW_WKE(state) {
+            state.worksheets_arr = [...state.worksheets_arr, cloneDeep(defWorksheetState())]
+        },
+        DELETE_WKE(state, idx) {
+            state.worksheets_arr.splice(idx, 1)
+        },
+        UPDATE_WKE(state, { idx, newWke }) {
+            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
+                [idx]: { $set: newWke },
+            })
+        },
+        SET_ACTIVE_WKE_ID(state, payload) {
+            state.active_wke_id = payload
+        },
+
+        // TODO: Refactor below mutations to update those states in worksheets_arr
         // Result tables data mutations
         SET_CURR_QUERY_MODE(state, payload) {
             state.curr_query_mode = payload
@@ -156,25 +211,6 @@ export default {
         },
         SET_QUERY_REQUEST_SENT_TIME(state, payload) {
             state.query_request_sent_time = payload
-        },
-        SET_ACTIVE_DB(state, payload) {
-            state.active_db = payload
-            localStorage.setItem('active_db', JSON.stringify(payload))
-        },
-        RESET_STATE(state) {
-            const initState = initialState()
-            Object.keys(initState).forEach(key => {
-                state[key] = initState[key]
-            })
-        },
-        SET_QUERY_MAX_ROW(state, payload) {
-            state.query_max_rows = payload
-            localStorage.setItem('query_max_rows', payload)
-        },
-        // payload is either 0 or 1
-        SET_QUERY_CONFIRM_FLAG(state, payload) {
-            state.query_confirm_flag = payload
-            localStorage.setItem('query_confirm_flag', payload)
         },
     },
     actions: {

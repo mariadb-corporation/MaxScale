@@ -22,18 +22,18 @@
             >
                 <template slot="pane-left">
                     <sidebar-container
-                        v-if="$refs.worksheet"
+                        v-if="$typy($refs, 'worksheets.$refs.wke').isDefined"
                         :isSidebarCollapsed="isSidebarCollapsed"
                         @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
                         @is-sidebar-collapsed="isSidebarCollapsed = $event"
-                        @place-to-editor="$refs.worksheet.placeToEditor"
-                        @dragging-schema="$refs.worksheet.draggingSchema"
-                        @drop-schema-to-editor="$refs.worksheet.dropSchemaToEditor"
+                        @place-to-editor="$refs.worksheets.$refs.wke[0].placeToEditor"
+                        @dragging-schema="$refs.worksheets.$refs.wke[0].draggingSchema"
+                        @drop-schema-to-editor="$refs.worksheets.$refs.wke[0].dropSchemaToEditor"
                     />
                 </template>
                 <template slot="pane-right">
-                    <worksheet
-                        ref="worksheet"
+                    <worksheets
+                        ref="worksheets"
                         :containerHeight="containerHeight"
                         :previewDataSchemaId="previewDataSchemaId"
                         :showVisSidebar="showVisSidebar"
@@ -63,13 +63,13 @@
 import SidebarContainer from './SidebarContainer'
 import { mapActions, mapState, mapGetters } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
-import Worksheet from './Worksheet'
+import Worksheets from './Worksheets.vue'
 export default {
     name: 'query-view',
     components: {
-        worksheet: Worksheet,
         SidebarContainer,
         ToolbarContainer,
+        Worksheets,
     },
     data() {
         return {
@@ -104,7 +104,11 @@ export default {
             this.$nextTick(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
         },
         sidebarPct() {
-            this.$nextTick(() => this.$refs.worksheet.setResultPaneDim())
+            this.$help.doubleRAF(() => {
+                if (this.$typy(this.$refs, 'worksheets.$refs.wke').isDefined) {
+                    this.$refs.worksheets.$refs.wke[0].setResultPaneDim()
+                }
+            })
         },
     },
     async created() {
@@ -127,8 +131,8 @@ export default {
         setPanelsPct() {
             this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })
             /**
-             * get pane container height then pass it via props to worksheet
-             * to calculate min percent of worksheet child panes
+             * get pane container height then pass it via props to worksheets
+             * to calculate min percent of worksheets child panes
              */
             this.containerHeight = this.$refs.paneContainer.clientHeight
         },
