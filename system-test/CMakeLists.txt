@@ -1144,6 +1144,21 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 # END: tests with 15 machines backend      #
 ############################################
 
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+add_test_executable_notest(gui_demo.cpp gui_demo gui_demo LABELS gui_demo REPL_BACKEND)
+add_test_executable_notest(gui_demo_galera.cpp gui_demo_galera gui_demo_galera LABELS gui_demo_galera GALERA_BACKEND)
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+
+
+
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
 ###############################

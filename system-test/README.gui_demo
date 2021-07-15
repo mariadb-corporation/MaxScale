@@ -1,0 +1,22 @@
+1. Configure your `mdbci` for AWS
+
+see https://github.com/mariadb-corporation/mdbci/blob/integration/docs/detailed_topics/mdbci_configurations.md
+
+2. Run `gui_demo` or `gui_demo_galera`
+
+export box=centos_7_aws
+export backend_box=centos_7_aws
+export mdbci_config_name=gui_demo_setup
+export target=2.5 # or target=<ci_target> e.g. target=2.5-2021-05-03-01-00-14-nightly
+export maxscale_product=maxscale # or maxscale_product=maxscale_ci
+./gui_demo
+
+3. Ssh maxscale machine and change access credentials
+
+ssh maxscale_000 -F ~/vms/gui_demo_setup_ssh_config
+maxctrl
+create user demo <top_secret_password>
+destroy user admin
+
+4. Get IP address from ~/vms/gui_demo_setup_network_config and use it to open demo in your browser
+<IP>:8989
