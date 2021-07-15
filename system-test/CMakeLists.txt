@@ -689,14 +689,6 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 # Run MaxCtrl test suite
 # add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
 
-
-# Creates KDC and tries authrization via GSSAPI (both client and backend)
-# works only with yum-based distributions
-# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
-add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL LISTENER_SSL
-        REPL_BACKEND)
-
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
 
@@ -1160,6 +1152,25 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 
 ############################################
 # END: tests with 15 machines backend      #
+############################################
+
+############################################
+# BEGIN: Kerberos tests                    #
+############################################
+
+# These tests have some issues and may affect other tests as they do not cleanup after themselves.
+# Run with BREAKS_REPL tag to ensure they are ran on a different test VM in parallel runs. Also run these
+# tests last so they cannot affect earlier tests.
+
+# Creates KDC and tries authrization via GSSAPI (both client and backend)
+# works only with yum-based distributions
+# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
+add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY UNSTABLE BREAKS_REPL gssapi REPL_BACKEND)
+add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY UNSTABLE BREAKS_REPL gssapi
+        BACKEND_SSL LISTENER_SSL REPL_BACKEND)
+
+############################################
+# END: Kerberos tests                      #
 ############################################
 
 ###############################
