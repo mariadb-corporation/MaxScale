@@ -55,6 +55,7 @@ add_library(maxscale-common SHARED
   utils.cc
   websocket.cc
   workerlocal.cc
+  response_distribution.cc
   )
 
 target_link_libraries(maxscale-common

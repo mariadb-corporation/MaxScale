@@ -69,7 +69,7 @@ cfg::ParamPath s_global_script(
     cfg::ParamPath::R, "");
 
 cfg::ParamPath s_session_script(
-    &s_spec, "session", "Path to session level Lua script",
+    &s_spec, "session_script", "Path to session level Lua script",
     cfg::ParamPath::R, "");
 }
 
@@ -318,7 +318,7 @@ bool LuaFilter::post_configure()
 
 uint64_t LuaFilter::getCapabilities() const
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)

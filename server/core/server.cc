@@ -32,6 +32,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/http.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/modutil.hh>
 
 #include "internal/config.hh"
 
@@ -44,6 +45,7 @@ using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
 namespace cfg = mxs::config;
+using Operation = mxb::MeasureTime::Operation;
 
 namespace
 {
@@ -716,8 +718,42 @@ json_t* Server::json_attributes() const
     json_object_set_new(statistics, "adaptive_avg_select_time",
                         json_string(mxb::to_string(response_ave).c_str()));
 
+
+    if (is_resp_distribution_enabled())
+    {
+        const auto& distr_obj = json_object();
+        json_object_set_new(distr_obj, "read", response_distribution_to_json(Operation::READ));
+        json_object_set_new(distr_obj, "write", response_distribution_to_json(Operation::WRITE));
+        json_object_set_new(statistics, "response_time_distribution", distr_obj);
+    }
+
     json_object_set_new(attr, "statistics", statistics);
     return attr;
+}
+
+json_t* Server::response_distribution_to_json(Operation opr) const
+{
+    const auto& distr_obj = json_object();
+    const auto& arr = json_array();
+    auto my_distribution = get_complete_response_distribution(opr);
+
+    for (const auto& element : my_distribution.get())
+    {
+        auto row_obj = json_object();
+
+        json_object_set_new(row_obj, "time",
+                            json_string(std::to_string(mxb::to_secs(element.limit)).c_str()));
+        json_object_set_new(row_obj, "total", json_real(mxb::to_secs(element.total)));
+        json_object_set_new(row_obj, "count", json_integer(element.count));
+
+        json_array_append(arr, row_obj);
+    }
+    json_object_set_new(distr_obj, "distribution", arr);
+    json_object_set_new(distr_obj, "range_base",
+                        json_integer(my_distribution.range_base()));
+    json_object_set_new(distr_obj, "operation", json_string(opr == Operation::READ ? "read" : "write"));
+
+    return distr_obj;
 }
 
 json_t* Server::to_json_data(const char* host) const
@@ -871,10 +907,54 @@ const SERVER::VersionInfo& Server::info() const
     return m_info;
 }
 
+maxscale::ResponseDistribution& Server::response_distribution(Operation opr)
+{
+    mxb_assert(opr != Operation::NOP);
+
+    if (opr == Operation::READ)
+    {
+        return *m_read_distributions;
+    }
+    else
+    {
+        return *m_write_distributions;
+    }
+}
+
+const maxscale::ResponseDistribution& Server::response_distribution(Operation opr) const
+{
+    return const_cast<Server*>(this)->response_distribution(opr);
+}
+
+// The threads modify a reference to a ResponseDistribution, which is
+// in a WorkerGlobal. So when the code below reads a copy (the +=)
+// there can be a small inconsistency: the count might have been updated,
+// but the total not, or even the other way around as there are no atomics
+// in ResponseDistribution.
+// Fine, it is still thread safe. All in the name of performance.
+maxscale::ResponseDistribution Server::get_complete_response_distribution(Operation opr) const
+{
+    mxb_assert(opr != Operation::NOP);
+
+    maxscale::ResponseDistribution ret = m_read_distributions->with_stats_reset();
+
+    const auto& distr = (opr == Operation::READ) ? m_read_distributions : m_write_distributions;
+
+    for (auto rhs : distr.values())
+    {
+        ret += rhs;
+    }
+
+    return ret;
+}
+
 ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)
     : m_up(up)
     , m_session(session)
     , m_server(server)
+    , m_query_time(RoutingWorker::get_current())
+    , m_read_distribution(server->response_distribution(Operation::READ))
+    , m_write_distribution(server->response_distribution(Operation::WRITE))
 {
 }
 
@@ -933,6 +1013,17 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     mxb_assert(is_open());
     int32_t rval = 0;
 
+    const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
+            | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+
+    auto type_mask = (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)) ?
+                qc_get_type_mask(buffer) : 0;
+
+    auto is_read_only = !(type_mask & ~read_only_types);
+    auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
+    auto not_master = !(m_server->status() & SERVER_MASTER);
+    auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
+
     if (m_conn_pooled && connect())
     {
         m_conn_pooled = false;
@@ -944,6 +1035,9 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
         rval = m_conn->write(buffer);
         mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
     }
+
+    m_query_time.start(opr); // always measure
+
     return rval;
 }
 
@@ -952,6 +1046,18 @@ bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     down.push_back(this);
+
+    m_query_time.stop(); // always measure
+
+    if (m_query_time.opr() == Operation::READ)
+    {
+        m_read_distribution.add(m_query_time.duration());
+    }
+    else
+    {
+        m_write_distribution.add(m_query_time.duration());
+    }
+
     return m_up->clientReply(buffer, down, reply);
 }
 
