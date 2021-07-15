@@ -2006,9 +2006,19 @@ int TestConnections::run_test_script(const char* script, const char* name)
     setenv("src_dir", test_dir, 1);
 
     string script_cmd = mxb::string_printf("%s/%s %s", test_dir, script, name);
-    int script_res = system(script_cmd.c_str());
+    int rc = system(script_cmd.c_str());
 
-    expect(script_res == 0, "Test %s exited with return code %d", name, script_res);
+    if (WIFEXITED(rc))
+    {
+        rc = WEXITSTATUS(rc);
+    }
+    else
+    {
+        tprintf("Command '%s' failed. Error: %s", script_cmd.c_str(), mxb_strerror(errno));
+        rc = 256;
+    }
+
+    expect(rc == 0, "Script %s exited with code %d", script_cmd.c_str(), rc);
 
     return global_result;
 }

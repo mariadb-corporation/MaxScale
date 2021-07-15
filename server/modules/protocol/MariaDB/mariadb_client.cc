@@ -88,7 +88,7 @@ string get_version_string(SERVICE* service)
 
     // Older applications don't understand versions other than 5 and cause strange problems.
     // The MariaDB Server also prepends 5.5.5- to its version strings, and this is not shown by clients.
-    if (service_vrs[0] != '5')
+    if (service_vrs[0] != '5' && service_vrs[0] != '8')
     {
         const char prefix[] = "5.5.5-";
         service_vrs = prefix + service_vrs;
