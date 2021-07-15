@@ -55,20 +55,41 @@ enum regex_options
     CCR_REGEX_EXTENDED         = PCRE2_EXTENDED
 };
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+class CCRSpecification : public config::Specification
+{
+public:
+    using config::Specification::Specification;
+
+protected:
+
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override final
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const override final
+    {
+        return do_post_validate(json);
+    }
+};
+
+CCRSpecification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamCount count(
     &specification,
     "count",
     "The number of SQL statements to route to master after detecting a data modifying SQL statement.",
-    0);
+    0, mxs::config::Param::AT_RUNTIME);
 
 config::ParamSeconds time(
     &specification,
     "time",
     "The time window during which queries are routed to the master.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds {60});
+    std::chrono::seconds {60}, mxs::config::Param::AT_RUNTIME);
 
 config::ParamBool global(
     &specification,
@@ -76,19 +97,19 @@ config::ParamBool global(
     "Specifies whether a write on one connection should have an impact on reads "
     "made on another connections. Note that 'global' and 'count' are mutually "
     "exclusive.",
-    false);
+    false, mxs::config::Param::AT_RUNTIME);
 
 config::ParamRegex match(
     &specification,
     "match",
     "Regular expression used for matching statements.",
-    "");
+    "", mxs::config::Param::AT_RUNTIME);
 
 config::ParamRegex ignore(
     &specification,
     "ignore",
     "Regular expression used for excluding statements.",
-    "");
+    "", mxs::config::Param::AT_RUNTIME);
 
 config::ParamEnumMask<regex_options> options(
     &specification,
@@ -102,7 +123,21 @@ config::ParamEnumMask<regex_options> options(
             {CCR_REGEX_CASE_SENSITIVE, "case"},
             {CCR_REGEX_EXTENDED, "extended"}
         },
-    CCR_REGEX_CASE_INSENSITIVE);
+    CCR_REGEX_CASE_INSENSITIVE, mxs::config::Param::AT_RUNTIME);
+
+template<class Params>
+bool CCRSpecification::do_post_validate(Params params) const
+{
+    bool rv = true;
+
+    if (ccr::global.get(params) && ccr::count.get(params) != 0)
+    {
+        MXS_ERROR("'count' and 'global' cannot be used at the same time.");
+        rv = false;
+    }
+
+    return rv;
+}
 }
 }
 
@@ -114,48 +149,23 @@ public:
 
     CCRConfig(const std::string& name)
         : mxs::config::Configuration(name, &ccr::specification)
+        , match(this, &ccr::match)
+        , ignore(this, &ccr::ignore)
+        , time(this, &ccr::time)
+        , count(this, &ccr::count)
+        , global(this, &ccr::global)
+        , options(this, &ccr::options)
     {
-        add_native(&CCRConfig::match, &ccr::match);
-        add_native(&CCRConfig::ignore, &ccr::ignore);
-        add_native(&CCRConfig::time, &ccr::time);
-        add_native(&CCRConfig::count, &ccr::count);
-        add_native(&CCRConfig::global, &ccr::global);
-        add_native(&CCRConfig::options, &ccr::options);
     }
 
     CCRConfig(CCRConfig&& rhs) = default;
 
-    bool post_configure()
-    {
-        bool rv = true;
-
-        if (this->global && (this->count != 0))
-        {
-            MXS_ERROR("'count' and 'global' cannot be used at the same time.");
-            rv = false;
-        }
-
-        if (rv)
-        {
-            this->ovector_size = std::max(this->match.ovec_size, this->ignore.ovec_size);
-
-            if (this->options != 0)
-            {
-                this->match.set_options(options);
-                this->ignore.set_options(options);
-            }
-        }
-
-        return rv;
-    }
-
-    mxs::config::RegexValue match;
-    mxs::config::RegexValue ignore;
-    std::chrono::seconds    time;
-    int64_t                 count;
-    bool                    global;
-    uint32_t                options;
-    uint32_t                ovector_size {0};
+    mxs::config::Regex                        match;
+    mxs::config::Regex                        ignore;
+    mxs::config::Seconds                      time;
+    mxs::config::Count                        count;
+    mxs::config::Bool                         global;
+    mxs::config::EnumMask<ccr::regex_options> options;
 };
 
 class CCRFilter;
@@ -173,6 +183,12 @@ private:
     CCRFilter& m_instance;
     int        m_hints_left = 0;                    /* Number of hints left to add to queries */
     time_t     m_last_modification = 0;             /* Time of the last data modifying operation */
+
+    mxs::config::RegexValue m_match;
+    mxs::config::RegexValue m_ignore;
+    std::chrono::seconds    m_time;
+    uint64_t                m_count;
+    bool                    m_global;
 
     enum CcrHintValue
     {
@@ -251,7 +267,17 @@ private:
 CCRSession::CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
     : maxscale::FilterSession(session, service)
     , m_instance(*instance)
+    , m_match(m_instance.config().match.get())
+    , m_ignore(m_instance.config().ignore.get())
+    , m_time(m_instance.config().time.get())
+    , m_count(m_instance.config().count.get())
+    , m_global(m_instance.config().global.get())
 {
+    if (int options = m_instance.config().options.get())
+    {
+        m_match.set_options(options);
+        m_ignore.set_options(options);
+    }
 }
 
 CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
@@ -264,7 +290,6 @@ bool CCRSession::routeQuery(GWBUF* queue)
     if (modutil_is_SQL(queue))
     {
         auto filter = &this->m_instance;
-        const CCRConfig& config = m_instance.config();
         time_t now = time(NULL);
         /* Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement. */
@@ -288,28 +313,25 @@ bool CCRSession::routeQuery(GWBUF* queue)
                 }
                 if (!decided)
                 {
-                    const auto& match = m_instance.config().match;
-                    const auto& ignore = m_instance.config().ignore;
-
-                    trigger_ccr = (!match || match.match(sql, (size_t)length))
-                        && (!ignore || !ignore.match(sql, (size_t)length));
+                    trigger_ccr = (!m_match || m_match.match(sql, (size_t)length))
+                        && (!m_ignore || !m_ignore.match(sql, (size_t)length));
                 }
                 if (trigger_ccr)
                 {
-                    if (config.count)
+                    if (m_count)
                     {
-                        m_hints_left = config.count;
+                        m_hints_left = m_count;
                         MXS_INFO("Write operation detected, next %ld queries routed to master",
-                                 config.count);
+                                 m_count);
                     }
 
-                    if (config.time.count())
+                    if (m_time.count())
                     {
                         m_last_modification = now;
                         MXS_INFO("Write operation detected, queries routed to master for %ld seconds",
-                                 config.time.count());
+                                 m_time.count());
 
-                        if (config.global)
+                        if (m_global)
                         {
                             filter->m_last_modification.store(now, std::memory_order_relaxed);
                         }
@@ -326,12 +348,12 @@ bool CCRSession::routeQuery(GWBUF* queue)
             filter->m_stats.n_add_count++;
             MXS_INFO("%d queries left", m_hints_left);
         }
-        else if (config.time.count())
+        else if (m_time.count())
         {
             double dt = std::min(difftime(now, m_last_modification),
                                  difftime(now, filter->m_last_modification.load(std::memory_order_relaxed)));
 
-            if (dt < config.time.count())
+            if (dt < m_time.count())
             {
                 queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
                 filter->m_stats.n_add_time++;
