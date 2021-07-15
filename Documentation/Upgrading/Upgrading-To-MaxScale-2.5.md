@@ -34,6 +34,12 @@ The encrypted passwords feature has been updated to be more secure. Users are
 recommended to generate a new encryption key and and re-encrypt their passwords
 using the `maxkeys` and `maxpasswd` utilities. Old passwords still work.
 
+## Default Server State
+
+The default state of servers in 2.4 was `Running` and in 2.5 it is now
+`Down`. This was done to prevent newly added servers from being accidentally
+used before they were monitored.
+
 ## Columnstore Monitor
 
 It is now mandatory to specify in the configuration what version the
