@@ -614,9 +614,6 @@ add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_
 # Test readwritesplit multi-statement handling
 add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt LABELS readwritesplit REPL_BACKEND)
 
-# Schemarouter duplicate database detection test: create DB on all nodes and then try query againt schema router
-add_test_executable(schemarouter_duplicate.cpp schemarouter_duplicate schemarouter_duplicate LABELS schemarouter REPL_BACKEND)
-
 # Test 10.3 SEQUENCE objects
 add_test_executable(sequence.cpp sequence replication LABELS LIGHT REPL_BACKEND)
 
@@ -625,12 +622,6 @@ add_test_executable(compound_statement.cpp compound_statement replication LABELS
 
 # test for 'max_sescmd_history' and 'connection_timeout' parameters
 add_test_executable(session_limits.cpp session_limits session_limits LABELS readwritesplit REPL_BACKEND)
-
-# Test of schema router
-add_test_executable(sharding.cpp sharding sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
-# MXS-1160: LOAD DATA LOCAL INFILE with schemarouter
-add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
@@ -728,17 +719,9 @@ add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABE
 # TODO: Remove this once MXS-1958 is fixed
 set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 
-# MXS-1849: Table family sharding router
-# https://jira.mariadb.org/browse/MXS-1849
-add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
 add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS REPL_BACKEND)
-
-# MXS-1113: Support of prepared statement for schemarouter
-# https://jira.mariadb.org/browse/MXS-1113
-add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-2037: Wildcards not working with source in Named Server Filter
 # https://jira.mariadb.org/browse/MXS-2037
@@ -819,9 +802,6 @@ add_test_executable(mxs2609_history_replay.cpp mxs2609_history_replay mxs2609_hi
 # MXS-2621: Incorrect SQL if lower_case_table_names is used.
 add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2621_lower_case_tables LABELS REPL_BACKEND)
 
-# MXS-2631: Duplicate system tables not ignored
-add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_tables mxs2631_ignore_system_tables LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
 # Service-to-Service routing with readwritesplit
 add_test_executable(sts_readwritesplit.cpp sts_readwritesplit sts_readwritesplit LABELS readwritesplit REPL_BACKEND)
 
@@ -856,9 +836,6 @@ add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS RE
 # MXS-3565: Target selection for COM_STMT_EXECUTION without metadata isn't done correctly
 add_test_executable(mxs2750_com_stmt_exec.cc mxs2750_com_stmt_exec replication LABELS readwritesplit REPL_BACKEND)
 
-# MXS-2793: Schemarouter multi-table joins
-add_test_executable(mxs2793_multi_table.cpp mxs2793_multi_table mxs2793_multi_table LABELS schemarouter REPL_BACKEND)
-
 # MXS-2878: Verify that TLS is required
 add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_ssl LABELS REPL_BACKEND)
 
@@ -870,9 +847,6 @@ add_test_executable(connection_init_queries.cc connection_init_queries connectio
 
 # MXS-2919: Slaves with broken replication should not be used
 add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_broken_slaves LABELS REPL_BACKEND readwritesplit)
-
-# MXS-2972: Caching of shards must take servers into notice
-add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard_caching LABELS REPL_BACKEND schemarouter)
 
 # MXS-3218: Crash with LOAD DATA LOCAL INFILE
 add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
