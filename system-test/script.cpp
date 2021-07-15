@@ -85,25 +85,29 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
+    // Generate some strings used repeatedly later on.
+    const char fmt[] = "[%s]:%d";
+
     auto& repl = *test.repl;
-    auto repl_ip0 = repl.ip_private(0);
-    auto repl_ip1 = repl.ip_private(1);
-    auto repl_ip2 = repl.ip_private(2);
-    auto repl_ip3 = repl.ip_private(3);
-    auto repl_port0 = repl.port[0];
-    auto repl_port1 = repl.port[1];
-    auto repl_port2 = repl.port[2];
-    auto repl_port3 = repl.port[3];
+    string repl0s = mxb::string_printf(fmt, repl.ip_private(0), repl.port[0]);
+    string repl1s = mxb::string_printf(fmt, repl.ip_private(1), repl.port[1]);
+    string repl2s = mxb::string_printf(fmt, repl.ip_private(2), repl.port[2]);
+    string repl3s = mxb::string_printf(fmt, repl.ip_private(3), repl.port[3]);
+    auto repl0 = repl0s.c_str();
+    auto repl1 = repl1s.c_str();
+    auto repl2 = repl2s.c_str();
+    auto repl3 = repl3s.c_str();
+
 
     auto& galera = *test.galera;
-    auto gal_ip0 = galera.ip_private(0);
-    auto gal_ip1 = galera.ip_private(1);
-    auto gal_ip2 = galera.ip_private(2);
-    auto gal_ip3 = galera.ip_private(3);
-    auto gal_port0 = galera.port[0];
-    auto gal_port1 = galera.port[1];
-    auto gal_port2 = galera.port[2];
-    auto gal_port3 = galera.port[3];
+    string gal0s = mxb::string_printf(fmt, galera.ip_private(0), galera.port[0]);
+    string gal1s = mxb::string_printf(fmt, galera.ip_private(1), galera.port[1]);
+    string gal2s = mxb::string_printf(fmt, galera.ip_private(2), galera.port[2]);
+    string gal3s = mxb::string_printf(fmt, galera.ip_private(3), galera.port[3]);
+    auto gal0 = gal0s.c_str();
+    auto gal1 = gal1s.c_str();
+    auto gal2 = gal2s.c_str();
+    auto gal3 = gal3s.c_str();
 
     auto& mxs = *test.maxscale;
     auto mxs_homedir = mxs.access_homedir();
@@ -122,53 +126,22 @@ int main(int argc, char* argv[])
 
     mxs.restart_maxscale();
 
+    const char line_3up_fmt[] = "--event=%s --initiator=%s --nodelist=%s,%s,%s\n";
+    const char line_4up_fmt[] = "--event=%s --initiator=%s --nodelist=%s,%s,%s,%s\n";
+
     const char repl_script_outfile[] = "script_output_expected";
     FILE* f = fopen(repl_script_outfile, "w");
-    fprintf(f, "--event=master_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip0, repl_port0,
-            repl_ip1, repl_port1,
-            repl_ip2, repl_port2,
-            repl_ip3, repl_port3);
-
-    fprintf(f, "--event=master_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip0, repl_port0,
-            repl_ip0, repl_port0,
-            repl_ip1, repl_port1,
-            repl_ip2, repl_port2,
-            repl_ip3, repl_port3);
-
-    fprintf(f, "--event=slave_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip1, repl_port1,
-            repl_ip0, repl_port0,
-            repl_ip1, repl_port1,
-            repl_ip2, repl_port2,
-            repl_ip3, repl_port3);
+    fprintf(f, line_3up_fmt, "master_down", repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "master_up", repl0, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "slave_up", repl1, repl0, repl1, repl2, repl3);
     fclose(f);
 
     const char galera_script_outfile[] = "script_output_expected_galera";
     f = fopen(galera_script_outfile, "w");
-    fprintf(f, "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip0, gal_port0,
-            gal_ip1, gal_port1,
-            gal_ip2, gal_port2,
-            gal_ip3, gal_port3);
-    fprintf(f, "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip0, gal_port0,
-            gal_ip0, gal_port0,
-            gal_ip1, gal_port1,
-            gal_ip2, gal_port2,
-            gal_ip3, gal_port3);
-    fprintf(f, "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip1, gal_port1,
-            gal_ip0, gal_port0,
-            gal_ip2, gal_port2,
-            gal_ip3, gal_port3);
-    fprintf(f, "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip1, gal_port1,
-            gal_ip0, gal_port0,
-            gal_ip1, gal_port1,
-            gal_ip2, gal_port2,
-            gal_ip3, gal_port3);
+    fprintf(f, line_3up_fmt, "synced_down", gal0, gal1, gal2, gal3);
+    fprintf(f, line_4up_fmt, "synced_up", gal0, gal0, gal1, gal2, gal3);
+    fprintf(f, line_3up_fmt, "synced_down", gal1, gal0, gal2, gal3);
+    fprintf(f, line_4up_fmt, "synced_up", gal1, gal0, gal1, gal2, gal3);
     fclose(f);
 
     test.tprintf("Copying expected script output files to Maxscale machine.");
