@@ -115,7 +115,16 @@ char* squeeze_whitespace(char* str);
 
 bool is_valid_posix_path(char* path);
 
-bool mxs_mkdir_all(const char* path, int mask);
+/**
+ * Create a directory and any parent directories that do not exist
+ *
+ * @param path       Path to create
+ * @param mask       Bitmask to use
+ * @param log_errors Whether to log errors
+ *
+ * @return True if directory exists or it was successfully created, false on error
+ */
+bool mxs_mkdir_all(const char* path, int mask, bool log_errors = true);
 
 /**
  * Return the number of processors
