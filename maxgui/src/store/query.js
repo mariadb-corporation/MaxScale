@@ -10,11 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie, uniqBy, uniqueId, cloneDeep, pickBy } from 'utils/helpers'
-function defWorksheetState() {
+import { getCookie, uniqBy, uniqueId, pickBy } from 'utils/helpers'
+
+/**
+ * @returns Return standalone worksheet states
+ */
+function saWkeStates() {
     return {
-        id: uniqueId('wke_'),
-        name: 'worksheet',
         loading_prvw_data: false,
         prvw_data: {},
         active_tree_node_id: '',
@@ -28,6 +30,15 @@ function defWorksheetState() {
         curr_query_mode: 'QUERY_VIEW',
     }
 }
+
+function defWorksheetState() {
+    return {
+        id: uniqueId('wke_'),
+        name: 'worksheet',
+        ...saWkeStates(),
+    }
+}
+
 function initialState() {
     return {
         // connection related states
@@ -50,21 +61,11 @@ function initialState() {
         db_completion_list: [],
 
         // worksheet states
-        worksheets_arr: [cloneDeep(defWorksheetState())],
+        worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
 
         // standalone wke states
-        loading_prvw_data: false,
-        prvw_data: {},
-        active_tree_node_id: '',
-        prvw_data_request_sent_time: 0,
-        loading_prvw_data_details: false,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
-        loading_query_result: false,
-        query_request_sent_time: 0,
-        query_result: {},
-        curr_query_mode: 'QUERY_VIEW',
+        ...saWkeStates(),
     }
 }
 
@@ -194,7 +195,7 @@ export default {
 
         // worksheet mutations
         ADD_NEW_WKE(state) {
-            state.worksheets_arr.push(cloneDeep(defWorksheetState()))
+            state.worksheets_arr.push(defWorksheetState())
         },
         DELETE_WKE(state, idx) {
             state.worksheets_arr.splice(idx, 1)
