@@ -1,0 +1,277 @@
+# MaxScale Resource
+
+The MaxScale resource represents a MaxScale instance and it is the core on top
+of which the modules build upon.
+
+[TOC]
+
+## Resource Operations
+
+## Get global information
+
+```
+GET /v1/maxscale
+```
+
+Retrieve global information about a MaxScale instance. This includes various
+file locations, configuration options and version information.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale")}}
+```
+
+## Update MaxScale parameters
+
+```
+PATCH /v1/maxscale
+```
+
+Update MaxScale parameters. The request body must define updated values for the
+`data.attributes.parameters` object. The following parameters can be altered:
+
+- [admin_auth](../Getting-Started/Configuration-Guide.md#admin_auth)
+- [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
+- [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
+- [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
+- [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
+- [passive](../Getting-Started/Configuration-Guide.md#passive)
+
+#### Response
+
+Parameters modified:
+
+`Status: 204 No Content`
+
+Invalid JSON body:
+
+`Status: 403 Forbidden`
+
+## Get thread information
+
+```
+GET /v1/maxscale/threads/:id
+```
+
+Get the information and statistics of a particular thread. The _:id_ in
+the URI must map to a valid thread number between 0 and the configured
+value of `threads`.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/threads/0")}}
+```
+
+## Get information for all threads
+
+```
+GET /v1/maxscale/threads
+```
+
+Get the information for all threads. Returns a collection of threads resources.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/threads")}}
+```
+
+## Get logging information
+
+```
+GET /v1/maxscale/logs
+```
+
+Get information about the current state of logging, enabled log files and the
+location where the log files are stored.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/logs")}}
+```
+
+## Update logging parameters
+
+```
+PATCH /v1/maxscale/logs
+```
+
+Update logging parameters. The request body must define updated values for the
+`data.attributes.parameters` object. All logging parameters can be altered at runtime.
+
+#### Response
+
+Parameters modified:
+
+`Status: 204 No Content`
+
+Invalid JSON body:
+
+`Status: 403 Forbidden`
+
+## Flush and rotate log files
+
+```
+POST /v1/maxscale/logs/flush
+```
+
+Flushes any pending messages to disk and reopens the log files. The body of the
+message is ignored.
+
+#### Response
+
+`Status: 204 No Content`
+
+## Get task schedule
+
+```
+GET /v1/maxscale/tasks
+```
+
+Retrieve all pending tasks that are queued for execution.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/tasks/"
+    },
+    "data": [] // No tasks active
+}
+```
+
+## Get a loaded module
+
+```
+GET /v1/maxscale/modules/:name
+```
+
+Retrieve information about a loaded module. The _:name_ must be the name of a
+valid loaded module or either `maxscale` or `servers`.
+
+The `maxscale` module will display the global configuration options
+(i.e. everything under the `[maxscale]` section) as a module.
+
+The `servers` module displays the server object type and the configuration
+parameters it accepts as a module.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/modules/readwritesplit")}}
+```
+
+## Get all loaded modules
+
+```
+GET /v1/maxscale/modules
+```
+
+Retrieve information about all loaded modules.
+
+This endpoint supports the `load=all` parameter. When defined, all modules
+located in the MaxScale module directory (`libdir`) will be loaded. This allows
+one to see the parameters of a module before the object is created.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/modules")}}
+```
+
+## Call a module command
+
+For read-only commands:
+
+```
+GET /v1/maxscale/modules/:module/:command
+```
+
+For commands that can modify data:
+
+```
+POST /v1/maxscale/modules/:module/:command
+```
+
+Modules can expose commands that can be called via the REST API. The module
+resource lists all commands in the `data.attributes.commands` list. Each value
+is a command sub-resource identified by its `id` field and the HTTP method the
+command uses is defined by the `attributes.method` field.
+
+The _:module_ in the URI must be a valid name of a loaded module and _:command_
+must be a valid command identifier that is exposed by that module. All
+parameters to the module commands are passed as HTTP request parameters.
+
+Here is an example POST requests to the dbfwfilter module command _reload_ with
+two parameters, the name of the filter instance and the path to a file:
+
+```
+POST /v1/maxscale/modules/dbfwfilter/reload?my-dbfwfilter-instance&/path/to/file.txt
+```
+
+#### Response
+
+Command with output:
+
+`Status: 200 OK`
+
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/modules/dbfwfilter/rules/json"
+    },
+    "meta": [ // Output of module command (module dependent)
+        {
+            "name": "test3",
+            "type": "COLUMN",
+            "times_matched": 0
+        }
+    ]
+}
+```
+
+The contents of the `meta` field will contain the output of the module
+command. This output depends on the command that is being executed. It can
+contain any valid JSON value.
+
+Command with no output:
+
+`Status: 204 No Content`
+
+## Classify a statement
+
+```
+GET /v1/maxscale/query_classifier/classify?sql=<statement>
+```
+
+Classify provided statement and return the result.
+
+#### Response
+
+`Status: 200 OK`
+
+```
+GET /v1/maxscale/query_classifier/classify?sql=SELECT+1
+```
+
+```javascript
+{{get("/v1/maxscale/query_classifier/classify?sql=SELECT+1")}}
+```

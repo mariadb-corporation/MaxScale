@@ -1,0 +1,114 @@
+# Listener Resource
+
+A listener resource represents a listener of a service in MaxScale. All
+listeners point to a service in MaxScale.
+
+[TOC]
+
+## Resource Operations
+
+### Get a listener
+
+```
+GET /v1/listeners/:name
+```
+
+Get a single listener. The _:name_ in the URI must be the name of a listener in
+MaxScale.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/listeners/RW-Split-Listener")}}
+```
+
+### Get all listeners
+
+```
+GET /v1/listeners
+```
+
+Get all listeners.
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/listeners")}}
+```
+
+### Create a new listener
+
+```
+POST /v1/listeners
+```
+
+Creates a new listener. The request body must define the following fields.
+
+* `data.id`
+  * Name of the listener
+
+* `data.type`
+  * Type of the object, must be `listeners`
+
+* `data.attributes.parameters.port` OR `data.attributes.parameters.socket`
+  * The TCP port or UNIX Domain Socket the listener listens on. Only one of the
+    fields can be defined.
+
+* `data.relationships.services.data`
+  * The service relationships data, must define a JSON object with an `id` value
+    that defines the service to use and a `type` value set to `services`.
+
+The following is the minimal required JSON object for defining a new listener.
+
+```javascript
+{
+    "data": {
+        "id": "my-listener",
+        "type": "listeners",
+        "attributes": {
+            "parameters": {
+                "port": 3306
+            }
+        },
+        "relationships": {
+            "services": {
+                "data": [
+                    {"id": "RW-Split-Router", "type": "services"}
+                ]
+            }
+        }
+    }
+}
+```
+
+Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md) for
+a full list of listener parameters.
+
+#### Response
+
+Listener is created:
+
+`Status: 204 No Content`
+
+### Destroy a listener
+
+```
+DELETE /v1/listeners/:name
+```
+
+The _:name_ must be a valid listener name. When a listener is destroyed, the
+network port it listens on is available for reuse.
+
+#### Response
+
+Listener is destroyed:
+
+`Status: 204 No Content`
+
+Listener cannot be deleted:
+
+`Status: 403 Forbidden`
