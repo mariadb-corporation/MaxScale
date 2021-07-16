@@ -3,6 +3,8 @@
 A listener resource represents a listener of a service in MaxScale. All
 listeners point to a service in MaxScale.
 
+[TOC]
+
 ## Resource Operations
 
 ### Get a listener
@@ -20,46 +22,49 @@ MaxScale.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener"
-    },
     "data": {
-        "id": "RW-Split-Listener",
-        "type": "listeners",
         "attributes": {
-            "state": "Running",
             "parameters": {
-                "protocol": "MariaDBClient",
-                "port": 4006,
-                "socket": null,
-                "authenticator_options": "",
                 "address": "::",
                 "authenticator": null,
+                "authenticator_options": "",
+                "connection_init_sql_file": null,
+                "port": 4006,
+                "protocol": "MariaDBClient",
+                "socket": null,
+                "sql_mode": null,
                 "ssl": "false",
-                "ssl_cert": null,
-                "ssl_key": null,
                 "ssl_ca_cert": null,
-                "ssl_crl": null,
-                "ssl_version": "MAX",
+                "ssl_cert": null,
                 "ssl_cert_verify_depth": 9,
+                "ssl_cipher": null,
+                "ssl_crl": null,
+                "ssl_key": null,
                 "ssl_verify_peer_certificate": false,
                 "ssl_verify_peer_host": false,
-                "sql_mode": null
-            }
+                "ssl_version": "MAX"
+            },
+            "state": "Running"
         },
+        "id": "RW-Split-Listener",
         "relationships": {
             "services": {
-                "links": {
-                    "self": "http://localhost:8989/v1/services/"
-                },
                 "data": [
                     {
                         "id": "RW-Split-Router",
                         "type": "services"
                     }
-                ]
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+                }
             }
-        }
+        },
+        "type": "listeners"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener"
     }
 }
 ```
@@ -78,87 +83,93 @@ Get all listeners.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/listeners/"
-    },
     "data": [
         {
-            "id": "Read-Connection-Listener",
-            "type": "listeners",
             "attributes": {
-                "state": "Running",
                 "parameters": {
-                    "protocol": "MariaDBClient",
-                    "port": 4008,
-                    "socket": null,
-                    "authenticator_options": "",
                     "address": "::",
                     "authenticator": null,
+                    "authenticator_options": "",
+                    "connection_init_sql_file": null,
+                    "port": 4008,
+                    "protocol": "MariaDBClient",
+                    "socket": null,
+                    "sql_mode": null,
                     "ssl": "false",
-                    "ssl_cert": null,
-                    "ssl_key": null,
                     "ssl_ca_cert": null,
-                    "ssl_crl": null,
-                    "ssl_version": "MAX",
+                    "ssl_cert": null,
                     "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
+                    "ssl_crl": null,
+                    "ssl_key": null,
                     "ssl_verify_peer_certificate": false,
                     "ssl_verify_peer_host": false,
-                    "sql_mode": null
-                }
+                    "ssl_version": "MAX"
+                },
+                "state": "Running"
             },
+            "id": "Read-Connection-Listener",
             "relationships": {
                 "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
                     "data": [
                         {
                             "id": "Read-Connection-Router",
                             "type": "services"
                         }
-                    ]
-                }
-            }
-        },
-        {
-            "id": "RW-Split-Listener",
-            "type": "listeners",
-            "attributes": {
-                "state": "Running",
-                "parameters": {
-                    "protocol": "MariaDBClient",
-                    "port": 4006,
-                    "socket": null,
-                    "authenticator_options": "",
-                    "address": "::",
-                    "authenticator": null,
-                    "ssl": "false",
-                    "ssl_cert": null,
-                    "ssl_key": null,
-                    "ssl_ca_cert": null,
-                    "ssl_crl": null,
-                    "ssl_version": "MAX",
-                    "ssl_cert_verify_depth": 9,
-                    "ssl_verify_peer_certificate": false,
-                    "ssl_verify_peer_host": false,
-                    "sql_mode": null
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/listeners/Read-Connection-Listener/relationships/services/"
+                    }
                 }
             },
+            "type": "listeners"
+        },
+        {
+            "attributes": {
+                "parameters": {
+                    "address": "::",
+                    "authenticator": null,
+                    "authenticator_options": "",
+                    "connection_init_sql_file": null,
+                    "port": 4006,
+                    "protocol": "MariaDBClient",
+                    "socket": null,
+                    "sql_mode": null,
+                    "ssl": "false",
+                    "ssl_ca_cert": null,
+                    "ssl_cert": null,
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
+                    "ssl_crl": null,
+                    "ssl_key": null,
+                    "ssl_verify_peer_certificate": false,
+                    "ssl_verify_peer_host": false,
+                    "ssl_version": "MAX"
+                },
+                "state": "Running"
+            },
+            "id": "RW-Split-Listener",
             "relationships": {
                 "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
                     "data": [
                         {
                             "id": "RW-Split-Router",
                             "type": "services"
                         }
-                    ]
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+                    }
                 }
-            }
+            },
+            "type": "listeners"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/listeners/"
+    }
 }
 ```
 

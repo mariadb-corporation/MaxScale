@@ -3,6 +3,8 @@
 Admin users represent administrative users that are able to query and change
 MaxScale's configuration.
 
+[TOC]
+
 ## Resource Operations
 
 ### Get network user
@@ -20,18 +22,18 @@ user name.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/users/inet/my-user"
-    },
     "data": {
-        "id": "my-user", // Username
-        "type": "inet", // User type
         "attributes": {
-            "account": "admin" // Type of the user, "admin" for read-write operations, "basic" for read-only
+            "account": "admin"
         },
+        "id": "admin",
         "relationships": {
-            "self": "http://localhost:8989/v1/users/inet/my-user"
-        }
+            "self": "http://localhost:8989/v1/users/inet/admin"
+        },
+        "type": "inet"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/users/inet/admin"
     }
 }
 ```
@@ -49,23 +51,22 @@ Get all network users.
 `Status: 200 OK`
 
 ```javascript
-// See `/v1/users/inet/` for a descriptions of the fields
 {
-    "links": {
-        "self": "http://localhost:8989/v1/users/inet"
-    },
     "data": [
         {
-            "id": "my-user",
-            "type": "inet",
             "attributes": {
                 "account": "admin"
             },
+            "id": "admin",
             "relationships": {
-                "self": "http://localhost:8989/v1/users/inet/my-user"
-            }
+                "self": "http://localhost:8989/v1/users/inet/admin"
+            },
+            "type": "inet"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/users/inet"
+    }
 }
 ```
 
@@ -75,31 +76,7 @@ Get all network users.
 GET /v1/users/unix/:name
 ```
 
-Get a single enabled UNIX account. The The _:name_ in the URI must be a valid
-UNIX account name that has been enabled.
-
-#### Response
-
-`Status: 200 OK`
-
-```javascript
-// See `/v1/users/inet/` for a descriptions of the fields
-{
-    "links": {
-        "self": "http://localhost:8989/v1/users/unix/maxscale"
-    },
-    "data": {
-        "id": "maxscale",
-        "type": "unix",
-        "attributes": {
-            "account": "basic"
-        },
-        "relationships": {
-            "self": "http://localhost:8989/v1/users/unix/maxscale"
-        }
-    }
-}
-```
+**Note:** This endpoint has been deprecated and does nothing.
 
 ### Get all enabled UNIX accounts
 
@@ -107,32 +84,7 @@ UNIX account name that has been enabled.
 GET /v1/users/unix
 ```
 
-Get all enabled UNIX accounts.
-
-#### Response
-
-`Status: 200 OK`
-
-```javascript
-// See `/v1/users/inet/` for a descriptions of the fields
-{
-    "links": {
-        "self": "http://localhost:8989/v1/users/unix"
-    },
-    "data": [
-        {
-            "id": "maxscale",
-            "type": "unix",
-            "attributes": {
-                "account": "admin"
-            },
-            "relationships": {
-                "self": "http://localhost:8989/v1/users/unix/maxscale"
-            }
-        }
-    ]
-}
-```
+**Note:** This endpoint has been deprecated and does nothing.
 
 ### Get all users
 
@@ -140,41 +92,29 @@ Get all enabled UNIX accounts.
 GET /v1/users
 ```
 
-Get all administrative users. This fetches both network users and local UNIX
-accounts.
+Get all administrative users.
 
 #### Response
 
 `Status: 200 OK`
 
 ```javascript
-// See `/v1/users/inet/` for a descriptions of the fields
 {
-    "links": {
-        "self": "http://localhost:8989/v1/users/"
-    },
-    "data": [ // List of all users
+    "data": [
         {
-            "id": "my-user",
-            "type": "inet", // A network user
             "attributes": {
                 "account": "admin"
             },
+            "id": "admin",
             "relationships": {
-                "self": "http://localhost:8989/v1/users/inet/my-user"
-            }
-        },
-        {
-            "id": "maxscale",
-            "type": "unix", // A local UNIX account
-            "attributes": {
-                "account": "admin"
+                "self": "http://localhost:8989/v1/users/inet/admin"
             },
-            "relationships": {
-                "self": "http://localhost:8989/v1/users/unix/maxscale"
-            }
+            "type": "inet"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/users/inet"
+    }
 }
 ```
 
