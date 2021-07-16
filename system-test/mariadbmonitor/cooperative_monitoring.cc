@@ -1,6 +1,5 @@
-#include <string>
 #include <maxtest/testconnections.hh>
-#include "failover_common.cpp"
+#include <string>
 
 using std::string;
 using mxt::MaxScale;
@@ -19,9 +18,9 @@ enum class MonitorID
 
 struct MonitorInfo
 {
-    MonitorID  id {MonitorID::UNKNOWN};
-    string     name;
-    MaxScale*  maxscale {nullptr};
+    MonitorID id {MonitorID::UNKNOWN};
+    string    name;
+    MaxScale* maxscale {nullptr};
 };
 
 MonitorInfo monitors[] = {
@@ -33,7 +32,7 @@ MonitorInfo monitors[] = {
 };
 
 const int failover_mon_ticks = 3;
-const int maxscale_switch_mon_ticks = 2;
+const int mxs_switch_ticks = 3;
 }
 
 bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
@@ -63,8 +62,11 @@ void test_main(TestConnections& test)
     monitors[1].maxscale = &mxs1;
     monitors[2].maxscale = &mxs2;
     monitors[3].maxscale = &mxs2;
-    mxs1.wait_for_monitor(2);
-    mxs2.wait_for_monitor(2);
+    mxs1.wait_for_monitor(mxs_switch_ticks);
+    mxs2.wait_for_monitor(mxs_switch_ticks);
+
+    mxs1.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+    mxs2.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
     // Should have just one primary monitor.
     const auto* primary_mon1 = get_primary_monitor(test);
@@ -78,11 +80,15 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         auto* previous_primary_maxscale = primary_mon1->maxscale;
-        cout << "Stopping " << previous_primary_maxscale->node_name() << ".\n";
+        test.tprintf("Stopping %s.", previous_primary_maxscale->node_name().c_str());
         previous_primary_maxscale->stop();
         MaxScale* expect_primary_maxscale = (previous_primary_maxscale == &mxs1) ? &mxs2 : &mxs1;
-        // The switch to another primary MaxScale should be quick.
-        expect_primary_maxscale->wait_for_monitor(maxscale_switch_mon_ticks);
+        // When swapping from one MaxScale to another, only waiting for monitor does not seem to be
+        // 100% reliable. 1s sleep seems to ensure the switch has happened. A possible reason is that there
+        // is some lag between a connection releasing a lock and that lock becoming available for other
+        // connections to take.
+        sleep(1);
+        expect_primary_maxscale->wait_for_monitor(mxs_switch_ticks);
         const auto* primary_mon2 = get_primary_monitor(test);
         if (test.ok())
         {
@@ -96,9 +102,9 @@ void test_main(TestConnections& test)
             current_primary_maxscale->wait_for_monitor(failover_mon_ticks);
             test_failover(test, *current_primary_maxscale);
         }
-        cout << "Starting " << previous_primary_maxscale->node_name() << ".\n";
+        test.tprintf("Starting %s.", previous_primary_maxscale->node_name().c_str());
         previous_primary_maxscale->start();
-        expect_primary_maxscale->wait_for_monitor(maxscale_switch_mon_ticks);
+        expect_primary_maxscale->wait_for_monitor(mxs_switch_ticks);
     }
 
     // If ok so far, do a rolling sweep through all four monitors by having each monitor release it's
@@ -106,7 +112,7 @@ void test_main(TestConnections& test)
     if (test.ok())
     {
         const char revisited[] = "Revisited the same monitor";
-        cout << "Testing rolling monitor swapping.\n";
+        test.tprintf("Testing rolling monitor swapping.");
         std::set<MonitorID> visited_monitors;
         while (visited_monitors.size() < 3 && test.ok())
         {
@@ -120,10 +126,16 @@ void test_main(TestConnections& test)
                 if (released)
                 {
                     visited_monitors.insert(mon_id);
-                    primary_mon->maxscale->wait_for_monitor(maxscale_switch_mon_ticks);
+                    // The 'wait_for_monitor'-function causes the target monitor to tick faster than usual.
+                    // This can cause issues when two separate MaxScales are involved, not leaving enough
+                    // time for the next MaxScale to tick. Simply wait on both MaxScales.
+                    sleep(1);
+                    mxs1.wait_for_monitor(mxs_switch_ticks);
+                    mxs2.wait_for_monitor(mxs_switch_ticks);
                 }
             }
         }
+
         // Should have one monitor left.
         const auto* primary_mon = get_primary_monitor(test);
         if (test.ok())
@@ -134,7 +146,7 @@ void test_main(TestConnections& test)
 
     if (test.ok())
     {
-        cout << "Test successful\n";
+        test.tprintf("Test successful!");
     }
 }
 
@@ -153,7 +165,7 @@ const MonitorInfo* get_primary_monitor(TestConnections& test)
             rval = &mon_info;
         }
     }
-    test.expect(primaries == 1, "Unexpected number of primary monitors: %i", primaries);
+    test.expect(primaries == 1, "Found %i primary monitors when 1 was expected.", primaries);
     return rval;
 }
 
@@ -169,7 +181,7 @@ bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
         string& output = res.output;
         if (output == "true")
         {
-            cout << mon_info.name << " from " << mxs_name << " is the primary monitor.\n";
+            test.tprintf("%s from %s is the primary monitor.", mon_info.name.c_str(), mxs_name.c_str());
             rval = true;
         }
         else
@@ -180,7 +192,7 @@ bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
     }
     else
     {
-        cout << "MaxCtrl command failed, " << mxs_name << " is likely down.\n";
+        test.tprintf("MaxCtrl command failed, %s  is likely down.", mxs_name.c_str());
     }
     return rval;
 }
@@ -201,7 +213,7 @@ void test_failover(TestConnections& test, MaxScale& maxscale)
     test.expect(first_master.server_id > 0, "No master at start of failover");
     if (test.ok())
     {
-        cout << "Stopping " << first_master.name << " and waiting for failover.\n";
+        test.tprintf("Stopping %s and waiting for failover.", first_master.name.c_str());
         int master_node = first_master.server_id - 1;
         test.repl->stop_node(master_node);
         maxscale.wait_for_monitor(failover_mon_ticks);
@@ -209,12 +221,12 @@ void test_failover(TestConnections& test, MaxScale& maxscale)
         test.expect(second_master.server_id > 0, "No master after failover");
         if (test.ok())
         {
-            cout << second_master.name << " is now master.\n";
+            test.tprintf("%s is now master.", second_master.name.c_str());
             test.expect(first_master.server_id != second_master.server_id,
                         "Master did not change, failover did not happen.");
         }
-        cout << "Starting " << first_master.name << ".\n";
+        test.tprintf("Starting %s.", first_master.name.c_str());
         test.repl->start_node(master_node);
-        maxscale.wait_for_monitor(2);       // wait for rejoin, assume it works
+        maxscale.wait_for_monitor(failover_mon_ticks);      // wait for rejoin, assume it works
     }
 }
