@@ -74,7 +74,7 @@ address=###node_server_IP_2###
 port=###node_server_port_2###
 protocol=MySQLBackend
 # This server is always out of disk space
-disk_space_threshold=/:1
+disk_space_threshold=/:0
 
 [server3]
 type=server

@@ -12,7 +12,6 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
 
@@ -26,35 +25,37 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.repl->connect();
-    const int N = 4;
     auto& mxs = *test.maxscale;
     auto& log = test.logger();
+    auto& repl = *test.repl;
+
+    const int N = 4;
+    const int disk_check_wait = 3;      // Monitor checks disk info every 2s.
 
     // Enable the disks-plugin on all servers. Has to be done before MaxScale is on to prevent disk space
-    // monitoring from disabling itself.
+    // monitoring from disabling itself due to errors.
     bool disks_plugin_loaded = false;
     const char strict_mode[] = "SET GLOBAL gtid_strict_mode=%i;";
-    test.repl->connect();
+    repl.connect();
     for (int i = 0; i < N; i++)
     {
-        MYSQL* conn = test.repl->nodes[i];
+        MYSQL* conn = repl.nodes[i];
         test.try_query(conn, "INSTALL SONAME 'disks';");
         test.try_query(conn, strict_mode, 1);
     }
 
     if (test.ok())
     {
-        cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
-                "Starting MaxScale.\n";
+        test.tprintf("Disks-plugin installed and gtid_strict_mode enabled on all servers. "
+                     "Starting MaxScale.");
         mxs.start_and_check_started();
-        sleep(2);
-        mxs.wait_for_monitor(2);
+        sleep(disk_check_wait);
+        mxs.wait_for_monitor(1);
         disks_plugin_loaded = true;
     }
     else
     {
-        cout << "Test preparations failed.\n";
+        test.tprintf("Test preparations failed.");
     }
 
     auto master = mxt::ServerInfo::master_st;
@@ -83,9 +84,9 @@ int main(int argc, char** argv)
     {
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         log.log_msg("Changing disk space threshold for the monitor, should cause a switchover.");
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:1");
-        sleep(2);   // The disk space is checked depending on wall clock time.
-        mxs.wait_for_monitor(2);
+        mxs.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:0");
+        sleep(disk_check_wait);
+        mxs.wait_for_monitor(1);
 
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
         // still replicating from server1. server1 was redirected to the new master. Although server1
@@ -101,21 +102,18 @@ int main(int argc, char** argv)
         mxs.get_servers().print();
 
         log.log_msg("Changing disk space threshold for the monitor, should prevent low disk switchovers.");
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:100");
-        sleep(2);   // To update disk space status
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:99");
+        sleep(disk_check_wait);
         mxs.wait_for_monitor(1);
     }
 
     // Use the reset-replication command to fix the situation.
     log.log_msg("Running reset-replication to fix the situation.");
     test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
-    sleep(2);
-    mxs.wait_for_monitor(2);
-    auto status = mxs.get_servers();
-    status.print();
-
+    sleep(disk_check_wait);
+    mxs.wait_for_monitor(1);
     // Check that no auto switchover has happened.
-    status.check_servers_status({master, maint, slave, slave});
+    mxs.check_print_servers_status({master, maint, slave, slave});
 
     const char drop_query[] = "DROP TABLE test.t1;";
     auto maxconn = mxs.open_rwsplit_connection();
@@ -124,16 +122,16 @@ int main(int argc, char** argv)
 
     if (disks_plugin_loaded)
     {
-        test.repl->connect();
+        repl.connect();
         // Disable the disks-plugin on all servers.
         for (int i = 0; i < N; i++)
         {
-            MYSQL* conn = test.repl->nodes[i];
+            MYSQL* conn = repl.nodes[i];
             test.try_query(conn, "UNINSTALL SONAME 'disks';");
             test.try_query(conn, strict_mode, 0);
         }
     }
 
-    test.repl->disconnect();
+    repl.disconnect();
     return test.global_result;
 }
