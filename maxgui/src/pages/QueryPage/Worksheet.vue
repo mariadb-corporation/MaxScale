@@ -183,6 +183,9 @@ export default {
     mounted() {
         this.setResultPaneDim()
     },
+    activated() {
+        this.setResultPaneDim()
+    },
     methods: {
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {

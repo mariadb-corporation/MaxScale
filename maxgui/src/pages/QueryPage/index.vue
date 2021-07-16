@@ -94,13 +94,16 @@ export default {
     },
     watch: {
         isFullscreen() {
-            this.$nextTick(() => {
+            this.$help.doubleRAF(() => {
                 // recalculate panes percent
                 this.setPanelsPct()
             })
         },
         isSidebarCollapsed(v) {
-            this.$nextTick(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
+            this.$help.doubleRAF(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
+        },
+        sidebarPct() {
+            this.$help.doubleRAF(() => this.$refs.worksheets.$refs.wke[0].setResultPaneDim())
         },
         active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
