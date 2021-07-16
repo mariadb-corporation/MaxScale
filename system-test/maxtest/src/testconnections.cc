@@ -44,7 +44,6 @@ const StringSet recognized_mdbci_labels =
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
-const int TEST_SKIPPED = 202;   // Exit code when skipping test. Should match value expected by cmake.
 }
 
 namespace maxscale
