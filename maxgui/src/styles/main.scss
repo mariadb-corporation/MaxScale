@@ -161,9 +161,6 @@ html {
 
 .tab-navigation--btn-style {
     width: unset !important;
-    .v-slide-group__wrapper {
-        border-bottom: none !important;
-    }
     .tab-btn {
         border: thin solid rgba(0, 0, 0, 0.12) !important;
         border-right: none !important;
@@ -183,6 +180,10 @@ html {
                 border-color: $error !important;
             }
         }
+    }
+    .v-window,
+    .v-window-item {
+        height: 100%;
     }
 }
 .v-card.v-card-custom {

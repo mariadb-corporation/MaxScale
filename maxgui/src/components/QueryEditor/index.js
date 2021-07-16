@@ -301,8 +301,12 @@ export default {
         setEditorValue(value) {
             if (this.editor) return this.editor.setValue(value)
         },
-        insertAtCursor(value) {
+        /**
+         * @param {Object} editOptions - IIdentifiedSingleEditOperation
+         */
+        insertAtCursor(editOptions) {
             if (this.editor) {
+                // default position is at current cursor position
                 const p = this.editor.getPosition()
                 this.editor.executeEdits('', [
                     {
@@ -312,7 +316,7 @@ export default {
                             p.lineNumber,
                             p.column
                         ),
-                        text: value,
+                        ...editOptions,
                     },
                 ])
             }

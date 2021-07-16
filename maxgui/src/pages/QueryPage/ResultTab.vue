@@ -218,6 +218,6 @@ export default {
 
 <style lang="scss" scoped>
 .tab-navigation--btn-style--custom-max-width {
-    max-width: calc(100% - 250px);
+    max-width: calc(100% - 330px);
 }
 </style>

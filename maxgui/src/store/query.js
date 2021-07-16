@@ -13,14 +13,16 @@
 import { getCookie, uniqBy } from 'utils/helpers'
 function initialState() {
     return {
+        // connection related states
         checking_active_conn: false,
         active_conn_state: false,
         conn_err_state: false,
-        rc_target_names_map: {},
-        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
-        active_db: JSON.parse(localStorage.getItem('active_db')),
+
+        //Sidebar tree schema states
         loading_db_tree: false,
         db_tree: [],
+        //TODO: create an array of worksheet object states
+        // worksheet states
         db_completion_list: [],
         loading_prvw_data: false,
         prvw_data: {},
@@ -32,9 +34,13 @@ function initialState() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        // Toolbar states
         // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
         query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
         query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
+        rc_target_names_map: {},
+        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
+        active_db: JSON.parse(localStorage.getItem('active_db')),
     }
 }
 export default {
@@ -291,12 +297,14 @@ export default {
                         name: row.SCHEMA_NAME,
                         id: row.SCHEMA_NAME,
                         data: row,
+                        draggable: true,
                         children: [
                             {
                                 type: 'Tables',
                                 name: 'Tables',
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Tables`,
+                                draggable: false,
                                 children: [],
                             },
                             {
@@ -304,6 +312,7 @@ export default {
                                 name: 'Stored Procedures',
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                draggable: false,
                                 children: [],
                             },
                         ],
@@ -353,12 +362,15 @@ export default {
                         name: row.TABLE_NAME,
                         id: `${dbName}.${row.TABLE_NAME}`,
                         data: row,
+                        canBeHighlighted: true,
+                        draggable: true,
                         children: [
                             {
                                 type: 'Columns',
                                 name: 'Columns',
                                 // only use to identify active node
                                 id: `${dbName}.${row.TABLE_NAME}.Columns`,
+                                draggable: false,
                                 children: [],
                             },
                             {
@@ -366,6 +378,7 @@ export default {
                                 name: 'Triggers',
                                 // only use to identify active node
                                 id: `${dbName}.${row.TABLE_NAME}.Triggers`,
+                                draggable: false,
                                 children: [],
                             },
                         ],
@@ -417,6 +430,7 @@ export default {
                         type: nodeType,
                         name: row.ROUTINE_NAME,
                         id: `${dbName}.${row.ROUTINE_NAME}`,
+                        draggable: true,
                         data: row,
                     })
                     dbCmplList.push({
@@ -468,6 +482,7 @@ export default {
                             dataType: row.COLUMN_TYPE,
                             type: nodeType,
                             id: `${dbName}.${tblName}.${row.COLUMN_NAME}`,
+                            draggable: true,
                             data: row,
                         })
                         dbCmplList.push({
@@ -521,6 +536,7 @@ export default {
                         type: nodeType,
                         name: row.TRIGGER_NAME,
                         id: `${dbName}.${row.TRIGGER_NAME}`,
+                        draggable: true,
                         data: row,
                     })
                     dbCmplList.push({

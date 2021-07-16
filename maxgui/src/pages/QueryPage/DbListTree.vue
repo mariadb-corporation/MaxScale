@@ -2,7 +2,7 @@
     <!-- TODO: Virtual scroll treeview -->
     <div>
         <m-treeview
-            :items="schemaList"
+            :items="schemaTree"
             :search="$parent.searchSchema"
             :filter="filter"
             hoverable
@@ -10,6 +10,8 @@
             open-on-click
             transition
             :load-children="handleLoadChildren"
+            :active.sync="activeNode"
+            @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
         >
@@ -21,7 +23,14 @@
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span class="text-truncate d-inline-block">{{ item.name }}</span>
+                    <span
+                        :draggable="item.draggable"
+                        class="text-truncate d-inline-block"
+                        @drag="e => onNodeDragging(e)"
+                        @dragend="e => onNodeDragEnd({ e, name: item.name })"
+                    >
+                        {{ item.name }}
+                    </span>
                 </div>
             </template>
 
@@ -38,7 +47,7 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
+            v-if="!isDragging && hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
             right
             :nudge-right="45"
@@ -118,6 +127,10 @@ export default {
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
+            activeNode: [],
+            activeNodeByClicking: false,
+            isDragging: false,
+            draggingEvt: null,
         }
     },
     computed: {
@@ -127,10 +140,21 @@ export default {
         showCtxBtn() {
             return item => this.activeCtxItem && item.id === this.activeCtxItem.id
         },
+        schemaTree() {
+            return this.schemaList
+        },
     },
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
+        },
+        /**
+         * Emit fetching preview-data only when node is activated by clicking.
+         * Node is activated by choosing option in context menu won't emit the event
+         */
+        activeNode(v, oV) {
+            if (v.length && v[0] !== oV[0] && this.activeNodeByClicking)
+                this.$emit('preview-data', v[0])
         },
     },
     methods: {
@@ -163,14 +187,20 @@ export default {
                 this.activeCtxItem = item
             }
         },
+        updateActiveNode(item) {
+            this.activeNode = [item.id]
+            this.activeNodeByClicking = false
+        },
         optionHandler({ item, option }) {
             const schema = item.id
             switch (option) {
                 case this.$t('previewData'):
                     this.$emit('preview-data', schema)
+                    this.updateActiveNode(item)
                     break
                 case this.$t('viewDetails'):
                     this.$emit('view-details', schema)
+                    this.updateActiveNode(item)
                     break
                 case this.$t('placeSchemaInEditor'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
@@ -209,8 +239,31 @@ export default {
                     return this.triggerOptions
             }
         },
+        onNodeClick(item) {
+            if (item.canBeHighlighted) this.activeNodeByClicking = true
+        },
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
+        },
+        onNodeDragging(e) {
+            if (!this.isDragging) this.isDragging = true
+            if (
+                this.$typy(this.draggingEvt).isNull ||
+                this.draggingEvt.clientX !== e.clientX ||
+                this.draggingEvt.clientY !== e.clientY
+            ) {
+                this.draggingEvt = e
+                this.$emit('dragging-schema', this.draggingEvt)
+            }
+        },
+        onNodeDragEnd({ e, name }) {
+            if (this.isDragging) {
+                this.$emit('drop-schema-to-editor', {
+                    e,
+                    name: this.$help.escapeIdentifiers(name),
+                })
+                this.isDragging = false
+            }
         },
     },
 }

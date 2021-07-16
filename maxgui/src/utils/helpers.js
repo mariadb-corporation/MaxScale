@@ -556,6 +556,10 @@ export function getObjectRows({ columns, rows }) {
     })
 }
 
+export function pxToPct({ px, containerPx }) {
+    return (px / containerPx) * 100
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -597,6 +601,7 @@ Object.defineProperties(Vue.prototype, {
                 doubleRAF,
                 escapeIdentifiers,
                 getObjectRows,
+                pxToPct,
             }
         },
     },
