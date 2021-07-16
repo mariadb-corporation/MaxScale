@@ -17,6 +17,7 @@ function defWorksheetState() {
         name: 'worksheet',
         loading_prvw_data: false,
         prvw_data: {},
+        active_tree_node_id: '',
         prvw_data_request_sent_time: 0,
         loading_prvw_data_details: false,
         prvw_data_details: {},
@@ -55,6 +56,7 @@ function initialState() {
         // standalone wke states
         loading_prvw_data: false,
         prvw_data: {},
+        active_tree_node_id: '',
         prvw_data_request_sent_time: 0,
         loading_prvw_data_details: false,
         prvw_data_details: {},
@@ -216,6 +218,9 @@ export default {
         },
         SET_PRVW_DATA(state, payload) {
             patch_wke_property(state, { obj: { prvw_data: payload }, scope: this })
+        },
+        SET_ACTIVE_TREE_NODE_ID(state, payload) {
+            patch_wke_property(state, { obj: { active_tree_node_id: payload }, scope: this })
         },
         SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
             patch_wke_property(state, {

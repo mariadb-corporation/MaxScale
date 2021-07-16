@@ -53,7 +53,6 @@
                         ref="queryResultPane"
                         :dynDim="resultPaneDim"
                         class="query-result"
-                        :previewDataSchemaId="previewDataSchemaId"
                     />
                 </template>
             </split-pane>
@@ -98,7 +97,6 @@ export default {
     },
     props: {
         containerHeight: { type: Number, required: true },
-        previewDataSchemaId: { type: String, required: true },
         showVisSidebar: { type: Boolean, required: true },
     },
     data() {

@@ -40,7 +40,6 @@
                             height: `calc(100% - ${wkeNavHeight}px)`,
                         }"
                         :containerHeight="containerHeight"
-                        :previewDataSchemaId="previewDataSchemaId"
                         :showVisSidebar="showVisSidebar"
                         v-on="$listeners"
                     />
@@ -72,7 +71,6 @@ export default {
     },
     props: {
         containerHeight: { type: Number, required: true },
-        previewDataSchemaId: { type: String, required: true },
         showVisSidebar: { type: Boolean, required: true },
     },
     data() {

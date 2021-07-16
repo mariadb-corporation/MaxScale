@@ -12,7 +12,6 @@
                 @is-fullscreen="isFullscreen = $event"
                 @show-vis-sidebar="showVisSidebar = $event"
             />
-            <!-- TODO: move sidebar to worksheet -->
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -22,11 +21,9 @@
                 :disable="isSidebarCollapsed"
             >
                 <template slot="pane-left">
-                    <!-- TODO: move previewDataSchemaId to query module state -->
                     <sidebar-container
                         v-if="$typy($refs, 'worksheets.$refs.wke').isDefined"
                         :isSidebarCollapsed="isSidebarCollapsed"
-                        @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
                         @is-sidebar-collapsed="isSidebarCollapsed = $event"
                         @place-to-editor="$refs.worksheets.$refs.wke[0].placeToEditor"
                         @dragging-schema="$refs.worksheets.$refs.wke[0].draggingSchema"
@@ -37,7 +34,6 @@
                     <worksheets
                         ref="worksheets"
                         :containerHeight="containerHeight"
-                        :previewDataSchemaId="previewDataSchemaId"
                         :showVisSidebar="showVisSidebar"
                         @query-txt="queryTxt = $event"
                         @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
@@ -80,7 +76,6 @@ export default {
             sidebarPct: 0,
             isFullscreen: false,
             isSidebarCollapsed: false,
-            previewDataSchemaId: '',
             showVisSidebar: false,
             queryTxt: { all: '', selected: '' },
         }

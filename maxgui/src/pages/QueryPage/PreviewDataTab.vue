@@ -4,7 +4,7 @@
             <template v-if="validConn">
                 <div class="d-flex align-center mr-4">
                     <b class="mr-1">Table:</b>
-                    <truncate-string :maxWidth="260" :nudgeLeft="16" :text="previewDataSchemaId" />
+                    <truncate-string :maxWidth="260" :nudgeLeft="16" :text="active_tree_node_id" />
                 </div>
                 <v-tabs
                     v-model="activeView"
@@ -124,7 +124,6 @@ export default {
         DurationTimer,
     },
     props: {
-        previewDataSchemaId: { type: String, require: true },
         dynDim: {
             type: Object,
             validator(obj) {
@@ -142,6 +141,7 @@ export default {
         ...mapState({
             loading_prvw_data: state => state.query.loading_prvw_data,
             loading_prvw_data_details: state => state.query.loading_prvw_data_details,
+            active_tree_node_id: state => state.query.active_tree_node_id,
             prvw_data_request_sent_time: state => state.query.prvw_data_request_sent_time,
             prvw_data_details_request_sent_time: state =>
                 state.query.prvw_data_details_request_sent_time,
@@ -154,7 +154,7 @@ export default {
             getPrvwExeTime: 'query/getPrvwExeTime',
         }),
         validConn() {
-            return this.previewDataSchemaId && this.active_conn_state
+            return this.active_tree_node_id && this.active_conn_state
         },
         isPrwDataLoading() {
             return this.loading_prvw_data || this.loading_prvw_data_details
@@ -199,7 +199,7 @@ export default {
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.getPrvwDataRes(SQL_QUERY_MODE).fields)
                         await this.fetchPrvw({
-                            tblId: this.previewDataSchemaId,
+                            tblId: this.active_tree_node_id,
                             prvwMode: SQL_QUERY_MODE,
                         })
                     break

@@ -28,7 +28,6 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
-                    :previewDataSchemaId="previewDataSchemaId"
                 />
             </keep-alive>
         </v-slide-x-transition>
@@ -58,7 +57,6 @@ export default {
         ResultTab,
     },
     props: {
-        previewDataSchemaId: { type: String, require: true },
         dynDim: {
             type: Object,
             validator(obj) {
