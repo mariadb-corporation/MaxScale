@@ -182,6 +182,9 @@ export default {
         if (process.env.NODE_ENV === 'development')
             this.queryTxt.all = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic'
     },
+    mounted() {
+        this.setResultPaneDim()
+    },
     methods: {
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {

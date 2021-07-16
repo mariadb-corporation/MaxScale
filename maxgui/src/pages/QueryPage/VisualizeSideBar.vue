@@ -219,6 +219,11 @@ export default {
         resultSets: {
             deep: true,
             handler() {
+                /**
+                 *  TODO: when switching to new worksheet, this is triggered.
+                 *  So user won't be able to see graphs of different worksheets.
+                 *  Need to find a way to workaround this.
+                 */
                 this.clearAxisVal()
                 this.resSet = null
                 this.genChartData({ axis: this.axis, chartType: this.selectedChart })

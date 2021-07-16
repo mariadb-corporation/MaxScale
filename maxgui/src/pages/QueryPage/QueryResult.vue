@@ -15,11 +15,17 @@
             <keep-alive>
                 <result-tab
                     v-if="activeTab === SQL_QUERY_MODES.QUERY_VIEW"
+                    :style="{
+                        height: `calc(100% - 24px)`,
+                    }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
                 />
                 <preview-data-tab
                     v-else
+                    :style="{
+                        height: `calc(100% - 24px)`,
+                    }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
                     :previewDataSchemaId="previewDataSchemaId"
@@ -63,7 +69,7 @@ export default {
     },
     data() {
         return {
-            tabItemClass: 'pt-2 px-5 query-result-fontStyle color text-small-text fill-height',
+            tabItemClass: 'pt-2 px-5 query-result-fontStyle color text-small-text',
         }
     },
     computed: {
@@ -72,7 +78,7 @@ export default {
             curr_query_mode: state => state.query.curr_query_mode,
         }),
         componentDynDim() {
-            /* Use ref to calculate the dim
+            /*
              * width: dynDim.width - px-5
              * height: dynDim.height - $tab-bar-height - pt-2
              */

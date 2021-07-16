@@ -31,19 +31,21 @@
         </v-tabs>
 
         <template v-for="wke in worksheets_arr">
-            <keep-alive :key="wke.id">
-                <worksheet
-                    v-if="activeWkeID === wke.id"
-                    ref="wke"
-                    :style="{
-                        height: `calc(100% - ${wkeNavHeight}px)`,
-                    }"
-                    :containerHeight="containerHeight"
-                    :previewDataSchemaId="previewDataSchemaId"
-                    :showVisSidebar="showVisSidebar"
-                    v-on="$listeners"
-                />
-            </keep-alive>
+            <v-fade-transition :key="wke.id">
+                <keep-alive>
+                    <worksheet
+                        v-if="activeWkeID === wke.id"
+                        ref="wke"
+                        :style="{
+                            height: `calc(100% - ${wkeNavHeight}px)`,
+                        }"
+                        :containerHeight="containerHeight"
+                        :previewDataSchemaId="previewDataSchemaId"
+                        :showVisSidebar="showVisSidebar"
+                        v-on="$listeners"
+                    />
+                </keep-alive>
+            </v-fade-transition>
         </template>
     </div>
 </template>
@@ -88,12 +90,9 @@ export default {
                 return this.active_wke_id
             },
             set(v) {
-                this.SET_ACTIVE_WKE_ID(v)
+                if (v) this.SET_ACTIVE_WKE_ID(v)
             },
         },
-    },
-    created() {
-        this.ADD_NEW_WKE()
     },
     methods: {
         ...mapMutations({

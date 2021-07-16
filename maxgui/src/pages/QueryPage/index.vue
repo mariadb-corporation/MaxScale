@@ -12,6 +12,7 @@
                 @is-fullscreen="isFullscreen = $event"
                 @show-vis-sidebar="showVisSidebar = $event"
             />
+            <!-- TODO: move sidebar to worksheet -->
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
@@ -21,6 +22,7 @@
                 :disable="isSidebarCollapsed"
             >
                 <template slot="pane-left">
+                    <!-- TODO: move previewDataSchemaId to query module state -->
                     <sidebar-container
                         v-if="$typy($refs, 'worksheets.$refs.wke').isDefined"
                         :isSidebarCollapsed="isSidebarCollapsed"
@@ -61,7 +63,7 @@
  * Public License.
  */
 import SidebarContainer from './SidebarContainer'
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
 import Worksheets from './Worksheets.vue'
 export default {
@@ -88,9 +90,11 @@ export default {
             checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
+            getActiveWke: 'query/getActiveWke',
         }),
     },
     watch: {
@@ -103,12 +107,8 @@ export default {
         isSidebarCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
         },
-        sidebarPct() {
-            this.$help.doubleRAF(() => {
-                if (this.$typy(this.$refs, 'worksheets.$refs.wke').isDefined) {
-                    this.$refs.worksheets.$refs.wke[0].setResultPaneDim()
-                }
-            })
+        active_wke_id(v) {
+            if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
         },
     },
     async created() {
@@ -123,6 +123,7 @@ export default {
         this.$help.doubleRAF(() => this.setPanelsPct())
     },
     methods: {
+        ...mapMutations({ UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES' }),
         ...mapActions({
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',

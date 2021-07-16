@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie, uniqBy, uniqueId, cloneDeep } from 'utils/helpers'
+import { getCookie, uniqBy, uniqueId, cloneDeep, pickBy } from 'utils/helpers'
 function defWorksheetState() {
     return {
         id: uniqueId('wke_'),
@@ -34,14 +34,25 @@ function initialState() {
         active_conn_state: false,
         conn_err_state: false,
 
+        // Toolbar states
+        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
+        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
+        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
+        rc_target_names_map: {},
+        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
+        active_db: JSON.parse(localStorage.getItem('active_db')),
+
+        //TODO: move sidebar states to worksheet state
         //Sidebar tree schema states
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
+
         // worksheet states
-        worksheets_arr: [],
+        worksheets_arr: [cloneDeep(defWorksheetState())],
         active_wke_id: '',
-        // TODO: remove below states and change to use vuex worksheet state
+
+        // standalone wke states
         loading_prvw_data: false,
         prvw_data: {},
         prvw_data_request_sent_time: 0,
@@ -52,15 +63,30 @@ function initialState() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
-        // Toolbar states
-        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
-        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
-        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
-        rc_target_names_map: {},
-        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
-        active_db: JSON.parse(localStorage.getItem('active_db')),
     }
 }
+
+function update_standalone_wke_state(state, obj) {
+    Object.keys(obj).forEach(key => {
+        state[key] = obj[key]
+    })
+}
+
+/**
+ * This function helps to update partial modification of a wke object
+ * and update standalone wke states
+ * @param {Object} state - module state object
+ * @param {Object} payload.obj - partial modification of a wke object
+ * @param {Object} payload.scope - scope aka (this)
+ */
+function patch_wke_property(state, { obj, scope }) {
+    const idx = state.worksheets_arr.findIndex(wke => wke.id === state.active_wke_id)
+    state.worksheets_arr = scope.vue.$help.immutableUpdate(state.worksheets_arr, {
+        [idx]: { $set: { ...state.worksheets_arr[idx], ...obj } },
+    })
+    update_standalone_wke_state(state, obj)
+}
+
 export default {
     namespaced: true,
     state: initialState,
@@ -166,51 +192,57 @@ export default {
 
         // worksheet mutations
         ADD_NEW_WKE(state) {
-            state.worksheets_arr = [...state.worksheets_arr, cloneDeep(defWorksheetState())]
+            state.worksheets_arr.push(cloneDeep(defWorksheetState()))
         },
         DELETE_WKE(state, idx) {
             state.worksheets_arr.splice(idx, 1)
         },
-        UPDATE_WKE(state, { idx, newWke }) {
-            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
-                [idx]: { $set: newWke },
-            })
-        },
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
         },
-
-        // TODO: Refactor below mutations to update those states in worksheets_arr
+        UPDATE_SA_WKE_STATES(state, wke) {
+            const reservedKeys = ['id', 'name']
+            update_standalone_wke_state(
+                state,
+                pickBy(wke, (v, key) => !reservedKeys.includes(key))
+            )
+        },
         // Result tables data mutations
         SET_CURR_QUERY_MODE(state, payload) {
-            state.curr_query_mode = payload
+            patch_wke_property(state, { obj: { curr_query_mode: payload }, scope: this })
         },
         SET_LOADING_PRVW_DATA(state, payload) {
-            state.loading_prvw_data = payload
+            patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
         },
         SET_PRVW_DATA(state, payload) {
-            state.prvw_data = payload
+            patch_wke_property(state, { obj: { prvw_data: payload }, scope: this })
         },
         SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_request_sent_time = payload
+            patch_wke_property(state, {
+                obj: { prvw_data_request_sent_time: payload },
+                scope: this,
+            })
         },
         SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
-            state.loading_prvw_data_details = payload
+            patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
         },
         SET_PRVW_DATA_DETAILS(state, payload) {
-            state.prvw_data_details = payload
+            patch_wke_property(state, { obj: { prvw_data_details: payload }, scope: this })
         },
         SET_PRVW_DATA_DETAILS_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_details_request_sent_time = payload
+            patch_wke_property(state, {
+                obj: { prvw_data_details_request_sent_time: payload },
+                scope: this,
+            })
         },
         SET_LOADING_QUERY_RESULT(state, payload) {
-            state.loading_query_result = payload
+            patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
         },
         SET_QUERY_RESULT(state, payload) {
-            state.query_result = payload
+            patch_wke_property(state, { obj: { query_result: payload }, scope: this })
         },
         SET_QUERY_REQUEST_SENT_TIME(state, payload) {
-            state.query_request_sent_time = payload
+            patch_wke_property(state, { obj: { query_request_sent_time: payload }, scope: this })
         },
     },
     actions: {
@@ -602,6 +634,7 @@ export default {
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
+
                 commit(`SET_${prvwMode}_REQUEST_SENT_TIME`, new Date().valueOf())
                 let sql
                 const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
@@ -718,6 +751,10 @@ export default {
             // remove duplicated labels
             return uniqBy(state.db_completion_list, 'label')
         },
+        getActiveWke: state => {
+            return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
+        },
+
         getQueryExeTime: state => {
             if (state.loading_query_result) return -1
             if (state.query_result.attributes)
