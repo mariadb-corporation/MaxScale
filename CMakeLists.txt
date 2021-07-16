@@ -127,6 +127,7 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/prerm.in ${CMAKE_BINARY_DIR}/prerm @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/upstart/maxscale.conf.in ${CMAKE_BINARY_DIR}/upstart/maxscale.conf @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test/maxscale_test_secondary.cnf ${CMAKE_BINARY_DIR}/maxscale_secondary.cnf @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/Documentation/REST-API/templates/rest_api.cnf.in ${CMAKE_BINARY_DIR}/rest_api.cnf @ONLY)
 
 set(FLAGS "-rdynamic -fno-omit-frame-pointer -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Werror -fPIC" CACHE STRING "Compilation flags")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4" CACHE STRING "Debug compilation flags")
