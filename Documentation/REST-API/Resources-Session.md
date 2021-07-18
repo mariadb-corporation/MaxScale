@@ -4,6 +4,8 @@ A session is an abstraction of a client connection, any number of related backen
 connections, a router module session and possibly filter module sessions. Each
 session is created on a service and each service can have multiple sessions.
 
+[TOC]
+
 ## Resource Operations
 
 ### Get a session
@@ -25,35 +27,59 @@ an external server, the operation may be expensive.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/sessions/9"
-    },
     "data": {
-        "id": "9", // The session ID, same as the one sent to the client
-        "type": "sessions",
-        "relationships": {
-            "services": { // The service that the session uses
-                "links": {
-                    "self": "http://localhost:8989/v1/services/"
+        "attributes": {
+            "client": {
+                "cipher": ""
+            },
+            "connected": "Sun Jul 18 04:50:55 2021",
+            "connections": [
+                {
+                    "cipher": "",
+                    "connection_id": 250,
+                    "server": "server1"
                 },
+                {
+                    "cipher": "",
+                    "connection_id": 152,
+                    "server": "server2"
+                }
+            ],
+            "idle": 2.3999999999999999,
+            "log": [],
+            "parameters": {
+                "log_error": false,
+                "log_info": false,
+                "log_notice": false,
+                "log_warning": false
+            },
+            "queries": [],
+            "remote": "::ffff:127.0.0.1",
+            "state": "Session started",
+            "user": "maxuser"
+        },
+        "id": "1",
+        "links": {
+            "self": "http://localhost:8989/v1/sessions/1/"
+        },
+        "relationships": {
+            "services": {
                 "data": [
                     {
                         "id": "RW-Split-Router",
                         "type": "services"
                     }
-                ]
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/sessions/1/relationships/services/"
+                }
             }
         },
-        "attributes": {
-            "state": "Session ready for routing", // Session state
-            "user": "maxuser", // The user that this session uses
-            "remote": "::ffff:127.0.0.1", // The client address
-            "connected": "Mon Jul 17 11:10:39 2017", // The time when the client connected
-            "idle": 23.800000000000001 // How many seconds the session has been idle
-        },
-        "links": {
-            "self": "http://localhost:8989/v1/sessions/9"
-        }
+        "type": "sessions"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/sessions/1/"
     }
 }
 ```
@@ -71,67 +97,63 @@ Get all sessions.
 `Status: 200 OK`
 
 ```javascript
-// See `/v1/sessions/:id` for a descriptions of the fields
 {
-    "links": {
-        "self": "http://localhost:8989/v1/sessions/"
-    },
     "data": [
         {
-            "id": "9",
-            "type": "sessions",
+            "attributes": {
+                "client": {
+                    "cipher": ""
+                },
+                "connected": "Sun Jul 18 04:50:55 2021",
+                "connections": [
+                    {
+                        "cipher": "",
+                        "connection_id": 250,
+                        "server": "server1"
+                    },
+                    {
+                        "cipher": "",
+                        "connection_id": 152,
+                        "server": "server2"
+                    }
+                ],
+                "idle": 2.5,
+                "log": [],
+                "parameters": {
+                    "log_error": false,
+                    "log_info": false,
+                    "log_notice": false,
+                    "log_warning": false
+                },
+                "queries": [],
+                "remote": "::ffff:127.0.0.1",
+                "state": "Session started",
+                "user": "maxuser"
+            },
+            "id": "1",
+            "links": {
+                "self": "http://localhost:8989/v1/sessions/1/"
+            },
             "relationships": {
                 "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
                     "data": [
                         {
                             "id": "RW-Split-Router",
                             "type": "services"
                         }
-                    ]
-                }
-            },
-            "attributes": {
-                "state": "Session ready for routing",
-                "user": "maxuser",
-                "remote": "::ffff:127.0.0.1",
-                "connected": "Mon Jul 17 11:10:39 2017",
-                "idle": 62.899999999999999
-            },
-            "links": {
-                "self": "http://localhost:8989/v1/sessions/9"
-            }
-        },
-        {
-            "id": "10",
-            "type": "sessions",
-            "relationships": {
-                "services": {
+                    ],
                     "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
-                    "data": [
-                        {
-                            "id": "RW-Split-Router",
-                            "type": "services"
-                        }
-                    ]
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/sessions/1/relationships/services/"
+                    }
                 }
             },
-            "attributes": {
-                "state": "Session ready for routing",
-                "user": "skysql",
-                "remote": "::ffff:127.0.0.1",
-                "connected": "Mon Jul 17 11:11:37 2017",
-                "idle": 5.2000000000000002
-            },
-            "links": {
-                "self": "http://localhost:8989/v1/sessions/10"
-            }
+            "type": "sessions"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/sessions/"
+    }
 }
 ```
 

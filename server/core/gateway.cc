@@ -705,9 +705,9 @@ static bool init_log()
     bool rval = false;
     const mxs::Config& cnf = mxs::Config::get();
 
-    if (!cnf.config_check && mkdir(mxs::logdir(), 0777) != 0 && errno != EEXIST)
+    if (!cnf.config_check && !mxs_mkdir_all(mxs::logdir(), 0777, false))
     {
-        print_alert(errno, "Cannot create log directory '%s'", MXS_DEFAULT_LOGDIR);
+        print_alert(errno, "Cannot create log directory '%s'", mxs::logdir());
     }
     else if (mxs_log_init(NULL, mxs::logdir(), cnf.log_target))
     {
