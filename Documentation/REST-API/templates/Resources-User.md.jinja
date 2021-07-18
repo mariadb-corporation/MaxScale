@@ -21,21 +21,7 @@ user name.
 `Status: 200 OK`
 
 ```javascript
-{
-    "data": {
-        "attributes": {
-            "account": "admin"
-        },
-        "id": "admin",
-        "relationships": {
-            "self": "http://localhost:8989/v1/users/inet/admin/"
-        },
-        "type": "inet"
-    },
-    "links": {
-        "self": "http://localhost:8989/v1/users/inet/admin/"
-    }
-}
+{{get("/v1/users/inet/admin")}}
 ```
 
 ### Get all network users
@@ -51,23 +37,7 @@ Get all network users.
 `Status: 200 OK`
 
 ```javascript
-{
-    "data": [
-        {
-            "attributes": {
-                "account": "admin"
-            },
-            "id": "admin",
-            "relationships": {
-                "self": "http://localhost:8989/v1/users/inet/admin/"
-            },
-            "type": "inet"
-        }
-    ],
-    "links": {
-        "self": "http://localhost:8989/v1/users/inet/"
-    }
-}
+{{get("/v1/users/inet")}}
 ```
 
 ### Get enabled UNIX account
@@ -99,23 +69,7 @@ Get all administrative users.
 `Status: 200 OK`
 
 ```javascript
-{
-    "data": [
-        {
-            "attributes": {
-                "account": "admin"
-            },
-            "id": "admin",
-            "relationships": {
-                "self": "http://localhost:8989/v1/users/inet/admin/"
-            },
-            "type": "inet"
-        }
-    ],
-    "links": {
-        "self": "http://localhost:8989/v1/users/inet/"
-    }
-}
+{{get("/v1/users")}}
 ```
 
 ### Create a network user

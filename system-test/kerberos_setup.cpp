@@ -25,6 +25,7 @@ int install_kerberos(TestConnections& test, std::string machine_name, std::strin
 
 int main(int argc, char* argv[])
 {
+    return TestConnections::TEST_SKIPPED;
     TestConnections* Test = new TestConnections(argc, argv);
     char str[1024];
     char str1[1024];

@@ -3,6 +3,8 @@
 A filter resource represents an instance of a filter inside MaxScale. Multiple
 services can use the same filter and a single service can use multiple filters.
 
+[TOC]
+
 ## Resource Operations
 
 The _:name_ in all of the URIs must be the name of a filter in MaxScale.
@@ -21,27 +23,48 @@ GET /v1/filters/:name
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/filters/Hint-Filter"
-    },
     "data": {
-        "id": "Hint-Filter",
-        "type": "filters",
-        "relationships": {
-            "services": { // All serices that use this filter
-                "links": {
-                    "self": "http://localhost:8989/v1/services/"
-                },
-                "data": [] // No service is using this filter
+        "attributes": {
+            "filter_diagnostics": null,
+            "module": "qlafilter",
+            "parameters": {
+                "append": false,
+                "exclude": null,
+                "filebase": "/tmp/qla.log",
+                "flush": true,
+                "log_data": "date,user,query",
+                "log_type": "unified",
+                "match": null,
+                "module": "qlafilter",
+                "newline_replacement": " ",
+                "options": "",
+                "separator": ",",
+                "source": null,
+                "user": null
             }
         },
-        "attributes": {
-            "module": "hintfilter",
-            "parameters": {} // Filter parameters
-        },
+        "id": "QLA",
         "links": {
-            "self": "http://localhost:8989/v1/filters/Hint-Filter"
-        }
+            "self": "http://localhost:8989/v1/filters/QLA/"
+        },
+        "relationships": {
+            "services": {
+                "data": [
+                    {
+                        "id": "Read-Connection-Router",
+                        "type": "services"
+                    }
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/filters/QLA/relationships/services/"
+                }
+            }
+        },
+        "type": "filters"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/filters/QLA/"
     }
 }
 ```
@@ -60,30 +83,78 @@ GET /v1/filters
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/filters/"
-    },
-    "data": [ // Array of filter resources
+    "data": [
         {
-            "id": "Hint-Filter",
-            "type": "filters",
-            "relationships": {
-                "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
-                    "data": []
+            "attributes": {
+                "filter_diagnostics": null,
+                "module": "qlafilter",
+                "parameters": {
+                    "append": false,
+                    "exclude": null,
+                    "filebase": "/tmp/qla.log",
+                    "flush": true,
+                    "log_data": "date,user,query",
+                    "log_type": "unified",
+                    "match": null,
+                    "module": "qlafilter",
+                    "newline_replacement": " ",
+                    "options": "",
+                    "separator": ",",
+                    "source": null,
+                    "user": null
                 }
             },
+            "id": "QLA",
+            "links": {
+                "self": "http://localhost:8989/v1/filters/QLA/"
+            },
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/filters/QLA/relationships/services/"
+                    }
+                }
+            },
+            "type": "filters"
+        },
+        {
             "attributes": {
                 "module": "hintfilter",
-                "parameters": {}
+                "parameters": {
+                    "module": "hintfilter"
+                }
             },
+            "id": "Hint",
             "links": {
-                "self": "http://localhost:8989/v1/filters/Hint-Filter"
-            }
+                "self": "http://localhost:8989/v1/filters/Hint/"
+            },
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/filters/Hint/relationships/services/"
+                    }
+                }
+            },
+            "type": "filters"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/filters/"
+    }
 }
 ```
 

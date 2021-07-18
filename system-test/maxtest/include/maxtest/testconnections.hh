@@ -33,6 +33,9 @@ class TestConnections
 public:
     using StringSet = std::set<std::string>;
 
+    // Exit code for skipping tests. Should match value expected by cmake.
+    static constexpr const int TEST_SKIPPED = 202;
+
     TestConnections();
 
     /**
