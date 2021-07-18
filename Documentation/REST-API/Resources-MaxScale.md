@@ -511,7 +511,7 @@ location where the log files are stored.
                 "log_notice": true,
                 "log_warning": true,
                 "maxlog": true,
-                "syslog": true,
+                "syslog": false,
                 "throttling": {
                     "count": 10,
                     "suppress_ms": 10000,
