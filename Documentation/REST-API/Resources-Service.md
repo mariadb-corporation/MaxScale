@@ -763,7 +763,7 @@ GET /v1/services/:name/listeners
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#get-all-listeners) listeners endpoint instead.
+[this](Resources-Listener.md#get-all-listeners) listeners endpoint instead.
 
 ### Get a single service listener
 
@@ -771,7 +771,7 @@ This endpoint is deprecated, use the
 GET /v1/services/:name/listeners/:listener
 ```
 
-This endpoint is deprecated, use the [this](Resource-Listener.md#get-a-listener)
+This endpoint is deprecated, use the [this](Resources-Listener.md#get-a-listener)
 listeners endpoint instead.
 
 ### Create a new listener
@@ -781,7 +781,7 @@ POST /v1/services/:name/listeners
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#create-a-new-listener) listeners endpoint instead.
+[this](Resources-Listener.md#create-a-new-listener) listeners endpoint instead.
 
 ### Destroy a listener
 
@@ -790,4 +790,4 @@ DELETE /v1/services/:service/listeners/:name
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#destroy-a-listener) listeners endpoint instead.
+[this](Resources-Listener.md#destroy-a-listener) listeners endpoint instead.
