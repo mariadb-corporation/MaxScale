@@ -84,7 +84,7 @@
  */
 import QueryEditor from '@/components/QueryEditor'
 import QueryResult from './QueryResult'
-import { mapGetters } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
 export default {
@@ -97,7 +97,6 @@ export default {
     },
     props: {
         containerHeight: { type: Number, required: true },
-        showVisSidebar: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -129,6 +128,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            show_vis_sidebar: state => state.query.show_vis_sidebar,
+        }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
         }),
@@ -152,7 +154,7 @@ export default {
         editorPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
-        showVisSidebar(v) {
+        show_vis_sidebar(v) {
             this.handleSetVisSidebar(v)
             this.$nextTick(() => this.setResultPaneDim())
         },

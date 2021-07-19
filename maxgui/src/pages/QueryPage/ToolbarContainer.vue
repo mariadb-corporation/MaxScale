@@ -95,20 +95,20 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     class="ml-2 visualize"
-                    :outlined="!showVisSidebar"
+                    :outlined="!show_vis_sidebar"
                     depressed
                     small
-                    :color="showVisSidebar ? 'primary' : 'accent-dark'"
+                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
                     v-on="on"
-                    @click="showVisSidebar = !showVisSidebar"
+                    @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >
-                    <v-icon size="16" :color="showVisSidebar ? 'background' : 'accent-dark'">
+                    <v-icon size="16" :color="show_vis_sidebar ? 'background' : 'accent-dark'">
                         $vuetify.icons.reports
                     </v-icon>
                 </v-btn>
             </template>
             <span class="text-capitalize">
-                {{ $t('visualizedConfig', { action: showVisSidebar ? $t('hide') : $t('show') }) }}
+                {{ $t('visualizedConfig', { action: show_vis_sidebar ? $t('hide') : $t('show') }) }}
             </span>
         </v-tooltip>
         <!-- Settings section-->
@@ -217,7 +217,6 @@ export default {
     data() {
         return {
             dontShowConfirm: false,
-            showVisSidebar: false, // TODO:; move this to query wke state
             queryConfigDialog: false,
         }
     },
@@ -229,17 +228,14 @@ export default {
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,
             query_confirm_flag: state => state.query.query_confirm_flag,
+            show_vis_sidebar: state => state.query.show_vis_sidebar,
         }),
-    },
-    watch: {
-        showVisSidebar(v) {
-            this.$emit('show-vis-sidebar', v)
-        },
     },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
+            SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',

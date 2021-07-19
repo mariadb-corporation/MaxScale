@@ -28,6 +28,7 @@ function saWkeStates() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        show_vis_sidebar: false,
     }
 }
 
@@ -191,7 +192,9 @@ export default {
             state.active_db = payload
             localStorage.setItem('active_db', JSON.stringify(payload))
         },
-
+        SET_SHOW_VIS_SIDEBAR(state, payload) {
+            patch_wke_property(state, { obj: { show_vis_sidebar: payload }, scope: this })
+        },
         // worksheet mutations
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())

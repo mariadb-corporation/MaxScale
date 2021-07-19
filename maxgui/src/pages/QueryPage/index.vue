@@ -10,7 +10,6 @@
                 :queryTxt="queryTxt"
                 :isFullscreen="isFullscreen"
                 @is-fullscreen="isFullscreen = $event"
-                @show-vis-sidebar="showVisSidebar = $event"
             />
             <split-pane
                 v-if="minSidebarPct"
@@ -34,7 +33,6 @@
                     <worksheets
                         ref="worksheets"
                         :containerHeight="containerHeight"
-                        :showVisSidebar="showVisSidebar"
                         @query-txt="queryTxt = $event"
                         @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
                         @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
@@ -76,7 +74,6 @@ export default {
             sidebarPct: 0,
             isFullscreen: false,
             isSidebarCollapsed: false,
-            showVisSidebar: false,
             queryTxt: { all: '', selected: '' },
         }
     },
