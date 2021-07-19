@@ -1,5 +1,5 @@
 # Default test timeout
-set(TEST_TIMEOUT 900)
+set(TEST_TIMEOUT 1200)
 # Return code for skipped tests
 set(TEST_SKIP_RC 202)
 
