@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
     execute_query(test->repl->nodes[0], "CREATE OR REPLACE TABLE test.t1 (id INT);");
     execute_query(test->repl->nodes[0], "CREATE OR REPLACE TABLE test.t2 (id INT);");
 
-    test->maxscale->connect_maxscale();
+    test->maxscale->connect_rwsplit();
 
     test->tprintf("Test `time`. The first SELECT within 10 seconds should go the "
                   "master and all SELECTs after it should go to the slaves.");
@@ -73,10 +73,8 @@ int main(int argc, char* argv[])
                   "insert should go to the master.");
 
     test->maxscale->close_maxscale_connections();
-    test->maxscale->ssh_node("sed -i -e 's/time.*/time=0/' /etc/maxscale.cnf", true);
-    test->maxscale->ssh_node("sed -i -e 's/###count/count/' /etc/maxscale.cnf", true);
-    test->maxscale->restart_maxscale();
-    test->maxscale->connect_maxscale();
+    test->check_maxctrl("alter filter ccrfilter time 0s count 3");
+    test->maxscale->connect_rwsplit();
 
     test->try_query(test->maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test->add_result(!is_master(test->maxscale->conn_rwsplit[0]), "Master should reply to the first SELECT");
@@ -94,9 +92,8 @@ int main(int argc, char* argv[])
                   "should go to the master.");
 
     test->maxscale->close_maxscale_connections();
-    test->maxscale->ssh_node("sed -i -e 's/###match/match/' /etc/maxscale.cnf", true);
-    test->maxscale->restart_maxscale();
-    test->maxscale->connect_maxscale();
+    test->check_maxctrl("alter filter ccrfilter match t2");
+    test->maxscale->connect_rwsplit();
 
 
     test->tprintf("t1 first, should be ignored");
@@ -124,10 +121,8 @@ int main(int argc, char* argv[])
                   "results as previous test.");
 
     test->maxscale->close_maxscale_connections();
-    test->maxscale->ssh_node("sed -i -e 's/match/###match/' /etc/maxscale.cnf", true);
-    test->maxscale->ssh_node("sed -i -e 's/###ignore/ignore/' /etc/maxscale.cnf", true);
-    test->maxscale->restart_maxscale();
-    test->maxscale->connect_maxscale();
+    test->check_maxctrl("alter filter ccrfilter match \"''\" ignore t1");
+    test->maxscale->connect_rwsplit();
 
     test->tprintf("t1 first, should be ignored");
 
