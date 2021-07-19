@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">

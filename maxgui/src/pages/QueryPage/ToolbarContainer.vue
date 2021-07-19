@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <v-toolbar
         outlined
         elevation="0"
@@ -218,7 +217,7 @@ export default {
     data() {
         return {
             dontShowConfirm: false,
-            showVisSidebar: false,
+            showVisSidebar: false, // TODO:; move this to query wke state
             queryConfigDialog: false,
         }
     },

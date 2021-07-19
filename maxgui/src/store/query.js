@@ -54,7 +54,6 @@ function initialState() {
         curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
         active_db: JSON.parse(localStorage.getItem('active_db')),
 
-        //TODO: move sidebar states to worksheet state
         //Sidebar tree schema states
         loading_db_tree: false,
         db_tree: [],

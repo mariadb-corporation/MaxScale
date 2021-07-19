@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="fill-height">
         <v-card v-if="loading_db_tree" class="fill-height db-tb-list" :loading="loading_db_tree" />
         <v-fade-transition>

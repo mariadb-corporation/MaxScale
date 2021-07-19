@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="pa-4">
         <h5 class="mb-4">Visualization</h5>
         <label class="field__label color text-small-text"> Graph</label>
@@ -111,6 +110,7 @@ export default {
             },
             numberSign: '#',
             showTrendline: false,
+            rmResultSetsWatcher: null,
         }
     },
     computed: {
@@ -216,19 +216,6 @@ export default {
             this.$emit('selected-chart', v)
             this.clearAxisVal()
         },
-        resultSets: {
-            deep: true,
-            handler() {
-                /**
-                 *  TODO: when switching to new worksheet, this is triggered.
-                 *  So user won't be able to see graphs of different worksheets.
-                 *  Need to find a way to workaround this.
-                 */
-                this.clearAxisVal()
-                this.resSet = null
-                this.genChartData({ axis: this.axis, chartType: this.selectedChart })
-            },
-        },
         resSet: {
             deep: true,
             handler() {
@@ -245,7 +232,23 @@ export default {
             this.genChartData({ axis: this.axis, chartType: this.selectedChart })
         },
     },
+    deactivated() {
+        this.rmResultSetsWatcher()
+    },
+    activated() {
+        this.addResultSetsWatcher()
+    },
     methods: {
+        addResultSetsWatcher() {
+            // store watcher to rmResultSetsWatcher and use it for removing the watcher
+            this.rmResultSetsWatcher = this.$watch('resultSets', (v, oV) => {
+                if (!this.$help.lodash.isEqual(v, oV)) {
+                    this.clearAxisVal()
+                    this.resSet = null
+                    this.genChartData({ axis: this.axis, chartType: this.selectedChart })
+                }
+            })
+        },
         cloneRes(res) {
             return JSON.parse(JSON.stringify(res))
         },
