@@ -19,11 +19,11 @@ class CommentConfig : public mxs::config::Configuration
 {
 public:
     CommentConfig(const CommentConfig&) = delete;
-    CommentConfig& operator = (const CommentConfig&) = delete;
+    CommentConfig& operator=(const CommentConfig&) = delete;
 
     CommentConfig(const std::string& name);
 
     static void populate(MXS_MODULE& info);
 
-    std::string inject;
+    mxs::config::String inject;
 };
