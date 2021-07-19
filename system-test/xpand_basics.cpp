@@ -118,6 +118,10 @@ void check_state_change(const MaxRest& maxrest)
 {
     TestConnections& test = maxrest.test();
 
+    // The Xpand-monitor depends on the internal monitor of the Xpand-cluster itself. Since it has a delay,
+    // some sleeps are required when expecting state changes.
+    const int cycles = 3;
+    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
     expect_all_servers_to_be(maxrest, "Master, Running");
     cout << endl;
 
@@ -127,9 +131,8 @@ void check_state_change(const MaxRest& maxrest)
     cout << "Blocking node: " << node << endl;
     test.xpand->block_node(node);
 
-    int cycles = 5;
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscale->wait_for_monitor(cycles);
+    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
 
     auto servers = maxrest.list_servers();
 
@@ -147,7 +150,7 @@ void check_state_change(const MaxRest& maxrest)
 
     test.xpand->unblock_node(node);
     cout << "Waiting for " << cycles << " monitor cycles." << endl;
-    test.maxscale->wait_for_monitor(cycles);
+    test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
 
     expect_all_servers_to_be(maxrest, "Master, Running");
     cout << endl;
