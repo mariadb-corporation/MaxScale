@@ -34,6 +34,7 @@
 
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
 #include <maxtest/galera_cluster.hh>
 #include <maxbase/format.hh>
 
@@ -67,6 +68,34 @@ void test_script_monitor(TestConnections& test, MariaDBCluster* nodes, const cha
     test.tprintf("Unblock node1");
     nodes->unblock_node(1);
     mxs.wait_for_monitor(script_delay_ticks);
+
+    // If testing the replication cluster, check that replication lag script event works. (MXS-2723)
+    auto repl = dynamic_cast<mxt::ReplicationCluster*>(nodes);
+    if (repl)
+    {
+        test.tprintf("Add delay to a slave.");
+        // Set up the second slave with delayed replication, then add a gtid event.
+        auto conn_slave = repl->backend(2)->open_connection();
+        auto set_delay = [&mxs, &conn_slave](int delay) {
+                conn_slave->cmd("stop slave;");
+                // Ensure monitor detects the slave down/up. Otherwise script output would depend on timing.
+                mxs.wait_for_monitor(1);
+                conn_slave->cmd_f("change master to master_delay=%d;", delay);
+                conn_slave->cmd("start slave;");
+                mxs.wait_for_monitor(1);
+            };
+
+        set_delay(5);
+
+        auto conn_master = repl->backend(0)->open_connection();
+        conn_master->cmd("flush tables;");
+        sleep(2);
+        mxs.wait_for_monitor(1);
+        sleep(4);
+        mxs.wait_for_monitor(1);
+        test.tprintf("Remove the delay.");
+        set_delay(0);
+    }
 
     test.tprintf("Comparing results");
 
@@ -137,6 +166,12 @@ void test_main(TestConnections& test)
     fprintf(f, line_3up_fmt, "master_down", repl0, repl1, repl2, repl3);
     fprintf(f, line_4up_fmt, "master_up", repl0, repl0, repl1, repl2, repl3);
     fprintf(f, line_4up_fmt, "slave_up", repl1, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "lost_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "new_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "rlag_above", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "rlag_below", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "lost_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "new_slave", repl2, repl0, repl1, repl2, repl3);
     fclose(f);
 
     const char galera_script_outfile[] = "script_output_expected_galera";
