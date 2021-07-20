@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="pa-4">
         <h5 class="mb-4">Visualization</h5>
         <label class="field__label color text-small-text"> Graph</label>
@@ -218,6 +219,11 @@ export default {
         resultSets: {
             deep: true,
             handler() {
+                /**
+                 *  TODO: when switching to new worksheet, this is triggered.
+                 *  So user won't be able to see graphs of different worksheets.
+                 *  Need to find a way to workaround this.
+                 */
                 this.clearAxisVal()
                 this.resSet = null
                 this.genChartData({ axis: this.axis, chartType: this.selectedChart })

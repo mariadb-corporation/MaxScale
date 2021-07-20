@@ -20,7 +20,7 @@ export const xorWith = require('lodash/xorWith')
 export const uniqueId = require('lodash/uniqueId')
 export const get = require('lodash/get')
 export const unionBy = require('lodash/unionBy')
-export const pick = require('lodash/pick')
+export const pickBy = require('lodash/pickBy')
 export const uniqBy = require('lodash/uniqBy')
 export const merge = require('lodash/merge')
 export const lodash = {
@@ -31,7 +31,7 @@ export const lodash = {
     uniqueId,
     objectGet: get,
     unionBy,
-    pick,
+    pickBy,
     uniqBy,
     deepMerge: merge,
 }

@@ -40,6 +40,7 @@ private:
 
     // Used in the create function
     CommentFilterSession(MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter);
-    const CommentFilter& m_filter;
     std::string parseComment(std::string comment);
+
+    std::string m_inject;
 };

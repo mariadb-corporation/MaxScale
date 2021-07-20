@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  Create a tab component wrapping this component that control adding/deleting worksheet -->
     <!-- Main panel contains editor pane and visualize-sidebar pane -->
     <split-pane
         v-model="mainPanePct"
@@ -50,18 +49,15 @@
                     </split-pane>
                 </template>
                 <template slot="pane-right">
-                    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
                     <query-result
                         ref="queryResultPane"
                         :dynDim="resultPaneDim"
                         class="query-result"
-                        :previewDataSchemaId="previewDataSchemaId"
                     />
                 </template>
             </split-pane>
         </template>
         <template slot="pane-right">
-            <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
             <visualize-sidebar
                 class="visualize-sidebar"
                 @selected-chart="selectedChart = $event"
@@ -101,7 +97,6 @@ export default {
     },
     props: {
         containerHeight: { type: Number, required: true },
-        previewDataSchemaId: { type: String, required: true },
         showVisSidebar: { type: Boolean, required: true },
     },
     data() {
@@ -184,6 +179,9 @@ export default {
         /*For development testing */
         if (process.env.NODE_ENV === 'development')
             this.queryTxt.all = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic'
+    },
+    mounted() {
+        this.setResultPaneDim()
     },
     methods: {
         setResultPaneDim() {

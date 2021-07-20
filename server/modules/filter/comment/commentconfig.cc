@@ -27,16 +27,17 @@ config::ParamString inject(
     "inject",
     "This string is injected as a comment before the statement. If the string "
     "contains $IP, it will be replaced with the IP of the client.",
-    config::ParamString::Quotes::REQUIRED);
+    config::ParamString::Quotes::REQUIRED,
+    mxs::config::Param::AT_RUNTIME);
 }
 
 CommentConfig::CommentConfig(const std::string& name)
     : mxs::config::Configuration(name, &comment::specification)
+    , inject(this, &comment::inject)
 {
-    add_native(&CommentConfig::inject, &comment::inject);
 }
 
-//static
+// static
 void CommentConfig::populate(MXS_MODULE& info)
 {
     info.specification = &comment::specification;

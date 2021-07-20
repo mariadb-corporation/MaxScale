@@ -209,6 +209,10 @@ export default {
         this.setTableToolsHeight()
         this.showAllHeaders()
     },
+    activated() {
+        this.setTableToolsHeight()
+        this.showAllHeaders()
+    },
     methods: {
         toggleAllHeaders(v) {
             if (!v) this.visHeaderIndexes = []

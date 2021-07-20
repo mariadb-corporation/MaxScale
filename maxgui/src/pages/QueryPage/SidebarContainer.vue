@@ -1,4 +1,5 @@
 <template>
+    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <div class="fill-height">
         <v-card v-if="loading_db_tree" class="fill-height db-tb-list" :loading="loading_db_tree" />
         <v-fade-transition>
@@ -81,7 +82,6 @@
                     </div>
                     <db-list-tree
                         v-if="!isSidebarCollapsed"
-                        :schemaList="db_tree"
                         class="schema-list-wrapper"
                         @preview-data="
                             schemaId =>
@@ -140,7 +140,6 @@ export default {
         ...mapState({
             checking_active_conn: state => state.query.checking_active_conn,
             loading_db_tree: state => state.query.loading_db_tree,
-            db_tree: state => state.query.db_tree,
             active_conn_state: state => state.query.active_conn_state,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
         }),
@@ -171,7 +170,6 @@ export default {
             await this.fetchDbList()
         },
         async handleFetchPreview({ SQL_QUERY_MODE, schemaId }) {
-            this.$emit('get-curr-prvw-data-schemaId', schemaId)
             this.clearDataPreview()
             this.SET_CURR_QUERY_MODE(SQL_QUERY_MODE)
             switch (SQL_QUERY_MODE) {
@@ -207,6 +205,7 @@ export default {
 <style lang="scss" scoped>
 .db-tb-list {
     border: 1px solid $table-border;
+    border-top: none;
     width: 100%;
     height: 100%;
     .db-tb-list__title {

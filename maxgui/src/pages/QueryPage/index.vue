@@ -22,20 +22,18 @@
             >
                 <template slot="pane-left">
                     <sidebar-container
-                        v-if="$refs.worksheet"
+                        v-if="$typy($refs, 'worksheets.$refs.wke').isDefined"
                         :isSidebarCollapsed="isSidebarCollapsed"
-                        @get-curr-prvw-data-schemaId="previewDataSchemaId = $event"
                         @is-sidebar-collapsed="isSidebarCollapsed = $event"
-                        @place-to-editor="$refs.worksheet.placeToEditor"
-                        @dragging-schema="$refs.worksheet.draggingSchema"
-                        @drop-schema-to-editor="$refs.worksheet.dropSchemaToEditor"
+                        @place-to-editor="$refs.worksheets.$refs.wke[0].placeToEditor"
+                        @dragging-schema="$refs.worksheets.$refs.wke[0].draggingSchema"
+                        @drop-schema-to-editor="$refs.worksheets.$refs.wke[0].dropSchemaToEditor"
                     />
                 </template>
                 <template slot="pane-right">
-                    <worksheet
-                        ref="worksheet"
+                    <worksheets
+                        ref="worksheets"
                         :containerHeight="containerHeight"
-                        :previewDataSchemaId="previewDataSchemaId"
                         :showVisSidebar="showVisSidebar"
                         @query-txt="queryTxt = $event"
                         @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
@@ -61,15 +59,15 @@
  * Public License.
  */
 import SidebarContainer from './SidebarContainer'
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
 import ToolbarContainer from './ToolbarContainer'
-import Worksheet from './Worksheet'
+import Worksheets from './Worksheets.vue'
 export default {
     name: 'query-view',
     components: {
-        worksheet: Worksheet,
         SidebarContainer,
         ToolbarContainer,
+        Worksheets,
     },
     data() {
         return {
@@ -78,7 +76,6 @@ export default {
             sidebarPct: 0,
             isFullscreen: false,
             isSidebarCollapsed: false,
-            previewDataSchemaId: '',
             showVisSidebar: false,
             queryTxt: { all: '', selected: '' },
         }
@@ -88,9 +85,11 @@ export default {
             checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
+            getActiveWke: 'query/getActiveWke',
         }),
     },
     watch: {
@@ -103,8 +102,8 @@ export default {
         isSidebarCollapsed(v) {
             this.$nextTick(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
         },
-        sidebarPct() {
-            this.$nextTick(() => this.$refs.worksheet.setResultPaneDim())
+        active_wke_id(v) {
+            if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
         },
     },
     async created() {
@@ -119,6 +118,7 @@ export default {
         this.$help.doubleRAF(() => this.setPanelsPct())
     },
     methods: {
+        ...mapMutations({ UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES' }),
         ...mapActions({
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',
@@ -127,8 +127,8 @@ export default {
         setPanelsPct() {
             this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })
             /**
-             * get pane container height then pass it via props to worksheet
-             * to calculate min percent of worksheet child panes
+             * get pane container height then pass it via props to worksheets
+             * to calculate min percent of worksheets child panes
              */
             this.containerHeight = this.$refs.paneContainer.clientHeight
         },

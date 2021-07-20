@@ -2,7 +2,7 @@
     <!-- TODO: Virtual scroll treeview -->
     <div>
         <m-treeview
-            :items="schemaTree"
+            :items="db_tree"
             :search="$parent.searchSchema"
             :filter="filter"
             hoverable
@@ -10,7 +10,7 @@
             open-on-click
             transition
             :load-children="handleLoadChildren"
-            :active.sync="activeNode"
+            :active.sync="activeNodes"
             @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
@@ -101,12 +101,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+//TODO: Bring module state and mutation to parent component
+import { mapMutations, mapState } from 'vuex'
 export default {
     name: 'db-list-tree',
-    props: {
-        schemaList: { type: Array, required: true },
-    },
     data() {
         return {
             /**
@@ -127,37 +125,39 @@ export default {
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
-            activeNode: [],
-            activeNodeByClicking: false,
             isDragging: false,
             draggingEvt: null,
         }
     },
     computed: {
+        ...mapState({
+            active_tree_node_id: state => state.query.active_tree_node_id,
+            db_tree: state => state.query.db_tree,
+        }),
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
         },
         showCtxBtn() {
             return item => this.activeCtxItem && item.id === this.activeCtxItem.id
         },
-        schemaTree() {
-            return this.schemaList
+        activeNodes: {
+            get() {
+                return [this.active_tree_node_id]
+            },
+            set(value) {
+                this.SET_ACTIVE_TREE_NODE_ID(value[0])
+            },
         },
     },
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
         },
-        /**
-         * Emit fetching preview-data only when node is activated by clicking.
-         * Node is activated by choosing option in context menu won't emit the event
-         */
-        activeNode(v, oV) {
-            if (v.length && v[0] !== oV[0] && this.activeNodeByClicking)
-                this.$emit('preview-data', v[0])
-        },
     },
     methods: {
+        ...mapMutations({
+            SET_ACTIVE_TREE_NODE_ID: 'query/SET_ACTIVE_TREE_NODE_ID',
+        }),
         /** This replaces dots with __ as vuetify activator slots
          * can't not parse html id contains dots.
          * @param {String} id - html id attribute
@@ -188,8 +188,7 @@ export default {
             }
         },
         updateActiveNode(item) {
-            this.activeNode = [item.id]
-            this.activeNodeByClicking = false
+            this.activeNodes = [item.id]
         },
         optionHandler({ item, option }) {
             const schema = item.id
@@ -240,7 +239,7 @@ export default {
             }
         },
         onNodeClick(item) {
-            if (item.canBeHighlighted) this.activeNodeByClicking = true
+            if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0])
         },
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
