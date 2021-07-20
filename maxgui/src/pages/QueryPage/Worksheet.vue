@@ -27,10 +27,15 @@
                         <template slot="pane-left">
                             <query-editor
                                 ref="queryEditor"
-                                v-model="queryTxt.all"
+                                v-model="allQueryTxt"
                                 class="editor pt-2 pl-2"
                                 :cmplList="getDbCmplList"
-                                @on-selection="queryTxt.selected = $event"
+                                @on-selection="
+                                    SET_QUERY_TXT({
+                                        ...query_txt,
+                                        selected: $event,
+                                    })
+                                "
                                 v-on="$listeners"
                             />
                         </template>
@@ -84,7 +89,7 @@
  */
 import QueryEditor from '@/components/QueryEditor'
 import QueryResult from './QueryResult'
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
 export default {
@@ -107,11 +112,6 @@ export default {
             minEditorPct: 0,
             queryPanePct: 100,
             minQueryPanePct: 0,
-            // query-editor state
-            queryTxt: {
-                all: '',
-                selected: '',
-            },
             mouseDropDOM: null, // mouse drop DOM node
             mouseDropWidget: null, // mouse drop widget while dragging to editor
             // chart-container states
@@ -130,6 +130,7 @@ export default {
     computed: {
         ...mapState({
             show_vis_sidebar: state => state.query.show_vis_sidebar,
+            query_txt: state => state.query.query_txt,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -144,6 +145,14 @@ export default {
                 return clientHeight - paneHeight - 2 // minus border
             }
             return 0
+        },
+        allQueryTxt: {
+            get() {
+                return this.query_txt.all
+            },
+            set(value) {
+                this.SET_QUERY_TXT({ ...this.query_txt, all: value })
+            },
         },
     },
     watch: {
@@ -170,17 +179,14 @@ export default {
         containerHeight(v) {
             this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: v })
         },
-        queryTxt: {
-            deep: true,
-            handler(v) {
-                this.$emit('query-txt', v)
-            },
-        },
     },
     async created() {
         /*For development testing */
         if (process.env.NODE_ENV === 'development')
-            this.queryTxt.all = 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic'
+            this.SET_QUERY_TXT({
+                ...this.query_txt,
+                all: 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic',
+            })
     },
     activated() {
         this.$emit('mounted', true)
@@ -190,6 +196,9 @@ export default {
         this.$emit('mounted', false)
     },
     methods: {
+        ...mapMutations({
+            SET_QUERY_TXT: 'query/SET_QUERY_TXT',
+        }),
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el

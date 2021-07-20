@@ -7,7 +7,6 @@
         >
             <toolbar-container
                 ref="toolbarContainer"
-                :queryTxt="queryTxt"
                 :isFullscreen="isFullscreen"
                 @is-fullscreen="isFullscreen = $event"
             />
@@ -35,7 +34,6 @@
                         ref="worksheets"
                         :containerHeight="containerHeight"
                         @mounted="isWkeMounted = $event"
-                        @query-txt="queryTxt = $event"
                         @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
                         @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
                     />
@@ -76,7 +74,6 @@ export default {
             sidebarPct: 0,
             isFullscreen: false,
             isSidebarCollapsed: false,
-            queryTxt: { all: '', selected: '' },
             isWkeMounted: false,
         }
     },

@@ -17,6 +17,10 @@ import { getCookie, uniqBy, uniqueId, pickBy } from 'utils/helpers'
  */
 function saWkeStates() {
     return {
+        query_txt: {
+            all: '',
+            selected: '',
+        },
         loading_prvw_data: false,
         prvw_data: {},
         active_tree_node_id: '',
@@ -165,6 +169,9 @@ export default {
             })
         },
         // editor mutations
+        SET_QUERY_TXT(state, payload) {
+            patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
+        },
         UPDATE_DB_CMPL_LIST(state, payload) {
             state.db_completion_list = [...state.db_completion_list, ...payload]
         },

@@ -72,9 +72,9 @@
                     small
                     color="accent-dark"
                     :loading="loading_query_result"
-                    :disabled="!queryTxt.all || !active_conn_state"
+                    :disabled="!query_txt.all || !active_conn_state"
                     v-on="on"
-                    @click="() => handleRun(queryTxt.selected ? 'selected' : 'all')"
+                    @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
                 >
                     <v-icon size="16" class="mr-2">
                         $vuetify.icons.running
@@ -83,7 +83,7 @@
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ queryTxt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
+                {{ query_txt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
             </span>
         </v-tooltip>
         <!-- Visualize section-->
@@ -161,7 +161,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="queryTxt.selected ? queryTxt.selected : queryTxt.all"
+                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -212,7 +212,6 @@ export default {
     },
     props: {
         isFullscreen: { type: Boolean, required: true },
-        queryTxt: { type: Object, required: true },
     },
     data() {
         return {
@@ -229,6 +228,7 @@ export default {
             loading_query_result: state => state.query.loading_query_result,
             query_confirm_flag: state => state.query.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
+            query_txt: state => state.query.query_txt,
         }),
     },
     methods: {
@@ -253,7 +253,7 @@ export default {
             }
         },
         async confirmRunning() {
-            await this.onRun(this.queryTxt.selected ? 'selected' : 'all')
+            await this.onRun(this.query_txt.selected ? 'selected' : 'all')
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
@@ -263,10 +263,11 @@ export default {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.queryTxt.all) await this.fetchQueryResult(this.queryTxt.all)
+                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
                     break
                 case 'selected':
-                    if (this.queryTxt.selected) await this.fetchQueryResult(this.queryTxt.selected)
+                    if (this.query_txt.selected)
+                        await this.fetchQueryResult(this.query_txt.selected)
                     break
             }
         },
