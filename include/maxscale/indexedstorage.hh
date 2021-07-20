@@ -46,6 +46,11 @@ public:
     ~IndexedStorage();
 
     /**
+     * Removes all stored values.
+     */
+    void clear();
+
+    /**
      * Initialize a globally unique data identifier
      *
      * @return The data identifier usable for indexed local data storage
@@ -115,5 +120,4 @@ private:
     LocalData    m_local_data;
     DataDeleters m_data_deleters;
 };
-
 }

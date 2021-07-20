@@ -917,6 +917,9 @@ void RoutingWorker::post_run()
 {
     pool_close_all_conns();
 
+    // See MainWorker::post_run for an explanation why this is done here
+    m_storage.clear();
+
     qc_thread_end(QC_INIT_SELF);
     modules_thread_finish();
     // TODO: Add service_thread_finish().
