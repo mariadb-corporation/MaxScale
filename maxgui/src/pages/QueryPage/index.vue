@@ -21,18 +21,20 @@
             >
                 <template slot="pane-left">
                     <sidebar-container
-                        v-if="$typy($refs, 'worksheets.$refs.wke').isDefined"
                         :isSidebarCollapsed="isSidebarCollapsed"
                         @is-sidebar-collapsed="isSidebarCollapsed = $event"
-                        @place-to-editor="$refs.worksheets.$refs.wke[0].placeToEditor"
-                        @dragging-schema="$refs.worksheets.$refs.wke[0].draggingSchema"
-                        @drop-schema-to-editor="$refs.worksheets.$refs.wke[0].dropSchemaToEditor"
+                        @place-to-editor="wkeRef ? wkeRef.placeToEditor($event) : () => null"
+                        @dragging-schema="wkeRef ? wkeRef.draggingSchema($event) : () => null"
+                        @drop-schema-to-editor="
+                            wkeRef ? wkeRef.dropSchemaToEditor($event) : () => null
+                        "
                     />
                 </template>
                 <template slot="pane-right">
                     <worksheets
                         ref="worksheets"
                         :containerHeight="containerHeight"
+                        @mounted="isWkeMounted = $event"
                         @query-txt="queryTxt = $event"
                         @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
                         @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
@@ -75,6 +77,7 @@ export default {
             isFullscreen: false,
             isSidebarCollapsed: false,
             queryTxt: { all: '', selected: '' },
+            isWkeMounted: false,
         }
     },
     computed: {
@@ -88,6 +91,12 @@ export default {
             getDbCmplList: 'query/getDbCmplList',
             getActiveWke: 'query/getActiveWke',
         }),
+        wkeRef() {
+            // wke ref is only available when it's fully mounted
+            if (this.isWkeMounted)
+                return this.$typy(this.$refs, 'worksheets.$refs.wke[0]').safeObject
+            return null
+        },
     },
     watch: {
         isFullscreen() {
@@ -100,7 +109,9 @@ export default {
             this.$help.doubleRAF(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
         },
         sidebarPct() {
-            this.$help.doubleRAF(() => this.$refs.worksheets.$refs.wke[0].setResultPaneDim())
+            this.$help.doubleRAF(() => {
+                if (this.wkeRef) this.wkeRef.setResultPaneDim()
+            })
         },
         active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
