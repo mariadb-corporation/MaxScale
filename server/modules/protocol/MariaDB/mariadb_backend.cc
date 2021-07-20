@@ -1160,8 +1160,8 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
 
         if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            MXS_ERROR("Network error for session in state %s (%s): %d, %s",
-                      session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
+            MXS_ERROR("Network error in connection to server '%s', session in state '%s' (%s): %d, %s",
+                      m_server.name(), session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
                       error, mxs_strerror(error));
         }
     }
@@ -1196,9 +1196,9 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
         {
             if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
             {
-                MXS_ERROR("Network hangup for session in state %s (%s): %d, %s",
-                          session_state_to_string(session->state()), mxs::to_string(m_dcb->state()),
-                          error, mxs_strerror(error));
+                MXS_ERROR("Network hangup in connection to server '%s', session in state '%s' (%s): %d, %s",
+                          m_server.name(), session_state_to_string(m_session->state()),
+                          mxs::to_string(m_dcb->state()), error, mxs_strerror(error));
             }
         }
     }
