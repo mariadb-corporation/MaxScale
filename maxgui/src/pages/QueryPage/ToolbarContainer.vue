@@ -260,6 +260,7 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
+            if (this.loading_query_result) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
