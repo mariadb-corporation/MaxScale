@@ -31,10 +31,10 @@ public:
 
     MaxRowsConfig(MaxRowsConfig&& rhs) = default;
 
-    int64_t max_rows;
-    int64_t max_size;
-    int64_t debug;
-    Mode    mode;
+    mxs::config::Count      max_rows;
+    mxs::config::Size       max_size;
+    mxs::config::Integer    debug;
+    mxs::config::Enum<Mode> mode;
 };
 
 
@@ -57,14 +57,13 @@ public:
     bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    // Used in the create function
-    MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
-        : FilterSession(pSession, pService)
-        , m_instance(pFilter)
-    {
-    }
+    MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter);
 
-    MaxRows*    m_instance;
+    uint64_t            m_max_rows;
+    uint64_t            m_max_size;
+    int64_t             m_debug;
+    MaxRowsConfig::Mode m_mode;
+
     mxs::Buffer m_buffer;   // Contains the partial resultset
     bool        m_collect {true};
 };
