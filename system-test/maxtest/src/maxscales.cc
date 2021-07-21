@@ -554,13 +554,18 @@ MYSQL* MaxScale::open_rwsplit_connection(const std::string& db)
     return open_conn(rwsplit_port, ip4(), m_user_name, m_password, m_ssl);
 }
 
-std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& db)
+MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(const string& db)
+{
+    return try_open_rwsplit_connection(m_ssl ? SslMode::ON : SslMode::OFF, db);
+}
+
+MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(MaxScale::SslMode ssl, const string& db)
 {
     auto conn = std::make_unique<mxt::MariaDB>(log());
     auto& sett = conn->connection_settings();
     sett.user = m_user_name;
     sett.password = m_password;
-    if (m_ssl)
+    if (ssl == SslMode::ON)
     {
         auto base_dir = mxt::SOURCE_DIR;
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
@@ -568,7 +573,14 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& d
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
     }
 
-    conn->open(ip(), rwsplit_port, db);
+    conn->try_open(ip(), rwsplit_port, db);
+    return conn;
+}
+
+std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& db)
+{
+    auto conn = try_open_rwsplit_connection(db);
+    m_shared.log.expect(conn->is_open(), "Failed to open MySQL connection to RWSplit.");
     return conn;
 }
 
@@ -811,6 +823,11 @@ const std::string& MaxScale::cnf_path() const
 const std::string& MaxScale::log_dir() const
 {
     return m_log_dir;
+}
+
+int MaxScale::get_master_server_id()
+{
+    return get_servers().get_master().server_id;
 }
 
 void ServersInfo::add(const ServerInfo& info)

@@ -128,6 +128,7 @@ private:
 class MaxScale
 {
 public:
+    using SMariaDB = std::unique_ptr<mxt::MariaDB>;
     enum service
     {
         RWSPLIT,
@@ -230,7 +231,11 @@ public:
      */
     MYSQL* open_rwsplit_connection(const std::string& db = "test");
 
-    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB try_open_rwsplit_connection(const std::string& db = "");
+
+    enum class SslMode {ON, OFF};
+    SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& db = "");
 
     /**
      * Get a readwritesplit Connection
@@ -327,6 +332,8 @@ public:
     StringSet get_server_status(const std::string& name);
 
     mxt::ServersInfo get_servers();
+
+    int get_master_server_id();
 
     /**
      * Wait until all running monitors have ticked.
