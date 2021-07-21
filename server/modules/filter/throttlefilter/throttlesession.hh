@@ -34,7 +34,13 @@ private:
     bool delayed_routeQuery(maxbase::Worker::Call::action_t action,
                             GWBUF* buffer);
     int real_routeQuery(GWBUF* buffer, bool is_delayed);
-    ThrottleFilter&     m_filter;
+
+    // Configuration
+    int64_t                   m_max_qps;
+    std::chrono::milliseconds m_sampling_duration;
+    std::chrono::milliseconds m_throttling_duration;
+    std::chrono::milliseconds m_continuous_duration;
+
     maxbase::EventCount m_query_count;
     maxbase::StopWatch  m_first_sample;
     maxbase::StopWatch  m_last_sample;
