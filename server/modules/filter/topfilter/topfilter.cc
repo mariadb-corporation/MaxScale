@@ -167,7 +167,7 @@ private:
     std::string          m_current;
     int                  m_n_statements = 0;
     wall_time::TimePoint m_connect;
-    mxb::Duration        m_stmt_time;
+    mxb::Duration        m_stmt_time {0};
     mxb::StopWatch       m_watch;
     std::vector<Query>   m_top;
 };
