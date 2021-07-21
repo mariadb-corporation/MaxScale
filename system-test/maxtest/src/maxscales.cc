@@ -33,10 +33,10 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
 {
     auto prefixc = my_prefix.c_str();
     string key_user = mxb::string_printf("%s_user", prefixc);
-    user_name = envvar_get_set(key_user.c_str(), "skysql");
+    m_user_name = envvar_get_set(key_user.c_str(), "skysql");
 
     string key_pw = mxb::string_printf("%s_password", prefixc);
-    password = envvar_get_set(key_pw.c_str(), "skysql");
+    m_password = envvar_get_set(key_pw.c_str(), "skysql");
 
     m_use_valgrind = readenv_bool("use_valgrind", false);
     m_use_callgrind = readenv_bool("use_callgrind", false);
@@ -54,10 +54,10 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         m_vmnode = move(new_node);
 
         string key_cnf = vm_name + "_cnf";
-        maxscale_cnf = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
+        m_cnf_path = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
         string key_log_dir = vm_name + "_log_dir";
-        maxscale_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
+        m_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
         string key_binlog_dir = vm_name + "_binlog_dir";
         m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
@@ -79,7 +79,7 @@ int MaxScale::connect_rwsplit(const std::string& db)
 {
     mysql_close(conn_rwsplit[0]);
 
-    conn_rwsplit[0] = open_conn_db(rwsplit_port, ip(), db, user_name, password, m_ssl);
+    conn_rwsplit[0] = open_conn_db(rwsplit_port, ip(), db, m_user_name, m_password, m_ssl);
     routers[0] = conn_rwsplit[0];
 
     int rc = 0;
@@ -102,7 +102,7 @@ int MaxScale::connect_readconn_master(const std::string& db)
     MYSQL*& conn_rc_master = conn_master;
     mysql_close(conn_rc_master);
 
-    conn_rc_master = open_conn_db(readconn_master_port, ip(), db, user_name, password, m_ssl);
+    conn_rc_master = open_conn_db(readconn_master_port, ip(), db, m_user_name, m_password, m_ssl);
     routers[1] = conn_rc_master;
 
     int rc = 0;
@@ -125,7 +125,7 @@ int MaxScale::connect_readconn_slave(const std::string& db)
     MYSQL*& conn_rc_slave = conn_slave;
     mysql_close(conn_rc_slave);
 
-    conn_rc_slave = open_conn_db(readconn_slave_port, ip(), db, user_name, password, m_ssl);
+    conn_rc_slave = open_conn_db(readconn_slave_port, ip(), db, m_user_name, m_password, m_ssl);
     routers[2] = conn_rc_slave;
 
     int rc = 0;
@@ -189,7 +189,7 @@ int MaxScale::start_maxscale()
     int res;
     if (m_use_valgrind)
     {
-        auto log_dir = maxscale_log_dir.c_str();
+        auto log_dir = m_log_dir.c_str();
         if (m_use_callgrind)
         {
             res = ssh_node_f(false,
@@ -517,8 +517,8 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
     system(sys.c_str());
 
     auto vm = m_vmnode.get();
-    auto mxs_logdir = maxscale_log_dir.c_str();
-    auto mxs_cnf_file = maxscale_cnf.c_str();
+    auto mxs_logdir = m_log_dir.c_str();
+    auto mxs_cnf_file = m_cnf_path.c_str();
 
     if (vm->is_remote())
     {
@@ -551,15 +551,15 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
 
 MYSQL* MaxScale::open_rwsplit_connection(const std::string& db)
 {
-    return open_conn(rwsplit_port, ip4(), user_name, password, m_ssl);
+    return open_conn(rwsplit_port, ip4(), m_user_name, m_password, m_ssl);
 }
 
 std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& db)
 {
     auto conn = std::make_unique<mxt::MariaDB>(log());
     auto& sett = conn->connection_settings();
-    sett.user = user_name;
-    sett.password = password;
+    sett.user = m_user_name;
+    sett.password = m_password;
     if (m_ssl)
     {
         auto base_dir = mxt::SOURCE_DIR;
@@ -574,32 +574,32 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& d
 
 Connection MaxScale::rwsplit(const std::string& db)
 {
-    return Connection(ip4(), rwsplit_port, user_name, password, db, m_ssl);
+    return Connection(ip4(), rwsplit_port, m_user_name, m_password, db, m_ssl);
 }
 
 Connection MaxScale::get_connection(int port, const std::string& db)
 {
-    return Connection(ip4(), port, user_name, password, db, m_ssl);
+    return Connection(ip4(), port, m_user_name, m_password, db, m_ssl);
 }
 
 MYSQL* MaxScale::open_readconn_master_connection()
 {
-    return open_conn(readconn_master_port, ip4(), user_name, password, m_ssl);
+    return open_conn(readconn_master_port, ip4(), m_user_name, m_password, m_ssl);
 }
 
 Connection MaxScale::readconn_master(const std::string& db)
 {
-    return Connection(ip4(), readconn_master_port, user_name, password, db, m_ssl);
+    return Connection(ip4(), readconn_master_port, m_user_name, m_password, db, m_ssl);
 }
 
 MYSQL* MaxScale::open_readconn_slave_connection()
 {
-    return open_conn(readconn_slave_port, ip4(), user_name, password, m_ssl);
+    return open_conn(readconn_slave_port, ip4(), m_user_name, m_password, m_ssl);
 }
 
 Connection MaxScale::readconn_slave(const std::string& db)
 {
-    return Connection(ip4(), readconn_slave_port, user_name, password, db, m_ssl);
+    return Connection(ip4(), readconn_slave_port, m_user_name, m_password, db, m_ssl);
 }
 
 void MaxScale::close_rwsplit()
@@ -791,6 +791,26 @@ mxt::ServersInfo MaxScale::get_servers()
         log().add_failure("REST-API servers query failed. Error %i, %s", res.rc, mxb_strerror(res.rc));
     }
     return rval;
+}
+
+const std::string& MaxScale::user_name() const
+{
+    return m_user_name;
+}
+
+const std::string& MaxScale::password() const
+{
+    return m_password;
+}
+
+const std::string& MaxScale::cnf_path() const
+{
+    return m_cnf_path;
+}
+
+const std::string& MaxScale::log_dir() const
+{
+    return m_log_dir;
 }
 
 void ServersInfo::add(const ServerInfo& info)

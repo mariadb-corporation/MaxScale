@@ -26,12 +26,12 @@ int main(int argc, char *argv[])
     // server is not expecting it. The connection to MaxScale is created but queries will fail.
     auto adminconn = test.maxscale->open_rwsplit_connection();
     test.expect(adminconn != NULL, "Connection to MaxScale with user %s failed when success was expected.",
-                test.maxscale->user_name.c_str());
+                test.maxscale->user_name().c_str());
     if (adminconn)
     {
         test.expect(execute_query(adminconn, "SELECT 1") != 0,
                     "Query with user %s succeeded when failure was expected.",
-                    test.maxscale->user_name.c_str());
+                    test.maxscale->user_name().c_str());
         mysql_close(adminconn);
         adminconn = NULL;
     }

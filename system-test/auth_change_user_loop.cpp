@@ -49,13 +49,16 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Doing change_user in the loop");
+    auto mxs_user = Test->maxscale->user_name().c_str();
+    auto mxs_pw = Test->maxscale->password().c_str();
+
     for (int i = 0; i < iterations; i++)
     {
         Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0], "user", "pass2", (char*) "test"),
                          "change_user failed! %s", mysql_error(Test->maxscale->conn_rwsplit[0]));
         Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0],
-                                           Test->maxscale->user_name.c_str(),
-                                           Test->maxscale->password.c_str(),
+                                           mxs_user,
+                                           mxs_pw,
                                            (char*) "test"), "change_user failed! %s",
                          mysql_error(Test->maxscale->conn_rwsplit[0]));
     }
@@ -68,11 +71,10 @@ int main(int argc, char* argv[])
     }
     Test->tprintf("All threads are finished");
 
-    Test->tprintf("Change user to '%s' in order to be able to DROP user",
-                  Test->maxscale->user_name.c_str());
+    Test->tprintf("Change user to '%s' in order to be able to DROP user", mxs_user);
     mysql_change_user(Test->maxscale->conn_rwsplit[0],
-                      Test->maxscale->user_name.c_str(),
-                      Test->maxscale->password.c_str(),
+                      mxs_user,
+                      mxs_pw,
                       NULL);
 
     Test->tprintf("Dropping user");

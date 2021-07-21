@@ -37,8 +37,8 @@ int main(int argc, char** argv)
         MYSQL* conn = open_conn_db(test.maxscale->port(),
                                    test.maxscale->ip(),
                                    db,
-                                   test.maxscale->user_name,
-                                   test.maxscale->password);
+                                   test.maxscale->user_name(),
+                                   test.maxscale->password());
 
         test.expect(execute_query(conn, "SELECT 1") == 0, "Query should work: %s", mysql_error(conn));
 

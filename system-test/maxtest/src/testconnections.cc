@@ -819,8 +819,8 @@ void TestConnections::init_maxscale(int m)
                     "iptables -F INPUT;"
                     "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                     "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                    mxs->maxscale_cnf.c_str(),
-                    mxs->maxscale_log_dir.c_str());
+                    mxs->cnf_path().c_str(),
+                    mxs->log_dir().c_str());
     if (maxscale::start)
     {
         expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
@@ -1118,7 +1118,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscale->ip4(), maxscale->user_name, maxscale->password, maxscale_ssl);
+                open_conn(4016, maxscale->ip4(), maxscale->user_name(), maxscale->password(), maxscale_ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;

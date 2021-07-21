@@ -53,8 +53,8 @@ int main(int argc, char* argv[])
 
     MYSQL* conn_galera = open_conn(4016,
                                    Test->maxscale->ip4(),
-                                   Test->maxscale->user_name,
-                                   Test->maxscale->password,
+                                   Test->maxscale->user_name(),
+                                   Test->maxscale->password(),
                                    Test->maxscale_ssl);
     mysql_close(conn_galera);
 

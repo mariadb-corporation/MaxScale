@@ -105,7 +105,7 @@ int MariaDBCluster::connect(int i, const std::string& db)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), user_name, password, 50, m_ssl);
+        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), m_user_name, m_password, 50, m_ssl);
     }
 
     if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
@@ -168,10 +168,10 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     auto prefixc = nwconf_prefix().c_str();
 
     string key_user = mxb::string_printf("%s_user", prefixc);
-    user_name = envvar_get_set(key_user.c_str(), "skysql");
+    m_user_name = envvar_get_set(key_user.c_str(), "skysql");
 
     string key_pw = mxb::string_printf("%s_password", prefixc);
-    password = envvar_get_set(key_pw.c_str(), "skysql");
+    m_password = envvar_get_set(key_pw.c_str(), "skysql");
 
     string key_ssl = mxb::string_printf("%s_ssl", prefixc);
     setenv(key_ssl.c_str(), m_ssl ? "true" : "false", 1);
@@ -233,8 +233,8 @@ void MariaDBCluster::print_env()
         printf("%s node %d \t%s\tPort=%d\n", namec, i, ip4(i), port[i]);
         printf("%s Access user %s\n", namec, access_user(i));
     }
-    printf("%s User name %s\n", namec, user_name.c_str());
-    printf("%s Password %s\n", namec, password.c_str());
+    printf("%s User name %s\n", namec, m_user_name.c_str());
+    printf("%s Password %s\n", namec, m_password.c_str());
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -290,8 +290,8 @@ bool MariaDBCluster::create_base_users(int node)
     string cmd = mxb::string_printf("export require_ssl=\"%s\"; export node_user=\"%s\"; "
                                     "export node_password=\"%s\"; "
                                     "%s/create_user.sh \"%s\" %s",
-                                    m_ssl ? "REQUIRE SSL" : "", user_name.c_str(),
-                                    password.c_str(),
+                                    m_ssl ? "REQUIRE SSL" : "", m_user_name.c_str(),
+                                    m_password.c_str(),
                                     access_homedir(0), m_socket_cmd[0].c_str(), type_string().c_str());
     int rc = ssh_node_f(node, true, "%s", cmd.c_str());
 
@@ -1035,7 +1035,7 @@ bool MariaDBCluster::check_normal_conns()
             if (!conn->is_open())
             {
                 logger().log_msgf("Connecting to '%s' as '%s' with SSL failed when SSL should be enabled.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), m_user_name.c_str());
                 rval = false;
             }
 
@@ -1045,7 +1045,7 @@ bool MariaDBCluster::check_normal_conns()
             {
                 logger().log_msgf("Connecting to '%s' as '%s' without SSL succeeded when "
                                   "SSL should be required.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), m_user_name.c_str());
                 rval = false;
             }
         }
@@ -1056,7 +1056,7 @@ bool MariaDBCluster::check_normal_conns()
             {
                 logger().log_msgf("Connecting to '%s' as '%s' without SSL failed when SSL should not "
                                   "be required.",
-                                  srv->m_vm.m_name.c_str(), user_name.c_str());
+                                  srv->m_vm.m_name.c_str(), m_user_name.c_str());
                 rval = false;
             }
             // SSL-connections would likely work as well, as server is always configured for it. No need to
@@ -1132,6 +1132,16 @@ mxt::MariaDBUserDef MariaDBCluster::service_user_def() const
     return rval;
 }
 
+const std::string& MariaDBCluster::user_name() const
+{
+    return m_user_name;
+}
+
+const std::string& MariaDBCluster::password() const
+{
+    return m_password;
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
@@ -1188,8 +1198,8 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl, const st
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
-    sett.user = m_cluster.user_name;
-    sett.password = m_cluster.password;
+    sett.user = m_cluster.user_name();
+    sett.password = m_cluster.password();
     if (ssl == SslMode::ON)
     {
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);

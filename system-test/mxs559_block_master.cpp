@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
         data_master[i].exit_flag = 0;
         data_master[i].ip = test.maxscale->ip4();
         data_master[i].port = test.maxscale->rwsplit_port;
-        data_master[i].user = test.maxscale->user_name;
-        data_master[i].password = test.maxscale->password;
+        data_master[i].user = test.maxscale->user_name();
+        data_master[i].password = test.maxscale->password();
         data_master[i].ssl = test.maxscale_ssl;
         pthread_create(&thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }

@@ -54,8 +54,8 @@ void test2(TestConnections& test)
     MYSQL* conn = open_conn_db_timeout(test.maxscale->rwsplit_port,
                                        test.maxscale->ip(),
                                        "test",
-                                       test.maxscale->user_name,
-                                       test.maxscale->password,
+                                       test.maxscale->user_name(),
+                                       test.maxscale->password(),
                                        1,
                                        false);
 
