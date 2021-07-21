@@ -70,6 +70,7 @@ BinlogFilterSession::BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pServic
                                          const BinlogFilter* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_filter(*pFilter)
+    , m_config(pFilter->getConfig())
 {
 }
 
@@ -142,7 +143,7 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
         m_state = BINLOG_MODE;
         MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
 
-        if (!m_is_gtid && m_filter.getConfig().rewrite_src)
+        if (!m_is_gtid && m_config.rewrite_src)
         {
             gwbuf_free(pPacket);
             std::ostringstream ss;
@@ -406,12 +407,12 @@ static std::string inline extract_table_info(const uint8_t* ptr)
     return dbname + "." + tblname;
 }
 
-static bool should_skip(const BinlogConfig& config, const std::string& str)
+static bool should_skip(const BinlogConfig::Values& config, const std::string& str)
 {
     return (config.match && !config.match.match(str)) || (config.exclude && config.exclude.match(str));
 }
 
-static bool should_skip_query(const BinlogConfig& config, const std::string& sql, const std::string& db = "")
+static bool should_skip_query(const BinlogConfig::Values& config, const std::string& sql, const std::string& db = "")
 {
     GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
@@ -455,7 +456,7 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
 void BinlogFilterSession::skipDatabaseTable(const uint8_t* data)
 {
     std::string table = extract_table_info(data);
-    m_skip = should_skip(m_filter.getConfig(), table);
+    m_skip = should_skip(m_config, table);
     MXS_INFO("[%s] TABLE_MAP: %s", m_skip ? "SKIP" : "    ", table.c_str());
 }
 
@@ -831,7 +832,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
     std::string db((char*)event + static_size + var_block_len, db_name_len);
     std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
 
-    const auto& config = m_filter.getConfig();
+    const auto& config = m_config;
     m_skip = should_skip_query(config, sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
@@ -883,6 +884,6 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 void BinlogFilterSession::checkAnnotate(const uint8_t* event, const uint32_t event_size)
 {
     std::string sql((char*)event, event_size - (m_crc ? 4 : 0));
-    m_skip = should_skip_query(m_filter.getConfig(), sql);
+    m_skip = should_skip_query(m_config, sql);
     MXS_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
 }

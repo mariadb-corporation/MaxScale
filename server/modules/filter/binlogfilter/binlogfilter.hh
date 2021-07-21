@@ -12,26 +12,11 @@
  */
 #pragma once
 
-#include <string>
 #include <maxscale/ccdefs.hh>
-#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/pcre2.hh>
+
+#include "binlogconfig.hh"
 #include "binlogfiltersession.hh"
-
-static constexpr const char REWRITE_SRC[] = "rewrite_src";
-static constexpr const char REWRITE_DEST[] = "rewrite_dest";
-
-// Binlog Filter configuration
-struct BinlogConfig : public mxs::config::Configuration
-{
-    BinlogConfig(const char* name);
-
-    mxs::config::RegexValue match;
-    mxs::config::RegexValue exclude;
-    mxs::config::RegexValue rewrite_src;
-    std::string             rewrite_dest;
-};
 
 class BinlogFilter : public mxs::Filter
 {
@@ -60,9 +45,9 @@ public:
     }
 
     // Return reference to filter config
-    const BinlogConfig& getConfig() const
+    const BinlogConfig::Values& getConfig() const
     {
-        return m_config;
+        return m_config.values();
     }
 
 private:
