@@ -1000,7 +1000,7 @@ add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS GALERA_BACKEND)
 # Test big number of opened connections with persistent connections configured
 add_test_executable(pers_02.cpp pers_02 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
-# Test of external script execution
+# Test of external script execution. Includes MXS-2723.
 add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
 # MXS-2441: Add support for read-only slaves to galeramon

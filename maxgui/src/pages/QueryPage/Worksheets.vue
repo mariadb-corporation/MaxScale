@@ -40,7 +40,6 @@
                             height: `calc(100% - ${wkeNavHeight}px)`,
                         }"
                         :containerHeight="containerHeight"
-                        :showVisSidebar="showVisSidebar"
                         v-on="$listeners"
                     />
                 </keep-alive>
@@ -71,7 +70,6 @@ export default {
     },
     props: {
         containerHeight: { type: Number, required: true },
-        showVisSidebar: { type: Boolean, required: true },
     },
     data() {
         return {

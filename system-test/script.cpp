@@ -33,213 +33,184 @@
  */
 
 
-#include <iostream>
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
 #include <maxtest/galera_cluster.hh>
+#include <maxbase/format.hh>
 
-void test_script_monitor(TestConnections* Test, MariaDBCluster* nodes, char* expected_filename)
+using std::string;
+const int script_delay_ticks = 2;
+
+void test_script_monitor(TestConnections& test, MariaDBCluster* nodes, const char* expected_filename)
 {
-    Test->reset_timeout();
-    auto homedir = Test->maxscale->access_homedir();
-    Test->maxscale->ssh_node_f(true,
-                               "cd %s; truncate -s 0 script_output; \
-                                chown maxscale:maxscale script_output; \
-                                chmod a+rw script_output",
-                               homedir);
-    sleep(10);
+    test.reset_timeout();
+    auto& mxs = *test.maxscale;
+    auto homedir = mxs.access_homedir();
+    mxs.ssh_node_f(true,
+                   "cd %s; truncate -s 0 script_output; chown maxscale:maxscale script_output; "
+                   "chmod a+rw script_output",
+                   homedir);
 
-    Test->tprintf("Block master node");
+    mxs.wait_for_monitor(script_delay_ticks);
+
+    test.tprintf("Block master node");
     nodes->block_node(0);
+    mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Sleeping");
-    sleep(10);
-
-    Test->tprintf("Unblock master node");
+    test.tprintf("Unblock master node");
     nodes->unblock_node(0);
+    mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Sleeping");
-    sleep(10);
-
-    Test->tprintf("Block node1");
+    test.tprintf("Block node1");
     nodes->block_node(1);
+    mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Sleeping");
-    sleep(10);
-
-    Test->tprintf("Unblock node1");
+    test.tprintf("Unblock node1");
     nodes->unblock_node(1);
+    mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Sleeping");
-    sleep(10);
-
-    Test->tprintf("Comparing results");
-
-    if (Test->maxscale->ssh_node_f(false, "diff %s/script_output %s", homedir, expected_filename) != 0)
+    // If testing the replication cluster, check that replication lag script event works. (MXS-2723)
+    auto repl = dynamic_cast<mxt::ReplicationCluster*>(nodes);
+    if (repl)
     {
-        Test->maxscale->ssh_node_f(true, "cat %s/script_output", homedir);
-        Test->add_result(1, "Wrong script output!");
+        test.tprintf("Add delay to a slave.");
+        // Set up the second slave with delayed replication, then add a gtid event.
+        auto conn_slave = repl->backend(2)->open_connection();
+        auto set_delay = [&mxs, &conn_slave](int delay) {
+                conn_slave->cmd("stop slave;");
+                // Ensure monitor detects the slave down/up. Otherwise script output would depend on timing.
+                mxs.wait_for_monitor(1);
+                conn_slave->cmd_f("change master to master_delay=%d;", delay);
+                conn_slave->cmd("start slave;");
+                mxs.wait_for_monitor(1);
+            };
+
+        set_delay(5);
+
+        auto conn_master = repl->backend(0)->open_connection();
+        conn_master->cmd("flush tables;");
+        sleep(2);
+        mxs.wait_for_monitor(1);
+        sleep(4);
+        mxs.wait_for_monitor(1);
+        test.tprintf("Remove the delay.");
+        set_delay(0);
+    }
+
+    test.tprintf("Comparing results");
+
+    if (mxs.ssh_node_f(false, "diff %s/script_output %s", homedir, expected_filename) != 0)
+    {
+        mxs.ssh_node_f(true, "cat %s/script_output", homedir);
+        test.add_failure("Wrong script output!");
     }
     else
     {
-        Test->tprintf("Script output is OK!");
+        test.tprintf("Script output is OK!");
     }
 }
 
+void test_main(TestConnections& test);
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
+    TestConnections test;
+    TestConnections::skip_maxscale_start(true);
+    return test.run_test(argc, argv, test_main);
+}
 
-    auto repl_ip0 = Test->repl->ip_private(0);
-    auto repl_ip1 = Test->repl->ip_private(1);
-    auto repl_ip2 = Test->repl->ip_private(2);
-    auto repl_ip3 = Test->repl->ip_private(3);
+void test_main(TestConnections& test)
+{
+    // Generate some strings used repeatedly later on.
+    const char fmt[] = "[%s]:%d";
 
-    auto gal_ip0 = Test->galera->ip_private(0);
-    auto gal_ip1 = Test->galera->ip_private(1);
-    auto gal_ip2 = Test->galera->ip_private(2);
-    auto gal_ip3 = Test->galera->ip_private(3);
+    auto& repl = *test.repl;
+    string repl0s = mxb::string_printf(fmt, repl.ip_private(0), repl.port[0]);
+    string repl1s = mxb::string_printf(fmt, repl.ip_private(1), repl.port[1]);
+    string repl2s = mxb::string_printf(fmt, repl.ip_private(2), repl.port[2]);
+    string repl3s = mxb::string_printf(fmt, repl.ip_private(3), repl.port[3]);
+    auto repl0 = repl0s.c_str();
+    auto repl1 = repl1s.c_str();
+    auto repl2 = repl2s.c_str();
+    auto repl3 = repl3s.c_str();
 
-    auto homedir = Test->maxscale->access_homedir();
-    auto sudo = Test->maxscale->access_sudo();
+    auto& galera = *test.galera;
+    string gal0s = mxb::string_printf(fmt, galera.ip_private(0), galera.port[0]);
+    string gal1s = mxb::string_printf(fmt, galera.ip_private(1), galera.port[1]);
+    string gal2s = mxb::string_printf(fmt, galera.ip_private(2), galera.port[2]);
+    string gal3s = mxb::string_printf(fmt, galera.ip_private(3), galera.port[3]);
+    auto gal0 = gal0s.c_str();
+    auto gal1 = gal1s.c_str();
+    auto gal2 = gal2s.c_str();
+    auto gal3 = gal3s.c_str();
 
-    Test->tprintf("Creating script on Maxscale machine");
-    Test->maxscale->ssh_node_f(false,
-                               "%s rm -rf %s/script; mkdir %s/script; "
-                               "echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; "
-                               "chmod a+x %s/script/script.sh; chmod a+x %s; "
-                               "%s chown maxscale:maxscale %s/script -R",
-                               sudo, homedir, homedir,
-                               homedir, homedir,
-                               homedir, homedir,
-                               sudo, homedir);
+    auto& mxs = *test.maxscale;
+    auto mxs_homedir = mxs.access_homedir();
+    auto sudo = mxs.access_sudo();
 
-    Test->maxscale->restart_maxscale();
+    test.tprintf("Creating script on Maxscale machine");
+    mxs.ssh_node_f(false,
+                   "%s rm -rf %s/script; mkdir %s/script; "
+                   "echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; "
+                   "chmod a+x %s/script/script.sh; chmod a+x %s; "
+                   "%s chown maxscale:maxscale %s/script -R",
+                   sudo, mxs_homedir, mxs_homedir,
+                   mxs_homedir, mxs_homedir,
+                   mxs_homedir, mxs_homedir,
+                   sudo, mxs_homedir);
 
-    FILE* f = fopen("script_output_expected", "w");
-    fprintf(f,
-            "--event=master_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip0,
-            Test->repl->port[0],
-            repl_ip1,
-            Test->repl->port[1],
-            repl_ip2,
-            Test->repl->port[2],
-            repl_ip3,
-            Test->repl->port[3]);
-    fprintf(f,
-            "--event=master_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip0,
-            Test->repl->port[0],
-            repl_ip0,
-            Test->repl->port[0],
-            repl_ip1,
-            Test->repl->port[1],
-            repl_ip2,
-            Test->repl->port[2],
-            repl_ip3,
-            Test->repl->port[3]);
-    fprintf(f,
-            "--event=slave_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            repl_ip1,
-            Test->repl->port[1],
-            repl_ip0,
-            Test->repl->port[0],
-            repl_ip1,
-            Test->repl->port[1],
-            repl_ip2,
-            Test->repl->port[2],
-            repl_ip3,
-            Test->repl->port[3]);
+    const char line_3up_fmt[] = "--event=%s --initiator=%s --nodelist=%s,%s,%s\n";
+    const char line_4up_fmt[] = "--event=%s --initiator=%s --nodelist=%s,%s,%s,%s\n";
+
+    const char repl_script_outfile[] = "script_output_expected";
+    FILE* f = fopen(repl_script_outfile, "w");
+    fprintf(f, line_3up_fmt, "master_down", repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "master_up", repl0, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "slave_up", repl1, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "lost_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "new_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "rlag_above", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "rlag_below", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "lost_slave", repl2, repl0, repl1, repl2, repl3);
+    fprintf(f, line_4up_fmt, "new_slave", repl2, repl0, repl1, repl2, repl3);
     fclose(f);
 
-    f = fopen("script_output_expected_galera", "w");
-    fprintf(f,
-            "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip0,
-            Test->galera->port[0],
-            gal_ip1,
-            Test->galera->port[1],
-            gal_ip2,
-            Test->galera->port[2],
-            gal_ip3,
-            Test->galera->port[3]);
-    fprintf(f,
-            "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip0,
-            Test->galera->port[0],
-            gal_ip0,
-            Test->galera->port[0],
-            gal_ip1,
-            Test->galera->port[1],
-            gal_ip2,
-            Test->galera->port[2],
-            gal_ip3,
-            Test->galera->port[3]);
-    fprintf(f,
-            "--event=synced_down --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip1,
-            Test->galera->port[1],
-            gal_ip0,
-            Test->galera->port[0],
-            gal_ip2,
-            Test->galera->port[2],
-            gal_ip3,
-            Test->galera->port[3]);
-    fprintf(f,
-            "--event=synced_up --initiator=[%s]:%d --nodelist=[%s]:%d,[%s]:%d,[%s]:%d,[%s]:%d\n",
-            gal_ip1,
-            Test->galera->port[1],
-            gal_ip0,
-            Test->galera->port[0],
-            gal_ip1,
-            Test->galera->port[1],
-            gal_ip2,
-            Test->galera->port[2],
-            gal_ip3,
-            Test->galera->port[3]);
+    const char galera_script_outfile[] = "script_output_expected_galera";
+    f = fopen(galera_script_outfile, "w");
+    fprintf(f, line_3up_fmt, "synced_down", gal0, gal1, gal2, gal3);
+    fprintf(f, line_4up_fmt, "synced_up", gal0, gal0, gal1, gal2, gal3);
+    fprintf(f, line_3up_fmt, "synced_down", gal1, gal0, gal2, gal3);
+    fprintf(f, line_4up_fmt, "synced_up", gal1, gal0, gal1, gal2, gal3);
     fclose(f);
 
-    Test->tprintf("Copying expected script output to Maxscale machine");
-    char str[4096 + 2048];
-    sprintf(str,
-            "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
-            Test->maxscale->sshkey(),
-            Test->maxscale->access_user(),
-            Test->maxscale->ip4(),
-            homedir);
-    Test->add_result(system(str), "Error copying script to VM");
+    test.tprintf("Copying expected script output files to Maxscale machine.");
+    mxs.copy_to_node(repl_script_outfile, mxs_homedir);
+    mxs.copy_to_node(galera_script_outfile, mxs_homedir);
 
-    sprintf(str, "%s/script_output_expected", homedir);
-    test_script_monitor(Test, Test->repl, str);
-    sprintf(str, "%s/script_output_expected_galera", homedir);
-    test_script_monitor(Test, Test->galera, str);
+    mxs.start();
 
-    Test->reset_timeout();
+    if (test.ok())
+    {
+        string repl_script_outfile_path = string(mxs_homedir) + "/" + repl_script_outfile;
+        test_script_monitor(test, &repl, repl_script_outfile_path.c_str());
+        string galera_script_outfile_path = string(mxs_homedir) + "/" + galera_script_outfile;
+        test_script_monitor(test, &galera, galera_script_outfile_path.c_str());
 
-    Test->tprintf("Making script non-executable");
-    Test->maxscale->ssh_node_f(true, "chmod a-x %s/script/script.sh", homedir);
+        test.reset_timeout();
 
-    sleep(3);
+        test.tprintf("Making script non-executable");
+        mxs.ssh_node_f(true, "chmod a-x %s/script/script.sh", mxs_homedir);
 
-    Test->tprintf("Block node1");
-    Test->repl->block_node(1);
+        mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Sleeping");
-    sleep(10);
+        test.tprintf("Block node1");
+        repl.block_node(1);
+        mxs.wait_for_monitor(script_delay_ticks);
 
-    Test->tprintf("Unblock node1");
-    Test->repl->unblock_node(1);
+        test.tprintf("Unblock node1");
+        repl.unblock_node(1);
+        mxs.wait_for_monitor(script_delay_ticks);
+    }
 
-    sleep(15);
-
-    Test->tprintf("Cheching Maxscale logs");
-    Test->log_includes("Cannot execute file");
-
-    Test->tprintf("checking if Maxscale is alive");
-    Test->check_maxscale_alive();
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    test.log_includes("Cannot execute file");
+    test.check_maxscale_alive();
 }

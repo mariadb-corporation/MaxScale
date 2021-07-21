@@ -10,11 +10,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie, uniqBy, uniqueId, cloneDeep, pickBy } from 'utils/helpers'
-function defWorksheetState() {
+import { getCookie, uniqBy, uniqueId, pickBy } from 'utils/helpers'
+
+/**
+ * @returns Return standalone worksheet states
+ */
+function saWkeStates() {
     return {
-        id: uniqueId('wke_'),
-        name: 'worksheet',
+        query_txt: {
+            all: '',
+            selected: '',
+        },
         loading_prvw_data: false,
         prvw_data: {},
         active_tree_node_id: '',
@@ -26,8 +32,18 @@ function defWorksheetState() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        show_vis_sidebar: false,
     }
 }
+
+function defWorksheetState() {
+    return {
+        id: uniqueId('wke_'),
+        name: 'worksheet',
+        ...saWkeStates(),
+    }
+}
+
 function initialState() {
     return {
         // connection related states
@@ -43,28 +59,17 @@ function initialState() {
         curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
         active_db: JSON.parse(localStorage.getItem('active_db')),
 
-        //TODO: move sidebar states to worksheet state
         //Sidebar tree schema states
         loading_db_tree: false,
         db_tree: [],
         db_completion_list: [],
 
         // worksheet states
-        worksheets_arr: [cloneDeep(defWorksheetState())],
+        worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
 
         // standalone wke states
-        loading_prvw_data: false,
-        prvw_data: {},
-        active_tree_node_id: '',
-        prvw_data_request_sent_time: 0,
-        loading_prvw_data_details: false,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
-        loading_query_result: false,
-        query_request_sent_time: 0,
-        query_result: {},
-        curr_query_mode: 'QUERY_VIEW',
+        ...saWkeStates(),
     }
 }
 
@@ -164,6 +169,9 @@ export default {
             })
         },
         // editor mutations
+        SET_QUERY_TXT(state, payload) {
+            patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
+        },
         UPDATE_DB_CMPL_LIST(state, payload) {
             state.db_completion_list = [...state.db_completion_list, ...payload]
         },
@@ -191,10 +199,12 @@ export default {
             state.active_db = payload
             localStorage.setItem('active_db', JSON.stringify(payload))
         },
-
+        SET_SHOW_VIS_SIDEBAR(state, payload) {
+            patch_wke_property(state, { obj: { show_vis_sidebar: payload }, scope: this })
+        },
         // worksheet mutations
         ADD_NEW_WKE(state) {
-            state.worksheets_arr.push(cloneDeep(defWorksheetState()))
+            state.worksheets_arr.push(defWorksheetState())
         },
         DELETE_WKE(state, idx) {
             state.worksheets_arr.splice(idx, 1)

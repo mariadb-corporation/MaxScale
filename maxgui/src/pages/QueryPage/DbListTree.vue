@@ -101,7 +101,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-//TODO: Bring module state and mutation to parent component
 import { mapMutations, mapState } from 'vuex'
 export default {
     name: 'db-list-tree',

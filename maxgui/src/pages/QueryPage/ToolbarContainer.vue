@@ -1,5 +1,4 @@
 <template>
-    <!-- TODO:  refactor it and its child components to use vuex worksheet state-->
     <v-toolbar
         outlined
         elevation="0"
@@ -73,9 +72,9 @@
                     small
                     color="accent-dark"
                     :loading="loading_query_result"
-                    :disabled="!queryTxt.all || !active_conn_state"
+                    :disabled="!query_txt.all || !active_conn_state"
                     v-on="on"
-                    @click="() => handleRun(queryTxt.selected ? 'selected' : 'all')"
+                    @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
                 >
                     <v-icon size="16" class="mr-2">
                         $vuetify.icons.running
@@ -84,7 +83,7 @@
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ queryTxt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
+                {{ query_txt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
             </span>
         </v-tooltip>
         <!-- Visualize section-->
@@ -96,20 +95,20 @@
             <template v-slot:activator="{ on }">
                 <v-btn
                     class="ml-2 visualize"
-                    :outlined="!showVisSidebar"
+                    :outlined="!show_vis_sidebar"
                     depressed
                     small
-                    :color="showVisSidebar ? 'primary' : 'accent-dark'"
+                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
                     v-on="on"
-                    @click="showVisSidebar = !showVisSidebar"
+                    @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >
-                    <v-icon size="16" :color="showVisSidebar ? 'background' : 'accent-dark'">
+                    <v-icon size="16" :color="show_vis_sidebar ? 'background' : 'accent-dark'">
                         $vuetify.icons.reports
                     </v-icon>
                 </v-btn>
             </template>
             <span class="text-capitalize">
-                {{ $t('visualizedConfig', { action: showVisSidebar ? $t('hide') : $t('show') }) }}
+                {{ $t('visualizedConfig', { action: show_vis_sidebar ? $t('hide') : $t('show') }) }}
             </span>
         </v-tooltip>
         <!-- Settings section-->
@@ -162,7 +161,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="queryTxt.selected ? queryTxt.selected : queryTxt.all"
+                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -213,12 +212,10 @@ export default {
     },
     props: {
         isFullscreen: { type: Boolean, required: true },
-        queryTxt: { type: Object, required: true },
     },
     data() {
         return {
             dontShowConfirm: false,
-            showVisSidebar: false,
             queryConfigDialog: false,
         }
     },
@@ -230,17 +227,15 @@ export default {
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,
             query_confirm_flag: state => state.query.query_confirm_flag,
+            show_vis_sidebar: state => state.query.show_vis_sidebar,
+            query_txt: state => state.query.query_txt,
         }),
-    },
-    watch: {
-        showVisSidebar(v) {
-            this.$emit('show-vis-sidebar', v)
-        },
     },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
+            SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
@@ -258,7 +253,7 @@ export default {
             }
         },
         async confirmRunning() {
-            await this.onRun(this.queryTxt.selected ? 'selected' : 'all')
+            await this.onRun(this.query_txt.selected ? 'selected' : 'all')
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
@@ -268,10 +263,11 @@ export default {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.queryTxt.all) await this.fetchQueryResult(this.queryTxt.all)
+                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
                     break
                 case 'selected':
-                    if (this.queryTxt.selected) await this.fetchQueryResult(this.queryTxt.selected)
+                    if (this.query_txt.selected)
+                        await this.fetchQueryResult(this.query_txt.selected)
                     break
             }
         },
