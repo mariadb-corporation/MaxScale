@@ -33,18 +33,31 @@ class Tee : public mxs::Filter
     const Tee& operator=(const Tee&);
 public:
 
-    struct Config : public mxs::config::Configuration
+    class Config : public mxs::config::Configuration
     {
+    public:
+        struct Values
+        {
+            mxs::Target*            target;
+            SERVICE*                service;
+            std::string             user;   /* The user name to filter on */
+            std::string             source; /* The source of the client connection */
+            mxs::config::RegexValue match;  /* Compiled match pattern */
+            mxs::config::RegexValue exclude;/* Compiled exclude pattern*/
+        };
+
         Config(const char* name);
 
-        mxs::Target*            target;
-        SERVICE*                service;
-        std::string             user;   /* The user name to filter on */
-        std::string             source; /* The source of the client connection */
-        mxs::config::RegexValue match;  /* Compiled match pattern */
-        mxs::config::RegexValue exclude;/* Compiled exclude pattern*/
+        const Values& values() const
+        {
+            return *m_values;
+        }
 
+    private:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
+
+        Values                    m_v;
+        mxs::WorkerGlobal<Values> m_values;
     };
 
     static Tee* create(const char* zName);
@@ -61,29 +74,9 @@ public:
         return m_config;
     }
 
-    bool user_matches(const char* user) const
+    const Config::Values& config() const
     {
-        return m_config.user.length() == 0 || strcmp(user, m_config.user.c_str()) == 0;
-    }
-
-    bool remote_matches(const char* remote) const
-    {
-        return m_config.source.length() == 0 || strcmp(remote, m_config.source.c_str()) == 0;
-    }
-
-    mxs::Target* get_target() const
-    {
-        return m_config.target;
-    }
-
-    const mxb::Regex& get_match() const
-    {
-        return m_config.match;
-    }
-
-    const mxb::Regex& get_exclude() const
-    {
-        return m_config.exclude;
+        return m_config.values();
     }
 
     void set_enabled(bool value)

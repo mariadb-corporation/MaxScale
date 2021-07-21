@@ -55,27 +55,27 @@ TeeSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamTarget s_target(
     &s_spec, "target", "The target where the queries are duplicated",
-    cfg::Param::OPTIONAL);
+    cfg::Param::OPTIONAL, cfg::Param::AT_RUNTIME);
 
 cfg::ParamService s_service(
     &s_spec, "service", "The service where the queries are duplicated",
-    cfg::Param::OPTIONAL);
+    cfg::Param::OPTIONAL, cfg::Param::AT_RUNTIME);
 
 cfg::ParamRegex s_match(
     &s_spec, "match", "Only include queries matching this pattern",
-    "");
+    "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamRegex s_exclude(
     &s_spec, "exclude", "Exclude queries matching this pattern",
-    "");
+    "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_source(
     &s_spec, "source", "Only include queries done from this address",
-    "");
+    "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_user(
     &s_spec, "user", "Only include queries done by this user",
-    "");
+    "", cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnum<uint32_t> s_options(
     &s_spec, "options", "Regular expression options",
@@ -83,7 +83,7 @@ cfg::ParamEnum<uint32_t> s_options(
         {PCRE2_CASELESS, "ignorecase"},
         {0, "case"},
         {PCRE2_EXTENDED, "extended"},
-    }, 0);
+    }, 0, cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool TeeSpecification::do_post_validate(Params params) const
@@ -111,22 +111,23 @@ bool TeeSpecification::do_post_validate(Params params) const
 Tee::Config::Config(const char* name)
     : mxs::config::Configuration(name, &s_spec)
 {
-    add_native(&Config::target, &s_target);
-    add_native(&Config::service, &s_service);
-    add_native(&Config::user, &s_user);
-    add_native(&Config::source, &s_source);
-    add_native(&Config::match, &s_match);
-    add_native(&Config::exclude, &s_exclude);
+    add_native(&Config::m_v, &Values::target, &s_target);
+    add_native(&Config::m_v, &Values::service, &s_service);
+    add_native(&Config::m_v, &Values::user, &s_user);
+    add_native(&Config::m_v, &Values::source, &s_source);
+    add_native(&Config::m_v, &Values::match, &s_match);
+    add_native(&Config::m_v, &Values::exclude, &s_exclude);
 }
 
 bool Tee::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    if (service)
+    if (m_v.service)
     {
-        mxb_assert(!target);
-        target = service;
+        mxb_assert(!m_v.target);
+        m_v.target = m_v.service;
     }
 
+    m_values.assign(m_v);
     return true;
 }
 
@@ -170,28 +171,6 @@ TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
 json_t* Tee::diagnostics() const
 {
     json_t* rval = json_object();
-
-    if (m_config.source.length())
-    {
-        json_object_set_new(rval, "source", json_string(m_config.source.c_str()));
-    }
-
-    json_object_set_new(rval, "target", json_string(m_config.target->name()));
-
-    if (m_config.user.length())
-    {
-        json_object_set_new(rval, "user", json_string(m_config.user.c_str()));
-    }
-
-    if (m_config.match)
-    {
-        json_object_set_new(rval, "match", json_string(m_config.match.pattern().c_str()));
-    }
-
-    if (m_config.exclude)
-    {
-        json_object_set_new(rval, "exclude", json_string(m_config.exclude.pattern().c_str()));
-    }
 
     json_object_set_new(rval, "enabled", json_boolean(m_enabled));
 
