@@ -141,7 +141,7 @@ export default {
     data() {
         return {
             headerHeight: 0,
-            isMounted: true,
+            isLoading: true,
             activeResSet: '',
             runSeconds: 0,
         }
@@ -157,7 +157,7 @@ export default {
             getQueryExeTime: 'query/getQueryExeTime',
         }),
         showGuide() {
-            return this.isMounted || !this.active_conn_state
+            return this.isLoading || !this.active_conn_state
         },
         queryTxt() {
             return this.$typy(this.query_result, 'attributes.sql').safeObject
@@ -182,23 +182,30 @@ export default {
             } else return {}
         },
     },
-    watch: {
-        loading_query_result(v) {
-            // After user clicks Run to send query, set isMounted to false to show skeleton-loader
-            if (v && this.isMounted) this.isMounted = false
-        },
-        resultData: {
-            deep: true,
-            handler() {
-                if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
-            },
-        },
-    },
-
     mounted() {
         this.setHeaderHeight()
     },
+    activated() {
+        this.addLoadingQueryResultWatcher()
+        this.addResultDataWatcher()
+    },
+    deactivated() {
+        this.rmLoadingQueryResultWatcher()
+        this.rmResultDataWatcher()
+    },
+
     methods: {
+        addLoadingQueryResultWatcher() {
+            this.rmLoadingQueryResultWatcher = this.$watch('loading_query_result', v => {
+                // After user clicks Run to send query, set isLoading to false to show skeleton-loader
+                if (v && this.isLoading) this.isLoading = false
+            })
+        },
+        addResultDataWatcher() {
+            this.rmResultDataWatcher = this.$watch('resultData', () => {
+                if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
+            })
+        },
         /**
          * This function checks for result set having syntax error or error message
          * @returns {String} Return resultData key tab name. e.g. Result_set_0

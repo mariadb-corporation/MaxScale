@@ -163,10 +163,6 @@ export default {
         editorPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
-        show_vis_sidebar(v) {
-            this.handleSetVisSidebar(v)
-            this.$nextTick(() => this.setResultPaneDim())
-        },
         selectedChart() {
             if (this.showVisChart) {
                 this.queryPanePct = 50
@@ -192,14 +188,22 @@ export default {
         this.$emit('mounted', true)
         this.handleSetMinEditorPct()
         this.setResultPaneDim()
+        this.addShowVisSidebarWatcher()
     },
     deactivated() {
         this.$emit('mounted', false)
+        this.rmShowVisSidebarWatcher()
     },
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
         }),
+        addShowVisSidebarWatcher() {
+            this.rmShowVisSidebarWatcher = this.$watch('show_vis_sidebar', v => {
+                this.handleSetVisSidebar(v)
+                this.$nextTick(() => this.setResultPaneDim())
+            })
+        },
         handleSetMinEditorPct() {
             this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: this.containerHeight })
         },
