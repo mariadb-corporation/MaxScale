@@ -27,12 +27,20 @@ int main(int argc, char** argv)
 
     auto kill_master = [&]() {
             test.repl->connect();
-            int master = test.repl->find_master();
-            test.repl->disconnect();
-            test.repl->block_node(master);
-            test.maxscale->wait_for_monitor(3);
-            test.repl->unblock_node(master);
-            test.maxscale->wait_for_monitor(3);
+            test.maxscale->wait_for_monitor(1);
+            auto master = test.get_repl_master();
+            if (master)
+            {
+                test.repl->disconnect();
+                test.repl->block_node(master->ind());
+                test.maxscale->wait_for_monitor(3);
+                test.repl->unblock_node(master->ind());
+                test.maxscale->wait_for_monitor(3);
+            }
+            else
+            {
+                test.add_failure("No master to kill.");
+            }
         };
 
     // Create a table

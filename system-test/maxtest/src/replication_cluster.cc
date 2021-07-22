@@ -44,6 +44,9 @@ const string sl_io = "Slave_IO_Running";
 const string sl_sql = "Slave_SQL_Running";
 const string show_slaves = "show all slaves status;";
 
+const string repl_user = "repl";
+const string repl_pw = "repl";
+
 bool repl_thread_run_states_ok(const string& io, const string& sql)
 {
     return (io == "Yes" || io == "Connecting" || io == "Preparing") && sql == "Yes";
@@ -532,43 +535,6 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
     return rval;
 }
 
-int ReplicationCluster::find_master()
-{
-    char str[255];
-    char master_IP[256];
-    int i = 0;
-    int found = 0;
-    int master_node = 255;
-    while ((found == 0) && (i < N))
-    {
-        if (find_field(nodes[i],
-                       (char*) "show slave status;",
-                       (char*) "Master_Host",
-                       &str[0]
-                       ) == 0)
-        {
-            found = 1;
-            strcpy(master_IP, str);
-        }
-        i++;
-    }
-    if (found == 1)
-    {
-        found = 0;
-        i = 0;
-        while ((found == 0) && (i < N))
-        {
-            if (strcmp(ip_private(i), master_IP) == 0)
-            {
-                found = 1;
-                master_node = i;
-            }
-            i++;
-        }
-    }
-    return master_node;
-}
-
 void ReplicationCluster::change_master(int NewMaster, int OldMaster)
 {
     for (int i = 0; i < N; i++)
@@ -598,41 +564,39 @@ void ReplicationCluster::change_master(int NewMaster, int OldMaster)
     }
 }
 
-int ReplicationCluster::set_slave(MYSQL* conn, const char* master_host, int master_port)
+void ReplicationCluster::replicate_from(int slave, int master)
 {
-    char str[1024];
-
-    sprintf(str, setup_slave, master_host, master_port);
-    if (verbose())
-    {
-        printf("Setup slave SQL: %s\n", str);
-    }
-    return execute_query(conn, "%s", str);
+    replicate_from(slave, ip_private(master), port[master]);
 }
 
-void ReplicationCluster::replicate_from(int slave, int master, const char* type)
+void ReplicationCluster::replicate_from(int slave, const std::string& host, uint16_t port)
 {
-    replicate_from(slave, ip_private(master), port[master], type);
+    replicate_from(slave, host, port, GtidType::CURRENT_POS, "", false);
 }
 
-void ReplicationCluster::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
+void ReplicationCluster::replicate_from(int slave, const std::string& host, uint16_t port, GtidType type,
+                                        const std::string& conn_name, bool reset)
 {
-    std::stringstream change_master;
-
-    change_master << "CHANGE MASTER TO MASTER_HOST = '" << host
-                  << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
-                  << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
-
-    if (verbose())
+    auto be = backend(slave);
+    if (be->ping_or_open_admin_connection())
     {
-        std::cout << "Server " << slave + 1
-                  << " starting to replicate from " << host << ":" << port << std::endl;
-        std::cout << "Query is '" << change_master.str() << "'" << std::endl;
+        auto conn_namec = conn_name.c_str();
+        auto conn = be->admin_connection();
+        if (conn->cmd_f("STOP SLAVE '%s';", conn_namec))
+        {
+            if (reset)
+            {
+                conn->cmd_f("RESET SLAVE '%s' ALL;", conn_namec);
+            }
+            const char* gtid_str = (type == GtidType::CURRENT_POS) ? "current_pos" : "slave_pos";
+            string change_master = mxb::string_printf(
+                "CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, "
+                "MASTER_USER = '%s', MASTER_PASSWORD = '%s', MASTER_USE_GTID = %s;",
+                conn_namec, host.c_str(), port, repl_user.c_str(), repl_pw.c_str(), gtid_str);
+            conn->cmd(change_master);
+            conn->cmd_f("START SLAVE '%s';", conn_namec);
+        }
     }
-
-    execute_query(nodes[slave], "STOP SLAVE;");
-    execute_query(nodes[slave], "%s", change_master.str().c_str());
-    execute_query(nodes[slave], "START SLAVE;");
 }
 
 const std::string& ReplicationCluster::nwconf_prefix() const

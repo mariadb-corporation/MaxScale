@@ -1281,6 +1281,11 @@ int MariaDBServer::port()
     return m_cluster.port[m_ind];
 }
 
+int MariaDBServer::ind() const
+{
+    return m_ind;
+}
+
 mxt::MariaDB* MariaDBServer::admin_connection()
 {
     // Can assume that the connection has been created.
