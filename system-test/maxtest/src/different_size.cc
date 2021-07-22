@@ -33,7 +33,7 @@ MYSQL* connect_to_serv(TestConnections* Test, bool binlog)
     if (binlog)
     {
         conn = open_conn(Test->repl->port[0], Test->repl->ip4(0),
-                         Test->repl->user_name, Test->repl->password,
+                         Test->repl->user_name(), Test->repl->password(),
                          Test->maxscale_ssl);
     }
     else

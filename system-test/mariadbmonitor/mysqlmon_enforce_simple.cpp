@@ -14,6 +14,7 @@
 #include <maxtest/testconnections.hh>
 #include <iostream>
 #include <maxbase/format.hh>
+#include <maxtest/mariadb_connector.hh>
 
 using std::string;
 using std::cout;
@@ -33,19 +34,26 @@ int get_master_server_id(TestConnections& test)
     return id;
 }
 
+void test_main(TestConnections& test);
+
 int main(int argc, char** argv)
 {
+    TestConnections test;
     TestConnections::skip_maxscale_start(true);
-    TestConnections test(argc, argv);
+    return test.run_test(argc, argv, test_main);
+}
 
-    if (test.repl->N < 4)
-    {
-        test.expect(false, "This test requires at least 4 backends.");
-        return test.global_result;
-    }
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto* repl = test.repl;
+    const int n = repl->N;
 
-    test.repl->connect();
-    auto server_ids = test.repl->get_all_server_ids();
+    repl->connect();
+    auto server_ids = repl->get_all_server_ids();
+    // Check MaxScale is stopped. This is required to ensure no monitor journal exists.
+    auto rwconn = mxs.try_open_rwsplit_connection();
+    test.expect(!rwconn->is_open(), "MaxScale should be stopped.");
 
     // Stop the master and the last slave, then start MaxScale.
     int master_ind = 0;
@@ -55,17 +63,17 @@ int main(int argc, char** argv)
     string slave_name = mxb::string_printf("server%i", last_slave_ind + 1);
 
     test.tprintf("Stopping %s and %s.", master_name.c_str(), slave_name.c_str());
-    test.repl->stop_node(master_ind);
-    test.repl->stop_node(last_slave_ind);
+    repl->stop_node(master_ind);
+    repl->stop_node(last_slave_ind);
 
     test.tprintf("Starting MaxScale");
-    test.maxscale->start_and_check_started();
+    mxs.start_and_check_started();
 
-    sleep(3);
-    test.maxscale->wait_for_monitor(3);
+    sleep(1);
+    mxs.wait_for_monitor(3);
 
     test.log_includes("Performing automatic failover");
-    int new_master_id = get_master_server_id(test);
+    int new_master_id = mxs.get_master_server_id();
     int expected_id1 = server_ids[1];
     int expected_id2 = server_ids[2];
     test.expect(new_master_id == expected_id1 || new_master_id == expected_id2,
@@ -75,24 +83,25 @@ int main(int argc, char** argv)
     if (test.ok())
     {
         // Restart server4, check that it rejoins.
-        test.repl->start_node(last_slave_ind, (char*)"");
+        test.repl->start_node(last_slave_ind);
         test.maxscale->wait_for_monitor(2);
 
-        auto states = test.maxscale->get_server_status(slave_name.c_str());
-        test.expect(states.count("Slave") == 1, "%s is not replicating as it should.", slave_name.c_str());
+        auto states = mxs.get_servers().get(slave_name);
+        test.expect(states.status == mxt::ServerInfo::slave_st,
+                    "%s is not replicating as it should.", slave_name.c_str());
     }
 
     if (test.ok())
     {
         // Finally, bring back old master and swap to it.
-        test.repl->start_node(master_ind, (char*)"");
+        test.repl->start_node(master_ind);
         test.maxscale->wait_for_monitor(2);
 
         test.tprintf("Switching back old master %s.", master_name.c_str());
         string switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
         test.maxctrl(switchover);
         test.maxscale->wait_for_monitor(2);
-        new_master_id = get_master_server_id(test);
+        new_master_id = mxs.get_master_server_id();
         test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
     }
 
@@ -103,7 +112,7 @@ int main(int argc, char** argv)
         test.maxscale->stop();
         test.repl->connect();
         const char set_ac[] = "SET GLOBAL autocommit=%i;";
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < n; i++)
         {
             test.try_query(test.repl->nodes[i], set_ac, 0);
         }
@@ -115,7 +124,7 @@ int main(int argc, char** argv)
         auto row = conn.row("SELECT @@GLOBAL.autocommit;");
         test.expect(!row.empty() && row[0] == "0", "autocommit is not off");
 
-        new_master_id = get_master_server_id(test);
+        new_master_id = mxs.get_master_server_id();
         test.expect(new_master_id == server_ids[master_ind], "No valid master");
 
         if (test.ok())
@@ -124,7 +133,7 @@ int main(int argc, char** argv)
             string switchover = "call command mariadbmon switchover MariaDB-Monitor";
             test.maxctrl(switchover);
             test.maxscale->wait_for_monitor(2);
-            new_master_id = get_master_server_id(test);
+            new_master_id = mxs.get_master_server_id();
             test.expect(new_master_id != server_ids[master_ind], "Switchover failed.");
             if (test.ok())
             {
@@ -134,15 +143,13 @@ int main(int argc, char** argv)
             switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
             test.maxctrl(switchover);
             test.maxscale->wait_for_monitor(2);
-            new_master_id = get_master_server_id(test);
-            test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");
+            mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
         }
 
         test.repl->connect();
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < n; i++)
         {
             test.try_query(test.repl->nodes[i], set_ac, 1);
         }
     }
-    return test.global_result;
 }

@@ -21,8 +21,8 @@ int main(int argc, char* argv[])
 
     MYSQL* conn = open_conn(test->maxscale->readconn_master_port,
                             test->maxscale->ip4(),
-                            test->maxscale->user_name,
-                            test->maxscale->password,
+                            test->maxscale->user_name(),
+                            test->maxscale->password(),
                             true);
     test->add_result(execute_query(conn, "select @@server_id"), "SSL query to readconnroute failed");
     mysql_close(conn);

@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
             MYSQL* conn = open_conn_db(test.maxscale->rwsplit_port,
                                        test.maxscale->ip4(),
                                        str,
-                                       test.maxscale->user_name,
-                                       test.maxscale->password,
+                                       test.maxscale->user_name(),
+                                       test.maxscale->password(),
                                        test.maxscale_ssl);
             test.reset_timeout();
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);

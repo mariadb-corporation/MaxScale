@@ -170,8 +170,8 @@ public:
     MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
     int    port[N_MAX];     /**< MariaDB port for every backend node */
 
-    std::string user_name;  /**< User name to access backend nodes */
-    std::string password;   /**< Password to access backend nodes */
+    const std::string& user_name() const;
+    const std::string& password() const;
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
@@ -181,7 +181,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(ip4(i), port[i], user_name, password, db, m_ssl);
+        return Connection(ip4(i), port[i], m_user_name, m_password, db, m_ssl);
     }
 
     /**
@@ -505,6 +505,9 @@ private:
     bool m_ssl {false};         /**< Use ssl? */
     bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
     int  m_n_req_backends {0};  /**< Number of backends required by test */
+
+    std::string m_user_name;    /**< User name to access backend nodes */
+    std::string m_password;     /**< Password to access backend nodes */
 
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 

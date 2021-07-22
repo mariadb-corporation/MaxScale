@@ -73,8 +73,8 @@ int main(int argc, char* argv[])
             mxt::SOURCE_DIR,
             Test->maxscale->ip4(),
             Test->maxscale->rwsplit_port,
-            Test->maxscale->user_name.c_str(),
-            Test->maxscale->password.c_str());
+            Test->maxscale->user_name().c_str(),
+            Test->maxscale->password().c_str());
 
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");

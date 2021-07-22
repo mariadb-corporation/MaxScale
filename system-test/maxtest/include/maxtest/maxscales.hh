@@ -128,6 +128,7 @@ private:
 class MaxScale
 {
 public:
+    using SMariaDB = std::unique_ptr<mxt::MariaDB>;
     enum service
     {
         RWSPLIT,
@@ -178,11 +179,11 @@ public:
     MYSQL* routers[3] {nullptr, nullptr, nullptr};
     int    ports[3] {-1, -1, -1};   /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
-    std::string maxscale_cnf;       /**< full name of Maxscale configuration file */
-    std::string maxscale_log_dir;   /**< name of log files directory */
+    const std::string& cnf_path() const;
+    const std::string& log_dir() const;
 
-    std::string user_name;  /**< User name to access backend nodes */
-    std::string password;   /**< Password to access backend nodes */
+    const std::string& user_name() const;
+    const std::string& password() const;
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
@@ -230,7 +231,11 @@ public:
      */
     MYSQL* open_rwsplit_connection(const std::string& db = "test");
 
-    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB try_open_rwsplit_connection(const std::string& db = "");
+
+    enum class SslMode {ON, OFF};
+    SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& db = "");
 
     /**
      * Get a readwritesplit Connection
@@ -328,6 +333,8 @@ public:
 
     mxt::ServersInfo get_servers();
 
+    int get_master_server_id();
+
     /**
      * Wait until all running monitors have ticked.
      *
@@ -402,10 +409,14 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    std::unique_ptr<mxt::VMNode> m_vmnode;
+    std::string m_user_name;    /**< User name to access backend nodes */
+    std::string m_password;     /**< Password to access backend nodes */
+    std::string m_cnf_path;     /**< Maxscale configuration file path */
+    std::string m_log_dir;      /**< MaxScale log files directory path */
+    std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 
-    std::string      m_binlog_dir;  /**< Directory of binlog files (for binlog router) */
-    mxt::SharedData& m_shared;
+    mxt::SharedData&             m_shared;
+    std::unique_ptr<mxt::VMNode> m_vmnode;
 
     mxt::TestLogger& log() const;
     bool             verbose() const;

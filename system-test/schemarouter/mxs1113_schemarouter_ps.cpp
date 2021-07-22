@@ -57,8 +57,8 @@ int main(int argc, char* argv[])
         conn = open_conn_db(test.repl->port[i],
                             test.repl->ip4(i),
                             "shard_db",
-                            test.repl->user_name,
-                            test.repl->password,
+                            test.repl->user_name(),
+                            test.repl->password(),
                             test.maxscale_ssl);
         execute_query(conn, "CREATE TABLE table%d (x1 int, fl int)", i);
         execute_query(conn, "INSERT INTO table%d VALUES(%d, %d)", i, i, i);
