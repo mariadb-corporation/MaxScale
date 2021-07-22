@@ -79,9 +79,7 @@ export default {
     },
     computed: {
         ...mapState({
-            checking_active_conn: state => state.query.checking_active_conn,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
-            active_conn_state: state => state.query.active_conn_state,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
@@ -115,7 +113,6 @@ export default {
     },
     async created() {
         await this.checkActiveConn()
-        if (this.active_conn_state) await this.updateActiveDb()
     },
     async beforeDestroy() {
         if (process.env.NODE_ENV !== 'development' && this.curr_cnct_resource)
@@ -129,7 +126,6 @@ export default {
         ...mapActions({
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',
-            updateActiveDb: 'query/updateActiveDb',
         }),
         setPanelsPct() {
             this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })

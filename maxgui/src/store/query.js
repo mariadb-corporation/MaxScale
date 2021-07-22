@@ -293,7 +293,6 @@ export default {
                     commit('SET_ACTIVE_CONN_STATE', true)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
-                    await dispatch('fetchDbList')
                     commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
