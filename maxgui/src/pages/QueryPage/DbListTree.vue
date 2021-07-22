@@ -47,8 +47,9 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="!isDragging && hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
+            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
+            :disabled="isDragging"
             right
             :nudge-right="45"
             transition="slide-x-transition"
