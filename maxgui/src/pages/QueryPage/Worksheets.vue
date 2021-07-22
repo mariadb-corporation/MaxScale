@@ -32,22 +32,20 @@
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
-
-        <template v-for="wke in worksheets_arr">
-            <v-fade-transition :key="wke.id">
-                <keep-alive>
-                    <worksheet
-                        v-if="activeWkeID === wke.id"
-                        ref="wke"
-                        :style="{
-                            height: `calc(100% - ${wkeNavHeight}px)`,
-                        }"
-                        :containerHeight="containerHeight"
-                        v-on="$listeners"
-                    />
-                </keep-alive>
-            </v-fade-transition>
-        </template>
+        <v-fade-transition>
+            <keep-alive>
+                <worksheet
+                    v-if="activeWkeID"
+                    :key="activeWkeID"
+                    ref="wke"
+                    :style="{
+                        height: `calc(100% - ${wkeNavHeight}px)`,
+                    }"
+                    :containerHeight="containerHeight"
+                    v-on="$listeners"
+                />
+            </keep-alive>
+        </v-fade-transition>
     </div>
 </template>
 <script>

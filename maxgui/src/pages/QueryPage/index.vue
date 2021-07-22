@@ -90,8 +90,7 @@ export default {
         }),
         wkeRef() {
             // wke ref is only available when it's fully mounted
-            if (this.isWkeMounted)
-                return this.$typy(this.$refs, 'worksheets.$refs.wke[0]').safeObject
+            if (this.isWkeMounted) return this.$typy(this.$refs, 'worksheets.$refs.wke').safeObject
             return null
         },
     },
