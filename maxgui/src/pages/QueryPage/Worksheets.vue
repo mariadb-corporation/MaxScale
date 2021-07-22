@@ -11,19 +11,22 @@
                 v-for="wke in worksheets_arr"
                 :key="wke.id"
                 :href="`#${wke.id}`"
-                class="tab-btn px-3 text-uppercase"
+                class="tab-btn px-3 text-none"
                 active-class="tab-btn--active font-weight-medium"
             >
-                {{ wke.name }}
-                <v-btn
-                    v-if="worksheets_arr.length > 1"
-                    class="ml-2"
-                    icon
-                    x-small
-                    @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
-                >
-                    <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
-                </v-btn>
+                <!-- TODO: Allow current active tab's name to be changed -->
+                <div style="min-width:160px" class="d-flex align-center justify-space-between">
+                    {{ wke.name }}
+                    <v-btn
+                        v-if="worksheets_arr.length > 1"
+                        class="ml-1 del-wke-btn"
+                        icon
+                        x-small
+                        @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                    >
+                        <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
+                    </v-btn>
+                </div>
             </v-tab>
             <v-btn height="32" width="32" class="ml-2" icon @click="addNewWs">
                 <v-icon size="18" color="deep-ocean">add</v-icon>
@@ -109,6 +112,14 @@ export default {
     .tab-btn {
         border-bottom: none !important;
         border-top: none !important;
+        .del-wke-btn {
+            visibility: hidden;
+        }
+        &:hover {
+            .del-wke-btn {
+                visibility: visible;
+            }
+        }
     }
 }
 </style>

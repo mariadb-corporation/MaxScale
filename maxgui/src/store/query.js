@@ -39,7 +39,7 @@ function saWkeStates() {
 function defWorksheetState() {
     return {
         id: uniqueId('wke_'),
-        name: 'worksheet',
+        name: 'WORKSHEET',
         ...saWkeStates(),
     }
 }
