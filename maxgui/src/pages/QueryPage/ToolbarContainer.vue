@@ -226,14 +226,20 @@ export default {
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,
+            query_max_rows: state => state.query.query_max_rows,
             query_confirm_flag: state => state.query.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
         }),
     },
+    mounted() {
+        if (isNaN(this.query_max_rows)) this.SET_QUERY_MAX_ROW(10000)
+        if (isNaN(this.query_confirm_flag)) this.SET_QUERY_CONFIRM_FLAG(1)
+    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW',
             SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
         }),
@@ -260,6 +266,7 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
+            if (this.loading_query_result) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':

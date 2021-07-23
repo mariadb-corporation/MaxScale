@@ -21,7 +21,8 @@ int main(int argc, char *argv[])
     Test->add_result(Test->test_maxscale_connections(true, true, true), "Can't connect to backend\n");
 
     Test->tprintf("Connecting to Maxscale router with Galera backend\n");
-    MYSQL * g_conn = open_conn(4016, Test->maxscale->ip4(), Test->maxscale->user_name, Test->maxscale->password, Test->maxscale_ssl);
+    MYSQL * g_conn = open_conn(4016, Test->maxscale->ip4(), Test->maxscale->user_name(),
+                               Test->maxscale->password(), Test->maxscale_ssl);
     if (g_conn != NULL )
     {
         Test->tprintf("Testing connection\n");

@@ -177,8 +177,8 @@ void try_and_reconnect(MYSQL * conn, char * db, char * sql)
         conn = open_conn_db_timeout(port,
                                     IP,
                                     db,
-                                    Test->repl->user_name,
-                                    Test->repl->password,
+                                    Test->repl->user_name(),
+                                    Test->repl->password(),
                                     20,
                                     Test->maxscale_ssl);
     }
@@ -193,8 +193,8 @@ void *query_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "test",
-                                Test->repl->user_name,
-                                Test->repl->password,
+                                Test->repl->user_name(),
+                                Test->repl->password(),
                                 20,
                                 Test->maxscale_ssl);
     while (!data->exit_flag)
@@ -226,8 +226,8 @@ void *read_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "test",
-                                Test->repl->user_name,
-                                Test->repl->password,
+                                Test->repl->user_name(),
+                                Test->repl->password(),
                                 20,
                                 Test->maxscale_ssl);
     while (!data->exit_flag)
@@ -249,8 +249,8 @@ void *transaction_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "test1",
-                                Test->repl->user_name,
-                                Test->repl->password,
+                                Test->repl->user_name(),
+                                Test->repl->password(),
                                 20,
                                 Test->maxscale_ssl);
     while (!data->exit_flag)
@@ -280,8 +280,8 @@ void *transaction_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "",
-                                Test->maxscale->user_name,
-                                Test->maxscale->password,
+                                Test->maxscale->user_name(),
+                                Test->maxscale->password(),
                                 20,
                                 Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test1");
@@ -298,8 +298,8 @@ void *short_session_thread(void *ptr )
         conn = open_conn_db_timeout(port,
                                     IP,
                                     (char *) "test",
-                                    Test->repl->user_name,
-                                    Test->repl->password,
+                                    Test->repl->user_name(),
+                                    Test->repl->password(),
                                     20,
                                     Test->maxscale_ssl);
         mysql_close(conn);
@@ -316,8 +316,8 @@ void *prepared_stmt_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "test2",
-                                Test->repl->user_name,
-                                Test->repl->password,
+                                Test->repl->user_name(),
+                                Test->repl->password(),
                                 20,
                                 Test->maxscale_ssl);
     while (!data->exit_flag)
@@ -339,8 +339,8 @@ void *prepared_stmt_thread(void *ptr )
     conn = open_conn_db_timeout(port,
                                 IP,
                                 (char *) "",
-                                Test->maxscale->user_name,
-                                Test->maxscale->password,
+                                Test->maxscale->user_name(),
+                                Test->maxscale->password(),
                                 20,
                                 Test->maxscale_ssl);
     Test->try_query(conn, "DROP DATABASE test2");

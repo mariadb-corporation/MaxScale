@@ -7,7 +7,7 @@
             content-class="shadow-drop pa-3"
         >
             <template v-slot:activator="{ on }">
-                <pre v-on="on"> {{ totalDuration }} seconds </pre>
+                <pre v-on="on"> {{ totalDuration }} seconds</pre>
             </template>
             <v-sheet min-width="220" max-width="450" class="color text-small-text">
                 <div class="d-flex align-center color text-navigation font-weight-bold">
@@ -60,6 +60,7 @@ export default {
     data() {
         return {
             totalDuration: 0,
+            rmExecTimeWatcher: null,
         }
     },
     computed: {
@@ -67,15 +68,23 @@ export default {
             return this.executionTime === -1
         },
     },
-    watch: {
-        executionTime(v) {
-            if (v === -1) this.updateSecond()
-        },
-    },
     mounted() {
+        this.addExeTimeWatcher()
         this.updateSecond()
     },
+    deactivated() {
+        this.rmExecTimeWatcher()
+    },
+    activated() {
+        this.addExeTimeWatcher()
+    },
     methods: {
+        addExeTimeWatcher() {
+            // store watcher to rmExecTimeWatcher and use it for removing the watcher
+            this.rmExecTimeWatcher = this.$watch('executionTime', v => {
+                if (v === -1) this.updateSecond()
+            })
+        },
         updateSecond() {
             const now = new Date().valueOf()
             const currSec = ((now - this.startTime) / 1000).toFixed(4)

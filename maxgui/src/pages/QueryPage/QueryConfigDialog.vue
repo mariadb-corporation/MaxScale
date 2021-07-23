@@ -124,8 +124,6 @@ export default {
             SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
         }),
         handleSetDefConfig() {
-            if (isNaN(this.query_max_rows)) this.SET_QUERY_MAX_ROW(10000)
-            if (isNaN(this.query_confirm_flag)) this.SET_QUERY_CONFIRM_FLAG(1)
             this.defConfig.maxRows = this.query_max_rows
             this.defConfig.showQueryConfirm = Boolean(this.query_confirm_flag)
         },

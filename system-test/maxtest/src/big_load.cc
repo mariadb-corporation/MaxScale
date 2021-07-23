@@ -121,11 +121,13 @@ void* query_thread1(void* ptr)
     int conn_err = 0;
     thread_data* data = (thread_data*) ptr;
     auto mxs_ip = data->Test->maxscale->ip4();
+    auto mxs_user = data->Test->maxscale->user_name();
+    auto mxs_pw = data->Test->maxscale->password();
 
     conn1 = open_conn_db_timeout(data->Test->maxscale->rwsplit_port, mxs_ip,
                                  "test",
-                                 data->Test->maxscale->user_name,
-                                 data->Test->maxscale->password,
+                                 mxs_user,
+                                 mxs_pw,
                                  20,
                                  data->Test->maxscale_ssl);
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
@@ -138,8 +140,8 @@ void* query_thread1(void* ptr)
         // conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         conn2 = open_conn_db_timeout(data->Test->maxscale->readconn_master_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscale->user_name,
-                                     data->Test->maxscale->password,
+                                     mxs_user,
+                                     mxs_pw,
                                      20,
                                      data->Test->maxscale_ssl);
         if (mysql_errno(conn2) != 0)
@@ -149,8 +151,8 @@ void* query_thread1(void* ptr)
         // conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
         conn3 = open_conn_db_timeout(data->Test->maxscale->readconn_slave_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscale->user_name,
-                                     data->Test->maxscale->password,
+                                     mxs_user,
+                                     mxs_pw,
                                      20,
                                      data->Test->maxscale_ssl);
         if (mysql_errno(conn3) != 0)
@@ -197,12 +199,14 @@ void* query_thread2(void* ptr)
     MYSQL* conn3;
     thread_data* data = (thread_data*) ptr;
     auto mxs_ip = data->Test->maxscale->ip4();
+    auto mxs_user = data->Test->maxscale->user_name();
+    auto mxs_pw = data->Test->maxscale->password();
 
     // conn1 = data->Test->maxscales->open_rwsplit_connection(0);
     conn1 = open_conn_db_timeout(data->Test->maxscale->rwsplit_port, mxs_ip,
                                  "test",
-                                 data->Test->maxscale->user_name,
-                                 data->Test->maxscale->password,
+                                 mxs_user,
+                                 mxs_pw,
                                  20,
                                  data->Test->maxscale_ssl);
     if (data->rwsplit_only == 0)
@@ -212,15 +216,15 @@ void* query_thread2(void* ptr)
 
         conn2 = open_conn_db_timeout(data->Test->maxscale->readconn_master_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscale->user_name,
-                                     data->Test->maxscale->password,
+                                     mxs_user,
+                                     mxs_pw,
                                      20,
                                      data->Test->maxscale_ssl);
         // if (mysql_errno(conn2) != 0) { conn_err++; }
         conn3 = open_conn_db_timeout(data->Test->maxscale->readconn_slave_port, mxs_ip,
                                      "test",
-                                     data->Test->maxscale->user_name,
-                                     data->Test->maxscale->password,
+                                     mxs_user,
+                                     mxs_pw,
                                      20,
                                      data->Test->maxscale_ssl);
         // if (mysql_errno(conn3) != 0) { conn_err++; }

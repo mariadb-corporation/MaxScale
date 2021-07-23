@@ -113,8 +113,8 @@ void Config::create_monitor(const char* name, const char* module, int interval)
 {
     test_->maxscale->ssh_node_f(true,
                                 "maxctrl create monitor %s %s monitor_interval=%d user=%s password=%s",
-                                name, module, interval, test_->maxscale->user_name.c_str(),
-                                test_->maxscale->password.c_str());
+                                name, module, interval, test_->maxscale->user_name().c_str(),
+                                test_->maxscale->password().c_str());
     created_monitors_.insert(std::string(name));
 }
 

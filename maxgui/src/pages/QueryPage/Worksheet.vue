@@ -163,10 +163,6 @@ export default {
         editorPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
-        show_vis_sidebar(v) {
-            this.handleSetVisSidebar(v)
-            this.$nextTick(() => this.setResultPaneDim())
-        },
         selectedChart() {
             if (this.showVisChart) {
                 this.queryPanePct = 50
@@ -176,8 +172,8 @@ export default {
                 })
             } else this.queryPanePct = 100
         },
-        containerHeight(v) {
-            this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: v })
+        containerHeight() {
+            this.handleSetMinEditorPct()
         },
     },
     async created() {
@@ -190,15 +186,27 @@ export default {
     },
     activated() {
         this.$emit('mounted', true)
+        this.handleSetMinEditorPct()
         this.setResultPaneDim()
+        this.addShowVisSidebarWatcher()
     },
     deactivated() {
         this.$emit('mounted', false)
+        this.rmShowVisSidebarWatcher()
     },
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
         }),
+        addShowVisSidebarWatcher() {
+            this.rmShowVisSidebarWatcher = this.$watch('show_vis_sidebar', v => {
+                this.handleSetVisSidebar(v)
+                this.$nextTick(() => this.setResultPaneDim())
+            })
+        },
+        handleSetMinEditorPct() {
+            this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: this.containerHeight })
+        },
         setResultPaneDim() {
             if (this.$refs.queryResultPane) {
                 const { clientWidth, clientHeight } = this.$refs.queryResultPane.$el

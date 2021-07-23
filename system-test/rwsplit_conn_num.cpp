@@ -28,8 +28,8 @@ int main(int argc, char* argv[])
     {
         backend_conn = open_conn(Test->repl->port[i],
                                  Test->repl->ip4(i),
-                                 Test->repl->user_name,
-                                 Test->repl->password,
+                                 Test->repl->user_name(),
+                                 Test->repl->password(),
                                  Test->repl->ssl());
         execute_query(backend_conn, "SET GLOBAL max_connections = 200;");
         mysql_close(backend_conn);
