@@ -29,20 +29,20 @@ cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamInteger s_max_qps(
     &s_spec, "max_qps", "Maximum queries per second",
-    1, std::numeric_limits<int64_t>::max());
+    1, std::numeric_limits<int64_t>::max(), cfg::Param::AT_RUNTIME);
 
 cfg::ParamMilliseconds s_throttling_duration(
     &s_spec, "throttling_duration",
     "How long a session is allowed to be throttled before MaxScale disconnects the session",
-    cfg::INTERPRET_AS_MILLISECONDS);
+    cfg::INTERPRET_AS_MILLISECONDS, cfg::Param::AT_RUNTIME);
 
 cfg::ParamMilliseconds s_sampling_duration(
     &s_spec, "sampling_duration", "The window of time over which QPS is measured",
-    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(250));
+    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(250), cfg::Param::AT_RUNTIME);
 
 cfg::ParamMilliseconds s_continuous_duration(
     &s_spec, "continuous_duration", "Continuous throttling window",
-    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(2000));
+    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(2000), cfg::Param::AT_RUNTIME);
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -78,11 +78,11 @@ namespace throttle
 
 ThrottleConfig::ThrottleConfig(const char* name)
     : mxs::config::Configuration(name, &s_spec)
+    , max_qps(this, &s_max_qps)
+    , sampling_duration(this, &s_sampling_duration)
+    , throttling_duration(this, &s_throttling_duration)
+    , continuous_duration(this, &s_continuous_duration)
 {
-    add_native(&ThrottleConfig::max_qps, &s_max_qps);
-    add_native(&ThrottleConfig::sampling_duration, &s_sampling_duration);
-    add_native(&ThrottleConfig::throttling_duration, &s_throttling_duration);
-    add_native(&ThrottleConfig::continuous_duration, &s_continuous_duration);
 }
 
 ThrottleFilter::ThrottleFilter(const char* name)

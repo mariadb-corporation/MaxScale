@@ -30,8 +30,11 @@ namespace throttle
 {
 ThrottleSession::ThrottleSession(MXS_SESSION* mxsSession, SERVICE* service, ThrottleFilter& filter)
     : maxscale::FilterSession(mxsSession, service)
-    , m_filter(filter)
-    , m_query_count("num-queries", filter.config().sampling_duration)
+    , m_max_qps(filter.config().max_qps.get())
+    , m_sampling_duration(filter.config().sampling_duration.get())
+    , m_throttling_duration(filter.config().throttling_duration.get())
+    , m_continuous_duration(filter.config().continuous_duration.get())
+    , m_query_count("num-queries", m_sampling_duration)
     , m_delayed_call_id(0)
     , m_state(State::MEASURING)
 {
@@ -53,14 +56,14 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
 
     int count = m_query_count.count();
     // not in g++ 4.4: duration<float>(x).count(), so
-    long micro = duration_cast<microseconds>(m_filter.config().sampling_duration).count();
+    long micro = duration_cast<microseconds>(m_sampling_duration).count();
     float secs = micro / 1000000.0;
     float qps = count / secs;   // not instantaneous, but over so many seconds
 
-    if (!is_delayed && qps >= m_filter.config().max_qps)    // trigger
+    if (!is_delayed && qps >= m_max_qps)    // trigger
     {
         // delay the current routeQuery for at least one cycle at stated max speed.
-        int32_t delay = 1 + std::ceil(1000.0 / m_filter.config().max_qps);
+        int32_t delay = 1 + std::ceil(1000.0 / m_max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
         m_delayed_call_id = worker->delayed_call(delay,
@@ -84,14 +87,14 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
     }
     else if (m_state == State::THROTTLING)
     {
-        if (m_last_sample.split() > m_filter.config().continuous_duration)
+        if (m_last_sample.split() > m_continuous_duration)
         {
             m_state = State::MEASURING;
             MXS_INFO("Query throttling stopped session %ld user %s",
                      m_pSession->id(),
                      m_pSession->user().c_str());
         }
-        else if (m_first_sample.split() > m_filter.config().throttling_duration)
+        else if (m_first_sample.split() > m_throttling_duration)
         {
             MXS_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
                        m_pSession->id(),

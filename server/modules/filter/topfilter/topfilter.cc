@@ -38,6 +38,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/session.hh>
+#include <maxscale/workerlocal.hh>
 
 class TopFilter;
 
@@ -74,27 +75,6 @@ private:
     std::string   m_sql;
 };
 
-class TopSession : public mxs::FilterSession
-{
-public:
-    TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
-    ~TopSession();
-    bool routeQuery(GWBUF* buffer) override;
-    bool clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    json_t* diagnostics() const;
-
-private:
-    TopFilter*           m_instance;
-    bool                 m_active = true;
-    std::string          m_filename;
-    std::string          m_current;
-    int                  m_n_statements = 0;
-    wall_time::TimePoint m_connect;
-    mxb::Duration        m_stmt_time;
-    mxb::StopWatch       m_watch;
-    std::vector<Query>   m_top;
-};
-
 namespace
 {
 
@@ -102,41 +82,94 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
-cfg::ParamCount s_count(&s_spec, "count", "How many SQL statements to store", 10);
-cfg::ParamString s_filebase(&s_spec, "filebase", "The basename of the output file created for each session");
-cfg::ParamRegex s_match(&s_spec, "match", "Only include queries matching this pattern", "");
-cfg::ParamRegex s_exclude(&s_spec, "exclude", "Exclude queries matching this pattern", "");
-cfg::ParamString s_source(&s_spec, "source", "Only include queries done from this address", "");
-cfg::ParamString s_user(&s_spec, "user", "Only include queries done by this user", "");
+cfg::ParamCount s_count(
+    &s_spec, "count", "How many SQL statements to store", 10, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_filebase(
+    &s_spec, "filebase", "The basename of the output file created for each session", cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_match(
+    &s_spec, "match", "Only include queries matching this pattern", "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude queries matching this pattern", "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_source(
+    &s_spec, "source", "Only include queries done from this address", "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Only include queries done by this user", "", cfg::Param::AT_RUNTIME);
+
 cfg::ParamEnum<uint32_t> s_options(&s_spec, "options", "Regular expression options",
     {
         {PCRE2_CASELESS, "ignorecase"},
         {0, "case"},
         {PCRE2_EXTENDED, "extended"},
-    }, 0);
+    }, 0, cfg::Param::AT_RUNTIME);
 }
 
-struct Config : public mxs::config::Configuration
+class Config : public mxs::config::Configuration
 {
+public:
+    struct Values
+    {
+        int64_t                 count;      /* Number of queries to store */
+        std::string             filebase;   /* Base of fielname to log into */
+        std::string             source;     /* The source of the client connection */
+        std::string             user;       /* A user name to filter on */
+        uint32_t                options;    /* Regex options */
+        mxs::config::RegexValue match;      /* Optional text to match against */
+        mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
+    };
+
     Config(const std::string& name)
         : mxs::config::Configuration(name, &s_spec)
     {
-        add_native(&Config::count, &s_count);
-        add_native(&Config::filebase, &s_filebase);
-        add_native(&Config::source, &s_source);
-        add_native(&Config::user, &s_user);
-        add_native(&Config::options, &s_options);
-        add_native(&Config::match, &s_match);
-        add_native(&Config::exclude, &s_exclude);
+        add_native(&Config::m_v, &Values::count, &s_count);
+        add_native(&Config::m_v, &Values::filebase, &s_filebase);
+        add_native(&Config::m_v, &Values::source, &s_source);
+        add_native(&Config::m_v, &Values::user, &s_user);
+        add_native(&Config::m_v, &Values::options, &s_options);
+        add_native(&Config::m_v, &Values::match, &s_match);
+        add_native(&Config::m_v, &Values::exclude, &s_exclude);
     }
 
-    int64_t                 count;      /* Number of queries to store */
-    std::string             filebase;   /* Base of fielname to log into */
-    std::string             source;     /* The source of the client connection */
-    std::string             user;       /* A user name to filter on */
-    uint32_t                options;    /* Regex options */
-    mxs::config::RegexValue match;      /* Optional text to match against */
-    mxs::config::RegexValue exclude;    /* Optional text to match against for exclusion */
+    const Values& values() const
+    {
+        return *m_values;
+    }
+
+private:
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final
+    {
+        m_values.assign(m_v);
+        return true;
+    }
+
+    Values                    m_v;
+    mxs::WorkerGlobal<Values> m_values;
+};
+
+class TopSession : public mxs::FilterSession
+{
+public:
+    TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service);
+    ~TopSession();
+    bool    routeQuery(GWBUF* buffer) override;
+    bool    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+    json_t* diagnostics() const;
+
+private:
+
+    Config::Values       m_config;
+    bool                 m_active = true;
+    std::string          m_filename;
+    std::string          m_current;
+    int                  m_n_statements = 0;
+    wall_time::TimePoint m_connect;
+    mxb::Duration        m_stmt_time {0};
+    mxb::StopWatch       m_watch;
+    std::vector<Query>   m_top;
 };
 
 class TopFilter : public mxs::Filter
@@ -167,9 +200,9 @@ public:
         return m_config;
     }
 
-    const Config& config() const
+    const Config::Values& config() const
     {
-        return m_config;
+        return m_config.values();
     }
 
 private:
@@ -183,14 +216,12 @@ private:
 
 TopSession::TopSession(TopFilter* instance, MXS_SESSION* session, SERVICE* service)
     : mxs::FilterSession(session, service)
-    , m_instance(instance)
-    , m_filename(m_instance->config().filebase + "." + std::to_string(session->id()))
+    , m_config(instance->config())
+    , m_filename(m_config.filebase + "." + std::to_string(session->id()))
     , m_connect(wall_time::Clock::now())
 {
-    const auto& config = m_instance->config();
-
-    if ((!config.source.empty() && session->client_remote() != config.source)
-        || (!config.user.empty() && session->user() != config.user))
+    if ((!m_config.source.empty() && session->client_remote() != m_config.source)
+        || (!m_config.user.empty() && session->user() != m_config.user))
     {
         m_active = false;
     }
@@ -208,7 +239,7 @@ TopSession::~TopSession()
         double avg = stmt / statements;
 
         file << std::fixed << std::setprecision(3);
-        file << "Top " << m_instance->config().count << " longest running queries in session.\n"
+        file << "Top " << m_config.count << " longest running queries in session.\n"
              << "==========================================\n\n"
              << "Time (sec) | Query\n"
              << "-----------+-----------------------------------------------------------------\n";
@@ -236,12 +267,11 @@ bool TopSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {
-        const auto& config = m_instance->config();
         auto sql = mxs::extract_sql(queue);
 
         if (!sql.empty()
-            && (!config.match || config.match.match(sql))
-            && (!config.exclude || !config.exclude.match(sql)))
+            && (!m_config.match || m_config.match.match(sql))
+            && (!m_config.exclude || !m_config.exclude.match(sql)))
         {
             m_n_statements++;
             m_watch.lap();
@@ -263,7 +293,7 @@ bool TopSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const m
 
         std::sort(m_top.begin(), m_top.end(), Query::Sort {});
 
-        if (m_top.size() > (size_t)m_instance->config().count)
+        if (m_top.size() > (size_t)m_config.count)
         {
             m_top.pop_back();
         }

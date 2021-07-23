@@ -207,6 +207,12 @@ bool MainWorker::pre_run()
 
 void MainWorker::post_run()
 {
+    // Clearing the storage right after the main loop returns guarantees that both the MainWorker and the
+    // RoutingWorkers are alive when stored data is destroyed. Without this, the destruction of filters is
+    // delayed until the MainWorker is destroyed which is something that must be avoided. All objects in
+    // MaxScale should be destroyed before the workers are destroyed.
+    m_storage.clear();
+
     qc_thread_end(QC_INIT_SELF);
     modules_thread_finish();
 }

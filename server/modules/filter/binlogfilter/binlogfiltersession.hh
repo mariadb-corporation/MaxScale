@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
+#include "binlogconfig.hh"
 #include "binlogfilter.hh"
 
 // TODO: add in a separate .h file in common to BinlogRouter code
@@ -29,8 +30,6 @@
 #define MARIADB_ANNOTATE_ROWS_EVENT  0x00a0
 #define HEARTBEAT_EVENT              0x001B
 #define BINLOG_EVENT_HDR_LEN         19
-
-class BinlogConfig;
 
 typedef struct rep_header_t
 {
@@ -113,6 +112,9 @@ private:
     };
 
 private:
+    // A local copy of the configuration
+    BinlogConfig::Values m_config;
+
     // Event filtering member vars
     uint32_t m_serverid = 0;            // server-id of connected slave
     state_t  m_state = COMMAND_MODE;    // Internal state

@@ -16,7 +16,7 @@
 namespace maxscale
 {
 
-IndexedStorage::~IndexedStorage()
+void IndexedStorage::clear()
 {
     for (uint64_t key = 0; key < m_local_data.size(); ++key)
     {
@@ -28,6 +28,13 @@ IndexedStorage::~IndexedStorage()
             deleter(pData);
         }
     }
+
+    m_local_data.clear();
+    m_data_deleters.clear();
 }
 
+IndexedStorage::~IndexedStorage()
+{
+    clear();
+}
 }

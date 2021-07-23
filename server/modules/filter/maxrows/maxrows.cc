@@ -30,13 +30,15 @@ config::ParamCount max_resultset_rows(
     &specification,
     "max_resultset_rows",
     "Specifies the maximum number of rows a resultset can have in order to be returned to the user.",
-    std::numeric_limits<uint32_t>::max());
+    std::numeric_limits<uint32_t>::max(),
+    config::Param::AT_RUNTIME);
 
 config::ParamSize max_resultset_size(
     &specification,
     "max_resultset_size",
     "Specifies the maximum size a resultset can have in order to be sent to the client.",
-    65536);
+    65536,
+    config::Param::AT_RUNTIME);
 
 config::ParamInteger debug(
     &specification,
@@ -45,7 +47,8 @@ config::ParamInteger debug(
     "filter can be controlled.",
     0,
     0,
-    3);
+    3,
+    config::Param::AT_RUNTIME);
 
 config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
     &specification,
@@ -57,17 +60,27 @@ config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
             {MaxRowsConfig::Mode::ERR, "error"},
             {MaxRowsConfig::Mode::OK, "ok"}
         },
-    MaxRowsConfig::Mode::EMPTY);
+    MaxRowsConfig::Mode::EMPTY,
+    config::Param::AT_RUNTIME);
 }
 }
 
 MaxRowsConfig::MaxRowsConfig(const char* zName)
     : mxs::config::Configuration(zName, &maxrows::specification)
+    , max_rows(this, &maxrows::max_resultset_rows)
+    , max_size(this, &maxrows::max_resultset_size)
+    , debug(this, &maxrows::debug)
+    , mode(this, &maxrows::max_resultset_return)
 {
-    add_native(&MaxRowsConfig::max_rows, &maxrows::max_resultset_rows);
-    add_native(&MaxRowsConfig::max_size, &maxrows::max_resultset_size);
-    add_native(&MaxRowsConfig::debug, &maxrows::debug);
-    add_native(&MaxRowsConfig::mode, &maxrows::max_resultset_return);
+}
+
+MaxRowsSession::MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
+    : FilterSession(pSession, pService)
+    , m_max_rows(pFilter->config().max_rows.get())
+    , m_max_size(pFilter->config().max_size.get())
+    , m_debug(pFilter->config().debug.get())
+    , m_mode(pFilter->config().mode.get())
+{
 }
 
 bool MaxRowsSession::routeQuery(GWBUF* packet)
@@ -85,11 +98,10 @@ bool MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const
         // The resultset is stored in an internal buffer until we know whether to send it or to discard it
         m_buffer.append(buffer.release());
 
-        if (reply.rows_read() > (uint64_t)m_instance->config().max_rows
-            || reply.size() > (uint64_t)m_instance->config().max_size)
+        if (reply.rows_read() > m_max_rows || reply.size() > m_max_size)
         {
             // A limit was exceeded, discard the result and replace it with a fake result
-            switch (m_instance->config().mode)
+            switch (m_mode)
             {
             case MaxRowsConfig::Mode::EMPTY:
                 if (reply.rows_read() > 0)
@@ -108,7 +120,7 @@ bool MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const
             case MaxRowsConfig::Mode::ERR:
                 m_buffer.reset(
                     modutil_create_mysql_err_msg(1, 0, 1226, "42000",
-                                                 reply.rows_read() > (uint64_t)m_instance->config().max_rows ?
+                                                 reply.rows_read() > m_max_rows ?
                                                  "Resultset row limit exceeded" :
                                                  "Resultset size limit exceeded"));
                 m_collect = false;

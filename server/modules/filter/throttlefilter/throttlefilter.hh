@@ -28,10 +28,10 @@ struct ThrottleConfig : public mxs::config::Configuration
 {
     ThrottleConfig(const char* name);
 
-    int64_t                   max_qps;              // if this many queries per second is exceeded..
-    std::chrono::milliseconds sampling_duration;    // .. in this time window, then cap qps to max_qps ..
-    std::chrono::milliseconds throttling_duration;  // .. for this long before disconnect.
-    std::chrono::milliseconds continuous_duration;  // What time window is considered continuous meddling.
+    mxs::config::Integer      max_qps;              // if this many queries per second is exceeded..
+    mxs::config::Milliseconds sampling_duration;    // .. in this time window, then cap qps to max_qps ..
+    mxs::config::Milliseconds throttling_duration;  // .. for this long before disconnect.
+    mxs::config::Milliseconds continuous_duration;  // What time window is considered continuous meddling.
 
     // Example: max 100qps and sampling 5s. As soon as more than 500 queries are made in less
     // then any 5s period throttling is triggered (because 501 > 100qps * 5 s). But also note
