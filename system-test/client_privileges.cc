@@ -11,9 +11,9 @@
  * Public License.
  */
 
+#include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
 #include <maxtest/mariadb_connector.hh>
-#include <maxtest/testconnections.hh>
 
 using std::string;
 
@@ -31,14 +31,21 @@ const char column_user[] = "column_user";
 const char column_pass[] = "column_pass";
 const char process_user[] = "process_user";
 const char process_pass[] = "process_pass";
+const char table_insert_user[] = "table_insert_user";
+const char table_insert_pass[] = "table_insert_pass";
 }
 
 void test_logins(TestConnections& test, bool expect_success);
+void test_main(TestConnections& test);
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
+void test_main(TestConnections& test)
+{
     test.repl->connect();
 
     auto& mxs = *test.maxscale;
@@ -53,6 +60,7 @@ int main(int argc, char* argv[])
     create_user(table_user, table_pass);
     create_user(column_user, column_pass);
     create_user(process_user, process_pass);
+    create_user(table_insert_user, table_insert_pass);
     test.repl->sync_slaves();
 
     if (test.ok())
@@ -89,11 +97,17 @@ int main(int argc, char* argv[])
             conn->cmd_f(grant_fmt, column_grant.c_str(), column_user);
 
             conn->cmd_f("GRANT EXECUTE ON PROCEDURE %s TO '%s'@'%%';", proc, process_user);
+
+            conn->cmd_f("GRANT INSERT ON %s TO '%s'@'%%';", table, table_insert_user);
             test.repl->sync_slaves();
         }
 
         if (test.ok())
         {
+            // Restart MaxScale to reload users.
+            mxs.restart();
+            mxs.wait_for_monitor();
+
             test_logins(test, true);
         }
         conn->cmd_f("DROP DATABASE %s;", db);
@@ -104,13 +118,11 @@ int main(int argc, char* argv[])
     conn->cmd_f(drop_fmt, table_user);
     conn->cmd_f(drop_fmt, column_user);
     conn->cmd_f(drop_fmt, process_user);
-
-    return test.global_result;
+    conn->cmd_f(drop_fmt, table_insert_user);
 }
 
 void test_logins(TestConnections& test, bool expect_success)
 {
-    int successes = 0;
     int port = test.maxscale->rwsplit_port;
     auto ip = test.maxscale->ip4();
 
@@ -133,8 +145,6 @@ void test_logins(TestConnections& test, bool expect_success)
     const char query_fmt[] = "SELECT %s from %s;";
     string query = mxb::string_printf(query_fmt, "*", table);
 
-    const char report_fmt[] = "";
-
     auto report_error = [&test](const char* user, bool result, bool expected) {
             const char* result_str = result ? "succeeded" : "failed";
             const char* expected_str = expected ? "success" : "failure";
@@ -155,4 +165,8 @@ void test_logins(TestConnections& test, bool expect_success)
     query = mxb::string_printf("CALL %s();", proc);
     ret = test_user(process_user, process_pass, query);
     report_error(process_user, ret, expect_success);
+
+    query = mxb::string_printf("INSERT INTO %s VALUES (1000 * rand(), 1000 * rand());", table);
+    ret = test_user(table_insert_user, table_insert_pass, query);
+    report_error(table_insert_user, ret, expect_success);
 }
