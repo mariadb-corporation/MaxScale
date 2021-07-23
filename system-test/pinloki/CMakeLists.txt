@@ -46,6 +46,10 @@ add_test_executable_ex(NAME pinloki_switchover SOURCE pinloki_switchover.cc
 add_test_executable_ex(NAME pinloki_upgrade SOURCE pinloki_upgrade.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki)
 
+# MXS-3674: Pinloki hangs if "maxctrl show threads" and STOP SLAVE are executed at the same time
+add_test_executable_ex(NAME pinloki_hang SOURCE pinloki_hang.cc
+  CONFIG pinloki.cnf VMS repl_backend LABELS pinloki)
+
 # Test pinloki with galera
 #add_test_executable_ex(NAME pinloki_galera SOURCE pinloki_galera.cc
 #  CONFIG pinloki_galera.cnf VMS repl_backend LABELS pinloki)
