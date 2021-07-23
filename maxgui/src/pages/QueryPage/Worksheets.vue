@@ -11,12 +11,26 @@
                 v-for="wke in worksheets_arr"
                 :key="wke.id"
                 :href="`#${wke.id}`"
-                class="tab-btn px-3 text-none"
+                class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active font-weight-medium"
+                :ripple="activeWkeID !== wke.id"
             >
-                <!-- TODO: Allow current active tab's name to be changed -->
-                <div style="min-width:160px" class="d-flex align-center justify-space-between">
-                    {{ wke.name }}
+                <div
+                    style="min-width:160px"
+                    class="fill-height d-flex align-center justify-space-between px-3"
+                    @click.prevent="activeWkeID === wke.id ? (editableTabName = true) : () => null"
+                >
+                    <v-text-field
+                        v-if="activeWkeID === wke.id && editableTabName"
+                        v-model="wke.name"
+                        autofocus
+                        height="32"
+                        class="std tab-name-input ma-0 pa-0"
+                        hide-details
+                        @blur="editableTabName = false"
+                    />
+                    <truncate-string v-else :text="wke.name" :maxWidth="112" />
+
                     <v-btn
                         v-if="worksheets_arr.length > 1"
                         class="ml-1 del-wke-btn"
@@ -75,6 +89,7 @@ export default {
     data() {
         return {
             wkeNavHeight: 32,
+            editableTabName: false,
         }
     },
     computed: {
@@ -117,6 +132,26 @@ export default {
             .del-wke-btn {
                 visibility: visible;
             }
+        }
+    }
+}
+.tab-btn--active {
+    cursor: text !important;
+}
+::v-deep .tab-name-input {
+    height: 100%;
+    font-size: 0.75rem;
+    max-width: 112px;
+    .v-input__slot {
+        input {
+            letter-spacing: 1.07143px; // same letter-spacing of v-tab
+            padding: 0px;
+            padding-top: 1px;
+            line-height: 30px;
+        }
+        &::after,
+        &::before {
+            display: none;
         }
     }
 }
