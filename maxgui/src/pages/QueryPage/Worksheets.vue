@@ -11,40 +11,55 @@
                 v-for="wke in worksheets_arr"
                 :key="wke.id"
                 :href="`#${wke.id}`"
-                class="tab-btn px-3 text-uppercase"
+                class="pa-0 tab-btn text-none"
                 active-class="tab-btn--active font-weight-medium"
+                :ripple="activeWkeID !== wke.id"
             >
-                {{ wke.name }}
-                <v-btn
-                    v-if="worksheets_arr.length > 1"
-                    class="ml-2"
-                    icon
-                    x-small
-                    @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                <div
+                    style="min-width:160px"
+                    class="fill-height d-flex align-center justify-space-between px-3"
+                    @click.prevent="activeWkeID === wke.id ? (editableTabName = true) : () => null"
                 >
-                    <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
-                </v-btn>
+                    <v-text-field
+                        v-if="activeWkeID === wke.id && editableTabName"
+                        v-model="wke.name"
+                        autofocus
+                        height="32"
+                        class="std tab-name-input ma-0 pa-0"
+                        hide-details
+                        @blur="editableTabName = false"
+                    />
+                    <truncate-string v-else :text="wke.name" :maxWidth="112" />
+
+                    <v-btn
+                        v-if="worksheets_arr.length > 1"
+                        class="ml-1 del-wke-btn"
+                        icon
+                        x-small
+                        @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                    >
+                        <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
+                    </v-btn>
+                </div>
             </v-tab>
             <v-btn height="32" width="32" class="ml-2" icon @click="addNewWs">
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
-
-        <template v-for="wke in worksheets_arr">
-            <v-fade-transition :key="wke.id">
-                <keep-alive>
-                    <worksheet
-                        v-if="activeWkeID === wke.id"
-                        ref="wke"
-                        :style="{
-                            height: `calc(100% - ${wkeNavHeight}px)`,
-                        }"
-                        :containerHeight="containerHeight"
-                        v-on="$listeners"
-                    />
-                </keep-alive>
-            </v-fade-transition>
-        </template>
+        <v-fade-transition>
+            <keep-alive>
+                <worksheet
+                    v-if="activeWkeID"
+                    :key="activeWkeID"
+                    ref="wke"
+                    :style="{
+                        height: `calc(100% - ${wkeNavHeight}px)`,
+                    }"
+                    :containerHeight="containerHeight"
+                    v-on="$listeners"
+                />
+            </keep-alive>
+        </v-fade-transition>
     </div>
 </template>
 <script>
@@ -74,6 +89,7 @@ export default {
     data() {
         return {
             wkeNavHeight: 32,
+            editableTabName: false,
         }
     },
     computed: {
@@ -109,6 +125,34 @@ export default {
     .tab-btn {
         border-bottom: none !important;
         border-top: none !important;
+        .del-wke-btn {
+            visibility: hidden;
+        }
+        &:hover {
+            .del-wke-btn {
+                visibility: visible;
+            }
+        }
+    }
+}
+.tab-btn--active {
+    cursor: text !important;
+}
+::v-deep .tab-name-input {
+    height: 100%;
+    font-size: 0.75rem;
+    max-width: 112px;
+    .v-input__slot {
+        input {
+            letter-spacing: 1.07143px; // same letter-spacing of v-tab
+            padding: 0px;
+            padding-top: 1px;
+            line-height: 30px;
+        }
+        &::after,
+        &::before {
+            display: none;
+        }
     }
 }
 </style>
