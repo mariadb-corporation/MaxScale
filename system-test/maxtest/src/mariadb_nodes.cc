@@ -283,20 +283,18 @@ bool MariaDBCluster::create_base_users(int node)
 {
     using mxt::MariaDBServer;
 
-    // Create users for replication as well as the users that are used by the tests
-    string script_file = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
-    copy_to_node(node, script_file.c_str(), access_homedir(node));
-
-    string cmd = mxb::string_printf("export require_ssl=\"%s\"; export node_user=\"%s\"; "
-                                    "export node_password=\"%s\"; "
-                                    "%s/create_user.sh \"%s\" %s",
-                                    m_ssl ? "REQUIRE SSL" : "", m_user_name.c_str(),
-                                    m_password.c_str(),
-                                    access_homedir(0), m_socket_cmd[0].c_str(), type_string().c_str());
-    int rc = ssh_node_f(node, true, "%s", cmd.c_str());
+    // Create the basic test admin user with ssh as the backend may not accept external connections.
+    // The sql-command given to ssh must escape double quotes.
+    auto vm = this->node(node);
+    string drop_query = mxb::string_printf(R"(drop user \"%s\";)", admin_user.c_str());
+    vm->run_sql_query(drop_query);
+    string create_query = mxb::string_printf(
+        R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;)",
+                                             admin_user.c_str(), admin_pw.c_str(), admin_user.c_str());
+    auto res = vm->run_sql_query(create_query);
 
     bool rval = false;
-    if (rc == 0)
+    if (res.rc == 0)
     {
         auto be = backend(node);
         be->update_status();
@@ -320,7 +318,8 @@ bool MariaDBCluster::create_base_users(int node)
 
         auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
 
-        if (gen_all_grants_user("repl", "repl", SslMode::OFF)
+        if (gen_all_grants_user(m_user_name, m_password, ssl_mode)
+            && gen_all_grants_user("repl", "repl", SslMode::OFF)
             && gen_all_grants_user("skysql", "skysql", ssl_mode)
             && gen_all_grants_user("maxskysql", "skysql", ssl_mode)
             && gen_all_grants_user("maxuser", "maxuser", ssl_mode))
@@ -335,8 +334,8 @@ bool MariaDBCluster::create_base_users(int node)
     }
     else
     {
-        logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i.",
-                          cmd.c_str(), name().c_str(), node, rc);
+        logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i, %s.",
+                          create_query.c_str(), name().c_str(), node, res.rc, res.output.c_str());
     }
     return rval;
 }
