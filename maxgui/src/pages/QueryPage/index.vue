@@ -3,25 +3,20 @@
         <div
             ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
-            :class="{ 'query-page--fullscreen': isFullscreen }"
+            :class="{ 'query-page--fullscreen': is_fullscreen }"
         >
-            <toolbar-container
-                ref="toolbarContainer"
-                :isFullscreen="isFullscreen"
-                @is-fullscreen="isFullscreen = $event"
-            />
+            <toolbar-container ref="toolbarContainer" />
             <split-pane
                 v-if="minSidebarPct"
                 v-model="sidebarPct"
                 class="query-page__content"
                 :minPercent="minSidebarPct"
                 split="vert"
-                :disable="isSidebarCollapsed"
+                :disable="is_sidebar_collapsed"
             >
                 <template slot="pane-left">
+                    <!-- TODO: move sidebar-container to <worksheet/> -->
                     <sidebar-container
-                        :isSidebarCollapsed="isSidebarCollapsed"
-                        @is-sidebar-collapsed="isSidebarCollapsed = $event"
                         @place-to-editor="wkeRef ? wkeRef.placeToEditor($event) : () => null"
                         @dragging-schema="wkeRef ? wkeRef.draggingSchema($event) : () => null"
                         @drop-schema-to-editor="
@@ -72,15 +67,15 @@ export default {
             containerHeight: 0,
             minSidebarPct: 0,
             sidebarPct: 0,
-            isFullscreen: false,
-            isSidebarCollapsed: false,
             isWkeMounted: false,
         }
     },
     computed: {
         ...mapState({
+            is_fullscreen: state => state.query.is_fullscreen,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_wke_id: state => state.query.active_wke_id,
+            is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -93,14 +88,14 @@ export default {
         },
     },
     watch: {
-        isFullscreen() {
+        is_fullscreen() {
             this.$help.doubleRAF(() => {
                 // recalculate panes percent
                 this.setPanelsPct()
             })
         },
-        isSidebarCollapsed(v) {
-            this.$help.doubleRAF(() => this.handleSetSidebarPct({ isSidebarCollapsed: v }))
+        is_sidebar_collapsed() {
+            this.$help.doubleRAF(() => this.handleSetSidebarPct())
         },
         sidebarPct() {
             this.$help.doubleRAF(() => {
@@ -128,16 +123,16 @@ export default {
             checkActiveConn: 'query/checkActiveConn',
         }),
         setPanelsPct() {
-            this.handleSetSidebarPct({ isSidebarCollapsed: this.isSidebarCollapsed })
+            this.handleSetSidebarPct()
             /**
              * get pane container height then pass it via props to worksheets
              * to calculate min percent of worksheets child panes
              */
             this.containerHeight = this.$refs.paneContainer.clientHeight
         },
-        handleSetSidebarPct({ isSidebarCollapsed }) {
+        handleSetSidebarPct() {
             const containerWidth = this.$refs.paneContainer.clientWidth
-            if (isSidebarCollapsed) {
+            if (this.is_sidebar_collapsed) {
                 this.minSidebarPct = this.$help.pxToPct({ px: 40, containerPx: containerWidth })
                 this.sidebarPct = this.minSidebarPct
             } else {

@@ -4,7 +4,7 @@
         elevation="0"
         height="45"
         class="query-toolbar"
-        :class="{ 'ml-0': isFullscreen }"
+        :class="{ 'ml-0': is_fullscreen }"
     >
         <connection-manager />
         <!-- Use database section-->
@@ -139,13 +139,13 @@
             content-class="shadow-drop color text-navigation py-1 px-4"
         >
             <template v-slot:activator="{ on }">
-                <v-btn icon small v-on="on" @click="$emit('is-fullscreen', !isFullscreen)">
+                <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
                     <v-icon size="20" color="accent-dark">
-                        fullscreen{{ isFullscreen ? '_exit' : '' }}
+                        fullscreen{{ is_fullscreen ? '_exit' : '' }}
                     </v-icon>
                 </v-btn>
             </template>
-            <span>{{ isFullscreen ? $t('minimize') : $t('maximize') }}</span>
+            <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
         </v-tooltip>
 
         <query-config-dialog v-model="queryConfigDialog" />
@@ -210,9 +210,6 @@ export default {
         'readonly-query-editor': QueryEditor,
         'query-config-dialog': QueryConfigDialog,
     },
-    props: {
-        isFullscreen: { type: Boolean, required: true },
-    },
     data() {
         return {
             dontShowConfirm: false,
@@ -221,6 +218,7 @@ export default {
     },
     computed: {
         ...mapState({
+            is_fullscreen: state => state.query.is_fullscreen,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             active_conn_state: state => state.query.active_conn_state,
             active_db: state => state.query.active_db,
@@ -238,6 +236,7 @@ export default {
     },
     methods: {
         ...mapMutations({
+            SET_FULLSCREEN: 'query/SET_FULLSCREEN',
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW',
             SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',

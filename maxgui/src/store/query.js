@@ -12,15 +12,41 @@
  */
 import { getCookie, uniqBy, uniqueId, pickBy } from 'utils/helpers'
 
+function connStates() {
+    return {
+        // connection related states
+        checking_active_conn: true,
+        active_conn_state: false,
+        conn_err_state: false,
+        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
+    }
+}
+
+//Sidebar tree schema states
+function sidebarStates() {
+    return {
+        loading_db_tree: false,
+        is_sidebar_collapsed: false,
+        search_schema: '',
+        db_tree: [],
+        db_completion_list: [],
+        active_db: JSON.parse(localStorage.getItem('active_db')),
+    }
+}
+
 /**
  * @returns Return standalone worksheet states
  */
 function saWkeStates() {
     return {
+        ...connStates(),
+        ...sidebarStates(),
+        // editor's states
         query_txt: {
             all: '',
             selected: '',
         },
+        // query-result's states
         loading_prvw_data: false,
         prvw_data: {},
         active_tree_node_id: '',
@@ -32,6 +58,7 @@ function saWkeStates() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+        // toolbar's states
         show_vis_sidebar: false,
     }
 }
@@ -46,28 +73,16 @@ function defWorksheetState() {
 
 function initialState() {
     return {
-        // connection related states
-        checking_active_conn: false,
-        active_conn_state: false,
-        conn_err_state: false,
-
         // Toolbar states
+        is_fullscreen: false,
         // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
         query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
         query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
         rc_target_names_map: {},
-        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
-        active_db: JSON.parse(localStorage.getItem('active_db')),
-
-        //Sidebar tree schema states
-        loading_db_tree: false,
-        db_tree: [],
-        db_completion_list: [],
 
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
-
         // standalone wke states
         ...saWkeStates(),
     }
@@ -104,19 +119,28 @@ export default {
                 state[key] = initState[key]
             })
         },
-
+        //Toolbar mutations
+        SET_FULLSCREEN(state, payload) {
+            state.is_fullscreen = payload
+        },
         // connection related mutations
         SET_CHECKING_ACTIVE_CONN(state, payload) {
-            state.checking_active_conn = payload
+            patch_wke_property(state, { obj: { checking_active_conn: payload }, scope: this })
         },
         SET_ACTIVE_CONN_STATE(state, payload) {
-            state.active_conn_state = payload
+            patch_wke_property(state, { obj: { active_conn_state: payload }, scope: this })
         },
         SET_CONN_ERR_STATE(state, payload) {
-            state.conn_err_state = payload
+            patch_wke_property(state, { obj: { conn_err_state: payload }, scope: this })
         },
 
         // Sidebar tree schema mutations
+        SET_IS_SIDEBAR_COLLAPSED(state, payload) {
+            patch_wke_property(state, { obj: { is_sidebar_collapsed: payload }, scope: this })
+        },
+        SET_SEARCH_SCHEMA(state, payload) {
+            patch_wke_property(state, { obj: { search_schema: payload }, scope: this })
+        },
         SET_LOADING_DB_TREE(state, payload) {
             state.loading_db_tree = payload
         },
@@ -184,7 +208,7 @@ export default {
             state.rc_target_names_map = payload
         },
         SET_CURR_CNCT_RESOURCE(state, payload) {
-            state.curr_cnct_resource = payload
+            patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
             localStorage.setItem('curr_cnct_resource', JSON.stringify(payload))
         },
         SET_QUERY_MAX_ROW(state, payload) {
@@ -196,7 +220,7 @@ export default {
             localStorage.setItem('query_confirm_flag', payload)
         },
         SET_ACTIVE_DB(state, payload) {
-            state.active_db = payload
+            patch_wke_property(state, { obj: { active_db: payload }, scope: this })
             localStorage.setItem('active_db', JSON.stringify(payload))
         },
         SET_SHOW_VIS_SIDEBAR(state, payload) {
@@ -204,7 +228,14 @@ export default {
         },
         // worksheet mutations
         ADD_NEW_WKE(state) {
-            state.worksheets_arr.push(defWorksheetState())
+            // Copy current connection states related
+            const currWke = state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
+            const currWkeConnStates = pickBy(currWke, (v, key) =>
+                Object.keys(connStates()).includes(key)
+            )
+
+            const newWke = { ...defWorksheetState(), ...currWkeConnStates }
+            state.worksheets_arr.push(newWke)
         },
         DELETE_WKE(state, idx) {
             state.worksheets_arr.splice(idx, 1)

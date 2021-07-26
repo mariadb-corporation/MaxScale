@@ -102,21 +102,16 @@ export default {
         }),
     },
     watch: {
-        checking_active_conn() {
-            this.handleAutoOpenDialog()
+        checking_active_conn(v) {
+            //After finish checking checking_active_conn, auto open dialog if there is no active connection
+            if (!v && !this.active_conn_state) this.openConnDialog()
         },
-    },
-    mounted() {
-        this.handleAutoOpenDialog()
     },
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
         }),
-        handleAutoOpenDialog() {
-            if (!this.checking_active_conn && !this.active_conn_state) this.openConnDialog()
-        },
         openConnDialog() {
             this.isConnDialogOpened = true
         },
