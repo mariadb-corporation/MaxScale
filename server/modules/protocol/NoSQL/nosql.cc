@@ -2059,7 +2059,6 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             case MONGOC_OPCODE_REPLY:
             case MONGOC_OPCODE_UPDATE:
                 {
-                    mxb_assert(!true);
                     ostringstream ss;
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());

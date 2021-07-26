@@ -66,6 +66,16 @@ const ClientDCB* ClientConnection::dcb() const
 
 void ClientConnection::ready_for_reading(DCB* dcb)
 {
+    if (m_session.listener_data()->m_ssl.config().enabled
+        && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_UNKNOWN)
+    {
+        if (dcb->ssl_handshake() != 1)
+        {
+            // The handshake is in progress or it failed, in both cases we just return.
+            return;
+        }
+    }
+
     DCB::ReadResult read_res = m_pDcb->read(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
     if (!read_res)
     {

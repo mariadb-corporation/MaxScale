@@ -64,6 +64,14 @@ public:
 
     mxt::CmdResult run_cmd_output_sudo(const std::string& cmd);
 
+    /**
+     * Run an sql-query on the node through ssh and mysql-client.
+     *
+     * @param sql The query. Should not contain single quotes (')
+     * @return Result struct. The output contains the result rows. Columns are separated by tab.
+     */
+    mxt::CmdResult run_sql_query(const std::string& sql);
+
     bool configure(const mxt::NetworkConfig& nwconfig);
 
     /**
