@@ -19,7 +19,11 @@ namespace
 namespace nosqlprotocol
 {
 
-mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+// Use the module name as the configuration prefix
+const char* CONFIG_PREFIX = MXS_MODULE_NAME;
+
+mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL,
+                                         CONFIG_PREFIX);
 }
 }
 

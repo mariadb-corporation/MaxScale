@@ -87,9 +87,10 @@ namespace config
 /**
  * class Specification
  */
-Specification::Specification(const char* zModule, Kind kind)
+Specification::Specification(const char* zModule, Kind kind, const char* zPrefix)
     : m_module(zModule)
     , m_kind(kind)
+    , m_prefix(zPrefix)
 {
 }
 
@@ -100,6 +101,11 @@ Specification::~Specification()
 const string& Specification::module() const
 {
     return m_module;
+}
+
+const string& Specification::prefix() const
+{
+    return m_prefix;
 }
 
 const Param* Specification::find_param(const string& name) const
@@ -849,6 +855,11 @@ ostream& Configuration::persist_append(ostream& out) const
 
         if (!str.empty())
         {
+            if (!m_pSpecification->prefix().empty())
+            {
+                out << m_pSpecification->prefix() << '.';
+            }
+
             out << str << '\n';
         }
     }
@@ -856,8 +867,20 @@ ostream& Configuration::persist_append(ostream& out) const
     return out;
 }
 
-void Configuration::fill(json_t* pJson) const
+void Configuration::fill(json_t* pObj) const
 {
+    json_t* pJson;
+
+    if (!m_pSpecification->prefix().empty())
+    {
+        pJson = json_object();
+        json_object_set_new(pObj, m_pSpecification->prefix().c_str(), pJson);
+    }
+    else
+    {
+        pJson = pObj;
+    }
+
     for (const auto& kv : m_values)
     {
         const Type* pType = kv.second;
@@ -895,14 +918,7 @@ size_t Configuration::size() const
 json_t* Configuration::to_json() const
 {
     json_t* pConfiguration = json_object();
-
-    for (const auto& kv : m_values)
-    {
-        const Type* pValue = kv.second;
-
-        json_object_set_new(pConfiguration, kv.first.c_str(), pValue->to_json());
-    }
-
+    fill(pConfiguration);
     return pConfiguration;
 }
 
