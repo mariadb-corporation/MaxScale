@@ -68,7 +68,6 @@
                         </div>
                         <v-text-field
                             v-if="!is_sidebar_collapsed"
-                            id="searchSchema"
                             v-model="searchSchema"
                             name="searchSchema"
                             required
@@ -80,7 +79,6 @@
                             :disabled="!active_conn_state"
                         />
                     </div>
-                    <!-- TODO: fix db-list-tree component is not rerendered when switching between worksheets-->
                     <db-list-tree
                         v-if="!is_sidebar_collapsed"
                         class="schema-list-wrapper"

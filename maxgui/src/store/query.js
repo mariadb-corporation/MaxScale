@@ -142,14 +142,13 @@ export default {
             patch_wke_property(state, { obj: { search_schema: payload }, scope: this })
         },
         SET_LOADING_DB_TREE(state, payload) {
-            state.loading_db_tree = payload
+            patch_wke_property(state, { obj: { loading_db_tree: payload }, scope: this })
         },
         SET_DB_TREE(state, payload) {
-            state.db_tree = payload
+            patch_wke_property(state, { obj: { db_tree: payload }, scope: this })
         },
         UPDATE_DB_GRAND_CHILD(state, { dbName, childType, grandChild, getters }) {
             const dbIndex = getters.getDbIdx(dbName)
-
             let childIndex
             switch (childType) {
                 case 'Tables':
@@ -159,10 +158,10 @@ export default {
                     childIndex = getters.getIdxOfSPNode(dbIndex)
                     break
             }
-
-            state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
+            const new_db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: { children: { [childIndex]: { children: { $set: grandChild } } } },
             })
+            patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
         },
         UPDATE_TABLE_CHILD(state, { dbName, tblName, children, childType, getters }) {
             const dbIndex = getters.getDbIdx(dbName)
@@ -176,7 +175,7 @@ export default {
                 tblIdx
             ].children.findIndex(tblChildNode => tblChildNode.type === childType)
 
-            state.db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
+            const new_db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
                 [dbIndex]: {
                     children: {
                         [idxOfTablesNode]: {
@@ -191,16 +190,20 @@ export default {
                     },
                 },
             })
+            patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
         },
         // editor mutations
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
         },
         UPDATE_DB_CMPL_LIST(state, payload) {
-            state.db_completion_list = [...state.db_completion_list, ...payload]
+            patch_wke_property(state, {
+                obj: { db_completion_list: [...state.db_completion_list, ...payload] },
+                scope: this,
+            })
         },
         CLEAR_DB_CMPL_LIST(state) {
-            state.db_completion_list = []
+            patch_wke_property(state, { obj: { db_completion_list: [] }, scope: this })
         },
 
         // Toolbar mutations
@@ -230,8 +233,11 @@ export default {
         ADD_NEW_WKE(state) {
             // Copy current connection states related
             const currWke = state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
-            const currWkeConnStates = pickBy(currWke, (v, key) =>
-                Object.keys(connStates()).includes(key)
+            const currWkeConnStates = pickBy(
+                currWke,
+                (v, key) =>
+                    Object.keys(connStates()).includes(key) ||
+                    Object.keys(sidebarStates()).includes(key)
             )
 
             const newWke = { ...defWorksheetState(), ...currWkeConnStates }
