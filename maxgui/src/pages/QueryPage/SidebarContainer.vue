@@ -143,13 +143,11 @@ export default {
             },
         },
     },
-    watch: {
-        active_conn_state: async function(v) {
-            if (v) {
-                await this.loadSchema()
-                await this.updateActiveDb()
-            }
-        },
+    activated() {
+        this.addActiveConnStateWatcher()
+    },
+    deactivated() {
+        this.unwatchActiveConnState()
     },
     methods: {
         ...mapMutations({
@@ -168,6 +166,14 @@ export default {
             fetchTriggers: 'query/fetchTriggers',
             useDb: 'query/useDb',
         }),
+        addActiveConnStateWatcher() {
+            this.unwatchActiveConnState = this.$watch('active_conn_state', async v => {
+                if (v) {
+                    await this.loadSchema()
+                    await this.updateActiveDb()
+                }
+            })
+        },
         async loadSchema() {
             await this.fetchDbList()
         },
