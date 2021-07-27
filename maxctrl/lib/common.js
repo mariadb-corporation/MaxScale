@@ -106,6 +106,15 @@ module.exports = function () {
       return n;
     }
 
+    try {
+      const v = JSON.parse(value);
+      if ((typeof v === "object" && typeof v !== "null") || Array.isArray(v)) {
+        return v;
+      }
+    } catch {
+      // Not a JSON object or an array treat it as a string
+    }
+
     return value;
   };
 
