@@ -333,7 +333,7 @@ add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
 
 # Test users with different level privileges: database, table, column and procedure.
-# MXS-37, MXS-3303
+# MXS-37, MXS-3303, MXS-1958
 add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
@@ -715,12 +715,6 @@ add_test_executable(mxs1929_start_from_scratch.cpp mxs1929_start_from_scratch mx
 # MXS-1932: Hidden files are not ignored
 # https://jira.mariadb.org/browse/MXS-1932
 add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)
-
-# MXS-1958: Users with insert-only privileges don't work
-# https://jira.mariadb.org/browse/MXS-1958
-add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
-# TODO: Remove this once MXS-1958 is fixed
-set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
 
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
