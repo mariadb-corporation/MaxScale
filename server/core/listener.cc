@@ -265,6 +265,14 @@ SListener ListenerManager::create(const std::string& name, Params params, Unknow
 
     if (s_spec.validate(params, &unknown))
     {
+        auto module = s_protocol.get(params);
+        mxb_assert(module->specification);
+
+        if (!module->specification->validate(params))
+        {
+            return nullptr;
+        }
+
         SListener listener(new Listener(name));
 
         if (listener->m_config.configure(params))
@@ -607,7 +615,9 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    return m_config.persist(os);
+    m_config.persist(os);
+    m_shared_data->m_proto_module->getConfiguration().persist_append(os);
+    return os;
 }
 
 json_t* Listener::to_json(const char* host) const
@@ -1052,9 +1062,11 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     SData rval;
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
-    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(protocol_params)};
+    std::unique_ptr<mxs::ProtocolModule> protocol_module {
+        protocol_api->create_protocol_module(m_name)
+    };
 
-    if (protocol_module)
+    if (protocol_module && protocol_module->getConfiguration().configure(protocol_params))
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
         mxs::SSLContext ssl;

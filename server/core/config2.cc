@@ -51,12 +51,12 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
         break;
 
     case Specification::LISTENER:
+    case Specification::PROTOCOL:
         return Listener::specification()->find_param(param);
 
     case Specification::SERVER:
         break;
 
-    case Specification::PROTOCOL:
         break;
 
     default:

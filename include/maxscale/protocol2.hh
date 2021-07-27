@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/authenticator.hh>
+#include <maxscale/config2.hh>
 
 class BackendDCB;
 class ClientDCB;
@@ -41,6 +42,17 @@ public:
         CAP_BACKEND      = (1u << 1),   // Protocol supports backend communication
         CAP_AUTH_MODULES = (1u << 2),   // Protocol uses authenticator modules and does not integrate one
     };
+
+
+    /**
+     * Get the protocol module configuration
+     *
+     * The configure method of the returned configuration will be called after the initial creation of the
+     * module as well as any time a parameter is modified at runtime.
+     *
+     * @return The configuration of the listener
+     */
+    virtual mxs::config::Configuration& getConfiguration() = 0;
 
     /**
      * Allocate new client protocol session
@@ -396,13 +408,9 @@ public:
     ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
-    static mxs::ProtocolModule* create_protocol_module(const mxs::ConfigParameters& params)
+    static mxs::ProtocolModule* create_protocol_module(const std::string& name)
     {
-        // If protocols require non-authentication-related settings, add passing them here.
-        // The unsolved issue is how to separate listener, protocol and authenticator-settings from
-        // each other. Currently this is mostly a non-issue as the only authenticator with a setting
-        // is gssapi.
-        return ProtocolImplementation::create(params);
+        return ProtocolImplementation::create(name);
     }
 
     static MXS_PROTOCOL_API s_api;
