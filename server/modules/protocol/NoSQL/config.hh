@@ -15,11 +15,12 @@
 #include "nosqlprotocol.hh"
 #include <maxscale/config2.hh>
 
+class ProtocolModule;
+
 class GlobalConfig final : public mxs::config::Configuration
 {
 public:
-    GlobalConfig();
-    GlobalConfig(GlobalConfig&&) = default;
+    GlobalConfig(const std::string& name, ProtocolModule* instance);
 
     enum OnUnknownCommand
     {
@@ -42,17 +43,17 @@ public:
 
     enum
     {
-        CURSOR_TIMEOUT_DEFAULT = 60 // seconds
+        CURSOR_TIMEOUT_DEFAULT = 60     // seconds
     };
 
     std::string           user;
     std::string           password;
-    OnUnknownCommand      on_unknown_command      { RETURN_ERROR };
-    bool                  auto_create_databases   { true };
-    bool                  auto_create_tables      { true };
-    int64_t               id_length               { ID_LENGTH_DEFAULT };
-    OrderedInsertBehavior ordered_insert_behavior { OrderedInsertBehavior::DEFAULT };
-    std::chrono::seconds  cursor_timeout          { std::chrono::seconds(CURSOR_TIMEOUT_DEFAULT) };
+    OnUnknownCommand      on_unknown_command      {RETURN_ERROR};
+    bool                  auto_create_databases   {true};
+    bool                  auto_create_tables      {true};
+    int64_t               id_length               {ID_LENGTH_DEFAULT};
+    OrderedInsertBehavior ordered_insert_behavior {OrderedInsertBehavior::DEFAULT};
+    std::chrono::seconds  cursor_timeout          {std::chrono::seconds(CURSOR_TIMEOUT_DEFAULT)};
 
     static mxs::config::Specification& specification();
 
@@ -64,6 +65,11 @@ public:
     static mxs::config::ParamCount                       s_id_length;
     static mxs::config::ParamEnum<OrderedInsertBehavior> s_ordered_insert_behavior;
     static mxs::config::ParamSeconds                     s_cursor_timeout;
+
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
+private:
+    ProtocolModule* m_instance;
 };
 
 class Config final
