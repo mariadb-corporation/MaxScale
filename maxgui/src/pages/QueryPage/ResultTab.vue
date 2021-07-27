@@ -148,6 +148,8 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            curr_query_mode: state => state.query.curr_query_mode,
             query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
             active_conn_state: state => state.query.active_conn_state,
@@ -181,28 +183,34 @@ export default {
                 return resultData
             } else return {}
         },
+        isQueryViewMode() {
+            return this.curr_query_mode === this.SQL_QUERY_MODES.QUERY_VIEW
+        },
     },
     mounted() {
         this.setHeaderHeight()
     },
     activated() {
-        this.addLoadingQueryResultWatcher()
-        this.addResultDataWatcher()
+        if (this.isQueryViewMode) {
+            this.addLoadingQueryResultWatcher()
+            this.addResultDataWatcher()
+        }
     },
     deactivated() {
-        this.rmLoadingQueryResultWatcher()
-        this.rmResultDataWatcher()
+        if (this.isQueryViewMode) {
+            this.unwatchLoadingQueryResult()
+            this.unwatchResultData()
+        }
     },
-
     methods: {
         addLoadingQueryResultWatcher() {
-            this.rmLoadingQueryResultWatcher = this.$watch('loading_query_result', v => {
+            this.unwatchLoadingQueryResult = this.$watch('loading_query_result', v => {
                 // After user clicks Run to send query, set isLoading to false to show skeleton-loader
                 if (v && this.isLoading) this.isLoading = false
             })
         },
         addResultDataWatcher() {
-            this.rmResultDataWatcher = this.$watch('resultData', () => {
+            this.unwatchResultData = this.$watch('resultData', () => {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
             })
         },
