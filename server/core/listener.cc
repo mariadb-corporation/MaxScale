@@ -626,9 +626,17 @@ json_t* Listener::to_json(const char* host) const
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_STATE, json_string(state()));
-    json_object_set_new(attr, CN_PARAMETERS, m_config.to_json());
 
-    json_t* diag = m_shared_data->m_proto_module->print_auth_users_json();
+    auto& protocol_module = m_shared_data->m_proto_module;
+
+    json_t* params = m_config.to_json();
+    json_t* tmp = protocol_module->getConfiguration().to_json();
+    json_object_update(params, tmp);
+    json_decref(tmp);
+
+    json_object_set_new(attr, CN_PARAMETERS, params);
+
+    json_t* diag = protocol_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
