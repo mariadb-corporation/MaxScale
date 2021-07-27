@@ -216,62 +216,56 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     {
         if (mandatory_params_defined(provided))
         {
-            if (!nested_parameters.empty())
+            for (const auto& kv : parameters_with_params)
             {
-                for (const auto& kv : nested_parameters)
+                const auto& my_params = nested_parameters[kv.first];
+                mxs::ConfigParameters unrecognized;
+                bool param_valid = kv.second->validate_parameters(kv.first, my_params, &unrecognized);
+
+                if (param_valid && !unrecognized.empty())
                 {
-                    const auto& name = kv.first;
-
-                    auto it = parameters_with_params.find(name);
-
-                    if (it != parameters_with_params.end())
-                    {
-                        const Param* pParam = it->second;
-
-                        mxs::ConfigParameters unrecognized;
-                        bool param_valid = pParam->validate_parameters(name, kv.second, &unrecognized);
-
-                        if (param_valid && !unrecognized.empty())
-                        {
-                            for (const auto& kv : unrecognized)
-                            {
-                                if (pUnrecognized)
-                                {
-                                    // If reporting upwards, we use the qualified name.
-                                    string qname = name + "." + kv.first;
-                                    pUnrecognized->set(qname, kv.second);
-                                }
-                                else
-                                {
-                                    // Otherwise, we report in the context of the module.
-                                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                                              name.c_str(), kv.first.c_str());
-                                    param_valid = false;
-                                }
-                            }
-                        }
-
-                        if (!param_valid)
-                        {
-                            valid = false;
-                        }
-                    }
-                    else
+                    for (const auto& unknown : unrecognized)
                     {
                         if (pUnrecognized)
                         {
-                            for (const auto& params : kv.second)
-                            {
-                                const auto& key = params.first;
-                                const auto& value = params.second;
-                                pUnrecognized->set(name + "." + key, value);
-                            }
+                            // If reporting upwards, we use the qualified name.
+                            string qname = kv.first + "." + unknown.first;
+                            pUnrecognized->set(qname, unknown.second);
                         }
                         else
                         {
-                            MXS_ERROR("'%s' does not refer to a module.", name.c_str());
-                            valid = false;
+                            // Otherwise, we report in the context of the module.
+                            MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                                      kv.first.c_str(), unknown.first.c_str());
+                            param_valid = false;
                         }
+                    }
+                }
+
+                if (!param_valid)
+                {
+                    valid = false;
+                }
+
+                // Remove the parameter once we've processed it. This will leave only unrecognized nested
+                // parameters inside nested_parameters once we're done.
+                nested_parameters.erase(kv.first);
+            }
+
+            for (const auto& kv : nested_parameters)
+            {
+                for (const auto& params : kv.second)
+                {
+                    auto key = kv.first + "." + params.first;
+
+                    if (pUnrecognized)
+                    {
+                        pUnrecognized->set(key, params.second);
+                    }
+                    else
+                    {
+                        MXS_ERROR("The parameter '%s' is unrecognized.", key.c_str());
+                        valid = false;
                     }
                 }
             }
@@ -359,49 +353,58 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
     {
         if (mandatory_params_defined(provided))
         {
-            if (!nested_parameters.empty())
+            for (const auto& kv : parameters_with_params)
             {
-                for (const auto& kv : nested_parameters)
+                const auto& my_params = nested_parameters[kv.first];
+                set<string> unrecognized;
+                bool param_valid = kv.second->validate_parameters(kv.first, my_params, &unrecognized);
+
+                if (param_valid && !unrecognized.empty())
                 {
-                    const auto& name = kv.first;
-
-                    auto it = parameters_with_params.find(name);
-
-                    if (it != parameters_with_params.end())
+                    for (const auto& s : unrecognized)
                     {
-                        const Param* pParam = it->second;
-
-                        set<string> unrecognized;
-                        bool param_valid = pParam->validate_parameters(name, kv.second, &unrecognized);
-
-                        if (param_valid && !unrecognized.empty())
+                        if (pUnrecognized)
                         {
-                            for (const auto& s : unrecognized)
-                            {
-                                if (pUnrecognized)
-                                {
-                                    // If reporting upwards, we use the qualified name.
-                                    string qname = name + "." + s;
-                                    pUnrecognized->insert(qname);
-                                }
-                                else
-                                {
-                                    // Otherwise, we report in the context of the module.
-                                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                                              name.c_str(), s.c_str());
-                                    param_valid = false;
-                                }
-                            }
+                            // If reporting upwards, we use the qualified name.
+                            string qname = kv.first + "." + s;
+                            pUnrecognized->insert(qname);
                         }
-
-                        if (!param_valid)
+                        else
                         {
-                            valid = false;
+                            // Otherwise, we report in the context of the module.
+                            MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                                      kv.first.c_str(), s.c_str());
+                            param_valid = false;
                         }
+                    }
+                }
+
+                if (!param_valid)
+                {
+                    valid = false;
+                }
+
+                // Remove the parameter once we've processed it. This will leave only unrecognized nested
+                // parameters inside nested_parameters once we're done.
+                nested_parameters.erase(kv.first);
+            }
+
+
+            for (const auto& kv : nested_parameters)
+            {
+                const char* k;
+                json_t* v;
+                json_object_foreach(kv.second, k, v)
+                {
+                    std::string key = kv.first + "." + k;
+
+                    if (pUnrecognized)
+                    {
+                        pUnrecognized->insert(key);
                     }
                     else
                     {
-                        MXS_ERROR("'%s' does not refer to a module.", name.c_str());
+                        MXS_ERROR("The parameter '%s' is unrecognized.", key.c_str());
                         valid = false;
                     }
                 }
@@ -1502,7 +1505,12 @@ bool ParamModule::validate_parameters(const std::string& value,
     const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
 
     bool valid;
-    if (pSpecification)
+    if (pSpecification->prefix().empty())
+    {
+        // The module does not expect nested parameters.
+        valid = true;
+    }
+    else if (pSpecification)
     {
         valid = pSpecification->validate(params, pUnrecognized);
     }
@@ -1522,7 +1530,12 @@ bool ParamModule::validate_parameters(const std::string& value,
     const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
 
     bool valid;
-    if (pSpecification)
+    if (pSpecification->prefix().empty())
+    {
+        // The module does not expect nested parameters.
+        valid = true;
+    }
+    else if (pSpecification)
     {
         valid = pSpecification->validate(pParams, pUnrecognized);
     }

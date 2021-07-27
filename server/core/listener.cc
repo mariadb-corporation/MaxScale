@@ -258,21 +258,13 @@ bool ListenerManager::listener_is_duplicate(const SListener& listener)
     return false;
 }
 
-template<class Params, class Unknown>
-SListener ListenerManager::create(const std::string& name, Params params, Unknown unknown)
+template<class Params>
+SListener ListenerManager::create(const std::string& name, Params params)
 {
     SListener rval;
 
-    if (s_spec.validate(params, &unknown))
+    if (s_spec.validate(params))
     {
-        auto module = s_protocol.get(params);
-        mxb_assert(module->specification);
-
-        if (!module->specification->validate(params))
-        {
-            return nullptr;
-        }
-
         SListener listener(new Listener(name));
 
         if (listener->m_config.configure(params))
@@ -455,15 +447,13 @@ Listener::~Listener()
 SListener Listener::create(const std::string& name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name.c_str());
-    mxs::ConfigParameters unknown;
-    return this_unit.create(name, params, unknown);
+    return this_unit.create(name, params);
 }
 
 SListener Listener::create(const std::string& name, json_t* params)
 {
     mxb::LogScope scope(name.c_str());
-    std::set<std::string> unknown;
-    return this_unit.create(name, params, unknown);
+    return this_unit.create(name, params);
 }
 
 void Listener::set_type()

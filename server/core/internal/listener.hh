@@ -340,8 +340,8 @@ class ListenerManager
 public:
     using SListener = std::shared_ptr<Listener>;
 
-    template<class Params, class Unknown>
-    SListener create(const std::string& name, Params params, Unknown unknown);
+    template<class Params>
+    SListener create(const std::string& name, Params params);
 
     void                   destroy_instances();
     void                   remove(const SListener& listener);
