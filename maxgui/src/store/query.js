@@ -119,10 +119,12 @@ export default {
                 state[key] = initState[key]
             })
         },
+
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
         },
+
         // connection related mutations
         SET_CHECKING_ACTIVE_CONN(state, payload) {
             patch_wke_property(state, { obj: { checking_active_conn: payload }, scope: this })
@@ -192,6 +194,7 @@ export default {
             })
             patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
         },
+
         // editor mutations
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
@@ -229,33 +232,7 @@ export default {
         SET_SHOW_VIS_SIDEBAR(state, payload) {
             patch_wke_property(state, { obj: { show_vis_sidebar: payload }, scope: this })
         },
-        // worksheet mutations
-        ADD_NEW_WKE(state) {
-            // Copy current connection states related
-            const currWke = state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
-            const currWkeConnStates = pickBy(
-                currWke,
-                (v, key) =>
-                    Object.keys(connStates()).includes(key) ||
-                    Object.keys(sidebarStates()).includes(key)
-            )
 
-            const newWke = { ...defWorksheetState(), ...currWkeConnStates }
-            state.worksheets_arr.push(newWke)
-        },
-        DELETE_WKE(state, idx) {
-            state.worksheets_arr.splice(idx, 1)
-        },
-        SET_ACTIVE_WKE_ID(state, payload) {
-            state.active_wke_id = payload
-        },
-        UPDATE_SA_WKE_STATES(state, wke) {
-            const reservedKeys = ['id', 'name']
-            update_standalone_wke_state(
-                state,
-                pickBy(wke, (v, key) => !reservedKeys.includes(key))
-            )
-        },
         // Result tables data mutations
         SET_CURR_QUERY_MODE(state, payload) {
             patch_wke_property(state, { obj: { curr_query_mode: payload }, scope: this })
@@ -295,6 +272,24 @@ export default {
         },
         SET_QUERY_REQUEST_SENT_TIME(state, payload) {
             patch_wke_property(state, { obj: { query_request_sent_time: payload }, scope: this })
+        },
+
+        // worksheet mutations
+        ADD_NEW_WKE(state) {
+            state.worksheets_arr.push(defWorksheetState())
+        },
+        DELETE_WKE(state, idx) {
+            state.worksheets_arr.splice(idx, 1)
+        },
+        SET_ACTIVE_WKE_ID(state, payload) {
+            state.active_wke_id = payload
+        },
+        UPDATE_SA_WKE_STATES(state, wke) {
+            const reservedKeys = ['id', 'name']
+            update_standalone_wke_state(
+                state,
+                pickBy(wke, (v, key) => !reservedKeys.includes(key))
+            )
         },
     },
     actions: {
