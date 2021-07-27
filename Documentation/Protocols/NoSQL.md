@@ -41,6 +41,16 @@ Since _nosqlprotocol_ is a _listener_, there must be a _service_ to which
 the client requests will be sent. _Nosqlprotocol_ places no limitations
 on what filters, routers or backends can be used.
 
+To configure the same listener with MaxCtrl, the parameters must be passed in a
+JSON object in the following manner:
+
+```
+maxctrl create listener TheService MongoDB-Listener --protocol=nosqlprotocol 'nosqlprotocol={"user":"the_user", "password": "the_password"}'
+```
+
+All the parameters that the nosqlprotocol module takes must be passed in the
+same JSON object.
+
 A complete example can be found at the [end](#example) of this document.
 
 # Client Authentication
