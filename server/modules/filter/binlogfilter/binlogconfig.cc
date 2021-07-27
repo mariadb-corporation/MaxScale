@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "binlogfilter"
+
 #include "binlogconfig.hh"
 
 namespace
