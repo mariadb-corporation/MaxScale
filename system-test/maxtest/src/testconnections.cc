@@ -1998,7 +1998,9 @@ int TestConnections::run_test_script(const char* script, const char* name)
     auto test_dir = mxt::SOURCE_DIR;
     setenv("src_dir", test_dir, 1);
 
-    string script_cmd = mxb::string_printf("%s/%s %s", test_dir, script, name);
+    string script_cmd = access(script, F_OK) == 0 ?
+        mxb::string_printf("%s %s", script, name) :
+        mxb::string_printf("%s/%s %s", test_dir, script, name);
     int rc = system(script_cmd.c_str());
 
     if (WIFEXITED(rc))
