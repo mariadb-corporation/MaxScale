@@ -10,19 +10,39 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCookie, uniqBy, uniqueId, pickBy } from 'utils/helpers'
+import { uniqBy, uniqueId, pickBy } from 'utils/helpers'
 
+/**
+ * @param {String} prefixName - prefix name of the connection cookie. i.e. conn_id_body_
+ * @returns {Array} an array of connection ids found from cookies
+ */
+function getClientConnIds(prefixName = 'conn_id_body_') {
+    let value = '; ' + document.cookie
+    let cookiesStr = value.split('; ')
+    const connCookies = cookiesStr.filter(p => p.includes(prefixName))
+    const connIds = []
+    connCookies.forEach(str => {
+        const parts = str.split('=')
+        if (parts.length === 2) connIds.push(parts[0].replace(prefixName, ''))
+    })
+    return connIds
+}
+
+/**
+ * @returns Initial connection related states
+ */
 function connStates() {
     return {
-        // connection related states
         checking_active_conn: true,
         active_conn_state: false,
         conn_err_state: false,
-        curr_cnct_resource: JSON.parse(localStorage.getItem('curr_cnct_resource')),
+        curr_cnct_resource: '',
     }
 }
 
-//Sidebar tree schema states
+/**
+ * @returns Initial sidebar tree schema related states
+ */
 function sidebarStates() {
     return {
         loading_db_tree: false,
@@ -30,12 +50,13 @@ function sidebarStates() {
         search_schema: '',
         db_tree: [],
         db_completion_list: [],
+        //TODO: make this as a property of curr_cnct_resource
         active_db: JSON.parse(localStorage.getItem('active_db')),
     }
 }
 
 /**
- * @returns Return standalone worksheet states
+ * @returns Return initial standalone worksheet states
  */
 function saWkeStates() {
     return {
@@ -63,6 +84,9 @@ function saWkeStates() {
     }
 }
 
+/**
+ * @returns Return a new worksheet state with unique id
+ */
 function defWorksheetState() {
     return {
         id: uniqueId('wke_'),
@@ -71,23 +95,11 @@ function defWorksheetState() {
     }
 }
 
-function initialState() {
-    return {
-        // Toolbar states
-        is_fullscreen: false,
-        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
-        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
-        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
-        rc_target_names_map: {},
-
-        // worksheet states
-        worksheets_arr: [defWorksheetState()],
-        active_wke_id: '',
-        // standalone wke states
-        ...saWkeStates(),
-    }
-}
-
+/**
+ * This helps to update standalone worksheet state
+ * @param {Object} state  vuex state
+ * @param {Object} obj  can be a standalone key/value pair state or saWkeStates
+ */
 function update_standalone_wke_state(state, obj) {
     Object.keys(obj).forEach(key => {
         state[key] = obj[key]
@@ -111,15 +123,22 @@ function patch_wke_property(state, { obj, scope }) {
 
 export default {
     namespaced: true,
-    state: initialState,
-    mutations: {
-        RESET_STATE(state) {
-            const initState = initialState()
-            Object.keys(initState).forEach(key => {
-                state[key] = initState[key]
-            })
-        },
+    state: {
+        // Toolbar states
+        is_fullscreen: false,
+        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
+        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
+        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
+        rc_target_names_map: {},
 
+        // worksheet states
+        worksheets_arr: [defWorksheetState()],
+        active_wke_id: '',
+        cnct_resources: JSON.parse(localStorage.getItem('cnct_resources')) || [],
+        // standalone wke states
+        ...saWkeStates(),
+    },
+    mutations: {
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
@@ -213,9 +232,18 @@ export default {
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
         },
-        SET_CURR_CNCT_RESOURCE(state, payload) {
+        SET_CNCT_RESOURCES(state, payload) {
+            state.cnct_resources.push(payload)
+            localStorage.setItem('cnct_resources', JSON.stringify(payload))
+        },
+        UPDATE_CNCT_RESOURCES(state, payload) {
+            //first update wke state and standalone wke state
             patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
-            localStorage.setItem('curr_cnct_resource', JSON.stringify(payload))
+            //Then update cnct_resources
+            const idx = state.cnct_resources.indexOf(payload)
+            if (idx === -1) state.cnct_resources.push(payload)
+            else state.cnct_resources.splice(idx, 1)
+            localStorage.setItem('cnct_resources', JSON.stringify(state.cnct_resources))
         },
         SET_QUERY_MAX_ROW(state, payload) {
             state.query_max_rows = payload
@@ -225,6 +253,7 @@ export default {
             state.query_confirm_flag = payload // payload is either 0 or 1
             localStorage.setItem('query_confirm_flag', payload)
         },
+        //TODO: make this as a property of curr_cnct_resource
         SET_ACTIVE_DB(state, payload) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this })
             localStorage.setItem('active_db', JSON.stringify(payload))
@@ -281,6 +310,11 @@ export default {
         DELETE_WKE(state, idx) {
             state.worksheets_arr.splice(idx, 1)
         },
+        UPDATE_WKE(state, { idx, wke }) {
+            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
+                [idx]: { $set: wke },
+            })
+        },
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
         },
@@ -321,9 +355,12 @@ export default {
                         { root: true }
                     )
                     const connId = res.data.data.id
-                    const curr_cnct_resource = { id: connId, name: body.target }
+                    const curr_cnct_resource = {
+                        id: connId,
+                        name: body.target,
+                    }
                     commit('SET_ACTIVE_CONN_STATE', true)
-                    commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
+                    commit('UPDATE_CNCT_RESOURCES', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', false)
                 }
@@ -333,7 +370,7 @@ export default {
                 commit('SET_CONN_ERR_STATE', true)
             }
         },
-        async disconnect({ state, commit }, { showSnackbar } = {}) {
+        async disconnect({ state, commit, dispatch }, { showSnackbar } = {}) {
             try {
                 let res = await this.vue.$axios.delete(`/sql/${state.curr_cnct_resource.id}`)
                 if (res.status === 204) {
@@ -346,39 +383,54 @@ export default {
                             },
                             { root: true }
                         )
-                    localStorage.removeItem('curr_cnct_resource')
+
+                    commit('UPDATE_CNCT_RESOURCES', state.curr_cnct_resource)
+                    //TODO: make this as a property of curr_cnct_resource
                     localStorage.removeItem('active_db')
-                    this.vue.$help.deleteCookie('conn_id_body')
-                    commit('RESET_STATE')
+                    dispatch('resetCurrWkeStates')
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
                 logger.error(e)
             }
         },
-
-        async checkActiveConn({ state, commit }) {
+        /* TODO: Decompose to smaller functions */
+        async checkActiveConn({ state, commit, dispatch }) {
             try {
                 commit('SET_CHECKING_ACTIVE_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
-                const hasToken = Boolean(getCookie('conn_id_body'))
-                const hasCurrCnctResource = this.vue.$typy(state.curr_cnct_resource, 'id').isDefined
-                let isValidToken = false
-                if (hasToken && hasCurrCnctResource) {
-                    for (const conn of res.data.data) {
-                        if (conn.id === state.curr_cnct_resource.id) {
-                            isValidToken = true
-                            break
-                        }
-                    }
-                }
-                commit('SET_ACTIVE_CONN_STATE', isValidToken)
-                if (!isValidToken) {
-                    localStorage.removeItem('curr_cnct_resource')
+                const resConnIds = res.data.data.map(conn => conn.id)
+
+                const clientConnIds = getClientConnIds()
+                let validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
+                let invalidConnIds = clientConnIds.filter(id => !validConnIds.includes(id))
+
+                let hasValidConn = Boolean(validConnIds.length)
+                commit('SET_ACTIVE_CONN_STATE', hasValidConn)
+                if (hasValidConn)
+                    // Select first valid client connection id to be active
+                    patch_wke_property(state, {
+                        obj: {
+                            curr_cnct_resource: state.cnct_resources.find(
+                                rsrc => rsrc.id === validConnIds[0]
+                            ),
+                        },
+                        scope: this,
+                    })
+
+                if (invalidConnIds.length) {
+                    //TODO: make this as a property of curr_cnct_resource
                     localStorage.removeItem('active_db')
-                    this.vue.$help.deleteCookie('conn_id_body')
-                    commit('RESET_STATE')
+                    invalidConnIds.forEach(id => {
+                        this.vue.$help.deleteCookie(`conn_id_body_${id}`)
+                        commit(
+                            'SET_CNCT_RESOURCES',
+                            state.cnct_resources.filter(rsrc => rsrc.id !== id)
+                        )
+                    })
+                    dispatch('resetCurrWkeStates')
                 }
+
                 commit('SET_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-checkActiveConn')
@@ -766,6 +818,7 @@ export default {
                     }
                 )
                 const resActiveDb = res.data.data.attributes.results[0].data.flat()[0]
+                //TODO: use active_db from curr_cnct_resource
                 if (!resActiveDb) commit('SET_ACTIVE_DB', '')
                 else if (state.active_db !== resActiveDb) commit('SET_ACTIVE_DB', resActiveDb)
             } catch (e) {
@@ -781,6 +834,16 @@ export default {
         clearDataPreview({ commit }) {
             commit('SET_PRVW_DATA', {})
             commit('SET_PRVW_DATA_DETAILS', {})
+        },
+        /**
+         * Call this action when disconnect a connection to
+         * clear the current worksheet state to its initial state
+         */
+        resetCurrWkeStates({ state, commit, getters }) {
+            const idx = state.worksheets_arr.indexOf(getters.getActiveWke)
+            const wke = { ...getters.getActiveWke, ...saWkeStates() }
+            commit('UPDATE_WKE', { idx, wke })
+            commit('UPDATE_SA_WKE_STATES', wke)
         },
     },
     getters: {

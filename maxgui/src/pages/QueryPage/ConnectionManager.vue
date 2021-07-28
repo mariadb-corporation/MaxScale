@@ -1,5 +1,6 @@
 <template>
     <div :style="{ maxWidth: '225px' }">
+        <!-- TODO: Refactor to return object instead of string value  -->
         <v-select
             v-model="chosenConn"
             :items="connOptions"
@@ -116,10 +117,12 @@ export default {
     computed: {
         ...mapState({
             checking_active_conn: state => state.query.checking_active_conn,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
+            cnct_resources: state => state.query.cnct_resources,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
         }),
         connOptions() {
+            //TODO: use cnct_resources as items to select
             let options = [this.newConnOption]
             if (this.curr_cnct_resource) options.unshift(this.curr_cnct_resource.name)
             return options
