@@ -3,6 +3,8 @@
         ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
+        :onCancel="onCancel"
+        :onClose="onClose"
         :title="`${$t('connectTo')}...`"
         :hasChanged="hasChanged"
         :lazyValidation="false"
@@ -190,6 +192,8 @@ export default {
     props: {
         value: { type: Boolean, required: true },
         handleSave: { type: Function, required: true },
+        onCancel: { type: Function, required: true },
+        onClose: { type: Function, required: true },
     },
     data() {
         return {
