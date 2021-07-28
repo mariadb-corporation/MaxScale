@@ -163,11 +163,6 @@ must be either given in the `token` parameter of a request or it must be stored
 in the cookies. If both a `token` parameter and a cookie exist at the same time,
 the `token` parameter will be used instead of the cookie.
 
-If this endpoint is called with a valid token in the `token` parameter or a
-token stored in the cookies, the existing connection will be closed before a new
-one is opened. This is done to prevent leakage of connections when using cookies
-as the token storage method.
-
 ####  Request Parameters
 
 This endpoint supports the following request parameters.
@@ -177,12 +172,14 @@ This endpoint supports the following request parameters.
   - Store the connection token in cookies instead of returning it as the response body.
 
     This parameter expects only one value, `yes`, as its argument. When
-    `persist=yes` is set, the token is stored in two cookies, `conn_id_body` and
-    `conn_id_sig`.
+    `persist=yes` is set, the token is stored in two cookies,
+    `conn_id_body_<id>` and `conn_id_sig_<id>` where the `<id>` part is replaced
+    by the ID of the connection.
 
-    The `conn_id_body` cookie contains the JWT header and claims sections and
-     contains the connection ID in the `aud` value. This can be used to retrieve
-     the connection ID from the cookies if the browser session is closed.
+    The `conn_id_body_<id>` cookie contains the JWT header and claims sections
+    and contains the connection ID in the `aud` value. This can be used to
+    retrieve the connection ID from the cookies if the browser session is
+    closed.
 
 #### Response
 

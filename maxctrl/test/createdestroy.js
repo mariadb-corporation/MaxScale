@@ -149,6 +149,17 @@ describe("Create/Destroy Commands", function () {
     return doCommand("destroy listener RW-Split-Router RW-Split-Listener").should.be.fulfilled;
   });
 
+  it("create listener", async function () {
+    var res = await verifyCommand(
+      "create listener RW-Split-Router my-listener 4567 address=127.0.0.1",
+      "services/RW-Split-Router/listeners/my-listener"
+    );
+
+    res.data.attributes.parameters.address.should.equal("127.0.0.1");
+
+    await doCommand("destroy listener RW-Split-Router my-listener");
+  });
+
   it("create user", function () {
     return verifyCommand("create user testuser test", "users/inet/testuser");
   });

@@ -31,8 +31,8 @@ namespace
 {
 
 // Cookies where the connection ID token is stored
-const std::string CONN_ID_BODY = "conn_id_body";
-const std::string CONN_ID_SIG = "conn_id_sig";
+const std::string CONN_ID_BODY = "conn_id_body_";
+const std::string CONN_ID_SIG = "conn_id_sig_";
 
 const std::string TOKEN_ISSUER = "mxs-query";
 
@@ -44,6 +44,22 @@ HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_FORBIDD
     return HttpResponse(errcode, mxs_json_error("%s", err.c_str()));
 }
 
+std::string get_conn_id_cookie(const HttpRequest& request, const std::string& id)
+{
+    std::string body = request.get_cookie(CONN_ID_BODY + id);
+    std::string sig = request.get_cookie(CONN_ID_SIG + id);
+
+    return !body.empty() && !sig.empty() ? body + sig : "";
+}
+
+void set_conn_id_cookie(HttpResponse* response, const std::string& id,
+                        const std::string& token, uint32_t max_age)
+{
+    std::string body = CONN_ID_BODY + id;
+    std::string sig = CONN_ID_SIG + id;
+    response->add_split_cookie(body, sig, token, max_age);
+}
+
 std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, const std::string& requested_id)
 {
     bool ok = false;
@@ -51,16 +67,15 @@ std::pair<int64_t, std::string> get_connection_id(const HttpRequest& request, co
     std::string aud;
     std::string err;
     std::string token = request.get_option("token");
-    std::string body = request.get_cookie(CONN_ID_BODY);
-    std::string sig = request.get_cookie(CONN_ID_SIG);
+    std::string cookie = get_conn_id_cookie(request, requested_id);
 
     if (!token.empty())
     {
         std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, token);
     }
-    else if (!body.empty() && !sig.empty())
+    else if (!cookie.empty())
     {
-        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, body + sig);
+        std::tie(ok, aud) = mxs::jwt::get_audience(TOKEN_ISSUER, cookie);
     }
     else if (!requested_id.empty())
     {
@@ -286,7 +301,7 @@ HttpResponse create_connect_response(const std::string& host, int64_t id, bool p
 
     if (persist)
     {
-        response.add_split_cookie(CONN_ID_BODY, CONN_ID_SIG, token, max_age);
+        set_conn_id_cookie(&response, id_str, token, max_age);
     }
     else
     {
@@ -326,22 +341,6 @@ HttpResponse connect(const HttpRequest& request)
     ConnectionConfig config;
     json.try_get_int("timeout", &config.timeout);
     json.try_get_string("db", &config.db);
-    int64_t old_id;
-    std::string err;
-    std::tie(old_id, err) = get_connection_id(request, "");
-
-    if (old_id)
-    {
-        // If the request defined an existing connection id, try to close it. We will anyway create a new
-        // connection and return its id. Closing the old connection can fail if it doesn't exist or is busy.
-        // Ignore this issue for now.
-        this_unit.manager.erase(old_id);
-    }
-    else if (!err.empty())
-    {
-        return create_error(err);
-    }
-
     std::string target;
 
     if (!json.try_get_string("user", &config.user)
@@ -513,7 +512,8 @@ HttpResponse disconnect(const HttpRequest& request)
             if (this_unit.manager.erase(id))
             {
                 HttpResponse response(MHD_HTTP_NO_CONTENT);
-                response.remove_split_cookie(CONN_ID_BODY, CONN_ID_SIG);
+                std::string id_str = std::to_string(id);
+                response.remove_split_cookie(CONN_ID_BODY + id_str, CONN_ID_SIG + id_str);
                 return response;
             }
             else

@@ -154,10 +154,10 @@ describe("Query API ", function () {
       expect(cookies).to.have.lengthOf(2);
 
       var names = cookies.map((cookie) => cookie.key);
-      expect(names).to.have.members(["conn_id_sig", "conn_id_body"]);
+      expect(names).to.have.members(["conn_id_sig_" + conn.data.id, "conn_id_body_" + conn.data.id]);
 
-      var body = cookies.find((cookie) => cookie.key == "conn_id_body").value;
-      var sig = cookies.find((cookie) => cookie.key == "conn_id_sig").value;
+      var body = cookies.find((cookie) => cookie.key == "conn_id_body_" + conn.data.id).value;
+      var sig = cookies.find((cookie) => cookie.key == "conn_id_sig_" + conn.data.id).value;
 
       var webtoken = jwt.decode(body + sig);
       expect(webtoken).to.be.an("object").that.has.keys("aud", "iss", "exp", "iat");
