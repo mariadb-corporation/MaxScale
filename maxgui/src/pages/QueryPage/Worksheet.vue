@@ -226,14 +226,16 @@ export default {
         })
     },
     deactivated() {
-        this.rmShowVisSidebarWatcher()
+        this.$help.doubleRAF(() => {
+            this.unwatchShowVisSidebar()
+        })
     },
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
         }),
         addShowVisSidebarWatcher() {
-            this.rmShowVisSidebarWatcher = this.$watch('show_vis_sidebar', v => {
+            this.unwatchShowVisSidebar = this.$watch('show_vis_sidebar', v => {
                 this.handleSetVisSidebar(v)
                 this.$nextTick(() => this.setResultPaneDim())
             })
