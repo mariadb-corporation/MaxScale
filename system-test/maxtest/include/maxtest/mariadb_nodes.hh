@@ -93,6 +93,7 @@ public:
 
     VMNode& vm_node();
     int     port();
+    int     ind() const;
 
     /**
      * Delete user, then create it with the grants listed.
@@ -427,7 +428,7 @@ public:
     /**
      * Ping or open admin connections to all servers.
      *
-     * @return Number of succesfull connections
+     * @return Number of successful connections
      */
     int ping_or_open_admin_connections();
 

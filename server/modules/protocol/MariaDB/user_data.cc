@@ -977,7 +977,7 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
                     break;
 
                 case HostPatternMode::MATCH:
-                    found_match = address_matches_host_pattern(host, entry.host_pattern);
+                    found_match = address_matches_host_pattern(host, entry);
                     break;
 
                 case HostPatternMode::EQUAL:
@@ -1249,22 +1249,34 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
     return privilege_found;
 }
 
+/**
+ * Check if address matches host pattern.
+ * @param addr Subject address.
+ * @param entry User account entry. Host pattern may contain wildcards % and _.
+ * @return True on match
+ */
 bool
-UserDatabase::address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const
+UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEntry& entry) const
 {
     // First, check the input address type. This affects how the comparison to the host pattern works.
     auto addrtype = parse_address_type(addr);
     // If host address form is unexpected, don't bother continuing.
     if (addrtype == AddrType::UNKNOWN)
     {
-        MXB_ERROR("Address '%s' is not supported.", addr.c_str());      // TODO: print username as well.
+        // TODO: entry.username is not always the user trying to log in, as in some cases an anonymous
+        // entry may be attempted. In any case, this error message should not happen.
+        MXB_ERROR("Address '%s' of incoming user '%s' is not supported.",
+                  addr.c_str(), entry.username.c_str());
         return false;
     }
 
-    auto patterntype = parse_pattern_type(host_pattern);    // TODO: perform this step when loading users
+    auto& host_pattern = entry.host_pattern;
+    // TODO: The result of pattern type parsing could be saved.
+    auto patterntype = parse_pattern_type(host_pattern);
     if (patterntype == PatternType::UNKNOWN)
     {
-        MXB_ERROR("Host pattern '%s' is not supported.", addr.c_str());
+        MXB_ERROR("Host pattern '%s' of user account '%s'@'%s' is not supported.",
+                  host_pattern.c_str(), entry.username.c_str(), host_pattern.c_str());
         return false;
     }
 
@@ -1307,7 +1319,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const std::s
             // client_ip & mask == base_ip. To test this, all three parts need to be converted
             // to numbers.
             auto ip_to_integer = [](const string& ip) {
-                    sockaddr_in sa;
+                    sockaddr_in sa {};
                     inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
                     return (uint32_t)sa.sin_addr.s_addr;
                 };
