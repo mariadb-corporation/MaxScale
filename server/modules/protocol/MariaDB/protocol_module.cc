@@ -24,20 +24,24 @@
 
 using std::string;
 
-MySQLProtocolModule* MySQLProtocolModule::create(const mxs::ConfigParameters& params)
+namespace
 {
-    MySQLProtocolModule* self = nullptr;
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+}
 
-    if (params.empty())
-    {
-        self = new MySQLProtocolModule();
-    }
-    else
-    {
-        MXS_ERROR("MariaDB protocol does not support any parameters.");
-    }
+MySQLProtocolModule::MySQLProtocolModule(const std::string& name)
+    : m_config(name, &s_spec)
+{
+}
 
-    return self;
+MySQLProtocolModule* MySQLProtocolModule::create(const std::string& name)
+{
+    return new MySQLProtocolModule(name);
+}
+
+mxs::config::Configuration& MySQLProtocolModule::getConfiguration()
+{
+    return m_config;
 }
 
 std::unique_ptr<mxs::ClientConnection>
@@ -340,7 +344,8 @@ MXS_MODULE* mariadbprotocol_info()
         nullptr,
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;

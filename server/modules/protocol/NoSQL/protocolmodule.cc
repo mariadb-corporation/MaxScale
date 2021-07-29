@@ -21,25 +21,20 @@
 
 using namespace std;
 
-ProtocolModule::ProtocolModule(GlobalConfig&& config)
-    : m_config(std::move(config))
+ProtocolModule::ProtocolModule(const std::string& name)
+    : m_config(name, this)
 {
-    nosql::NoSQLCursor::start_purging_idle_cursors(config.cursor_timeout);
 }
 
-//static
-ProtocolModule* ProtocolModule::create(const mxs::ConfigParameters& params)
+void ProtocolModule::post_configure()
 {
-    ProtocolModule* pThis = nullptr;
+    nosql::NoSQLCursor::start_purging_idle_cursors(m_config.cursor_timeout);
+}
 
-    GlobalConfig config;
-
-    if (config.configure(params))
-    {
-        pThis = new ProtocolModule(std::move(config));
-    }
-
-    return pThis;
+// static
+ProtocolModule* ProtocolModule::create(const std::string& name)
+{
+    return new ProtocolModule(name);
 }
 
 unique_ptr<mxs::ClientConnection>

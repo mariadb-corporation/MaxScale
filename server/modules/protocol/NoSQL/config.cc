@@ -12,14 +12,18 @@
  */
 
 #include "config.hh"
+#include "protocolmodule.hh"
 
 namespace
 {
 namespace nosqlprotocol
 {
 
-mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+// Use the module name as the configuration prefix
+const char* CONFIG_PREFIX = MXS_MODULE_NAME;
 
+mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL,
+                                         CONFIG_PREFIX);
 }
 }
 
@@ -38,10 +42,10 @@ mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknow
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown NoSQL "
     "command is encountered.",
-    {
-        { GlobalConfig::RETURN_ERROR, "return_error" },
-        { GlobalConfig::RETURN_EMPTY, "return_empty" }
-    },
+{
+    {GlobalConfig::RETURN_ERROR, "return_error"},
+    {GlobalConfig::RETURN_EMPTY, "return_empty"}
+},
     GlobalConfig::RETURN_ERROR);
 
 mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
@@ -74,10 +78,10 @@ mxs::config::ParamEnum<GlobalConfig::OrderedInsertBehavior> GlobalConfig::s_orde
     "ordered_insert_behavior",
     "Whether documents will be inserted in a way true to how NoSQL behaves, "
     "or in a way that is efficient from MariaDB's point of view.",
-    {
-        { GlobalConfig::OrderedInsertBehavior::DEFAULT, "default" },
-        { GlobalConfig::OrderedInsertBehavior::ATOMIC, "atomic" }
-    },
+{
+    {GlobalConfig::OrderedInsertBehavior::DEFAULT, "default"},
+    {GlobalConfig::OrderedInsertBehavior::ATOMIC, "atomic"}
+},
     GlobalConfig::OrderedInsertBehavior::DEFAULT);
 
 mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
@@ -88,8 +92,9 @@ mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
     std::chrono::seconds(GlobalConfig::CURSOR_TIMEOUT_DEFAULT));
 
 
-GlobalConfig::GlobalConfig()
-    : mxs::config::Configuration(MXS_MODULE_NAME, &nosqlprotocol::specification)
+GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
+    : mxs::config::Configuration(name, &nosqlprotocol::specification)
+    , m_instance(instance)
 {
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
@@ -101,7 +106,13 @@ GlobalConfig::GlobalConfig()
     add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
 }
 
-//static
+bool GlobalConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    m_instance->post_configure();
+    return true;
+}
+
+// static
 mxs::config::Specification& GlobalConfig::specification()
 {
     return nosqlprotocol::specification;

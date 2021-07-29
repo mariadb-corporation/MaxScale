@@ -1014,10 +1014,19 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     int32_t rval = 0;
 
     const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
-            | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+        | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
 
-    auto type_mask = (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)) ?
-                qc_get_type_mask(buffer) : 0;
+    uint32_t type_mask = 0;
+
+    if (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer))
+    {
+        if (!gwbuf_is_contiguous(buffer))
+        {
+            buffer = gwbuf_make_contiguous(buffer);
+        }
+
+        type_mask = qc_get_type_mask(buffer);
+    }
 
     auto is_read_only = !(type_mask & ~read_only_types);
     auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();

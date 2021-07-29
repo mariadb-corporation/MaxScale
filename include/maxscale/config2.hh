@@ -61,11 +61,17 @@ public:
     using value_type = ParamsByName::value_type;
 
     /**
-     * Constructor
+     * Construct a specification
+     *
+     * A specification with a prefix expects the parameters to be defined in the form  of "prefix.name" when
+     * configured in the configuration file or inside of a nested object when configured from JSON.
      *
      * @param zModule The the name of the module, e.g. "cachefilter".
+     * @param kind    The type of the module.
+     * @param zPrefix The prefix to use. This is added to all parameters used by this specification.
      */
-    Specification(const char* zModule, Kind kind);
+    Specification(const char* zModule, Kind kind, const char* zPrefix = "");
+
     ~Specification();
 
     /**
@@ -80,6 +86,11 @@ public:
      * @return The module name of this specification.
      */
     const std::string& module() const;
+
+    /**
+     * The prefix of this module or an empty string if no prefix is specified.
+     */
+    const std::string& prefix() const;
 
     /**
      *  Validate parameters
@@ -217,6 +228,7 @@ private:
     std::string  m_module;
     Kind         m_kind;
     ParamsByName m_params;
+    std::string  m_prefix;
 };
 
 
@@ -1574,7 +1586,8 @@ using ParamBitMask = ParamCount;
  *
  * Walks hand in hand with Specification.
  */
-template<class ParamType, class ConfigurationType> class Native;
+template<class ParamType, class ConfigurationType>
+class Native;
 
 class Configuration
 {
@@ -1724,9 +1737,9 @@ protected:
      * @param pParam  Pointer to paramter describing value.
      * @param onSet   Optional functor to be called when value is set (at startup).
      */
-template<class ParamType,
-         class ConcreteConfiguration,
-         class NativeParamType = Native<ParamType, ConcreteConfiguration>>
+    template<class ParamType,
+             class ConcreteConfiguration,
+             class NativeParamType = Native<ParamType, ConcreteConfiguration>>
     void add_native(typename ParamType::value_type ConcreteConfiguration::* pValue,
                     ParamType* pParam,
                     std::function<void(typename ParamType::value_type)> on_set = nullptr);

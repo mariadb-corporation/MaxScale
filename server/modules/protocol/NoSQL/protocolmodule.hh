@@ -16,13 +16,17 @@
 #include <maxscale/protocol2.hh>
 #include "config.hh"
 
-
 class ProtocolModule : public mxs::ProtocolModule
 {
 public:
     using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
 
-    static ProtocolModule* create(const mxs::ConfigParameters& params);
+    static ProtocolModule* create(const std::string& name);
+
+    mxs::config::Configuration& getConfiguration() override final
+    {
+        return m_config;
+    }
 
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
@@ -40,8 +44,10 @@ public:
 
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
+    void post_configure();
+
 private:
-    ProtocolModule(GlobalConfig&& config);
+    ProtocolModule(const std::string& name);
 
 private:
     GlobalConfig m_config;

@@ -248,7 +248,8 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 # Tries to use 'maxkeys', 'maxpasswrd'
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
-# Basic MaxCtrl test
+# Basic MaxCtrl test. Also covers the following bugs:
+# MXS-3697: ENOENT: no such file or directory, stat '/~/.maxctrl.cnf' when running commands from the root directory.
 add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl REPL_BACKEND)
 
 # MXS-2167: Monitors should be able to use extra_port

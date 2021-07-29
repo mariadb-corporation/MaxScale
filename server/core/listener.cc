@@ -258,12 +258,12 @@ bool ListenerManager::listener_is_duplicate(const SListener& listener)
     return false;
 }
 
-template<class Params, class Unknown>
-SListener ListenerManager::create(const std::string& name, Params params, Unknown unknown)
+template<class Params>
+SListener ListenerManager::create(const std::string& name, Params params)
 {
     SListener rval;
 
-    if (s_spec.validate(params, &unknown))
+    if (s_spec.validate(params))
     {
         SListener listener(new Listener(name));
 
@@ -447,15 +447,13 @@ Listener::~Listener()
 SListener Listener::create(const std::string& name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name.c_str());
-    mxs::ConfigParameters unknown;
-    return this_unit.create(name, params, unknown);
+    return this_unit.create(name, params);
 }
 
 SListener Listener::create(const std::string& name, json_t* params)
 {
     mxb::LogScope scope(name.c_str());
-    std::set<std::string> unknown;
-    return this_unit.create(name, params, unknown);
+    return this_unit.create(name, params);
 }
 
 void Listener::set_type()
@@ -607,7 +605,9 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    return m_config.persist(os);
+    m_config.persist(os);
+    m_shared_data->m_proto_module->getConfiguration().persist_append(os);
+    return os;
 }
 
 json_t* Listener::to_json(const char* host) const
@@ -616,9 +616,17 @@ json_t* Listener::to_json(const char* host) const
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_STATE, json_string(state()));
-    json_object_set_new(attr, CN_PARAMETERS, m_config.to_json());
 
-    json_t* diag = m_shared_data->m_proto_module->print_auth_users_json();
+    auto& protocol_module = m_shared_data->m_proto_module;
+
+    json_t* params = m_config.to_json();
+    json_t* tmp = protocol_module->getConfiguration().to_json();
+    json_object_update(params, tmp);
+    json_decref(tmp);
+
+    json_object_set_new(attr, CN_PARAMETERS, params);
+
+    json_t* diag = protocol_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -1052,9 +1060,11 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     SData rval;
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
-    std::unique_ptr<mxs::ProtocolModule> protocol_module {protocol_api->create_protocol_module(protocol_params)};
+    std::unique_ptr<mxs::ProtocolModule> protocol_module {
+        protocol_api->create_protocol_module(m_name)
+    };
 
-    if (protocol_module)
+    if (protocol_module && protocol_module->getConfiguration().configure(protocol_params))
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
         mxs::SSLContext ssl;

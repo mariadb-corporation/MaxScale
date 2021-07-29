@@ -92,9 +92,11 @@ struct MXS_PROTOCOL_API
     /**
      * Creates a new protocol module instance.
      *
+     * @param name The name of the listener for which this protocol is created
+     *
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)(const mxs::ConfigParameters& params);
+    mxs::ProtocolModule* (* create_protocol_module)(const std::string& name);
 };
 
 /**

@@ -23,7 +23,9 @@ class MySQLProtocolModule : public mxs::ProtocolModule
 public:
     ~MySQLProtocolModule() override = default;
 
-    static MySQLProtocolModule* create(const mxs::ConfigParameters& params);
+    static MySQLProtocolModule* create(const std::string& name);
+
+    mxs::config::Configuration& getConfiguration() override final;
 
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
@@ -42,10 +44,14 @@ public:
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
 private:
+    MySQLProtocolModule(const std::string& name);
     bool parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out);
     bool read_authentication_options(mxs::ConfigParameters* params);
 
     /** Partial user search settings. These settings originate from the listener and do not
      * change once set. */
     mariadb::UserSearchSettings::Listener m_user_search_settings;
+
+    // This is needed for the getConfiguration entry point
+    mxs::config::Configuration m_config;
 };

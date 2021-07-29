@@ -44,25 +44,24 @@
 #include <maxscale/session.hh>
 #include "cdc_plain_auth.hh"
 
+namespace
+{
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+}
+
 class CDCProtocolModule : public mxs::ProtocolModule
 {
 public:
     ~CDCProtocolModule() override = default;
 
-    static CDCProtocolModule* create(const mxs::ConfigParameters& params)
+    static CDCProtocolModule* create(const std::string& name)
     {
-        CDCProtocolModule* self = nullptr;
+        return new CDCProtocolModule(name);
+    }
 
-        if (params.empty())
-        {
-            self = new(std::nothrow) CDCProtocolModule();
-        }
-        else
-        {
-            MXS_ERROR("CDC protocol does not support any parameters.");
-        }
-
-        return self;
+    mxs::config::Configuration& getConfiguration() override final
+    {
+        return m_config;
     }
 
     std::unique_ptr<mxs::ClientConnection>
@@ -89,7 +88,15 @@ public:
     }
 
 private:
+    CDCProtocolModule(const std::string& name)
+        : m_config(name, &s_spec)
+    {
+    }
+
     CDCAuthenticatorModule m_auth_module;
+
+    // This is needed for the getConfiguration entry point
+    mxs::config::Configuration m_config;
 };
 
 extern "C"
@@ -131,7 +138,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,       /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;

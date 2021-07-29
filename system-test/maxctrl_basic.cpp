@@ -96,6 +96,11 @@ int main(int argc, char** argv)
                               "maxctrl api get servers;"
                               "maxctrl classify 'select 1';");
 
+    test.tprintf("MXS-3697: MaxCtrl fails with \"ENOENT: no such file or directory, stat '/~/.maxctrl.cnf'\" "
+                 "when running commands from the root directory.");
+    rc = test.maxscale->ssh_node_f(false, "cd / && maxctrl list servers");
+    test.expect(rc == 0, "Failed to execute a command from the root directory");
+
     test.check_maxscale_alive();
     return test.global_result;
 }

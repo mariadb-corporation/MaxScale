@@ -31,6 +31,12 @@ function configParser(filename) {
   // with a /, Yargs prepends it with the CWD, so some work is needed to
   // figure out whether the filename is the default.
   var prefix = process.cwd() + "/~/";
+
+  // Remove duplicated slashes to make sure the literal string comparison
+  // of the prefix works. This would happen when MaxCtrl is executed from
+  // the root directory and the prefix would end up being //~/.
+  prefix = prefix.replace("//", "/");
+
   if (filename.indexOf(prefix) == 0) {
     // Replace "${CWD}/~/" with "${HOME}/"
     filename = os.homedir() + "/" + filename.slice(-(filename.length - prefix.length));
