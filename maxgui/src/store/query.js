@@ -50,8 +50,7 @@ function sidebarStates() {
         search_schema: '',
         db_tree: [],
         db_completion_list: [],
-        //TODO: make this as a property of curr_cnct_resource
-        active_db: JSON.parse(localStorage.getItem('active_db')),
+        active_db: '',
     }
 }
 
@@ -258,10 +257,8 @@ export default {
             state.query_confirm_flag = payload // payload is either 0 or 1
             localStorage.setItem('query_confirm_flag', payload)
         },
-        //TODO: make this as a property of curr_cnct_resource
         SET_ACTIVE_DB(state, payload) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this })
-            localStorage.setItem('active_db', JSON.stringify(payload))
         },
         SET_SHOW_VIS_SIDEBAR(state, payload) {
             patch_wke_property(state, { obj: { show_vis_sidebar: payload }, scope: this })
@@ -392,8 +389,6 @@ export default {
                         )
 
                     commit('DELETE_CNCT_RESOURCE', targetCnctResource)
-                    //TODO: make this as a property of curr_cnct_resource
-                    localStorage.removeItem('active_db')
                     dispatch('resetWkeStates', { cnctId: cnctId })
                 }
             } catch (e) {
@@ -416,8 +411,6 @@ export default {
                 commit('SET_ACTIVE_CONN_STATE', hasValidConn)
 
                 if (invalidConnIds.length) {
-                    //TODO: make this as a property of curr_cnct_resource
-                    localStorage.removeItem('active_db')
                     commit(
                         'SET_CNCT_RESOURCES',
                         state.cnct_resources.filter(rsrc => !invalidConnIds.includes(rsrc.id))
@@ -815,7 +808,6 @@ export default {
                     }
                 )
                 const resActiveDb = res.data.data.attributes.results[0].data.flat()[0]
-                //TODO: use active_db from curr_cnct_resource
                 if (!resActiveDb) commit('SET_ACTIVE_DB', '')
                 else if (state.active_db !== resActiveDb) commit('SET_ACTIVE_DB', resActiveDb)
             } catch (e) {
@@ -841,6 +833,7 @@ export default {
             const idx = state.worksheets_arr.indexOf(targetWke)
             const wke = { ...targetWke, ...saWkeStates() }
             commit('UPDATE_WKE', { idx, wke })
+            commit('UPDATE_SA_WKE_STATES', wke)
         },
     },
     getters: {
