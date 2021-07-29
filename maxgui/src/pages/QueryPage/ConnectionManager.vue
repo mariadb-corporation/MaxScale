@@ -1,63 +1,80 @@
 <template>
-    <div>
-        <v-btn
+    <div :style="{ maxWidth: '225px' }">
+        <v-select
+            v-model="chosenConn"
+            :items="connOptions"
             outlined
-            width="220"
-            class="text-none px-2 font-weight-regular"
-            depressed
-            small
-            color="accent-dark"
-            @click="curr_cnct_resource ? null : openConnDialog()"
+            dense
+            class="std mariadb-select-input conn-dropdown"
+            :menu-props="{
+                contentClass: 'mariadb-select-v-menu',
+                bottom: true,
+                offsetY: true,
+            }"
+            :height="28"
+            hide-details
+            :placeholder="$t('selectConnection')"
         >
-            <div
-                id="curr_cnct_resource"
-                class="d-flex align-center"
-                :style="{ maxWidth: `${curr_cnct_resource ? 162 : 198}px` }"
-            >
-                <v-icon v-if="curr_cnct_resource" class="mr-2" size="16" color="accent-dark">
-                    $vuetify.icons.server
-                </v-icon>
-                <div class="text-truncate">
-                    {{ curr_cnct_resource ? curr_cnct_resource.name : $t('openConnection') }}
+            <template v-slot:selection="{ item }">
+                <div class="d-flex align-center pl-1">
+                    <v-icon class="mr-2" size="16" color="accent-dark">
+                        $vuetify.icons.server
+                    </v-icon>
+                    <truncate-string :text="item" :maxWidth="145" :nudgeLeft="32" />
                 </div>
-            </div>
-            <v-tooltip
-                v-if="curr_cnct_resource"
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        class="ml-2"
-                        height="24"
-                        width="24"
-                        fab
-                        icon
-                        small
-                        v-on="on"
-                        @click.prevent="() => $refs.confirmDialog.open()"
+            </template>
+            <template v-slot:item="{ item, on, attrs }">
+                <div
+                    class="v-list-item__title d-flex align-center flex-row flex-grow-1"
+                    v-bind="attrs"
+                    v-on="on"
+                >
+                    <div
+                        v-if="item === newConnOption"
+                        class="text-decoration-underline color text-primary"
                     >
-                        <v-icon size="18" color="error">
-                            $vuetify.icons.unlink
+                        {{ item }}
+                    </div>
+                    <template v-else>
+                        <v-icon class="mr-2" size="16" color="accent-dark">
+                            $vuetify.icons.server
                         </v-icon>
-                    </v-btn>
-                </template>
-                <span>{{ $t('disconnect') }}</span>
-            </v-tooltip>
-        </v-btn>
-        <v-tooltip
-            v-if="curr_cnct_resource"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-            nudge-right="20px"
-            activator="#curr_cnct_resource"
-        >
-            <span>{{ $t('connectedTo') }}: {{ curr_cnct_resource.name }} </span>
-        </v-tooltip>
+                        <truncate-string :text="item" :maxWidth="135" :nudgeLeft="32" />
+                        <v-spacer />
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn
+                                    class="ml-2"
+                                    height="24"
+                                    width="24"
+                                    fab
+                                    icon
+                                    small
+                                    v-on="on"
+                                    @click.prevent="() => $refs.confirmDialog.open()"
+                                >
+                                    <v-icon size="18" color="error">
+                                        $vuetify.icons.unlink
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <span>{{ $t('disconnect') }}</span>
+                        </v-tooltip>
+                    </template>
+                </div>
+            </template>
+        </v-select>
 
-        <connection-dialog v-model="isConnDialogOpened" :handleSave="handleOpenConn" />
+        <connection-dialog
+            v-model="isConnDialogOpened"
+            :handleSave="handleOpenConn"
+            :onCancel="assignActiveConn"
+            :onClose="assignActiveConn"
+        />
         <confirm-dialog
             v-if="curr_cnct_resource"
             ref="confirmDialog"
@@ -92,6 +109,8 @@ export default {
     data() {
         return {
             isConnDialogOpened: false,
+            chosenConn: '',
+            newConnOption: this.$t('newConnection'),
         }
     },
     computed: {
@@ -100,22 +119,34 @@ export default {
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
         }),
-    },
-    watch: {
-        checking_active_conn() {
-            this.handleAutoOpenDialog()
+        connOptions() {
+            let options = [this.newConnOption]
+            if (this.curr_cnct_resource) options.unshift(this.curr_cnct_resource.name)
+            return options
         },
     },
-    mounted() {
-        this.handleAutoOpenDialog()
+    watch: {
+        checking_active_conn(v) {
+            //After finish checking checking_active_conn, auto open dialog if there is no active connection
+            if (!v && !this.active_conn_state) this.openConnDialog()
+            else this.assignActiveConn()
+        },
+        chosenConn(v) {
+            if (v === this.newConnOption) this.openConnDialog()
+            else this.assignActiveConn()
+        },
+        curr_cnct_resource(v) {
+            if (v) this.chosenConn = v.name
+        },
     },
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
         }),
-        handleAutoOpenDialog() {
-            if (!this.checking_active_conn && !this.active_conn_state) this.openConnDialog()
+        assignActiveConn() {
+            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource.name
+            else this.chosenConn = ''
         },
         openConnDialog() {
             this.isConnDialogOpened = true
@@ -126,3 +157,14 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+::v-deep .mariadb-select-input.conn-dropdown {
+    .v-input__control {
+        min-height: 0px;
+        fieldset {
+            border: thin solid $accent-dark;
+        }
+    }
+}
+</style>

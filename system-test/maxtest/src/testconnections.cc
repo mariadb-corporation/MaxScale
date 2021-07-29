@@ -888,8 +888,7 @@ void TestConnections::revert_replicate_from_master()
 
     for (int i = 1; i < repl->N; i++)
     {
-        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0]);
-        execute_query(repl->nodes[i], "start slave");
+        repl->replicate_from(i, 0);
     }
 }
 

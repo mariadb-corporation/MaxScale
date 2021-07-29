@@ -5,45 +5,19 @@
             <div
                 v-if="!loading_db_tree"
                 class="db-tb-list"
-                :class="[isSidebarCollapsed ? 'pa-1' : 'pa-3']"
+                :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']"
             >
-                <portal to="toggle-pane">
-                    <v-tooltip
-                        top
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
-                    >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                icon
-                                small
-                                v-on="on"
-                                @click="$emit('is-sidebar-collapsed', !isSidebarCollapsed)"
-                            >
-                                <v-icon
-                                    size="16"
-                                    color="deep-ocean"
-                                    class="collapse-icon"
-                                    :class="{ 'collapse-icon--active': isSidebarCollapsed }"
-                                >
-                                    double_arrow
-                                </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ isSidebarCollapsed ? $t('expand') : $t('collapse') }}</span>
-                    </v-tooltip>
-                </portal>
                 <div class="visible-when-expand fill-height">
                     <div class="schema-list-tools">
                         <div class="d-flex align-center justify-end">
                             <span
-                                v-if="!isSidebarCollapsed"
+                                v-if="!is_sidebar_collapsed"
                                 class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
                             >
                                 {{ $t('schemas') }}
                             </span>
                             <v-tooltip
-                                v-if="!isSidebarCollapsed"
+                                v-if="!is_sidebar_collapsed"
                                 top
                                 transition="slide-y-transition"
                                 content-class="shadow-drop color text-navigation py-1 px-4"
@@ -63,11 +37,37 @@
                                 </template>
                                 <span>{{ $t('reload') }}</span>
                             </v-tooltip>
-                            <portal-target name="toggle-pane" />
+                            <v-tooltip
+                                top
+                                transition="slide-y-transition"
+                                content-class="shadow-drop color text-navigation py-1 px-4"
+                            >
+                                <template v-slot:activator="{ on }">
+                                    <v-btn
+                                        icon
+                                        small
+                                        v-on="on"
+                                        @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
+                                    >
+                                        <v-icon
+                                            size="16"
+                                            color="deep-ocean"
+                                            class="collapse-icon"
+                                            :class="{
+                                                'collapse-icon--active': is_sidebar_collapsed,
+                                            }"
+                                        >
+                                            double_arrow
+                                        </v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>{{
+                                    is_sidebar_collapsed ? $t('expand') : $t('collapse')
+                                }}</span>
+                            </v-tooltip>
                         </div>
                         <v-text-field
-                            v-if="!isSidebarCollapsed"
-                            id="searchSchema"
+                            v-if="!is_sidebar_collapsed"
                             v-model="searchSchema"
                             name="searchSchema"
                             required
@@ -80,7 +80,7 @@
                         />
                     </div>
                     <db-list-tree
-                        v-if="!isSidebarCollapsed"
+                        v-if="!is_sidebar_collapsed"
                         class="schema-list-wrapper"
                         @preview-data="
                             schemaId =>
@@ -126,33 +126,34 @@ export default {
     components: {
         DbListTree,
     },
-    props: {
-        isSidebarCollapsed: { type: Boolean, required: true },
-    },
-
-    data() {
-        return {
-            searchSchema: '',
-        }
-    },
     computed: {
         ...mapState({
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             loading_db_tree: state => state.query.loading_db_tree,
             active_conn_state: state => state.query.active_conn_state,
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
+            search_schema: state => state.query.search_schema,
         }),
-    },
-    watch: {
-        active_conn_state: async function(v) {
-            if (v) {
-                await this.loadSchema()
-                await this.updateActiveDb()
-            }
+        searchSchema: {
+            get() {
+                return this.search_schema
+            },
+            set(value) {
+                this.SET_SEARCH_SCHEMA(value)
+            },
         },
+    },
+    activated() {
+        this.addActiveConnStateWatcher()
+    },
+    deactivated() {
+        this.unwatchActiveConnState()
     },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_IS_SIDEBAR_COLLAPSED: 'query/SET_IS_SIDEBAR_COLLAPSED',
+            SET_SEARCH_SCHEMA: 'query/SET_SEARCH_SCHEMA',
         }),
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
@@ -165,6 +166,14 @@ export default {
             fetchTriggers: 'query/fetchTriggers',
             useDb: 'query/useDb',
         }),
+        addActiveConnStateWatcher() {
+            this.unwatchActiveConnState = this.$watch('active_conn_state', async v => {
+                if (v) {
+                    await this.loadSchema()
+                    await this.updateActiveDb()
+                }
+            })
+        },
         async loadSchema() {
             await this.fetchDbList()
         },

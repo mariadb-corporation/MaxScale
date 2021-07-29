@@ -46,16 +46,16 @@
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
+        <!-- TODO: Fix transition height issue -->
         <v-fade-transition>
             <keep-alive>
                 <worksheet
                     v-if="activeWkeID"
                     :key="activeWkeID"
-                    ref="wke"
                     :style="{
                         height: `calc(100% - ${wkeNavHeight}px)`,
                     }"
-                    :containerHeight="containerHeight"
+                    :ctrDim="ctrDim"
                     v-on="$listeners"
                 />
             </keep-alive>
@@ -84,7 +84,7 @@ export default {
         Worksheet,
     },
     props: {
-        containerHeight: { type: Number, required: true },
+        ctrDim: { type: Object, required: true },
     },
     data() {
         return {
@@ -122,6 +122,7 @@ export default {
 <style lang="scss" scoped>
 .wke-navigation {
     border-right: 1px solid $table-border !important;
+    border-bottom: 1px solid $table-border !important;
     .tab-btn {
         border-bottom: none !important;
         border-top: none !important;
