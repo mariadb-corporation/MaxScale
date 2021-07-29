@@ -125,15 +125,14 @@ export default {
     state: {
         // Toolbar states
         is_fullscreen: false,
-        // returns NaN if not found for the following states: query_max_rows, query_confirm_flag
-        query_max_rows: parseInt(localStorage.getItem('query_max_rows')),
-        query_confirm_flag: parseInt(localStorage.getItem('query_confirm_flag')),
+        query_max_rows: 10000,
+        query_confirm_flag: 1,
         rc_target_names_map: {},
 
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
-        cnct_resources: JSON.parse(localStorage.getItem('cnct_resources')) || [],
+        cnct_resources: [],
         // standalone wke states
         ...saWkeStates(),
     },
@@ -237,25 +236,20 @@ export default {
         },
         SET_CNCT_RESOURCES(state, payload) {
             state.cnct_resources = payload
-            localStorage.setItem('cnct_resources', JSON.stringify(payload))
         },
         ADD_CNCT_RESOURCE(state, payload) {
             state.cnct_resources.push(payload)
             patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
-            localStorage.setItem('cnct_resources', JSON.stringify(state.cnct_resources))
         },
         DELETE_CNCT_RESOURCE(state, payload) {
             const idx = state.cnct_resources.indexOf(payload)
             state.cnct_resources.splice(idx, 1)
-            localStorage.setItem('cnct_resources', JSON.stringify(state.cnct_resources))
         },
         SET_QUERY_MAX_ROW(state, payload) {
             state.query_max_rows = payload
-            localStorage.setItem('query_max_rows', payload)
         },
         SET_QUERY_CONFIRM_FLAG(state, payload) {
             state.query_confirm_flag = payload // payload is either 0 or 1
-            localStorage.setItem('query_confirm_flag', payload)
         },
         SET_ACTIVE_DB(state, payload) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this })
