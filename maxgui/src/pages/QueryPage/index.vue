@@ -65,10 +65,11 @@ export default {
         this.$help.doubleRAF(() => this.setCtrDim())
         await this.checkActiveConn()
     },
-    async beforeDestroy() {
+    //TODO: Prompt dialog to let user disconnect all opened connections
+    /*     async beforeDestroy() {
         if (process.env.NODE_ENV !== 'development' && this.curr_cnct_resource)
             await this.disconnect()
-    },
+    }, */
     methods: {
         ...mapMutations({ UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES' }),
         ...mapActions({

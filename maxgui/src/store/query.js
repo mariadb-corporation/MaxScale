@@ -232,17 +232,22 @@ export default {
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
         },
+
+        SET_CURR_CNCT_RESOURCE(state, payload) {
+            patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
+        },
         SET_CNCT_RESOURCES(state, payload) {
-            state.cnct_resources.push(payload)
+            state.cnct_resources = payload
             localStorage.setItem('cnct_resources', JSON.stringify(payload))
         },
-        UPDATE_CNCT_RESOURCES(state, payload) {
-            //first update wke state and standalone wke state
+        ADD_CNCT_RESOURCE(state, payload) {
+            state.cnct_resources.push(payload)
             patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
-            //Then update cnct_resources
+            localStorage.setItem('cnct_resources', JSON.stringify(state.cnct_resources))
+        },
+        DELETE_CNCT_RESOURCE(state, payload) {
             const idx = state.cnct_resources.indexOf(payload)
-            if (idx === -1) state.cnct_resources.push(payload)
-            else state.cnct_resources.splice(idx, 1)
+            state.cnct_resources.splice(idx, 1)
             localStorage.setItem('cnct_resources', JSON.stringify(state.cnct_resources))
         },
         SET_QUERY_MAX_ROW(state, payload) {
@@ -360,7 +365,7 @@ export default {
                         name: body.target,
                     }
                     commit('SET_ACTIVE_CONN_STATE', true)
-                    commit('UPDATE_CNCT_RESOURCES', curr_cnct_resource)
+                    commit('ADD_CNCT_RESOURCE', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', false)
                 }
@@ -370,9 +375,11 @@ export default {
                 commit('SET_CONN_ERR_STATE', true)
             }
         },
-        async disconnect({ state, commit, dispatch }, { showSnackbar } = {}) {
+        async disconnect({ state, commit, dispatch }, { showSnackbar, id } = {}) {
             try {
-                let res = await this.vue.$axios.delete(`/sql/${state.curr_cnct_resource.id}`)
+                const cnctId = id ? id : state.curr_cnct_resource.id
+                const targetCnctResource = state.cnct_resources.find(rsrc => rsrc.id === cnctId)
+                let res = await this.vue.$axios.delete(`/sql/${cnctId}`)
                 if (res.status === 204) {
                     if (showSnackbar)
                         commit(
@@ -384,10 +391,10 @@ export default {
                             { root: true }
                         )
 
-                    commit('UPDATE_CNCT_RESOURCES', state.curr_cnct_resource)
+                    commit('DELETE_CNCT_RESOURCE', targetCnctResource)
                     //TODO: make this as a property of curr_cnct_resource
                     localStorage.removeItem('active_db')
-                    dispatch('resetCurrWkeStates')
+                    dispatch('resetWkeStates', { cnctId: cnctId })
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
@@ -395,7 +402,7 @@ export default {
             }
         },
         /* TODO: Decompose to smaller functions */
-        async checkActiveConn({ state, commit, dispatch }) {
+        async checkActiveConn({ state, commit, dispatch, getters }) {
             try {
                 commit('SET_CHECKING_ACTIVE_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
@@ -407,30 +414,20 @@ export default {
 
                 let hasValidConn = Boolean(validConnIds.length)
                 commit('SET_ACTIVE_CONN_STATE', hasValidConn)
-                if (hasValidConn)
-                    // Select first valid client connection id to be active
-                    patch_wke_property(state, {
-                        obj: {
-                            curr_cnct_resource: state.cnct_resources.find(
-                                rsrc => rsrc.id === validConnIds[0]
-                            ),
-                        },
-                        scope: this,
-                    })
 
                 if (invalidConnIds.length) {
                     //TODO: make this as a property of curr_cnct_resource
                     localStorage.removeItem('active_db')
+                    commit(
+                        'SET_CNCT_RESOURCES',
+                        state.cnct_resources.filter(rsrc => !invalidConnIds.includes(rsrc.id))
+                    )
                     invalidConnIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        commit(
-                            'SET_CNCT_RESOURCES',
-                            state.cnct_resources.filter(rsrc => rsrc.id !== id)
-                        )
+                        dispatch('resetWkeStates', { cnctId: id })
                     })
-                    dispatch('resetCurrWkeStates')
+                    commit('UPDATE_SA_WKE_STATES', getters.getActiveWke)
                 }
-
                 commit('SET_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-checkActiveConn')
@@ -837,13 +834,13 @@ export default {
         },
         /**
          * Call this action when disconnect a connection to
-         * clear the current worksheet state to its initial state
+         * clear the state of the worksheet having that connection to its initial state
          */
-        resetCurrWkeStates({ state, commit, getters }) {
-            const idx = state.worksheets_arr.indexOf(getters.getActiveWke)
-            const wke = { ...getters.getActiveWke, ...saWkeStates() }
+        resetWkeStates({ state, commit }, { cnctId }) {
+            const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
+            const idx = state.worksheets_arr.indexOf(targetWke)
+            const wke = { ...targetWke, ...saWkeStates() }
             commit('UPDATE_WKE', { idx, wke })
-            commit('UPDATE_SA_WKE_STATES', wke)
         },
     },
     getters: {

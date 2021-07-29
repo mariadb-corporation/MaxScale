@@ -1,6 +1,5 @@
 <template>
     <div :style="{ maxWidth: '225px' }">
-        <!-- TODO: Refactor to return object instead of string value  -->
         <v-select
             v-model="chosenConn"
             :items="connOptions"
@@ -14,6 +13,8 @@
             }"
             :height="28"
             hide-details
+            item-text="name"
+            return-object
             :placeholder="$t('selectConnection')"
         >
             <template v-slot:selection="{ item }">
@@ -21,7 +22,7 @@
                     <v-icon class="mr-2" size="16" color="accent-dark">
                         $vuetify.icons.server
                     </v-icon>
-                    <truncate-string :text="item" :maxWidth="145" :nudgeLeft="32" />
+                    <truncate-string :text="item.name" :maxWidth="145" :nudgeLeft="32" />
                 </div>
             </template>
             <template v-slot:item="{ item, on, attrs }">
@@ -31,16 +32,16 @@
                     v-on="on"
                 >
                     <div
-                        v-if="item === newConnOption"
+                        v-if="item.name === newConnOption.name"
                         class="text-decoration-underline color text-primary"
                     >
-                        {{ item }}
+                        {{ item.name }}
                     </div>
                     <template v-else>
                         <v-icon class="mr-2" size="16" color="accent-dark">
                             $vuetify.icons.server
                         </v-icon>
-                        <truncate-string :text="item" :maxWidth="135" :nudgeLeft="32" />
+                        <truncate-string :text="item.name" :maxWidth="135" :nudgeLeft="32" />
                         <v-spacer />
                         <v-tooltip
                             top
@@ -56,7 +57,7 @@
                                     icon
                                     small
                                     v-on="on"
-                                    @click.prevent="() => $refs.confirmDialog.open()"
+                                    @click.stop="() => unlinkConn(item)"
                                 >
                                     <v-icon size="18" color="error">
                                         $vuetify.icons.unlink
@@ -77,12 +78,11 @@
             :onClose="assignActiveConn"
         />
         <confirm-dialog
-            v-if="curr_cnct_resource"
             ref="confirmDialog"
             :title="$t('disconnectConn')"
             type="disconnect"
-            :item="{ id: curr_cnct_resource.name }"
-            :onSave="() => disconnect({ showSnackbar: true })"
+            :item="{ id: targetConn.name }"
+            :onSave="() => disconnect({ showSnackbar: true, id: targetConn.id })"
         />
     </div>
 </template>
@@ -100,7 +100,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import ConnectionDialog from './ConnectionDialog'
 export default {
     name: 'connection-manager',
@@ -110,49 +110,74 @@ export default {
     data() {
         return {
             isConnDialogOpened: false,
-            chosenConn: '',
-            newConnOption: this.$t('newConnection'),
+            chosenConn: {},
+            newConnOption: {
+                name: this.$t('newConnection'),
+            },
+            targetConn: {}, // target connection to be deleted
         }
     },
     computed: {
         ...mapState({
             checking_active_conn: state => state.query.checking_active_conn,
-            active_conn_state: state => state.query.active_conn_state,
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_conn_state: state => state.query.active_conn_state,
         }),
         connOptions() {
-            //TODO: use cnct_resources as items to select
             let options = [this.newConnOption]
-            if (this.curr_cnct_resource) options.unshift(this.curr_cnct_resource.name)
+            if (this.cnct_resources.length) options.unshift(...this.cnct_resources)
             return options
+        },
+        isCreatingNewConn() {
+            return this.chosenConn.name === this.newConnOption.name
         },
     },
     watch: {
         checking_active_conn(v) {
             //After finish checking checking_active_conn, auto open dialog if there is no active connection
-            if (!v && !this.active_conn_state) this.openConnDialog()
+            if (!v && this.connOptions.length === 1) this.openConnDialog()
             else this.assignActiveConn()
         },
-        chosenConn(v) {
-            if (v === this.newConnOption) this.openConnDialog()
-            else this.assignActiveConn()
+        chosenConn: {
+            deep: true,
+            async handler(v) {
+                if (this.isCreatingNewConn) this.openConnDialog()
+                else if (this.$typy(v, 'id').isDefined) {
+                    this.SET_CURR_CNCT_RESOURCE(v)
+                    await this.checkActiveConn()
+                    if (this.active_conn_state) {
+                        await this.fetchDbList()
+                        await this.updateActiveDb()
+                    }
+                }
+            },
         },
         curr_cnct_resource(v) {
-            if (v) this.chosenConn = v.name
+            if (!this.$help.lodash.isEqual(v, this.chosenConn)) this.chosenConn = v
         },
     },
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
+            checkActiveConn: 'query/checkActiveConn',
+            fetchDbList: 'query/fetchDbList',
+            updateActiveDb: 'query/updateActiveDb',
+        }),
+        ...mapMutations({
+            SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
         }),
         assignActiveConn() {
-            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource.name
-            else this.chosenConn = ''
+            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
+            else this.chosenConn = {}
         },
         openConnDialog() {
             this.isConnDialogOpened = true
+        },
+        unlinkConn(item) {
+            this.$refs.confirmDialog.open()
+            this.targetConn = item
         },
         async handleOpenConn(body) {
             await this.openConnect(body)

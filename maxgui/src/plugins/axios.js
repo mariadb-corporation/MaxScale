@@ -67,7 +67,6 @@ apiClient.interceptors.response.use(
                         type: 'error',
                     })
             case 503: {
-                await store.dispatch('query/disconnect')
                 return store.commit('SET_SNACK_BAR_MESSAGE', {
                     text: [...getErrorsArr(error), 'Please reconnect'],
                     type: 'error',
