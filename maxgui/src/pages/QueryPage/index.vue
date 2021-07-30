@@ -5,12 +5,7 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': is_fullscreen }"
         >
-            <toolbar-container ref="toolbarContainer" />
-            <worksheets
-                :ctrDim="ctrDim"
-                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
-                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
-            />
+            <worksheets :ctrDim="ctrDim" />
             <confirm-dialog
                 ref="confirmDialog"
                 :title="$t('confirmations.leavePage')"
@@ -51,12 +46,10 @@
  * Public License.
  */
 import { mapActions, mapState, mapGetters, mapMutations } from 'vuex'
-import ToolbarContainer from './ToolbarContainer'
 import Worksheets from './Worksheets.vue'
 export default {
     name: 'query-view',
     components: {
-        ToolbarContainer,
         Worksheets,
     },
     data() {

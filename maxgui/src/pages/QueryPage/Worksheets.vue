@@ -46,6 +46,7 @@
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
+        <toolbar-container ref="toolbarContainer" />
         <v-fade-transition mode="out-in">
             <keep-alive>
                 <worksheet
@@ -53,9 +54,10 @@
                     :key="activeWkeID"
                     :ctrDim="ctrDim"
                     :style="{
-                        height: `calc(100% - ${wkeNavHeight}px)`,
+                        height: `calc(100% - ${wkeNavHeight + 45}px)`,
                     }"
-                    v-on="$listeners"
+                    @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
+                    @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
                 />
             </keep-alive>
         </v-fade-transition>
@@ -77,10 +79,12 @@
 
 import { mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
+import ToolbarContainer from './ToolbarContainer'
 export default {
     name: 'worksheets',
     components: {
         Worksheet,
+        ToolbarContainer,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -121,7 +125,7 @@ export default {
 <style lang="scss" scoped>
 .wke-navigation {
     border-right: 1px solid $table-border !important;
-    border-bottom: 1px solid $table-border !important;
+    border-top: 1px solid $table-border !important;
     .tab-btn {
         border-bottom: none !important;
         border-top: none !important;
