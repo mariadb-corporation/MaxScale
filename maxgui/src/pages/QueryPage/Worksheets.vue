@@ -46,16 +46,15 @@
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
-        <!-- TODO: Fix transition height issue -->
-        <v-fade-transition>
+        <v-fade-transition mode="out-in">
             <keep-alive>
                 <worksheet
                     v-if="activeWkeID"
                     :key="activeWkeID"
+                    :ctrDim="ctrDim"
                     :style="{
                         height: `calc(100% - ${wkeNavHeight}px)`,
                     }"
-                    :ctrDim="ctrDim"
                     v-on="$listeners"
                 />
             </keep-alive>
