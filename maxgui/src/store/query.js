@@ -390,6 +390,16 @@ export default {
                 logger.error(e)
             }
         },
+        async disconnectAll({ state, dispatch } = {}) {
+            try {
+                state.cnct_resources.map(async ({ id }) => {
+                    await dispatch('disconnect', { showSnackbar: false, id: id })
+                })
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-disconnectAll')
+                logger.error(e)
+            }
+        },
         /* TODO: Decompose to smaller functions */
         async checkActiveConn({ state, commit, dispatch, getters }) {
             try {
@@ -398,18 +408,24 @@ export default {
                 const resConnIds = res.data.data.map(conn => conn.id)
 
                 const clientConnIds = getClientConnIds()
-                let validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-                let invalidConnIds = clientConnIds.filter(id => !validConnIds.includes(id))
+                const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
 
-                let hasValidConn = Boolean(validConnIds.length)
+                const validCnctResources = state.cnct_resources.filter(rsrc =>
+                    validConnIds.includes(rsrc.id)
+                )
+                const invalidCnctResources = this.vue.$help.lodash.xorWith(
+                    state.cnct_resources,
+                    validCnctResources,
+                    this.vue.$help.lodash.isEqual
+                )
+
+                commit('SET_CNCT_RESOURCES', validCnctResources)
+
+                const hasValidConn = Boolean(validConnIds.length)
                 commit('SET_ACTIVE_CONN_STATE', hasValidConn)
 
-                if (invalidConnIds.length) {
-                    commit(
-                        'SET_CNCT_RESOURCES',
-                        state.cnct_resources.filter(rsrc => !invalidConnIds.includes(rsrc.id))
-                    )
-                    invalidConnIds.forEach(id => {
+                if (invalidCnctResources.length) {
+                    invalidCnctResources.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
                         dispatch('resetWkeStates', { cnctId: id })
                     })
@@ -825,7 +841,7 @@ export default {
         resetWkeStates({ state, commit }, { cnctId }) {
             const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
             const idx = state.worksheets_arr.indexOf(targetWke)
-            const wke = { ...targetWke, ...saWkeStates() }
+            const wke = { ...targetWke, ...connStates(), ...sidebarStates() }
             commit('UPDATE_WKE', { idx, wke })
             commit('UPDATE_SA_WKE_STATES', wke)
         },

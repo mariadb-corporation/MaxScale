@@ -51,7 +51,8 @@ export default {
         },
     },
     actions: {
-        async logout({ commit, rootState }) {
+        async logout({ commit, dispatch, rootState }) {
+            await dispatch('query/disconnectAll', {}, { root: true })
             cancelAllRequests() // cancel all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
