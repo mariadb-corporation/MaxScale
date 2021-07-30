@@ -87,20 +87,32 @@ string get_version_string(SERVICE* service)
     return service_vrs;
 }
 
-bool supports_extended_caps(SERVICE* service)
+enum class CapTypes
 {
-    bool rval = false;
+    XPAND,      // XPand, doesn't include SESSION_TRACK as it doesn't support it
+    NORMAL,     // The normal capabilities but without the extra MariaDB-only bits
+    MARIADB,    // All capabilities
+};
 
+CapTypes get_supported_cap_types(SERVICE* service)
+{
     for (SERVER* s : service->reachable_servers())
     {
-        if (s->info().version_num().total >= 100200)
+        if (s->info().type() == SERVER::VersionInfo::Type::XPAND)
         {
-            rval = true;
-            break;
+            // At least one node is XPand and since it's the most restrictive, we can return early.
+            return CapTypes::XPAND;
+        }
+        else if (s->info().version_num().total >= 100200)
+        {
+            // TODO: This is "bug compatible" with older releases where the MariaDB extra capabilities are
+            // sent if at least one node is version 10.2 or higher. This should behave according to the lowest
+            // version reachable from this service to make sure all nodes behave in a roughly similar manner.
+            return CapTypes::MARIADB;
         }
     }
 
-    return rval;
+    return CapTypes::NORMAL;
 }
 
 uint32_t parse_packet_length(GWBUF* buffer)
@@ -368,7 +380,8 @@ int MariaDBClientConnection::send_mysql_client_handshake()
         server_scramble[i] = '!' + (val16 % (('~' + 1) - '!'));
     }
 
-    bool is_maria = supports_extended_caps(service);
+    auto cap_types = get_supported_cap_types(service);
+    bool is_maria = cap_types == CapTypes::MARIADB;
 
     // copy back to the caller
     memcpy(m_session_data->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
@@ -449,9 +462,17 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     *mysql_handshake_payload = GW_MYSQL_HANDSHAKE_FILLER;
     mysql_handshake_payload++;
 
+    uint64_t server_capabilities = GW_MYSQL_CAPABILITIES_SERVER;
+
+    if (cap_types == CapTypes::XPAND)
+    {
+        // XPand doesn't support SESSION_TRACK
+        server_capabilities &= ~GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    }
+
     // write server capabilities part one
-    mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
-    mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
+    mysql_server_capabilities_one[0] = (uint8_t)server_capabilities;
+    mysql_server_capabilities_one[1] = (uint8_t)(server_capabilities >> 8);
 
     if (is_maria)
     {
@@ -479,8 +500,8 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
 
     // write server capabilities part two
-    mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
-    mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
+    mysql_server_capabilities_two[0] = (uint8_t)(server_capabilities >> 16);
+    mysql_server_capabilities_two[1] = (uint8_t)(server_capabilities >> 24);
 
     /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
      *  the value 128 even though there's no such capability. */
