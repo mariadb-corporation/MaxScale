@@ -318,9 +318,9 @@ class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
 public:
     struct gtid
     {
-        uint32_t domain;
-        uint32_t server_id;
-        uint64_t sequence;
+        uint32_t domain {0};
+        uint32_t server_id {0};
+        uint64_t sequence {0};
 
         static gtid from_string(const std::string& str);
         std::string to_string() const;
@@ -398,6 +398,6 @@ private:
     mxs::WorkerGlobal<RWSConfig>          m_config;
     Stats                                 m_stats;
     mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
-    gtid                                  m_last_gtid {0, 0, 0};
+    std::map<uint32_t, gtid>              m_last_gtid;
     mutable mxb::shared_mutex             m_last_gtid_lock;
 };
