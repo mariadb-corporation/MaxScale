@@ -711,7 +711,8 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
         }
     }
 
-    pServer->pool_stats().persistmax = MXS_MAX(pServer->pool_stats().persistmax, count);
+    pServer->pool_stats().persistmax = MXS_MAX(pServer->pool_stats().persistmax,
+                                               pServer->pool_stats().n_persistent);
 
     for (BackendDCB* pDcb : to_be_evicted)
     {
