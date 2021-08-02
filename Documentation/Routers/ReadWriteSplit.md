@@ -563,9 +563,14 @@ The possible values for this parameter are:
     inside a single GTID domain.This mode gives similar benefits as the `local`
     mode in that it improves read scalability at the cost of latency.
 
-    Multi-domain use of causal_reads can cause non-causal reads to occur which
-    is why it is highly recommended to avoid this when the global causal reads
-    mode is used.
+    With MaxScale versions 2.5.14 and older, multi-domain use of causal_reads
+    could cause non-causal reads to occur. Starting with MaxScale 2.5.15, this
+    was fixed and all the GTID coordinates are passed alongside all requests
+    which makes multi-domain GTIDs safe to use. However, this does mean that the
+    GTID coordinates will never be reset: if replication is reset and and GTID
+    coordinates go "backwards", readwritesplit will not consider these as being
+    newer than the ones already stored. To reset the stored GTID coordinates in
+    readwritesplit, MaxScale must be restarted.
 
 * `fast`
 

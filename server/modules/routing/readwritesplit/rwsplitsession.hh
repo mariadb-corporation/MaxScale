@@ -372,7 +372,8 @@ private:
         const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
             | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
 
-        if ((route_info().type_mask() & ~read_only_types) && !trx_is_read_only())
+        if ((route_info().type_mask() & ~read_only_types) && !trx_is_read_only()
+            && res.target->is_master())
         {
             m_server_stats[res.target->target()].inc_write();
         }
