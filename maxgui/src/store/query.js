@@ -39,7 +39,6 @@ function connStates() {
         curr_cnct_resource: '',
     }
 }
-
 /**
  * @returns Initial sidebar tree schema related states
  */
@@ -53,20 +52,22 @@ function sidebarStates() {
         active_db: '',
     }
 }
-
 /**
- * @returns Return initial standalone worksheet states
+ * @returns Initial editor related states
  */
-function saWkeStates() {
+function editorStates() {
     return {
-        ...connStates(),
-        ...sidebarStates(),
-        // editor's states
         query_txt: {
             all: '',
             selected: '',
         },
-        // query-result's states
+    }
+}
+/**
+ * @returns Initial result related states
+ */
+function resultStates() {
+    return {
         loading_prvw_data: false,
         prvw_data: {},
         active_tree_node_id: '',
@@ -78,8 +79,28 @@ function saWkeStates() {
         query_request_sent_time: 0,
         query_result: {},
         curr_query_mode: 'QUERY_VIEW',
+    }
+}
+/**
+ * @returns Initial toolbar related states
+ */
+function toolbarStates() {
+    return {
         // toolbar's states
         show_vis_sidebar: false,
+    }
+}
+
+/**
+ * @returns Return initial standalone worksheet states
+ */
+function saWkeStates() {
+    return {
+        ...connStates(),
+        ...sidebarStates(),
+        ...editorStates(),
+        ...resultStates(),
+        ...toolbarStates(),
     }
 }
 
@@ -841,9 +862,20 @@ export default {
         resetWkeStates({ state, commit }, { cnctId }) {
             const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
             const idx = state.worksheets_arr.indexOf(targetWke)
-            const wke = { ...targetWke, ...connStates(), ...sidebarStates() }
+            // reset everything to initial state except editorStates()
+            const wke = {
+                ...targetWke,
+                ...connStates(),
+                ...sidebarStates(),
+                ...resultStates(),
+                ...toolbarStates(),
+            }
             commit('UPDATE_WKE', { idx, wke })
-            commit('UPDATE_SA_WKE_STATES', wke)
+            /**
+             * if connection id to be deleted is equal to current connected
+             * resource of active worksheet, update standalone wke states
+             */
+            if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
         },
     },
     getters: {
