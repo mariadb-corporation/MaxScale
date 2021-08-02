@@ -119,7 +119,7 @@ export default {
     },
     computed: {
         ...mapState({
-            checking_active_conn: state => state.query.checking_active_conn,
+            is_checking_active_conn: state => state.query.is_checking_active_conn,
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
@@ -134,8 +134,8 @@ export default {
         },
     },
     watch: {
-        checking_active_conn(v) {
-            //After finish checking checking_active_conn, auto open dialog if there is no active connection
+        is_checking_active_conn(v) {
+            //After finish checking is_checking_active_conn, auto open dialog if there is no active connection
             if (!v && this.connOptions.length === 1) this.openConnDialog()
             else this.assignActiveConn()
         },

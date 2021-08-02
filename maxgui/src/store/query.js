@@ -33,7 +33,7 @@ function getClientConnIds(prefixName = 'conn_id_body_') {
  */
 function connStates() {
     return {
-        checking_active_conn: true,
+        is_checking_active_conn: true,
         active_conn_state: false,
         conn_err_state: false,
         curr_cnct_resource: '',
@@ -164,8 +164,8 @@ export default {
         },
 
         // connection related mutations
-        SET_CHECKING_ACTIVE_CONN(state, payload) {
-            patch_wke_property(state, { obj: { checking_active_conn: payload }, scope: this })
+        SET_IS_CHECKING_ACTIVE_CONN(state, payload) {
+            patch_wke_property(state, { obj: { is_checking_active_conn: payload }, scope: this })
         },
         SET_ACTIVE_CONN_STATE(state, payload) {
             patch_wke_property(state, { obj: { active_conn_state: payload }, scope: this })
@@ -421,40 +421,45 @@ export default {
                 logger.error(e)
             }
         },
-        /* TODO: Decompose to smaller functions */
-        async checkActiveConn({ state, commit, dispatch, getters }) {
+        async checkActiveConn({ state, commit, dispatch }) {
             try {
-                commit('SET_CHECKING_ACTIVE_CONN', true)
+                commit('SET_IS_CHECKING_ACTIVE_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
-
                 const clientConnIds = getClientConnIds()
                 const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
 
                 const validCnctResources = state.cnct_resources.filter(rsrc =>
                     validConnIds.includes(rsrc.id)
                 )
+                /**
+                 * deleteInvalidConn should be called before calling SET_CNCT_RESOURCES
+                 * as deleteInvalidConn use current state.cnct_resources to get invalid cnct resources
+                 */
+                dispatch('deleteInvalidConn', validCnctResources)
+                commit('SET_CNCT_RESOURCES', validCnctResources)
+                commit('SET_ACTIVE_CONN_STATE', validConnIds.length)
+
+                commit('SET_IS_CHECKING_ACTIVE_CONN', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-checkActiveConn')
+                logger.error(e)
+            }
+        },
+        deleteInvalidConn({ state, dispatch }, validCnctResources) {
+            try {
                 const invalidCnctResources = this.vue.$help.lodash.xorWith(
                     state.cnct_resources,
                     validCnctResources,
                     this.vue.$help.lodash.isEqual
                 )
-
-                commit('SET_CNCT_RESOURCES', validCnctResources)
-
-                const hasValidConn = Boolean(validConnIds.length)
-                commit('SET_ACTIVE_CONN_STATE', hasValidConn)
-
-                if (invalidCnctResources.length) {
+                if (invalidCnctResources.length)
                     invalidCnctResources.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
                         dispatch('resetWkeStates', { cnctId: id })
                     })
-                    commit('UPDATE_SA_WKE_STATES', getters.getActiveWke)
-                }
-                commit('SET_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-checkActiveConn')
+                const logger = this.vue.$logger('store-query-deleteInvalidConn')
                 logger.error(e)
             }
         },
