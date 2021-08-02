@@ -398,6 +398,8 @@ static inline bool MYSQL_IS_CHANGE_USER(const uint8_t* header)
 /* The following can be compared using memcmp to detect a null password */
 extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
 
+extern const char* const USERS_RECENTLY_UPDATED_FMT;
+
 GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
 GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message);
