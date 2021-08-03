@@ -52,7 +52,8 @@ async function resolvingGuardedRoutes(to, from, next) {
     // Check if user is logged in
     const { getCookie } = store.vue.$help
     const user = JSON.parse(localStorage.getItem('user'))
-    const isAuthenticated = getCookie('token_body') && user.isLoggedIn
+    const isAuthenticated =
+        getCookie('token_body') && store.vue.$typy(user, 'isLoggedIn').safeBoolean
 
     if (isAuthenticated) {
         // show overlay loading screen after successfully authenticating
