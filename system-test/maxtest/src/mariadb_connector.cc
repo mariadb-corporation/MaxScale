@@ -17,6 +17,8 @@
 #include <maxsql/mariadb.hh>
 #include <maxtest/log.hh>
 
+using std::string;
+
 maxtest::MariaDB::MariaDB(TestLogger& log)
     : m_log(log)
 {
@@ -123,4 +125,63 @@ std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::query(const std::string& que
 std::unique_ptr<mxq::QueryResult> maxtest::MariaDB::try_query(const std::string& query)
 {
     return this->query(query, Expect::ANY);
+}
+
+mxt::ScopedUser
+maxtest::MariaDB::create_user(const std::string& user, const std::string& host, const std::string& pw)
+{
+    mxt::ScopedUser rval;
+    if (is_open())
+    {
+        auto user_host = mxb::string_printf("'%s'@'%s'", user.c_str(), host.c_str());
+        if (cmd_f("create or replace user %s identified by '%s';", user_host.c_str(), pw.c_str()))
+        {
+            rval = ScopedUser(user_host, this);
+        }
+    }
+    return rval;
+}
+
+maxtest::ScopedUser::ScopedUser(std::string user_host, maxtest::MariaDB* conn)
+    : m_user_host(std::move(user_host))
+    , m_conn(conn)
+{
+}
+
+maxtest::ScopedUser::~ScopedUser()
+{
+    if (m_conn)
+    {
+        m_conn->cmd_f("drop user %s;", m_user_host.c_str());
+    }
+}
+
+void maxtest::ScopedUser::grant(const std::string& grant)
+{
+    if (m_conn)
+    {
+        m_conn->cmd_f("grant %s to %s;", grant.c_str(), m_user_host.c_str());
+    }
+}
+
+void maxtest::ScopedUser::grant_f(const char* grant_fmt, ...)
+{
+    va_list args;
+    va_start(args, grant_fmt);
+    string grant_str = mxb::string_vprintf(grant_fmt, args);
+    va_end(args);
+    grant(grant_str);
+}
+
+maxtest::ScopedUser& maxtest::ScopedUser::operator=(maxtest::ScopedUser&& rhs)
+{
+    m_conn = rhs.m_conn;
+    rhs.m_conn = nullptr;
+    m_user_host = std::move(rhs.m_user_host);
+    return *this;
+}
+
+maxtest::ScopedUser::ScopedUser(maxtest::ScopedUser&& rhs)
+{
+    *this = std::move(rhs);
 }

@@ -18,6 +18,7 @@
 namespace maxtest
 {
 class TestLogger;
+class ScopedUser;
 
 /**
  * Connection helper class for tests. Reports errors to the system test log.
@@ -42,7 +43,41 @@ public:
     std::unique_ptr<mxq::QueryResult> query(const std::string& query, Expect expect = Expect::OK);
     std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
 
+    /**
+     * Create a user that is automatically deleted when the object goes out of scope. Depends on the
+     * generating connection object, so be careful when moving or manually destroying the user object.
+     *
+     * @param user Username
+     * @param host Host
+     * @param pw Password
+     * @return User object
+     */
+    ScopedUser create_user(const std::string& user, const std::string& host,
+                           const std::string& pw);
+
 private:
     TestLogger& m_log;
+};
+
+/**
+ * Helper class for managing user accounts in tests. When the object goes out of scope, the user is deleted
+ * from backend. The object is dependent on the connection that created it. Should not be generated manually.
+ */
+class ScopedUser final
+{
+public:
+    ScopedUser& operator=(ScopedUser&& rhs);
+
+    ScopedUser() = default;
+    ScopedUser(std::string user_host, maxtest::MariaDB* conn);
+    ScopedUser(ScopedUser&& rhs);
+    ~ScopedUser();
+
+    void grant(const std::string& grant);
+    void grant_f(const char* grant_fmt, ...);
+
+private:
+    std::string   m_user_host;      /**< user@host */
+    mxt::MariaDB* m_conn {nullptr}; /**< Connection managing this user */
 };
 }
