@@ -556,16 +556,23 @@ MYSQL* MaxScale::open_rwsplit_connection(const std::string& db)
 
 MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(const string& db)
 {
-    return try_open_rwsplit_connection(m_ssl ? SslMode::ON : SslMode::OFF, db);
+    return try_open_rwsplit_connection(SslMode::AUTO, m_user_name, m_password, db);
 }
 
-MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(MaxScale::SslMode ssl, const string& db)
+MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(const string& user, const string& pass,
+                                                         const string& db)
+{
+    return try_open_rwsplit_connection(SslMode::AUTO, user, pass, db);
+}
+
+MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(MaxScale::SslMode ssl, const string& user,
+                                                         const std::string& pass, const string& db)
 {
     auto conn = std::make_unique<mxt::MariaDB>(log());
     auto& sett = conn->connection_settings();
-    sett.user = m_user_name;
-    sett.password = m_password;
-    if (ssl == SslMode::ON)
+    sett.user = user;
+    sett.password = pass;
+    if (ssl == SslMode::ON || (ssl == SslMode::AUTO && m_ssl))
     {
         auto base_dir = mxt::SOURCE_DIR;
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
