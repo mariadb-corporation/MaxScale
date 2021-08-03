@@ -21,6 +21,13 @@ int main(int argc, char* argv[])
     long int new_selects[256];
     long int new_inserts[256];
 
+    // It's possible that one of the services will fail to load the users if there are too many connections to
+    // the backend servers. This will cause test to fail as the test host gets blocked due to too many
+    // authentication failures. To prevent this, create one connection to each of the services to make sure
+    // the users have been loaded.
+    Test->maxscale->connect_maxscale();
+    Test->maxscale->close_maxscale_connections();
+
     Test->tprintf("Start load\n");
     Test->reset_timeout();
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, false, false);
