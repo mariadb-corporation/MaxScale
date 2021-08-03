@@ -143,12 +143,6 @@ export default {
             },
         },
     },
-    activated() {
-        this.addActiveConnStateWatcher()
-    },
-    deactivated() {
-        this.unwatchActiveConnState()
-    },
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
@@ -157,7 +151,6 @@ export default {
         }),
         ...mapActions({
             fetchDbList: 'query/fetchDbList',
-            updateActiveDb: 'query/updateActiveDb',
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
             fetchTables: 'query/fetchTables',
@@ -166,14 +159,6 @@ export default {
             fetchTriggers: 'query/fetchTriggers',
             useDb: 'query/useDb',
         }),
-        addActiveConnStateWatcher() {
-            this.unwatchActiveConnState = this.$watch('active_conn_state', async v => {
-                if (v) {
-                    await this.loadSchema()
-                    await this.updateActiveDb()
-                }
-            })
-        },
         async loadSchema() {
             await this.fetchDbList()
         },

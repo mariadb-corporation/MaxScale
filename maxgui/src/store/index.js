@@ -24,6 +24,7 @@ import query from './query'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import { refreshAxiosToken } from 'plugins/axios'
+import createPersistedState from 'vuex-persistedstate'
 
 const plugins = store => {
     store.router = router
@@ -31,7 +32,17 @@ const plugins = store => {
 }
 
 const store = new Vuex.Store({
-    plugins: [plugins],
+    plugins: [
+        plugins,
+        createPersistedState({
+            paths: [
+                'query.worksheets_arr',
+                'query.query_max_rows',
+                'query.query_confirm_flag',
+                'query.cnct_resources',
+            ],
+        }),
+    ],
     state: {
         app_config: APP_CONFIG,
         snackbar_message: {

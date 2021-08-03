@@ -51,12 +51,12 @@ export default {
         },
     },
     actions: {
-        async logout({ commit, rootState }) {
+        async logout({ commit, dispatch, rootState }) {
+            await dispatch('query/disconnectAll', {}, { root: true })
             cancelAllRequests() // cancel all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
-            localStorage.clear()
-            this.vue.$help.deleteAllCookies()
+
             // hide snackbar snackbar_message if it is on
             if (rootState.snackbar_message.status) {
                 commit(
@@ -73,8 +73,12 @@ export default {
                 commit('SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
-            // call this at last
+            /**
+             * Reset to app's initial state. After that clear localStorage and cookies
+             */
             resetState()
+            localStorage.clear()
+            this.vue.$help.deleteAllCookies()
         },
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {

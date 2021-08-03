@@ -150,6 +150,7 @@
     "maxRows": "Max rows",
     "exportChart": "Export chart",
     "showTrendline": "Show Trendline",
+    "disconnectAll": "Disconnect all",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -173,7 +174,8 @@
         "stop": "Are you sure you want to stop {targetId}?",
         "start": "Are you sure you want to start {targetId}?",
         "disconnect": "Are you sure you want to disconnect from {targetId}?",
-        "runQuery": "Are you sure you want to run the following queries?"
+        "runQuery": "Are you sure you want to run the following queries?",
+        "leavePage": "Are you sure you want to leave?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",
@@ -181,7 +183,8 @@
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
         "queryShowConfirm": "{action} confirmation before running the queries",
-        "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code style='line-height: unset;' class='pa-0 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set"
+        "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code style='line-height: unset;' class='pa-0 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set",
+        "disconnectAll": "You have opened connections, uncheck the box below to keep them opening."
     },
 
     "$vuetify": {
