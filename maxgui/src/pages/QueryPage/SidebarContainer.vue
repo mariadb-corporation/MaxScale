@@ -80,7 +80,7 @@
                         />
                     </div>
                     <db-list-tree
-                        v-if="!is_sidebar_collapsed"
+                        v-show="!is_sidebar_collapsed"
                         class="schema-list-wrapper"
                         @preview-data="
                             schemaId =>

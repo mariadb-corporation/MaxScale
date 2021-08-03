@@ -75,27 +75,21 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <v-slide-x-transition>
+                <v-fade-transition :duration="200">
                     <keep-alive>
                         <result-data-table
-                            v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
-                            :key="SQL_QUERY_MODES.PRVW_DATA"
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="getPrvwDataRes(activeView).fields"
-                            :rows="getPrvwDataRes(activeView).data"
-                        />
-
-                        <result-data-table
-                            v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                            :key="SQL_QUERY_MODES.PRVW_DATA_DETAILS"
+                            v-if="
+                                activeView === SQL_QUERY_MODES.PRVW_DATA ||
+                                    activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS
+                            "
+                            :key="activeView"
                             :height="dynDim.height - headerHeight"
                             :width="dynDim.width"
                             :headers="getPrvwDataRes(activeView).fields"
                             :rows="getPrvwDataRes(activeView).data"
                         />
                     </keep-alive>
-                </v-slide-x-transition>
+                </v-fade-transition>
             </template>
         </template>
     </div>

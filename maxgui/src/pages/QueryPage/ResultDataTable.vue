@@ -205,10 +205,6 @@ export default {
             return this.visHeaderIndexes.length === this.tableHeaders.length
         },
     },
-    mounted() {
-        this.setTableToolsHeight()
-        this.showAllHeaders()
-    },
     activated() {
         this.setTableToolsHeight()
         this.showAllHeaders()
