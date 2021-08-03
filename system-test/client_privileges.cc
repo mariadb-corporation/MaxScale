@@ -52,20 +52,13 @@ void test_main(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
-    const char drop_fmt[] = "DROP USER '%s'@'%%';";
-
     auto conn = mxs.open_rwsplit_connection2();
 
-    auto create_user = [&](const char* user, const char* pass) {
-            conn->cmd_f("DROP USER IF EXISTS '%s'@'%%'", user);
-            conn->cmd_f("CREATE USER '%s'@'%%' IDENTIFIED BY '%s';", user, pass);
-        };
-
-    create_user(db_user, db_pass);
-    create_user(table_user, table_pass);
-    create_user(column_user, column_pass);
-    create_user(process_user, process_pass);
-    create_user(table_insert_user, table_insert_pass);
+    auto db_scopeuser = conn->create_user(db_user, "%", db_pass);
+    auto table_scopeuser = conn->create_user(table_user, "%", table_pass);
+    auto column_scopeuser = conn->create_user(column_user, "%", column_pass);
+    auto process_scopeuser = conn->create_user(process_user, "%", process_pass);
+    auto table_insert_scopeuser = conn->create_user(table_insert_user, "%", table_insert_pass);
     repl.sync_slaves();
 
     if (test.ok())
@@ -90,20 +83,12 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
-            const char grant_fmt[] = "GRANT SELECT %s TO '%s'@'%%';";
-
-            string db_grant = mxb::string_printf("ON %s.*", db);
-            conn->cmd_f(grant_fmt, db_grant.c_str(), db_user);
-
-            string table_grant = mxb::string_printf("ON %s", table);
-            conn->cmd_f(grant_fmt, table_grant.c_str(), table_user);
-
-            string column_grant = mxb::string_printf("(c2) ON %s", table);
-            conn->cmd_f(grant_fmt, column_grant.c_str(), column_user);
-
-            conn->cmd_f("GRANT EXECUTE ON PROCEDURE %s TO '%s'@'%%';", proc, process_user);
-
-            conn->cmd_f("GRANT INSERT ON %s TO '%s'@'%%';", table, table_insert_user);
+            string db_grant = mxb::string_printf("SELECT ON %s.*", db);
+            db_scopeuser.grant(db_grant);
+            table_scopeuser.grant_f("SELECT ON %s", table);
+            column_scopeuser.grant_f("SELECT (c2) ON %s", table);
+            process_scopeuser.grant_f("EXECUTE ON PROCEDURE %s", proc);
+            table_insert_scopeuser.grant_f("INSERT ON %s", table);
             repl.sync_slaves();
 
             if (test.ok())
@@ -119,9 +104,9 @@ void test_main(TestConnections& test)
             {
                 // All ok so far. Test user account refreshing. First, generate a user not yet
                 // known to MaxScale.
-                create_user(new_user, new_pass);
                 auto master_conn = test.repl->backend(0)->open_connection();
-                master_conn->cmd_f(grant_fmt, db_grant.c_str(), new_user);
+                auto new_scopeuser = master_conn->create_user(new_user, "%", new_pass);
+                new_scopeuser.grant(db_grant);
                 repl.sync_slaves();
                 // Should be able to login and query without reloading users.
                 bool login_ok = test_user_full(test, mxs.ip(), mxs.rwsplit_port, new_user, new_pass,
@@ -144,18 +129,11 @@ void test_main(TestConnections& test)
                 test_conn = mxs.try_open_rwsplit_connection(new_user, new_pass);
                 test.expect(!test_conn->is_open(), "Logging in with old password succeeded when it should "
                                                    "have failed.");
-                conn->cmd_f(drop_fmt, new_user);
             }
         }
 
         conn->cmd_f("DROP DATABASE %s;", db);
     }
-
-    conn->cmd_f(drop_fmt, db_user);
-    conn->cmd_f(drop_fmt, table_user);
-    conn->cmd_f(drop_fmt, column_user);
-    conn->cmd_f(drop_fmt, process_user);
-    conn->cmd_f(drop_fmt, table_insert_user);
 }
 
 bool test_user_full(TestConnections& test, const string& ip, int port,
