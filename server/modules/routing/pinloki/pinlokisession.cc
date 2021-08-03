@@ -212,7 +212,7 @@ void PinlokiSession::send(GWBUF* buffer)
     mxs::RouterSession::clientReply(buffer, down, reply);
 }
 
-void PinlokiSession::select(const std::vector<std::string>& fields)
+void PinlokiSession::select(const std::vector<std::string>& fields, const std::vector<std::string>& aliases)
 {
     static const std::set<std::string> gtid_pos_sel_var =
     {
@@ -280,7 +280,7 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         }
     }
 
-    send(create_resultset(fields, values));
+    send(create_resultset(aliases, values));
 }
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
