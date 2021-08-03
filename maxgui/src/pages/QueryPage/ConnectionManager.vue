@@ -123,6 +123,7 @@ export default {
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
+            expanded_nodes: state => state.query.expanded_nodes,
         }),
         connOptions() {
             let options = [this.newConnOption]
@@ -147,8 +148,7 @@ export default {
                     this.SET_CURR_CNCT_RESOURCE(v)
                     await this.checkActiveConn()
                     if (this.active_conn_state) {
-                        await this.fetchDbList()
-                        await this.updateActiveDb()
+                        await this.initialFetch()
                     }
                 }
             },
@@ -163,11 +163,16 @@ export default {
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',
             fetchDbList: 'query/fetchDbList',
+            reloadTreeNodes: 'query/reloadTreeNodes',
             updateActiveDb: 'query/updateActiveDb',
         }),
         ...mapMutations({
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
         }),
+        async initialFetch() {
+            await this.reloadTreeNodes()
+            await this.updateActiveDb()
+        },
         assignActiveConn() {
             if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
             else this.chosenConn = {}

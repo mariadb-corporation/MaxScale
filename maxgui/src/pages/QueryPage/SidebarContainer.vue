@@ -28,7 +28,7 @@
                                         small
                                         :disabled="!active_conn_state"
                                         v-on="on"
-                                        @click="loadSchema"
+                                        @click="reloadSchema"
                                     >
                                         <v-icon size="12" color="deep-ocean">
                                             $vuetify.icons.reload
@@ -150,17 +150,18 @@ export default {
             SET_SEARCH_SCHEMA: 'query/SET_SEARCH_SCHEMA',
         }),
         ...mapActions({
-            fetchDbList: 'query/fetchDbList',
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
             fetchTables: 'query/fetchTables',
             fetchStoredProcedures: 'query/fetchStoredProcedures',
             fetchCols: 'query/fetchCols',
             fetchTriggers: 'query/fetchTriggers',
+            fetchTreeNode: 'query/fetchTreeNode',
             useDb: 'query/useDb',
+            reloadTreeNodes: 'query/reloadTreeNodes',
         }),
-        async loadSchema() {
-            await this.fetchDbList()
+        async reloadSchema() {
+            await this.reloadTreeNodes()
         },
         async handleFetchPreview({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
@@ -176,20 +177,7 @@ export default {
             }
         },
         async handleLoadChildren(item) {
-            switch (item.type) {
-                case 'Tables':
-                    await this.fetchTables(item)
-                    break
-                case 'Columns':
-                    await this.fetchCols(item)
-                    break
-                case 'Stored Procedures':
-                    await this.fetchStoredProcedures(item)
-                    break
-                case 'Triggers':
-                    await this.fetchTriggers(item)
-                    break
-            }
+            await this.fetchTreeNode(item)
         },
     },
 }

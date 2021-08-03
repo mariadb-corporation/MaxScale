@@ -50,6 +50,8 @@ function sidebarStates() {
         db_tree: [],
         db_completion_list: [],
         active_db: '',
+        active_tree_node: {},
+        expanded_nodes: [],
     }
 }
 /**
@@ -70,7 +72,6 @@ function resultStates() {
     return {
         loading_prvw_data: false,
         prvw_data: {},
-        active_tree_node_id: '',
         prvw_data_request_sent_time: 0,
         loading_prvw_data_details: false,
         prvw_data_details: {},
@@ -232,6 +233,12 @@ export default {
             })
             patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
         },
+        SET_ACTIVE_TREE_NODE(state, payload) {
+            patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
+        },
+        SET_EXPANDED_NODES(state, payload) {
+            patch_wke_property(state, { obj: { expanded_nodes: payload }, scope: this })
+        },
 
         // editor mutations
         SET_QUERY_TXT(state, payload) {
@@ -288,9 +295,6 @@ export default {
         },
         SET_PRVW_DATA(state, payload) {
             patch_wke_property(state, { obj: { prvw_data: payload }, scope: this })
-        },
-        SET_ACTIVE_TREE_NODE_ID(state, payload) {
-            patch_wke_property(state, { obj: { active_tree_node_id: payload }, scope: this })
         },
         SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
             patch_wke_property(state, {
@@ -751,7 +755,47 @@ export default {
                 logger.error(e)
             }
         },
-
+        /**
+         * @param {Object} item - schema tree node object.
+         */
+        async fetchTreeNode({ dispatch }, item) {
+            try {
+                switch (item.type) {
+                    case 'Tables':
+                        await dispatch('fetchTables', item)
+                        break
+                    case 'Columns':
+                        await dispatch('fetchCols', item)
+                        break
+                    case 'Stored Procedures':
+                        await dispatch('fetchStoredProcedures', item)
+                        break
+                    case 'Triggers':
+                        await dispatch('fetchTriggers', item)
+                        break
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchTreeNode')
+                logger.error(e)
+            }
+        },
+        async reloadTreeNodes({ commit, dispatch, state }) {
+            try {
+                if (state.expanded_nodes.length) {
+                    commit('SET_LOADING_DB_TREE', true)
+                    let promises = []
+                    for (let i = 0; i < state.expanded_nodes.length; i++) {
+                        promises.push(await dispatch('fetchTreeNode', state.expanded_nodes[i]))
+                    }
+                    await Promise.all(promises)
+                    commit('SET_LOADING_DB_TREE', false)
+                } else await dispatch('fetchDbList')
+            } catch (e) {
+                commit('SET_LOADING_DB_TREE', false)
+                const logger = this.vue.$logger('store-query-reloadTreeNodes')
+                logger.error(e)
+            }
+        },
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */

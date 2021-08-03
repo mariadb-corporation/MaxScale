@@ -11,6 +11,8 @@
             transition
             :load-children="handleLoadChildren"
             :active.sync="activeNodes"
+            :open.sync="expandedNodes"
+            return-object
             @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
@@ -33,7 +35,6 @@
                     </span>
                 </div>
             </template>
-
             <template v-slot:append="{ isHover, item }">
                 <v-btn
                     v-show="nodesHasCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
@@ -88,7 +89,6 @@
         </v-menu>
     </div>
 </template>
-
 <script>
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
@@ -120,7 +120,6 @@ export default {
             columnOptions: [this.$t('placeColumnNameInEditor')],
             spOptions: [this.$t('placeSchemaInEditor')],
             triggerOptions: [this.$t('placeSchemaInEditor')],
-
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
@@ -131,7 +130,8 @@ export default {
     },
     computed: {
         ...mapState({
-            active_tree_node_id: state => state.query.active_tree_node_id,
+            active_tree_node: state => state.query.active_tree_node,
+            expanded_nodes: state => state.query.expanded_nodes,
             db_tree: state => state.query.db_tree,
         }),
         filter() {
@@ -142,10 +142,19 @@ export default {
         },
         activeNodes: {
             get() {
-                return [this.active_tree_node_id]
+                return [this.active_tree_node]
             },
-            set(value) {
-                this.SET_ACTIVE_TREE_NODE_ID(value[0])
+            set(v) {
+                const activeNodes = this.minimizeNodes(v)
+                if (activeNodes.length) this.SET_ACTIVE_TREE_NODE(activeNodes[0])
+            },
+        },
+        expandedNodes: {
+            get() {
+                return this.expanded_nodes
+            },
+            set(v) {
+                this.SET_EXPANDED_NODES(this.minimizeNodes(v))
             },
         },
     },
@@ -156,8 +165,16 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_ACTIVE_TREE_NODE_ID: 'query/SET_ACTIVE_TREE_NODE_ID',
+            SET_ACTIVE_TREE_NODE: 'query/SET_ACTIVE_TREE_NODE',
+            SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
         }),
+        /**
+         * @param {Array} nodes - array of nodes
+         * @returns {Array} minimized nodes where each node is an object with id and type props
+         */
+        minimizeNodes(nodes) {
+            return nodes.map(node => ({ id: node.id, type: node.type }))
+        },
         /** This replaces dots with __ as vuetify activator slots
          * can't not parse html id contains dots.
          * @param {String} id - html id attribute
@@ -188,7 +205,7 @@ export default {
             }
         },
         updateActiveNode(item) {
-            this.activeNodes = [item.id]
+            this.activeNodes = [item]
         },
         optionHandler({ item, option }) {
             const schema = item.id
@@ -239,7 +256,7 @@ export default {
             }
         },
         onNodeClick(item) {
-            if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0])
+            if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0].id)
         },
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
@@ -267,7 +284,6 @@ export default {
     },
 }
 </script>
-
 <style lang="scss" scoped>
 ::v-deep .v-treeview-node__toggle {
     width: 16px;
