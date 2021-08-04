@@ -409,9 +409,13 @@ export default {
         },
         async disconnectAll({ state, dispatch } = {}) {
             try {
-                state.cnct_resources.map(async ({ id }) => {
-                    await dispatch('disconnect', { showSnackbar: false, id: id })
-                })
+                const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
+                for (let i = 0; i < cnctResources.length; i++) {
+                    await dispatch('disconnect', {
+                        showSnackbar: false,
+                        id: cnctResources[i].id,
+                    })
+                }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnectAll')
                 logger.error(e)
@@ -775,11 +779,9 @@ export default {
             try {
                 if (state.expanded_nodes.length) {
                     commit('SET_LOADING_DB_TREE', true)
-                    let promises = []
                     for (let i = 0; i < state.expanded_nodes.length; i++) {
-                        promises.push(await dispatch('fetchTreeNode', state.expanded_nodes[i]))
+                        await dispatch('fetchTreeNode', state.expanded_nodes[i])
                     }
-                    await Promise.all(promises)
                     commit('SET_LOADING_DB_TREE', false)
                 } else await dispatch('fetchDbList')
             } catch (e) {
