@@ -888,6 +888,18 @@ void GaleraMonitor::set_galera_cluster()
     }
 }
 
+bool GaleraMonitor::can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const
+{
+    // If the server is the master, it cannot be disabled.
+    bool can_disable = !status_is_master(server.server->status());
+    if (!can_disable)
+    {
+        // Is there a way for the user to change the master?
+        *errmsg_out = "The server is master, so it cannot be set in maintenance or draining mode.";
+    }
+    return can_disable;
+}
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
