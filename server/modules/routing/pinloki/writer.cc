@@ -36,13 +36,11 @@ using namespace std::literals::string_literals;
 namespace pinloki
 {
 
-Writer::Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv)
-    : m_generator(generator)
-    , m_worker(worker)
-    , m_inventory(*inv)
+Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWriter* inv)
+    : m_inventory(*inv)
     , m_current_gtid_list(m_inventory.rpl_state())
+    , m_details(details)
 {
-    mxb_assert(m_worker);
     m_inventory.set_is_writer_connected(false);
 
     std::vector<maxsql::Gtid> gtids;
@@ -70,15 +68,16 @@ Writer::~Writer()
     m_thread.join();
 }
 
+void Writer::set_connection_details(const mxq::Connection::ConnectionDetails& details)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_details = details;
+}
+
 mxq::Connection::ConnectionDetails Writer::get_connection_details()
 {
-    mxq::Connection::ConnectionDetails details;
-
-    m_worker->call([&]() {
-                       details = m_generator();
-                   }, mxb::Worker::EXECUTE_AUTO);
-
-    return details;
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_details;
 }
 
 mxq::GtidList Writer::get_gtid_io_pos() const

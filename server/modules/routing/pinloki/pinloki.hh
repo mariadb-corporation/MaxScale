@@ -47,7 +47,7 @@ public:
     Pinloki(const Pinloki&) = delete;
     Pinloki& operator=(const Pinloki&) = delete;
 
-    ~Pinloki() = default;
+    ~Pinloki();
     static Pinloki* create(SERVICE* pService, mxs::ConfigParameters* pParams);
     PinlokiSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*         diagnostics() const;
@@ -68,6 +68,8 @@ public:
 
 private:
     Pinloki(SERVICE* pService, Config&& config);
+
+    bool update_details(mxb::Worker::Call::action_t action);
 
     maxsql::Connection::ConnectionDetails generate_details();
 
@@ -101,6 +103,7 @@ private:
     InventoryWriter         m_inventory;
     std::unique_ptr<Writer> m_writer;
     MasterConfig            m_master_config;
+    uint32_t                m_dcid; // Delayed call ID for updating the Writer's connection details
     mutable std::mutex      m_lock;
 };
 

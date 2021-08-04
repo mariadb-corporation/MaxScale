@@ -182,6 +182,13 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
         auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
         worker->delayed_call(ms, &Pinloki::purge_old_binlogs, this);
     }
+
+    m_dcid = mxs::MainWorker::get()->delayed_call(1000, &Pinloki::update_details, this);
+}
+
+Pinloki::~Pinloki()
+{
+    mxs::MainWorker::get()->cancel_delayed_call(m_dcid);
 }
 
 // static
@@ -458,6 +465,21 @@ bool Pinloki::is_slave_running() const
     return m_writer.get();
 }
 
+bool Pinloki::update_details(mxb::Worker::Call::action_t action)
+{
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
+        std::lock_guard<std::mutex> guard(m_lock);
+
+        if (m_writer)
+        {
+            m_writer->set_connection_details(generate_details());
+        }
+    }
+
+    return true;
+}
+
 maxsql::Connection::ConnectionDetails Pinloki::generate_details()
 {
     maxsql::Connection::ConnectionDetails details;
@@ -536,10 +558,7 @@ std::string Pinloki::start_slave()
         if (err_str.empty())
         {
             MXS_INFO("Starting slave");
-
-            Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
-            m_writer = std::make_unique<Writer>(generator, mxs::MainWorker::get(), inventory());
-
+            m_writer = std::make_unique<Writer>(generate_details(), inventory());
             m_master_config.slave_running = true;
             m_master_config.save(m_config);
         }

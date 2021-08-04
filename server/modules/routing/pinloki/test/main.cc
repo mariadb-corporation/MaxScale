@@ -59,9 +59,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
 
     if (writer_mode)
     {
-        pinloki::Writer writer([&]() {
-                                   return details;
-                               }, &worker, &write_inventory());
+        pinloki::Writer writer(details, &write_inventory());
         worker.start();
         worker.join();
     }
