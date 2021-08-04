@@ -67,6 +67,12 @@ const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
 const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
+// The past-the-end value for the session command IDs we generate (includes prepared statements). When this ID
+// value is reached, the counter is reset back to 1. This makes sure we reserve the values 0 and 0xffffffff as
+// special values that are never assigned by MaxScale.
+const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
+static_assert(MAX_SESCMD_ID == MARIADB_PS_DIRECT_EXEC_ID);
+
 // Default version string sent to clients
 const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
 
@@ -1023,7 +1029,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 m_qc.ps_store(buffer.get(), m_next_id);
             }
 
-            if (++m_next_id == 0)
+            if (++m_next_id == MAX_SESCMD_ID)
             {
                 m_next_id = 1;
             }
@@ -1058,7 +1064,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     {
         buffer.set_id(m_next_id);
 
-        if (++m_next_id == 0)
+        if (++m_next_id == MAX_SESCMD_ID)
         {
             m_next_id = 1;
         }
