@@ -110,12 +110,13 @@ export default {
                 commit('SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
-            /**
-             * Reset to app's initial state. After that clear localStorage and cookies
-             */
+
+            // Clear all but keeping persistedState
+            const persistedState = this.vue.$help.lodash.cloneDeep(rootState.persisted)
             resetState()
             localStorage.clear()
             this.vue.$help.deleteAllCookies()
+            localStorage.setItem('maxgui', JSON.stringify({ persisted: persistedState }))
         },
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {

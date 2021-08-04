@@ -147,8 +147,6 @@ export default {
     state: {
         // Toolbar states
         is_fullscreen: false,
-        query_max_rows: 10000,
-        query_confirm_flag: 1,
         rc_target_names_map: {},
 
         // worksheet states
@@ -272,12 +270,6 @@ export default {
         DELETE_CNCT_RESOURCE(state, payload) {
             const idx = state.cnct_resources.indexOf(payload)
             state.cnct_resources.splice(idx, 1)
-        },
-        SET_QUERY_MAX_ROW(state, payload) {
-            state.query_max_rows = payload
-        },
-        SET_QUERY_CONFIRM_FLAG(state, payload) {
-            state.query_confirm_flag = payload // payload is either 0 or 1
         },
         SET_ACTIVE_DB(state, payload) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this })
@@ -442,7 +434,7 @@ export default {
                  */
                 dispatch('deleteInvalidConn', validCnctResources)
                 commit('SET_CNCT_RESOURCES', validCnctResources)
-                commit('SET_ACTIVE_CONN_STATE', validConnIds.length)
+                commit('SET_ACTIVE_CONN_STATE', Boolean(validConnIds.length))
 
                 commit('SET_IS_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
@@ -817,7 +809,7 @@ export default {
 
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
-                    { sql, max_rows: state.query_max_rows }
+                    { sql, max_rows: rootState.persisted.query_max_rows }
                 )
                 commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
                 commit(`SET_LOADING_${prvwMode}`, false)
@@ -831,7 +823,7 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ state, commit, dispatch }, query) {
+        async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
                 commit('SET_QUERY_REQUEST_SENT_TIME', new Date().valueOf())
@@ -839,7 +831,7 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
-                        max_rows: state.query_max_rows,
+                        max_rows: rootState.persisted.query_max_rows,
                     }
                 )
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))

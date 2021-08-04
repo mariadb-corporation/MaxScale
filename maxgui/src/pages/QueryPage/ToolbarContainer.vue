@@ -233,7 +233,7 @@ export default {
         ...mapMutations({
             SET_FULLSCREEN: 'query/SET_FULLSCREEN',
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
-            SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
+            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
         }),
         ...mapActions({
