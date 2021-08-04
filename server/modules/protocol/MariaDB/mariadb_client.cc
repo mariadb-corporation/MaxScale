@@ -968,11 +968,18 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
 {
     bool should_record = false;
     const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
+
+    // Update the routing information. This must be done even if the command isn't added to the history.
     const auto& info = m_qc.update_route_info(current_target, buffer.get());
 
-    if (cmd != MXS_COM_QUIT && m_qc.target_is_all(info.target()))
+    switch (cmd)
     {
-        if (cmd == MXS_COM_STMT_CLOSE)
+    case MXS_COM_QUIT:      // The client connection is about to be closed
+    case MXS_COM_PING:      // Doesn't change the state so it doesn't need to be stored
+    case MXS_COM_STMT_RESET:// Resets the prepared statement state, not needed by new connections
+        break;
+
+    case MXS_COM_STMT_CLOSE:
         {
             // Instead of handling COM_STMT_CLOSE like a normal command, we can exclude it from the history as
             // well as remove the original COM_STMT_PREPARE that it refers to. This simplifies the history
@@ -994,21 +1001,19 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 m_qc.ps_erase(buffer.get());
             }
         }
-        else if (cmd == MXS_COM_STMT_RESET)
-        {
-            // COM_STMT_RESET is useless in the history, no point in recording it as new connections don't
-            // need it.
-        }
-        else if (cmd == MXS_COM_CHANGE_USER)
-        {
-            // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
-            // credentials which means we can safely reset the history here.
-            m_session_data->history.clear();
-        }
-        else
+        break;
+
+    case MXS_COM_CHANGE_USER:
+        // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
+        // credentials which means we can safely reset the history here.
+        m_session_data->history.clear();
+        break;
+
+    default:
+        if (m_qc.target_is_all(info.target()))
         {
             buffer.set_id(m_next_id);
-            m_pending_cmd = buffer;         // Keep a copy for the session command history
+            m_pending_cmd = buffer;     // Keep a copy for the session command history
             should_record = true;
 
             if (cmd == MXS_COM_STMT_PREPARE
@@ -1023,6 +1028,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 m_next_id = 1;
             }
         }
+        break;
     }
 
     return should_record;
