@@ -15,7 +15,7 @@
                         id="username"
                         v-model="credential.username"
                         :rules="rules.username"
-                        :error-messages="errorMessage"
+                        :error-messages="login_err_msg"
                         class="std mt-5"
                         name="username"
                         autocomplete="username"
@@ -31,7 +31,7 @@
                         id="password"
                         v-model="credential.password"
                         :rules="rules.password"
-                        :error-messages="showEmptyMessage ? ' ' : errorMessage"
+                        :error-messages="login_err_msg"
                         :type="isPwdVisible ? 'text' : 'password'"
                         class="std std-password mt-5"
                         name="password"
@@ -79,9 +79,6 @@
                 >
                     <span class="font-weight-bold text-capitalize">{{ $t('signIn') }}</span>
                 </v-btn>
-                <!--  <a href style="font-size:0.75rem;text-decoration: none;" class="d-block mx-auto "
-                    >{{ $t('forgotPassword') }}
-                </a> -->
             </div>
         </v-card-actions>
     </v-card>
@@ -101,9 +98,7 @@
  * Public License.
  */
 
-import { mapMutations } from 'vuex'
-import { refreshAxiosToken } from 'plugins/axios'
-
+import { mapActions, mapMutations, mapState } from 'vuex'
 export default {
     name: 'login-form',
 
@@ -118,8 +113,6 @@ export default {
                 username: '',
                 password: '',
             },
-            errorMessage: '',
-            showEmptyMessage: false, // errors receives from api
             rules: {
                 username: [
                     val => !!val || this.$t('errors.requiredInput', { inputName: 'Username' }),
@@ -131,56 +124,30 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            login_err_msg: state => state.user.login_err_msg,
+        }),
         logger: function() {
             return this.$logger('Login')
         },
     },
 
     methods: {
-        ...mapMutations({ SET_LOGGED_IN_USER: 'user/SET_LOGGED_IN_USER' }),
-
+        ...mapMutations({
+            SET_LOGGED_IN_USER: 'user/SET_LOGGED_IN_USER',
+            SET_LOGIN_ERR_MSG: 'user/SET_LOGIN_ERR_MSG',
+        }),
+        ...mapActions({ login: 'user/login' }),
         onInput() {
-            if (this.showEmptyMessage) {
-                this.showEmptyMessage = false
-                this.errorMessage = ''
-            }
+            if (this.login_err_msg) this.SET_LOGIN_ERR_MSG('')
         },
 
         async handleSubmit() {
             this.isLoading = true
-            try {
-                /*  use login axios instance, instead of showing global interceptor, show error in catch
-                    max-age param will be 8 hours if rememberMe is true, otherwise, along as user close the browser
-                    it will be expired
-                */
-                refreshAxiosToken()
-                let url = '/auth?persist=yes'
-                await this.$loginAxios.get(`${url}${this.rememberMe ? '&max-age=28800' : ''}`, {
-                    auth: this.credential,
-                })
-
-                // for now, using username as name
-                let userObj = {
-                    name: this.credential.username,
-                    rememberMe: this.rememberMe,
-                    isLoggedIn: this.$help.getCookie('token_body') ? true : false,
-                }
-                await this.SET_LOGGED_IN_USER(userObj)
-                localStorage.setItem('user', JSON.stringify(userObj))
-
-                await this.$router.push(this.$route.query.redirect || '/dashboard/servers')
-            } catch (error) {
-                this.showEmptyMessage = true
-                if (error.response) {
-                    this.errorMessage =
-                        error.response.status === 401
-                            ? this.$t('errors.wrongCredentials')
-                            : error.response.statusText
-                } else {
-                    this.logger.error(error)
-                    this.errorMessage = error.toString()
-                }
-            }
+            await this.login({
+                rememberMe: this.rememberMe,
+                auth: this.credential,
+            })
             this.isLoading = false
         },
     },

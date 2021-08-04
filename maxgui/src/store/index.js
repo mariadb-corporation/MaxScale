@@ -23,12 +23,13 @@ import listener from './listener'
 import query from './query'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
-import { refreshAxiosToken } from 'plugins/axios'
+import i18n from 'plugins/i18n'
 import createPersistedState from 'vuex-persistedstate'
 
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
+    store.i18n = i18n
 }
 
 const store = new Vuex.Store({
@@ -40,6 +41,7 @@ const store = new Vuex.Store({
                 'query.query_max_rows',
                 'query.query_confirm_flag',
                 'query.cnct_resources',
+                'user.logged_in_user',
             ],
         }),
     ],
@@ -102,7 +104,7 @@ const store = new Vuex.Store({
          * It should be dispatched on public route when routing occurs
          */
         async checkingForUpdate({ commit }) {
-            refreshAxiosToken()
+            this.vue.$refreshAxiosToken()
             const logger = this.vue.$logger('index-store')
             const res = await this.vue.$axios.get(`/`)
             logger.info('Checking for update')

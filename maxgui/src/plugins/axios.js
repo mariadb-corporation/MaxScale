@@ -103,10 +103,19 @@ Object.defineProperties(Vue.prototype, {
             return apiClient
         },
     },
-
     $loginAxios: {
         get() {
             return loginAxios
+        },
+    },
+    $refreshAxiosToken: {
+        get() {
+            return refreshAxiosToken
+        },
+    },
+    $cancelAllRequests: {
+        get() {
+            return cancelAllRequests
         },
     },
 })
