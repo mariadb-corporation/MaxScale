@@ -373,53 +373,34 @@ int TestConnections::setup_vms()
     bool maxscale_installed = false;
 
     bool vms_found = false;
-    if (read_network_config() && required_machines_are_running())
+    if (m_recreate_vms)
     {
-        vms_found = true;
-    }
-    else
-    {
-        // Not all VMs were found. Call MDBCI first time.
-        if (call_mdbci_and_check())
+        // User has requested to recreate all VMs required by current test.
+        if (call_mdbci_and_check("--recreate"))
         {
             vms_found = true;
             maxscale_installed = true;
         }
     }
-
-    bool nodes_ok = false;
-    if (vms_found)
+    else
     {
-        if (initialize_nodes())
+        if (read_network_config() && required_machines_are_running())
         {
-            nodes_ok = true;
+            vms_found = true;
         }
         else
         {
-            tprintf("Recreating VMs because node check failed.");
-        }
-
-        if (!nodes_ok)
-        {
-            // Node init failed, call mdbci again. Is this worth even trying?
-            if (call_mdbci_and_check("--recreate"))
+            // Not all VMs were found. Call MDBCI.
+            if (call_mdbci_and_check())
             {
+                vms_found = true;
                 maxscale_installed = true;
-                if (initialize_nodes())
-                {
-                    nodes_ok = true;
-                }
-            }
-
-            if (!nodes_ok)
-            {
-                add_failure("Could not initialize nodes even after 'mdbci --recreate'. Exiting.");
             }
         }
     }
 
     int rval = MDBCI_FAIL;
-    if (nodes_ok)
+    if (vms_found && initialize_nodes())
     {
         rval = 0;
         if (m_reinstall_maxscale)
@@ -438,9 +419,13 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(mxt::SOURCE_DIR) + "/mdbci/add_core_cnf.sh";
-            maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
-            maxscale->ssh_node_f(true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
-                                 verbose() ? "verbose" : "");
+            for (int i = 0; i < n_maxscales(); i++)
+            {
+                auto mxs = my_maxscale(i);
+                auto homedir = mxs->access_homedir();
+                mxs->copy_to_node(src.c_str(), homedir);
+                mxs->ssh_node_f(true, "%s/add_core_cnf.sh %s", homedir, verbose() ? "verbose" : "");
+            }
         }
     }
 
@@ -1687,6 +1672,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
         {"fix-clusters",       no_argument,       0, 'f'},
+        {"recreate-vms",       no_argument,       0, 'c'},
         {0,                    0,                 0, 0  }
     };
 
@@ -1694,7 +1680,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlmef::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlmefc::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1775,6 +1761,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'f':
             printf("Fixing clusters after test.\n");
             m_fix_clusters_after = true;
+            break;
+
+        case 'c':
+            printf("Recreating all test VMs.\n");
+            m_recreate_vms = true;
             break;
 
         default:
