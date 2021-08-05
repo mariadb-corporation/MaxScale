@@ -79,8 +79,8 @@ WorkerLoad::WorkerLoad()
     : m_start_time(0)
     , m_wait_start(0)
     , m_wait_time(0)
-    , m_load_1_hour(60) // 60 minutes in an hour
-    , m_load_1_minute(60, &m_load_1_hour) // 60 seconds in a minute
+    , m_load_1_hour(60)                     // 60 minutes in an hour
+    , m_load_1_minute(60, &m_load_1_hour)   // 60 seconds in a minute
     , m_load_1_second(&m_load_1_minute)
 {
 }
@@ -361,7 +361,7 @@ Worker::RandomEngine& Worker::random_engine()
 
 void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
 {
-    auto pWorker = mxb::Worker::get_current(); // Must be in a worker thread.
+    auto pWorker = mxb::Worker::get_current();      // Must be in a worker thread.
     auto& rand_eng = pWorker->m_random_engine;
     size_t bytes_written = 0;
     while (bytes_written < nBytes)
@@ -966,6 +966,7 @@ void Worker::tick()
 
 uint32_t Worker::add_delayed_call(DelayedCall* pCall)
 {
+    mxb_assert(Worker::get_current() == this);
     bool adjust = true;
 
     if (!m_sorted_calls.empty())
@@ -1020,6 +1021,7 @@ void Worker::adjust_timer()
 
 bool Worker::cancel_delayed_call(uint32_t id)
 {
+    mxb_assert(Worker::get_current() == this);
     bool found = false;
 
     auto i = m_calls.find(id);
