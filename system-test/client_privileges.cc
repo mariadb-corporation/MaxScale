@@ -33,10 +33,14 @@ const char process_user[] = "process_user";
 const char process_pass[] = "process_pass";
 const char table_insert_user[] = "table_insert_user";
 const char table_insert_pass[] = "table_insert_pass";
+const char new_user[] = "new_user";
+const char new_pass[] = "new_pass";
 }
 
 void test_logins(TestConnections& test, bool expect_success);
 void test_main(TestConnections& test);
+bool test_user_full(TestConnections& test, const string& ip, int port,
+                    const string& user, const string& pass, const string& query);
 
 int main(int argc, char* argv[])
 {
@@ -46,9 +50,10 @@ int main(int argc, char* argv[])
 
 void test_main(TestConnections& test)
 {
-    test.repl->connect();
-
     auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    const char drop_fmt[] = "DROP USER '%s'@'%%';";
+
     auto conn = mxs.open_rwsplit_connection2();
 
     auto create_user = [&](const char* user, const char* pass) {
@@ -61,7 +66,7 @@ void test_main(TestConnections& test)
     create_user(column_user, column_pass);
     create_user(process_user, process_pass);
     create_user(table_insert_user, table_insert_pass);
-    test.repl->sync_slaves();
+    repl.sync_slaves();
 
     if (test.ok())
     {
@@ -75,7 +80,7 @@ void test_main(TestConnections& test)
                     "SELECT rand(); "
                     "END; ",
                     proc);
-        test.repl->sync_slaves();
+        repl.sync_slaves();
 
         if (test.ok())
         {
@@ -99,26 +104,75 @@ void test_main(TestConnections& test)
             conn->cmd_f("GRANT EXECUTE ON PROCEDURE %s TO '%s'@'%%';", proc, process_user);
 
             conn->cmd_f("GRANT INSERT ON %s TO '%s'@'%%';", table, table_insert_user);
-            test.repl->sync_slaves();
+            repl.sync_slaves();
+
+            if (test.ok())
+            {
+                // Restart MaxScale to reload users.
+                mxs.restart();
+                mxs.wait_for_monitor();
+
+                test_logins(test, true);
+            }
+
+            if (test.ok())
+            {
+                // All ok so far. Test user account refreshing. First, generate a user not yet
+                // known to MaxScale.
+                create_user(new_user, new_pass);
+                auto master_conn = test.repl->backend(0)->open_connection();
+                master_conn->cmd_f(grant_fmt, db_grant.c_str(), new_user);
+                repl.sync_slaves();
+                // Should be able to login and query without reloading users.
+                bool login_ok = test_user_full(test, mxs.ip(), mxs.rwsplit_port, new_user, new_pass,
+                                               "sElEcT rand();");
+                test.expect(login_ok, "Login to a new user failed.");
+
+                // Change the password of the user. Login again with old password. Should work,
+                // although the query should fail. Tests MXS-3630.
+                master_conn->cmd_f("ALTER USER '%s' identified by '%s';", new_user, "different_pass");
+                repl.sync_slaves();
+
+                auto test_conn = mxs.try_open_rwsplit_connection(new_user, new_pass);
+                test.expect(test_conn->is_open(), "Logging in with old password failed.");
+                auto res = test_conn->try_query("select 1;");
+                test.expect(!res, "Query succeeded when it should have failed.");
+
+                // Wait a bit and try connecting again. Now even the connection should fail, as MaxScale
+                // updated user accounts.
+                sleep(1);
+                test_conn = mxs.try_open_rwsplit_connection(new_user, new_pass);
+                test.expect(!test_conn->is_open(), "Logging in with old password succeeded when it should "
+                                                   "have failed.");
+                conn->cmd_f(drop_fmt, new_user);
+            }
         }
 
-        if (test.ok())
-        {
-            // Restart MaxScale to reload users.
-            mxs.restart();
-            mxs.wait_for_monitor();
-
-            test_logins(test, true);
-        }
         conn->cmd_f("DROP DATABASE %s;", db);
     }
 
-    const char drop_fmt[] = "DROP USER '%s'@'%%';";
     conn->cmd_f(drop_fmt, db_user);
     conn->cmd_f(drop_fmt, table_user);
     conn->cmd_f(drop_fmt, column_user);
     conn->cmd_f(drop_fmt, process_user);
     conn->cmd_f(drop_fmt, table_insert_user);
+}
+
+bool test_user_full(TestConnections& test, const string& ip, int port,
+                    const string& user, const string& pass, const string& query)
+{
+    bool rval = false;
+    MYSQL* conn = open_conn_db(port, ip, db, user, pass);
+    if (mysql_errno(conn) == 0)
+    {
+        // Query should work.
+        if (test.try_query(conn, "%s", query.c_str()) == 0)
+        {
+            rval = true;
+        }
+    }
+    mysql_close(conn);
+    return rval;
 }
 
 void test_logins(TestConnections& test, bool expect_success)
@@ -127,18 +181,7 @@ void test_logins(TestConnections& test, bool expect_success)
     auto ip = test.maxscale->ip4();
 
     auto test_user = [&](const string& user, const string& pass, const string& query) {
-            bool rval = false;
-            MYSQL* conn = open_conn_db(port, ip, db, user, pass);
-            if (mysql_errno(conn) == 0)
-            {
-                // Query should work.
-                if (test.try_query(conn, "%s", query.c_str()) == 0)
-                {
-                    rval = true;
-                }
-            }
-            mysql_close(conn);
-            return rval;
+            return test_user_full(test, ip, port, user, pass, query);
         };
 
 

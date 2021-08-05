@@ -40,10 +40,7 @@ struct Error
 class Writer
 {
 public:
-    // Used to generate the connection details used for replication
-    using Generator = std::function<maxsql::Connection::ConnectionDetails()>;
-
-    Writer(Generator generator, mxb::Worker* worker, InventoryWriter* inv);
+    Writer(const mxq::Connection::ConnectionDetails& details, InventoryWriter* inv);
     ~Writer();
     void run();
 
@@ -51,9 +48,9 @@ public:
     mxq::GtidList get_gtid_io_pos() const;
     Error         get_err() const;
 
+    void set_connection_details(const mxq::Connection::ConnectionDetails& details);
+
 private:
-    Generator         m_generator;
-    mxb::Worker*      m_worker;
     InventoryWriter&  m_inventory;
     bool              m_is_bootstrap = false;
     bool              m_commit_on_query = false;
@@ -62,6 +59,8 @@ private:
     std::thread       m_thread;
     maxbase::Timer    m_timer {10s};
     Error             m_error;
+
+    mxq::Connection::ConnectionDetails m_details;
 
     mutable std::mutex              m_lock;
     mutable std::condition_variable m_cond;

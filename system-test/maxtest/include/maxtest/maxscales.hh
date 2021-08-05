@@ -233,9 +233,12 @@ public:
 
     SMariaDB open_rwsplit_connection2(const std::string& db = "");
     SMariaDB try_open_rwsplit_connection(const std::string& db = "");
+    SMariaDB try_open_rwsplit_connection(const std::string& user, const std::string& pass,
+                                         const std::string& db = "");
 
-    enum class SslMode {ON, OFF};
-    SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& db = "");
+    enum class SslMode {AUTO, ON, OFF};
+    SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& user, const std::string& pass,
+                                         const std::string& db = "");
 
     /**
      * Get a readwritesplit Connection

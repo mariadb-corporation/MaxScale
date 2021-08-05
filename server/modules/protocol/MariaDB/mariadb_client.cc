@@ -506,8 +506,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                     }
                     else
                     {
-                        MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
-                                    m_session->user_and_host().c_str());
+                        MXS_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
                         // If plugin exists, start exchange. Authentication will surely fail.
                         m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
                             AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;

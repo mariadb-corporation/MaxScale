@@ -17,6 +17,8 @@
 
 #include <queue>
 
+class MariaDBUserCache;
+
 class MariaDBBackendConnection : public mxs::BackendConnection
 {
 public:
@@ -162,6 +164,8 @@ private:
     void     process_ok_packet(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     void     set_reply_state(mxs::ReplyState state);
+
+    const MariaDBUserCache* user_account_cache();
 
     // Contains the necessary information required to track queries
     struct TrackedQuery

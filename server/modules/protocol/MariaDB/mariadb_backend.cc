@@ -14,6 +14,7 @@
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 
 #include <arpa/inet.h>
+#include <openssl/rand.h>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
@@ -31,8 +32,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-
-#include <openssl/rand.h>
+#include "user_data.hh"
 
 // For setting server status through monitor
 #include "../../../core/internal/monitormanager.hh"
@@ -243,6 +243,24 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
                   server->name(), server->address(), server->port());
+    }
+    else if (errcode == ER_ACCESS_DENIED_ERROR)
+    {
+        // Authentication to backend failed. MaxScale must be operating on old user account data. This
+        // session will fail, but update account data.
+        auto user_cache = user_account_cache();
+        if (user_cache)
+        {
+            if (user_cache->can_update_immediately())
+            {
+                m_session->service->request_user_account_update();
+            }
+            else
+            {
+                MXS_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
+            }
+        }
+        // If user cache does not exist, do nothing.
     }
 
     do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
@@ -2794,4 +2812,12 @@ mxs::Component* MariaDBBackendConnection::upstream() const
 bool MariaDBBackendConnection::expecting_reply() const
 {
     return !m_reply.is_complete() || !m_track_queue.empty();
+}
+
+const MariaDBUserCache* MariaDBBackendConnection::user_account_cache()
+{
+    auto users = m_session->service->user_account_cache();
+    // MariaDBBackendConnections may be used by other protocols than just MariaDB. The user account cache
+    // may not exist or may be a different class. For now, only update it when using MariaDB-protocol.
+    return dynamic_cast<const MariaDBUserCache*>(users);
 }

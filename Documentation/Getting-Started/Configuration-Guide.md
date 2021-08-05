@@ -42,6 +42,9 @@ Auth Error    | The monitor cannot login and query the server due to insufficien
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
 
+For more information on how to manually set these states via MaxCtrl, read the
+[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
+
 ### Monitor
 
 A monitor module is capable of monitoring the state of a particular kind

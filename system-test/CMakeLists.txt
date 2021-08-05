@@ -334,7 +334,7 @@ add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
 
 # Test users with different level privileges: database, table, column and procedure.
-# MXS-37, MXS-3303, MXS-1958
+# MXS-37, MXS-3303, MXS-1958, MXS-3630
 add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
