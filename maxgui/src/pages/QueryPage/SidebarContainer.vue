@@ -80,7 +80,7 @@
                         />
                     </div>
                     <db-list-tree
-                        v-show="!is_sidebar_collapsed"
+                        v-show="active_conn_state && !is_sidebar_collapsed"
                         class="schema-list-wrapper"
                         @preview-data="
                             schemaId =>
@@ -152,11 +152,7 @@ export default {
         ...mapActions({
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
-            fetchTables: 'query/fetchTables',
-            fetchStoredProcedures: 'query/fetchStoredProcedures',
-            fetchCols: 'query/fetchCols',
-            fetchTriggers: 'query/fetchTriggers',
-            fetchTreeNode: 'query/fetchTreeNode',
+            updateTreeNodes: 'query/updateTreeNodes',
             useDb: 'query/useDb',
             reloadTreeNodes: 'query/reloadTreeNodes',
         }),
@@ -176,8 +172,8 @@ export default {
                     break
             }
         },
-        async handleLoadChildren(item) {
-            await this.fetchTreeNode(item)
+        async handleLoadChildren(node) {
+            await this.updateTreeNodes(node)
         },
     },
 }

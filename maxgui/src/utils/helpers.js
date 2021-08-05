@@ -560,6 +560,8 @@ export function pxToPct({ px, containerPx }) {
     return (px / containerPx) * 100
 }
 
+export const immutableUpdate = update
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -595,7 +597,7 @@ Object.defineProperties(Vue.prototype, {
                 isFunction,
                 isUndefined,
                 lodash,
-                immutableUpdate: update,
+                immutableUpdate,
                 resourceTxtTransform,
                 ciStrIncludes,
                 doubleRAF,

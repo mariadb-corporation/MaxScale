@@ -11,23 +11,7 @@
  * Public License.
  */
 import { uniqBy, uniqueId, pickBy } from 'utils/helpers'
-
-/**
- * @param {String} prefixName - prefix name of the connection cookie. i.e. conn_id_body_
- * @returns {Array} an array of connection ids found from cookies
- */
-function getClientConnIds(prefixName = 'conn_id_body_') {
-    let value = '; ' + document.cookie
-    let cookiesStr = value.split('; ')
-    const connCookies = cookiesStr.filter(p => p.includes(prefixName))
-    const connIds = []
-    connCookies.forEach(str => {
-        const parts = str.split('=')
-        if (parts.length === 2) connIds.push(parts[0].replace(prefixName, ''))
-    })
-    return connIds
-}
-
+import queryHelper from './queryHelper'
 /**
  * @returns Initial connection related states
  */
@@ -47,8 +31,6 @@ function sidebarStates() {
         loading_db_tree: false,
         is_sidebar_collapsed: false,
         search_schema: '',
-        db_tree: [],
-        db_completion_list: [],
         active_db: '',
         active_tree_node: {},
         expanded_nodes: [],
@@ -70,6 +52,7 @@ function editorStates() {
  */
 function resultStates() {
     return {
+        //TODO: Move these to outside of wke state except curr_query_mode
         loading_prvw_data: false,
         prvw_data: {},
         prvw_data_request_sent_time: 0,
@@ -148,7 +131,9 @@ export default {
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
-
+        // sidebar states
+        db_tree: [],
+        db_completion_list: [],
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
@@ -184,52 +169,7 @@ export default {
             patch_wke_property(state, { obj: { loading_db_tree: payload }, scope: this })
         },
         SET_DB_TREE(state, payload) {
-            patch_wke_property(state, { obj: { db_tree: payload }, scope: this })
-        },
-        UPDATE_DB_GRAND_CHILD(state, { dbName, childType, grandChild, getters }) {
-            const dbIndex = getters.getDbIdx(dbName)
-            let childIndex
-            switch (childType) {
-                case 'Tables':
-                    childIndex = getters.getIdxOfTablesNode(dbIndex)
-                    break
-                case 'Stored Procedures':
-                    childIndex = getters.getIdxOfSPNode(dbIndex)
-                    break
-            }
-            const new_db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
-                [dbIndex]: { children: { [childIndex]: { children: { $set: grandChild } } } },
-            })
-            patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
-        },
-        UPDATE_TABLE_CHILD(state, { dbName, tblName, children, childType, getters }) {
-            const dbIndex = getters.getDbIdx(dbName)
-            const idxOfTablesNode = getters.getIdxOfTablesNode(dbIndex)
-            const tblIdx = state.db_tree[dbIndex].children[idxOfTablesNode].children.findIndex(
-                tbl => tbl.name === tblName
-            )
-            const dbChildNodes = state.db_tree[dbIndex].children
-
-            const idxOfTriggersNode = dbChildNodes[idxOfTablesNode].children[
-                tblIdx
-            ].children.findIndex(tblChildNode => tblChildNode.type === childType)
-
-            const new_db_tree = this.vue.$help.immutableUpdate(state.db_tree, {
-                [dbIndex]: {
-                    children: {
-                        [idxOfTablesNode]: {
-                            children: {
-                                [tblIdx]: {
-                                    children: {
-                                        [idxOfTriggersNode]: { children: { $set: children } },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            })
-            patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
+            state.db_tree = payload
         },
         SET_ACTIVE_TREE_NODE(state, payload) {
             patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
@@ -242,16 +182,9 @@ export default {
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
         },
-        UPDATE_DB_CMPL_LIST(state, payload) {
-            patch_wke_property(state, {
-                obj: { db_completion_list: [...state.db_completion_list, ...payload] },
-                scope: this,
-            })
+        SET_DB_CMPL_LIST(state, payload) {
+            state.db_completion_list = payload
         },
-        CLEAR_DB_CMPL_LIST(state) {
-            patch_wke_property(state, { obj: { db_completion_list: [] }, scope: this })
-        },
-
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
@@ -426,7 +359,7 @@ export default {
                 commit('SET_IS_CHECKING_ACTIVE_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
-                const clientConnIds = getClientConnIds()
+                const clientConnIds = queryHelper.getClientConnIds()
                 const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
 
                 const validCnctResources = state.cnct_resources.filter(rsrc =>
@@ -463,19 +396,21 @@ export default {
                 logger.error(e)
             }
         },
-
-        async fetchDbList({ state, commit }) {
+        /**
+         *
+         * @param {Object} payload.state  query module state
+         * @returns {Object} { dbTree, cmpList }
+         */
+        async getDbs({ state }) {
             try {
-                commit('SET_LOADING_DB_TREE', true)
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: 'SELECT * FROM information_schema.SCHEMATA;',
                     }
                 )
-                await this.vue.$help.delay(200)
-                let dbCmplList = []
-                let dbTree = []
+                let cmpList = []
+                let db_tree = []
                 const nodeType = 'Schema'
 
                 const dataRows = this.vue.$help.getObjectRows({
@@ -484,12 +419,13 @@ export default {
                 })
 
                 dataRows.forEach(row => {
-                    dbTree.push({
+                    db_tree.push({
                         type: nodeType,
                         name: row.SCHEMA_NAME,
                         id: row.SCHEMA_NAME,
                         data: row,
                         draggable: true,
+                        level: 0,
                         children: [
                             {
                                 type: 'Tables',
@@ -497,6 +433,7 @@ export default {
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Tables`,
                                 draggable: false,
+                                level: 1,
                                 children: [],
                             },
                             {
@@ -505,285 +442,256 @@ export default {
                                 // only use to identify active node
                                 id: `${row.SCHEMA_NAME}.Stored Procedures`,
                                 draggable: false,
+                                level: 1,
                                 children: [],
                             },
                         ],
                     })
-                    dbCmplList.push({
+                    cmpList.push({
                         label: row.SCHEMA_NAME,
                         detail: 'SCHEMA',
                         insertText: `\`${row.SCHEMA_NAME}\``,
                         type: nodeType,
                     })
                 })
-                commit('SET_DB_TREE', dbTree)
-                commit('CLEAR_DB_CMPL_LIST')
-                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                commit('SET_LOADING_DB_TREE', false)
+                return { db_tree, cmpList }
             } catch (e) {
-                commit('SET_LOADING_DB_TREE', false)
-                const logger = this.vue.$logger('store-query-fetchDbList')
+                const logger = this.vue.$logger('store-query-getDbs')
                 logger.error(e)
             }
         },
         /**
-         * @param {Object} tablesObj - tables node object.
+         * @param {Object} node - node child of db node object. Either type `Tables` or `Stored Procedures`
+         * @returns {Object} { dbName, gch, cmpList }
          */
-        async fetchTables({ state, commit, getters }, tablesObj) {
+        async getDbGrandChild({ state }, node) {
             try {
-                const dbName = tablesObj.id.replace(/\.Tables/g, '')
+                let dbName
+                let query
+                let grandChildNodeType
+                let rowName
+                switch (node.type) {
+                    case 'Tables':
+                        dbName = node.id.replace(/\.Tables/g, '')
+                        grandChildNodeType = 'Table'
+                        rowName = 'TABLE_NAME'
+                        // eslint-disable-next-line vue/max-len
+                        query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
+                        break
+                    case 'Stored Procedures':
+                        dbName = node.id.replace(/\.Stored Procedures/g, '')
+                        grandChildNodeType = 'Stored Procedure'
+                        rowName = 'ROUTINE_NAME'
+                        // eslint-disable-next-line vue/max-len
+                        query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
+                        break
+                }
                 // eslint-disable-next-line vue/max-len
-                const query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
                     }
                 )
-
                 const dataRows = this.vue.$help.getObjectRows({
                     columns: res.data.data.attributes.results[0].fields,
                     rows: res.data.data.attributes.results[0].data,
                 })
-                let tblsChildren = []
-                let dbCmplList = []
-                const nodeType = 'Table'
+
+                let gch = []
+                let cmpList = []
                 dataRows.forEach(row => {
-                    tblsChildren.push({
-                        type: nodeType,
-                        name: row.TABLE_NAME,
-                        id: `${dbName}.${row.TABLE_NAME}`,
-                        data: row,
-                        canBeHighlighted: true,
+                    let grandChildNode = {
+                        type: grandChildNodeType,
+                        name: row[rowName],
+                        id: `${dbName}.${row[rowName]}`,
                         draggable: true,
-                        children: [
+                        data: row,
+                        level: 2,
+                    }
+                    // For child node of Tables, it has canBeHighlighted and children props
+                    if (node.type === 'Tables') {
+                        grandChildNode.canBeHighlighted = true
+                        grandChildNode.children = [
                             {
                                 type: 'Columns',
                                 name: 'Columns',
                                 // only use to identify active node
-                                id: `${dbName}.${row.TABLE_NAME}.Columns`,
+                                id: `${dbName}.${row[rowName]}.Columns`,
                                 draggable: false,
                                 children: [],
+                                level: 3,
                             },
                             {
                                 type: 'Triggers',
                                 name: 'Triggers',
                                 // only use to identify active node
-                                id: `${dbName}.${row.TABLE_NAME}.Triggers`,
+                                id: `${dbName}.${row[rowName]}.Triggers`,
                                 draggable: false,
                                 children: [],
+                                level: 3,
                             },
-                        ],
-                    })
-                    dbCmplList.push({
-                        label: row.TABLE_NAME,
-                        detail: 'TABLE',
-                        insertText: `\`${row.TABLE_NAME}\``,
-                        type: nodeType,
-                    })
-                })
-                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                commit('UPDATE_DB_GRAND_CHILD', {
-                    dbName,
-                    childType: 'Tables',
-                    getters,
-                    grandChild: tblsChildren,
-                })
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchTables')
-                logger.error(e)
-            }
-        },
-
-        /**
-         * @param {Object} storedProceduresNode - storedProceduresNode node object.
-         */
-        async fetchStoredProcedures({ state, commit, getters }, storedProceduresNode) {
-            try {
-                const dbName = storedProceduresNode.id.replace(/\.Stored Procedures/g, '')
-                // eslint-disable-next-line vue/max-len
-                const query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
-                const res = await this.vue.$axios.post(
-                    `/sql/${state.curr_cnct_resource.id}/queries`,
-                    {
-                        sql: query,
+                        ]
                     }
-                )
-                const dataRows = this.vue.$help.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
+                    gch.push(grandChildNode)
 
-                let spChildren = []
-                let dbCmplList = []
-                const nodeType = 'Stored Procedure'
-                dataRows.forEach(row => {
-                    spChildren.push({
-                        type: nodeType,
-                        name: row.ROUTINE_NAME,
-                        id: `${dbName}.${row.ROUTINE_NAME}`,
-                        draggable: true,
-                        data: row,
-                    })
-                    dbCmplList.push({
-                        label: row.ROUTINE_NAME,
-                        detail: 'STORED PROCEDURE',
-                        insertText: row.ROUTINE_NAME,
-                        type: nodeType,
+                    cmpList.push({
+                        label: row[rowName],
+                        detail: grandChildNodeType.toUpperCase(),
+                        insertText: `\`${row[rowName]}\``,
+                        type: grandChildNodeType,
                     })
                 })
-                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-
-                commit('UPDATE_DB_GRAND_CHILD', {
-                    dbName,
-                    childType: 'Stored Procedures',
-                    getters,
-                    grandChild: spChildren,
-                })
+                return { dbName, gch, cmpList }
             } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchStoredProcedures')
+                const logger = this.vue.$logger('store-query-getDbGrandChild')
                 logger.error(e)
             }
         },
         /**
-         * @param {Object} columnsObj - columns node object.
+         * @param {Object} node - node object. Either type `Triggers` or `Columns`
+         * @returns {Object} { dbName, tblName, gch, cmpList }
          */
-        async fetchCols({ state, commit, getters }, columnsObj) {
+        async getTableGrandChild({ state }, node) {
             try {
-                const dbName = columnsObj.id.split('.')[0]
-                const tblName = columnsObj.id.split('.')[1]
-                // eslint-disable-next-line vue/max-len
-                const query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
-                const res = await this.vue.$axios.post(
-                    `/sql/${state.curr_cnct_resource.id}/queries`,
-                    {
-                        sql: query,
-                    }
-                )
-                if (res.data) {
-                    const dataRows = this.vue.$help.getObjectRows({
-                        columns: res.data.data.attributes.results[0].fields,
-                        rows: res.data.data.attributes.results[0].data,
-                    })
-                    let tblChildren = []
-                    let dbCmplList = []
-                    const nodeType = 'Column'
-                    dataRows.forEach(row => {
-                        tblChildren.push({
-                            name: row.COLUMN_NAME,
-                            dataType: row.COLUMN_TYPE,
-                            type: nodeType,
-                            id: `${dbName}.${tblName}.${row.COLUMN_NAME}`,
-                            draggable: true,
-                            data: row,
-                        })
-                        dbCmplList.push({
-                            label: row.COLUMN_NAME,
-                            insertText: `\`${row.COLUMN_NAME}\``,
-                            detail: 'COLUMN',
-                            type: nodeType,
-                        })
-                    })
-
-                    commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-
-                    commit('UPDATE_TABLE_CHILD', {
-                        dbName,
-                        tblName,
-                        childType: 'Columns',
-                        children: tblChildren,
-                        getters,
-                    })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchCols')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {Object} triggersNode - triggersNode node object.
-         */
-        async fetchTriggers({ state, commit, getters }, triggersNode) {
-            try {
-                const dbName = triggersNode.id.split('.')[0]
-                const tblName = triggersNode.id.split('.')[1]
-                // eslint-disable-next-line vue/max-len
-                const query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
-                const res = await this.vue.$axios.post(
-                    `/sql/${state.curr_cnct_resource.id}/queries`,
-                    {
-                        sql: query,
-                    }
-                )
-                const dataRows = this.vue.$help.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
-
-                let tblChildren = []
-                let dbCmplList = []
-                const nodeType = 'Trigger'
-                dataRows.forEach(row => {
-                    tblChildren.push({
-                        type: nodeType,
-                        name: row.TRIGGER_NAME,
-                        id: `${dbName}.${row.TRIGGER_NAME}`,
-                        draggable: true,
-                        data: row,
-                    })
-                    dbCmplList.push({
-                        label: row.TRIGGER_NAME,
-                        detail: 'TRIGGERS',
-                        insertText: row.TRIGGER_NAME,
-                        type: nodeType,
-                    })
-                })
-                commit('UPDATE_DB_CMPL_LIST', dbCmplList)
-                commit('UPDATE_TABLE_CHILD', {
-                    dbName,
-                    tblName,
-                    childType: 'Triggers',
-                    children: tblChildren,
-                    getters,
-                })
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchTriggers')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {Object} item - schema tree node object.
-         */
-        async fetchTreeNode({ dispatch }, item) {
-            try {
-                switch (item.type) {
-                    case 'Tables':
-                        await dispatch('fetchTables', item)
+                const dbName = node.id.split('.')[0]
+                const tblName = node.id.split('.')[1]
+                let query
+                let nodeType
+                let rowName
+                switch (node.type) {
+                    case 'Triggers':
+                        nodeType = 'Trigger'
+                        rowName = 'TRIGGER_NAME'
+                        // eslint-disable-next-line vue/max-len
+                        query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
                         break
                     case 'Columns':
-                        await dispatch('fetchCols', item)
-                        break
-                    case 'Stored Procedures':
-                        await dispatch('fetchStoredProcedures', item)
-                        break
-                    case 'Triggers':
-                        await dispatch('fetchTriggers', item)
+                        nodeType = 'Column'
+                        rowName = 'COLUMN_NAME'
+                        // eslint-disable-next-line vue/max-len
+                        query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
                         break
                 }
+                const res = await this.vue.$axios.post(
+                    `/sql/${state.curr_cnct_resource.id}/queries`,
+                    {
+                        sql: query,
+                    }
+                )
+
+                const dataRows = this.vue.$help.getObjectRows({
+                    columns: res.data.data.attributes.results[0].fields,
+                    rows: res.data.data.attributes.results[0].data,
+                })
+
+                let gch = []
+                let cmpList = []
+
+                dataRows.forEach(row => {
+                    gch.push({
+                        type: nodeType,
+                        name: row[rowName],
+                        id: `${dbName}.${row[rowName]}`,
+                        draggable: true,
+                        data: row,
+                        level: 4,
+                    })
+                    cmpList.push({
+                        label: row[rowName],
+                        detail: nodeType.toUpperCase(),
+                        insertText: row[rowName],
+                        type: nodeType,
+                    })
+                })
+                return { dbName, tblName, gch, cmpList }
             } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchTreeNode')
+                const logger = this.vue.$logger('store-query-getTableGrandChild')
+                logger.error(e)
+            }
+        },
+        /**
+         * @param {Object} payload.node - A node object having children nodes
+         * @param {Array} payload.db_tree - Array of tree node to be updated
+         * @param {Array} payload.cmpList - Array of completion list for editor
+         * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
+         */
+        async getTreeData({ dispatch }, { node, db_tree, cmpList }) {
+            try {
+                switch (node.type) {
+                    case 'Tables':
+                    case 'Stored Procedures': {
+                        const { gch, cmpList: partCmpList, dbName } = await dispatch(
+                            'getDbGrandChild',
+                            node
+                        )
+                        const new_db_tree = queryHelper.updateDbChild({
+                            db_tree,
+                            dbName,
+                            childType: node.type,
+                            gch,
+                        })
+
+                        return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
+                    }
+                    case 'Columns':
+                    case 'Triggers': {
+                        const { gch, cmpList: partCmpList, dbName, tblName } = await dispatch(
+                            'getTableGrandChild',
+                            node
+                        )
+                        const new_db_tree = queryHelper.updateTblChild({
+                            db_tree,
+                            dbName,
+                            tblName,
+                            childType: node.type,
+                            gch,
+                        })
+                        return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
+                    }
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-getTreeData')
+                logger.error(e)
+                return { new_db_tree: {}, new_cmp_list: [] }
+            }
+        },
+        async updateTreeNodes({ commit, dispatch, state }, node) {
+            try {
+                const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                    node,
+                    db_tree: state.db_tree,
+                    cmpList: state.db_completion_list,
+                })
+                commit('SET_DB_TREE', new_db_tree)
+                commit('SET_DB_CMPL_LIST', new_cmp_list)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-updateTreeNodes')
                 logger.error(e)
             }
         },
         async reloadTreeNodes({ commit, dispatch, state }) {
             try {
-                if (state.expanded_nodes.length) {
-                    commit('SET_LOADING_DB_TREE', true)
-                    for (let i = 0; i < state.expanded_nodes.length; i++) {
-                        await dispatch('fetchTreeNode', state.expanded_nodes[i])
+                const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
+                commit('SET_LOADING_DB_TREE', true)
+                const { db_tree, cmpList } = await dispatch('getDbs')
+                let tree = db_tree
+                let completionList = cmpList
+                const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
+                for (let i = 0; i < expanded_nodes.length; i++) {
+                    if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                        const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                            node: expanded_nodes[i],
+                            db_tree: tree,
+                            cmpList: completionList,
+                        })
+                        if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
+                        if (completionList.length) completionList = new_cmp_list
                     }
-                    commit('SET_LOADING_DB_TREE', false)
-                } else await dispatch('fetchDbList')
+                }
+                commit('SET_DB_TREE', tree)
+                commit('SET_DB_CMPL_LIST', completionList)
+                commit('SET_LOADING_DB_TREE', false)
             } catch (e) {
                 commit('SET_LOADING_DB_TREE', false)
                 const logger = this.vue.$logger('store-query-reloadTreeNodes')
@@ -922,15 +830,6 @@ export default {
         },
     },
     getters: {
-        getIdxOfTablesNode: state => dbIndex =>
-            state.db_tree[dbIndex].children.findIndex(
-                dbChildrenNode => dbChildrenNode.type === 'Tables'
-            ),
-        getDbIdx: state => dbName => state.db_tree.findIndex(db => db.name === dbName),
-        getIdxOfSPNode: state => dbIndex =>
-            state.db_tree[dbIndex].children.findIndex(
-                dbChildrenNode => dbChildrenNode.type === 'Stored Procedures'
-            ),
         getDbCmplList: state => {
             // remove duplicated labels
             return uniqBy(state.db_completion_list, 'label')

@@ -123,7 +123,6 @@ export default {
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_conn_state: state => state.query.active_conn_state,
-            expanded_nodes: state => state.query.expanded_nodes,
         }),
         connOptions() {
             let options = [this.newConnOption]
@@ -162,7 +161,6 @@ export default {
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
             checkActiveConn: 'query/checkActiveConn',
-            fetchDbList: 'query/fetchDbList',
             reloadTreeNodes: 'query/reloadTreeNodes',
             updateActiveDb: 'query/updateActiveDb',
         }),
