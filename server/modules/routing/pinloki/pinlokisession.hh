@@ -40,7 +40,7 @@ public:
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
     // pinloki::parser::Handler API
-    void select(const std::vector<std::string>& values) override;
+    void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) override;
     void set(const std::string& key, const std::string& value) override;
     void change_master_to(const parser::ChangeMasterValues& values) override;
     void start_slave() override;

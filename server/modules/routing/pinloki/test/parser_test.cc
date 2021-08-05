@@ -8,9 +8,9 @@ std::ostringstream result;
 struct DebugHandler : public pinloki::parser::Handler
 {
 
-    void select(const std::vector<std::string>& values) override
+    void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) override
     {
-        result << "SELECT " << mxb::join(values);
+        result << "SELECT " << mxb::join(aliases);
     }
 
     void set(const std::string& key, const std::string& value) override
@@ -106,6 +106,9 @@ std::vector<std::pair<std::string, std::string>> tests =
     },
     {
         "SELECT unix_timestamp()", "SELECT unix_timestamp()"
+    },
+    {
+        "SELECT 1 as a, 2 b", "SELECT a,b"      // MXS-3299
     },
     {
         "SET a  =  1", "SET a=1"

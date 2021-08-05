@@ -177,6 +177,48 @@ supports. The following commands are supported:
 
      * `@master_binlog_checksum`: Always `CRC32`.
 
+     * `@@session.auto_increment_increment`: Always `1`
+
+     * `@@character_set_client`: Always `utf8`
+
+     * `@@character_set_connection`: Always `utf8`
+
+     * `@@character_set_results`: Always `utf8`
+
+     * `@@character_set_server`: Always `utf8mb4`
+
+     * `@@collation_server`: Always `utf8mb4_general_ci`
+
+     * `@@collation_connection`: Always `utf8_general_ci`
+
+     * `@@init_connect`: Always an empty string
+
+     * `@@interactive_timeout`: Always `28800`
+
+     * `@@license`: Always `BSL`
+
+     * `@@lower_case_table_names`: Always `0`
+
+     * `@@max_allowed_packet`: Always `16777216`
+
+     * `@@net_write_timeout`: Always `60`
+
+     * `@@performance_schema`: Always `0`
+
+     * `@@query_cache_size`: Always `1048576`
+
+     * `@@query_cache_type`: Always `OFF`
+
+     * `@@sql_mode`: Always an empty string
+
+     * `@@system_time_zone`: Always `UTC`
+
+     * `@@time_zone`: Always `SYSTEM`
+
+     * `@@tx_isolation`: Always `REPEATABLE-READ`
+
+     * `@@wait_timeout`: Always `28800`
+
  * `SET`
 
    * `@@global.gtid_slave_pos`: Set the position from which binlogrouter should
