@@ -154,17 +154,33 @@ const MonitorInfo* get_primary_monitor(TestConnections& test)
 {
     // Test each monitor in turn until find the one with lock majority. Also check that only one
     // monitor is primary.
-    const MonitorInfo* rval = nullptr;
     int primaries = 0;
-    for (int i = 0; monitors[i].maxscale; i++)
+
+    auto find_primary = [&]() {
+            const MonitorInfo* found = nullptr;
+            primaries = 0;
+            for (int i = 0; monitors[i].maxscale; i++)
+            {
+                auto& mon_info = monitors[i];
+                if (monitor_is_primary(test, mon_info))
+                {
+                    primaries++;
+                    found = &mon_info;
+                }
+            }
+            return found;
+        };
+
+    const MonitorInfo* rval = find_primary();
+    if (!rval)
     {
-        auto& mon_info = monitors[i];
-        if (monitor_is_primary(test, mon_info))
-        {
-            primaries++;
-            rval = &mon_info;
-        }
+        // Did not find a single primary monitor. This happens sometimes, perhaps due to monitor or server
+        // being slow to react to freed locks. In any case, give MaxScale some more time to detect the
+        // situation.
+        sleep(5);
+        rval = find_primary();
     }
+
     test.expect(primaries == 1, "Found %i primary monitors when 1 was expected.", primaries);
     return rval;
 }
