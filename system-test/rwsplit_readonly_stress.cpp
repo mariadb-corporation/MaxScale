@@ -45,8 +45,8 @@ void query_thread(TestConnections& test)
         {
             auto start = Clock::now();
             test.expect(conn.query("select repeat('a', 1000)"),
-                        "Query failed (iteration %d, query %d) for %s, waited for %lums: %s",
-                        i, counter, type, diff_to_ms(start), conn.error());
+                        "Query failed (iteration %d, query %d) for %s, waited for %lums, thread ID %u: %s",
+                        i, counter, type, diff_to_ms(start), conn.thread_id(), conn.error());
         }
 
         ++counter;
