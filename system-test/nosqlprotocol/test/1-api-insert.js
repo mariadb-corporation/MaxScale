@@ -254,6 +254,13 @@ describe(name, function () {
         assert.equal(rv.n, 6);
     });
 
+    it('Can insert single quote.', async function () {
+        await mxs.runCommand({insert: tblname, documents: [{a: "a'b"}]});
+        await mxs.runCommand({insert: tblname, documents: [{a: "a\b"}]});
+        await mxs.runCommand({insert: tblname, documents: [{a: "a\'b"}]});
+        await mxs.runCommand({insert: tblname, documents: [{a: "a\\''b"}]});
+    });
+
     after(function () {
         if (mxs) {
             mxs.close();

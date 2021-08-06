@@ -1023,6 +1023,8 @@ protected:
 
         m_ids.push_back(element);
 
+        json = escape_essential_chars(std::move(json));
+
         sql << "('" << json << "')";
 
         return sql.str();
@@ -1259,9 +1261,12 @@ private:
             break;
 
         case REPLACEMENT_DOCUMENT:
-            sql << "JSON_SET('"
-                << bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()))
-                << "', '$._id', JSON_EXTRACT(id, '$'))";
+            {
+                auto json = bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()));
+                json = escape_essential_chars(std::move(json));
+
+                sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
+            }
             break;
 
         case UPDATE_OPERATORS:
@@ -1417,8 +1422,11 @@ private:
                     s += ", ";
                 }
 
+                string key = field.key().data();
+                key = escape_essential_chars(std::move(key));
+
                 s += "'$.";
-                s += field.key().data();
+                s += key;
                 s += "'";
 
                 if (add_value)
