@@ -52,17 +52,13 @@ function editorStates() {
  */
 function resultStates() {
     return {
-        //TODO: Move these to outside of wke state except curr_query_mode
+        curr_query_mode: 'QUERY_VIEW',
         loading_prvw_data: false,
-        prvw_data: {},
-        prvw_data_request_sent_time: 0,
         loading_prvw_data_details: false,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
         loading_query_result: false,
+        //TODO: Move these to outside of wke state
         query_request_sent_time: 0,
         query_result: {},
-        curr_query_mode: 'QUERY_VIEW',
     }
 }
 /**
@@ -134,6 +130,11 @@ export default {
         // sidebar states
         db_tree: [],
         db_completion_list: [],
+        // results states
+        prvw_data: {},
+        prvw_data_request_sent_time: 0,
+        prvw_data_details: {},
+        prvw_data_details_request_sent_time: 0,
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
@@ -219,25 +220,19 @@ export default {
             patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
         },
         SET_PRVW_DATA(state, payload) {
-            patch_wke_property(state, { obj: { prvw_data: payload }, scope: this })
+            state.prvw_data = payload
         },
         SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
-            patch_wke_property(state, {
-                obj: { prvw_data_request_sent_time: payload },
-                scope: this,
-            })
+            state.prvw_data_request_sent_time = payload
         },
         SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
             patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
         },
         SET_PRVW_DATA_DETAILS(state, payload) {
-            patch_wke_property(state, { obj: { prvw_data_details: payload }, scope: this })
+            state.prvw_data_details = payload
         },
         SET_PRVW_DATA_DETAILS_REQUEST_SENT_TIME(state, payload) {
-            patch_wke_property(state, {
-                obj: { prvw_data_details_request_sent_time: payload },
-                scope: this,
-            })
+            state.prvw_data_details_request_sent_time = payload
         },
         SET_LOADING_QUERY_RESULT(state, payload) {
             patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })

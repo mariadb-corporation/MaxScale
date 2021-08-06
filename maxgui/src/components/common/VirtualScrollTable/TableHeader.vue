@@ -124,9 +124,11 @@ export default {
             if (this.$refs[`header__${0}`])
                 // set all header maxWidth to unset to get auto width in doubleRAF cb
                 for (let i = 0; i < this.tableHeaders.length; i++) {
-                    let headerStyle = this.$refs[`header__${i}`][0].style
-                    headerStyle.maxWidth = 'unset'
-                    headerStyle.minWidth = 'unset'
+                    if (this.$refs[`header__${i}`].length) {
+                        let headerStyle = this.$refs[`header__${i}`][0].style
+                        headerStyle.maxWidth = 'unset'
+                        headerStyle.minWidth = 'unset'
+                    }
                 }
         },
         resizerMouseDown(e, i) {
@@ -170,10 +172,12 @@ export default {
                 let headerWidthMap = {}
                 // get width of each header then use it to set same width of corresponding cells
                 for (let i = 0; i < this.tableHeaders.length; i++) {
-                    const headerWidth = this.$refs[`header__${i}`][0].clientWidth
-                    headerWidthMap = {
-                        ...headerWidthMap,
-                        [i]: headerWidth,
+                    if (this.$refs[`header__${i}`].length) {
+                        const headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                        headerWidthMap = {
+                            ...headerWidthMap,
+                            [i]: headerWidth,
+                        }
                     }
                 }
                 this.headerWidthMap = headerWidthMap
