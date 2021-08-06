@@ -33,13 +33,12 @@ function getClientConnIds(prefixName = 'conn_id_body_') {
  */
 function connStates() {
     return {
-        checking_active_conn: true,
+        is_checking_active_conn: true,
         active_conn_state: false,
         conn_err_state: false,
         curr_cnct_resource: '',
     }
 }
-
 /**
  * @returns Initial sidebar tree schema related states
  */
@@ -51,6 +50,45 @@ function sidebarStates() {
         db_tree: [],
         db_completion_list: [],
         active_db: '',
+        active_tree_node: {},
+        expanded_nodes: [],
+    }
+}
+/**
+ * @returns Initial editor related states
+ */
+function editorStates() {
+    return {
+        query_txt: {
+            all: '',
+            selected: '',
+        },
+    }
+}
+/**
+ * @returns Initial result related states
+ */
+function resultStates() {
+    return {
+        loading_prvw_data: false,
+        prvw_data: {},
+        prvw_data_request_sent_time: 0,
+        loading_prvw_data_details: false,
+        prvw_data_details: {},
+        prvw_data_details_request_sent_time: 0,
+        loading_query_result: false,
+        query_request_sent_time: 0,
+        query_result: {},
+        curr_query_mode: 'QUERY_VIEW',
+    }
+}
+/**
+ * @returns Initial toolbar related states
+ */
+function toolbarStates() {
+    return {
+        // toolbar's states
+        show_vis_sidebar: false,
     }
 }
 
@@ -61,25 +99,9 @@ function saWkeStates() {
     return {
         ...connStates(),
         ...sidebarStates(),
-        // editor's states
-        query_txt: {
-            all: '',
-            selected: '',
-        },
-        // query-result's states
-        loading_prvw_data: false,
-        prvw_data: {},
-        active_tree_node_id: '',
-        prvw_data_request_sent_time: 0,
-        loading_prvw_data_details: false,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
-        loading_query_result: false,
-        query_request_sent_time: 0,
-        query_result: {},
-        curr_query_mode: 'QUERY_VIEW',
-        // toolbar's states
-        show_vis_sidebar: false,
+        ...editorStates(),
+        ...resultStates(),
+        ...toolbarStates(),
     }
 }
 
@@ -125,8 +147,6 @@ export default {
     state: {
         // Toolbar states
         is_fullscreen: false,
-        query_max_rows: 10000,
-        query_confirm_flag: 1,
         rc_target_names_map: {},
 
         // worksheet states
@@ -143,8 +163,8 @@ export default {
         },
 
         // connection related mutations
-        SET_CHECKING_ACTIVE_CONN(state, payload) {
-            patch_wke_property(state, { obj: { checking_active_conn: payload }, scope: this })
+        SET_IS_CHECKING_ACTIVE_CONN(state, payload) {
+            patch_wke_property(state, { obj: { is_checking_active_conn: payload }, scope: this })
         },
         SET_ACTIVE_CONN_STATE(state, payload) {
             patch_wke_property(state, { obj: { active_conn_state: payload }, scope: this })
@@ -211,6 +231,12 @@ export default {
             })
             patch_wke_property(state, { obj: { db_tree: new_db_tree }, scope: this })
         },
+        SET_ACTIVE_TREE_NODE(state, payload) {
+            patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
+        },
+        SET_EXPANDED_NODES(state, payload) {
+            patch_wke_property(state, { obj: { expanded_nodes: payload }, scope: this })
+        },
 
         // editor mutations
         SET_QUERY_TXT(state, payload) {
@@ -245,12 +271,6 @@ export default {
             const idx = state.cnct_resources.indexOf(payload)
             state.cnct_resources.splice(idx, 1)
         },
-        SET_QUERY_MAX_ROW(state, payload) {
-            state.query_max_rows = payload
-        },
-        SET_QUERY_CONFIRM_FLAG(state, payload) {
-            state.query_confirm_flag = payload // payload is either 0 or 1
-        },
         SET_ACTIVE_DB(state, payload) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this })
         },
@@ -267,9 +287,6 @@ export default {
         },
         SET_PRVW_DATA(state, payload) {
             patch_wke_property(state, { obj: { prvw_data: payload }, scope: this })
-        },
-        SET_ACTIVE_TREE_NODE_ID(state, payload) {
-            patch_wke_property(state, { obj: { active_tree_node_id: payload }, scope: this })
         },
         SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
             patch_wke_property(state, {
@@ -392,48 +409,57 @@ export default {
         },
         async disconnectAll({ state, dispatch } = {}) {
             try {
-                state.cnct_resources.map(async ({ id }) => {
-                    await dispatch('disconnect', { showSnackbar: false, id: id })
-                })
+                const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
+                for (let i = 0; i < cnctResources.length; i++) {
+                    await dispatch('disconnect', {
+                        showSnackbar: false,
+                        id: cnctResources[i].id,
+                    })
+                }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnectAll')
                 logger.error(e)
             }
         },
-        /* TODO: Decompose to smaller functions */
-        async checkActiveConn({ state, commit, dispatch, getters }) {
+        async checkActiveConn({ state, commit, dispatch }) {
             try {
-                commit('SET_CHECKING_ACTIVE_CONN', true)
+                commit('SET_IS_CHECKING_ACTIVE_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
-
                 const clientConnIds = getClientConnIds()
                 const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
 
                 const validCnctResources = state.cnct_resources.filter(rsrc =>
                     validConnIds.includes(rsrc.id)
                 )
+                /**
+                 * deleteInvalidConn should be called before calling SET_CNCT_RESOURCES
+                 * as deleteInvalidConn use current state.cnct_resources to get invalid cnct resources
+                 */
+                dispatch('deleteInvalidConn', validCnctResources)
+                commit('SET_CNCT_RESOURCES', validCnctResources)
+                commit('SET_ACTIVE_CONN_STATE', Boolean(validConnIds.length))
+
+                commit('SET_IS_CHECKING_ACTIVE_CONN', false)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-checkActiveConn')
+                logger.error(e)
+            }
+        },
+        deleteInvalidConn({ state, dispatch }, validCnctResources) {
+            try {
                 const invalidCnctResources = this.vue.$help.lodash.xorWith(
                     state.cnct_resources,
                     validCnctResources,
                     this.vue.$help.lodash.isEqual
                 )
-
-                commit('SET_CNCT_RESOURCES', validCnctResources)
-
-                const hasValidConn = Boolean(validConnIds.length)
-                commit('SET_ACTIVE_CONN_STATE', hasValidConn)
-
-                if (invalidCnctResources.length) {
+                if (invalidCnctResources.length)
                     invalidCnctResources.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
                         dispatch('resetWkeStates', { cnctId: id })
                     })
-                    commit('UPDATE_SA_WKE_STATES', getters.getActiveWke)
-                }
-                commit('SET_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-checkActiveConn')
+                const logger = this.vue.$logger('store-query-deleteInvalidConn')
                 logger.error(e)
             }
         },
@@ -725,7 +751,45 @@ export default {
                 logger.error(e)
             }
         },
-
+        /**
+         * @param {Object} item - schema tree node object.
+         */
+        async fetchTreeNode({ dispatch }, item) {
+            try {
+                switch (item.type) {
+                    case 'Tables':
+                        await dispatch('fetchTables', item)
+                        break
+                    case 'Columns':
+                        await dispatch('fetchCols', item)
+                        break
+                    case 'Stored Procedures':
+                        await dispatch('fetchStoredProcedures', item)
+                        break
+                    case 'Triggers':
+                        await dispatch('fetchTriggers', item)
+                        break
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-fetchTreeNode')
+                logger.error(e)
+            }
+        },
+        async reloadTreeNodes({ commit, dispatch, state }) {
+            try {
+                if (state.expanded_nodes.length) {
+                    commit('SET_LOADING_DB_TREE', true)
+                    for (let i = 0; i < state.expanded_nodes.length; i++) {
+                        await dispatch('fetchTreeNode', state.expanded_nodes[i])
+                    }
+                    commit('SET_LOADING_DB_TREE', false)
+                } else await dispatch('fetchDbList')
+            } catch (e) {
+                commit('SET_LOADING_DB_TREE', false)
+                const logger = this.vue.$logger('store-query-reloadTreeNodes')
+                logger.error(e)
+            }
+        },
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */
@@ -747,7 +811,7 @@ export default {
 
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
-                    { sql, max_rows: state.query_max_rows }
+                    { sql, max_rows: rootState.persisted.query_max_rows }
                 )
                 commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
                 commit(`SET_LOADING_${prvwMode}`, false)
@@ -761,7 +825,7 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ state, commit, dispatch }, query) {
+        async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
                 commit('SET_QUERY_REQUEST_SENT_TIME', new Date().valueOf())
@@ -769,7 +833,7 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
                         sql: query,
-                        max_rows: state.query_max_rows,
+                        max_rows: rootState.persisted.query_max_rows,
                     }
                 )
                 commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
@@ -841,9 +905,20 @@ export default {
         resetWkeStates({ state, commit }, { cnctId }) {
             const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
             const idx = state.worksheets_arr.indexOf(targetWke)
-            const wke = { ...targetWke, ...connStates(), ...sidebarStates() }
+            // reset everything to initial state except editorStates()
+            const wke = {
+                ...targetWke,
+                ...connStates(),
+                ...sidebarStates(),
+                ...resultStates(),
+                ...toolbarStates(),
+            }
             commit('UPDATE_WKE', { idx, wke })
-            commit('UPDATE_SA_WKE_STATES', wke)
+            /**
+             * if connection id to be deleted is equal to current connected
+             * resource of active worksheet, update standalone wke states
+             */
+            if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
         },
     },
     getters: {

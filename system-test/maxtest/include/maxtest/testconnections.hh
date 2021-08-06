@@ -369,6 +369,7 @@ private:
     bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
     bool m_fix_clusters_after {false};  /**< Fix clusters after test? */
     bool m_enable_timeout {true};       /**< Is timeout enabled? */
+    bool m_recreate_vms {false};        /**< Wipeout and recreate test VMs. */
 
     /* If false, logs from backends are not copied (needed with Aurora RDS backend or similar) */
     bool m_backend_log_copy {true};

@@ -77,7 +77,7 @@
             />
             <template v-else>
                 <template v-for="(resSet, name) in resultData">
-                    <v-slide-x-transition :key="name">
+                    <v-fade-transition :key="name" :duration="200">
                         <keep-alive>
                             <template v-if="activeResSet === name">
                                 <result-data-table
@@ -100,7 +100,7 @@
                                 </div>
                             </template>
                         </keep-alive>
-                    </v-slide-x-transition>
+                    </v-fade-transition>
                 </template>
             </template>
         </template>

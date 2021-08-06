@@ -9,7 +9,6 @@
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
-                        minWidth: `${headerWidthMap[i]}px`,
                         maxWidth: `${headerWidthMap[i]}px`,
                     }"
                     class="th d-flex align-center px-3"

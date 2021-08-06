@@ -11,12 +11,12 @@
  * Public License.
  */
 import { OVERLAY_LOGOUT } from 'store/overlayTypes'
-import { cancelAllRequests } from 'plugins/axios'
 import { resetState } from 'store/index'
 export default {
     namespaced: true,
     state: {
-        logged_in_user: JSON.parse(localStorage.getItem('user')),
+        logged_in_user: {},
+        login_err_msg: '',
         current_network_user: null,
         all_network_users: [],
         all_unix_accounts: [],
@@ -30,6 +30,9 @@ export default {
          */
         SET_LOGGED_IN_USER(state, userObj) {
             state.logged_in_user = userObj
+        },
+        SET_LOGIN_ERR_MSG(state, errMsg) {
+            state.login_err_msg = errMsg
         },
         // ------------------- Network users
         SET_CURRENT_NETWORK_USER(state, obj) {
@@ -51,9 +54,43 @@ export default {
         },
     },
     actions: {
+        async login({ commit }, { rememberMe, auth }) {
+            try {
+                /* Using $loginAxios instance, instead of using $axios as it's configured to have global interceptor*/
+                this.vue.$refreshAxiosToken()
+                let url = '/auth?persist=yes'
+                let res = await this.vue.$loginAxios.get(
+                    `${url}${rememberMe ? '&max-age=28800' : ''}`,
+                    {
+                        auth,
+                    }
+                )
+                if (res.status === 204) {
+                    commit('SET_LOGGED_IN_USER', {
+                        name: auth.username,
+                        rememberMe: rememberMe,
+                        isLoggedIn: Boolean(this.vue.$help.getCookie('token_body')),
+                    })
+                    this.router.push(this.router.app.$route.query.redirect || '/dashboard/servers')
+                }
+            } catch (e) {
+                let errMsg = ''
+                if (e.response) {
+                    errMsg =
+                        e.response.status === 401
+                            ? this.i18n.t('errors.wrongCredentials')
+                            : e.response.statusText
+                } else {
+                    const logger = this.vue.$logger('store-user-login')
+                    logger.error(e)
+                    errMsg = e.toString()
+                }
+                commit('SET_LOGIN_ERR_MSG', errMsg)
+            }
+        },
         async logout({ commit, dispatch, rootState }) {
             await dispatch('query/disconnectAll', {}, { root: true })
-            cancelAllRequests() // cancel all previous requests before logging out
+            this.vue.$cancelAllRequests() // cancel all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
 
@@ -73,12 +110,13 @@ export default {
                 commit('SET_OVERLAY_TYPE', null, { root: true })
                 if (this.router.app.$route.name !== 'login') this.router.push('/login')
             })
-            /**
-             * Reset to app's initial state. After that clear localStorage and cookies
-             */
+
+            // Clear all but keeping persistedState
+            const persistedState = this.vue.$help.lodash.cloneDeep(rootState.persisted)
             resetState()
             localStorage.clear()
             this.vue.$help.deleteAllCookies()
+            localStorage.setItem('maxgui', JSON.stringify({ persisted: persistedState }))
         },
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {

@@ -50,9 +50,12 @@ async function showLoadingOverlay(duration) {
  */
 async function resolvingGuardedRoutes(to, from, next) {
     // Check if user is logged in
-    const { getCookie } = store.vue.$help
-    const user = JSON.parse(localStorage.getItem('user'))
-    const isAuthenticated = getCookie('token_body') && user.isLoggedIn
+    const {
+        vue: { $help, $typy },
+        state,
+    } = store
+    const user = $typy(state, 'user.logged_in_user').safeObjectOrEmpty
+    const isAuthenticated = $help.getCookie('token_body') && $typy(user, 'isLoggedIn').safeBoolean
 
     if (isAuthenticated) {
         // show overlay loading screen after successfully authenticating

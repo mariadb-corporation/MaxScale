@@ -158,7 +158,8 @@ export default {
             getDbCmplList: 'query/getDbCmplList',
         }),
         showVisChart() {
-            return this.selectedChart !== 'No Visualization'
+            const datasets = this.$typy(this.chartData, 'datasets').safeArray
+            return this.selectedChart !== 'No Visualization' && datasets.length
         },
         containerChartHeight() {
             const { height: paneHeight } = this.resultPaneDim
@@ -179,7 +180,7 @@ export default {
     },
     watch: {
         sidebarPct() {
-            this.$help.doubleRAF(() => {
+            this.$nextTick(() => {
                 this.setResultPaneDim()
             })
         },
@@ -190,8 +191,8 @@ export default {
         editorPct() {
             this.$nextTick(() => this.setResultPaneDim())
         },
-        selectedChart() {
-            if (this.showVisChart) {
+        showVisChart(v) {
+            if (v) {
                 this.queryPanePct = 50
                 this.minQueryPanePct = this.$help.pxToPct({
                     px: 32,
@@ -221,8 +222,8 @@ export default {
         this.$help.doubleRAF(() => {
             this.handleSetSidebarPct()
             this.handleSetMinEditorPct()
-            this.setResultPaneDim()
             this.addShowVisSidebarWatcher()
+            this.$nextTick(() => this.handleSetVisSidebar(this.show_vis_sidebar))
         })
     },
     deactivated() {
@@ -267,7 +268,7 @@ export default {
             if (showVisSidebar) {
                 const visSidebarPct = this.$help.pxToPct({
                     px: 250,
-                    containerPx: this.resultPaneDim.width,
+                    containerPx: this.$refs.queryResultPane.$el.clientWidth,
                 })
                 this.mainPanePct = 100 - visSidebarPct
             } else this.mainPanePct = 100

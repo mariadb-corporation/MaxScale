@@ -93,8 +93,8 @@ export default {
     },
     computed: {
         ...mapState({
-            query_max_rows: state => state.query.query_max_rows,
-            query_confirm_flag: state => state.query.query_confirm_flag,
+            query_max_rows: state => state.persisted.query_max_rows,
+            query_confirm_flag: state => state.persisted.query_confirm_flag,
         }),
         isOpened: {
             get() {
@@ -120,8 +120,8 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_QUERY_MAX_ROW: 'query/SET_QUERY_MAX_ROW',
-            SET_QUERY_CONFIRM_FLAG: 'query/SET_QUERY_CONFIRM_FLAG',
+            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
+            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
         }),
         handleSetDefConfig() {
             this.defConfig.maxRows = this.query_max_rows
