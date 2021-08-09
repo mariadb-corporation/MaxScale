@@ -52,6 +52,7 @@ apiClient.interceptors.response.use(
         const { response: { status = null } = {} } = error || {}
         switch (status) {
             case 401:
+                store.vue.$cancelAllRequests() // cancel all previous requests before logging out
                 await store.dispatch('user/logout')
                 break
             case 404:
