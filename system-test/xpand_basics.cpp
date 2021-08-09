@@ -120,7 +120,7 @@ void check_state_change(const MaxRest& maxrest)
 
     // The Xpand-monitor depends on the internal monitor of the Xpand-cluster itself. Since it has a delay,
     // some sleeps are required when expecting state changes.
-    const int cycles = 3;
+    const int cycles = 4;
     test.maxscale->sleep_and_wait_for_monitor(cycles, cycles);
     expect_all_servers_to_be(maxrest, "Master, Running");
     cout << endl;

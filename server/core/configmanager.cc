@@ -173,11 +173,7 @@ ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
 ConfigManager::~ConfigManager()
 {
     mxb_assert(this_unit.manager == this);
-
-    if (m_dcid)
-    {
-        m_worker->cancel_delayed_call(m_dcid);
-    }
+    mxb_assert_message(m_dcid == 0, "Sync should be off when ConfigManager is destroyed");
 }
 
 void ConfigManager::reconnect()
@@ -209,6 +205,17 @@ void ConfigManager::start_sync()
 
     // Queue a sync to take place right after startup
     queue_sync();
+}
+
+void ConfigManager::stop_sync()
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    if (m_dcid)
+    {
+        m_worker->cancel_delayed_call(m_dcid);
+        m_dcid = 0;
+    }
 }
 
 void ConfigManager::refresh()

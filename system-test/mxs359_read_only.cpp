@@ -27,12 +27,18 @@ void change_master(int next, int current)
     test.repl->change_master(next, current);
     test.repl->close_connections();
     test.maxctrl("start monitor MySQL-Monitor");
+
+    // Blocking the node makes sure the monitor picks the new master
+    test.repl->block_node(current);
+    test.maxscale->wait_for_monitor();
+    test.repl->unblock_node(current);
+    test.maxscale->wait_for_monitor();
 }
 
 void test_replaced_master(TestConnections& test, std::ostream& out)
 {
     out << "Sanity check that reads and writes work" << endl;
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
 
@@ -61,7 +67,7 @@ void test_new_master(TestConnections& test, std::ostream& out)
     test.maxscale->wait_for_monitor();
 
     out << "Connect and check that read-only mode works" << endl;
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
 
     change_master(1, 0);
@@ -79,7 +85,7 @@ void test_new_master(TestConnections& test, std::ostream& out)
 void test_master_failure(TestConnections& test, std::ostream& out)
 {
     out << "Sanity check that reads and writes work" << endl;
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
 
@@ -110,7 +116,7 @@ int main(int argc, char** argv)
     });
 
     // Create a table for testing
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscale->disconnect();
@@ -130,7 +136,7 @@ int main(int argc, char** argv)
     // Wait for the monitoring to stabilize before dropping the table
     sleep(5);
 
-    test.maxscale->connect();
+    test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
     test.maxscale->disconnect();
 

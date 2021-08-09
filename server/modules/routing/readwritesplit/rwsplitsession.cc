@@ -584,12 +584,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
 
-            if (!session_is_load_active(m_pSession))
-            {
-                // TODO: This would make more sense if it was done at the client protocol level
-                session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
-            }
-
             constexpr const char* LEVEL = "SERIALIZABLE";
 
             if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string::npos

@@ -1083,6 +1083,8 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (expecting_response)
     {
         ++m_num_responses;
+
+        session_retain_statement(m_session, buffer.get());
     }
 
     if (recording)
@@ -2388,11 +2390,6 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         is_large = (header.pl_length == MYSQL_PACKET_LENGTH_MAX);
     }
 
-    if (mxs_mysql_command_will_respond(m_command))
-    {
-        session_retain_statement(m_session, buffer.get());
-    }
-
     switch (m_command)
     {
     case MXS_COM_CHANGE_USER:
@@ -2598,6 +2595,9 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         {
             --m_num_responses;
             mxb_assert(m_num_responses >= 0);
+
+            // TODO: The SERVER parameter should be changed into a mxs::Target
+            session_book_server_response(m_session, (SERVER*)down.front()->target(), true);
         }
 
         if (reply.is_ok() && m_session->service->config()->session_track_trx_state)

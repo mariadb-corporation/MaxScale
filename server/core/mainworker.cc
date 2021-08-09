@@ -26,6 +26,7 @@
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
 #include "internal/listener.hh"
+#include "internal/configmanager.hh"
 
 namespace
 {
@@ -52,15 +53,6 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     this_unit.pMain = this;
     this_thread.pMain = this;
-
-    delayed_call(100, &MainWorker::inc_ticks);
-
-    const auto& config = mxs::Config::get();
-
-    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
-    {
-        order_balancing_dc();
-    }
 }
 
 MainWorker::~MainWorker()
@@ -196,6 +188,15 @@ bool MainWorker::pre_run()
 {
     bool rval = false;
 
+    delayed_call(100, &MainWorker::inc_ticks);
+
+    const auto& config = mxs::Config::get();
+
+    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
+    {
+        order_balancing_dc();
+    }
+
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {
         rval = true;
@@ -316,6 +317,7 @@ void MainWorker::start_shutdown()
                 // Stop cleanup-thread only after rest-api is shut down, so that no queries are active.
                 HttpSql::stop_cleanup();
             }
+            mxs::ConfigManager::get()->stop_sync();
             Listener::stop_all();
 
             // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
