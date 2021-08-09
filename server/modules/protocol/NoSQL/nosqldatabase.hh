@@ -154,9 +154,9 @@ private:
     GWBUF* execute(GWBUF* pRequest,
                    const ConcretePacket& req,
                    const bsoncxx::document::view& doc,
-                   const Command::DocumentArguments& arguments)
+                   const MsgCommand::DocumentArguments& arguments)
     {
-        auto sCommand = nosql::Command::get(this, pRequest, req, doc, arguments);
+        auto sCommand = nosql::MsgCommand::get(this, pRequest, req, doc, arguments);
 
         return execute(std::move(sCommand));
     }

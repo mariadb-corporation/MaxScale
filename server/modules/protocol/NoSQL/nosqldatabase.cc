@@ -45,7 +45,7 @@ GWBUF* nosql::Database::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     mxb_assert(is_ready());
 
-    Command::DocumentArguments arguments;
+    MsgCommand::DocumentArguments arguments;
 
     return execute(pRequest, req, req.query(), arguments);
 }

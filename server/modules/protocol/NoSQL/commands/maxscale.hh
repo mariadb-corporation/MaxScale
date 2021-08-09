@@ -42,13 +42,13 @@ public:
             {
                 Query& query = static_cast<Query&>(m_req);
 
-                sCommand = Command::get(&m_database, m_pRequest, query, command, arguments);
+                sCommand = MsgCommand::get(&m_database, m_pRequest, query, command, arguments);
             }
             else
             {
                 Msg& msg = static_cast<Msg&>(m_req);
 
-                sCommand = Command::get(&m_database, m_pRequest, msg, command, arguments);
+                sCommand = MsgCommand::get(&m_database, m_pRequest, msg, command, arguments);
             }
 
             try

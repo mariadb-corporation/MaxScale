@@ -687,7 +687,7 @@ GWBUF* nosql::MariaDBError::create_response(const Command& command) const
 
 void nosql::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
 {
-    string json = bsoncxx::to_json(command.doc());
+    string json = command.to_json();
     string sql = command.last_statement();
 
     DocumentBuilder mariadb;

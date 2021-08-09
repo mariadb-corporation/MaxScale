@@ -93,7 +93,7 @@ unique_ptr<Command> create_command(const string& name,
                                    const Query* pQuery,
                                    const Msg* pMsg,
                                    const bsoncxx::document::view& doc,
-                                   const Command::DocumentArguments& arguments)
+                                   const MsgCommand::DocumentArguments& arguments)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -117,7 +117,7 @@ using CreatorFunction = unique_ptr<Command> (*)(const string& name,
                                                 const Query* pQuery,
                                                 const Msg* pMsg,
                                                 const bsoncxx::document::view& doc,
-                                                const Command::DocumentArguments& arguments);
+                                                const MsgCommand::DocumentArguments& arguments);
 
 struct CommandInfo
 {
@@ -202,9 +202,183 @@ struct ThisUnit
 namespace nosql
 {
 
+//
+// Command
+//
 Command::~Command()
 {
     free_request();
+}
+
+bool Command::is_admin() const
+{
+    return false;
+}
+
+const string& Command::name() const
+{
+    static string no_name;
+    return no_name;
+}
+
+string Command::to_json() const
+{
+    return "";
+}
+
+void Command::free_request()
+{
+    if (m_pRequest)
+    {
+        gwbuf_free(m_pRequest);
+        m_pRequest = nullptr;
+    }
+}
+
+void Command::send_downstream(const string& sql)
+{
+    MXB_INFO("SQL: %s", sql.c_str());
+
+    m_last_statement = sql;
+
+    GWBUF* pRequest = modutil_create_query(sql.c_str());
+
+    m_database.context().downstream().routeQuery(pRequest);
+}
+
+GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
+{
+    GWBUF* pResponse = nullptr;
+
+    if (m_response_kind == ResponseKind::REPLY)
+    {
+        pResponse = create_reply_response(doc);
+    }
+    else
+    {
+        pResponse = create_msg_response(doc);
+    }
+
+    return pResponse;
+}
+
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
+{
+    // TODO: In the following is assumed that whatever is returned will
+    // TODO: fit into a MongoDB packet.
+
+    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
+    int64_t cursor_id = 0;
+    int32_t starting_from = 0;
+    int32_t number_returned = nDocuments;
+
+    size_t response_size = protocol::HEADER_LEN
+        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+        + size_of_documents;
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_database.context().next_request_id();
+    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+
+    pData += protocol::set_byte4(pData, response_flags);
+    pData += protocol::set_byte8(pData, cursor_id);
+    pData += protocol::set_byte4(pData, starting_from);
+    pData += protocol::set_byte4(pData, number_returned);
+
+    return make_pair(pResponse, pData);
+}
+
+GWBUF* Command::create_reply_response(size_t size_of_documents,
+                                      const vector<bsoncxx::document::value>& documents) const
+{
+    GWBUF* pResponse;
+    uint8_t* pData;
+
+    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
+
+    for (const auto& doc : documents)
+    {
+        auto view = doc.view();
+        size_t size = view.length();
+
+        memcpy(pData, view.data(), view.length());
+        pData += view.length();
+    }
+
+    return pResponse;
+}
+
+GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
+{
+    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
+
+    auto doc_view = doc.view();
+    size_t doc_len = doc_view.length();
+
+    GWBUF* pResponse;
+    uint8_t* pData;
+
+    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
+
+    memcpy(pData, doc_view.data(), doc_view.length());
+
+    return pResponse;
+}
+
+GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
+{
+    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
+
+    uint32_t flag_bits = 0;
+    uint8_t kind = 0;
+    uint32_t doc_length = doc.view().length();
+
+    size_t response_size = protocol::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
+
+    bool append_checksum = (m_response_kind == ResponseKind::MSG_WITH_CHECKSUM);
+
+    if (append_checksum)
+    {
+        flag_bits |= Msg::CHECKSUM_PRESENT;
+        response_size += sizeof(uint32_t); // sizeof checksum
+    }
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_database.context().next_request_id();
+    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_MSG;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+
+    pData += protocol::set_byte4(pData, flag_bits);
+
+    pData += protocol::set_byte1(pData, kind);
+    memcpy(pData, doc.view().data(), doc_length);
+    pData += doc_length;
+
+    if (append_checksum)
+    {
+        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
+        pData += protocol::set_byte4(pData, checksum);
+    }
+
+    return pResponse;
+}
+
+//
+// MsgCommand
+//
+MsgCommand::~MsgCommand()
+{
 }
 
 namespace
@@ -242,11 +416,11 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 }
 
 //static
-unique_ptr<Command> Command::get(nosql::Database* pDatabase,
-                                 GWBUF* pRequest,
-                                 const nosql::Query& query,
-                                 const bsoncxx::document::view& doc,
-                                 const DocumentArguments& arguments)
+unique_ptr<Command> MsgCommand::get(nosql::Database* pDatabase,
+                                    GWBUF* pRequest,
+                                    const nosql::Query& query,
+                                    const bsoncxx::document::view& doc,
+                                    const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -257,11 +431,11 @@ unique_ptr<Command> Command::get(nosql::Database* pDatabase,
 }
 
 //static
-unique_ptr<Command> Command::get(nosql::Database* pDatabase,
-                                 GWBUF* pRequest,
-                                 const nosql::Msg& msg,
-                                 const bsoncxx::document::view& doc,
-                                 const DocumentArguments& arguments)
+unique_ptr<Command> MsgCommand::get(nosql::Database* pDatabase,
+                                    GWBUF* pRequest,
+                                    const nosql::Msg& msg,
+                                    const bsoncxx::document::view& doc,
+                                    const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -271,7 +445,7 @@ unique_ptr<Command> Command::get(nosql::Database* pDatabase,
     return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
 }
 
-GWBUF* Command::create_empty_response() const
+GWBUF* MsgCommand::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
@@ -280,7 +454,7 @@ GWBUF* Command::create_empty_response() const
 }
 
 //static
-void Command::check_write_batch_size(int size)
+void MsgCommand::check_write_batch_size(int size)
 {
     if (size < 1 || size > protocol::MAX_WRITE_BATCH_SIZE)
     {
@@ -292,7 +466,7 @@ void Command::check_write_batch_size(int size)
 }
 
 //static
-void Command::check_maximum_sql_length(int length)
+void MsgCommand::check_maximum_sql_length(int length)
 {
     if (length > MAX_QUERY_LEN)
     {
@@ -306,7 +480,7 @@ void Command::check_maximum_sql_length(int length)
 }
 
 //static
-void Command::list_commands(DocumentBuilder& commands)
+void MsgCommand::list_commands(DocumentBuilder& commands)
 {
     for (const auto& kv : this_unit.infos_by_name)
     {
@@ -329,7 +503,7 @@ void Command::list_commands(DocumentBuilder& commands)
     }
 }
 
-void Command::throw_unexpected_packet()
+void MsgCommand::throw_unexpected_packet()
 {
     ostringstream ss;
     ss << m_name << " received unexpected packet from backend.";
@@ -337,7 +511,7 @@ void Command::throw_unexpected_packet()
     throw HardError(ss.str(), error::INTERNAL_ERROR);
 }
 
-void Command::require_admin_db()
+void MsgCommand::require_admin_db()
 {
     if (m_database.name() != "admin")
     {
@@ -346,7 +520,7 @@ void Command::require_admin_db()
     }
 }
 
-string Command::convert_skip_and_limit() const
+string MsgCommand::convert_skip_and_limit() const
 {
     string rv;
 
@@ -410,7 +584,7 @@ string Command::convert_skip_and_limit() const
     return rv;
 }
 
-const string& Command::table(Quoted quoted) const
+const string& MsgCommand::table(Quoted quoted) const
 {
     if (m_quoted_table.empty())
     {
@@ -434,48 +608,7 @@ const string& Command::table(Quoted quoted) const
     return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;
 }
 
-void Command::free_request()
-{
-    if (m_pRequest)
-    {
-        gwbuf_free(m_pRequest);
-        m_pRequest = nullptr;
-    }
-}
-
-void Command::send_downstream(const string& sql)
-{
-    MXB_INFO("SQL: %s", sql.c_str());
-
-    m_last_statement = sql;
-
-    GWBUF* pRequest = modutil_create_query(sql.c_str());
-
-    m_database.context().downstream().routeQuery(pRequest);
-}
-
-GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
-{
-    GWBUF* pResponse = nullptr;
-
-    switch (m_req.opcode())
-    {
-    case MONGOC_OPCODE_QUERY:
-        pResponse = create_reply_response(doc);
-        break;
-
-    case MONGOC_OPCODE_MSG:
-        pResponse = create_msg_response(doc);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    return pResponse;
-}
-
-void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
+void MsgCommand::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
     bsoncxx::builder::basic::document mariadb;
 
@@ -495,7 +628,7 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
     array.append(error.extract());
 }
 
-void Command::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
+void MsgCommand::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
 {
     bsoncxx::builder::basic::array array;
 
@@ -504,121 +637,11 @@ void Command::add_error(bsoncxx::builder::basic::document& response, const ComER
     response.append(bsoncxx::builder::basic::kvp(key::WRITE_ERRORS, array.extract()));
 }
 
-void Command::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
+void MsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
     error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
     error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));
     error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
-}
-
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
-{
-    // TODO: In the following is assumed that whatever is returned will
-    // TODO: fit into a MongoDB packet.
-
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
-    int32_t number_returned = nDocuments;
-
-    size_t response_size = protocol::HEADER_LEN
-        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-        + size_of_documents;
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_database.context().next_request_id();
-    pRes_hdr->response_to = m_req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
-
-    pData += protocol::set_byte4(pData, response_flags);
-    pData += protocol::set_byte8(pData, cursor_id);
-    pData += protocol::set_byte4(pData, starting_from);
-    pData += protocol::set_byte4(pData, number_returned);
-
-    return make_pair(pResponse, pData);
-}
-
-GWBUF* Command::create_reply_response(size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents) const
-{
-    GWBUF* pResponse;
-    uint8_t* pData;
-
-    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
-
-    for (const auto& doc : documents)
-    {
-        auto view = doc.view();
-        size_t size = view.length();
-
-        memcpy(pData, view.data(), view.length());
-        pData += view.length();
-    }
-
-    return pResponse;
-}
-
-GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
-{
-    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
-
-    auto doc_view = doc.view();
-    size_t doc_len = doc_view.length();
-
-    GWBUF* pResponse;
-    uint8_t* pData;
-
-    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
-
-    memcpy(pData, doc_view.data(), doc_view.length());
-
-    return pResponse;
-}
-
-GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
-{
-    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
-
-    uint32_t flag_bits = 0;
-    uint8_t kind = 0;
-    uint32_t doc_length = doc.view().length();
-
-    size_t response_size = protocol::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
-
-    if (m_append_checksum)
-    {
-        flag_bits |= Msg::CHECKSUM_PRESENT;
-        response_size += sizeof(uint32_t); // sizeof checksum
-    }
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_database.context().next_request_id();
-    pRes_hdr->response_to = m_req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_MSG;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
-
-    pData += protocol::set_byte4(pData, flag_bits);
-
-    pData += protocol::set_byte1(pData, kind);
-    memcpy(pData, doc.view().data(), doc_length);
-    pData += doc_length;
-
-    if (m_append_checksum)
-    {
-        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
-        pData += protocol::set_byte4(pData, checksum);
-    }
-
-    return pResponse;
 }
 
 GWBUF* ImmediateCommand::execute()

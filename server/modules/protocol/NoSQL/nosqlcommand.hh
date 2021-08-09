@@ -42,23 +42,93 @@ struct IsAdmin
 class Command
 {
 public:
+    virtual ~Command();
+
+    virtual bool is_admin() const;
+
+    virtual const std::string& name() const;
+
+    virtual std::string to_json() const;
+
+    const std::string& last_statement() const
+    {
+        return m_last_statement;
+    }
+
+    virtual GWBUF* execute() = 0;
+
+    enum State
+    {
+        BUSY,
+        READY
+    };
+
+    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+
+    virtual void diagnose(DocumentBuilder& doc) = 0;
+
+    GWBUF* create_response(const bsoncxx::document::value& doc) const;
+
+protected:
+    enum class ResponseKind
+    {
+        REPLY,
+        MSG,
+        MSG_WITH_CHECKSUM
+    };
+
+    Command(Database* pDatabase,
+            GWBUF* pRequest,
+            int32_t request_id,
+            ResponseKind response_kind)
+        : m_database(*pDatabase)
+        , m_pRequest(gwbuf_clone(pRequest))
+        , m_request_id(request_id)
+        , m_response_kind(response_kind)
+    {
+    }
+
+    void free_request();
+
+    void send_downstream(const std::string& sql);
+
+
+    Database&     m_database;
+    GWBUF*        m_pRequest;
+    const int32_t m_request_id;
+    std::string   m_last_statement;
+
+private:
+    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
+                                                             size_t nDocuments) const;
+
+    GWBUF* create_reply_response(size_t size_of_documents,
+                                 const std::vector<bsoncxx::document::value>& documents) const;
+    GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
+
+    GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
+
+    ResponseKind m_response_kind;
+};
+
+class MsgCommand : public Command
+{
+public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
     template<class ConcretePacket>
-    Command(const std::string& name,
-            Database* pDatabase,
-            GWBUF* pRequest,
-            const ConcretePacket& req,
-            const bsoncxx::document::view& doc,
-            const DocumentArguments& arguments)
-        : m_name(name)
-        , m_database(*pDatabase)
-        , m_pRequest(gwbuf_clone(pRequest))
+    MsgCommand(const std::string& name,
+               Database* pDatabase,
+               GWBUF* pRequest,
+               const ConcretePacket& req,
+               const bsoncxx::document::view& doc,
+               const DocumentArguments& arguments)
+        : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
+        , m_name(name)
         , m_req(req)
         , m_doc(doc)
         , m_arguments(arguments)
-        , m_append_checksum(checksum_used(req))
     {
     }
 
@@ -81,17 +151,16 @@ public:
                                         const bsoncxx::document::view& doc,
                                         const DocumentArguments& arguments);
 
-    enum State
-    {
-        BUSY,
-        READY
-    };
+    ~MsgCommand() override;
 
-    virtual ~Command();
-
-    const std::string& name() const
+    const std::string& name() const override
     {
         return m_name;
+    }
+
+    std::string to_json() const override
+    {
+        return bsoncxx::to_json(m_doc);
     }
 
     const bsoncxx::document::view& doc() const
@@ -99,18 +168,7 @@ public:
         return m_doc;
     }
 
-    const std::string& last_statement() const
-    {
-        return m_last_statement;
-    }
-
-    virtual GWBUF* execute() = 0;
-
-    virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
-
     GWBUF* create_empty_response() const;
-
-    GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
     static void check_write_batch_size(int size);
 
@@ -119,8 +177,6 @@ public:
     {
         check_maximum_sql_length(s.length());
     }
-
-    virtual void diagnose(DocumentBuilder& doc) = 0;
 
     enum Quoted
     {
@@ -136,11 +192,6 @@ public:
      * @throws SoftError, if the value of the command key is not a string.
      */
     const std::string& table(Quoted quoted = Quoted::YES) const;
-
-    virtual bool is_admin() const
-    {
-        return command::IsAdmin<Command>::is_admin;
-    }
 
     static void list_commands(DocumentBuilder& commands);
 
@@ -215,10 +266,6 @@ protected:
         return required<T>(m_name.c_str(), conversion);
     }
 
-    void free_request();
-
-    void send_downstream(const std::string& sql);
-
     void add_error(bsoncxx::builder::basic::array& builder, const ComERR& err, int index);
     void add_error(bsoncxx::builder::basic::document& builder, const ComERR& err);
 
@@ -228,34 +275,21 @@ protected:
     virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
 
     const std::string       m_name;
-    Database&               m_database;
-    GWBUF*                  m_pRequest;
     Packet                  m_req;
     bsoncxx::document::view m_doc;
     DocumentArguments       m_arguments;
-    std::string             m_last_statement;
 
 private:
-    bool checksum_used(const Msg& req)
+    ResponseKind response_kind(const Msg& req)
     {
-        return req.checksum_present();
+        return req.checksum_present() ? ResponseKind::MSG_WITH_CHECKSUM : ResponseKind::MSG;
     }
 
-    bool checksum_used(const Query&)
+    ResponseKind response_kind(const Query&)
     {
-        return false;
+        return ResponseKind::REPLY;
     }
 
-    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
-                                                             size_t nDocuments) const;
-
-    GWBUF* create_reply_response(size_t size_of_documents, const std::
-                                 vector<bsoncxx::document::value>& documents) const;
-    GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
-
-    GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
-
-    bool                m_append_checksum { false };
     mutable std::string m_quoted_table;
     mutable std::string m_unquoted_table;
 };
@@ -265,10 +299,10 @@ private:
  *
  * A command that generates the response immediately, without any backend activity.
  */
-class ImmediateCommand : public Command
+class ImmediateCommand : public MsgCommand
 {
 public:
-    using Command::Command;
+    using MsgCommand::MsgCommand;
 
     GWBUF* execute() override final;
 
@@ -286,10 +320,10 @@ protected:
  * A command that executes a single SQL statement against the backend, in order
  * to produce the response.
  */
-class SingleCommand : public Command
+class SingleCommand : public MsgCommand
 {
 public:
-    using Command::Command;
+    using MsgCommand::MsgCommand;
 
     GWBUF* execute() override final;
 
@@ -309,10 +343,10 @@ protected:
  * A command that may execute multiple SQL statements against the backend, in order
  * to produce the response.
  */
-class MultiCommand : public Command
+class MultiCommand : public MsgCommand
 {
 public:
-    using Command::Command;
+    using MsgCommand::MsgCommand;
 
     void diagnose(DocumentBuilder& doc) override;
 
