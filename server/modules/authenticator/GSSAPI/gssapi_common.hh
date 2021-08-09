@@ -36,5 +36,6 @@ public:
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    std::string principal_name;     /**< Service principal name given to the client */
+private:
+    std::string m_service_principal;    /**< Service principal name given to the client */
 };

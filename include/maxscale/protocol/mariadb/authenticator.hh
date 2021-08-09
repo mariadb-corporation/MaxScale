@@ -179,25 +179,6 @@ public:
     virtual AuthRes authenticate(const UserEntry* entry, MYSQL_session* session) = 0;
 };
 
-// Helper template which stores the module reference.
-template<class AuthModule>
-class ClientAuthenticatorT : public ClientAuthenticator
-{
-public:
-    /**
-     * Constructor.
-     *
-     * @param module The global module data
-     */
-    ClientAuthenticatorT(AuthModule* module)
-        : m_module(*module)
-    {
-    }
-
-protected:
-    AuthModule& m_module;
-};
-
 /**
  * Data shared between the backend connection and its authenticator module.
  */
