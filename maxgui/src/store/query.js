@@ -56,9 +56,7 @@ function resultStates() {
         loading_prvw_data: false,
         loading_prvw_data_details: false,
         loading_query_result: false,
-        //TODO: Move these to outside of wke state
         query_request_sent_time: 0,
-        query_result: {},
     }
 }
 /**
@@ -135,6 +133,11 @@ export default {
         prvw_data_request_sent_time: 0,
         prvw_data_details: {},
         prvw_data_details_request_sent_time: 0,
+        /**
+         * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
+         * because it's not possible at the moment to fetch query results using query id, it can only be read once.
+         */
+        query_results_map: {}, //
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
@@ -237,8 +240,8 @@ export default {
         SET_LOADING_QUERY_RESULT(state, payload) {
             patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
         },
-        SET_QUERY_RESULT(state, payload) {
-            patch_wke_property(state, { obj: { query_result: payload }, scope: this })
+        UPDATE_QUERY_RESULTS_MAP(state, { id, resultSets }) {
+            state.query_results_map = { ...state.query_results_map, ...{ [id]: resultSets } }
         },
         SET_QUERY_REQUEST_SENT_TIME(state, payload) {
             patch_wke_property(state, { obj: { query_request_sent_time: payload }, scope: this })
@@ -328,6 +331,7 @@ export default {
                         )
 
                     commit('DELETE_CNCT_RESOURCE', targetCnctResource)
+                    dispatch('emptyQueryResult', cnctId)
                     dispatch('resetWkeStates', { cnctId: cnctId })
                 }
             } catch (e) {
@@ -339,6 +343,7 @@ export default {
             try {
                 const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
                 for (let i = 0; i < cnctResources.length; i++) {
+                    dispatch('emptyQueryResult', cnctResources[i].id)
                     await dispatch('disconnect', {
                         showSnackbar: false,
                         id: cnctResources[i].id,
@@ -384,6 +389,7 @@ export default {
                 if (invalidCnctResources.length)
                     invalidCnctResources.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
+                        dispatch('emptyQueryResult', id)
                         dispatch('resetWkeStates', { cnctId: id })
                     })
             } catch (e) {
@@ -739,7 +745,10 @@ export default {
                         max_rows: rootState.persisted.query_max_rows,
                     }
                 )
-                commit('SET_QUERY_RESULT', Object.freeze(res.data.data))
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: state.active_wke_id,
+                    resultSets: Object.freeze(res.data.data),
+                })
                 commit('SET_LOADING_QUERY_RESULT', false)
                 const USE_REG = /(use|drop database)\s/i
                 if (query.match(USE_REG)) await dispatch('updateActiveDb')
@@ -823,6 +832,18 @@ export default {
              */
             if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
         },
+        /**
+         * Call this action when a connection is disconnected
+         * @param {Number} cnctId - Worksheet connection id
+         */
+        emptyQueryResult({ state, commit }, cnctId) {
+            const wke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
+            if (wke)
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: wke.id,
+                    resultSets: {},
+                })
+        },
     },
     getters: {
         getDbCmplList: state => {
@@ -832,11 +853,11 @@ export default {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
-
-        getQueryExeTime: state => {
+        getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
+        getQueryExeTime: (state, getters) => {
             if (state.loading_query_result) return -1
-            if (state.query_result.attributes)
-                return parseFloat(state.query_result.attributes.execution_time.toFixed(4))
+            if (getters.getQueryResult.attributes)
+                return parseFloat(getters.getQueryResult.attributes.execution_time.toFixed(4))
             return 0
         },
         getPrvwDataRes: state => mode => {

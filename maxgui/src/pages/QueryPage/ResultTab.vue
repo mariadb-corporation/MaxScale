@@ -150,26 +150,26 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
-            query_result: state => state.query.query_result,
             loading_query_result: state => state.query.loading_query_result,
             active_conn_state: state => state.query.active_conn_state,
             query_request_sent_time: state => state.query.query_request_sent_time,
         }),
         ...mapGetters({
             getQueryExeTime: 'query/getQueryExeTime',
+            getQueryResult: 'query/getQueryResult',
         }),
         showGuide() {
             return this.isLoading || !this.active_conn_state
         },
         queryTxt() {
-            return this.$typy(this.query_result, 'attributes.sql').safeObject
+            return this.$typy(this.getQueryResult, 'attributes.sql').safeObject
         },
         resultData() {
-            if (this.$typy(this.query_result, 'attributes.results').isDefined) {
+            if (this.$typy(this.getQueryResult, 'attributes.results').isDefined) {
                 let resultData = {}
                 let resSetCount = 0
                 let resCount = 0
-                for (const res of this.query_result.attributes.results) {
+                for (const res of this.getQueryResult.attributes.results) {
                     if (this.$typy(res, 'data').isDefined) {
                         ++resSetCount
                         resultData[`Result set ${resSetCount}`] = res
