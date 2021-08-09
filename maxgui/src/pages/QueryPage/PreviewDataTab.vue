@@ -192,7 +192,10 @@ export default {
                     // Auto fetch preview data if there is active_tree_node in localStorage
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.SQL_QUERY_MODES.PRVW_DATA:
-                        if (this.$typy(this.active_tree_node, 'id').safeObject)
+                        if (
+                            this.$typy(this.active_tree_node, 'id').safeObject &&
+                            !this[`loading_${this.activeView.toLowerCase()}`]
+                        )
                             await this.fetchActiveNodeData(this.activeView)
                 }
         },
