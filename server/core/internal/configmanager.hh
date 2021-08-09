@@ -58,8 +58,17 @@ public:
 
     /**
      * Start synchronizing with the cluster
+     *
+     * Must be called once during startup after the REST API has been enabled.
      */
     void start_sync();
+
+    /**
+     * Stop synchronizing with the cluster
+     *
+     * Must be called during shutdown after the REST API has stopped.
+     */
+    void stop_sync();
 
     /**
      * Refresh the current configuration representation
