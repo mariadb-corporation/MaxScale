@@ -672,7 +672,7 @@ void ConfigManager::process_config(const mxb::Json& new_json)
 
         if (added.find(name) == added.end() || to_type(type) == Type::SERVICES)
         {
-            update_object(obj.get_string(CN_ID), type, obj);
+            update_object(name, type, obj);
         }
     }
 }
@@ -698,37 +698,72 @@ void ConfigManager::remove_old_object(const std::string& name, const std::string
     switch (to_type(type))
     {
     case Type::SERVERS:
-        if (!runtime_destroy_server(ServerManager::find_by_unique_name(name), true))
+        if (auto* server = ServerManager::find_by_unique_name(name))
         {
-            throw error("Failed to destroy server '", name, "'");
+            if (!runtime_destroy_server(server, true))
+            {
+                throw error("Failed to destroy server '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a server");
         }
         break;
 
     case Type::MONITORS:
-        if (!runtime_destroy_monitor(MonitorManager::find_monitor(name.c_str()), true))
+        if (auto* monitor = MonitorManager::find_monitor(name.c_str()))
         {
-            throw error("Failed to destroy monitor '", name, "'");
+            if (!runtime_destroy_monitor(monitor, true))
+            {
+                throw error("Failed to destroy monitor '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a monitor");
         }
         break;
 
     case Type::SERVICES:
-        if (!runtime_destroy_service(Service::find(name), true))
+        if (auto* service = Service::find(name))
         {
-            throw error("Failed to destroy service '", name, "'");
+            if (!runtime_destroy_service(service, true))
+            {
+                throw error("Failed to destroy service '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a service");
         }
         break;
 
     case Type::LISTENERS:
-        if (!runtime_destroy_listener(listener_find(name)))
+        if (auto listener = listener_find(name))
         {
-            throw error("Failed to destroy listener '", name, "'");
+            if (!runtime_destroy_listener(listener))
+            {
+                throw error("Failed to destroy listener '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a listener");
         }
         break;
 
     case Type::FILTERS:
-        if (!runtime_destroy_filter(filter_find(name), true))
+        if (auto filter = filter_find(name))
         {
-            throw error("Failed to destroy filter '", name, "'");
+            if (!runtime_destroy_filter(filter, true))
+            {
+                throw error("Failed to destroy filter '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a filter");
         }
         break;
 
@@ -847,37 +882,72 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     switch (to_type(type))
     {
     case Type::SERVERS:
-        if (!runtime_alter_server_from_json(ServerManager::find_by_unique_name(name), js))
+        if (auto* server = ServerManager::find_by_unique_name(name))
         {
-            throw error("Failed to update server '", name, "'");
+            if (!runtime_alter_server_from_json(server, js))
+            {
+                throw error("Failed to update server '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a server");
         }
         break;
 
     case Type::MONITORS:
-        if (!runtime_alter_monitor_from_json(MonitorManager::find_monitor(name.c_str()), js))
+        if (auto* monitor = MonitorManager::find_monitor(name.c_str()))
         {
-            throw error("Failed to update monitor '", name, "'");
+            if (!runtime_alter_monitor_from_json(monitor, js))
+            {
+                throw error("Failed to update monitor '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a monitor");
         }
         break;
 
     case Type::SERVICES:
-        if (!runtime_alter_service_from_json(Service::find(name), js))
+        if (auto* service = Service::find(name))
         {
-            throw error("Failed to update service '", name, "'");
+            if (!runtime_alter_service_from_json(service, js))
+            {
+                throw error("Failed to update service '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a service");
         }
         break;
 
     case Type::LISTENERS:
-        if (!runtime_alter_listener_from_json(listener_find(name), js))
+        if (auto listener = listener_find(name))
         {
-            throw error("Failed to update listener '", name, "'");
+            if (!runtime_alter_listener_from_json(listener, js))
+            {
+                throw error("Failed to update listener '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a listener");
         }
         break;
 
     case Type::FILTERS:
-        if (!runtime_alter_filter_from_json(filter_find(name), js))
+        if (auto filter = filter_find(name))
         {
-            throw error("Failed to update filter '", name, "'");
+            if (!runtime_alter_filter_from_json(filter, js))
+            {
+                throw error("Failed to update filter '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a filter");
         }
         break;
 
