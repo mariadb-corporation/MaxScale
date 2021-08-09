@@ -207,6 +207,9 @@ uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq);
  */
 uint8_t* copy_bytes(uint8_t* dest, const uint8_t* src, size_t n);
 
+// Same for char source.
+uint8_t* copy_chars(uint8_t* dest, const char* src, size_t n);
+
 /**
  * Same as memset.
  *

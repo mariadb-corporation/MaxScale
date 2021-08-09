@@ -608,6 +608,11 @@ uint8_t* copy_bytes(uint8_t* dest, const uint8_t* src, size_t n)
     return static_cast<uint8_t*>(mempcpy(dest, src, n));
 }
 
+uint8_t* copy_chars(uint8_t* dest, const char* src, size_t n)
+{
+    return copy_bytes(dest, reinterpret_cast<const uint8_t*>(src), n);
+}
+
 uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
 {
     memset(dest, val, n);
