@@ -17,6 +17,7 @@
 #include <bsoncxx/exception/exception.hpp>
 #include "config.hh"
 #include "commands/query_and_write_operation.hh"
+#include "commands/packetcommands.hh"
 
 using namespace std;
 
@@ -39,6 +40,15 @@ unique_ptr<nosql::Database> nosql::Database::create(const std::string& name,
                                                     Config* pConfig)
 {
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
+}
+
+GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, const nosql::Insert& req)
+{
+    mxb_assert(is_ready());
+
+    unique_ptr<Command> sCommand(new nosql::command::InsertCommand(this, pRequest, req));
+
+    return execute_command(std::move(sCommand));
 }
 
 GWBUF* nosql::Database::handle_query(GWBUF* pRequest, const nosql::Query& req)
@@ -100,7 +110,32 @@ GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
     return pResponse;
 }
 
-GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
+GWBUF* nosql::Database::execute_msg_command(std::unique_ptr<MsgCommand> sCommand)
+{
+    GWBUF* pResponse = nullptr;
+
+    if (m_sCommand->is_admin() && m_name != "admin")
+    {
+        SoftError error(sCommand->name() + " may only be run against the admin database.",
+                        error::UNAUTHORIZED);
+        m_context.set_last_error(error.create_last_error());
+
+        pResponse = error.create_response(*m_sCommand.get());
+    }
+    else if (sCommand->name() != command::GetLastError::KEY)
+    {
+        m_context.reset_error();
+    }
+
+    if (!pResponse)
+    {
+        pResponse = execute_command(std::move(m_sCommand));
+    }
+
+    return pResponse;
+}
+
+GWBUF* nosql::Database::execute_command(std::unique_ptr<Command> sCommand)
 {
     GWBUF* pResponse = nullptr;
 
@@ -108,17 +143,6 @@ GWBUF* nosql::Database::execute(std::unique_ptr<Command> sCommand)
     {
         m_sCommand = std::move(sCommand);
         set_pending();
-
-        if (m_sCommand->is_admin() && m_name != "admin")
-        {
-            throw SoftError(m_sCommand->name() + " may only be run against the admin database.",
-                            error::UNAUTHORIZED);
-        }
-
-        if (m_sCommand->name() != command::GetLastError::KEY)
-        {
-            m_context.reset_error();
-        }
 
         pResponse = m_sCommand->execute();
     }

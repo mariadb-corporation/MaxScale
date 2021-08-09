@@ -535,6 +535,37 @@ protected:
     const protocol::HEADER* m_pHeader;
 };
 
+class Insert final : public Packet
+{
+public:
+    Insert(const Packet& packet);
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    const std::vector<bsoncxx::document::view>& documents() const
+    {
+        return m_documents;
+    }
+
+private:
+    uint32_t                             m_flags;
+    const char*                          m_zCollection;
+    std::vector<bsoncxx::document::view> m_documents;
+};
+
 class Query final : public Packet
 {
 public:
@@ -836,6 +867,7 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
+    GWBUF* handle_insert(GWBUF* pRequest, const nosql::Insert& req);
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 

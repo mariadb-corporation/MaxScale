@@ -81,7 +81,18 @@ public:
                                             Config* pConfig);
 
     /**
-     * Handle a NoSQL query.
+     * Handle an OP_INSERT
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The query request; *must* be intended for the database this
+     *              instance represents.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_insert(GWBUF* pRequest, const nosql::Insert& req);
+
+    /**
+     * Handle an OP_QUERY.
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The query request; *must* be intended for the database this
@@ -148,7 +159,8 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute(std::unique_ptr<Command> sCommand);
+    GWBUF* execute_msg_command(std::unique_ptr<MsgCommand> sCommand);
+    GWBUF* execute_command(std::unique_ptr<Command> sCommand);
 
     template<class ConcretePacket>
     GWBUF* execute(GWBUF* pRequest,
@@ -158,7 +170,7 @@ private:
     {
         auto sCommand = nosql::MsgCommand::get(this, pRequest, req, doc, arguments);
 
-        return execute(std::move(sCommand));
+        return execute_msg_command(std::move(sCommand));
     }
 
     using SCommand = std::unique_ptr<Command>;

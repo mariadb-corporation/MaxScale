@@ -42,11 +42,18 @@ struct IsAdmin
 class Command
 {
 public:
+    // For the time being, the requirement is that the SQL a document corresponds to
+    // must fit into a single COM_QUERY packet.
+    // The first -1 is the command byte and the second to ensure that the length stays
+    // below 0xffffff, as a length of exactly that would require an additional empty
+    // packet to be sent.
+    static const int32_t MAX_QUERY_LEN = (GW_MYSQL_MAX_PACKET_LEN - MYSQL_HEADER_LEN - 1 - 1);
+
     virtual ~Command();
 
     virtual bool is_admin() const;
 
-    virtual const std::string& name() const;
+    virtual std::string description() const = 0;
 
     virtual std::string to_json() const;
 
@@ -68,6 +75,12 @@ public:
     virtual void diagnose(DocumentBuilder& doc) = 0;
 
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
+
+    static void check_maximum_sql_length(int length);
+    static void check_maximum_sql_length(const std::string& s)
+    {
+        check_maximum_sql_length(s.length());
+    }
 
 protected:
     enum class ResponseKind
@@ -92,6 +105,7 @@ protected:
 
     void send_downstream(const std::string& sql);
 
+    void throw_unexpected_packet();
 
     Database&     m_database;
     GWBUF*        m_pRequest;
@@ -132,30 +146,28 @@ public:
     {
     }
 
-    // For the time being, the requirement is that the SQL a document corresponds to
-    // must fit into a single COM_QUERY packet.
-    // The first -1 is the command byte and the second to ensure that the length stays
-    // below 0xffffff, as a length of exactly that would require an additional empty
-    // packet to be sent.
-    static const int32_t MAX_QUERY_LEN = (GW_MYSQL_MAX_PACKET_LEN - MYSQL_HEADER_LEN - 1 - 1);
+    static std::unique_ptr<MsgCommand> get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Query& req,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments);
 
-    static std::unique_ptr<Command> get(nosql::Database* pDatabase,
-                                        GWBUF* pRequest,
-                                        const nosql::Query& req,
-                                        const bsoncxx::document::view& doc,
-                                        const DocumentArguments& arguments);
-
-    static std::unique_ptr<Command> get(nosql::Database* pDatabase,
-                                        GWBUF* pRequest,
-                                        const nosql::Msg& req,
-                                        const bsoncxx::document::view& doc,
-                                        const DocumentArguments& arguments);
+    static std::unique_ptr<MsgCommand> get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Msg& req,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments);
 
     ~MsgCommand() override;
 
-    const std::string& name() const override
+    const std::string& name() const
     {
         return m_name;
+    }
+
+    std::string description() const override
+    {
+        return m_req.opcode() == MONGOC_OPCODE_QUERY ? "OP_QUERY" : ("OP_MSG(" + m_name);
     }
 
     std::string to_json() const override
@@ -171,12 +183,6 @@ public:
     GWBUF* create_empty_response() const;
 
     static void check_write_batch_size(int size);
-
-    static void check_maximum_sql_length(int length);
-    static void check_maximum_sql_length(const std::string& s)
-    {
-        check_maximum_sql_length(s.length());
-    }
 
     enum Quoted
     {
@@ -196,8 +202,6 @@ public:
     static void list_commands(DocumentBuilder& commands);
 
 protected:
-    void throw_unexpected_packet();
-
     void require_admin_db();
 
     template<class Type>

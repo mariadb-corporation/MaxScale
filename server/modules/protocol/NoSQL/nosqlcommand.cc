@@ -87,13 +87,13 @@ public:
 using namespace nosql;
 
 template<class ConcreteCommand>
-unique_ptr<Command> create_command(const string& name,
-                                   Database* pDatabase,
-                                   GWBUF* pRequest,
-                                   const Query* pQuery,
-                                   const Msg* pMsg,
-                                   const bsoncxx::document::view& doc,
-                                   const MsgCommand::DocumentArguments& arguments)
+unique_ptr<MsgCommand> create_command(const string& name,
+                                      Database* pDatabase,
+                                      GWBUF* pRequest,
+                                      const Query* pQuery,
+                                      const Msg* pMsg,
+                                      const bsoncxx::document::view& doc,
+                                      const MsgCommand::DocumentArguments& arguments)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -111,13 +111,13 @@ unique_ptr<Command> create_command(const string& name,
     return sCommand;
 }
 
-using CreatorFunction = unique_ptr<Command> (*)(const string& name,
-                                                Database* pDatabase,
-                                                GWBUF* pRequest,
-                                                const Query* pQuery,
-                                                const Msg* pMsg,
-                                                const bsoncxx::document::view& doc,
-                                                const MsgCommand::DocumentArguments& arguments);
+using CreatorFunction = unique_ptr<MsgCommand> (*)(const string& name,
+                                                   Database* pDatabase,
+                                                   GWBUF* pRequest,
+                                                   const Query* pQuery,
+                                                   const Msg* pMsg,
+                                                   const bsoncxx::document::view& doc,
+                                                   const MsgCommand::DocumentArguments& arguments);
 
 struct CommandInfo
 {
@@ -215,12 +215,6 @@ bool Command::is_admin() const
     return false;
 }
 
-const string& Command::name() const
-{
-    static string no_name;
-    return no_name;
-}
-
 string Command::to_json() const
 {
     return "";
@@ -244,6 +238,28 @@ void Command::send_downstream(const string& sql)
     GWBUF* pRequest = modutil_create_query(sql.c_str());
 
     m_database.context().downstream().routeQuery(pRequest);
+}
+
+//static
+void Command::check_maximum_sql_length(int length)
+{
+    if (length > MAX_QUERY_LEN)
+    {
+        ostringstream ss;
+        ss << "Generated SQL of " << length
+           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
+           << " bytes.";
+
+        throw HardError(ss.str(), error::COMMAND_FAILED);
+    }
+}
+
+void Command::throw_unexpected_packet()
+{
+    ostringstream ss;
+    ss << "While executing " << description() << ", an unexpected packet was received from the backend.";
+
+    throw HardError(ss.str(), error::INTERNAL_ERROR);
 }
 
 GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
@@ -416,11 +432,11 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 }
 
 //static
-unique_ptr<Command> MsgCommand::get(nosql::Database* pDatabase,
-                                    GWBUF* pRequest,
-                                    const nosql::Query& query,
-                                    const bsoncxx::document::view& doc,
-                                    const DocumentArguments& arguments)
+unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
+                                       GWBUF* pRequest,
+                                       const nosql::Query& query,
+                                       const bsoncxx::document::view& doc,
+                                       const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -431,11 +447,11 @@ unique_ptr<Command> MsgCommand::get(nosql::Database* pDatabase,
 }
 
 //static
-unique_ptr<Command> MsgCommand::get(nosql::Database* pDatabase,
-                                    GWBUF* pRequest,
-                                    const nosql::Msg& msg,
-                                    const bsoncxx::document::view& doc,
-                                    const DocumentArguments& arguments)
+unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
+                                       GWBUF* pRequest,
+                                       const nosql::Msg& msg,
+                                       const bsoncxx::document::view& doc,
+                                       const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -466,20 +482,6 @@ void MsgCommand::check_write_batch_size(int size)
 }
 
 //static
-void MsgCommand::check_maximum_sql_length(int length)
-{
-    if (length > MAX_QUERY_LEN)
-    {
-        ostringstream ss;
-        ss << "Generated SQL of " << length
-           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
-           << " bytes.";
-
-        throw HardError(ss.str(), error::COMMAND_FAILED);
-    }
-}
-
-//static
 void MsgCommand::list_commands(DocumentBuilder& commands)
 {
     for (const auto& kv : this_unit.infos_by_name)
@@ -501,14 +503,6 @@ void MsgCommand::list_commands(DocumentBuilder& commands)
         // passing a 'const char*' does not.
         commands.append(kvp(string(info.zKey), command.extract()));
     }
-}
-
-void MsgCommand::throw_unexpected_packet()
-{
-    ostringstream ss;
-    ss << m_name << " received unexpected packet from backend.";
-
-    throw HardError(ss.str(), error::INTERNAL_ERROR);
 }
 
 void MsgCommand::require_admin_db()
