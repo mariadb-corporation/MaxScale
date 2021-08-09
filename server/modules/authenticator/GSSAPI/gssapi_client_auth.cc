@@ -128,102 +128,116 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
     return rval;
 }
 
-static gss_name_t server_name = GSS_C_NO_NAME;
-
 /**
- * @brief Check if the client token is valid
+ * Check if the client token is valid
  *
- * @param token Client token
- * @param len Length of the token
- * @param output Pointer where the client principal name is stored
+ * @param ses Session
+ * @param entry User entry
  * @return True if client token is valid
  */
-bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len, char** output)
+bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const mariadb::UserEntry* entry)
 {
-    gss_buffer_desc server_buf = {0, 0};
+    gss_buffer_desc service_name_buf = GSS_C_EMPTY_BUFFER;
+    service_name_buf.value = (void*)m_service_principal.c_str();
+    service_name_buf.length = m_service_principal.length() + 1;
 
-    const char* pr = m_service_principal.c_str();
-    server_buf.value = (void*)pr;
-    server_buf.length = m_service_principal.length() + 1;
-
+    gss_name_t service_name = GSS_C_NO_NAME;
     OM_uint32 minor = 0;
-    OM_uint32 major = gss_import_name(&minor, &server_buf, GSS_C_NT_USER_NAME, &server_name);
+    OM_uint32 major = gss_import_name(&minor, &service_name_buf, GSS_C_NT_USER_NAME, &service_name);
 
+    gss_cred_id_t credentials = GSS_C_NO_CREDENTIAL;
+    bool cred_init_ok = false;
     if (GSS_ERROR(major))
     {
-        report_error(major, minor);
-        return false;
+        report_error(major, minor, "gss_import_name");
     }
-
-    gss_cred_id_t credentials;
-    major = gss_acquire_cred(&minor, server_name,
-                             GSS_C_INDEFINITE, GSS_C_NO_OID_SET, GSS_C_ACCEPT,
-                             &credentials, nullptr, nullptr);
-    if (GSS_ERROR(major))
+    else
     {
-        report_error(major, minor);
-        return false;
-    }
-
-    do
-    {
-
-        gss_ctx_id_t handle = NULL;
-        gss_buffer_desc in = {0, 0};
-        gss_buffer_desc out = {0, 0};
-        gss_buffer_desc client_name = {0, 0};
-        gss_OID_desc* oid;
-        gss_name_t client;
-
-        in.value = token;
-        in.length = len;
-
-        major = gss_accept_sec_context(&minor, &handle, GSS_C_NO_CREDENTIAL, &in, GSS_C_NO_CHANNEL_BINDINGS,
-                                       &client, &oid, &out, 0, 0, NULL);
+        major = gss_acquire_cred(&minor, service_name,
+                                 GSS_C_INDEFINITE, GSS_C_NO_OID_SET, GSS_C_ACCEPT,
+                                 &credentials, nullptr, nullptr);
         if (GSS_ERROR(major))
         {
-            report_error(major, minor);
-            return false;
+            report_error(major, minor, "gss_acquire_cred");
         }
+        else
+        {
+            cred_init_ok = true;    // MaxScale/server credentials are ok.
+        }
+    }
 
-        major = gss_display_name(&minor, client, &client_name, NULL);
+    bool auth_ok = false;
+    if (cred_init_ok)
+    {
+        // MaxScale does not support complicated authentication schemes involving multiple messages. If
+        // gssapi wants more communication, authentication fails.
+        gss_ctx_id_t handle = GSS_C_NO_CONTEXT;
+        gss_buffer_desc in = GSS_C_EMPTY_BUFFER;
+        in.value = ses->client_token.data();
+        in.length = ses->client_token.size();
 
+        gss_name_t client = GSS_C_NO_NAME;
+        gss_buffer_desc out = GSS_C_EMPTY_BUFFER;
+
+        major = gss_accept_sec_context(&minor, &handle, credentials, &in, GSS_C_NO_CHANNEL_BINDINGS,
+                                       &client, nullptr, &out, nullptr, nullptr, nullptr);
         if (GSS_ERROR(major))
         {
-            report_error(major, minor);
-            return false;
+            report_error(major, minor, "gss_accept_sec_context");
         }
-
-        char* princ_name = static_cast<char*>(MXS_MALLOC(client_name.length + 1));
-
-        if (!princ_name)
+        else if (major & GSS_S_CONTINUE_NEEDED)
         {
-            return false;
+            MXB_ERROR("'gss_accept_sec_context' requires additional communication with client. "
+                      "Not supported.");
+        }
+        else
+        {
+            gss_buffer_desc client_name = GSS_C_EMPTY_BUFFER;
+            major = gss_display_name(&minor, client, &client_name, nullptr);
+            if (GSS_ERROR(major))
+            {
+                report_error(major, minor, "gss_display_name");
+            }
+            else
+            {
+                // Finally, check that username as reported by gssapi is same as the client username.
+                // Similarly to server, if authentication string is given, compare to that. If not, compare
+                // against username.
+                string found_name;
+                found_name.assign((const char*)client_name.value, client_name.length);
+                const std::string* expected_str = nullptr;
+                if (entry->auth_string.empty())
+                {
+                    expected_str = &entry->username;
+                    found_name.erase(found_name.find('@'));
+                }
+                else
+                {
+                    expected_str = &entry->auth_string;
+                }
+
+                if (found_name == *expected_str)
+                {
+                    auth_ok = true;
+                }
+                else
+                {
+                    MXB_ERROR("Name mismatch: found '%s', expected '%s'.",
+                              found_name.c_str(), expected_str->c_str());
+                }
+
+                gss_release_buffer(&minor, &client_name);
+            }
         }
 
-        memcpy(princ_name, (const char*)client_name.value, client_name.length);
-        princ_name[client_name.length] = '\0';
-        *output = princ_name;
+        gss_release_buffer(&minor, &out);
+        gss_release_name(&minor, &client);
+        gss_delete_sec_context(&minor, &handle, GSS_C_NO_BUFFER);
     }
-    while (major & GSS_S_CONTINUE_NEEDED);
 
-    return true;
-}
-
-/**
- * @brief Verify the user has access to the database
- *
- * @param session MySQL session
- * @param princ Client principal name
- * @return True if the user has access to the database
- */
-bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char* princ,
-                                              const mariadb::UserEntry* entry)
-{
-    mxb_assert(princ);
-    std::string princ_user = princ;
-    princ_user.erase(princ_user.find('@'));
-    return session->user == princ_user || entry->auth_string == princ;
+    gss_release_cred(&minor, &credentials);
+    gss_release_name(&minor, &service_name);
+    return auth_ok;
 }
 
 /**
@@ -241,16 +255,10 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
 
     /** We sent the principal name and the client responded with the GSSAPI
      * token that we must validate */
-    char* princ = NULL;
-
-    if (validate_gssapi_token(session->client_token.data(), session->client_token.size(), &princ)
-        && validate_user(session, princ, entry))
+    if (validate_gssapi_token(session, entry))
     {
         rval.status = AuthRes::Status::SUCCESS;
         session->backend_token = session->client_token;
     }
-
-    MXS_FREE(princ);
-
     return rval;
 }

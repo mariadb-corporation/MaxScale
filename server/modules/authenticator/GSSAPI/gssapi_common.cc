@@ -24,30 +24,19 @@
  * @param major GSSAPI major error number
  * @param minor GSSAPI minor error number
  */
-void report_error(OM_uint32 major, OM_uint32 minor)
+void report_error(OM_uint32 major, OM_uint32 minor, const char* failed_func)
 {
-    OM_uint32 status_maj = major;
-    OM_uint32 status_min = minor;
     OM_uint32 res = 0;
-    gss_buffer_desc buf = {0, 0};
-
-    major = gss_display_status(&minor, status_maj, GSS_C_GSS_CODE, NULL, &res, &buf);
-
-    {
-        char sbuf[buf.length + 1];
-        memcpy(sbuf, buf.value, buf.length);
-        sbuf[buf.length] = '\0';
-        MXS_ERROR("GSSAPI Major Error: %s", sbuf);
-    }
-
-    major = gss_display_status(&minor, status_min, GSS_C_MECH_CODE, NULL, &res, &buf);
-
-    {
-        char sbuf[buf.length + 1];
-        memcpy(sbuf, buf.value, buf.length);
-        sbuf[buf.length] = '\0';
-        MXS_ERROR("GSSAPI Minor Error: %s", sbuf);
-    }
+    gss_buffer_desc major_msg = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc minor_msg = GSS_C_EMPTY_BUFFER;
+    OM_uint32 minor_status = 0;
+    gss_display_status(&minor_status, major, GSS_C_GSS_CODE, nullptr, &res, &major_msg);
+    gss_display_status(&minor_status, minor, GSS_C_MECH_CODE, nullptr, &res, &minor_msg);
+    MXS_ERROR("%s failed. Major error %u: '%.*s' Minor error %u: '%.*s'",
+              failed_func, major, (int)major_msg.length, (const char*)major_msg.value,
+              minor, (int)minor_msg.length, (const char*)minor_msg.value);
+    gss_release_buffer(&minor_status, &major_msg);
+    gss_release_buffer(&minor_status, &minor_msg);
 }
 
 uint64_t GSSAPIAuthenticatorModule::capabilities() const
