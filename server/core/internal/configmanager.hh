@@ -171,6 +171,7 @@ private:
 
     void process_config(const mxb::Json& new_json);
     bool revert_changes();
+    bool is_same_object(const mxb::Json& lhs, const mxb::Json& rhs);
     void remove_old_object(const std::string& name, const std::string& type);
     void create_new_object(const std::string& name, const std::string& type, mxb::Json& obj);
     void update_object(const std::string& name, const std::string& type, const mxb::Json& json);

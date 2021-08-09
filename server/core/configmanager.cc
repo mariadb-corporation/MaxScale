@@ -641,6 +641,31 @@ void ConfigManager::process_config(const mxb::Json& new_json)
                         old_names.begin(), old_names.end(),
                         std::inserter(added, added.begin()));
 
+
+    for (const auto& obj : new_objects)
+    {
+        auto name = obj.get_string(CN_ID);
+
+        if (added.find(name) == added.end())
+        {
+            // This is an existing object, check if it has been destroyed and then created again. This can be
+            // detected by changes in the object type, the module it uses or any parameter that cannot be
+            // modified at runtime.
+            auto it = std::find_if(old_objects.begin(), old_objects.end(), [&](const auto& o) {
+                                       return o.get_string(CN_ID) == name;
+                                   });
+            mxb_assert(it != old_objects.end());
+
+            if (!is_same_object(obj, *it))
+            {
+                // A conflicting change was detected, add it to both the removed and added sets. This will
+                // first destroy it and then recreate it using the new configuration.
+                removed.insert(name);
+                added.insert(name);
+            }
+        }
+    }
+
     // Iterate the config in reverse to remove the objects in the reverse dependency order.
     for (auto it = old_objects.rbegin(); it != old_objects.rend(); ++it)
     {
@@ -691,6 +716,49 @@ ConfigManager::Type ConfigManager::to_type(const std::string& type)
 
     auto it = types.find(type);
     return it != types.end() ? it->second : Type::UNKNOWN;
+}
+
+bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    bool rval = false;
+
+    if (lhs.at(CN_TYPE) == rhs.at(CN_TYPE))
+    {
+        auto lhs_attr = lhs.at(CN_ATTRIBUTES);
+        auto rhs_attr = rhs.at(CN_ATTRIBUTES);
+
+        switch (to_type(lhs.get_string(CN_TYPE)))
+        {
+        case Type::SERVERS:
+            // Servers are never recreated as all their parameters can be modified at runtime
+            return true;
+            break;
+
+        case Type::MONITORS:
+        case Type::FILTERS:
+            // Filters and monitors both use the "module" parameter
+            rval = lhs_attr.get_string(CN_MODULE) == rhs_attr.get_string(CN_MODULE);
+            break;
+
+        case Type::SERVICES:
+            rval = lhs_attr.get_string(CN_ROUTER) == rhs_attr.get_string(CN_ROUTER);
+            break;
+
+        case Type::LISTENERS:
+            rval = lhs_attr.get_string(CN_PROTOCOL) == rhs_attr.get_string(CN_PROTOCOL);
+            break;
+
+        case Type::MAXSCALE:
+            // Only one MaxScale exists and it is only updated
+            return true;
+
+        case Type::UNKNOWN:
+            mxb_assert_message(!true, "Unknown type of JSON: %s", rhs.to_string().c_str());
+            return false;
+        }
+    }
+
+    return rval;
 }
 
 void ConfigManager::remove_old_object(const std::string& name, const std::string& type)
