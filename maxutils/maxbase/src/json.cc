@@ -505,7 +505,7 @@ void Json::reset(json_t* obj)
 
 bool Json::equal(const Json& other) const
 {
-    return valid() && other.valid() && json_equal(m_obj, other.m_obj);
+    return valid() == other.valid() && (!valid() || json_equal(m_obj, other.m_obj));
 }
 
 bool Json::ok() const

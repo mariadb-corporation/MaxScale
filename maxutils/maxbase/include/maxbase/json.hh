@@ -374,6 +374,12 @@ public:
     /**
      * Check if two JSON values are equal
      *
+     * Note that this is a strict equality comparison. In terms of JavaScript, this is the `===` operator, not
+     * the `==` operator.
+     *
+     * In practice the thing to keep in mind is that two undefined values (i.e. valid() returns false) compare
+     * equal but a null value and an undefined value do not.
+     *
      * @return True if values compare equal
      */
     bool equal(const Json& other) const;
