@@ -736,6 +736,31 @@ void test_conflicts(TestConnections& test)
     expect_sync(test, version, 2);
     expect_equal(test, "services/test-object", "/data/attributes/router");
 
+    test.tprintf("Destroy the service and create a qlafilter");
+    test.check_maxctrl("destroy service test-object");
+    ++version;
+    test.check_maxctrl("create filter test-object qlafilter filebase=/tmp/file1");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/attributes/parameters");
+
+    test.tprintf("Stop the second MaxScale");
+    test.maxscale2->stop();
+
+    // TODO: The filter needs to be changed when runtime config change support is added to qlafilter
+    test.tprintf("Destroy the filter and create it with different parameters");
+    test.check_maxctrl("destroy filter test-object");
+    ++version;
+    test.check_maxctrl("create filter test-object qlafilter filebase=/tmp/file2");
+    ++version;
+
+    test.tprintf("Start the second MaxScale: it should recreate the filter");
+    test.maxscale2->start();
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/attributes/parameters");
+
     reset(test);
 }
 
