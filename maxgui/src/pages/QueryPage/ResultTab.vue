@@ -77,30 +77,25 @@
             />
             <template v-else>
                 <template v-for="(resSet, name) in resultData">
-                    <v-fade-transition :key="name" :duration="200">
-                        <keep-alive>
-                            <template v-if="activeResSet === name">
-                                <result-data-table
-                                    v-if="$typy(resSet, 'data').isDefined"
-                                    :height="dynDim.height - headerHeight"
-                                    :width="dynDim.width"
-                                    :headers="resSet.fields"
-                                    :rows="resSet.data"
-                                />
-                                <div
-                                    v-else
-                                    :style="{ height: `${dynDim.height - headerHeight}px` }"
-                                >
-                                    <template v-for="(v, key) in resSet">
-                                        <div :key="key">
-                                            <b>{{ key }}:</b>
-                                            <span class="d-inline-block ml-4">{{ v }}</span>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-                        </keep-alive>
-                    </v-fade-transition>
+                    <keep-alive :key="name">
+                        <template v-if="activeResSet === name">
+                            <result-data-table
+                                v-if="$typy(resSet, 'data').isDefined"
+                                :height="dynDim.height - headerHeight"
+                                :width="dynDim.width"
+                                :headers="resSet.fields"
+                                :rows="resSet.data"
+                            />
+                            <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
+                                <template v-for="(v, key) in resSet">
+                                    <div :key="key">
+                                        <b>{{ key }}:</b>
+                                        <span class="d-inline-block ml-4">{{ v }}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </keep-alive>
                 </template>
             </template>
         </template>
