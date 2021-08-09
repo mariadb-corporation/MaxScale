@@ -10,6 +10,12 @@ void test_master_failure(TestConnections& test)
     // Create a separate user so that we can easily kill the connection.
     Connection master = test.repl->get_connection(0);
     master.connect();
+
+    for (auto row : master.rows("SELECT user, host FROM mysql.user WHERE user = 'bob'"))
+    {
+        master.query("DROP USER '" + row[0] + "'@'" + row[1] + "'");
+    }
+
     master.query("CREATE USER bob IDENTIFIED BY 'bob'");
     master.query("GRANT ALL ON *.* TO bob");
 
