@@ -1,6 +1,6 @@
 if (GSSAPI_FOUND)
   include_directories(${GSSAPI_INCS})
-  add_library(gssapiauth SHARED gssapi_auth.cc gssapi_auth_common.cc gssapi_backend_auth.cc)
+  add_library(gssapiauth SHARED gssapi_common.cc gssapi_client_auth.cc gssapi_backend_auth.cc)
   target_link_libraries(gssapiauth maxscale-common ${GSSAPI_LIBS})
   set_target_properties(gssapiauth PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
   install_module(gssapiauth core)

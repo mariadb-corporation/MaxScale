@@ -12,7 +12,7 @@
  */
 
 #include "gssapi_common.hh"
-#include "gssapi_auth.hh"
+#include "gssapi_client_auth.hh"
 #include "gssapi_backend_auth.hh"
 
 #include <maxbase/alloc.h>

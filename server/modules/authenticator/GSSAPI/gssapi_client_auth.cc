@@ -10,8 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 #include "gssapi_common.hh"
-#include "gssapi_auth.hh"
+#include "gssapi_client_auth.hh"
 
 #include <maxbase/alloc.h>
 

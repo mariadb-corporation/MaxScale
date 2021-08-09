@@ -13,9 +13,10 @@
  */
 #define MXS_MODULE_NAME "GSSAPIAuth"
 
+#include <maxscale/ccdefs.hh>
+#include <gssapi.h>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <gssapi.h>
 
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
