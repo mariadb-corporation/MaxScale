@@ -250,6 +250,11 @@ public:
      * @return The value at the pointer or an empty object if no value is found
      */
     Json at(const char* ptr) const;
+    Json at(const std::string& str) const
+    {
+        return at(str.c_str());
+    }
+
 
     /**
      * Get latest error message
