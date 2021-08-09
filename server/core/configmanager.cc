@@ -25,6 +25,7 @@
 #include "internal/config_runtime.hh"
 #include "internal/servermanager.hh"
 #include "internal/monitormanager.hh"
+#include "internal/modules.hh"
 
 #include <set>
 #include <fstream>
@@ -656,10 +657,13 @@ void ConfigManager::process_config(const mxb::Json& new_json)
                                    });
             mxb_assert(it != old_objects.end());
 
-            if (!is_same_object(obj, *it))
+            std::ostringstream reason;
+
+            if (!is_same_object(obj, *it, reason))
             {
                 // A conflicting change was detected, add it to both the removed and added sets. This will
                 // first destroy it and then recreate it using the new configuration.
+                MXS_NOTICE("Recreating object '%s': %s", name.c_str(), reason.str().c_str());
                 removed.insert(name);
                 added.insert(name);
             }
@@ -718,34 +722,42 @@ ConfigManager::Type ConfigManager::to_type(const std::string& type)
     return it != types.end() ? it->second : Type::UNKNOWN;
 }
 
-bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs)
+bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs, std::ostringstream& reason)
 {
     bool rval = false;
+    auto lhs_type = lhs.at(CN_TYPE);
+    auto rhs_type = rhs.at(CN_TYPE);
 
-    if (lhs.at(CN_TYPE) == rhs.at(CN_TYPE))
+    if (lhs_type == rhs_type)
     {
-        auto lhs_attr = lhs.at(CN_ATTRIBUTES);
-        auto rhs_attr = rhs.at(CN_ATTRIBUTES);
+        std::ostringstream ss;
+        mxs::ModuleType mod_type;
 
         switch (to_type(lhs.get_string(CN_TYPE)))
         {
-        case Type::SERVERS:
-            // Servers are never recreated as all their parameters can be modified at runtime
-            return true;
+        case Type::MONITORS:
+            ss << CN_MODULE;
+            mod_type = mxs::ModuleType::MONITOR;
             break;
 
-        case Type::MONITORS:
         case Type::FILTERS:
-            // Filters and monitors both use the "module" parameter
-            rval = lhs_attr.get_string(CN_MODULE) == rhs_attr.get_string(CN_MODULE);
+            ss << CN_MODULE;
+            mod_type = mxs::ModuleType::FILTER;
             break;
 
         case Type::SERVICES:
-            rval = lhs_attr.get_string(CN_ROUTER) == rhs_attr.get_string(CN_ROUTER);
+            ss << CN_ROUTER;
+            mod_type = mxs::ModuleType::ROUTER;
             break;
 
         case Type::LISTENERS:
-            rval = lhs_attr.get_string(CN_PROTOCOL) == rhs_attr.get_string(CN_PROTOCOL);
+            ss << CN_PARAMETERS << "/" << CN_PROTOCOL;
+            mod_type = mxs::ModuleType::PROTOCOL;
+            break;
+
+        case Type::SERVERS:
+            // Servers are never recreated as all their parameters can be modified at runtime
+            return true;
             break;
 
         case Type::MAXSCALE:
@@ -754,8 +766,61 @@ bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs)
 
         case Type::UNKNOWN:
             mxb_assert_message(!true, "Unknown type of JSON: %s", rhs.to_string().c_str());
-            return false;
+            // If this ever happens, the error is reported in the updating code.
+            return true;
         }
+
+        std::string mod_name = ss.str();
+        auto lhs_attr = lhs.at(CN_ATTRIBUTES);
+        auto rhs_attr = rhs.at(CN_ATTRIBUTES);
+        auto lhs_module = lhs_attr.at(mod_name).get_string();
+        auto rhs_module = rhs_attr.at(mod_name).get_string();
+
+        // Checking that one of the modules is not empty makes it easier to write the code that handles the
+        // module parameter checks. The lack of a module is detected later on when the update will fail.
+        if (!lhs_module.empty() && lhs_module == rhs_module)
+        {
+            rval = same_unmodifiable_parameters(lhs_attr.at(CN_PARAMETERS),
+                                                rhs_attr.at(CN_PARAMETERS),
+                                                lhs_module, mod_type, reason);
+        }
+        else
+        {
+            reason << "module changed from '" << lhs_module << "' to '" << rhs_module << "'";
+        }
+    }
+    else
+    {
+        reason << "object changed type from '" << lhs_type.get_string()
+               << "' to '" << rhs_type.get_string() << "'";
+    }
+
+    return rval;
+}
+
+bool ConfigManager::same_unmodifiable_parameters(const mxb::Json& lhs_params, const mxb::Json& rhs_params,
+                                                 const std::string& name, mxs::ModuleType type,
+                                                 std::ostringstream& reason)
+{
+    bool rval = true;
+    const MXS_MODULE* mod = get_module(name, type);
+    mxb_assert_message(mod, "Could not find module '%s'", name.c_str());
+
+    if (mod->specification)
+    {
+        for (const auto& param : *mod->specification)
+        {
+            if (!param.second->is_modifiable_at_runtime()
+                && lhs_params.at(param.first) != rhs_params.at(param.first))
+            {
+                reason << "Parameter '" << param.first << "' is not the same in both configurations";
+                rval = false;
+            }
+        }
+    }
+    else
+    {
+        // A module with no specification, not supported
     }
 
     return rval;
