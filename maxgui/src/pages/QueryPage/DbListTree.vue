@@ -158,17 +158,11 @@ export default {
         expandedNodes: {
             deep: true,
             handler(v, oV) {
-                if (
-                    !this.$help.lodash.isEqual(
-                        v.map(o => o.id),
-                        oV.map(o => o.id)
-                    )
-                ) {
+                // Don't SET_EXPANDED_NODES when old length of expandedNodes is 0.
+                if (oV.length) {
                     let nodes = this.minimizeNodes(v)
-                    //
                     //   The order is important which is used to reload the schema and update the tree
                     //   Sort expandedNodes by level property
-                    //
                     nodes.sort((a, b) => a.level - b.level)
                     // Auto collapse all expanded nodes if schema node is collapsed
                     let validLevels = nodes.map(node => node.level)
@@ -178,11 +172,9 @@ export default {
             },
         },
     },
-
-    mounted() {
+    created() {
         this.expandedNodes = this.expanded_nodes
     },
-
     methods: {
         ...mapMutations({
             SET_ACTIVE_TREE_NODE: 'query/SET_ACTIVE_TREE_NODE',
