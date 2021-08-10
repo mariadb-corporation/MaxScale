@@ -84,23 +84,21 @@ public:
      * Handle an OP_DELETE
      *
      * @pRequest    The GWBUF holding data of @c req.
-     * @req         The query request; *must* be intended for the database this
-     *              instance represents.
+     * @packet      The delete request.
      *
      * @return nullptr
      */
-    GWBUF* handle_delete(GWBUF* pRequest, const nosql::Delete& req);
+    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
 
     /**
      * Handle an OP_INSERT
      *
      * @pRequest    The GWBUF holding data of @c req.
-     * @req         The query request; *must* be intended for the database this
-     *              instance represents.
+     * @req         The insert request.
      *
      * @return nullptr
      */
-    GWBUF* handle_insert(GWBUF* pRequest, const nosql::Insert& req);
+    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
 
     /**
      * Handle an OP_QUERY.

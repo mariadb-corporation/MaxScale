@@ -41,20 +41,20 @@ unique_ptr<nosql::Database> nosql::Database::create(const std::string& name,
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
-GWBUF* nosql::Database::handle_delete(GWBUF* pRequest, const nosql::Delete& req)
+GWBUF* nosql::Database::handle_delete(GWBUF* pRequest, nosql::Delete&& packet)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpDeleteCommand(this, pRequest, req));
+    unique_ptr<Command> sCommand(new nosql::OpDeleteCommand(this, pRequest, std::move(packet)));
 
     return execute_command(std::move(sCommand));
 }
 
-GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, const nosql::Insert& req)
+GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpInsertCommand(this, pRequest, req));
+    unique_ptr<Command> sCommand(new nosql::OpInsertCommand(this, pRequest, std::move(req)));
 
     return execute_command(std::move(sCommand));
 }

@@ -2266,7 +2266,7 @@ string extract_database(const string& collection)
 
 }
 
-GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, const nosql::Delete& req)
+GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req)
 {
     MXB_INFO("Request(DELETE): %s", req.zCollection());
 
@@ -2274,12 +2274,12 @@ GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, const nosql::Delete& req)
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
     // OP_DELETE does not return anything, ever.
-    GWBUF* pResponse = m_sDatabase->handle_delete(pRequest, req);
+    GWBUF* pResponse = m_sDatabase->handle_delete(pRequest, std::move(req));
 
     return pResponse;
 }
 
-GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, const nosql::Insert& req)
+GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
 {
     MXB_INFO("Request(INSERT): %s", req.zCollection());
 
@@ -2287,7 +2287,7 @@ GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, const nosql::Insert& req)
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
     // OP_INSERT does not return anything, ever.
-    GWBUF* pResponse = m_sDatabase->handle_insert(pRequest, req);
+    GWBUF* pResponse = m_sDatabase->handle_insert(pRequest, std::move(req));
 
     return pResponse;
 }

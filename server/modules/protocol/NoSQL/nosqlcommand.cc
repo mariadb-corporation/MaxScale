@@ -419,9 +419,9 @@ std::string OpDeleteCommand::description() const
 GWBUF* OpDeleteCommand::execute()
 {
     ostringstream ss;
-    ss << "DELETE FROM " << table() << query_to_where_clause(m_selector);
+    ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
 
-    if ((m_flags & 0x01) == 1)
+    if ((m_req.flags() & 0x01) == 1)
     {
         ss << " LIMIT 1";
     }
@@ -466,10 +466,12 @@ Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 
 string OpDeleteCommand::table() const
 {
-    auto n = m_collection.find('.');
+    const auto& collection = m_req.collection();
 
-    string d = m_collection.substr(0, n);
-    string t = m_collection.substr(n + 1);
+    auto n = collection.find('.');
+
+    string d = collection.substr(0, n);
+    string t = collection.substr(n + 1);
 
     return '`' + d + "`.`" + t + '`';
 };
@@ -484,7 +486,7 @@ std::string OpInsertCommand::description() const
 
 GWBUF* OpInsertCommand::execute()
 {
-    auto doc = m_documents[0];
+    auto doc = m_req.documents()[0];
 
     ostringstream ss;
     ss << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc) << ";";
@@ -657,10 +659,12 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 
 string OpInsertCommand::table() const
 {
-    auto n = m_collection.find('.');
+    const auto& collection = m_req.collection();
 
-    string d = m_collection.substr(0, n);
-    string t = m_collection.substr(n + 1);
+    auto n = collection.find('.');
+
+    string d = collection.substr(0, n);
+    string t = collection.substr(n + 1);
 
     return '`' + d + "`.`" + t + '`';
 };

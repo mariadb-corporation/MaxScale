@@ -127,17 +127,32 @@ private:
     ResponseKind m_response_kind;
 };
 
+template<class Packet>
+class PacketCommand : public Command
+{
+protected:
+    PacketCommand(Database* pDatabase,
+                  GWBUF* pRequest,
+                  Packet&& req)
+        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
+        ,  m_req(std::move(req))
+    {
+    }
+
+protected:
+    Packet m_req;
+};
+
 //
 // OpDeleteCommand
 //
-class OpDeleteCommand : public Command
+class OpDeleteCommand : public PacketCommand<nosql::Delete>
 {
 public:
     OpDeleteCommand(Database* pDatabase,
                     GWBUF* pRequest,
-                    const nosql::Delete& req)
-        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
-        , m_collection(req.collection())
+                    nosql::Delete&& req)
+        : PacketCommand<nosql::Delete>(pDatabase, pRequest, std::move(req))
     {
     }
 
@@ -149,19 +164,12 @@ public:
 
 private:
     std::string table() const;
-
-private:
-    std::string             m_collection;
-    uint32_t                m_flags;
-    bsoncxx::document::view m_selector;
-
-    std::string             m_statement;
 };
 
 //
 // OpInsertCommand
 //
-class OpInsertCommand : public Command
+class OpInsertCommand : public PacketCommand<nosql::Insert>
 {
 public:
     enum Action
@@ -173,13 +181,11 @@ public:
 
     OpInsertCommand(Database* pDatabase,
                     GWBUF* pRequest,
-                    const nosql::Insert& req)
-        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
+                    nosql::Insert&& req)
+        : PacketCommand<nosql::Insert>(pDatabase, pRequest, std::move(req))
         , m_action(INSERTING_DATA)
-        , m_collection(req.collection())
-        , m_documents(req.documents())
     {
-        mxb_assert(m_documents.size() == 1);
+        mxb_assert(m_req.documents().size() == 1);
     }
 
     std::string description() const override;
@@ -195,9 +201,7 @@ private:
 
 private:
     Action                                m_action;
-    std::string                           m_collection;
     std::string                           m_statement;
-    std::vector<bsoncxx::document::view>  m_documents;
     std::vector<bsoncxx::document::value> m_stashed_documents;
 };
 

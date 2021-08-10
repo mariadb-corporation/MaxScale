@@ -533,7 +533,7 @@ public:
     }
 
 protected:
-    const uint8_t*       m_pEnd;
+    const uint8_t*          m_pEnd;
     const protocol::HEADER* m_pHeader;
 };
 
@@ -541,6 +541,7 @@ class Insert final : public Packet
 {
 public:
     Insert(const Packet& packet);
+    Insert(Insert&& rhs) = default;
 
     uint32_t flags() const
     {
@@ -572,6 +573,7 @@ class Delete final : public Packet
 {
 public:
     Delete(const Packet& packet);
+    Delete(Delete&& rhs) = default;
 
     const char* zCollection() const
     {
@@ -900,8 +902,8 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    GWBUF* handle_delete(GWBUF* pRequest, const nosql::Delete& req);
-    GWBUF* handle_insert(GWBUF* pRequest, const nosql::Insert& req);
+    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
+    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 
