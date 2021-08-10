@@ -80,6 +80,33 @@ int32_t alias::to_type(const string& alias)
     return it->second;
 }
 
+int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView)
+{
+    if (pEnd - pData < 4)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, expecting document, but not even document length received.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    uint32_t size;
+    get_byte4(pData, &size);
+
+    if (pData + size > pEnd)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
+           << pEnd - pData << " available.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    return size;
+}
+
 }
 
 void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element)
@@ -403,6 +430,21 @@ nosql::Insert::Insert(const Packet& packet)
 
         pData += size;
     }
+}
+
+nosql::Delete::Delete(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_DELETE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+
+    mxb_assert(pData == m_pEnd);
 }
 
 nosql::Query::Query(const Packet& packet)
@@ -2099,7 +2141,6 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             switch (req.opcode())
             {
             case MONGOC_OPCODE_COMPRESSED:
-            case MONGOC_OPCODE_DELETE:
             case MONGOC_OPCODE_GET_MORE:
             case MONGOC_OPCODE_KILL_CURSORS:
             case MONGOC_OPCODE_REPLY:
@@ -2109,6 +2150,10 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());
                 }
+                break;
+
+            case MONGOC_OPCODE_DELETE:
+                pResponse = handle_delete(pRequest, nosql::Delete(req));
                 break;
 
             case MONGOC_OPCODE_INSERT:
@@ -2219,6 +2264,19 @@ string extract_database(const string& collection)
     return collection.substr(0, i);
 }
 
+}
+
+GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, const nosql::Delete& req)
+{
+    MXB_INFO("Request(DELETE): %s", req.zCollection());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    // OP_DELETE does not return anything, ever.
+    GWBUF* pResponse = m_sDatabase->handle_delete(pRequest, req);
+
+    return pResponse;
 }
 
 GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, const nosql::Insert& req)

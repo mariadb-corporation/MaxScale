@@ -257,12 +257,27 @@ void Command::check_maximum_sql_length(int length)
     }
 }
 
-void Command::throw_unexpected_packet()
+namespace
+{
+
+string unexpected_message(const std::string& who, const std::string& statement)
 {
     ostringstream ss;
-    ss << "While executing " << description() << ", an unexpected packet was received from the backend.";
+    ss << "Unexpected response received by " << who << " from backend for: " << statement;
 
-    throw HardError(ss.str(), error::INTERNAL_ERROR);
+    return ss.str();
+}
+
+}
+
+void Command::log_unexpected_packet()
+{
+    MXS_ERROR("%s", unexpected_message(description(), m_last_statement).c_str());
+}
+
+void Command::throw_unexpected_packet()
+{
+    throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
 }
 
 GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
@@ -392,6 +407,72 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     return pResponse;
 }
+
+//
+// OpDeleteCommand
+//
+std::string OpDeleteCommand::description() const
+{
+    return "OP_DELETE";
+}
+
+GWBUF* OpDeleteCommand::execute()
+{
+    ostringstream ss;
+    ss << "DELETE FROM " << table() << query_to_where_clause(m_selector);
+
+    if ((m_flags & 0x01) == 1)
+    {
+        ss << " LIMIT 1";
+    }
+
+    auto statement = ss.str();
+
+    check_maximum_sql_length(statement);
+
+    send_downstream(statement);
+
+    return nullptr;
+}
+
+Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+
+            if (err.code() != ER_NO_SUCH_TABLE)
+            {
+                m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+        }
+        break;
+
+    default:
+        // We do not throw, as that would generate a response.
+        log_unexpected_packet();
+    }
+
+    *ppNoSQL_response = nullptr;
+    return READY;
+};
+
+string OpDeleteCommand::table() const
+{
+    auto n = m_collection.find('.');
+
+    string d = m_collection.substr(0, n);
+    string t = m_collection.substr(n + 1);
+
+    return '`' + d + "`.`" + t + '`';
+};
 
 //
 // OpInsertCommand

@@ -81,6 +81,17 @@ public:
                                             Config* pConfig);
 
     /**
+     * Handle an OP_DELETE
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The query request; *must* be intended for the database this
+     *              instance represents.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_delete(GWBUF* pRequest, const nosql::Delete& req);
+
+    /**
      * Handle an OP_INSERT
      *
      * @pRequest    The GWBUF holding data of @c req.

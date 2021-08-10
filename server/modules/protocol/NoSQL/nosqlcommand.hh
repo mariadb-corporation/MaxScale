@@ -106,6 +106,7 @@ protected:
 
     void send_downstream(const std::string& sql);
 
+    void log_unexpected_packet();
     void throw_unexpected_packet();
 
     Database&     m_database;
@@ -124,6 +125,37 @@ private:
     GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
 
     ResponseKind m_response_kind;
+};
+
+//
+// OpDeleteCommand
+//
+class OpDeleteCommand : public Command
+{
+public:
+    OpDeleteCommand(Database* pDatabase,
+                    GWBUF* pRequest,
+                    const nosql::Delete& req)
+        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
+        , m_collection(req.collection())
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    std::string table() const;
+
+private:
+    std::string             m_collection;
+    uint32_t                m_flags;
+    bsoncxx::document::view m_selector;
+
+    std::string             m_statement;
 };
 
 //

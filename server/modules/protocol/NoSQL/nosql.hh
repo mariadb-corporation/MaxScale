@@ -152,6 +152,8 @@ inline int32_t get_zstring(const uint8_t* pBuffer, const char** pzString)
     return strlen(zString) + 1;
 }
 
+int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView);
+
 inline int32_t set_byte1(uint8_t* pBuffer, uint8_t val)
 {
     *pBuffer = val;
@@ -566,6 +568,37 @@ private:
     std::vector<bsoncxx::document::view> m_documents;
 };
 
+class Delete final : public Packet
+{
+public:
+    Delete(const Packet& packet);
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    const bsoncxx::document::view& selector() const
+    {
+        return m_selector;
+    }
+
+private:
+    const char*             m_zCollection;
+    uint32_t                m_flags;
+    bsoncxx::document::view m_selector;
+};
+
 class Query final : public Packet
 {
 public:
@@ -867,6 +900,7 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
+    GWBUF* handle_delete(GWBUF* pRequest, const nosql::Delete& req);
     GWBUF* handle_insert(GWBUF* pRequest, const nosql::Insert& req);
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
