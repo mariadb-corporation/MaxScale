@@ -25,6 +25,7 @@
 #include "internal/config_runtime.hh"
 #include "internal/servermanager.hh"
 #include "internal/monitormanager.hh"
+#include "internal/modules.hh"
 
 #include <set>
 #include <fstream>
@@ -641,6 +642,34 @@ void ConfigManager::process_config(const mxb::Json& new_json)
                         old_names.begin(), old_names.end(),
                         std::inserter(added, added.begin()));
 
+
+    for (const auto& obj : new_objects)
+    {
+        auto name = obj.get_string(CN_ID);
+
+        if (added.find(name) == added.end())
+        {
+            // This is an existing object, check if it has been destroyed and then created again. This can be
+            // detected by changes in the object type, the module it uses or any parameter that cannot be
+            // modified at runtime.
+            auto it = std::find_if(old_objects.begin(), old_objects.end(), [&](const auto& o) {
+                                       return o.get_string(CN_ID) == name;
+                                   });
+            mxb_assert(it != old_objects.end());
+
+            std::ostringstream reason;
+
+            if (!is_same_object(obj, *it, reason))
+            {
+                // A conflicting change was detected, add it to both the removed and added sets. This will
+                // first destroy it and then recreate it using the new configuration.
+                MXS_NOTICE("Recreating object '%s': %s", name.c_str(), reason.str().c_str());
+                removed.insert(name);
+                added.insert(name);
+            }
+        }
+    }
+
     // Iterate the config in reverse to remove the objects in the reverse dependency order.
     for (auto it = old_objects.rbegin(); it != old_objects.rend(); ++it)
     {
@@ -672,7 +701,7 @@ void ConfigManager::process_config(const mxb::Json& new_json)
 
         if (added.find(name) == added.end() || to_type(type) == Type::SERVICES)
         {
-            update_object(obj.get_string(CN_ID), type, obj);
+            update_object(name, type, obj);
         }
     }
 }
@@ -693,42 +722,181 @@ ConfigManager::Type ConfigManager::to_type(const std::string& type)
     return it != types.end() ? it->second : Type::UNKNOWN;
 }
 
+bool ConfigManager::is_same_object(const mxb::Json& lhs, const mxb::Json& rhs, std::ostringstream& reason)
+{
+    bool rval = false;
+    auto lhs_type = lhs.at(CN_TYPE);
+    auto rhs_type = rhs.at(CN_TYPE);
+
+    if (lhs_type == rhs_type)
+    {
+        std::ostringstream ss;
+        mxs::ModuleType mod_type;
+
+        switch (to_type(lhs.get_string(CN_TYPE)))
+        {
+        case Type::MONITORS:
+            ss << CN_MODULE;
+            mod_type = mxs::ModuleType::MONITOR;
+            break;
+
+        case Type::FILTERS:
+            ss << CN_MODULE;
+            mod_type = mxs::ModuleType::FILTER;
+            break;
+
+        case Type::SERVICES:
+            ss << CN_ROUTER;
+            mod_type = mxs::ModuleType::ROUTER;
+            break;
+
+        case Type::LISTENERS:
+            ss << CN_PARAMETERS << "/" << CN_PROTOCOL;
+            mod_type = mxs::ModuleType::PROTOCOL;
+            break;
+
+        case Type::SERVERS:
+            // Servers are never recreated as all their parameters can be modified at runtime
+            return true;
+            break;
+
+        case Type::MAXSCALE:
+            // Only one MaxScale exists and it is only updated
+            return true;
+
+        case Type::UNKNOWN:
+            mxb_assert_message(!true, "Unknown type of JSON: %s", rhs.to_string().c_str());
+            // If this ever happens, the error is reported in the updating code.
+            return true;
+        }
+
+        std::string mod_name = ss.str();
+        auto lhs_attr = lhs.at(CN_ATTRIBUTES);
+        auto rhs_attr = rhs.at(CN_ATTRIBUTES);
+        auto lhs_module = lhs_attr.at(mod_name).get_string();
+        auto rhs_module = rhs_attr.at(mod_name).get_string();
+
+        // Checking that one of the modules is not empty makes it easier to write the code that handles the
+        // module parameter checks. The lack of a module is detected later on when the update will fail.
+        if (!lhs_module.empty() && lhs_module == rhs_module)
+        {
+            rval = same_unmodifiable_parameters(lhs_attr.at(CN_PARAMETERS),
+                                                rhs_attr.at(CN_PARAMETERS),
+                                                lhs_module, mod_type, reason);
+        }
+        else
+        {
+            reason << "module changed from '" << lhs_module << "' to '" << rhs_module << "'";
+        }
+    }
+    else
+    {
+        reason << "object changed type from '" << lhs_type.get_string()
+               << "' to '" << rhs_type.get_string() << "'";
+    }
+
+    return rval;
+}
+
+bool ConfigManager::same_unmodifiable_parameters(const mxb::Json& lhs_params, const mxb::Json& rhs_params,
+                                                 const std::string& name, mxs::ModuleType type,
+                                                 std::ostringstream& reason)
+{
+    bool rval = true;
+    const MXS_MODULE* mod = get_module(name, type);
+    mxb_assert_message(mod, "Could not find module '%s'", name.c_str());
+
+    if (mod->specification)
+    {
+        for (const auto& param : *mod->specification)
+        {
+            if (!param.second->is_modifiable_at_runtime()
+                && lhs_params.at(param.first) != rhs_params.at(param.first))
+            {
+                reason << "Parameter '" << param.first << "' is not the same in both configurations";
+                rval = false;
+            }
+        }
+    }
+    else
+    {
+        // A module with no specification, not supported
+    }
+
+    return rval;
+}
+
 void ConfigManager::remove_old_object(const std::string& name, const std::string& type)
 {
     switch (to_type(type))
     {
     case Type::SERVERS:
-        if (!runtime_destroy_server(ServerManager::find_by_unique_name(name), true))
+        if (auto* server = ServerManager::find_by_unique_name(name))
         {
-            throw error("Failed to destroy server '", name, "'");
+            if (!runtime_destroy_server(server, true))
+            {
+                throw error("Failed to destroy server '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a server");
         }
         break;
 
     case Type::MONITORS:
-        if (!runtime_destroy_monitor(MonitorManager::find_monitor(name.c_str()), true))
+        if (auto* monitor = MonitorManager::find_monitor(name.c_str()))
         {
-            throw error("Failed to destroy monitor '", name, "'");
+            if (!runtime_destroy_monitor(monitor, true))
+            {
+                throw error("Failed to destroy monitor '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a monitor");
         }
         break;
 
     case Type::SERVICES:
-        if (!runtime_destroy_service(Service::find(name), true))
+        if (auto* service = Service::find(name))
         {
-            throw error("Failed to destroy service '", name, "'");
+            if (!runtime_destroy_service(service, true))
+            {
+                throw error("Failed to destroy service '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a service");
         }
         break;
 
     case Type::LISTENERS:
-        if (!runtime_destroy_listener(listener_find(name)))
+        if (auto listener = listener_find(name))
         {
-            throw error("Failed to destroy listener '", name, "'");
+            if (!runtime_destroy_listener(listener))
+            {
+                throw error("Failed to destroy listener '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a listener");
         }
         break;
 
     case Type::FILTERS:
-        if (!runtime_destroy_filter(filter_find(name), true))
+        if (auto filter = filter_find(name))
         {
-            throw error("Failed to destroy filter '", name, "'");
+            if (!runtime_destroy_filter(filter, true))
+            {
+                throw error("Failed to destroy filter '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a filter");
         }
         break;
 
@@ -847,37 +1015,72 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
     switch (to_type(type))
     {
     case Type::SERVERS:
-        if (!runtime_alter_server_from_json(ServerManager::find_by_unique_name(name), js))
+        if (auto* server = ServerManager::find_by_unique_name(name))
         {
-            throw error("Failed to update server '", name, "'");
+            if (!runtime_alter_server_from_json(server, js))
+            {
+                throw error("Failed to update server '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a server");
         }
         break;
 
     case Type::MONITORS:
-        if (!runtime_alter_monitor_from_json(MonitorManager::find_monitor(name.c_str()), js))
+        if (auto* monitor = MonitorManager::find_monitor(name.c_str()))
         {
-            throw error("Failed to update monitor '", name, "'");
+            if (!runtime_alter_monitor_from_json(monitor, js))
+            {
+                throw error("Failed to update monitor '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a monitor");
         }
         break;
 
     case Type::SERVICES:
-        if (!runtime_alter_service_from_json(Service::find(name), js))
+        if (auto* service = Service::find(name))
         {
-            throw error("Failed to update service '", name, "'");
+            if (!runtime_alter_service_from_json(service, js))
+            {
+                throw error("Failed to update service '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a service");
         }
         break;
 
     case Type::LISTENERS:
-        if (!runtime_alter_listener_from_json(listener_find(name), js))
+        if (auto listener = listener_find(name))
         {
-            throw error("Failed to update listener '", name, "'");
+            if (!runtime_alter_listener_from_json(listener, js))
+            {
+                throw error("Failed to update listener '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a listener");
         }
         break;
 
     case Type::FILTERS:
-        if (!runtime_alter_filter_from_json(filter_find(name), js))
+        if (auto filter = filter_find(name))
         {
-            throw error("Failed to update filter '", name, "'");
+            if (!runtime_alter_filter_from_json(filter, js))
+            {
+                throw error("Failed to update filter '", name, "'");
+            }
+        }
+        else
+        {
+            throw error("The object '", name, "' is not a filter");
         }
         break;
 

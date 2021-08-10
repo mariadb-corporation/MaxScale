@@ -132,33 +132,40 @@ default user is removed, the credentials must always be provded.
 The following list of global configuration parameters can **NOT** be changed at
 runtime and can only be defined in a configuration file:
 
-* `threads`
-* `log_to_shm`
+* `admin_auth`
+* `admin_enabled`
+* `admin_gui`
+* `admin_host`
+* `admin_pam_readonly_service`
+* `admin_pam_readwrite_service`
+* `admin_port`
+* `admin_secure_gui`
+* `admin_ssl_ca_cert`
+* `admin_ssl_cert`
+* `admin_ssl_key`
+* `admin_ssl_version`
+* `cachedir`
+* `connector_plugindir`
+* `datadir`
+* `debug`
+* `debug`
+* `execdir`
+* `language`
+* `libdir`
+* `load_persisted_configs`
+* `local_address`
 * `log_augmentation`
 * `log_warn_super_user`
 * `logdir`
-* `datadir`
-* `libdir`
-* `cachedir`
-* `piddir`
-* `execdir`
-* `connector_plugindir`
-* `persistdir`
 * `module_configdir`
-* `language`
-* `query_classifier`
+* `persistdir`
+* `piddir`
 * `query_classifier_args`
-* `substitute_variables`
+* `query_classifier`
+* `query_retries`
 * `sql_mode`
-* `local_address`
-* `users_refresh_time`
-* `users_refresh_interval`
-* `load_persisted_configs`
-* `admin_ssl_key`
-* `admin_ssl_cert`
-* `admin_ssl_ca_cert`
-* `admin_ssl_version`
-* `admin_enabled`
+* `substitute_variables`
+* `threads`
 
 All other parameters that relate to objects can be altered at runtime or can be
 changed by destroying and recreating the object in question.
@@ -527,15 +534,6 @@ maxlog=1
 
 To enable logging to the MariaDB MaxScale log file use the value 1 and to
 disable use the value 0.
-
-### `log_to_shm`
-
-**Note:** This parameter has been removed in 2.4.0: do not use it
-
-In older MaxScale versions, the actual log file was created in `/dev/shm` and
-a symbolic link to that file was stored in place of the normal MaxScale log.
-If you want to store the log in shared memory, define the directory with
-`logdir` in `/dev/shm`.
 
 ### `log_warning`
 
@@ -2507,15 +2505,6 @@ updates done with `--skip-sync` will overwritten by changes coming from the
 cluster.
 
 ### Limitations in Configuration Synchronization
-
-* ([MXS-3618](https://jira.mariadb.org/browse/MXS-3618)) If an object is
-  recreated with the same name but with a different module, it is possible that
-  MaxScale instances will fail to apply the configuration update if they are
-  lagging behind by at least one configuration version. This same limitation
-  applies to any parameters that can only be defined during object creation. To
-  prevent this, use unique names for objects that are being recreated or make
-  sure that all MaxScale instances have synchronized the deletion before
-  creating the new version of the object.
 
 * ([MXS-3619](https://jira.mariadb.org/browse/MXS-3619)) The synchronization
   only affects the MaxScale configuration. The state of objects or any external

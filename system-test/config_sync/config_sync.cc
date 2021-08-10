@@ -682,6 +682,88 @@ void test_bad_cache(TestConnections& test)
     reset(test);
 }
 
+void test_conflicts(TestConnections& test)
+{
+    // Each test case should increment the version by one
+    int version = 0;
+
+    test.tprintf("Create a filter");
+    test.check_maxctrl("create filter test-object hintfilter");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/type");
+
+    test.tprintf("Stop the second MaxScale");
+    test.maxscale2->stop();
+
+    test.tprintf("Recreate the filter as a server");
+    test.check_maxctrl("destroy filter test-object");
+    ++version;
+    test.check_maxctrl("create server test-object 127.0.0.1 3306");
+    ++version;
+
+    test.tprintf("Start the second MaxScale: it should destroy the filter and create it as a server");
+    test.maxscale2->start();
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/test-object", "/data/type");
+
+    test.tprintf("Destroy the server");
+    test.check_maxctrl("destroy server test-object");
+    ++version;
+    expect_sync(test, version, 2);
+
+    test.tprintf("Create the object as a service");
+    test.check_maxctrl("create service test-object readwritesplit user=maxskysql password=skysql");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "services/test-object", "/data/attributes/router");
+
+    test.tprintf("Stop the second MaxScale");
+    test.maxscale2->stop();
+
+    test.tprintf("Destroy the service and create it with another router");
+    test.check_maxctrl("destroy service test-object");
+    ++version;
+    test.check_maxctrl("create service test-object readconnroute user=maxskysql password=skysql");
+    ++version;
+
+    test.tprintf("Start the second MaxScale: it should recreate the service");
+    test.maxscale2->start();
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "services/test-object", "/data/attributes/router");
+
+    test.tprintf("Destroy the service and create a qlafilter");
+    test.check_maxctrl("destroy service test-object");
+    ++version;
+    test.check_maxctrl("create filter test-object qlafilter filebase=/tmp/file1");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/attributes/parameters");
+
+    test.tprintf("Stop the second MaxScale");
+    test.maxscale2->stop();
+
+    // TODO: The filter needs to be changed when runtime config change support is added to qlafilter
+    test.tprintf("Destroy the filter and create it with different parameters");
+    test.check_maxctrl("destroy filter test-object");
+    ++version;
+    test.check_maxctrl("create filter test-object qlafilter filebase=/tmp/file2");
+    ++version;
+
+    test.tprintf("Start the second MaxScale: it should recreate the filter");
+    test.maxscale2->start();
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "filters/test-object", "/data/attributes/parameters");
+
+    reset(test);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -702,6 +784,9 @@ int main(int argc, char** argv)
 
     test.log_printf("5. test_bad_cache");
     test_bad_cache(test);
+
+    test.log_printf("6. test_conflicts");
+    test_conflicts(test);
 
     return test.global_result;
 }
