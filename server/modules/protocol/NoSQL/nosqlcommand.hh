@@ -144,7 +144,7 @@ public:
                     const nosql::Insert& req)
         : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
         , m_action(INSERTING_DATA)
-        , m_table(req.collection())
+        , m_collection(req.collection())
         , m_documents(req.documents())
     {
         mxb_assert(m_documents.size() == 1);
@@ -159,9 +159,11 @@ public:
 private:
     std::string convert_document_data(const bsoncxx::document::view& doc);
 
+    std::string table() const;
+
 private:
     Action                                m_action;
-    std::string                           m_table;
+    std::string                           m_collection;
     std::string                           m_statement;
     std::vector<bsoncxx::document::view>  m_documents;
     std::vector<bsoncxx::document::value> m_stashed_documents;

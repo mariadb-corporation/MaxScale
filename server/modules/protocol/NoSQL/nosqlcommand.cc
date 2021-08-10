@@ -406,7 +406,7 @@ GWBUF* OpInsertCommand::execute()
     auto doc = m_documents[0];
 
     ostringstream ss;
-    ss << "INSERT INTO " << m_table << " (doc) VALUES " << convert_document_data(doc) << ";";
+    ss << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc) << ";";
 
     m_statement = ss.str();
 
@@ -460,7 +460,7 @@ Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
                             if (action == Worker::Call::EXECUTE)
                             {
                                 auto id_length = m_database.config().id_length;
-                                auto sql = nosql::table_create_statement(m_table, id_length);
+                                auto sql = nosql::table_create_statement(table(), id_length);
 
                                 m_action = CREATING_TABLE;
                                 send_downstream(sql);
@@ -573,6 +573,16 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 
     return sql.str();
 }
+
+string OpInsertCommand::table() const
+{
+    auto n = m_collection.find('.');
+
+    string d = m_collection.substr(0, n);
+    string t = m_collection.substr(n + 1);
+
+    return '`' + d + "`.`" + t + '`';
+};
 
 //
 // OpMsgCommand
