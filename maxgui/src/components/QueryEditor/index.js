@@ -111,6 +111,7 @@ export default {
                     case 'Column':
                     case 'Schema':
                     case 'Stored Procedure':
+                    case 'Trigger':
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }

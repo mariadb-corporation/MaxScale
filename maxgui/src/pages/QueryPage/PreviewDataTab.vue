@@ -79,21 +79,19 @@
                 :height="dynDim.height - headerHeight"
             />
             <template v-else>
-                <v-fade-transition :duration="200">
-                    <keep-alive>
-                        <result-data-table
-                            v-if="
-                                activeView === SQL_QUERY_MODES.PRVW_DATA ||
-                                    activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS
-                            "
-                            :key="activeView"
-                            :height="dynDim.height - headerHeight"
-                            :width="dynDim.width"
-                            :headers="getPrvwDataRes(activeView).fields"
-                            :rows="getPrvwDataRes(activeView).data"
-                        />
-                    </keep-alive>
-                </v-fade-transition>
+                <keep-alive>
+                    <result-data-table
+                        v-if="
+                            activeView === SQL_QUERY_MODES.PRVW_DATA ||
+                                activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS
+                        "
+                        :key="activeView"
+                        :height="dynDim.height - headerHeight"
+                        :width="dynDim.width"
+                        :headers="$typy(getPrvwDataRes(activeView), 'fields').safeArray"
+                        :rows="$typy(getPrvwDataRes(activeView), 'data').safeArray"
+                    />
+                </keep-alive>
             </template>
         </template>
     </div>
@@ -173,8 +171,11 @@ export default {
             if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(activeView)
         },
     },
-    mounted() {
+    async mounted() {
         this.setHeaderHeight()
+    },
+    async activated() {
+        await this.autoFetchActiveNode()
     },
     methods: {
         ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
@@ -184,6 +185,19 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
+        },
+        async autoFetchActiveNode() {
+            if (this.active_conn_state)
+                switch (this.activeView) {
+                    // Auto fetch preview data if there is active_tree_node in localStorage
+                    case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                    case this.SQL_QUERY_MODES.PRVW_DATA:
+                        if (
+                            this.$typy(this.active_tree_node, 'id').safeObject &&
+                            !this[`loading_${this.activeView.toLowerCase()}`]
+                        )
+                            await this.fetchActiveNodeData(this.activeView)
+                }
         },
         /**
          * This function checks if there is no preview data or details data
@@ -196,14 +210,20 @@ export default {
                 case this.SQL_QUERY_MODES.PRVW_DATA:
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     if (!this.getPrvwDataRes(SQL_QUERY_MODE).fields) {
-                        await this.fetchPrvw({
-                            tblId: this.$typy(this.active_tree_node, 'id').safeObject,
-                            prvwMode: SQL_QUERY_MODE,
-                        })
+                        await this.fetchActiveNodeData(SQL_QUERY_MODE)
                     }
 
                     break
             }
+        },
+        /**
+         * @param {String} SQL_QUERY_MODE - query mode
+         */
+        async fetchActiveNodeData(SQL_QUERY_MODE) {
+            await this.fetchPrvw({
+                tblId: this.$typy(this.active_tree_node, 'id').safeObject,
+                prvwMode: SQL_QUERY_MODE,
+            })
         },
     },
 }

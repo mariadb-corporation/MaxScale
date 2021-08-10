@@ -1,108 +1,100 @@
 <template>
     <div class="fill-height">
-        <v-card v-if="loading_db_tree" class="fill-height db-tb-list" :loading="loading_db_tree" />
-        <v-fade-transition>
-            <div
-                v-if="!loading_db_tree"
-                class="db-tb-list"
-                :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']"
-            >
-                <div class="visible-when-expand fill-height">
-                    <div class="schema-list-tools">
-                        <div class="d-flex align-center justify-end">
-                            <span
-                                v-if="!is_sidebar_collapsed"
-                                class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
-                            >
-                                {{ $t('schemas') }}
-                            </span>
-                            <v-tooltip
-                                v-if="!is_sidebar_collapsed"
-                                top
-                                transition="slide-y-transition"
-                                content-class="shadow-drop color text-navigation py-1 px-4"
-                            >
-                                <template v-slot:activator="{ on }">
-                                    <v-btn
-                                        icon
-                                        small
-                                        :disabled="!active_conn_state"
-                                        v-on="on"
-                                        @click="reloadSchema"
-                                    >
-                                        <v-icon size="12" color="deep-ocean">
-                                            $vuetify.icons.reload
-                                        </v-icon>
-                                    </v-btn>
-                                </template>
-                                <span>{{ $t('reload') }}</span>
-                            </v-tooltip>
-                            <v-tooltip
-                                top
-                                transition="slide-y-transition"
-                                content-class="shadow-drop color text-navigation py-1 px-4"
-                            >
-                                <template v-slot:activator="{ on }">
-                                    <v-btn
-                                        icon
-                                        small
-                                        v-on="on"
-                                        @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
-                                    >
-                                        <v-icon
-                                            size="16"
-                                            color="deep-ocean"
-                                            class="collapse-icon"
-                                            :class="{
-                                                'collapse-icon--active': is_sidebar_collapsed,
-                                            }"
-                                        >
-                                            double_arrow
-                                        </v-icon>
-                                    </v-btn>
-                                </template>
-                                <span>{{
-                                    is_sidebar_collapsed ? $t('expand') : $t('collapse')
-                                }}</span>
-                            </v-tooltip>
-                        </div>
-                        <v-text-field
+        <div class="db-tb-list" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
+            <div class="visible-when-expand fill-height">
+                <div class="schema-list-tools">
+                    <div class="d-flex align-center justify-end">
+                        <span
                             v-if="!is_sidebar_collapsed"
-                            v-model="searchSchema"
-                            name="searchSchema"
-                            required
-                            dense
-                            outlined
-                            height="28"
-                            class="std filter-objects"
-                            :placeholder="$t('filterSchemaObjects')"
-                            :disabled="!active_conn_state"
-                        />
+                            class="color text-small-text db-tb-list__title d-inline-block text-truncate text-uppercase"
+                        >
+                            {{ $t('schemas') }}
+                        </span>
+                        <v-tooltip
+                            v-if="!is_sidebar_collapsed"
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn
+                                    icon
+                                    small
+                                    :disabled="!active_conn_state || loading_db_tree"
+                                    v-on="on"
+                                    @click="reloadSchema"
+                                >
+                                    <v-icon size="12" color="deep-ocean">
+                                        $vuetify.icons.reload
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <span>{{ $t('reload') }}</span>
+                        </v-tooltip>
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn
+                                    icon
+                                    small
+                                    v-on="on"
+                                    @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
+                                >
+                                    <v-icon
+                                        size="16"
+                                        color="deep-ocean"
+                                        class="collapse-icon"
+                                        :class="{
+                                            'collapse-icon--active': is_sidebar_collapsed,
+                                        }"
+                                    >
+                                        double_arrow
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <span>{{ is_sidebar_collapsed ? $t('expand') : $t('collapse') }}</span>
+                        </v-tooltip>
                     </div>
-                    <db-list-tree
-                        v-show="!is_sidebar_collapsed"
-                        class="schema-list-wrapper"
-                        @preview-data="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
-                                    schemaId,
-                                })
-                        "
-                        @view-details="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                                    schemaId,
-                                })
-                        "
-                        @load-children="handleLoadChildren"
-                        @use-db="useDb"
-                        v-on="$listeners"
+                    <v-text-field
+                        v-if="!is_sidebar_collapsed"
+                        v-model="searchSchema"
+                        name="searchSchema"
+                        required
+                        dense
+                        outlined
+                        height="28"
+                        class="std filter-objects"
+                        :placeholder="$t('filterSchemaObjects')"
+                        :disabled="!active_conn_state || loading_db_tree"
                     />
                 </div>
+                <db-list-tree
+                    v-if="active_conn_state && !loading_db_tree"
+                    v-show="!is_sidebar_collapsed"
+                    class="schema-list-wrapper"
+                    @preview-data="
+                        schemaId =>
+                            handleFetchPreview({
+                                SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
+                                schemaId,
+                            })
+                    "
+                    @view-details="
+                        schemaId =>
+                            handleFetchPreview({
+                                SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+                                schemaId,
+                            })
+                    "
+                    @load-children="handleLoadChildren"
+                    @use-db="useDb"
+                    v-on="$listeners"
+                />
             </div>
-        </v-fade-transition>
+        </div>
     </div>
 </template>
 
@@ -152,11 +144,7 @@ export default {
         ...mapActions({
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
-            fetchTables: 'query/fetchTables',
-            fetchStoredProcedures: 'query/fetchStoredProcedures',
-            fetchCols: 'query/fetchCols',
-            fetchTriggers: 'query/fetchTriggers',
-            fetchTreeNode: 'query/fetchTreeNode',
+            updateTreeNodes: 'query/updateTreeNodes',
             useDb: 'query/useDb',
             reloadTreeNodes: 'query/reloadTreeNodes',
         }),
@@ -176,8 +164,8 @@ export default {
                     break
             }
         },
-        async handleLoadChildren(item) {
-            await this.fetchTreeNode(item)
+        async handleLoadChildren(node) {
+            await this.updateTreeNodes(node)
         },
     },
 }

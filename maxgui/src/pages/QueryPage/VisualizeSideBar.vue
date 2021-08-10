@@ -116,17 +116,16 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            query_result: state => state.query.query_result,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
+            getQueryResult: 'query/getQueryResult',
         }),
-
         resultSets() {
             let resSets = []
 
             let resSetArr = this.cloneRes(
-                this.$typy(this.query_result, 'attributes.results').safeArray
+                this.$typy(this.getQueryResult, 'attributes.results').safeArray
             )
             let resSetCount = 0
             for (const res of resSetArr) {

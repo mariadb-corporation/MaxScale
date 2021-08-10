@@ -1,6 +1,6 @@
 <template>
     <!-- TODO: Virtual scroll treeview -->
-    <div>
+    <div v-if="db_tree.length">
         <m-treeview
             :items="db_tree"
             :search="$parent.searchSchema"
@@ -126,6 +126,7 @@ export default {
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             isDragging: false,
             draggingEvt: null,
+            expandedNodes: [],
         }
     },
     computed: {
@@ -149,19 +150,30 @@ export default {
                 if (activeNodes.length) this.SET_ACTIVE_TREE_NODE(activeNodes[0])
             },
         },
-        expandedNodes: {
-            get() {
-                return this.expanded_nodes
-            },
-            set(v) {
-                this.SET_EXPANDED_NODES(this.minimizeNodes(v))
-            },
-        },
     },
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
         },
+        expandedNodes: {
+            deep: true,
+            handler(v, oV) {
+                // Don't SET_EXPANDED_NODES when old length of expandedNodes is 0.
+                if (oV.length) {
+                    let nodes = this.minimizeNodes(v)
+                    //   The order is important which is used to reload the schema and update the tree
+                    //   Sort expandedNodes by level property
+                    nodes.sort((a, b) => a.level - b.level)
+                    // Auto collapse all expanded nodes if schema node is collapsed
+                    let validLevels = nodes.map(node => node.level)
+                    if (validLevels[0] === 0) this.SET_EXPANDED_NODES(nodes)
+                    else this.SET_EXPANDED_NODES([])
+                }
+            },
+        },
+    },
+    created() {
+        this.expandedNodes = this.expanded_nodes
     },
     methods: {
         ...mapMutations({
@@ -173,7 +185,7 @@ export default {
          * @returns {Array} minimized nodes where each node is an object with id and type props
          */
         minimizeNodes(nodes) {
-            return nodes.map(node => ({ id: node.id, type: node.type }))
+            return nodes.map(node => ({ id: node.id, type: node.type, level: node.level }))
         },
         /** This replaces dots with __ as vuetify activator slots
          * can't not parse html id contains dots.

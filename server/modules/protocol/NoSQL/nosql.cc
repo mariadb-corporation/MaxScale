@@ -782,6 +782,8 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
             }
         }
 
+        auto extraction = escape_essential_chars(static_cast<string>(key));
+
         extractions.push_back(static_cast<string>(key));
     }
 
@@ -1769,7 +1771,7 @@ string element_to_string(const document_element_or_array_item& x)
         break;
 
     case bsoncxx::type::k_document:
-        ss << bsoncxx::to_json(x.get_document());
+        ss << escape_essential_chars(std::move(bsoncxx::to_json(x.get_document())));
         break;
 
     case bsoncxx::type::k_double:
@@ -1801,7 +1803,11 @@ string element_to_string(const document_element_or_array_item& x)
         break;
 
     case bsoncxx::type::k_utf8:
-        ss << x.get_utf8().value;
+        {
+            const auto& view = x.get_utf8().value;
+            string value(view.data(), view.length());
+            ss << escape_essential_chars(std::move(value));
+        }
         break;
 
     case bsoncxx::type::k_binary:
@@ -2226,4 +2232,58 @@ string nosql::table_create_statement(const std::string& table_name, int64_t id_l
        << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
 
     return ss.str();
+}
+
+std::string nosql::escape_essential_chars(std::string&& from)
+{
+    auto it = from.begin();
+    auto end = from.end();
+
+    while (it != end && *it != '\'' && *it != '\\')
+    {
+        ++it;
+    }
+
+    if (it == end)
+    {
+        return from;
+    }
+
+    string to(from.begin(), it);
+
+    if (*it == '\'')
+    {
+        to.push_back('\'');
+    }
+    else
+    {
+        to.push_back('\\');
+    }
+
+    to.push_back(*it++);
+
+    while (it != end)
+    {
+        auto c = *it;
+
+        switch (c)
+        {
+        case '\\':
+            to.push_back('\\');
+            break;
+
+        case '\'':
+            to.push_back('\'');
+            break;
+
+        default:
+            break;
+        }
+
+        to.push_back(c);
+
+        ++it;
+    }
+
+    return to;
 }

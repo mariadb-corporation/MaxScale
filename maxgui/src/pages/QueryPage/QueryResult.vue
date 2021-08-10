@@ -22,6 +22,7 @@
                 />
                 <preview-data-tab
                     v-else
+                    ref="prvwDataTab"
                     :style="{
                         height: `calc(100% - 24px)`,
                     }"
@@ -99,6 +100,7 @@ export default {
             },
         },
     },
+
     methods: {
         ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
     },

@@ -858,6 +858,16 @@ private:
 std::string table_create_statement(const std::string& table_name,
                                    int64_t id_length);
 
+
+/**
+ * Escape the characters \ and '.
+ *
+ * @param from  The string to escape.
+ *
+ * @return The same string with \ and ' escaped.
+ */
+std::string escape_essential_chars(std::string&& from);
+
 }
 
 inline std::ostream& operator << (std::ostream& out, const nosql::Packet& x)

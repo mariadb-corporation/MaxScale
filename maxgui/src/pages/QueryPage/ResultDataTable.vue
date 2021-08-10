@@ -127,7 +127,6 @@
                 :height="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
-                @scroll-end="fetchMore"
             />
         </keep-alive>
     </div>
@@ -173,7 +172,8 @@ export default {
             return res
         },
         tableHeaders() {
-            return ['#', ...this.headers]
+            const headers = this.headers.length ? ['#', ...this.headers] : []
+            return headers
         },
         rowsWithIndex() {
             return this.rows.map((row, i) => [i + 1, ...row])
@@ -220,9 +220,6 @@ export default {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
-        },
-        async fetchMore() {
-            /* TODO: emit to parent */
         },
     },
 }

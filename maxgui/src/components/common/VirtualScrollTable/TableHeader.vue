@@ -94,12 +94,12 @@ export default {
     watch: {
         tableHeaders() {
             // reset width to unset then get width and assign
-            this.$help.doubleRAF(() => this.resetHeaderWidth())
-            this.$help.doubleRAF(() => this.assignHeaderWidthMap())
+            this.$nextTick(() => this.resetHeaderWidth())
+            this.$nextTick(() => this.assignHeaderWidthMap())
         },
         boundingWidth() {
             this.resetHeaderWidth()
-            this.$help.doubleRAF(() => this.assignHeaderWidthMap())
+            this.$nextTick(() => this.assignHeaderWidthMap())
         },
         headerWidthMap: {
             deep: true,
@@ -119,14 +119,21 @@ export default {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
+    // When virtual-scroll-table is wrapped in keep-alive, table col width needs to be recalculated
+    activated() {
+        this.$nextTick(() => this.resetHeaderWidth())
+        this.$nextTick(() => this.assignHeaderWidthMap())
+    },
     methods: {
         resetHeaderWidth() {
             if (this.$refs[`header__${0}`])
-                // set all header maxWidth to unset to get auto width in doubleRAF cb
+                // set all header maxWidth to unset to get auto width
                 for (let i = 0; i < this.tableHeaders.length; i++) {
-                    let headerStyle = this.$refs[`header__${i}`][0].style
-                    headerStyle.maxWidth = 'unset'
-                    headerStyle.minWidth = 'unset'
+                    if (this.$refs[`header__${i}`].length) {
+                        let headerStyle = this.$refs[`header__${i}`][0].style
+                        headerStyle.maxWidth = 'unset'
+                        headerStyle.minWidth = 'unset'
+                    }
                 }
         },
         resizerMouseDown(e, i) {
@@ -170,10 +177,13 @@ export default {
                 let headerWidthMap = {}
                 // get width of each header then use it to set same width of corresponding cells
                 for (let i = 0; i < this.tableHeaders.length; i++) {
-                    const headerWidth = this.$refs[`header__${i}`][0].clientWidth
-                    headerWidthMap = {
-                        ...headerWidthMap,
-                        [i]: headerWidth,
+                    if (this.$refs[`header__${i}`].length) {
+                        let headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                        if (headerWidth < this.minHeaderWidth) headerWidth = this.minHeaderWidth
+                        headerWidthMap = {
+                            ...headerWidthMap,
+                            [i]: headerWidth,
+                        }
                     }
                 }
                 this.headerWidthMap = headerWidthMap

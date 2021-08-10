@@ -47,20 +47,18 @@
             </v-btn>
         </v-tabs>
         <toolbar-container ref="toolbarContainer" />
-        <v-fade-transition mode="out-in">
-            <keep-alive>
-                <worksheet
-                    v-if="activeWkeID"
-                    :key="activeWkeID"
-                    :ctrDim="ctrDim"
-                    :style="{
-                        height: `calc(100% - ${wkeNavHeight + 45}px)`,
-                    }"
-                    @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
-                    @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
-                />
-            </keep-alive>
-        </v-fade-transition>
+        <keep-alive>
+            <worksheet
+                v-if="activeWkeID"
+                :key="activeWkeID"
+                :ctrDim="ctrDim"
+                :style="{
+                    height: `calc(100% - ${wkeNavHeight + 45}px)`,
+                }"
+                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
+                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
+            />
+        </keep-alive>
     </div>
 </template>
 <script>
