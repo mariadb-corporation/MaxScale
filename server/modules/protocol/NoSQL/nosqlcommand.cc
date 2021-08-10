@@ -464,18 +464,6 @@ Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
     return READY;
 };
 
-string OpDeleteCommand::table() const
-{
-    const auto& collection = m_req.collection();
-
-    auto n = collection.find('.');
-
-    string d = collection.substr(0, n);
-    string t = collection.substr(n + 1);
-
-    return '`' + d + "`.`" + t + '`';
-};
-
 //
 // OpInsertCommand
 //
@@ -657,17 +645,73 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
     return sql.str();
 }
 
-string OpInsertCommand::table() const
+//
+// OpUpdateCommand
+//
+string OpUpdateCommand::description() const
 {
-    const auto& collection = m_req.collection();
+    return "OP_UPDATE";
+}
 
-    auto n = collection.find('.');
+GWBUF* OpUpdateCommand::execute()
+{
+    ostringstream sql;
+    sql << "UPDATE " << table() << " SET DOC = ";
 
-    string d = collection.substr(0, n);
-    string t = collection.substr(n + 1);
+    // TODO: In principle the document may be something else than a
+    // TODO: simple replacement document.
+    auto json = escape_essential_chars(bsoncxx::to_json(m_req.update()));
 
-    return '`' + d + "`.`" + t + '`';
-};
+    sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$')) ";
+    sql << query_to_where_clause(m_req.selector());
+
+    if (m_req.is_upsert())
+    {
+        MXS_ERROR("UPSERT not supported.");
+    }
+
+    if (!m_req.is_multi())
+    {
+        sql << " LIMIT 1";
+    }
+
+    const auto& statement = sql.str();
+
+    check_maximum_sql_length(statement);
+
+    send_downstream(statement);
+
+    return nullptr;
+}
+
+Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+
+            if (err.code() != ER_NO_SUCH_TABLE)
+            {
+                m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+        }
+        break;
+
+    default:
+        // We do not throw, as that would generate a response.
+        log_unexpected_packet();
+    }
+
+    *ppNoSQL_response = nullptr;
+    return READY;
+}
 
 //
 // OpMsgCommand

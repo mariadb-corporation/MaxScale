@@ -447,6 +447,22 @@ nosql::Delete::Delete(const Packet& packet)
     mxb_assert(pData == m_pEnd);
 }
 
+nosql::Update::Update(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_UPDATE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+    pData += protocol::get_document(pData, m_pEnd, &m_update);
+
+    mxb_assert(pData == m_pEnd);
+}
+
 nosql::Query::Query(const Packet& packet)
     : Packet(packet)
 {
@@ -2144,7 +2160,6 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             case MONGOC_OPCODE_GET_MORE:
             case MONGOC_OPCODE_KILL_CURSORS:
             case MONGOC_OPCODE_REPLY:
-            case MONGOC_OPCODE_UPDATE:
                 {
                     ostringstream ss;
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
@@ -2166,6 +2181,10 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
 
             case MONGOC_OPCODE_QUERY:
                 pResponse = handle_query(pRequest, nosql::Query(req));
+                break;
+
+            case MONGOC_OPCODE_UPDATE:
+                pResponse = handle_update(pRequest, nosql::Update(req));
                 break;
 
             default:
@@ -2288,6 +2307,19 @@ GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
 
     // OP_INSERT does not return anything, ever.
     GWBUF* pResponse = m_sDatabase->handle_insert(pRequest, std::move(req));
+
+    return pResponse;
+}
+
+GWBUF* nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req)
+{
+    MXB_INFO("Request(UPDATE): %s", req.zCollection());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    // OP_UPDATE does not return anything, ever.
+    GWBUF* pResponse = m_sDatabase->handle_update(pRequest, std::move(req));
 
     return pResponse;
 }

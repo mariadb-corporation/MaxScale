@@ -601,6 +601,60 @@ private:
     bsoncxx::document::view m_selector;
 };
 
+class Update final : public Packet
+{
+public:
+    Update(const Packet& packet);
+    Update(Update&& rhs) = default;
+
+    enum Flags
+    {
+        UPSERT = 0x01,
+        MULTI  = 0x02,
+    };
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    bool is_upsert() const
+    {
+        return m_flags & UPSERT;
+    }
+
+    bool is_multi() const
+    {
+        return m_flags & MULTI;
+    }
+
+    const bsoncxx::document::view& selector() const
+    {
+        return m_selector;
+    }
+
+    const bsoncxx::document::view update() const
+    {
+        return m_update;
+    }
+
+private:
+    const char*             m_zCollection;
+    uint32_t                m_flags;
+    bsoncxx::document::view m_selector;
+    bsoncxx::document::view m_update;
+};
+
 class Query final : public Packet
 {
 public:
@@ -904,6 +958,8 @@ private:
 
     GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
     GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
+    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
+
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 

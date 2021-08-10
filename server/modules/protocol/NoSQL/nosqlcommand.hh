@@ -140,6 +140,18 @@ protected:
     }
 
 protected:
+    std::string table() const
+    {
+        const auto& collection = m_req.collection();
+
+        auto n = collection.find('.');
+
+        auto d = collection.substr(0, n);
+        auto t = collection.substr(n + 1);
+
+        return '`' + d + "`.`" + t + '`';
+    }
+
     Packet m_req;
 };
 
@@ -161,9 +173,6 @@ public:
     GWBUF* execute() override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
-
-private:
-    std::string table() const;
 };
 
 //
@@ -197,12 +206,30 @@ public:
 private:
     std::string convert_document_data(const bsoncxx::document::view& doc);
 
-    std::string table() const;
-
 private:
     Action                                m_action;
     std::string                           m_statement;
     std::vector<bsoncxx::document::value> m_stashed_documents;
+};
+
+//
+// OpUpdateCommand
+//
+class OpUpdateCommand : public PacketCommand<nosql::Update>
+{
+public:
+    OpUpdateCommand(Database* pDatabase,
+                    GWBUF* pRequest,
+                    nosql::Update&& req)
+        : PacketCommand<nosql::Update>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //

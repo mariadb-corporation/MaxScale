@@ -114,6 +114,16 @@ public:
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
 
     /**
+     * Handle an OP_UPDATE
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The update request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
+
+    /**
      * Handle a NoSQL command.
      *
      * @pRequest    The GWBUF holding data of @c req.
