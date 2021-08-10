@@ -872,8 +872,15 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
                 break;
 
             case bsoncxx::type::k_bool:
-            default:
                 include_id = static_cast<bool>(element.get_bool());
+                break;
+
+            case bsoncxx::type::k_double:
+                include_id = static_cast<double>(element.get_double());
+                break;
+
+            default:
+                ;
             }
 
             if (!include_id)
