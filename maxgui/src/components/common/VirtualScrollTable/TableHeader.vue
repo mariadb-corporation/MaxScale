@@ -178,7 +178,8 @@ export default {
                 // get width of each header then use it to set same width of corresponding cells
                 for (let i = 0; i < this.tableHeaders.length; i++) {
                     if (this.$refs[`header__${i}`].length) {
-                        const headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                        let headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                        if (headerWidth < this.minHeaderWidth) headerWidth = this.minHeaderWidth
                         headerWidthMap = {
                             ...headerWidthMap,
                             [i]: headerWidth,
