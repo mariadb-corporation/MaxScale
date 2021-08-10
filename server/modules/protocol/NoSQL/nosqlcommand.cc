@@ -15,9 +15,12 @@
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxbase/string.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/modutil.hh>
 #include "nosqldatabase.hh"
 #include "crc32.h"
+
+using mxb::Worker;
 
 //
 // The include order, which has no impact on the functionality, is the one
@@ -87,13 +90,13 @@ public:
 using namespace nosql;
 
 template<class ConcreteCommand>
-unique_ptr<MsgCommand> create_command(const string& name,
-                                      Database* pDatabase,
-                                      GWBUF* pRequest,
-                                      const Query* pQuery,
-                                      const Msg* pMsg,
-                                      const bsoncxx::document::view& doc,
-                                      const MsgCommand::DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> create_command(const string& name,
+                                        Database* pDatabase,
+                                        GWBUF* pRequest,
+                                        const Query* pQuery,
+                                        const Msg* pMsg,
+                                        const bsoncxx::document::view& doc,
+                                        const OpMsgCommand::DocumentArguments& arguments)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -111,13 +114,13 @@ unique_ptr<MsgCommand> create_command(const string& name,
     return sCommand;
 }
 
-using CreatorFunction = unique_ptr<MsgCommand> (*)(const string& name,
-                                                   Database* pDatabase,
-                                                   GWBUF* pRequest,
-                                                   const Query* pQuery,
-                                                   const Msg* pMsg,
-                                                   const bsoncxx::document::view& doc,
-                                                   const MsgCommand::DocumentArguments& arguments);
+using CreatorFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
+                                                     Database* pDatabase,
+                                                     GWBUF* pRequest,
+                                                     const Query* pQuery,
+                                                     const Msg* pMsg,
+                                                     const bsoncxx::document::view& doc,
+                                                     const OpMsgCommand::DocumentArguments& arguments);
 
 struct CommandInfo
 {
@@ -391,9 +394,190 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 }
 
 //
-// MsgCommand
+// OpInsertCommand
 //
-MsgCommand::~MsgCommand()
+std::string OpInsertCommand::description() const
+{
+    return "OP_INSERT";
+}
+
+GWBUF* OpInsertCommand::execute()
+{
+    auto doc = m_documents[0];
+
+    ostringstream ss;
+    ss << "INSERT INTO " << m_table << " (doc) VALUES " << convert_document_data(doc) << ";";
+
+    m_statement = ss.str();
+
+    check_maximum_sql_length(m_statement);
+
+    send_downstream(m_statement);
+
+    return nullptr;
+}
+
+Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    State state = READY;
+    GWBUF* pResponse = nullptr;
+
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        if (m_action == CREATING_TABLE || m_action == CREATING_DATABASE)
+        {
+            Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                    if (action == Worker::Call::EXECUTE)
+                    {
+                        m_action = INSERTING_DATA;
+                        send_downstream(m_statement);
+                    }
+
+                    return false;
+                });
+            state = BUSY;
+        }
+        else
+        {
+            state = READY;
+        }
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+            auto s = err.message();
+            MXS_INFO("%s", s.c_str());
+
+            switch (err.code())
+            {
+            case ER_NO_SUCH_TABLE:
+                {
+                    Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                            if (action == Worker::Call::EXECUTE)
+                            {
+                                auto id_length = m_database.config().id_length;
+                                auto sql = nosql::table_create_statement(m_table, id_length);
+
+                                m_action = CREATING_TABLE;
+                                send_downstream(sql);
+                            }
+
+                            return false;
+                        });
+                    state = BUSY;
+                }
+                break;
+
+            case ER_BAD_DB_ERROR:
+                {
+                    if (err.message().find("Unknown database") == 0)
+                    {
+                        Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                                if (action == Worker::Call::EXECUTE)
+                                {
+                                    ostringstream ss;
+                                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+
+                                    m_action = CREATING_DATABASE;
+                                    send_downstream(ss.str());
+                                }
+
+                                return false;
+                            });
+                        state = BUSY;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Inserting '%s' failed with: (%d) %s",
+                                  m_statement.c_str(), err.code(), err.message().c_str());
+                        state = READY;
+                    }
+                }
+                break;
+
+            case ER_DB_CREATE_EXISTS:
+            case ER_TABLE_EXISTS_ERROR:
+                // Ok, someone else got there first.
+                Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                        if (action == Worker::Call::EXECUTE)
+                        {
+                            m_action = INSERTING_DATA;
+                            send_downstream(m_statement);
+                        }
+
+                        return false;
+                    });
+                state = BUSY;
+                break;
+
+            default:
+                MXS_ERROR("Inserting '%s' failed with: (%d) %s",
+                          m_statement.c_str(), err.code(), err.message().c_str());
+                state = READY;
+            }
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+        throw_unexpected_packet();
+    }
+
+    *ppNoSQL_response = pResponse;
+    return state;
+};
+
+string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc)
+{
+    ostringstream sql;
+
+    string json;
+
+    auto element = doc["_id"];
+
+    if (element)
+    {
+        json = bsoncxx::to_json(doc);
+    }
+    else
+    {
+        // Ok, as the document does not have an id, one must be generated. However,
+        // as an existing document is immutable, a new one must be created.
+
+        bsoncxx::oid oid;
+
+        DocumentBuilder builder;
+        builder.append(kvp(key::_ID, oid));
+
+        for (const auto& e : doc)
+        {
+            append(builder, e.key(), e);
+        }
+
+        // We need to keep the created document around, so that 'element'
+        // down below stays alive.
+        m_stashed_documents.emplace_back(builder.extract());
+
+        const auto& doc_with_id = m_stashed_documents.back();
+
+        json = bsoncxx::to_json(doc_with_id);
+    }
+
+    json = escape_essential_chars(std::move(json));
+
+    sql << "('" << json << "')";
+
+    return sql.str();
+}
+
+//
+// OpMsgCommand
+//
+OpMsgCommand::~OpMsgCommand()
 {
 }
 
@@ -432,11 +616,11 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 }
 
 //static
-unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
-                                       GWBUF* pRequest,
-                                       const nosql::Query& query,
-                                       const bsoncxx::document::view& doc,
-                                       const DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Query& query,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -447,11 +631,11 @@ unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
 }
 
 //static
-unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
-                                       GWBUF* pRequest,
-                                       const nosql::Msg& msg,
-                                       const bsoncxx::document::view& doc,
-                                       const DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Msg& msg,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -461,7 +645,7 @@ unique_ptr<MsgCommand> MsgCommand::get(nosql::Database* pDatabase,
     return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
 }
 
-GWBUF* MsgCommand::create_empty_response() const
+GWBUF* OpMsgCommand::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
@@ -470,7 +654,7 @@ GWBUF* MsgCommand::create_empty_response() const
 }
 
 //static
-void MsgCommand::check_write_batch_size(int size)
+void OpMsgCommand::check_write_batch_size(int size)
 {
     if (size < 1 || size > protocol::MAX_WRITE_BATCH_SIZE)
     {
@@ -482,7 +666,7 @@ void MsgCommand::check_write_batch_size(int size)
 }
 
 //static
-void MsgCommand::list_commands(DocumentBuilder& commands)
+void OpMsgCommand::list_commands(DocumentBuilder& commands)
 {
     for (const auto& kv : this_unit.infos_by_name)
     {
@@ -505,7 +689,7 @@ void MsgCommand::list_commands(DocumentBuilder& commands)
     }
 }
 
-void MsgCommand::require_admin_db()
+void OpMsgCommand::require_admin_db()
 {
     if (m_database.name() != "admin")
     {
@@ -514,7 +698,7 @@ void MsgCommand::require_admin_db()
     }
 }
 
-string MsgCommand::convert_skip_and_limit() const
+string OpMsgCommand::convert_skip_and_limit() const
 {
     string rv;
 
@@ -578,7 +762,7 @@ string MsgCommand::convert_skip_and_limit() const
     return rv;
 }
 
-const string& MsgCommand::table(Quoted quoted) const
+const string& OpMsgCommand::table(Quoted quoted) const
 {
     if (m_quoted_table.empty())
     {
@@ -602,7 +786,7 @@ const string& MsgCommand::table(Quoted quoted) const
     return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;
 }
 
-void MsgCommand::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
+void OpMsgCommand::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
     bsoncxx::builder::basic::document mariadb;
 
@@ -622,7 +806,7 @@ void MsgCommand::add_error(bsoncxx::builder::basic::array& array, const ComERR& 
     array.append(error.extract());
 }
 
-void MsgCommand::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
+void OpMsgCommand::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
 {
     bsoncxx::builder::basic::array array;
 
@@ -631,7 +815,7 @@ void MsgCommand::add_error(bsoncxx::builder::basic::document& response, const Co
     response.append(bsoncxx::builder::basic::kvp(key::WRITE_ERRORS, array.extract()));
 }
 
-void MsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
+void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
     error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
     error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));

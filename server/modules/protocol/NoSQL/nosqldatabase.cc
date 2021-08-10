@@ -17,7 +17,6 @@
 #include <bsoncxx/exception/exception.hpp>
 #include "config.hh"
 #include "commands/query_and_write_operation.hh"
-#include "commands/packetcommands.hh"
 
 using namespace std;
 
@@ -46,7 +45,7 @@ GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, const nosql::Insert& req)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::command::InsertCommand(this, pRequest, req));
+    unique_ptr<Command> sCommand(new nosql::OpInsertCommand(this, pRequest, req));
 
     return execute_command(std::move(sCommand));
 }
@@ -55,7 +54,7 @@ GWBUF* nosql::Database::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     mxb_assert(is_ready());
 
-    MsgCommand::DocumentArguments arguments;
+    OpMsgCommand::DocumentArguments arguments;
 
     return execute(pRequest, req, req.query(), arguments);
 }
@@ -110,17 +109,17 @@ GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
     return pResponse;
 }
 
-GWBUF* nosql::Database::execute_msg_command(std::unique_ptr<MsgCommand> sCommand)
+GWBUF* nosql::Database::execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand)
 {
     GWBUF* pResponse = nullptr;
 
-    if (m_sCommand->is_admin() && m_name != "admin")
+    if (sCommand->is_admin() && m_name != "admin")
     {
         SoftError error(sCommand->name() + " may only be run against the admin database.",
                         error::UNAUTHORIZED);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand.get());
+        pResponse = error.create_response(*sCommand.get());
     }
     else if (sCommand->name() != command::GetLastError::KEY)
     {
@@ -129,7 +128,7 @@ GWBUF* nosql::Database::execute_msg_command(std::unique_ptr<MsgCommand> sCommand
 
     if (!pResponse)
     {
-        pResponse = execute_command(std::move(m_sCommand));
+        pResponse = execute_command(std::move(sCommand));
     }
 
     return pResponse;

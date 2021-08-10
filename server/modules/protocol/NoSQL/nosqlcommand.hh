@@ -39,6 +39,9 @@ struct IsAdmin
 
 }
 
+//
+// Command
+//
 class Command
 {
 public:
@@ -71,8 +74,6 @@ public:
     };
 
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
-
-    virtual void diagnose(DocumentBuilder& doc) = 0;
 
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
@@ -125,19 +126,63 @@ private:
     ResponseKind m_response_kind;
 };
 
-class MsgCommand : public Command
+//
+// OpInsertCommand
+//
+class OpInsertCommand : public Command
+{
+public:
+    enum Action
+    {
+        INSERTING_DATA,
+        CREATING_TABLE,
+        CREATING_DATABASE
+    };
+
+    OpInsertCommand(Database* pDatabase,
+                    GWBUF* pRequest,
+                    const nosql::Insert& req)
+        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
+        , m_action(INSERTING_DATA)
+        , m_table(req.collection())
+        , m_documents(req.documents())
+    {
+        mxb_assert(m_documents.size() == 1);
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    std::string convert_document_data(const bsoncxx::document::view& doc);
+
+private:
+    Action                                m_action;
+    std::string                           m_table;
+    std::string                           m_statement;
+    std::vector<bsoncxx::document::view>  m_documents;
+    std::vector<bsoncxx::document::value> m_stashed_documents;
+};
+
+//
+// OpMsgCommand
+//
+class OpMsgCommand : public Command
 {
 public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
     template<class ConcretePacket>
-    MsgCommand(const std::string& name,
-               Database* pDatabase,
-               GWBUF* pRequest,
-               const ConcretePacket& req,
-               const bsoncxx::document::view& doc,
-               const DocumentArguments& arguments)
+    OpMsgCommand(const std::string& name,
+                 Database* pDatabase,
+                 GWBUF* pRequest,
+                 const ConcretePacket& req,
+                 const bsoncxx::document::view& doc,
+                 const DocumentArguments& arguments)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
         , m_name(name)
         , m_req(req)
@@ -146,19 +191,19 @@ public:
     {
     }
 
-    static std::unique_ptr<MsgCommand> get(nosql::Database* pDatabase,
-                                           GWBUF* pRequest,
-                                           const nosql::Query& req,
-                                           const bsoncxx::document::view& doc,
-                                           const DocumentArguments& arguments);
+    static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
+                                             GWBUF* pRequest,
+                                             const nosql::Query& req,
+                                             const bsoncxx::document::view& doc,
+                                             const DocumentArguments& arguments);
 
-    static std::unique_ptr<MsgCommand> get(nosql::Database* pDatabase,
-                                           GWBUF* pRequest,
-                                           const nosql::Msg& req,
-                                           const bsoncxx::document::view& doc,
-                                           const DocumentArguments& arguments);
+    static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
+                                             GWBUF* pRequest,
+                                             const nosql::Msg& req,
+                                             const bsoncxx::document::view& doc,
+                                             const DocumentArguments& arguments);
 
-    ~MsgCommand() override;
+    ~OpMsgCommand() override;
 
     const std::string& name() const
     {
@@ -167,8 +212,10 @@ public:
 
     std::string description() const override
     {
-        return m_req.opcode() == MONGOC_OPCODE_QUERY ? "OP_QUERY" : ("OP_MSG(" + m_name);
+        return m_req.opcode() == MONGOC_OPCODE_QUERY ? "OP_QUERY" : ("OP_MSG(" + m_name + ")");
     }
+
+    virtual void diagnose(DocumentBuilder& doc) = 0;
 
     std::string to_json() const override
     {
@@ -275,7 +322,7 @@ protected:
 
     /**
      * Add at least 'index', 'code' and 'errmsg'.
-    */
+     */
     virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
 
     const std::string       m_name;
@@ -303,10 +350,10 @@ private:
  *
  * A command that generates the response immediately, without any backend activity.
  */
-class ImmediateCommand : public MsgCommand
+class ImmediateCommand : public OpMsgCommand
 {
 public:
-    using MsgCommand::MsgCommand;
+    using OpMsgCommand::OpMsgCommand;
 
     GWBUF* execute() override final;
 
@@ -324,10 +371,10 @@ protected:
  * A command that executes a single SQL statement against the backend, in order
  * to produce the response.
  */
-class SingleCommand : public MsgCommand
+class SingleCommand : public OpMsgCommand
 {
 public:
-    using MsgCommand::MsgCommand;
+    using OpMsgCommand::OpMsgCommand;
 
     GWBUF* execute() override final;
 
@@ -347,10 +394,10 @@ protected:
  * A command that may execute multiple SQL statements against the backend, in order
  * to produce the response.
  */
-class MultiCommand : public MsgCommand
+class MultiCommand : public OpMsgCommand
 {
 public:
-    using MsgCommand::MsgCommand;
+    using OpMsgCommand::OpMsgCommand;
 
     void diagnose(DocumentBuilder& doc) override;
 

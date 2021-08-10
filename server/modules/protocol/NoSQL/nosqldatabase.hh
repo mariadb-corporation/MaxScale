@@ -159,16 +159,16 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute_msg_command(std::unique_ptr<MsgCommand> sCommand);
+    GWBUF* execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand);
     GWBUF* execute_command(std::unique_ptr<Command> sCommand);
 
     template<class ConcretePacket>
     GWBUF* execute(GWBUF* pRequest,
                    const ConcretePacket& req,
                    const bsoncxx::document::view& doc,
-                   const MsgCommand::DocumentArguments& arguments)
+                   const OpMsgCommand::DocumentArguments& arguments)
     {
-        auto sCommand = nosql::MsgCommand::get(this, pRequest, req, doc, arguments);
+        auto sCommand = nosql::OpMsgCommand::get(this, pRequest, req, doc, arguments);
 
         return execute_msg_command(std::move(sCommand));
     }

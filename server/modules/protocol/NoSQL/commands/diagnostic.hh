@@ -194,7 +194,7 @@ public:
     {
         DocumentBuilder commands;
 
-        MsgCommand::list_commands(commands);
+        OpMsgCommand::list_commands(commands);
 
         doc.append(kvp(key::COMMANDS, commands.extract()));
         doc.append(kvp(key::OK, 1));
