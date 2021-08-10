@@ -22,11 +22,12 @@
                 >
                     <v-text-field
                         v-if="activeWkeID === wke.id && editableTabName"
-                        v-model="wke.name"
+                        :value="wke.name"
                         autofocus
                         height="32"
                         class="std tab-name-input ma-0 pa-0"
                         hide-details
+                        @input="v => changeWkeName({ wke, v })"
                         @blur="editableTabName = false"
                     />
                     <truncate-string v-else :text="wke.name" :maxWidth="112" />
@@ -112,10 +113,16 @@ export default {
             ADD_NEW_WKE: 'query/ADD_NEW_WKE',
             DELETE_WKE: 'query/DELETE_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
+            UPDATE_WKE: 'query/UPDATE_WKE',
         }),
         addNewWs() {
             this.ADD_NEW_WKE()
             this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
+        },
+        changeWkeName({ wke, v }) {
+            let newWke = this.$help.lodash.cloneDeep(wke)
+            newWke.name = v
+            this.UPDATE_WKE({ idx: this.worksheets_arr.indexOf(wke), wke: newWke })
         },
     },
 }
