@@ -20,7 +20,7 @@ function connStates() {
         is_checking_active_conn: true,
         active_conn_state: false,
         conn_err_state: false,
-        curr_cnct_resource: '',
+        curr_cnct_resource: {},
     }
 }
 /**
@@ -85,7 +85,7 @@ function saWkeStates() {
 /**
  * @returns Return a new worksheet state with unique id
  */
-function defWorksheetState() {
+export function defWorksheetState() {
     return {
         id: uniqueId('wke_'),
         name: 'WORKSHEET',
