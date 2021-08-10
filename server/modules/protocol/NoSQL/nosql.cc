@@ -801,8 +801,9 @@ void nosql::MariaDBError::create_response(const Command& command, DocumentBuilde
     doc.append(kvp(key::CODE_NAME, nosql::error::name(protocol_code)));
     doc.append(kvp(key::MARIADB, mariadb.extract()));
 
-    MXS_ERROR("Protocol command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
-              m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
+    MXS_ERROR("Protocol command failed due to MariaDB error: "
+              "json = \"%s\", code = %d, message = \"%s\", sql = \"%s\"",
+              json.c_str(), m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
 
 unique_ptr<nosql::LastError> nosql::MariaDBError::create_last_error() const
 {
