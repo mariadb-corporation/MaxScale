@@ -303,7 +303,9 @@ bool XpandMonitor::configure(const mxs::ConfigParameters* pParams)
         populate_from_bootstrap_servers();
     }
 
-    make_health_check();
+    execute([this]() {
+             make_health_check();
+         }, mxb::Worker::EXECUTE_AUTO);
 
     return true;
 }
@@ -329,9 +331,9 @@ bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                rv = perform_softfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+                 rv = perform_softfail(pServer, ppError);
+             },
+             EXECUTE_QUEUED);
     }
     else
     {
@@ -351,9 +353,9 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
     if (is_running())
     {
         call([this, pServer, ppError, &rv]() {
-                rv = perform_unsoftfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+                 rv = perform_unsoftfail(pServer, ppError);
+             },
+             EXECUTE_QUEUED);
     }
     else
     {
