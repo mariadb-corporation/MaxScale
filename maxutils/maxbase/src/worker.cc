@@ -785,7 +785,7 @@ void Worker::poll_waitevents()
     {
         m_state = POLLING;
 
-        atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
+        ++m_statistics.n_polls;
 
         auto now = mxb::Clock::now();
 
@@ -830,7 +830,7 @@ void Worker::poll_waitevents()
                 m_statistics.evq_max = nfds;
             }
 
-            mxb::atomic::add(&m_statistics.n_pollev, 1, mxb::atomic::RELAXED);
+            ++m_statistics.n_pollev;
 
             m_state = PROCESSING;
 
@@ -864,27 +864,27 @@ void Worker::poll_waitevents()
 
             if (actions & MXB_POLL_ACCEPT)
             {
-                mxb::atomic::add(&m_statistics.n_accept, 1, mxb::atomic::RELAXED);
+                m_statistics.n_accept += 1;
             }
 
             if (actions & MXB_POLL_READ)
             {
-                mxb::atomic::add(&m_statistics.n_read, 1, mxb::atomic::RELAXED);
+                m_statistics.n_read += 1;
             }
 
             if (actions & MXB_POLL_WRITE)
             {
-                mxb::atomic::add(&m_statistics.n_write, 1, mxb::atomic::RELAXED);
+                m_statistics.n_write += 1;
             }
 
             if (actions & MXB_POLL_HUP)
             {
-                mxb::atomic::add(&m_statistics.n_hup, 1, mxb::atomic::RELAXED);
+                m_statistics.n_hup += 1;
             }
 
             if (actions & MXB_POLL_ERROR)
             {
-                mxb::atomic::add(&m_statistics.n_error, 1, mxb::atomic::RELAXED);
+                m_statistics.n_error += 1;
             }
 
             /** Calculate event execution statistics */
