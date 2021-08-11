@@ -191,6 +191,7 @@ struct ThisUnit
         { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
         { tolower(command::ResetError::KEY),              create_info<command::ResetError>() },
         { tolower(command::Update::KEY),                  create_info<command::Update>() },
+        { tolower(command::Validate::KEY),                create_info<command::Validate>() },
         { tolower(command::WhatsMyUri::KEY),              create_info<command::WhatsMyUri>() },
 
         { tolower(command::MxsDiagnose::KEY),             create_info<command::MxsDiagnose>() },

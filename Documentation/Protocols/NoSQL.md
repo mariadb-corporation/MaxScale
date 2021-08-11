@@ -838,6 +838,18 @@ Field | Type | Description
 ------|------|------------
 ping | any | Ignored.
 
+### [validate](https://docs.mongodb.com/manual/reference/command/validate/)
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+validate | string | The name of the collection to validate.
+
+The command does not actually perform any validation but for checking
+that the collection exists. The response will contain in `nrecords`
+the current number of documents/rows it contains.
+
 ### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
 
 The following fields are relevant.
