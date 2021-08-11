@@ -667,7 +667,9 @@ GWBUF* OpUpdateCommand::execute()
 
     if (m_req.is_upsert())
     {
-        MXS_ERROR("UPSERT not supported.");
+        MXS_WARNING("OP_UPDATE(%s): upsert not supported, "
+                    "selector: '%s', document: '%s'.",
+                    m_req.zCollection(), bsoncxx::to_json(m_req.selector()).c_str(), json.c_str());
     }
 
     if (!m_req.is_multi())

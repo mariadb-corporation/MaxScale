@@ -471,7 +471,7 @@ public:
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            MXS_WARNING("listCollections.filter is ignored.");
+            MXS_WARNING("listCollections.filter is ignored: '%s'", bsoncxx::to_json(filter).c_str());
         }
 
         ostringstream sql;
