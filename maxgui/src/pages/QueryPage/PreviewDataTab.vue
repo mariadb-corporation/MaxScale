@@ -36,18 +36,14 @@
                 <v-spacer />
                 <keep-alive>
                     <duration-timer
-                        v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
-                        :key="SQL_QUERY_MODES.PRVW_DATA"
-                        :startTime="prvw_data_request_sent_time"
+                        v-if="activeView"
+                        :key="activeView"
+                        :startTime="getPrvwSentTime(activeView)"
                         :executionTime="getPrvwExeTime(activeView)"
-                    />
-                    <duration-timer
-                        v-else-if="activeView === SQL_QUERY_MODES.PRVW_DATA_DETAILS"
-                        :startTime="prvw_data_details_request_sent_time"
-                        :executionTime="getPrvwExeTime(activeView)"
+                        :totalDuration="getPrvwTotalDuration(activeView)"
+                        @total-duration="updateDuration"
                     />
                 </keep-alive>
-
                 <v-tooltip
                     v-if="activeView === SQL_QUERY_MODES.PRVW_DATA"
                     top
@@ -138,16 +134,16 @@ export default {
             loading_prvw_data: state => state.query.loading_prvw_data,
             loading_prvw_data_details: state => state.query.loading_prvw_data_details,
             active_tree_node: state => state.query.active_tree_node,
-            prvw_data_request_sent_time: state => state.query.prvw_data_request_sent_time,
-            prvw_data_details_request_sent_time: state =>
-                state.query.prvw_data_details_request_sent_time,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
             active_conn_state: state => state.query.active_conn_state,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
+            getPrvwSentTime: 'query/getPrvwSentTime',
             getPrvwExeTime: 'query/getPrvwExeTime',
+            getPrvwTotalDuration: 'query/getPrvwTotalDuration',
         }),
         validConn() {
             return Boolean(this.active_tree_node.id && this.active_conn_state)
@@ -171,14 +167,16 @@ export default {
             if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(activeView)
         },
     },
-    async mounted() {
-        this.setHeaderHeight()
-    },
     async activated() {
+        this.setHeaderHeight()
         await this.autoFetchActiveNode()
     },
     methods: {
-        ...mapMutations({ SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE' }),
+        ...mapMutations({
+            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            UPDATE_PRVW_DATA_MAP: 'query/UPDATE_PRVW_DATA_MAP',
+            UPDATE_PRVW_DATA_DETAILS_MAP: 'query/UPDATE_PRVW_DATA_DETAILS_MAP',
+        }),
         ...mapActions({
             fetchPrvw: 'query/fetchPrvw',
         }),
@@ -191,12 +189,14 @@ export default {
                 switch (this.activeView) {
                     // Auto fetch preview data if there is active_tree_node in localStorage
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    case this.SQL_QUERY_MODES.PRVW_DATA:
-                        if (
-                            this.$typy(this.active_tree_node, 'id').safeObject &&
-                            !this[`loading_${this.activeView.toLowerCase()}`]
-                        )
+                    case this.SQL_QUERY_MODES.PRVW_DATA: {
+                        const hasActiveNode = this.$typy(this.active_tree_node, 'id').safeObject
+                        const isFetchingAlready = this[`loading_${this.activeView.toLowerCase()}`]
+                        const isDataEmpty = this.$typy(this.getPrvwDataRes(this.activeView))
+                            .isEmptyObject
+                        if (hasActiveNode && !isFetchingAlready && isDataEmpty)
                             await this.fetchActiveNodeData(this.activeView)
+                    }
                 }
         },
         /**
@@ -223,6 +223,14 @@ export default {
             await this.fetchPrvw({
                 tblId: this.$typy(this.active_tree_node, 'id').safeObject,
                 prvwMode: SQL_QUERY_MODE,
+            })
+        },
+        updateDuration(v) {
+            this[`UPDATE_${this.activeView}_MAP`]({
+                id: this.active_wke_id,
+                payload: {
+                    total_duration: v,
+                },
             })
         },
     },

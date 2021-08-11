@@ -7,19 +7,19 @@
             content-class="shadow-drop pa-3"
         >
             <template v-slot:activator="{ on }">
-                <pre v-on="on"> {{ totalDuration }} seconds</pre>
+                <pre v-on="on"> {{ duration }} seconds</pre>
             </template>
             <v-sheet min-width="220" max-width="450" class="color text-small-text">
                 <div class="d-flex align-center color text-navigation font-weight-bold">
                     <span>Total Duration:</span>
                     <v-spacer />
-                    <span>{{ totalDuration }} seconds</span>
+                    <span>{{ duration }} seconds</span>
                 </div>
                 <div class="d-flex align-center">
                     <span>Network delay</span>
                     <v-spacer />
                     <span class="color text-navigation">
-                        {{ Math.abs(totalDuration - executionTime).toFixed(4) }} seconds
+                        {{ Math.abs(duration - executionTime).toFixed(4) }} seconds
                     </span>
                 </div>
                 <div class="d-flex align-center">
@@ -56,10 +56,14 @@ export default {
             type: Number, // in ms
             required: true,
         },
+        totalDuration: {
+            type: Number, // in ms
+            required: true,
+        },
     },
     data() {
         return {
-            totalDuration: 0,
+            duration: 0,
             rmExecTimeWatcher: null,
         }
     },
@@ -68,15 +72,18 @@ export default {
             return this.executionTime === -1
         },
     },
-    mounted() {
-        this.addExeTimeWatcher()
+    watch: {
+        isGettingEndTime(v) {
+            if (!v) this.$emit('total-duration', this.duration)
+        },
+    },
+    activated() {
         this.updateSecond()
+        this.duration = this.totalDuration
+        this.addExeTimeWatcher()
     },
     deactivated() {
         this.rmExecTimeWatcher()
-    },
-    activated() {
-        this.addExeTimeWatcher()
     },
     methods: {
         addExeTimeWatcher() {
@@ -89,7 +96,7 @@ export default {
             const now = new Date().valueOf()
             const currSec = ((now - this.startTime) / 1000).toFixed(4)
             if (this.isGettingEndTime) {
-                this.totalDuration = parseFloat(currSec)
+                this.duration = parseFloat(currSec)
                 requestAnimationFrame(this.updateSecond)
             }
         },

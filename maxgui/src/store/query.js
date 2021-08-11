@@ -129,10 +129,8 @@ export default {
         db_tree: [],
         db_completion_list: [],
         // results states
-        prvw_data: {},
-        prvw_data_request_sent_time: 0,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
+        prvw_data_map: {},
+        prvw_data_details_map: {},
         /**
          * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
          * because it's not possible at the moment to fetch query results using query id, it can only be read once.
@@ -222,20 +220,20 @@ export default {
         SET_LOADING_PRVW_DATA(state, payload) {
             patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
         },
-        SET_PRVW_DATA(state, payload) {
-            state.prvw_data = payload
+        UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
+            state.prvw_data_map = {
+                ...state.prvw_data_map,
+                ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
+            }
         },
-        SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_request_sent_time = payload
+        UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
+            state.prvw_data_details_map = {
+                ...state.prvw_data_details_map,
+                ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
+            }
         },
         SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
             patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
-        },
-        SET_PRVW_DATA_DETAILS(state, payload) {
-            state.prvw_data_details = payload
-        },
-        SET_PRVW_DATA_DETAILS_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_details_request_sent_time = payload
         },
         SET_LOADING_QUERY_RESULT(state, payload) {
             patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
@@ -705,8 +703,12 @@ export default {
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
-
-                commit(`SET_${prvwMode}_REQUEST_SENT_TIME`, new Date().valueOf())
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        request_sent_time: new Date().valueOf(),
+                    },
+                })
                 let sql
                 const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
                 switch (prvwMode) {
@@ -722,7 +724,12 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql, max_rows: rootState.persisted.query_max_rows }
                 )
-                commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        data: Object.freeze(res.data.data),
+                    },
+                })
                 commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
                 commit(`SET_LOADING_${prvwMode}`, false)
@@ -806,9 +813,23 @@ export default {
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        clearDataPreview({ commit }) {
-            commit('SET_PRVW_DATA', {})
-            commit('SET_PRVW_DATA_DETAILS', {})
+        clearDataPreview({ state, commit }) {
+            commit(`UPDATE_PRVW_DATA_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    request_sent_time: 0,
+                    data: {},
+                    total_duration: 0,
+                },
+            })
+            commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    request_sent_time: 0,
+                    data: {},
+                    total_duration: 0,
+                },
+            })
         },
         /**
          * Call this action when disconnect a connection to
@@ -860,36 +881,29 @@ export default {
                 return parseFloat(getters.getQueryResult.attributes.execution_time.toFixed(4))
             return 0
         },
-        getPrvwDataRes: state => mode => {
-            switch (mode) {
-                case 'PRVW_DATA': {
-                    if (state.prvw_data.attributes) return state.prvw_data.attributes.results[0]
-                    return {}
-                }
-                case 'PRVW_DATA_DETAILS': {
-                    if (state.prvw_data_details.attributes)
-                        return state.prvw_data_details.attributes.results[0]
-                    return {}
-                }
-            }
+        getPrvwData: state => mode => {
+            let map = state[`${mode.toLowerCase()}_map`]
+            if (map) return map[state.active_wke_id] || {}
+            return {}
         },
-        getPrvwExeTime: state => mode => {
-            switch (mode) {
-                case 'PRVW_DATA': {
-                    if (state.loading_prvw_data) return -1
-                    if (state.prvw_data.attributes)
-                        return parseFloat(state.prvw_data.attributes.execution_time.toFixed(4))
-                    return 0
-                }
-                case 'PRVW_DATA_DETAILS': {
-                    if (state.loading_prvw_data_details) return -1
-                    if (state.prvw_data_details.attributes)
-                        return parseFloat(
-                            state.prvw_data_details.attributes.execution_time.toFixed(4)
-                        )
-                    return 0
-                }
-            }
+        getPrvwDataRes: (state, getters) => mode => {
+            const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)
+            if (results.length) return results[0]
+            return {}
+        },
+        getPrvwExeTime: (state, getters) => mode => {
+            if (state[`loading_${mode.toLowerCase()}`]) return -1
+            const { data: { attributes } = {} } = getters.getPrvwData(mode)
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
+            return 0
+        },
+        getPrvwSentTime: (state, getters) => mode => {
+            const { request_sent_time = 0 } = getters.getPrvwData(mode)
+            return request_sent_time
+        },
+        getPrvwTotalDuration: (state, getters) => mode => {
+            const { total_duration = 0 } = getters.getPrvwData(mode)
+            return total_duration
         },
     },
 }
