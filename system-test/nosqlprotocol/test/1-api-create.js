@@ -23,6 +23,7 @@ describe(name, function () {
 
     let mng;
     let mxs;
+    let nonexistent;
 
     /*
      * MOCHA
@@ -55,6 +56,14 @@ describe(name, function () {
         assert.deepEqual(rv1, rv2);
     });
 
+    it('Can create with non-existent database.', async function () {
+        nonexistent = await test.MDB.create(test.MxsMongo, "nonexistent");
+
+        await nonexistent.runCommand({create: name});
+
+        await nonexistent.runCommand({dropDatabase: 1});
+    });
+
     after(async function () {
         if (mxs) {
             await mxs.close();
@@ -62,6 +71,10 @@ describe(name, function () {
 
         if (mng) {
             await mng.close();
+        }
+
+        if (nonexistent) {
+            await nonexistent.close();
         }
     });
 });
