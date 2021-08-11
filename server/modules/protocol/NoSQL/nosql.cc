@@ -1123,11 +1123,17 @@ string get_logical_condition(const bsoncxx::document::element& element)
 }
 
 using ElementValueToString = string (*)(const bsoncxx::document::element& element, const string& op);
+using FieldAndElementValueToComparison = string (*) (const std::string& field,
+                                                     const bsoncxx::document::element& element,
+                                                     const string& mariadb_op,
+                                                     const string& nosql_op,
+                                                     ElementValueToString value_to_string);
 
 struct ElementValueInfo
 {
-    const string         op;
-    ElementValueToString converter;
+    const string                     mariadb_op;
+    ElementValueToString             value_to_string;
+    FieldAndElementValueToComparison field_and_value_to_comparison;
 };
 
 template<class document_element_or_array_item>
@@ -1412,17 +1418,27 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
     return condition;
 }
 
+string default_field_and_value_to_comparison(const std::string& field,
+                                             const bsoncxx::document::element& element,
+                                             const string& mariadb_op,
+                                             const string& nosql_op,
+                                             ElementValueToString value_to_string)
+{
+    return "(JSON_EXTRACT(doc, '$." + field + "') "
+        + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value } },
-    { "$gt",     { ">",      &element_to_value } },
-    { "$gte",    { ">=",     &element_to_value } },
-    { "$lt",     { "<",      &element_to_value } },
-    { "$in",     { "IN",     &element_to_array } },
-    { "$lte",    { "<=",     &element_to_value } },
-    { "$ne",     { "!=",     &element_to_value } },
-    { "$nin",    { "NOT IN", &element_to_array } },
-    { "$exists", { "IS",     &element_to_null } }
+    { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$in",     { "IN",     &element_to_array, default_field_and_value_to_comparison } },
+    { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$nin",    { "NOT IN", &element_to_array, default_field_and_value_to_comparison } },
+    { "$exists", { "IS",     &element_to_null,  default_field_and_value_to_comparison } }
 };
 
 string get_op_and_value(const bsoncxx::document::view& doc)
@@ -1436,18 +1452,18 @@ string get_op_and_value(const bsoncxx::document::view& doc)
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
         const auto& element = *it;
-        const auto op = static_cast<string>(element.key());
+        const auto nosql_op = static_cast<string>(element.key());
 
-        auto jt = converters.find(op);
+        auto jt = converters.find(nosql_op);
 
         if (jt != converters.end())
         {
-            rv = jt->second.op + " " + jt->second.converter(element, op);
+            rv = jt->second.mariadb_op + " " + jt->second.value_to_string(element, nosql_op);
         }
         else
         {
             ostringstream ss;
-            ss << "unknown operator: " << op;
+            ss << "unknown operator: " << nosql_op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
@@ -1660,16 +1676,19 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
         const auto& element = *it;
-        const auto op = static_cast<string>(element.key());
+        const auto nosql_op = static_cast<string>(element.key());
 
-        auto jt = converters.find(op);
+        auto jt = converters.find(nosql_op);
 
         if (jt != converters.end())
         {
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') "
-                + jt->second.op + " " + jt->second.converter(element, op) + ")";
+            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto& value_to_string = jt->second.value_to_string;
+
+            rv = jt->second.field_and_value_to_comparison(field, element, mariadb_op,
+                                                          nosql_op, value_to_string);
         }
-        else if (op == "$not")
+        else if (nosql_op == "$not")
         {
             if (element.type() != bsoncxx::type::k_document)
             {
@@ -1686,26 +1705,26 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
             rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
                 + "OR NOT JSON_EXTRACT(doc, '$." + field + "') " + get_op_and_value(doc) + ")";
         }
-        else if (op == "$elemMatch")
+        else if (nosql_op == "$elemMatch")
         {
             rv = elemMatch_to_condition(field, element);
         }
-        else if (op == "$size")
+        else if (nosql_op == "$size")
         {
-            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, op) + ")";
+            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, nosql_op) + ")";
         }
-        else if (op == "$all")
+        else if (nosql_op == "$all")
         {
             rv = all_to_condition(field, element);
         }
-        else if (op == "$type")
+        else if (nosql_op == "$type")
         {
             rv = type_to_condition(field, element);
         }
         else
         {
             ostringstream ss;
-            ss << "unknown operator: " << op;
+            ss << "unknown operator: " << nosql_op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
