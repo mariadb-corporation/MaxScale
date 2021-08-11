@@ -65,7 +65,8 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
         if (test.global_result == 0)
         {
             test.tprintf("Maxscale was killed by systemd - ok");
-            test.maxscale->ssh_node_f(true, "rm -f /tmp/core*");
+            auto res = test.maxscale->ssh_output("rm -vf /tmp/core*", true);
+            test.expect(res.rc == 0, "Removing core files should work:\n%s", res.output.c_str());
         }
     }
 }
