@@ -59,6 +59,11 @@ public:
 
     void populate_response(nosql::DocumentBuilder& doc) override
     {
+        if (m_database.config().log_unknown_command)
+        {
+            MXS_WARNING("Unknown command: %s", bsoncxx::to_json(m_doc).c_str());
+        }
+
         string command;
         if (!m_doc.empty())
         {

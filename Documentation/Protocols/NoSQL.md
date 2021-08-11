@@ -138,6 +138,16 @@ Enumeration values:
    * `return_error`: An error document is returned.
    * `return_empty`: An empty document is returned.
 
+## `log_unknown_command`
+
+   * Type: boolean
+   * Mandatory: false
+   * Default: `false`
+
+Specifies whether an unknown command should be logged. This is primarily
+for debugging purposes, to find out whether a client uses a command that
+currently is not supported.
+
 ## `auto_create_databases`
 
    * Type: boolean
