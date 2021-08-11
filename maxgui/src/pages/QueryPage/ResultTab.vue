@@ -41,10 +41,15 @@
                     </v-tab>
                 </v-tabs>
                 <v-spacer />
-                <duration-timer
-                    :startTime="query_request_sent_time"
-                    :executionTime="getQueryExeTime"
-                />
+                <keep-alive>
+                    <duration-timer
+                        v-if="getQueryRequestSentTime"
+                        :startTime="getQueryRequestSentTime"
+                        :executionTime="getQueryExeTime"
+                        :totalDuration="getQueryTotalDuration"
+                        @total-duration="updateDuration"
+                    />
+                </keep-alive>
 
                 <v-tooltip
                     v-if="
@@ -115,7 +120,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
 export default {
@@ -145,24 +150,26 @@ export default {
         ...mapState({
             loading_query_result: state => state.query.loading_query_result,
             active_conn_state: state => state.query.active_conn_state,
-            query_request_sent_time: state => state.query.query_request_sent_time,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
+            getResults: 'query/getResults',
+            getQueryRequestSentTime: 'query/getQueryRequestSentTime',
             getQueryExeTime: 'query/getQueryExeTime',
-            getQueryResult: 'query/getQueryResult',
+            getQueryTotalDuration: 'query/getQueryTotalDuration',
         }),
         showGuide() {
             return this.isLoading || !this.active_conn_state
         },
         queryTxt() {
-            return this.$typy(this.getQueryResult, 'attributes.sql').safeObject
+            return this.$typy(this.getResults, 'attributes.sql').safeObject
         },
         resultData() {
-            if (this.$typy(this.getQueryResult, 'attributes.results').isDefined) {
+            if (this.$typy(this.getResults, 'attributes.results').isDefined) {
                 let resultData = {}
                 let resSetCount = 0
                 let resCount = 0
-                for (const res of this.getQueryResult.attributes.results) {
+                for (const res of this.getResults.attributes.results) {
                     if (this.$typy(res, 'data').isDefined) {
                         ++resSetCount
                         resultData[`Result set ${resSetCount}`] = res
@@ -183,17 +190,18 @@ export default {
             if (v && this.isLoading) this.isLoading = false
         },
     },
-    mounted() {
-        this.setHeaderHeight()
-    },
     activated() {
         if (this.loading_query_result && this.isLoading) this.isLoading = false
+        this.setHeaderHeight()
         this.addResultDataWatcher()
     },
     deactivated() {
         this.unwatchResultData()
     },
     methods: {
+        ...mapMutations({
+            UPDATE_QUERY_RESULTS_MAP: 'query/UPDATE_QUERY_RESULTS_MAP',
+        }),
         addResultDataWatcher() {
             this.unwatchResultData = this.$watch('resultData', () => {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
@@ -211,6 +219,14 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
+        },
+        updateDuration(v) {
+            this.UPDATE_QUERY_RESULTS_MAP({
+                id: this.active_wke_id,
+                payload: {
+                    total_duration: v,
+                },
+            })
         },
     },
 }

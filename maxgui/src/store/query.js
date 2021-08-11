@@ -56,7 +56,6 @@ function resultStates() {
         loading_prvw_data: false,
         loading_prvw_data_details: false,
         loading_query_result: false,
-        query_request_sent_time: 0,
     }
 }
 /**
@@ -238,11 +237,11 @@ export default {
         SET_LOADING_QUERY_RESULT(state, payload) {
             patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
         },
-        UPDATE_QUERY_RESULTS_MAP(state, { id, resultSets }) {
-            state.query_results_map = { ...state.query_results_map, ...{ [id]: resultSets } }
-        },
-        SET_QUERY_REQUEST_SENT_TIME(state, payload) {
-            patch_wke_property(state, { obj: { query_request_sent_time: payload }, scope: this })
+        UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
+            state.query_results_map = {
+                ...state.query_results_map,
+                ...{ [id]: { ...state.query_results_map[id], ...payload } },
+            }
         },
 
         // worksheet mutations
@@ -744,7 +743,11 @@ export default {
         async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
-                commit('SET_QUERY_REQUEST_SENT_TIME', new Date().valueOf())
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: state.active_wke_id,
+                    payload: { request_sent_time: new Date().valueOf() },
+                })
+
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -754,7 +757,7 @@ export default {
                 )
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: state.active_wke_id,
-                    resultSets: Object.freeze(res.data.data),
+                    payload: { results: Object.freeze(res.data.data) },
                 })
                 commit('SET_LOADING_QUERY_RESULT', false)
                 const USE_REG = /(use|drop database)\s/i
@@ -817,16 +820,16 @@ export default {
             commit(`UPDATE_PRVW_DATA_MAP`, {
                 id: state.active_wke_id,
                 payload: {
-                    request_sent_time: 0,
                     data: {},
+                    request_sent_time: 0,
                     total_duration: 0,
                 },
             })
             commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
                 id: state.active_wke_id,
                 payload: {
-                    request_sent_time: 0,
                     data: {},
+                    request_sent_time: 0,
                     total_duration: 0,
                 },
             })
@@ -862,7 +865,7 @@ export default {
             if (wke)
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: wke.id,
-                    resultSets: {},
+                    payload: { results: {}, request_sent_time: 0, total_duration: 0 },
                 })
         },
     },
@@ -875,12 +878,26 @@ export default {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
         getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
+
+        getResults: (state, getters) => {
+            const { results = {} } = getters.getQueryResult
+            return results
+        },
+        getQueryRequestSentTime: (state, getters) => {
+            const { request_sent_time = 0 } = getters.getQueryResult
+            return request_sent_time
+        },
         getQueryExeTime: (state, getters) => {
             if (state.loading_query_result) return -1
-            if (getters.getQueryResult.attributes)
-                return parseFloat(getters.getQueryResult.attributes.execution_time.toFixed(4))
+            const { attributes } = getters.getResults
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
             return 0
         },
+        getQueryTotalDuration: (state, getters) => {
+            const { total_duration = 0 } = getters.getQueryResult
+            return total_duration
+        },
+
         getPrvwData: state => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
             if (map) return map[state.active_wke_id] || {}
