@@ -1428,16 +1428,58 @@ string default_field_and_value_to_comparison(const std::string& field,
         + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
 }
 
+string field_and_value_to_in_comparison(const std::string& field,
+                                        const bsoncxx::document::element& element,
+                                        const string& mariadb_op,
+                                        const string& nosql_op,
+                                        ElementValueToString value_to_string)
+{
+    string rv;
+    string s = value_to_string(element, nosql_op);
+
+    if (!s.empty())
+    {
+        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
+    }
+    else
+    {
+        rv = "(false)";
+    }
+
+    return rv;
+}
+
+string field_and_value_to_nin_comparison(const std::string& field,
+                                         const bsoncxx::document::element& element,
+                                         const string& mariadb_op,
+                                         const string& nosql_op,
+                                         ElementValueToString value_to_string)
+{
+    string rv;
+    string s = value_to_string(element, nosql_op);
+
+    if (!s.empty())
+    {
+        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
+    }
+    else
+    {
+        rv = "(true)";
+    }
+
+    return rv;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
     { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$in",     { "IN",     &element_to_array, default_field_and_value_to_comparison } },
+    { "$in",     { "IN",     &element_to_array, field_and_value_to_in_comparison } },
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$nin",    { "NOT IN", &element_to_array, default_field_and_value_to_comparison } },
+    { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
     { "$exists", { "IS",     &element_to_null,  default_field_and_value_to_comparison } }
 };
 
