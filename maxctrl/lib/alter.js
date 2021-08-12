@@ -176,7 +176,7 @@ exports.builder = function (yargs) {
               "Refer to the filter documentation for details on whether it supports " +
               "runtime configuration changes and which parameters can be altered."
           )
-          .usage("Usage: alter service <service> <key> <value> ...");
+          .usage("Usage: alter filter <filter> <key> <value> ...");
       },
       function (argv) {
         maxctrl(argv, function (host) {
