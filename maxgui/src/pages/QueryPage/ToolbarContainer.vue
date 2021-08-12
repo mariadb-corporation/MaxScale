@@ -16,7 +16,7 @@
             depressed
             small
             color="accent-dark"
-            :disabled="!active_conn_state"
+            :disabled="!curr_cnct_resource.id"
         >
             <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
@@ -72,7 +72,7 @@
                     small
                     color="accent-dark"
                     :loading="loading_query_result"
-                    :disabled="!query_txt.all || !active_conn_state"
+                    :disabled="!query_txt.all || !curr_cnct_resource.id"
                     v-on="on"
                     @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
                 >
@@ -99,10 +99,20 @@
                     depressed
                     small
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+                    :disabled="!curr_cnct_resource.id"
                     v-on="on"
                     @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >
-                    <v-icon size="16" :color="show_vis_sidebar ? 'background' : 'accent-dark'">
+                    <v-icon
+                        size="16"
+                        :color="
+                            curr_cnct_resource.id
+                                ? show_vis_sidebar
+                                    ? 'background'
+                                    : 'accent-dark'
+                                : ''
+                        "
+                    >
                         $vuetify.icons.reports
                     </v-icon>
                 </v-btn>
@@ -220,7 +230,7 @@ export default {
         ...mapState({
             is_fullscreen: state => state.query.is_fullscreen,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            active_conn_state: state => state.query.active_conn_state,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,

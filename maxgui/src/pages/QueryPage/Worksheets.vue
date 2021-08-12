@@ -43,7 +43,14 @@
                     </v-btn>
                 </div>
             </v-tab>
-            <v-btn height="32" width="32" class="ml-2" icon @click="addNewWs">
+            <v-btn
+                :disabled="!cnct_resources.length"
+                height="32"
+                width="32"
+                class="ml-2"
+                icon
+                @click="addNewWs"
+            >
                 <v-icon size="18" color="deep-ocean">add</v-icon>
             </v-btn>
         </v-tabs>
@@ -98,6 +105,7 @@ export default {
         ...mapState({
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
+            cnct_resources: state => state.query.cnct_resources,
         }),
         activeWkeID: {
             get() {
