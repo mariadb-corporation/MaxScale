@@ -17,8 +17,7 @@ import queryHelper from './queryHelper'
  */
 function connStates() {
     return {
-        is_checking_active_conn: true,
-        active_conn_state: false,
+        is_validating_conn: true,
         conn_err_state: false,
         curr_cnct_resource: {},
     }
@@ -149,11 +148,8 @@ export default {
         },
 
         // connection related mutations
-        SET_IS_CHECKING_ACTIVE_CONN(state, payload) {
-            patch_wke_property(state, { obj: { is_checking_active_conn: payload }, scope: this })
-        },
-        SET_ACTIVE_CONN_STATE(state, payload) {
-            patch_wke_property(state, { obj: { active_conn_state: payload }, scope: this })
+        SET_IS_VALIDATING_CONN(state, payload) {
+            patch_wke_property(state, { obj: { is_validating_conn: payload }, scope: this })
         },
         SET_CONN_ERR_STATE(state, payload) {
             patch_wke_property(state, { obj: { conn_err_state: payload }, scope: this })
@@ -199,7 +195,6 @@ export default {
         },
         ADD_CNCT_RESOURCE(state, payload) {
             state.cnct_resources.push(payload)
-            patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
         },
         DELETE_CNCT_RESOURCE(state, payload) {
             const idx = state.cnct_resources.indexOf(payload)
@@ -300,8 +295,8 @@ export default {
                         id: connId,
                         name: body.target,
                     }
-                    commit('SET_ACTIVE_CONN_STATE', true)
                     commit('ADD_CNCT_RESOURCE', curr_cnct_resource)
+                    commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', false)
                 }
@@ -351,9 +346,9 @@ export default {
                 logger.error(e)
             }
         },
-        async checkActiveConn({ state, commit, dispatch }) {
+        async validatingConn({ state, commit, dispatch }) {
             try {
-                commit('SET_IS_CHECKING_ACTIVE_CONN', true)
+                commit('SET_IS_VALIDATING_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -368,9 +363,8 @@ export default {
                  */
                 dispatch('deleteInvalidConn', validCnctResources)
                 commit('SET_CNCT_RESOURCES', validCnctResources)
-                let activeConnState = Boolean(validConnIds.length)
                 if (state.curr_cnct_resource.id) {
-                    activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
+                    let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
                     if (!activeConnState) {
                         this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
                         dispatch('emptyQueryResult', state.curr_cnct_resource.id)
@@ -385,10 +379,9 @@ export default {
                         )
                     }
                 }
-                commit('SET_ACTIVE_CONN_STATE', activeConnState)
-                commit('SET_IS_CHECKING_ACTIVE_CONN', false)
+                commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-checkActiveConn')
+                const logger = this.vue.$logger('store-query-validatingConn')
                 logger.error(e)
             }
         },

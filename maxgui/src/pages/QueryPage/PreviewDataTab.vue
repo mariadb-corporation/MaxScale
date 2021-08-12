@@ -136,7 +136,7 @@ export default {
             active_tree_node: state => state.query.active_tree_node,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
-            active_conn_state: state => state.query.active_conn_state,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
@@ -146,7 +146,7 @@ export default {
             getPrvwTotalDuration: 'query/getPrvwTotalDuration',
         }),
         validConn() {
-            return Boolean(this.active_tree_node.id && this.active_conn_state)
+            return Boolean(this.active_tree_node.id && this.curr_cnct_resource.id)
         },
         isPrwDataLoading() {
             return this.loading_prvw_data || this.loading_prvw_data_details
@@ -185,7 +185,7 @@ export default {
             this.headerHeight = this.$refs.header.clientHeight
         },
         async autoFetchActiveNode() {
-            if (this.active_conn_state)
+            if (this.curr_cnct_resource.id)
                 switch (this.activeView) {
                     // Auto fetch preview data if there is active_tree_node in localStorage
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:

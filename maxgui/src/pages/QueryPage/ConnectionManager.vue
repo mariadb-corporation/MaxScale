@@ -119,10 +119,9 @@ export default {
     },
     computed: {
         ...mapState({
-            is_checking_active_conn: state => state.query.is_checking_active_conn,
+            is_validating_conn: state => state.query.is_validating_conn,
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
-            active_conn_state: state => state.query.active_conn_state,
         }),
         connOptions() {
             let options = [this.newConnOption]
@@ -134,8 +133,8 @@ export default {
         },
     },
     watch: {
-        is_checking_active_conn(v) {
-            //After finish checking is_checking_active_conn, auto open dialog if there is no active connection
+        is_validating_conn(v) {
+            //After finish validating connections, auto open dialog if there is no connections
             if (!v && this.connOptions.length === 1) this.openConnDialog()
             else this.assignActiveConn()
         },
@@ -145,8 +144,8 @@ export default {
                 if (this.isCreatingNewConn) this.openConnDialog()
                 else if (this.$typy(v, 'id').isDefined) {
                     this.SET_CURR_CNCT_RESOURCE(v)
-                    await this.checkActiveConn()
-                    if (this.active_conn_state) {
+                    await this.validatingConn()
+                    if (this.curr_cnct_resource.id) {
                         await this.initialFetch()
                     }
                 }
@@ -160,7 +159,7 @@ export default {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
-            checkActiveConn: 'query/checkActiveConn',
+            validatingConn: 'query/validatingConn',
             reloadTreeNodes: 'query/reloadTreeNodes',
             updateActiveDb: 'query/updateActiveDb',
         }),
