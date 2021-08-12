@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-geospatial/
+// https://docs.mongodb.com/v4.4/reference/command/nav-geospatial/
 //
 
 #include "defs.hh"
@@ -23,7 +23,7 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/geoSearch/
+// https://docs.mongodb.com/v4.4/reference/command/geoSearch/
 
 
 }

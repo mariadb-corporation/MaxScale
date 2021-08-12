@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-plan-cache/
+// https://docs.mongodb.com/v4.4/reference/command/nav-plan-cache/
 //
 
 #include "defs.hh"
@@ -23,13 +23,13 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/planCacheClear/
+// https://docs.mongodb.com/v4.4/reference/command/planCacheClear/
 
-// https://docs.mongodb.com/manual/reference/command/planCacheClearFilters/
+// https://docs.mongodb.com/v4.4/reference/command/planCacheClearFilters/
 
-// https://docs.mongodb.com/manual/reference/command/planCacheListFilters/
+// https://docs.mongodb.com/v4.4/reference/command/planCacheListFilters/
 
-// https://docs.mongodb.com/manual/reference/command/planCacheSetFilter/
+// https://docs.mongodb.com/v4.4/reference/command/planCacheSetFilter/
 
 
 }

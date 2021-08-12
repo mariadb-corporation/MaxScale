@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-user-management/
+// https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
 
@@ -22,19 +22,19 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/createUser/
+// https://docs.mongodb.com/v4.4/reference/command/createUser/
 
-// https://docs.mongodb.com/manual/reference/command/dropAllUsersFromDatabase/
+// https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
 
-// https://docs.mongodb.com/manual/reference/command/dropUser/
+// https://docs.mongodb.com/v4.4/reference/command/dropUser/
 
-// https://docs.mongodb.com/manual/reference/command/grantRolesToUser/
+// https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
 
-// https://docs.mongodb.com/manual/reference/command/revokeRolesFromUser/
+// https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
 
-// https://docs.mongodb.com/manual/reference/command/updateUser/
+// https://docs.mongodb.com/v4.4/reference/command/updateUser/
 
-// https://docs.mongodb.com/manual/reference/command/usersInfo/
+// https://docs.mongodb.com/v4.4/reference/command/usersInfo/
 
 
 }

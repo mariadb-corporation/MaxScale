@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-crud/
+// https://docs.mongodb.com/v4.4/reference/command/nav-crud/
 //
 
 #include "defs.hh"
@@ -271,7 +271,7 @@ protected:
     bsoncxx::builder::basic::array m_write_errors;
 };
 
-// https://docs.mongodb.com/manual/reference/command/delete/
+// https://docs.mongodb.com/v4.4/reference/command/delete/
 class Delete final : public OrderedCommand
 {
 public:
@@ -367,7 +367,7 @@ private:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/find/
+// https://docs.mongodb.com/v4.4/reference/command/find/
 class Find final : public SingleCommand
 {
 public:
@@ -513,9 +513,9 @@ private:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/findAndModify/
+// https://docs.mongodb.com/v4.4/reference/command/findAndModify/
 
-// https://docs.mongodb.com/manual/reference/command/getLastError/
+// https://docs.mongodb.com/v4.4/reference/command/getLastError/
 class GetLastError final : public ImmediateCommand
 {
 public:
@@ -530,7 +530,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/getMore/
+// https://docs.mongodb.com/v4.4/reference/command/getMore/
 class GetMore final : public ImmediateCommand
 {
 public:
@@ -565,7 +565,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/insert/
+// https://docs.mongodb.com/v4.4/reference/command/insert/
 class Insert final : public OrderedCommand
 {
 public:
@@ -1169,7 +1169,7 @@ protected:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/resetError/
+// https://docs.mongodb.com/v4.4/reference/command/resetError/
 class ResetError final : public ImmediateCommand
 {
 public:
@@ -1185,7 +1185,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/update/
+// https://docs.mongodb.com/v4.4/reference/command/update/
 class Update final : public OrderedCommand
 {
 public:

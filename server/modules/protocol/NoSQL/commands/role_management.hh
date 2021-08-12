@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-role-management/
+// https://docs.mongodb.com/v4.4/reference/command/nav-role-management/
 //
 
 #include "defs.hh"
@@ -23,25 +23,25 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/createRole/
+// https://docs.mongodb.com/v4.4/reference/command/createRole/
 
-// https://docs.mongodb.com/manual/reference/command/dropRole/
+// https://docs.mongodb.com/v4.4/reference/command/dropRole/
 
-// https://docs.mongodb.com/manual/reference/command/dropAllRolesFromDatabase/
+// https://docs.mongodb.com/v4.4/reference/command/dropAllRolesFromDatabase/
 
-// https://docs.mongodb.com/manual/reference/command/grantPrivilegesToRole/
+// https://docs.mongodb.com/v4.4/reference/command/grantPrivilegesToRole/
 
-// https://docs.mongodb.com/manual/reference/command/grantRolesToRole/
+// https://docs.mongodb.com/v4.4/reference/command/grantRolesToRole/
 
-// https://docs.mongodb.com/manual/reference/command/invalidateUserCache/
+// https://docs.mongodb.com/v4.4/reference/command/invalidateUserCache/
 
-// https://docs.mongodb.com/manual/reference/command/revokePrivilegesFromRole/
+// https://docs.mongodb.com/v4.4/reference/command/revokePrivilegesFromRole/
 
-// https://docs.mongodb.com/manual/reference/command/revokeRolesFromRole/
+// https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromRole/
 
-// https://docs.mongodb.com/manual/reference/command/rolesInfo/
+// https://docs.mongodb.com/v4.4/reference/command/rolesInfo/
 
-// https://docs.mongodb.com/manual/reference/command/updateRole/
+// https://docs.mongodb.com/v4.4/reference/command/updateRole/
 
 
 }

@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-administration/
+// https://docs.mongodb.com/v4.4/reference/command/nav-administration/
 //
 
 #include "defs.hh"
@@ -23,17 +23,17 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/cloneCollectionAsCapped/
+// https://docs.mongodb.com/v4.4/reference/command/cloneCollectionAsCapped/
 
-// https://docs.mongodb.com/manual/reference/command/collMod/
+// https://docs.mongodb.com/v4.4/reference/command/collMod/
 
-// https://docs.mongodb.com/manual/reference/command/compact/
+// https://docs.mongodb.com/v4.4/reference/command/compact/
 
-// https://docs.mongodb.com/manual/reference/command/connPoolSync/
+// https://docs.mongodb.com/v4.4/reference/command/connPoolSync/
 
-// https://docs.mongodb.com/manual/reference/command/convertToCapped/
+// https://docs.mongodb.com/v4.4/reference/command/convertToCapped/
 
-// https://docs.mongodb.com/manual/reference/command/create/
+// https://docs.mongodb.com/v4.4/reference/command/create/
 class Create final : public SingleCommand
 {
 public:
@@ -246,11 +246,11 @@ private:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/createIndexes/
+// https://docs.mongodb.com/v4.4/reference/command/createIndexes/
 
-// https://docs.mongodb.com/manual/reference/command/currentOp/
+// https://docs.mongodb.com/v4.4/reference/command/currentOp/
 
-// https://docs.mongodb.com/manual/reference/command/drop/
+// https://docs.mongodb.com/v4.4/reference/command/drop/
 class Drop final : public SingleCommand
 {
 public:
@@ -312,7 +312,7 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/dropDatabase/
+// https://docs.mongodb.com/v4.4/reference/command/dropDatabase/
 class DropDatabase final : public SingleCommand
 {
 public:
@@ -373,21 +373,21 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/dropConnections/
+// https://docs.mongodb.com/v4.4/reference/command/dropConnections/
 
-// https://docs.mongodb.com/manual/reference/command/dropIndexes/
+// https://docs.mongodb.com/v4.4/reference/command/dropIndexes/
 
-// https://docs.mongodb.com/manual/reference/command/filemd5/
+// https://docs.mongodb.com/v4.4/reference/command/filemd5/
 
-// https://docs.mongodb.com/manual/reference/command/fsync/
+// https://docs.mongodb.com/v4.4/reference/command/fsync/
 
-// https://docs.mongodb.com/manual/reference/command/fsyncUnlock/
+// https://docs.mongodb.com/v4.4/reference/command/fsyncUnlock/
 
-// https://docs.mongodb.com/manual/reference/command/getDefaultRWConcern/
+// https://docs.mongodb.com/v4.4/reference/command/getDefaultRWConcern/
 
-// https://docs.mongodb.com/manual/reference/command/getParameter/
+// https://docs.mongodb.com/v4.4/reference/command/getParameter/
 
-// https://docs.mongodb.com/manual/reference/command/killCursors/
+// https://docs.mongodb.com/v4.4/reference/command/killCursors/
 class KillCursors final : public ImmediateCommand
 {
 public:
@@ -453,9 +453,9 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/killOp/
+// https://docs.mongodb.com/v4.4/reference/command/killOp/
 
-// https://docs.mongodb.com/manual/reference/command/listCollections/
+// https://docs.mongodb.com/v4.4/reference/command/listCollections/
 class ListCollections final : public SingleCommand
 {
 public:
@@ -590,7 +590,7 @@ private:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/listDatabases/
+// https://docs.mongodb.com/v4.4/reference/command/listDatabases/
 class ListDatabases;
 
 template<>
@@ -714,13 +714,13 @@ private:
     bool m_name_only { false };
 };
 
-// https://docs.mongodb.com/manual/reference/command/listIndexes/
+// https://docs.mongodb.com/v4.4/reference/command/listIndexes/
 
-// https://docs.mongodb.com/manual/reference/command/logRotate/
+// https://docs.mongodb.com/v4.4/reference/command/logRotate/
 
-// https://docs.mongodb.com/manual/reference/command/reIndex/
+// https://docs.mongodb.com/v4.4/reference/command/reIndex/
 
-// https://docs.mongodb.com/manual/reference/command/renameCollection/
+// https://docs.mongodb.com/v4.4/reference/command/renameCollection/
 class RenameCollection;
 
 template<>
@@ -836,15 +836,15 @@ private:
     string m_to;
 };
 
-// https://docs.mongodb.com/manual/reference/command/setFeatureCompatibilityVersion/
+// https://docs.mongodb.com/v4.4/reference/command/setFeatureCompatibilityVersion/
 
-// https://docs.mongodb.com/manual/reference/command/setIndexCommitQuorum/
+// https://docs.mongodb.com/v4.4/reference/command/setIndexCommitQuorum/
 
-// https://docs.mongodb.com/manual/reference/command/setParameter/
+// https://docs.mongodb.com/v4.4/reference/command/setParameter/
 
-// https://docs.mongodb.com/manual/reference/command/setDefaultRWConcern/
+// https://docs.mongodb.com/v4.4/reference/command/setDefaultRWConcern/
 
-// https://docs.mongodb.com/manual/reference/command/shutdown/
+// https://docs.mongodb.com/v4.4/reference/command/shutdown/
 
 
 }

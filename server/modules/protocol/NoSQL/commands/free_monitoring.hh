@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-free-monitoring/
+// https://docs.mongodb.com/v4.4/reference/command/nav-free-monitoring/
 //
 
 #include "defs.hh"
@@ -23,7 +23,7 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/
+// https://docs.mongodb.com/v4.4/reference/command/getFreeMonitoringStatus/
 class GetFreeMonitoringStatus;
 
 template<>
@@ -53,7 +53,7 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/setFreeMonitoring/
+// https://docs.mongodb.com/v4.4/reference/command/setFreeMonitoring/
 
 
 }

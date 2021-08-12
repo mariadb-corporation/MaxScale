@@ -6,7 +6,7 @@ Internally, all documents are stored in a table containing two columns;
 an `id` column for the object id and a `doc` column for the document itself.
 
 When the MongoDB® client application issues MongoDB
-[commands](https://docs.mongodb.com/manual/reference/command/),
+[commands](https://docs.mongodb.com/v4.4/reference/command/),
 either directly or indirectly via the client library, they are transparently
 converted into the equivalent SQL and executed against the MariaDB backend.
 The MariaDB responses are then in turn converted into the format expected by
@@ -65,7 +65,7 @@ is used, then the connection string should look like:
 const uri = "mongodb://127.0.0.1:17017"
 ```
 
-Similarly, if the [mongo Shell](https://docs.mongodb.com/manual/mongo/)
+Similarly, if the [mongo Shell](https://docs.mongodb.com/v4.4/mongo/)
 is used, only the host and port should be provided:
 ```
 $ mongo --host 127.0.0.1 --port 17017
@@ -78,9 +78,9 @@ MongoDB shell version v4.4.1
 
 As the goal of _nosqlprotocol_ is to implement, to the extent that it
 is feasible, the
-[MongoDB Wire Protocol](https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/)
+[MongoDB Wire Protocol](https://docs.mongodb.com/v4.4/reference/mongodb-wire-protocol/)
 and the
-[Database Commands](https://docs.mongodb.com/manual/reference/command/)
+[Database Commands](https://docs.mongodb.com/v4.4/reference/command/)
 the way MongoDB® implements them, it should be possible to use
 any language specific [driver](https://docs.mongodb.com/drivers/).
 
@@ -249,36 +249,36 @@ database for tables that contain documents.
 
 # Operators
 
-## [Query and Projection Operators](https://docs.mongodb.com/manual/reference/operator/query/)
+## [Query and Projection Operators](https://docs.mongodb.com/v4.4/reference/operator/query/)
 
-### [Comparison Query Operators](https://docs.mongodb.com/manual/reference/operator/query-comparison/)
-
-Name | Status
------|-------
-[$eq](https://docs.mongodb.com/manual/reference/operator/query/eq/) | Supported
-[$gt](https://docs.mongodb.com/manual/reference/operator/query/gt/) | Supported
-[$gte](https://docs.mongodb.com/manual/reference/operator/query/gte/) | Supported
-[$in](https://docs.mongodb.com/manual/reference/operator/query/in/) | Supported
-[$lt](https://docs.mongodb.com/manual/reference/operator/query/lt/) | Supported
-[$lte](https://docs.mongodb.com/manual/reference/operator/query/lte/) | Supported
-[$ne](https://docs.mongodb.com/manual/reference/operator/query/ne/) | Supported
-[$nin](https://docs.mongodb.com/manual/reference/operator/query/nin/) | Supported
-
-### [Logical Query Operators](https://docs.mongodb.com/manual/reference/operator/query-logical/)
+### [Comparison Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-comparison/)
 
 Name | Status
 -----|-------
-[$and](https://docs.mongodb.com/manual/reference/operator/query/and/) | Supported
-[$not](https://docs.mongodb.com/manual/reference/operator/query/not/) | Supported
-[$nor](https://docs.mongodb.com/manual/reference/operator/query/nor/) | Supported
-[$or](https://docs.mongodb.com/manual/reference/operator/query/or/) | Supported
+[$eq](https://docs.mongodb.com/v4.4/reference/operator/query/eq/) | Supported
+[$gt](https://docs.mongodb.com/v4.4/reference/operator/query/gt/) | Supported
+[$gte](https://docs.mongodb.com/v4.4/reference/operator/query/gte/) | Supported
+[$in](https://docs.mongodb.com/v4.4/reference/operator/query/in/) | Supported
+[$lt](https://docs.mongodb.com/v4.4/reference/operator/query/lt/) | Supported
+[$lte](https://docs.mongodb.com/v4.4/reference/operator/query/lte/) | Supported
+[$ne](https://docs.mongodb.com/v4.4/reference/operator/query/ne/) | Supported
+[$nin](https://docs.mongodb.com/v4.4/reference/operator/query/nin/) | Supported
 
-### [Element Query Operators](https://docs.mongodb.com/manual/reference/operator/query-element/)
+### [Logical Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-logical/)
 
 Name | Status
 -----|-------
-[$exists](https://docs.mongodb.com/manual/reference/operator/query/exists/) | Supported
-[$type](https://docs.mongodb.com/manual/reference/operator/query/type/) | Supported
+[$and](https://docs.mongodb.com/v4.4/reference/operator/query/and/) | Supported
+[$not](https://docs.mongodb.com/v4.4/reference/operator/query/not/) | Supported
+[$nor](https://docs.mongodb.com/v4.4/reference/operator/query/nor/) | Supported
+[$or](https://docs.mongodb.com/v4.4/reference/operator/query/or/) | Supported
+
+### [Element Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-element/)
+
+Name | Status
+-----|-------
+[$exists](https://docs.mongodb.com/v4.4/reference/operator/query/exists/) | Supported
+[$type](https://docs.mongodb.com/v4.4/reference/operator/query/type/) | Supported
 
 #### `$type`
 
@@ -298,117 +298,117 @@ Boolean | 5 | "bool" | `BOOLEAN`
 The _"number"_ alias is supported and will match values whose MariaDB type is
 `DOUBLE` or `INTEGER`.
 
-### [Evaluation Query Operators](https://docs.mongodb.com/manual/reference/operator/query-evaluation/)
+### [Evaluation Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-evaluation/)
 
 Name | Status
 -----|-------
-[$expr](https://docs.mongodb.com/manual/reference/operator/query/expr/) | Not supported
-[$jsonSchema](https://docs.mongodb.com/manual/reference/operator/query/jsonSchema/) | Not supported
-[$mod](https://docs.mongodb.com/manual/reference/operator/query/mod/) | Not supported
-[$regex](https://docs.mongodb.com/manual/reference/operator/query/regex/) | Not supported
-[$text](https://docs.mongodb.com/manual/reference/operator/query/text/) | Not supported
-[$where](https://docs.mongodb.com/manual/reference/operator/query/where/) | Not supported
+[$expr](https://docs.mongodb.com/v4.4/reference/operator/query/expr/) | Not supported
+[$jsonSchema](https://docs.mongodb.com/v4.4/reference/operator/query/jsonSchema/) | Not supported
+[$mod](https://docs.mongodb.com/v4.4/reference/operator/query/mod/) | Not supported
+[$regex](https://docs.mongodb.com/v4.4/reference/operator/query/regex/) | Not supported
+[$text](https://docs.mongodb.com/v4.4/reference/operator/query/text/) | Not supported
+[$where](https://docs.mongodb.com/v4.4/reference/operator/query/where/) | Not supported
 
-### [Geospatial Query Operators](https://docs.mongodb.com/manual/reference/operator/query-geospatial/)
-
-Name | Status
------|-------
-[$geoIntersects](https://docs.mongodb.com/manual/reference/operator/query/geoIntersects/) | Not supported
-[$geoWithin](https://docs.mongodb.com/manual/reference/operator/query/geoWithin/) | Not supported
-[$near](https://docs.mongodb.com/manual/reference/operator/query/near/) | Not supported
-[$nearSphere](https://docs.mongodb.com/manual/reference/operator/query/nearSphere/) | Not supported
-[$box](https://docs.mongodb.com/manual/reference/operator/query/box/) | Not supported
-[$center](https://docs.mongodb.com/manual/reference/operator/query/center/) | Not supported
-[$centerSphere](https://docs.mongodb.com/manual/reference/operator/query/centerSphere/) | Not supported
-[$geometry](https://docs.mongodb.com/manual/reference/operator/query/geometry/) | Not supported
-[$maxDistance](https://docs.mongodb.com/manual/reference/operator/query/maxDistance/) | Not supported
-[$minDistance](https://docs.mongodb.com/manual/reference/operator/query/minDistance/) | Not supported
-[$polygon](https://docs.mongodb.com/manual/reference/operator/query/polygon/) | Not supported
-[$uniqueDocs](https://docs.mongodb.com/manual/reference/operator/query/uniqueDocs/) | Not supported
-
-### [Array Query Operators](https://docs.mongodb.com/manual/reference/operator/query-array/)
+### [Geospatial Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-geospatial/)
 
 Name | Status
 -----|-------
-[$all](https://docs.mongodb.com/manual/reference/operator/query/all/) | Supported
-[$elemMatch](https://docs.mongodb.com/manual/reference/operator/query//) | Supported
-[$size](https://docs.mongodb.com/manual/reference/operator/query//) | Supported
+[$geoIntersects](https://docs.mongodb.com/v4.4/reference/operator/query/geoIntersects/) | Not supported
+[$geoWithin](https://docs.mongodb.com/v4.4/reference/operator/query/geoWithin/) | Not supported
+[$near](https://docs.mongodb.com/v4.4/reference/operator/query/near/) | Not supported
+[$nearSphere](https://docs.mongodb.com/v4.4/reference/operator/query/nearSphere/) | Not supported
+[$box](https://docs.mongodb.com/v4.4/reference/operator/query/box/) | Not supported
+[$center](https://docs.mongodb.com/v4.4/reference/operator/query/center/) | Not supported
+[$centerSphere](https://docs.mongodb.com/v4.4/reference/operator/query/centerSphere/) | Not supported
+[$geometry](https://docs.mongodb.com/v4.4/reference/operator/query/geometry/) | Not supported
+[$maxDistance](https://docs.mongodb.com/v4.4/reference/operator/query/maxDistance/) | Not supported
+[$minDistance](https://docs.mongodb.com/v4.4/reference/operator/query/minDistance/) | Not supported
+[$polygon](https://docs.mongodb.com/v4.4/reference/operator/query/polygon/) | Not supported
+[$uniqueDocs](https://docs.mongodb.com/v4.4/reference/operator/query/uniqueDocs/) | Not supported
+
+### [Array Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-array/)
+
+Name | Status
+-----|-------
+[$all](https://docs.mongodb.com/v4.4/reference/operator/query/all/) | Supported
+[$elemMatch](https://docs.mongodb.com/v4.4/reference/operator/query//) | Supported
+[$size](https://docs.mongodb.com/v4.4/reference/operator/query//) | Supported
 
 #### `$elemMatch`
 As arguments, only the operators `$eq` and `$ne` are supported.
 
-### [Bitwise Query Operators](https://docs.mongodb.com/manual/reference/operator/query-bitwise/)
+### [Bitwise Query Operators](https://docs.mongodb.com/v4.4/reference/operator/query-bitwise/)
 
 Name | Status
 -----|-------
-[$bitsAllClear](https://docs.mongodb.com/manual/reference/operator/query/bitsAllClear/) | Not supported
-[$bitsAllSet](https://docs.mongodb.com/manual/reference/operator/query/bitsAllSet/) | Not supported
-[$bitsAnyClear](https://docs.mongodb.com/manual/reference/operator/query/bitsAnyClear/) | Not supported
-[$bitsAnySet](https://docs.mongodb.com/manual/reference/operator/query/bitsAnySet/) | Not supported
+[$bitsAllClear](https://docs.mongodb.com/v4.4/reference/operator/query/bitsAllClear/) | Not supported
+[$bitsAllSet](https://docs.mongodb.com/v4.4/reference/operator/query/bitsAllSet/) | Not supported
+[$bitsAnyClear](https://docs.mongodb.com/v4.4/reference/operator/query/bitsAnyClear/) | Not supported
+[$bitsAnySet](https://docs.mongodb.com/v4.4/reference/operator/query/bitsAnySet/) | Not supported
 
-### [Projection Operators](https://docs.mongodb.com/manual/reference/operator/projection/)
-
-Name | Status
------|-------
-[<array>.$ (projection)](https://docs.mongodb.com/manual/reference/operator/projection/positional/) | Not supported
-[$elemMatch (projection)](https://docs.mongodb.com/manual/reference/operator/projection/elemMatch/) | Not supported
-[$slice (projection)](https://docs.mongodb.com/manual/reference/operator/projection/slic/) | Not supported
-
-### [Miscallenous Operators](https://docs.mongodb.com/manual/reference/operator/query-miscellaneous/)
+### [Projection Operators](https://docs.mongodb.com/v4.4/reference/operator/projection/)
 
 Name | Status
 -----|-------
-[$comment](https://docs.mongodb.com/manual/reference/operator/query/comment/) | Not supported
-[$rand](https://docs.mongodb.com/manual/reference/operator/query/rand/) | Not supported
+[<array>.$ (projection)](https://docs.mongodb.com/v4.4/reference/operator/projection/positional/) | Not supported
+[$elemMatch (projection)](https://docs.mongodb.com/v4.4/reference/operator/projection/elemMatch/) | Not supported
+[$slice (projection)](https://docs.mongodb.com/v4.4/reference/operator/projection/slic/) | Not supported
 
-## [Update Operators](https://docs.mongodb.com/manual/reference/operator/update/#update-operators)
-
-### [Field Update Operators](https://docs.mongodb.com/manual/reference/operator/update-field/)
-
-Name | Status
------|-------
-[$currentDate](https://docs.mongodb.com/manual/reference/operator/update//) | Not supported
-[$inc](https://docs.mongodb.com/manual/reference/operator/update/inc/) | Not supported
-[$min](https://docs.mongodb.com/manual/reference/operator/update/min/) | Not supported
-[$max](https://docs.mongodb.com/manual/reference/operator/update/max/) | Not supported
-[$mul](https://docs.mongodb.com/manual/reference/operator/update/mul/) | Not supported
-[$rename](https://docs.mongodb.com/manual/reference/operator/update/rename/) | Not supported
-[$set](https://docs.mongodb.com/manual/reference/operator/update/set/) | Supported
-[$setOnInsert](https://docs.mongodb.com/manual/reference/operator/update/setOnInsert/) | Not supported
-[$unset](https://docs.mongodb.com/manual/reference/operator/update/unset/) | Supported
-
-### [Array Update Operators](https://docs.mongodb.com/manual/reference/operator/update-array/)
+### [Miscallenous Operators](https://docs.mongodb.com/v4.4/reference/operator/query-miscellaneous/)
 
 Name | Status
 -----|-------
-[\<array\>.$](https://docs.mongodb.com/manual/reference/operator/update/positional/) | Not supported
-[\<array\>.$\[\]](https://docs.mongodb.com/manual/reference/operator/update/positional/) | Not supported
-[\<array\>\[\<identifier\>\]](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) | Not supported
-[$addToSet](https://docs.mongodb.com/manual/reference/operator/update/addToSet/) | Not supported
-[$pop](https://docs.mongodb.com/manual/reference/operator/update/pop/) | Not supported
-[$pull](https://docs.mongodb.com/manual/reference/operator/update/pull/) | Not supported
-[$push](https://docs.mongodb.com/manual/reference/operator/update/push/) | Not supported
-[$pullAll](https://docs.mongodb.com/manual/reference/operator/update/pullAll/) | Not supported
-[$each](https://docs.mongodb.com/manual/reference/operator/update/each/) | Not supported
-[$position](https://docs.mongodb.com/manual/reference/operator/update/position/) | Not supported
-[$slice](https://docs.mongodb.com/manual/reference/operator/update/slice/) | Not supported
-[$sort](https://docs.mongodb.com/manual/reference/operator/update/sort/) | Not supported
+[$comment](https://docs.mongodb.com/v4.4/reference/operator/query/comment/) | Not supported
+[$rand](https://docs.mongodb.com/v4.4/reference/operator/query/rand/) | Not supported
 
-### [Bitwise Update Operators](https://docs.mongodb.com/manual/reference/operator/update-array/)
+## [Update Operators](https://docs.mongodb.com/v4.4/reference/operator/update/#update-operators)
+
+### [Field Update Operators](https://docs.mongodb.com/v4.4/reference/operator/update-field/)
 
 Name | Status
 -----|-------
-[$bit](https://docs.mongodb.com/manual/reference/operator/update/bit/) | Not supported
+[$currentDate](https://docs.mongodb.com/v4.4/reference/operator/update//) | Not supported
+[$inc](https://docs.mongodb.com/v4.4/reference/operator/update/inc/) | Not supported
+[$min](https://docs.mongodb.com/v4.4/reference/operator/update/min/) | Not supported
+[$max](https://docs.mongodb.com/v4.4/reference/operator/update/max/) | Not supported
+[$mul](https://docs.mongodb.com/v4.4/reference/operator/update/mul/) | Not supported
+[$rename](https://docs.mongodb.com/v4.4/reference/operator/update/rename/) | Not supported
+[$set](https://docs.mongodb.com/v4.4/reference/operator/update/set/) | Supported
+[$setOnInsert](https://docs.mongodb.com/v4.4/reference/operator/update/setOnInsert/) | Not supported
+[$unset](https://docs.mongodb.com/v4.4/reference/operator/update/unset/) | Supported
 
-## [Aggregation Pipeline Stages](https://docs.mongodb.com/manual/reference/operator/aggregation-pipeline/)
+### [Array Update Operators](https://docs.mongodb.com/v4.4/reference/operator/update-array/)
+
+Name | Status
+-----|-------
+[\<array\>.$](https://docs.mongodb.com/v4.4/reference/operator/update/positional/) | Not supported
+[\<array\>.$\[\]](https://docs.mongodb.com/v4.4/reference/operator/update/positional/) | Not supported
+[\<array\>\[\<identifier\>\]](https://docs.mongodb.com/v4.4/reference/operator/update/positional-filtered/) | Not supported
+[$addToSet](https://docs.mongodb.com/v4.4/reference/operator/update/addToSet/) | Not supported
+[$pop](https://docs.mongodb.com/v4.4/reference/operator/update/pop/) | Not supported
+[$pull](https://docs.mongodb.com/v4.4/reference/operator/update/pull/) | Not supported
+[$push](https://docs.mongodb.com/v4.4/reference/operator/update/push/) | Not supported
+[$pullAll](https://docs.mongodb.com/v4.4/reference/operator/update/pullAll/) | Not supported
+[$each](https://docs.mongodb.com/v4.4/reference/operator/update/each/) | Not supported
+[$position](https://docs.mongodb.com/v4.4/reference/operator/update/position/) | Not supported
+[$slice](https://docs.mongodb.com/v4.4/reference/operator/update/slice/) | Not supported
+[$sort](https://docs.mongodb.com/v4.4/reference/operator/update/sort/) | Not supported
+
+### [Bitwise Update Operators](https://docs.mongodb.com/v4.4/reference/operator/update-array/)
+
+Name | Status
+-----|-------
+[$bit](https://docs.mongodb.com/v4.4/reference/operator/update/bit/) | Not supported
+
+## [Aggregation Pipeline Stages](https://docs.mongodb.com/v4.4/reference/operator/aggregation-pipeline/)
 
 Currently not supported.
 
-## [Aggregation Pipeline Operators](https://docs.mongodb.com/manual/reference/operator/aggregation/)
+## [Aggregation Pipeline Operators](https://docs.mongodb.com/v4.4/reference/operator/aggregation/)
 
 Currently not supported.
 
-## [Query Modifiers](https://docs.mongodb.com/manual/reference/operator/query-modifier/)
+## [Query Modifiers](https://docs.mongodb.com/v4.4/reference/operator/query-modifier/)
 
 Currently not supported.
 
@@ -425,9 +425,9 @@ the MongoDB documentation for the command.
 **All** non-listed fields are ignored; their presence or absence have no
 impact, unless otherwise explicitly specified.
 
-## [Aggregation Commands](https://docs.mongodb.com/manual/reference/command/nav-aggregation/)
+## [Aggregation Commands](https://docs.mongodb.com/v4.4/reference/command/nav-aggregation/)
 
-### [count](https://docs.mongodb.com/manual/reference/command/count/)
+### [count](https://docs.mongodb.com/v4.4/reference/command/count/)
 
 The following fields are relevant.
 
@@ -438,7 +438,7 @@ query| document | Optional. A query that selects which documents to count in the
 limit| integer | Optional. The maximum number of matching documents to return.
 skip | integer | Optional. The number of matching documents to skip before returning results.
 
-### [distinct](https://docs.mongodb.com/manual/reference/command/distinct/)
+### [distinct](https://docs.mongodb.com/v4.4/reference/command/distinct/)
 
 The following fields are relevant.
 
@@ -448,13 +448,13 @@ distinct| string | The name of the collection to query for distinct values.
 key | string | The field for which to return distinct values.
 query| document | Optional. A query that selects which documents to count in the collection
 
-## [Geospatial Commands](https://docs.mongodb.com/manual/reference/command/nav-geospatial/)
+## [Geospatial Commands](https://docs.mongodb.com/v4.4/reference/command/nav-geospatial/)
 
 No commands from this group are currently supported.
 
-## [Query and Write Operation Commands](https://docs.mongodb.com/manual/reference/command/nav-crud/)
+## [Query and Write Operation Commands](https://docs.mongodb.com/v4.4/reference/command/nav-crud/)
 
-### [delete](https://docs.mongodb.com/manual/reference/command/delete)
+### [delete](https://docs.mongodb.com/v4.4/reference/command/delete)
 
 The following fields are relevant.
 
@@ -471,7 +471,7 @@ Field | Type | Description
 q | document | The query that matches documents to delete.
 limit | integer | The number of matching documents to delete. Specify either a 0 to delete all matching documents or 1 to delete a single document.
 
-### [find](https://docs.mongodb.com/manual/reference/command/find)
+### [find](https://docs.mongodb.com/v4.4/reference/command/find)
 
 The following fields are relevant.
 
@@ -548,7 +548,7 @@ and in the latter
 That is, in the former case the _indexed_ column `id` will be used, in the
 latter it will not.
 
-### [getLastError](https://docs.mongodb.com/manual/reference/command/getLastError/)
+### [getLastError](https://docs.mongodb.com/v4.4/reference/command/getLastError/)
 
 The following fields are relevant.
 
@@ -556,7 +556,7 @@ Field | Type | Description
 ------|------|------------
 getLastError | any | Ignored.
 
-### [getMore](https://docs.mongodb.com/manual/reference/command/getMore/)
+### [getMore](https://docs.mongodb.com/v4.4/reference/command/getMore/)
 
 The following fields are relevant.
 
@@ -566,7 +566,7 @@ getMore | long | The cursor id.
 collection | string | The name of the collection over which the cursor is operating.
 batchSize | positive integer | Optional. The number of documents to return in the batch.
 
-### [insert](https://docs.mongodb.com/manual/reference/command/insert)
+### [insert](https://docs.mongodb.com/v4.4/reference/command/insert)
 
 The `insert` command inserts one or more documents into the table whose
 name is the same as that of the collection. If the option `auto_create_tables`
@@ -610,7 +610,7 @@ Of these, `atomic + true` is the fastest and `atomic|default + false` the slowes
 being roughly twice as slow. The performance of 'default + true' is halfway between
 the two.
 
-### [resetError](https://docs.mongodb.com/manual/reference/command/resetError/)
+### [resetError](https://docs.mongodb.com/v4.4/reference/command/resetError/)
 
 The following fields are relevant.
 
@@ -618,7 +618,7 @@ Field | Type | Description
 ------|------|------------
 resetError | any | Ignored.
 
-### [update](https://docs.mongodb.com/manual/reference/command/update)
+### [update](https://docs.mongodb.com/v4.4/reference/command/update)
 
 The following fields are relevant.
 
@@ -691,25 +691,25 @@ document id will remain non-changed while the document otherwise is replaced. Th
 different from MongoDB® where the presence of the `_id` field in the replacement document
 causes an error, if the value is not the same as it is in the document being replaced.
 
-## [Query Plan Cache Commands](https://docs.mongodb.com/manual/reference/command/nav-plan-cache/)
+## [Query Plan Cache Commands](https://docs.mongodb.com/v4.4/reference/command/nav-plan-cache/)
 
 No commands from this group are currently supported.
 
-## [Authenitcation Commands](https://docs.mongodb.com/manual/reference/command/nav-authentication/)
+## [Authenitcation Commands](https://docs.mongodb.com/v4.4/reference/command/nav-authentication/)
 
 No commands from this group are currently supported.
 
-## [User Management Commands](https://docs.mongodb.com/manual/reference/command/nav-user-management/)
+## [User Management Commands](https://docs.mongodb.com/v4.4/reference/command/nav-user-management/)
 
 No commands from this group are currently supported.
 
-## [Role Management Commands](https://docs.mongodb.com/manual/reference/command/nav-role-management/)
+## [Role Management Commands](https://docs.mongodb.com/v4.4/reference/command/nav-role-management/)
 
 No commands from this group are currently supported.
 
-## [Replication Commands](https://docs.mongodb.com/manual/reference/command/nav-replication/)
+## [Replication Commands](https://docs.mongodb.com/v4.4/reference/command/nav-replication/)
 
-### [isMaster](https://docs.mongodb.com/manual/reference/command/isMaster/)
+### [isMaster](https://docs.mongodb.com/v4.4/reference/command/isMaster/)
 
 The following fields are relevant.
 
@@ -717,13 +717,13 @@ Field | Type | Description
 ------|------|------------
 isMaster | any | Ignored.
 
-## [Sharding Commands](https://docs.mongodb.com/manual/reference/command/nav-sharding/)
+## [Sharding Commands](https://docs.mongodb.com/v4.4/reference/command/nav-sharding/)
 
 No commands from this group are currently supported.
 
-## [Sessions Commands](https://docs.mongodb.com/manual/reference/command/nav-sessions/)
+## [Sessions Commands](https://docs.mongodb.com/v4.4/reference/command/nav-sessions/)
 
-### [endSessions](https://docs.mongodb.com/manual/reference/command/endSessions/)
+### [endSessions](https://docs.mongodb.com/v4.4/reference/command/endSessions/)
 
 The following fields are relevant.
 
@@ -736,9 +736,9 @@ The following document will always be returned:
 { "ok" : 1 }
 ```
 
-## [Administration Commands](https://docs.mongodb.com/manual/reference/command/nav-administration/)
+## [Administration Commands](https://docs.mongodb.com/v4.4/reference/command/nav-administration/)
 
-### [create](https://docs.mongodb.com/manual/reference/command/create/)
+### [create](https://docs.mongodb.com/v4.4/reference/command/create/)
 
 The following fields are relevant.
 
@@ -746,7 +746,7 @@ Field | Type | Description
 ------|------|------------
 create| string | The name of the collection to create.
 
-### [drop](https://docs.mongodb.com/manual/reference/command/drop/)
+### [drop](https://docs.mongodb.com/v4.4/reference/command/drop/)
 
 The following fields are relevant.
 
@@ -754,7 +754,7 @@ Field | Type | Description
 ------|------|------------
 drop| string | The name of the collection to drop.
 
-### [dropDatabase](https://docs.mongodb.com/manual/reference/command/dropDatabase/)
+### [dropDatabase](https://docs.mongodb.com/v4.4/reference/command/dropDatabase/)
 
 The following fields are relevant.
 
@@ -762,7 +762,7 @@ Field | Type | Description
 ------|------|------------
 dropDatabase | any | Ignored.
 
-### [killCursors](https://docs.mongodb.com/manual/reference/command/killCursors/)
+### [killCursors](https://docs.mongodb.com/v4.4/reference/command/killCursors/)
 
 The following fields are relevant.
 
@@ -771,7 +771,7 @@ Field | Type | Description
 killCursors | string | The name of the collection.
 cursors | array | The ids of the cursors to kill.
 
-### [listCollections](https://docs.mongodb.com/manual/reference/command/listCollections/)
+### [listCollections](https://docs.mongodb.com/v4.4/reference/command/listCollections/)
 
 The following fields are relevant.
 
@@ -784,7 +784,7 @@ Note that the command lists all collections (that is, tables) that are found
 in the current database. The listed collections may or may not be suitable
 for being accessed using _nosqlprotocol_.
 
-### [listDatabases](https://docs.mongodb.com/manual/reference/command/listDatabases/)
+### [listDatabases](https://docs.mongodb.com/v4.4/reference/command/listDatabases/)
 
 The following fields are relevant.
 
@@ -793,7 +793,7 @@ Field | Type | Description
 listDatabases | any | Ignored.
 nameOnly | boolean | Optional. A flag to indicate whether the command should return just the database names, or return both database names and size information.
 
-### [renameCollection](https://docs.mongodb.com/manual/reference/command/renameCollection/)
+### [renameCollection](https://docs.mongodb.com/v4.4/reference/command/renameCollection/)
 
 The following fields are relevant.
 
@@ -802,9 +802,9 @@ Field | Type | Description
 renameCollection | string | The namespace of the collection to rename. The namespace is a combination of the database name and the name of the collection.
 to | string | The new namespace of the collection. Moving a collection/table from one database to another succeeds provided the databases reside in the same filesystem.
 
-## [Diagnostic Commands](https://docs.mongodb.com/manual/reference/command/nav-diagnostic/)
+## [Diagnostic Commands](https://docs.mongodb.com/v4.4/reference/command/nav-diagnostic/)
 
-### [buildInfo](https://docs.mongodb.com/manual/reference/command/buildInfo/)
+### [buildInfo](https://docs.mongodb.com/v4.4/reference/command/buildInfo/)
 
 The following fields are relevant.
 
@@ -814,7 +814,7 @@ buildInfo | any | Ignored.
 
 The command returns a document containing the stable fields. In addition, there is a field `maxscale` whose value is the MaxScale version, expressed as a string.
 
-### [getCmdLineOpts](https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/)
+### [getCmdLineOpts](https://docs.mongodb.com/v4.4/reference/command/getCmdLineOpts/)
 
 The following fields are relevant.
 
@@ -822,7 +822,7 @@ Field | Type | Description
 ------|------|------------
 getCmdLineOpts | any | Ignored.
 
-### [getLog](https://docs.mongodb.com/manual/reference/command/getLog/)
+### [getLog](https://docs.mongodb.com/v4.4/reference/command/getLog/)
 
 The following fields are relevant.
 
@@ -832,7 +832,7 @@ getLog | string | `*`, `global` and `startupWarnings`
 
 The command returns a document of the correct format, but _no_ actual log data will be returned.
 
-### [listCommands](https://docs.mongodb.com/manual/reference/command/listCommands/)
+### [listCommands](https://docs.mongodb.com/v4.4/reference/command/listCommands/)
 
 The following fields are relevant.
 
@@ -840,7 +840,7 @@ Field | Type | Description
 ------|------|------------
 listCommands | any | Ignored.
 
-### [ping](https://docs.mongodb.com/manual/reference/command/ping/)
+### [ping](https://docs.mongodb.com/v4.4/reference/command/ping/)
 
 The following fields are relevant.
 
@@ -848,7 +848,7 @@ Field | Type | Description
 ------|------|------------
 ping | any | Ignored.
 
-### [validate](https://docs.mongodb.com/manual/reference/command/validate/)
+### [validate](https://docs.mongodb.com/v4.4/reference/command/validate/)
 
 The following fields are relevant.
 
@@ -860,7 +860,7 @@ The command does not actually perform any validation but for checking
 that the collection exists. The response will contain in `nrecords`
 the current number of documents/rows it contains.
 
-### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
+### [whatsmyuri](https://docs.mongodb.com/v4.4/reference/command/whatsmyuri/)
 
 The following fields are relevant.
 
@@ -870,9 +870,9 @@ whatsmyri | any | Ignored.
 
 This is an internal command, implemented only because the Mongo Shell uses it.
 
-## [Free Monitoring Commands](https://docs.mongodb.com/manual/reference/command/nav-free-monitoring/)
+## [Free Monitoring Commands](https://docs.mongodb.com/v4.4/reference/command/nav-free-monitoring/)
 
-### [getFreeMonitoringStatus](https://docs.mongodb.com/manual/reference/command/getFreeMonitoringStatus/)
+### [getFreeMonitoringStatus](https://docs.mongodb.com/v4.4/reference/command/getFreeMonitoringStatus/)
 
 The following fields are relevant.
 
@@ -885,7 +885,7 @@ The following document will always be returned:
 { "state" : "undecided", "ok" : 1 }
 ```
 
-## [System Events Auditing Commands](https://docs.mongodb.com/manual/reference/command/nav-auditing/)
+## [System Events Auditing Commands](https://docs.mongodb.com/v4.4/reference/command/nav-auditing/)
 
 No commands from this group are currently supported.
 
@@ -1161,7 +1161,7 @@ log file.
 
 ## MongoDB® Shell
 
-[The mongo Shell](https://docs.mongodb.com/manual/mongo/) is a powerful
+[The mongo Shell](https://docs.mongodb.com/v4.4/mongo/) is a powerful
 tool with which to access and manipulate a MongoDB database. It is part
 of the MongoDB® package, which already for that reason alone should be
 installed. Having the native MongoDB database installed is adviseable

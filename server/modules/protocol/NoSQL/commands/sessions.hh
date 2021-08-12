@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-sessions/
+// https://docs.mongodb.com/v4.4/reference/command/nav-sessions/
 //
 
 #include "defs.hh"
@@ -23,11 +23,11 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/abortTransaction/
+// https://docs.mongodb.com/v4.4/reference/command/abortTransaction/
 
-// https://docs.mongodb.com/manual/reference/command/commitTransaction/
+// https://docs.mongodb.com/v4.4/reference/command/commitTransaction/
 
-// https://docs.mongodb.com/manual/reference/command/endSessions/
+// https://docs.mongodb.com/v4.4/reference/command/endSessions/
 class EndSessions final : public ImmediateCommand
 {
 public:
@@ -42,15 +42,15 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/killAllSessions/
+// https://docs.mongodb.com/v4.4/reference/command/killAllSessions/
 
-// https://docs.mongodb.com/manual/reference/command/killAllSessionsByPattern/
+// https://docs.mongodb.com/v4.4/reference/command/killAllSessionsByPattern/
 
-// https://docs.mongodb.com/manual/reference/command/killSessions/
+// https://docs.mongodb.com/v4.4/reference/command/killSessions/
 
-// https://docs.mongodb.com/manual/reference/command/refreshSessions/
+// https://docs.mongodb.com/v4.4/reference/command/refreshSessions/
 
-// https://docs.mongodb.com/manual/reference/command/startSession/
+// https://docs.mongodb.com/v4.4/reference/command/startSession/
 
 
 }

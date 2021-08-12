@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-authentication/
+// https://docs.mongodb.com/v4.4/reference/command/nav-authentication/
 //
 
 #include "defs.hh"
@@ -23,11 +23,11 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/authenticate/
+// https://docs.mongodb.com/v4.4/reference/command/authenticate/
 
-// https://docs.mongodb.com/manual/reference/command/getnonce/
+// https://docs.mongodb.com/v4.4/reference/command/getnonce/
 
-// https://docs.mongodb.com/manual/reference/command/logout/
+// https://docs.mongodb.com/v4.4/reference/command/logout/
 
 
 }
