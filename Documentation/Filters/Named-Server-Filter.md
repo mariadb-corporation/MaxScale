@@ -22,6 +22,10 @@ allowed in the form *match01* - *target01*, *match02* - *target02* and so on.
 Also, in indexed mode, the server names (targets) may contain a list of names or
 special tags `->master` or `->slave`.
 
+All parameters except the deprecated `match` and `target` parameters can
+be modified at runtime. Any modifications to the filter configuration will
+only affect sessions created after the change has completed.
+
 Below is a configuration example for the filter in indexed-mode. The legacy mode
 is not recommended and may be removed in a future release. In the example, a
 SELECT on TableOne (*match01*) results in routing hints to two named servers,

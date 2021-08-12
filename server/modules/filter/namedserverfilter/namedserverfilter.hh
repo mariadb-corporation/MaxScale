@@ -16,6 +16,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include <netdb.h>
 
 #include <maxscale/filter.hh>
@@ -23,6 +24,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/hint.h>
+#include <maxscale/workerlocal.hh>
 
 class RegexHintFilter;
 class RegexHintFSession;
@@ -45,6 +47,14 @@ public:
     volatile unsigned int m_total_diverted {0};
     volatile unsigned int m_total_undiverted {0};
 
+    struct Setup
+    {
+        SourceHostVector sources;           /* Source addresses to restrict matches */
+        StringVector     hostnames;         /* Source hostnames to restrict matches */
+        MappingVector    mapping;           /* Regular expression to serverlist mapping */
+        int              ovector_size {1};  /* Given to pcre2_match_data_create() */
+    };
+
     RegexHintFilter(const std::string& name);
 
     static RegexHintFilter*     create(const char* zName);
@@ -52,10 +62,6 @@ public:
     json_t*                     diagnostics() const override;
     uint64_t                    getCapabilities() const override;
     mxs::config::Configuration& getConfiguration() override;
-
-
-    MappingVector& mapping();
-    int            ovector_size() const;
 
     bool post_configure();
 
@@ -93,19 +99,18 @@ private:
         RegexHintFilter* m_filter;
     };
 
-    SourceHostVector m_sources;         /* Source addresses to restrict matches */
-    StringVector     m_hostnames;       /* Source hostnames to restrict matches */
-    MappingVector    m_mapping;         /* Regular expression to serverlist mapping */
-    int              m_ovector_size {1};/* Given to pcre2_match_data_create() */
-
     Settings m_settings;
 
-    bool check_source_host(const char* remote, const struct sockaddr_storage* ip);
-    bool check_source_hostnames(const struct sockaddr_storage* ip);
-    void set_source_addresses(const std::string& input_host_names);
-    bool add_source_address(const std::string& input_host);
-    void form_regex_server_mapping(int pcre_ops);
-    bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
+    mxs::WorkerGlobal<std::shared_ptr<Setup>> m_setup;
+
+    bool check_source_host(const std::shared_ptr<Setup>& setup,
+                           const char* remote, const struct sockaddr_storage* ip);
+    bool check_source_hostnames(const std::shared_ptr<Setup>& setup, const struct sockaddr_storage* ip);
+    void set_source_addresses(const std::shared_ptr<Setup>& setup, const std::string& input_host_names);
+    bool add_source_address(const std::shared_ptr<Setup>& setup, const std::string& input_host);
+    bool form_regex_server_mapping(const std::shared_ptr<Setup>& setup, int pcre_ops);
+    bool regex_compile_and_add(const std::shared_ptr<Setup>& setup,
+                               int pcre_ops, bool legacy_mode, const std::string& match,
                                const std::string& target);
     static bool validate_ipv4_address(const char*);
 };
@@ -116,7 +121,8 @@ private:
 class RegexHintFSession : public maxscale::FilterSession
 {
 public:
-    RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter, bool active);
+    RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter, bool active,
+                      std::shared_ptr<RegexHintFilter::Setup>&& setup);
     ~RegexHintFSession();
 
     json_t* diagnostics() const;
@@ -129,6 +135,8 @@ private:
     int m_n_diverted {0};       /* No. of statements diverted */
     int m_n_undiverted {0};     /* No. of statements not diverted */
     int m_active;               /* Is filter active? */
+
+    std::shared_ptr<RegexHintFilter::Setup> m_setup;
 
     const RegexToServers* find_servers(char* sql, int sql_len);
 };
