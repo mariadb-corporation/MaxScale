@@ -72,7 +72,7 @@
                     />
                 </div>
                 <db-list-tree
-                    v-if="active_conn_state && !loading_db_tree"
+                    v-if="!is_checking_active_conn && active_conn_state && !loading_db_tree"
                     v-show="!is_sidebar_collapsed"
                     class="schema-list-wrapper"
                     @preview-data="
@@ -125,6 +125,7 @@ export default {
             active_conn_state: state => state.query.active_conn_state,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
+            is_checking_active_conn: state => state.query.is_checking_active_conn,
         }),
         searchSchema: {
             get() {

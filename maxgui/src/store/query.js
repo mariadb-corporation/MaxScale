@@ -368,8 +368,24 @@ export default {
                  */
                 dispatch('deleteInvalidConn', validCnctResources)
                 commit('SET_CNCT_RESOURCES', validCnctResources)
-                commit('SET_ACTIVE_CONN_STATE', Boolean(validConnIds.length))
-
+                let activeConnState = Boolean(validConnIds.length)
+                if (state.curr_cnct_resource.id) {
+                    activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
+                    if (!activeConnState) {
+                        this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
+                        dispatch('emptyQueryResult', state.curr_cnct_resource.id)
+                        dispatch('resetWkeStates', { cnctId: state.curr_cnct_resource.id })
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: ['Connection is not found, please reconnect'],
+                                type: 'error',
+                            },
+                            { root: true }
+                        )
+                    }
+                }
+                commit('SET_ACTIVE_CONN_STATE', activeConnState)
                 commit('SET_IS_CHECKING_ACTIVE_CONN', false)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-checkActiveConn')
