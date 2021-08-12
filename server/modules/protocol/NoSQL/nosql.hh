@@ -152,6 +152,8 @@ inline int32_t get_zstring(const uint8_t* pBuffer, const char** pzString)
     return strlen(zString) + 1;
 }
 
+int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView);
+
 inline int32_t set_byte1(uint8_t* pBuffer, uint8_t val)
 {
     *pBuffer = val;
@@ -354,12 +356,15 @@ const char DROPPED[]                         = "dropped";
 const char EMPTY[]                           = "empty";
 const char ERRMSG[]                          = "errmsg";
 const char ERROR[]                           = "error";
+const char ERRORS[]                          = "errors";
 const char ERR[]                             = "err";
+const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
 const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
 const char ID[]                              = "id";
+const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
 const char INFO[]                            = "info";
 const char ISMASTER[]                        = "ismaster";
@@ -367,6 +372,7 @@ const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
 const char KEY_PATTERN[]                     = "keyPattern";
 const char KEY_VALUE[]                       = "keyValue";
 const char KEY[]                             = "key";
+const char KEYS_PER_INDEX[]                  = "keysPerIndex";
 const char KIND[]                            = "kind";
 const char LIMIT[]                           = "limit";
 const char LOCALTIME[]                       = "localTime";
@@ -380,14 +386,18 @@ const char MAX_WIRE_VERSION[]                = "maxWireVersion";
 const char MAX_WRITE_BATCH_SIZE[]            = "maxWriteBatchSize";
 const char MESSAGE[]                         = "message";
 const char MIN_WIRE_VERSION[]                = "minWireVersion";
+const char MISSING_INDEX_ENTRIES[]           = "missingIndexEntries";
 const char MODULES[]                         = "modules";
 const char MULTI[]                           = "multi";
 const char NAME_ONLY[]                       = "nameOnly";
 const char NAMES[]                           = "names";
 const char NAME[]                            = "name";
 const char NEXT_BATCH[]                      = "nextBatch";
+const char N_INDEXES[]                       = "nIndexes";
 const char N_INDEXES_WAS[]                   = "nIndexesWas";
+const char N_INVALID_DOCUMENTS[]             = "nInvalidDocuments";
 const char N_MODIFIED[]                      = "nModified";
+const char NRECORDS[]                        = "nrecords";
 const char NS[]                              = "ns";
 const char N[]                               = "n";
 const char OK[]                              = "ok";
@@ -416,8 +426,10 @@ const char TYPE[]                            = "type";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
 const char U[]                               = "u";
+const char VALID[]                           = "valid";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
+const char WARNINGS[]                        = "warnings";
 const char WRITE_CONCERN[]                   = "writeConcern";
 const char WRITE_ERRORS[]                    = "writeErrors";
 const char WRITTEN_TO[]                      = "writtenTo";
@@ -425,6 +437,7 @@ const char WTIMEOUT[]                        = "wtimeout";
 const char W[]                               = "w";
 const char YOU[]                             = "you";
 const char _ID[]                             = "_id";
+const char _ID_[]                            = "_id_";
 
 }
 
@@ -531,8 +544,126 @@ public:
     }
 
 protected:
-    const uint8_t*       m_pEnd;
+    const uint8_t*          m_pEnd;
     const protocol::HEADER* m_pHeader;
+};
+
+class Insert final : public Packet
+{
+public:
+    Insert(const Packet& packet);
+    Insert(Insert&& rhs) = default;
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    const std::vector<bsoncxx::document::view>& documents() const
+    {
+        return m_documents;
+    }
+
+private:
+    uint32_t                             m_flags;
+    const char*                          m_zCollection;
+    std::vector<bsoncxx::document::view> m_documents;
+};
+
+class Delete final : public Packet
+{
+public:
+    Delete(const Packet& packet);
+    Delete(Delete&& rhs) = default;
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    const bsoncxx::document::view& selector() const
+    {
+        return m_selector;
+    }
+
+private:
+    const char*             m_zCollection;
+    uint32_t                m_flags;
+    bsoncxx::document::view m_selector;
+};
+
+class Update final : public Packet
+{
+public:
+    Update(const Packet& packet);
+    Update(Update&& rhs) = default;
+
+    enum Flags
+    {
+        UPSERT = 0x01,
+        MULTI  = 0x02,
+    };
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    uint32_t flags() const
+    {
+        return m_flags;
+    }
+
+    bool is_upsert() const
+    {
+        return m_flags & UPSERT;
+    }
+
+    bool is_multi() const
+    {
+        return m_flags & MULTI;
+    }
+
+    const bsoncxx::document::view& selector() const
+    {
+        return m_selector;
+    }
+
+    const bsoncxx::document::view update() const
+    {
+        return m_update;
+    }
+
+private:
+    const char*             m_zCollection;
+    uint32_t                m_flags;
+    bsoncxx::document::view m_selector;
+    bsoncxx::document::view m_update;
 };
 
 class Query final : public Packet
@@ -835,6 +966,10 @@ private:
     void kill_client();
 
     using SDatabase = std::unique_ptr<Database>;
+
+    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
+    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
+    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
 
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);

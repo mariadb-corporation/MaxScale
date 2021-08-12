@@ -87,7 +87,7 @@ function saWkeStates() {
  */
 export function defWorksheetState() {
     return {
-        id: uniqueId('wke_'),
+        id: uniqueId(`wke_${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
         ...saWkeStates(),
     }

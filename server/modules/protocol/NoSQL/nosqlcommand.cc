@@ -15,9 +15,12 @@
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <maxbase/string.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/modutil.hh>
 #include "nosqldatabase.hh"
 #include "crc32.h"
+
+using mxb::Worker;
 
 //
 // The include order, which has no impact on the functionality, is the one
@@ -56,6 +59,11 @@ public:
 
     void populate_response(nosql::DocumentBuilder& doc) override
     {
+        if (m_database.config().log_unknown_command)
+        {
+            MXS_WARNING("Unknown command: %s", bsoncxx::to_json(m_doc).c_str());
+        }
+
         string command;
         if (!m_doc.empty())
         {
@@ -87,13 +95,13 @@ public:
 using namespace nosql;
 
 template<class ConcreteCommand>
-unique_ptr<Command> create_command(const string& name,
-                                   Database* pDatabase,
-                                   GWBUF* pRequest,
-                                   const Query* pQuery,
-                                   const Msg* pMsg,
-                                   const bsoncxx::document::view& doc,
-                                   const Command::DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> create_command(const string& name,
+                                        Database* pDatabase,
+                                        GWBUF* pRequest,
+                                        const Query* pQuery,
+                                        const Msg* pMsg,
+                                        const bsoncxx::document::view& doc,
+                                        const OpMsgCommand::DocumentArguments& arguments)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -111,13 +119,13 @@ unique_ptr<Command> create_command(const string& name,
     return sCommand;
 }
 
-using CreatorFunction = unique_ptr<Command> (*)(const string& name,
-                                                Database* pDatabase,
-                                                GWBUF* pRequest,
-                                                const Query* pQuery,
-                                                const Msg* pMsg,
-                                                const bsoncxx::document::view& doc,
-                                                const Command::DocumentArguments& arguments);
+using CreatorFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
+                                                     Database* pDatabase,
+                                                     GWBUF* pRequest,
+                                                     const Query* pQuery,
+                                                     const Msg* pMsg,
+                                                     const bsoncxx::document::view& doc,
+                                                     const OpMsgCommand::DocumentArguments& arguments);
 
 struct CommandInfo
 {
@@ -188,6 +196,7 @@ struct ThisUnit
         { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
         { tolower(command::ResetError::KEY),              create_info<command::ResetError>() },
         { tolower(command::Update::KEY),                  create_info<command::Update>() },
+        { tolower(command::Validate::KEY),                create_info<command::Validate>() },
         { tolower(command::WhatsMyUri::KEY),              create_info<command::WhatsMyUri>() },
 
         { tolower(command::MxsDiagnose::KEY),             create_info<command::MxsDiagnose>() },
@@ -202,9 +211,521 @@ struct ThisUnit
 namespace nosql
 {
 
+//
+// Command
+//
 Command::~Command()
 {
     free_request();
+}
+
+bool Command::is_admin() const
+{
+    return false;
+}
+
+string Command::to_json() const
+{
+    return "";
+}
+
+void Command::free_request()
+{
+    if (m_pRequest)
+    {
+        gwbuf_free(m_pRequest);
+        m_pRequest = nullptr;
+    }
+}
+
+void Command::send_downstream(const string& sql)
+{
+    MXB_INFO("SQL: %s", sql.c_str());
+
+    m_last_statement = sql;
+
+    GWBUF* pRequest = modutil_create_query(sql.c_str());
+
+    m_database.context().downstream().routeQuery(pRequest);
+}
+
+//static
+void Command::check_maximum_sql_length(int length)
+{
+    if (length > MAX_QUERY_LEN)
+    {
+        ostringstream ss;
+        ss << "Generated SQL of " << length
+           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
+           << " bytes.";
+
+        throw HardError(ss.str(), error::COMMAND_FAILED);
+    }
+}
+
+namespace
+{
+
+string unexpected_message(const std::string& who, const std::string& statement)
+{
+    ostringstream ss;
+    ss << "Unexpected response received by " << who << " from backend for: " << statement;
+
+    return ss.str();
+}
+
+}
+
+void Command::log_unexpected_packet()
+{
+    MXS_ERROR("%s", unexpected_message(description(), m_last_statement).c_str());
+}
+
+void Command::throw_unexpected_packet()
+{
+    throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
+}
+
+GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
+{
+    GWBUF* pResponse = nullptr;
+
+    if (m_response_kind == ResponseKind::REPLY)
+    {
+        pResponse = create_reply_response(doc);
+    }
+    else
+    {
+        pResponse = create_msg_response(doc);
+    }
+
+    return pResponse;
+}
+
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
+{
+    // TODO: In the following is assumed that whatever is returned will
+    // TODO: fit into a MongoDB packet.
+
+    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
+    int64_t cursor_id = 0;
+    int32_t starting_from = 0;
+    int32_t number_returned = nDocuments;
+
+    size_t response_size = protocol::HEADER_LEN
+        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
+        + size_of_documents;
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_database.context().next_request_id();
+    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+
+    pData += protocol::set_byte4(pData, response_flags);
+    pData += protocol::set_byte8(pData, cursor_id);
+    pData += protocol::set_byte4(pData, starting_from);
+    pData += protocol::set_byte4(pData, number_returned);
+
+    return make_pair(pResponse, pData);
+}
+
+GWBUF* Command::create_reply_response(size_t size_of_documents,
+                                      const vector<bsoncxx::document::value>& documents) const
+{
+    GWBUF* pResponse;
+    uint8_t* pData;
+
+    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
+
+    for (const auto& doc : documents)
+    {
+        auto view = doc.view();
+        size_t size = view.length();
+
+        memcpy(pData, view.data(), view.length());
+        pData += view.length();
+    }
+
+    return pResponse;
+}
+
+GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
+{
+    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
+
+    auto doc_view = doc.view();
+    size_t doc_len = doc_view.length();
+
+    GWBUF* pResponse;
+    uint8_t* pData;
+
+    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
+
+    memcpy(pData, doc_view.data(), doc_view.length());
+
+    return pResponse;
+}
+
+GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
+{
+    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
+
+    uint32_t flag_bits = 0;
+    uint8_t kind = 0;
+    uint32_t doc_length = doc.view().length();
+
+    size_t response_size = protocol::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
+
+    bool append_checksum = (m_response_kind == ResponseKind::MSG_WITH_CHECKSUM);
+
+    if (append_checksum)
+    {
+        flag_bits |= Msg::CHECKSUM_PRESENT;
+        response_size += sizeof(uint32_t); // sizeof checksum
+    }
+
+    GWBUF* pResponse = gwbuf_alloc(response_size);
+
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    pRes_hdr->msg_len = response_size;
+    pRes_hdr->request_id = m_database.context().next_request_id();
+    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->opcode = MONGOC_OPCODE_MSG;
+
+    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+
+    pData += protocol::set_byte4(pData, flag_bits);
+
+    pData += protocol::set_byte1(pData, kind);
+    memcpy(pData, doc.view().data(), doc_length);
+    pData += doc_length;
+
+    if (append_checksum)
+    {
+        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
+        pData += protocol::set_byte4(pData, checksum);
+    }
+
+    return pResponse;
+}
+
+//
+// OpDeleteCommand
+//
+std::string OpDeleteCommand::description() const
+{
+    return "OP_DELETE";
+}
+
+GWBUF* OpDeleteCommand::execute()
+{
+    ostringstream ss;
+    ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
+
+    if ((m_req.flags() & 0x01) == 1)
+    {
+        ss << " LIMIT 1";
+    }
+
+    auto statement = ss.str();
+
+    check_maximum_sql_length(statement);
+
+    send_downstream(statement);
+
+    return nullptr;
+}
+
+Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+
+            if (err.code() != ER_NO_SUCH_TABLE)
+            {
+                m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+        }
+        break;
+
+    default:
+        // We do not throw, as that would generate a response.
+        log_unexpected_packet();
+    }
+
+    *ppNoSQL_response = nullptr;
+    return READY;
+};
+
+//
+// OpInsertCommand
+//
+std::string OpInsertCommand::description() const
+{
+    return "OP_INSERT";
+}
+
+GWBUF* OpInsertCommand::execute()
+{
+    auto doc = m_req.documents()[0];
+
+    ostringstream ss;
+    ss << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc) << ";";
+
+    m_statement = ss.str();
+
+    check_maximum_sql_length(m_statement);
+
+    send_downstream(m_statement);
+
+    return nullptr;
+}
+
+Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    State state = READY;
+    GWBUF* pResponse = nullptr;
+
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        if (m_action == CREATING_TABLE || m_action == CREATING_DATABASE)
+        {
+            Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                    if (action == Worker::Call::EXECUTE)
+                    {
+                        m_action = INSERTING_DATA;
+                        send_downstream(m_statement);
+                    }
+
+                    return false;
+                });
+            state = BUSY;
+        }
+        else
+        {
+            state = READY;
+        }
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+            auto s = err.message();
+            MXS_INFO("%s", s.c_str());
+
+            switch (err.code())
+            {
+            case ER_NO_SUCH_TABLE:
+                {
+                    Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                            if (action == Worker::Call::EXECUTE)
+                            {
+                                auto id_length = m_database.config().id_length;
+                                auto sql = nosql::table_create_statement(table(), id_length);
+
+                                m_action = CREATING_TABLE;
+                                send_downstream(sql);
+                            }
+
+                            return false;
+                        });
+                    state = BUSY;
+                }
+                break;
+
+            case ER_BAD_DB_ERROR:
+                {
+                    if (err.message().find("Unknown database") == 0)
+                    {
+                        Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                                if (action == Worker::Call::EXECUTE)
+                                {
+                                    ostringstream ss;
+                                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+
+                                    m_action = CREATING_DATABASE;
+                                    send_downstream(ss.str());
+                                }
+
+                                return false;
+                            });
+                        state = BUSY;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Inserting '%s' failed with: (%d) %s",
+                                  m_statement.c_str(), err.code(), err.message().c_str());
+                        state = READY;
+                    }
+                }
+                break;
+
+            case ER_DB_CREATE_EXISTS:
+            case ER_TABLE_EXISTS_ERROR:
+                // Ok, someone else got there first.
+                Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                        if (action == Worker::Call::EXECUTE)
+                        {
+                            m_action = INSERTING_DATA;
+                            send_downstream(m_statement);
+                        }
+
+                        return false;
+                    });
+                state = BUSY;
+                break;
+
+            default:
+                MXS_ERROR("Inserting '%s' failed with: (%d) %s",
+                          m_statement.c_str(), err.code(), err.message().c_str());
+                state = READY;
+            }
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+        throw_unexpected_packet();
+    }
+
+    *ppNoSQL_response = pResponse;
+    return state;
+};
+
+string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc)
+{
+    ostringstream sql;
+
+    string json;
+
+    auto element = doc["_id"];
+
+    if (element)
+    {
+        json = bsoncxx::to_json(doc);
+    }
+    else
+    {
+        // Ok, as the document does not have an id, one must be generated. However,
+        // as an existing document is immutable, a new one must be created.
+
+        bsoncxx::oid oid;
+
+        DocumentBuilder builder;
+        builder.append(kvp(key::_ID, oid));
+
+        for (const auto& e : doc)
+        {
+            append(builder, e.key(), e);
+        }
+
+        // We need to keep the created document around, so that 'element'
+        // down below stays alive.
+        m_stashed_documents.emplace_back(builder.extract());
+
+        const auto& doc_with_id = m_stashed_documents.back();
+
+        json = bsoncxx::to_json(doc_with_id);
+    }
+
+    json = escape_essential_chars(std::move(json));
+
+    sql << "('" << json << "')";
+
+    return sql.str();
+}
+
+//
+// OpUpdateCommand
+//
+string OpUpdateCommand::description() const
+{
+    return "OP_UPDATE";
+}
+
+GWBUF* OpUpdateCommand::execute()
+{
+    ostringstream sql;
+    sql << "UPDATE " << table() << " SET DOC = ";
+
+    // TODO: In principle the document may be something else than a
+    // TODO: simple replacement document.
+    auto json = escape_essential_chars(bsoncxx::to_json(m_req.update()));
+
+    sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$')) ";
+    sql << query_to_where_clause(m_req.selector());
+
+    if (m_req.is_upsert())
+    {
+        MXS_WARNING("OP_UPDATE(%s): upsert not supported, "
+                    "selector: '%s', document: '%s'.",
+                    m_req.zCollection(), bsoncxx::to_json(m_req.selector()).c_str(), json.c_str());
+    }
+
+    if (!m_req.is_multi())
+    {
+        sql << " LIMIT 1";
+    }
+
+    const auto& statement = sql.str();
+
+    check_maximum_sql_length(statement);
+
+    send_downstream(statement);
+
+    return nullptr;
+}
+
+Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::OK_PACKET:
+        break;
+
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+
+            if (err.code() != ER_NO_SUCH_TABLE)
+            {
+                m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+        }
+        break;
+
+    default:
+        // We do not throw, as that would generate a response.
+        log_unexpected_packet();
+    }
+
+    *ppNoSQL_response = nullptr;
+    return READY;
+}
+
+//
+// OpMsgCommand
+//
+OpMsgCommand::~OpMsgCommand()
+{
 }
 
 namespace
@@ -242,11 +763,11 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 }
 
 //static
-unique_ptr<Command> Command::get(nosql::Database* pDatabase,
-                                 GWBUF* pRequest,
-                                 const nosql::Query& query,
-                                 const bsoncxx::document::view& doc,
-                                 const DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Query& query,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -257,11 +778,11 @@ unique_ptr<Command> Command::get(nosql::Database* pDatabase,
 }
 
 //static
-unique_ptr<Command> Command::get(nosql::Database* pDatabase,
-                                 GWBUF* pRequest,
-                                 const nosql::Msg& msg,
-                                 const bsoncxx::document::view& doc,
-                                 const DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
+                                           const nosql::Msg& msg,
+                                           const bsoncxx::document::view& doc,
+                                           const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
@@ -271,7 +792,7 @@ unique_ptr<Command> Command::get(nosql::Database* pDatabase,
     return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
 }
 
-GWBUF* Command::create_empty_response() const
+GWBUF* OpMsgCommand::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;
@@ -280,7 +801,7 @@ GWBUF* Command::create_empty_response() const
 }
 
 //static
-void Command::check_write_batch_size(int size)
+void OpMsgCommand::check_write_batch_size(int size)
 {
     if (size < 1 || size > protocol::MAX_WRITE_BATCH_SIZE)
     {
@@ -292,21 +813,7 @@ void Command::check_write_batch_size(int size)
 }
 
 //static
-void Command::check_maximum_sql_length(int length)
-{
-    if (length > MAX_QUERY_LEN)
-    {
-        ostringstream ss;
-        ss << "Generated SQL of " << length
-           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
-           << " bytes.";
-
-        throw HardError(ss.str(), error::COMMAND_FAILED);
-    }
-}
-
-//static
-void Command::list_commands(DocumentBuilder& commands)
+void OpMsgCommand::list_commands(DocumentBuilder& commands)
 {
     for (const auto& kv : this_unit.infos_by_name)
     {
@@ -329,15 +836,7 @@ void Command::list_commands(DocumentBuilder& commands)
     }
 }
 
-void Command::throw_unexpected_packet()
-{
-    ostringstream ss;
-    ss << m_name << " received unexpected packet from backend.";
-
-    throw HardError(ss.str(), error::INTERNAL_ERROR);
-}
-
-void Command::require_admin_db()
+void OpMsgCommand::require_admin_db()
 {
     if (m_database.name() != "admin")
     {
@@ -346,7 +845,7 @@ void Command::require_admin_db()
     }
 }
 
-string Command::convert_skip_and_limit() const
+string OpMsgCommand::convert_skip_and_limit() const
 {
     string rv;
 
@@ -410,7 +909,7 @@ string Command::convert_skip_and_limit() const
     return rv;
 }
 
-const string& Command::table(Quoted quoted) const
+const string& OpMsgCommand::table(Quoted quoted) const
 {
     if (m_quoted_table.empty())
     {
@@ -434,48 +933,7 @@ const string& Command::table(Quoted quoted) const
     return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;
 }
 
-void Command::free_request()
-{
-    if (m_pRequest)
-    {
-        gwbuf_free(m_pRequest);
-        m_pRequest = nullptr;
-    }
-}
-
-void Command::send_downstream(const string& sql)
-{
-    MXB_INFO("SQL: %s", sql.c_str());
-
-    m_last_statement = sql;
-
-    GWBUF* pRequest = modutil_create_query(sql.c_str());
-
-    m_database.context().downstream().routeQuery(pRequest);
-}
-
-GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
-{
-    GWBUF* pResponse = nullptr;
-
-    switch (m_req.opcode())
-    {
-    case MONGOC_OPCODE_QUERY:
-        pResponse = create_reply_response(doc);
-        break;
-
-    case MONGOC_OPCODE_MSG:
-        pResponse = create_msg_response(doc);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    return pResponse;
-}
-
-void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
+void OpMsgCommand::add_error(bsoncxx::builder::basic::array& array, const ComERR& err, int index)
 {
     bsoncxx::builder::basic::document mariadb;
 
@@ -495,7 +953,7 @@ void Command::add_error(bsoncxx::builder::basic::array& array, const ComERR& err
     array.append(error.extract());
 }
 
-void Command::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
+void OpMsgCommand::add_error(bsoncxx::builder::basic::document& response, const ComERR& err)
 {
     bsoncxx::builder::basic::array array;
 
@@ -504,121 +962,11 @@ void Command::add_error(bsoncxx::builder::basic::document& response, const ComER
     response.append(bsoncxx::builder::basic::kvp(key::WRITE_ERRORS, array.extract()));
 }
 
-void Command::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
+void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
     error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
     error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));
     error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
-}
-
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
-{
-    // TODO: In the following is assumed that whatever is returned will
-    // TODO: fit into a MongoDB packet.
-
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
-    int32_t number_returned = nDocuments;
-
-    size_t response_size = protocol::HEADER_LEN
-        + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
-        + size_of_documents;
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_database.context().next_request_id();
-    pRes_hdr->response_to = m_req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
-
-    pData += protocol::set_byte4(pData, response_flags);
-    pData += protocol::set_byte8(pData, cursor_id);
-    pData += protocol::set_byte4(pData, starting_from);
-    pData += protocol::set_byte4(pData, number_returned);
-
-    return make_pair(pResponse, pData);
-}
-
-GWBUF* Command::create_reply_response(size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents) const
-{
-    GWBUF* pResponse;
-    uint8_t* pData;
-
-    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
-
-    for (const auto& doc : documents)
-    {
-        auto view = doc.view();
-        size_t size = view.length();
-
-        memcpy(pData, view.data(), view.length());
-        pData += view.length();
-    }
-
-    return pResponse;
-}
-
-GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
-{
-    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
-
-    auto doc_view = doc.view();
-    size_t doc_len = doc_view.length();
-
-    GWBUF* pResponse;
-    uint8_t* pData;
-
-    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
-
-    memcpy(pData, doc_view.data(), doc_view.length());
-
-    return pResponse;
-}
-
-GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
-{
-    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
-
-    uint32_t flag_bits = 0;
-    uint8_t kind = 0;
-    uint32_t doc_length = doc.view().length();
-
-    size_t response_size = protocol::HEADER_LEN + sizeof(flag_bits) + sizeof(kind) + doc_length;
-
-    if (m_append_checksum)
-    {
-        flag_bits |= Msg::CHECKSUM_PRESENT;
-        response_size += sizeof(uint32_t); // sizeof checksum
-    }
-
-    GWBUF* pResponse = gwbuf_alloc(response_size);
-
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
-    pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_database.context().next_request_id();
-    pRes_hdr->response_to = m_req.request_id();
-    pRes_hdr->opcode = MONGOC_OPCODE_MSG;
-
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
-
-    pData += protocol::set_byte4(pData, flag_bits);
-
-    pData += protocol::set_byte1(pData, kind);
-    memcpy(pData, doc.view().data(), doc_length);
-    pData += doc_length;
-
-    if (m_append_checksum)
-    {
-        uint32_t checksum = crc32_func(gwbuf_link_data(pResponse), response_size - sizeof(uint32_t));
-        pData += protocol::set_byte4(pData, checksum);
-    }
-
-    return pResponse;
 }
 
 GWBUF* ImmediateCommand::execute()

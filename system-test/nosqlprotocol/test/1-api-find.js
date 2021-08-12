@@ -169,6 +169,7 @@ describe(name, function () {
         await find_with_comparison_query_operator("j", "$in", [9, 11, 13], 3 * N / J);
         await find_with_comparison_query_operator("k", "$in", [9, 11, 13, 73], 4);
 
+        await find_with_comparison_query_operator("k", "$in", [], 0);
         await find_with_comparison_query_operator("i", "$in", [N], 0);
         await find_with_comparison_query_operator("j", "$in", [N, N + 1], 0);
         await find_with_comparison_query_operator("k", "$in", [N, N + 1, -1], 0);
@@ -209,6 +210,7 @@ describe(name, function () {
         await find_with_comparison_query_operator("j", "$nin", [13, 14, 16, 19], (J - 4) * N / J);
         await find_with_comparison_query_operator("k", "$nin", [1, 12, 25, 37, 48, 59, 60], K - 7);
 
+        await find_with_comparison_query_operator("i", "$nin", [], N);
         await find_with_comparison_query_operator("i", "$nin", [N + 1], N);
         await find_with_comparison_query_operator("j", "$nin", [N + 1, N + 2], N);
         await find_with_comparison_query_operator("k", "$nin", [N + 1, N + 2, N + 3], N);

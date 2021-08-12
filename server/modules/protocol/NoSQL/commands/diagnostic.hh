@@ -194,7 +194,7 @@ public:
     {
         DocumentBuilder commands;
 
-        Command::list_commands(commands);
+        OpMsgCommand::list_commands(commands);
 
         doc.append(kvp(key::COMMANDS, commands.extract()));
         doc.append(kvp(key::OK, 1));
@@ -229,6 +229,119 @@ public:
 // https://docs.mongodb.com/manual/reference/command/top/
 
 // https://docs.mongodb.com/manual/reference/command/validate/
+class Validate final : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "validate";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    string generate_sql() override
+    {
+        ostringstream ss;
+        ss << "SELECT COUNT(id) FROM " << table();
+        return ss.str();
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    {
+        ComResponse response(mariadb_response.data());
+
+        int32_t ok = 0;
+        int32_t n = 0;
+
+        switch (response.type())
+        {
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                auto code = err.code();
+
+                if (code == ER_NO_SUCH_TABLE)
+                {
+                    ostringstream ss;
+                    ss << "Collection '" << table(Quoted::NO) << "' does not exist to validate.";
+
+                    throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::OK_PACKET:
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+
+        default:
+            ok = 1;
+            n = get_n(GWBUF_DATA(mariadb_response.get()));
+        }
+
+        DocumentBuilder doc;
+
+        int32_t n_invalid_documents = 0;
+        int32_t n_indexes = 1;
+
+        DocumentBuilder keys_per_index;
+        keys_per_index.append(kvp(key::_ID_, n));
+
+        DocumentBuilder id;
+        id.append(kvp(key::VALID, true));
+        DocumentBuilder index_details;
+        index_details.append(kvp(key::_ID_, id.extract()));
+
+        ArrayBuilder empty_array;
+
+        doc.append(kvp(key::NS, table(Quoted::NO)));
+        doc.append(kvp(key::N_INVALID_DOCUMENTS, n_invalid_documents));
+        doc.append(kvp(key::NRECORDS, n));
+        doc.append(kvp(key::N_INDEXES, n_indexes));
+        doc.append(kvp(key::KEYS_PER_INDEX, keys_per_index.extract()));
+        doc.append(kvp(key::INDEX_DETAILS, index_details.extract()));
+        doc.append(kvp(key::VALID, true));
+        doc.append(kvp(key::WARNINGS, empty_array.extract()));
+        doc.append(kvp(key::ERRORS,empty_array.extract()));
+        doc.append(kvp(key::EXTRA_INDEX_ENTRIES, empty_array.extract()));
+        doc.append(kvp(key::MISSING_INDEX_ENTRIES, empty_array.extract()));
+        doc.append(kvp(key::OK, ok));
+
+        *ppResponse = create_response(doc.extract());
+        return READY;
+    }
+
+private:
+    int32_t get_n(uint8_t* pBuffer)
+    {
+        int32_t n = 0;
+
+        ComQueryResponse cqr(&pBuffer);
+        mxb_assert(cqr.nFields());
+
+        ComQueryResponse::ColumnDef column_def(&pBuffer);
+        vector<enum_field_types> types { column_def.type() };
+
+        ComResponse eof(&pBuffer);
+        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+        CQRTextResultsetRow row(&pBuffer, types);
+
+        auto it = row.begin();
+        mxb_assert(it != row.end());
+
+        const auto& value = *it++;
+        mxb_assert(it == row.end());
+
+        n = std::stoi(value.as_string().to_string());
+
+        return n;
+    }
+};
 
 // https://docs.mongodb.com/manual/reference/command/whatsmyuri/
 class WhatsMyUri final : public ImmediateCommand

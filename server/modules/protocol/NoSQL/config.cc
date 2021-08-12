@@ -91,6 +91,12 @@ mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
     mxs::config::NO_INTERPRETATION,
     std::chrono::seconds(GlobalConfig::CURSOR_TIMEOUT_DEFAULT));
 
+mxs::config::ParamBool GlobalConfig::s_log_unknown_command(
+    &nosqlprotocol::specification,
+    "log_unknown_command",
+    "Whether an unknown command should be logged.",
+    false);
+
 
 GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     : mxs::config::Configuration(name, &nosqlprotocol::specification)
@@ -104,6 +110,7 @@ GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     add_native(&GlobalConfig::id_length, &s_id_length);
     add_native(&GlobalConfig::ordered_insert_behavior, &s_ordered_insert_behavior);
     add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
+    add_native(&GlobalConfig::log_unknown_command, &s_log_unknown_command);
 }
 
 bool GlobalConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

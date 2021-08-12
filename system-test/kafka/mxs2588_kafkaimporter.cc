@@ -102,7 +102,27 @@ void test_table_in_key(TestConnections& test)
     producer.flush();
 
     test.expect(read_rows(test, "t2", NUM_MSG), "Failed to read rows");
+
+    test.check_maxctrl("alter service Kafka-Importer batch_size 1");
+
+    test.tprintf("Producing a message with a table name that must be escaped");
+    producer.produce_message("second_topic", "test.`that's-a-bad-name`",
+                             "{\"_id\": 0, \"data\": \"this should work\"}");
+    producer.flush();
+
+    test.expect(read_rows(test, "`that's-a-bad-name`", 1), "Failed to read rows");
+
+
+    test.tprintf("Producing a message with a table name that has spaces in it");
+    producer.produce_message("second_topic", "`test`.`spaces in table name`",
+                             "{\"_id\": 0, \"data\": \"this should also work\"}");
+    producer.flush();
+
+    test.expect(read_rows(test, "`spaces in table name`", 1), "Failed to read rows");
+
     conn.query("DROP TABLE test.t2");
+    conn.query("DROP TABLE test.`that's-a-bad-name`");
+    conn.query("DROP TABLE test.`spaces in table name`");
 }
 
 int main(int argc, char** argv)

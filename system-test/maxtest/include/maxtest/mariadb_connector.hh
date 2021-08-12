@@ -63,10 +63,9 @@ private:
  * Helper class for managing user accounts in tests. When the object goes out of scope, the user is deleted
  * from backend. The object is dependent on the connection that created it. Should not be generated manually.
  */
-class ScopedUser
+class ScopedUser final
 {
 public:
-    ScopedUser& operator=(const ScopedUser& rhs) = delete;
     ScopedUser& operator=(ScopedUser&& rhs);
 
     ScopedUser() = default;

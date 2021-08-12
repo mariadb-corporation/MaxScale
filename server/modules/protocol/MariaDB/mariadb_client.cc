@@ -67,6 +67,12 @@ const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
 const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
+// The past-the-end value for the session command IDs we generate (includes prepared statements). When this ID
+// value is reached, the counter is reset back to 1. This makes sure we reserve the values 0 and 0xffffffff as
+// special values that are never assigned by MaxScale.
+const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
+static_assert(MAX_SESCMD_ID == MARIADB_PS_DIRECT_EXEC_ID);
+
 // Default version string sent to clients
 const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
 
@@ -968,11 +974,18 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
 {
     bool should_record = false;
     const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
+
+    // Update the routing information. This must be done even if the command isn't added to the history.
     const auto& info = m_qc.update_route_info(current_target, buffer.get());
 
-    if (cmd != MXS_COM_QUIT && m_qc.target_is_all(info.target()))
+    switch (cmd)
     {
-        if (cmd == MXS_COM_STMT_CLOSE)
+    case MXS_COM_QUIT:      // The client connection is about to be closed
+    case MXS_COM_PING:      // Doesn't change the state so it doesn't need to be stored
+    case MXS_COM_STMT_RESET:// Resets the prepared statement state, not needed by new connections
+        break;
+
+    case MXS_COM_STMT_CLOSE:
         {
             // Instead of handling COM_STMT_CLOSE like a normal command, we can exclude it from the history as
             // well as remove the original COM_STMT_PREPARE that it refers to. This simplifies the history
@@ -994,21 +1007,19 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 m_qc.ps_erase(buffer.get());
             }
         }
-        else if (cmd == MXS_COM_STMT_RESET)
-        {
-            // COM_STMT_RESET is useless in the history, no point in recording it as new connections don't
-            // need it.
-        }
-        else if (cmd == MXS_COM_CHANGE_USER)
-        {
-            // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
-            // credentials which means we can safely reset the history here.
-            m_session_data->history.clear();
-        }
-        else
+        break;
+
+    case MXS_COM_CHANGE_USER:
+        // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
+        // credentials which means we can safely reset the history here.
+        m_session_data->history.clear();
+        break;
+
+    default:
+        if (m_qc.target_is_all(info.target()))
         {
             buffer.set_id(m_next_id);
-            m_pending_cmd = buffer;         // Keep a copy for the session command history
+            m_pending_cmd = buffer;     // Keep a copy for the session command history
             should_record = true;
 
             if (cmd == MXS_COM_STMT_PREPARE
@@ -1018,11 +1029,12 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 m_qc.ps_store(buffer.get(), m_next_id);
             }
 
-            if (++m_next_id == 0)
+            if (++m_next_id == MAX_SESCMD_ID)
             {
                 m_next_id = 1;
             }
         }
+        break;
     }
 
     return should_record;
@@ -1052,7 +1064,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     {
         buffer.set_id(m_next_id);
 
-        if (++m_next_id == 0)
+        if (++m_next_id == MAX_SESCMD_ID)
         {
             m_next_id = 1;
         }

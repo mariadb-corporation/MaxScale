@@ -170,8 +170,16 @@ public:
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query))
         {
-            sql << query_to_where_clause(query);
-            sql << "AND ";
+            auto where = query_to_where_clause(query);
+
+            if (where.empty())
+            {
+                sql << "WHERE ";
+            }
+            else
+            {
+                sql << where << " AND ";
+            }
         }
         else
         {

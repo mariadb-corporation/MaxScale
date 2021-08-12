@@ -81,7 +81,27 @@ public:
                                             Config* pConfig);
 
     /**
-     * Handle a NoSQL query.
+     * Handle an OP_DELETE
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @packet      The delete request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
+
+    /**
+     * Handle an OP_INSERT
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The insert request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
+
+    /**
+     * Handle an OP_QUERY.
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The query request; *must* be intended for the database this
@@ -92,6 +112,16 @@ public:
      *         of the client protocol will eventually be called.
      */
     GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
+
+    /**
+     * Handle an OP_UPDATE
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The update request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
 
     /**
      * Handle a NoSQL command.
@@ -148,17 +178,18 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute(std::unique_ptr<Command> sCommand);
+    GWBUF* execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand);
+    GWBUF* execute_command(std::unique_ptr<Command> sCommand);
 
     template<class ConcretePacket>
     GWBUF* execute(GWBUF* pRequest,
                    const ConcretePacket& req,
                    const bsoncxx::document::view& doc,
-                   const Command::DocumentArguments& arguments)
+                   const OpMsgCommand::DocumentArguments& arguments)
     {
-        auto sCommand = nosql::Command::get(this, pRequest, req, doc, arguments);
+        auto sCommand = nosql::OpMsgCommand::get(this, pRequest, req, doc, arguments);
 
-        return execute(std::move(sCommand));
+        return execute_msg_command(std::move(sCommand));
     }
 
     using SCommand = std::unique_ptr<Command>;

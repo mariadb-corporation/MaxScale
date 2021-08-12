@@ -158,6 +158,12 @@ describe('distinct', function () {
         await distinct("j.i", 1, query);
     });
 
+    it('Distincts correctly with empty query', async function () {
+        var query = { };
+
+        await distinct("j.i", 50, query);
+    });
+
     after(function () {
         if (mxs) {
             mxs.close();

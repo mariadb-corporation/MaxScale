@@ -42,38 +42,104 @@ public:
 
     using SingleCommand::SingleCommand;
 
+    using Worker = mxb::Worker;
+
+    ~Create()
+    {
+        if (m_dcid)
+        {
+            Worker::get_current()->cancel_delayed_call(m_dcid);
+        }
+    }
+
     string generate_sql() override
     {
-        auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
+        m_statement = nosql::table_create_statement(table(), m_database.config().id_length);
 
-        return sql;
+        return m_statement;
     }
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(mariadb_response.data());
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
 
-        int32_t ok = 0;
+        switch (m_action)
+        {
+        case Action::CREATING_TABLE:
+            state = translate_creating_table(std::move(mariadb_response), &pResponse);
+            break;
+
+        case Action::CREATING_DATABASE:
+            state = translate_creating_database(std::move(mariadb_response), &pResponse);
+            break;
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_action == Action::CREATING_TABLE);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
 
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            ok = 1;
+            {
+                DocumentBuilder doc;
+                doc.append(kvp(key::OK, (int32_t)1));
+
+                pResponse = create_response(doc.extract());
+                state = READY;
+            }
             break;
 
         case ComResponse::ERR_PACKET:
             {
                 ComERR err(response);
 
-                if (err.code() == ER_TABLE_EXISTS_ERROR)
+                switch (err.code())
                 {
-                    ostringstream ss;
-                    ss << "Collection already exists. NS: " << table(Quoted::NO);
-                    throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
-                }
-                else
-                {
-                    throw MariaDBError(ComERR(response));
+                case ER_BAD_DB_ERROR:
+                    {
+                        if (err.message().find("Unknown database") == 0)
+                        {
+                            if (m_database.config().auto_create_databases)
+                            {
+                                create_database();
+                            }
+                            else
+                            {
+                                ostringstream ss;
+                                ss << "Database " << m_database.name() << " does not exist, and "
+                                   << "'auto_create_databases' is false.";
+
+                                throw HardError(ss.str(), error::COMMAND_FAILED);
+                            }
+                        }
+                        else
+                        {
+                            throw MariaDBError(err);
+                        }
+                    }
+                    break;
+
+                case ER_TABLE_EXISTS_ERROR:
+                    {
+                        ostringstream ss;
+                        ss << "Collection already exists. NS: " << table(Quoted::NO);
+                        throw SoftError(ss.str(), error::NAMESPACE_EXISTS);
+                    }
+                    break;
+
+                default:
+                    throw MariaDBError(err);
                 }
             }
             break;
@@ -83,13 +149,100 @@ public:
             throw_unexpected_packet();
         }
 
-        DocumentBuilder doc;
-
-        doc.append(kvp(key::OK, ok));
-
-        *ppResponse = create_response(doc.extract());
-        return READY;
+        *ppResponse = pResponse;
+        return state;
     }
+
+    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_action == Action::CREATING_DATABASE);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            create_table();
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                switch (err.code())
+                {
+                case  ER_DB_CREATE_EXISTS:
+                    // Someone else has created the database.
+                    create_table();
+                    break;
+
+                default:
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    void create_database()
+    {
+        mxb_assert(m_action == Action::CREATING_TABLE);
+        m_action = Action::CREATING_DATABASE;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    ostringstream ss;
+                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+
+                    send_downstream(ss.str());
+                }
+
+                return false;
+            });
+    }
+
+    void create_table()
+    {
+        mxb_assert(m_action == Action::CREATING_DATABASE);
+        m_action = Action::CREATING_TABLE;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    send_downstream(m_statement);
+                }
+
+                return false;
+            });
+    }
+
+private:
+    enum class Action
+    {
+        CREATING_TABLE,
+        CREATING_DATABASE
+    };
+
+    Action   m_action { Action::CREATING_TABLE };
+    string   m_statement;
+    uint32_t m_dcid { 0 };
 };
 
 
@@ -318,7 +471,7 @@ public:
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            MXS_WARNING("listCollections.filter is ignored.");
+            MXS_WARNING("listCollections.filter is ignored: '%s'", bsoncxx::to_json(filter).c_str());
         }
 
         ostringstream sql;

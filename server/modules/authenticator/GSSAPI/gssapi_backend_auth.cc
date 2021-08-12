@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "gssapi_auth.hh"
+#include "gssapi_backend_auth.hh"
 
 #include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/mysql.hh>

@@ -10,66 +10,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include "gssapi_auth.hh"
+
+#include "gssapi_common.hh"
+#include "gssapi_client_auth.hh"
 
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator.hh>
-#include <maxscale/dcb.hh>
+
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 
-uint64_t GSSAPIAuthenticatorModule::capabilities() const
-{
-    return 0;
-}
 
-std::string GSSAPIAuthenticatorModule::supported_protocol() const
-{
-    return MXS_MARIADB_PROTOCOL_NAME;
-}
-
-/**
- * @brief Initialize the GSSAPI authenticator
- *
- * This function processes the service principal name that is given to the client.
- *
- * @param options Listener options
- * @return Authenticator instance
- */
-GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParameters* options)
-{
-    /** This is mainly for testing purposes */
-    const char default_princ_name[] = "mariadb/localhost.localdomain";
-
-    auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
-    if (instance)
-    {
-        const std::string princ_option = "principal_name";
-        if (options->contains(princ_option))
-        {
-            instance->principal_name = options->get_string(princ_option);
-            options->remove(princ_option);
-        }
-        else
-        {
-            instance->principal_name = default_princ_name;
-            MXS_NOTICE("Using default principal name: %s", instance->principal_name.c_str());
-        }
-    }
-    return instance;
-}
-
-mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
-{
-    auto new_ses = new(std::nothrow) GSSAPIClientAuthenticator(this);
-    return mariadb::SClientAuth(new_ses);
-}
 
 GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module)
     : ClientAuthenticatorT(module)
@@ -338,52 +293,4 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
     MXS_FREE(princ);
 
     return rval;
-}
-
-mariadb::SBackendAuth
-GSSAPIAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
-{
-    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator(auth_data));
-}
-
-std::string GSSAPIAuthenticatorModule::name() const
-{
-    return MXS_MODULE_NAME;
-}
-
-const std::unordered_set<std::string>& GSSAPIAuthenticatorModule::supported_plugins() const
-{
-    static const std::unordered_set<std::string> plugins = {"gssapi"};
-    return plugins;
-}
-
-extern "C"
-{
-/**
- * Module handle entry point
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_MODULE info =
-    {
-        mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
-        mxs::ModuleType::AUTHENTICATOR,
-        mxs::ModuleStatus::GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "GSSAPI authenticator",
-        "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApiGenerator<GSSAPIAuthenticatorModule>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 }

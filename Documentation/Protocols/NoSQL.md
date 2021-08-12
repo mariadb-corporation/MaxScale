@@ -138,6 +138,16 @@ Enumeration values:
    * `return_error`: An error document is returned.
    * `return_empty`: An empty document is returned.
 
+## `log_unknown_command`
+
+   * Type: boolean
+   * Mandatory: false
+   * Default: `false`
+
+Specifies whether an unknown command should be logged. This is primarily
+for debugging purposes, to find out whether a client uses a command that
+currently is not supported.
+
 ## `auto_create_databases`
 
    * Type: boolean
@@ -837,6 +847,18 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 ping | any | Ignored.
+
+### [validate](https://docs.mongodb.com/manual/reference/command/validate/)
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+validate | string | The name of the collection to validate.
+
+The command does not actually perform any validation but for checking
+that the collection exists. The response will contain in `nrecords`
+the current number of documents/rows it contains.
 
 ### [whatsmyuri](https://docs.mongodb.com/manual/reference/command/whatsmyuri/)
 

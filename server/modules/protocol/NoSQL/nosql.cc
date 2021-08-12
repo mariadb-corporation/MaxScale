@@ -80,6 +80,33 @@ int32_t alias::to_type(const string& alias)
     return it->second;
 }
 
+int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView)
+{
+    if (pEnd - pData < 4)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, expecting document, but not even document length received.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    uint32_t size;
+    get_byte4(pData, &size);
+
+    if (pData + size > pEnd)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
+           << pEnd - pData << " available.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    return size;
+}
+
 }
 
 void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element)
@@ -362,6 +389,78 @@ bool element_as<bool>(const string& command,
     return rv;
 }
 
+}
+
+nosql::Insert::Insert(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_INSERT);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+
+    while (pData < m_pEnd)
+    {
+        if (m_pEnd - pData < 4)
+        {
+            mxb_assert(!true);
+            std::ostringstream ss;
+            ss << "Malformed packet, expecting document, but not even document length received.";
+
+            throw std::runtime_error(ss.str());
+        }
+
+        uint32_t size;
+        protocol::get_byte4(pData, &size);
+
+        if (pData + size > m_pEnd)
+        {
+            mxb_assert(!true);
+            std::ostringstream ss;
+            ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
+               << m_pEnd - pData << " available.";
+
+            throw std::runtime_error(ss.str());
+        }
+
+        auto view = bsoncxx::document::view { pData, size };
+        m_documents.push_back(view);
+
+        pData += size;
+    }
+}
+
+nosql::Delete::Delete(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_DELETE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+
+    mxb_assert(pData == m_pEnd);
+}
+
+nosql::Update::Update(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_UPDATE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+    pData += protocol::get_document(pData, m_pEnd, &m_update);
+
+    mxb_assert(pData == m_pEnd);
 }
 
 nosql::Query::Query(const Packet& packet)
@@ -687,7 +786,7 @@ GWBUF* nosql::MariaDBError::create_response(const Command& command) const
 
 void nosql::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
 {
-    string json = bsoncxx::to_json(command.doc());
+    string json = command.to_json();
     string sql = command.last_statement();
 
     DocumentBuilder mariadb;
@@ -702,8 +801,9 @@ void nosql::MariaDBError::create_response(const Command& command, DocumentBuilde
     doc.append(kvp(key::CODE_NAME, nosql::error::name(protocol_code)));
     doc.append(kvp(key::MARIADB, mariadb.extract()));
 
-    MXS_ERROR("Protocol command failed due to MariaDB error: code = %d, message = \"%s\", sql = \"%s\"",
-              m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
+    MXS_ERROR("Protocol command failed due to MariaDB error: "
+              "json = \"%s\", code = %d, message = \"%s\", sql = \"%s\"",
+              json.c_str(), m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());}
 
 unique_ptr<nosql::LastError> nosql::MariaDBError::create_last_error() const
 {
@@ -772,8 +872,15 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
                 break;
 
             case bsoncxx::type::k_bool:
-            default:
                 include_id = static_cast<bool>(element.get_bool());
+                break;
+
+            case bsoncxx::type::k_double:
+                include_id = static_cast<double>(element.get_double());
+                break;
+
+            default:
+                ;
             }
 
             if (!include_id)
@@ -1016,11 +1123,17 @@ string get_logical_condition(const bsoncxx::document::element& element)
 }
 
 using ElementValueToString = string (*)(const bsoncxx::document::element& element, const string& op);
+using FieldAndElementValueToComparison = string (*) (const std::string& field,
+                                                     const bsoncxx::document::element& element,
+                                                     const string& mariadb_op,
+                                                     const string& nosql_op,
+                                                     ElementValueToString value_to_string);
 
 struct ElementValueInfo
 {
-    const string         op;
-    ElementValueToString converter;
+    const string                     mariadb_op;
+    ElementValueToString             value_to_string;
+    FieldAndElementValueToComparison field_and_value_to_comparison;
 };
 
 template<class document_element_or_array_item>
@@ -1305,17 +1418,69 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
     return condition;
 }
 
+string default_field_and_value_to_comparison(const std::string& field,
+                                             const bsoncxx::document::element& element,
+                                             const string& mariadb_op,
+                                             const string& nosql_op,
+                                             ElementValueToString value_to_string)
+{
+    return "(JSON_EXTRACT(doc, '$." + field + "') "
+        + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
+}
+
+string field_and_value_to_in_comparison(const std::string& field,
+                                        const bsoncxx::document::element& element,
+                                        const string& mariadb_op,
+                                        const string& nosql_op,
+                                        ElementValueToString value_to_string)
+{
+    string rv;
+    string s = value_to_string(element, nosql_op);
+
+    if (!s.empty())
+    {
+        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
+    }
+    else
+    {
+        rv = "(false)";
+    }
+
+    return rv;
+}
+
+string field_and_value_to_nin_comparison(const std::string& field,
+                                         const bsoncxx::document::element& element,
+                                         const string& mariadb_op,
+                                         const string& nosql_op,
+                                         ElementValueToString value_to_string)
+{
+    string rv;
+    string s = value_to_string(element, nosql_op);
+
+    if (!s.empty())
+    {
+        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
+    }
+    else
+    {
+        rv = "(true)";
+    }
+
+    return rv;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value } },
-    { "$gt",     { ">",      &element_to_value } },
-    { "$gte",    { ">=",     &element_to_value } },
-    { "$lt",     { "<",      &element_to_value } },
-    { "$in",     { "IN",     &element_to_array } },
-    { "$lte",    { "<=",     &element_to_value } },
-    { "$ne",     { "!=",     &element_to_value } },
-    { "$nin",    { "NOT IN", &element_to_array } },
-    { "$exists", { "IS",     &element_to_null } }
+    { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$in",     { "IN",     &element_to_array, field_and_value_to_in_comparison } },
+    { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
+    { "$exists", { "IS",     &element_to_null,  default_field_and_value_to_comparison } }
 };
 
 string get_op_and_value(const bsoncxx::document::view& doc)
@@ -1329,18 +1494,18 @@ string get_op_and_value(const bsoncxx::document::view& doc)
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
         const auto& element = *it;
-        const auto op = static_cast<string>(element.key());
+        const auto nosql_op = static_cast<string>(element.key());
 
-        auto jt = converters.find(op);
+        auto jt = converters.find(nosql_op);
 
         if (jt != converters.end())
         {
-            rv = jt->second.op + " " + jt->second.converter(element, op);
+            rv = jt->second.mariadb_op + " " + jt->second.value_to_string(element, nosql_op);
         }
         else
         {
             ostringstream ss;
-            ss << "unknown operator: " << op;
+            ss << "unknown operator: " << nosql_op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
@@ -1553,16 +1718,19 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
         const auto& element = *it;
-        const auto op = static_cast<string>(element.key());
+        const auto nosql_op = static_cast<string>(element.key());
 
-        auto jt = converters.find(op);
+        auto jt = converters.find(nosql_op);
 
         if (jt != converters.end())
         {
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') "
-                + jt->second.op + " " + jt->second.converter(element, op) + ")";
+            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto& value_to_string = jt->second.value_to_string;
+
+            rv = jt->second.field_and_value_to_comparison(field, element, mariadb_op,
+                                                          nosql_op, value_to_string);
         }
-        else if (op == "$not")
+        else if (nosql_op == "$not")
         {
             if (element.type() != bsoncxx::type::k_document)
             {
@@ -1579,26 +1747,26 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
             rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
                 + "OR NOT JSON_EXTRACT(doc, '$." + field + "') " + get_op_and_value(doc) + ")";
         }
-        else if (op == "$elemMatch")
+        else if (nosql_op == "$elemMatch")
         {
             rv = elemMatch_to_condition(field, element);
         }
-        else if (op == "$size")
+        else if (nosql_op == "$size")
         {
-            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, op) + ")";
+            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, nosql_op) + ")";
         }
-        else if (op == "$all")
+        else if (nosql_op == "$all")
         {
             rv = all_to_condition(field, element);
         }
-        else if (op == "$type")
+        else if (nosql_op == "$type")
         {
             rv = type_to_condition(field, element);
         }
         else
         {
             ostringstream ss;
-            ss << "unknown operator: " << op;
+            ss << "unknown operator: " << nosql_op;
             throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
         }
     }
@@ -2058,17 +2226,22 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             switch (req.opcode())
             {
             case MONGOC_OPCODE_COMPRESSED:
-            case MONGOC_OPCODE_DELETE:
             case MONGOC_OPCODE_GET_MORE:
-            case MONGOC_OPCODE_INSERT:
             case MONGOC_OPCODE_KILL_CURSORS:
             case MONGOC_OPCODE_REPLY:
-            case MONGOC_OPCODE_UPDATE:
                 {
                     ostringstream ss;
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());
                 }
+                break;
+
+            case MONGOC_OPCODE_DELETE:
+                pResponse = handle_delete(pRequest, nosql::Delete(req));
+                break;
+
+            case MONGOC_OPCODE_INSERT:
+                pResponse = handle_insert(pRequest, nosql::Insert(req));
                 break;
 
             case MONGOC_OPCODE_MSG:
@@ -2077,6 +2250,10 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
 
             case MONGOC_OPCODE_QUERY:
                 pResponse = handle_query(pRequest, nosql::Query(req));
+                break;
+
+            case MONGOC_OPCODE_UPDATE:
+                pResponse = handle_update(pRequest, nosql::Update(req));
                 break;
 
             default:
@@ -2160,12 +2337,68 @@ void nosql::NoSQL::kill_client()
     m_context.client_connection().dcb()->session()->kill();
 }
 
+namespace
+{
+
+string extract_database(const string& collection)
+{
+    auto i = collection.find('.');
+
+    if (i == string::npos)
+    {
+        return collection;
+    }
+
+    return collection.substr(0, i);
+}
+
+}
+
+GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req)
+{
+    MXB_INFO("Request(DELETE): %s", req.zCollection());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    // OP_DELETE does not return anything, ever.
+    GWBUF* pResponse = m_sDatabase->handle_delete(pRequest, std::move(req));
+
+    return pResponse;
+}
+
+GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
+{
+    MXB_INFO("Request(INSERT): %s", req.zCollection());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    // OP_INSERT does not return anything, ever.
+    GWBUF* pResponse = m_sDatabase->handle_insert(pRequest, std::move(req));
+
+    return pResponse;
+}
+
+GWBUF* nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req)
+{
+    MXB_INFO("Request(UPDATE): %s", req.zCollection());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    // OP_UPDATE does not return anything, ever.
+    GWBUF* pResponse = m_sDatabase->handle_update(pRequest, std::move(req));
+
+    return pResponse;
+}
+
 GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, const nosql::Query& req)
 {
     MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
     mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(req.collection(), &m_context, &m_config));
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
     GWBUF* pResponse = m_sDatabase->handle_query(pRequest, req);
 

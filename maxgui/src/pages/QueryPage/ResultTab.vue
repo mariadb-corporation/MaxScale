@@ -143,8 +143,6 @@ export default {
     },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            curr_query_mode: state => state.query.curr_query_mode,
             loading_query_result: state => state.query.loading_query_result,
             active_conn_state: state => state.query.active_conn_state,
             query_request_sent_time: state => state.query.query_request_sent_time,
@@ -178,32 +176,24 @@ export default {
                 return resultData
             } else return {}
         },
-        isQueryViewMode() {
-            return this.curr_query_mode === this.SQL_QUERY_MODES.QUERY_VIEW
+    },
+    watch: {
+        loading_query_result(v) {
+            // After user clicks Run to send query, set isLoading to false to show skeleton-loader
+            if (v && this.isLoading) this.isLoading = false
         },
     },
     mounted() {
         this.setHeaderHeight()
     },
     activated() {
-        if (this.isQueryViewMode) {
-            this.addLoadingQueryResultWatcher()
-            this.addResultDataWatcher()
-        }
+        if (this.loading_query_result && this.isLoading) this.isLoading = false
+        this.addResultDataWatcher()
     },
     deactivated() {
-        if (this.isQueryViewMode) {
-            this.unwatchLoadingQueryResult()
-            this.unwatchResultData()
-        }
+        this.unwatchResultData()
     },
     methods: {
-        addLoadingQueryResultWatcher() {
-            this.unwatchLoadingQueryResult = this.$watch('loading_query_result', v => {
-                // After user clicks Run to send query, set isLoading to false to show skeleton-loader
-                if (v && this.isLoading) this.isLoading = false
-            })
-        },
         addResultDataWatcher() {
             this.unwatchResultData = this.$watch('resultData', () => {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()

@@ -54,6 +54,7 @@ public:
     int64_t               id_length               {ID_LENGTH_DEFAULT};
     OrderedInsertBehavior ordered_insert_behavior {OrderedInsertBehavior::DEFAULT};
     std::chrono::seconds  cursor_timeout          {std::chrono::seconds(CURSOR_TIMEOUT_DEFAULT)};
+    bool                  log_unknown_command     {false};
 
     static mxs::config::Specification& specification();
 
@@ -65,6 +66,7 @@ public:
     static mxs::config::ParamCount                       s_id_length;
     static mxs::config::ParamEnum<OrderedInsertBehavior> s_ordered_insert_behavior;
     static mxs::config::ParamSeconds                     s_cursor_timeout;
+    static mxs::config::ParamBool                        s_log_unknown_command;
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
@@ -84,6 +86,7 @@ public:
         , id_length(config.id_length)
         , ordered_insert_behavior(config.ordered_insert_behavior)
         , cursor_timeout(config.cursor_timeout)
+        , log_unknown_command(config.log_unknown_command)
     {
     }
 
@@ -95,4 +98,5 @@ public:
     int64_t                             id_length;
     GlobalConfig::OrderedInsertBehavior ordered_insert_behavior;
     std::chrono::seconds                cursor_timeout;
+    bool                                log_unknown_command;
 };
