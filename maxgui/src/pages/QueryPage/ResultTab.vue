@@ -1,79 +1,78 @@
 <template>
     <div class="fill-height">
         <div ref="header" class="pb-2 result-header d-flex align-center">
-            <span v-if="showGuide" v-html="$t('resultTabGuide')" />
-            <template v-else>
-                <v-menu
-                    offset-y
-                    top
-                    transition="slide-y-transition"
-                    :close-on-content-click="false"
-                    content-class="shadow-drop color text-navigation "
-                    open-on-hover
-                    nudge-left="16"
-                >
-                    <template v-slot:activator="{ on }">
-                        <span class="mr-4 pointer color text-links " v-on="on">
-                            {{ $t('queryTxt') }}
-                        </span>
-                    </template>
-                    <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
-                        {{ queryTxt }}
-                    </v-sheet>
-                </v-menu>
+            <span v-if="!queryTxt" v-html="$t('resultTabGuide')" />
+            <v-menu
+                v-else
+                offset-y
+                top
+                transition="slide-y-transition"
+                :close-on-content-click="false"
+                content-class="shadow-drop color text-navigation "
+                open-on-hover
+                nudge-left="16"
+            >
+                <template v-slot:activator="{ on }">
+                    <span class="mr-4 pointer color text-links " v-on="on">
+                        {{ $t('queryTxt') }}
+                    </span>
+                </template>
+                <v-sheet class="text-body-2 py-2 px-4 color bg-background text-navigation">
+                    {{ queryTxt }}
+                </v-sheet>
+            </v-menu>
 
-                <v-tabs
-                    v-model="activeResSet"
-                    show-arrows
-                    hide-slider
-                    :height="20"
-                    class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
+            <v-tabs
+                v-model="activeResSet"
+                show-arrows
+                hide-slider
+                :height="20"
+                class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
+            >
+                <v-tab
+                    v-for="(resSet, name) in resultData"
+                    :key="name"
+                    :href="`#${name}`"
+                    class="tab-btn px-3 text-uppercase"
+                    :class="{ 'tab-btn--err-tab': getErrTabName() === name }"
+                    active-class="tab-btn--active font-weight-medium"
                 >
-                    <v-tab
-                        v-for="(resSet, name) in resultData"
-                        :key="name"
-                        :href="`#${name}`"
-                        class="tab-btn px-3 text-uppercase"
-                        :class="{ 'tab-btn--err-tab': getErrTabName() === name }"
-                        active-class="tab-btn--active font-weight-medium"
-                    >
-                        {{ name }}
-                    </v-tab>
-                </v-tabs>
-                <v-spacer />
-                <keep-alive>
-                    <duration-timer
-                        v-if="getQueryRequestSentTime"
-                        :startTime="getQueryRequestSentTime"
-                        :executionTime="getQueryExeTime"
-                        :totalDuration="getQueryTotalDuration"
-                        @total-duration="updateDuration"
-                    />
-                </keep-alive>
+                    {{ name }}
+                </v-tab>
+            </v-tabs>
+            <v-spacer />
+            <keep-alive>
+                <duration-timer
+                    v-if="getQueryRequestSentTime"
+                    :startTime="getQueryRequestSentTime"
+                    :executionTime="getQueryExeTime"
+                    :totalDuration="getQueryTotalDuration"
+                    @total-duration="updateDuration"
+                />
+            </keep-alive>
 
-                <v-tooltip
-                    v-if="
-                        $typy(resultData[activeResSet], 'data').isDefined &&
-                            !resultData[activeResSet].complete
-                    "
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <div class="ml-4 d-flex align-center" v-on="on">
-                            <v-icon size="16" color="error" class="mr-2">
-                                $vuetify.icons.alertWarning
-                            </v-icon>
-                            {{ $t('incomplete') }}
-                        </div>
-                    </template>
-                    <span> {{ $t('info.queryIncomplete') }}</span>
-                </v-tooltip>
-            </template>
+            <v-tooltip
+                v-if="
+                    $typy(resultData[activeResSet], 'data').isDefined &&
+                        !resultData[activeResSet].complete
+                "
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <div class="ml-4 d-flex align-center" v-on="on">
+                        <v-icon size="16" color="error" class="mr-2">
+                            $vuetify.icons.alertWarning
+                        </v-icon>
+                        {{ $t('incomplete') }}
+                    </div>
+                </template>
+                <span> {{ $t('info.queryIncomplete') }}</span>
+            </v-tooltip>
         </div>
 
-        <template v-if="!showGuide">
+        <template>
             <v-skeleton-loader
                 v-if="loading_query_result"
                 :loading="loading_query_result"
@@ -149,7 +148,6 @@ export default {
     computed: {
         ...mapState({
             loading_query_result: state => state.query.loading_query_result,
-            active_conn_state: state => state.query.active_conn_state,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
@@ -158,9 +156,6 @@ export default {
             getQueryExeTime: 'query/getQueryExeTime',
             getQueryTotalDuration: 'query/getQueryTotalDuration',
         }),
-        showGuide() {
-            return this.isLoading || !this.active_conn_state
-        },
         queryTxt() {
             return this.$typy(this.getResults, 'attributes.sql').safeObject
         },
@@ -184,14 +179,7 @@ export default {
             } else return {}
         },
     },
-    watch: {
-        loading_query_result(v) {
-            // After user clicks Run to send query, set isLoading to false to show skeleton-loader
-            if (v && this.isLoading) this.isLoading = false
-        },
-    },
     activated() {
-        if (this.loading_query_result && this.isLoading) this.isLoading = false
         this.setHeaderHeight()
         this.addResultDataWatcher()
     },
