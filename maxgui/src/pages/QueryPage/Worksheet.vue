@@ -222,6 +222,7 @@ export default {
         this.$help.doubleRAF(() => {
             this.handleSetSidebarPct()
             this.handleSetMinEditorPct()
+            this.setResultPaneDim()
             this.addShowVisSidebarWatcher()
             this.$nextTick(() => this.handleSetVisSidebar(this.show_vis_sidebar))
         })
