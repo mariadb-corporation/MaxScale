@@ -324,6 +324,7 @@ public:
 
     mxt::TestLogger& logger();
     mxt::Settings&   settings();
+    mxt::SharedData& shared();
 
     std::string get_mdbci_config_name()
     {
@@ -341,6 +342,9 @@ public:
     bool verbose() const;
     void write_node_env_vars();
     int  n_maxscales() const;
+    bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
+
+    mxt::CmdResult run_shell_cmd_output(const std::string& cmd, const std::string& errmsg = "");
 
 private:
     bool read_test_info();
@@ -410,7 +414,6 @@ private:
     bool check_backend_versions();
     bool check_create_vm_dir();
     bool read_network_config();
-    bool run_shell_command(const std::string& cmd, const std::string& errmsg = "");
     bool process_template(mxt::MaxScale& mxs, const std::string& config_file_path, const char* dest);
     bool process_mdbci_template();
     bool call_mdbci(const char* options);

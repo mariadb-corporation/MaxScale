@@ -2035,6 +2035,26 @@ bool TestConnections::run_shell_command(const string& cmd, const string& errmsg)
     return m_shared.run_shell_command(cmd, errmsg);
 }
 
+mxt::CmdResult TestConnections::run_shell_cmd_output(const string& cmd, const string& errmsg)
+{
+    auto rval = m_shared.run_shell_cmd_output(cmd);
+    auto rc = rval.rc;
+    if (rc != 0)
+    {
+        string msgp2 = mxb::string_printf("Shell command '%s' returned %i: %s.",
+                                          cmd.c_str(), rc, rval.output.c_str());
+        if (errmsg.empty())
+        {
+            logger().add_failure("%s", msgp2.c_str());
+        }
+        else
+        {
+            logger().add_failure("%s %s", errmsg.c_str(), msgp2.c_str());
+        }
+    }
+    return rval;
+}
+
 mxt::MariaDBServer* TestConnections::get_repl_master()
 {
     mxt::MariaDBServer* rval = nullptr;
@@ -2079,4 +2099,9 @@ mxt::MaxScale* TestConnections::my_maxscale(int m) const
         rval = maxscale2;
     }
     return rval;
+}
+
+mxt::SharedData& TestConnections::shared()
+{
+    return m_shared;
 }
