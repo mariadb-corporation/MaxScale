@@ -2,15 +2,22 @@
     <div>
         <div ref="tableTools" class="table-tools pb-2 d-inline-flex align-center">
             <v-text-field
-                v-model="searchCellKeyword"
+                v-model="filterKeyword"
                 name="filter"
                 dense
                 outlined
                 height="28"
-                class="std filter-result mr-auto"
+                class="std filter-result mr-2"
                 :placeholder="$t('filterResult')"
                 hide-details
             />
+            <column-list
+                v-model="filterHeaderIdxs"
+                :label="$t('filterBy')"
+                :cols="tableHeaders"
+                :maxHeight="tableHeight - 20"
+            />
+            <v-spacer />
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
             <column-list
                 v-model="visHeaderIdxs"
@@ -90,8 +97,9 @@ export default {
     },
     data() {
         return {
+            filterHeaderIdxs: [],
             visHeaderIdxs: [],
-            searchCellKeyword: '',
+            filterKeyword: '',
             tableToolsHeight: 0,
             isVertTable: false,
         }
@@ -118,7 +126,19 @@ export default {
             const rows = this.rowsWithIndex.map(row =>
                 row.filter((cell, i) => this.visHeaderIdxs.includes(i))
             )
-            return rows.filter(row => this.$help.ciStrIncludes(`${row}`, this.searchCellKeyword))
+            return rows.filter(row => {
+                let match = false
+                for (const [i, cell] of row.entries()) {
+                    if (
+                        (this.filterHeaderIdxs.includes(i) || !this.filterHeaderIdxs.length) &&
+                        this.$help.ciStrIncludes(`${cell}`, this.filterKeyword)
+                    ) {
+                        match = true
+                        break
+                    }
+                }
+                return match
+            })
         },
         visibleHeaders() {
             return this.tableHeaders.filter((h, i) => this.visHeaderIdxs.includes(i))

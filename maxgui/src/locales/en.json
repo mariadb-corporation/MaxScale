@@ -151,6 +151,7 @@
     "exportChart": "Export chart",
     "showTrendline": "Show Trendline",
     "disconnectAll": "Disconnect all",
+    "filterBy": "Filter by",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
