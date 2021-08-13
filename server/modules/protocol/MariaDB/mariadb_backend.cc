@@ -170,8 +170,7 @@ void MariaDBBackendConnection::finish_connection()
 
     if (m_state != State::POOLED)
     {
-        MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-        data->history_info.erase(this);
+        mysql_session()->history_info.erase(this);
     }
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
@@ -583,7 +582,7 @@ void MariaDBBackendConnection::normal_read()
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
     uint64_t capabilities = service_get_capabilities(session->service);
-    capabilities |= static_cast<MYSQL_session*>(session->protocol_data())->client_protocol_capabilities();
+    capabilities |= mysql_session()->client_protocol_capabilities();
     bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)
@@ -691,7 +690,7 @@ void MariaDBBackendConnection::normal_read()
 
 void MariaDBBackendConnection::send_history()
 {
-    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+    MYSQL_session* client_data = mysql_session();
 
     if (!client_data->history.empty())
     {
@@ -743,7 +742,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+                MYSQL_session* client_data = mysql_session();
                 uint32_t id = m_history_responses.front();
                 auto it = client_data->history_responses.find(id);
                 mxb_assert(it != client_data->history_responses.end());
@@ -800,7 +799,7 @@ void MariaDBBackendConnection::pin_history_responses()
     // Mark the start of the history responses that we're interested in. This guarantees that all responses
     // remain in effect while the connection reset is ongoing. This is needed to correctly detect a
     // COM_STMT_CLOSE that arrives after the connection creation and which caused the history to shrink.
-    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+    MYSQL_session* client_data = mysql_session();
 
     if (!client_data->history.empty())
     {
@@ -812,7 +811,7 @@ bool MariaDBBackendConnection::compare_responses()
 {
     bool ok = true;
     bool found = false;
-    MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    MYSQL_session* data = mysql_session();
     auto it = m_ids_to_check.begin();
 
     while (it != m_ids_to_check.end())
@@ -889,7 +888,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             if (m_state == State::READ_CHANGE_USER)
             {
                 // Fix the packet sequence number to be the same what the client expects
-                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+                MYSQL_session* client_data = mysql_session();
                 buffer.data()[3] = client_data->next_sequence;
 
                 mxs::ReplyRoute route;
@@ -1099,7 +1098,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     // sent, don't respond to it.
                     if (cmd == MXS_COM_STMT_CLOSE)
                     {
-                        auto data = static_cast<MYSQL_session*>(m_session->protocol_data());
+                        auto data = mysql_session();
 
                         if (data->history_responses.find(ps_id) != data->history_responses.end())
                         {
@@ -2369,7 +2368,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 {
     m_session = session;
     m_upstream = upstream;
-    MYSQL_session* client_data = static_cast<MYSQL_session*>(session->protocol_data());
+    MYSQL_session* client_data = mysql_session();
     m_auth_data.client_data = client_data;
     m_authenticator = client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
 }
@@ -2825,8 +2824,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
 
 void MariaDBBackendConnection::set_to_pooled()
 {
-    MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-    data->history_info.erase(this);
+    mysql_session()->history_info.erase(this);
 
     m_session = nullptr;
     m_upstream = nullptr;

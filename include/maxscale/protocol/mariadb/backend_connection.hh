@@ -168,6 +168,12 @@ private:
 
     const MariaDBUserCache* user_account_cache();
 
+    // Helper for getting the shared session data
+    MYSQL_session* mysql_session()
+    {
+        return static_cast<MYSQL_session*>(m_session->protocol_data());
+    }
+
     // Contains the necessary information required to track queries
     struct TrackedQuery
     {
