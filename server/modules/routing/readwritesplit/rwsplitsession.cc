@@ -985,12 +985,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
     }
 
-    // We lost the connection, metadata needs to be sent again.
-    for (auto& kv : m_exec_map)
-    {
-        kv.second.metadata_sent.erase(backend);
-    }
-
     return can_continue;
 }
 

@@ -985,6 +985,28 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
     case MXS_COM_STMT_RESET:// Resets the prepared statement state, not needed by new connections
         break;
 
+    case MXS_COM_STMT_EXECUTE:
+        {
+            uint32_t id = mxs_mysql_extract_ps_id(buffer.get());
+            uint16_t params = m_qc.get_param_count(id);
+
+            if (params > 0)
+            {
+                size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
+                uint8_t* ptr = buffer.data() + types_offset;
+
+                if (*ptr)
+                {
+                    ++ptr;
+
+                    // Store the metadata, two bytes per parameter, for later use. The backends will need if
+                    // it they have to reconnect and re-executed the prepared statements.
+                    m_session_data->exec_metadata[id].assign(ptr, ptr + (params * 2));
+                }
+            }
+        }
+        break;
+
     case MXS_COM_STMT_CLOSE:
         {
             // Instead of handling COM_STMT_CLOSE like a normal command, we can exclude it from the history as
@@ -1005,6 +1027,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 mxb_assert(it->id());
                 m_session_data->history.erase(it);
                 m_qc.ps_erase(buffer.get());
+                m_session_data->exec_metadata.erase(id);
             }
         }
         break;
@@ -1116,6 +1139,11 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
                  STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
                  mxs::extract_sql(m_pending_cmd, 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
+
+        if (reply.command() == MXS_COM_STMT_PREPARE)
+        {
+            m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
+        }
 
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();

@@ -299,6 +299,61 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
     m_track_state = gwbuf_should_track_state(buffer);
 }
 
+void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
+{
+    size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((ps_info.n_params + 7) / 8);
+    uint8_t* ptr = gwbuf_link_data(*original) + types_offset;
+
+    if (*ptr == 0)
+    {
+        if (!ps_info.exec_metadata_sent)
+        {
+            MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+            auto it = data->exec_metadata.find(id);
+
+            // Although this check is practically always true, it will prevent a broken
+            // connector from crashing MaxScale.
+            if (it != data->exec_metadata.end())
+            {
+                const auto& metadata = it->second;
+
+                mxs::Buffer buf(*original);
+                mxs::Buffer newbuf(buf.length() + metadata.size());
+                auto data = newbuf.data();
+
+                memcpy(data, buf.data(), types_offset);
+                data += types_offset;
+
+                // Set to 1, we are sending the types
+                *data++ = 1;
+
+                // Splice the metadata into COM_STMT_EXECUTE
+                memcpy(data, metadata.data(), metadata.size());
+                data += metadata.size();
+
+                // Copy remaining data that is being sent and update the packet length
+                mxb_assert(buf.length() > types_offset + 1);
+                memcpy(data, buf.data() + types_offset + 1, buf.length() - types_offset - 1);
+                gw_mysql_set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
+
+                // The old buffer is freed along with `buf`
+                *original = newbuf.release();
+
+                ps_info.exec_metadata_sent = true;
+            }
+            else
+            {
+                MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
+                            "execution with metadata and current execution doesn't contain it", id);
+            }
+        }
+    }
+    else
+    {
+        ps_info.exec_metadata_sent = true;
+    }
+}
+
 void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
@@ -1079,11 +1134,15 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                     // Replace our generated ID with the real PS ID
                     uint8_t* ptr = GWBUF_DATA(queue) + MYSQL_PS_ID_OFFSET;
-                    mariadb::set_byte4(ptr, it->second);
+                    mariadb::set_byte4(ptr, it->second.real_id);
 
                     if (cmd == MXS_COM_STMT_CLOSE)
                     {
                         m_ps_map.erase(it);
+                    }
+                    else if (cmd == MXS_COM_STMT_EXECUTE)
+                    {
+                        process_stmt_execute(&queue, ps_id, it->second);
                     }
                 }
                 else if (ps_id != MARIADB_PS_DIRECT_EXEC_ID)
@@ -2222,7 +2281,8 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     stmt_id |= *it << 24;
     *it++ = internal_id >> 24;
 
-    m_ps_map[internal_id] = stmt_id;
+    auto& ps_map = m_ps_map[internal_id];
+    ps_map.real_id = stmt_id;
     MXS_INFO("PS internal ID %u maps to external ID %u on server '%s'",
              internal_id, stmt_id, m_dcb->server()->name());
 
@@ -2233,6 +2293,8 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     // Parameters
     uint16_t params = *it++;
     params += *it++ << 8;
+
+    ps_map.n_params = params;
 
     // Always set our internal ID as the PS ID
     m_reply.set_generated_id(internal_id);

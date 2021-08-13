@@ -36,10 +36,6 @@ struct ExecInfo
 {
     // The latest server this was executed on, used to figure out where COM_STMT_FETCH needs to be sent.
     mxs::RWBackend* target = nullptr;
-    // Parameter type metadata
-    std::vector<uint8_t> metadata;
-    // The set of servers to which the metadata has been sent
-    std::unordered_set<mxs::RWBackend*> metadata_sent;
 };
 
 /** Map of COM_STMT_EXECUTE targets by internal ID */
@@ -149,7 +145,6 @@ private:
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF* querybuf, int delay = 1);
-    void            process_stmt_execute(mxs::Buffer* buffer, uint32_t id, mxs::RWBackend* target);
 
     // Transaction state helpers
     bool trx_is_starting() const;

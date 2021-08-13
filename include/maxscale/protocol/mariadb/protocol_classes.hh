@@ -158,6 +158,9 @@ public:
     // The responses to the executed commands, contains the ID and the result
     std::map<uint32_t, bool> history_responses;
 
+    // Metadata for COM_STMT_EXECUTE
+    std::map<uint32_t, std::vector<uint8_t>> exec_metadata;
+
     // Whether the history has been pruned of old commands. If true, reconnection should only take place if it
     // is acceptable to lose some state history (i.e. prune_sescmd_history is enabled).
     bool history_pruned {false};

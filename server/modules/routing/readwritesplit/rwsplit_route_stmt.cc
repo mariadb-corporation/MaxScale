@@ -992,61 +992,6 @@ RWBackend* RWSplitSession::handle_master_is_target()
     return target;
 }
 
-void RWSplitSession::process_stmt_execute(mxs::Buffer* buf, uint32_t id, RWBackend* target)
-{
-    mxb_assert(buf->is_contiguous());
-    mxb_assert(mxs_mysql_get_command(buf->get()) == MXS_COM_STMT_EXECUTE);
-    auto params = m_qc.get_param_count(id);
-
-    if (params > 0)
-    {
-        size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
-        uint8_t* ptr = buf->data() + types_offset;
-
-        if (*ptr)
-        {
-            ++ptr;
-            // Store the metadata, two bytes per parameter, for later use
-            m_exec_map[id].metadata.assign(ptr, ptr + (params * 2));
-        }
-        else
-        {
-            auto it = m_exec_map.find(id);
-
-            if (it == m_exec_map.end())
-            {
-                MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
-                            "execution with metadata and current execution doesn't contain it", id);
-                mxb_assert(!true);
-            }
-            else if (it->second.metadata_sent.count(target) == 0)
-            {
-                const auto& info = it->second;
-                mxb_assert(!info.metadata.empty());
-                mxs::Buffer newbuf(buf->length() + info.metadata.size());
-                auto data = newbuf.data();
-
-                memcpy(data, buf->data(), types_offset);
-                data += types_offset;
-
-                // Set to 1, we are sending the types
-                mxb_assert(*ptr == 0);
-                *data++ = 1;
-
-                // Splice the metadata into COM_STMT_EXECUTE
-                memcpy(data, info.metadata.data(), info.metadata.size());
-                data += info.metadata.size();
-
-                // Copy remaining data that is being sent and update the packet length
-                mxb_assert(buf->length() > types_offset + 1);
-                memcpy(data, buf->data() + types_offset + 1, buf->length() - types_offset - 1);
-                gw_mysql_set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
-                buf->reset(newbuf.release());
-            }
-        }
-    }
-}
-
 /**
  * @brief Handle writing to a target server
  *
@@ -1107,14 +1052,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             auto& info = m_exec_map[route_info().stmt_id()];
             info.target = target;
             MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
-
-            if (cmd == MXS_COM_STMT_EXECUTE)
-            {
-                // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store
-                // it for later use. If it doesn't, add it if the current target has never gotten it.
-                process_stmt_execute(&buffer, route_info().stmt_id(), target);
-                info.metadata_sent.insert(target);
-            }
         }
     }
 
