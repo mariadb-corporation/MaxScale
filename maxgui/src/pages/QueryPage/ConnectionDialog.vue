@@ -86,6 +86,7 @@
                             class="mt-2"
                             :entityName="selectedResourceType"
                             :items="resourceItems"
+                            :defaultItems="defSelectedRsrc"
                             clearable
                             showPlaceHolder
                             required
@@ -199,6 +200,7 @@ export default {
         return {
             selectedResourceType: '',
             selectedResource: [],
+            defSelectedRsrc: {},
             hasChanged: false,
             isPwdVisible: false,
             body: {
@@ -239,8 +241,11 @@ export default {
         },
     },
     watch: {
-        selectedResourceType(v) {
-            if (v) this.handleResourceSelect(v)
+        async selectedResourceType(v) {
+            if (v) {
+                await this.handleResourceSelect(v)
+                this.defSelectedRsrc = this.resourceItems[0]
+            }
         },
         isOpened(v) {
             // reset to initial state and bind this context
