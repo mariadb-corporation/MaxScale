@@ -160,6 +160,7 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 {
     std::unique_ptr<MariaDBBackendConnection> backend_conn(new MariaDBBackendConnection(server));
     backend_conn->assign_session(session, component);
+    backend_conn->pin_history_responses();
     return backend_conn;
 }
 
@@ -202,6 +203,10 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
             MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
             rv = true;
+
+            // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
+            m_ps_map.clear();
+            pin_history_responses();
         }
     }
 
@@ -710,8 +715,6 @@ void MariaDBBackendConnection::send_history()
             m_dcb->writeq_append(buffer.release());
             m_history_responses.push_back(a.id());
         }
-
-        client_data->history_info[this].position = m_history_responses.front();
     }
 }
 
@@ -747,7 +750,6 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
                 if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
-                    client_data->history_info[this].position = id;
                     m_history_responses.pop_front();
                 }
                 else
@@ -791,6 +793,19 @@ std::string MariaDBBackendConnection::create_response_mismatch_error()
     }
 
     return ss.str();
+}
+
+void MariaDBBackendConnection::pin_history_responses()
+{
+    // Mark the start of the history responses that we're interested in. This guarantees that all responses
+    // remain in effect while the connection reset is ongoing. This is needed to correctly detect a
+    // COM_STMT_CLOSE that arrives after the connection creation and which caused the history to shrink.
+    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+
+    if (!client_data->history.empty())
+    {
+        client_data->history_info[this].position = client_data->history.front().id();
+    }
 }
 
 bool MariaDBBackendConnection::compare_responses()
@@ -1079,11 +1094,24 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     std::stringstream ss;
                     ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
                        << STRPACKETTYPE(cmd) << " by '" << m_session->user_and_host() << "'";
-                    MXS_WARNING("%s", ss.str().c_str());
 
                     // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
                     // sent, don't respond to it.
-                    if (cmd != MXS_COM_STMT_CLOSE)
+                    if (cmd == MXS_COM_STMT_CLOSE)
+                    {
+                        auto data = static_cast<MYSQL_session*>(m_session->protocol_data());
+
+                        if (data->history_responses.find(ps_id) != data->history_responses.end())
+                        {
+                            // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to
+                            // but we have the response for it, we know that the COM_STMT_CLOSE was received
+                            // after the connection was opened but before we reached the history replay state.
+                            // This can be relied on as the history position is pinned to the lowest ID when
+                            // the connection is opened.
+                            return 1;
+                        }
+                    }
+                    else
                     {
                         GWBUF* err = mysql_create_custom_error(
                             1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
@@ -1093,6 +1121,8 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                         m_dcb->readq_append(err);
                         m_dcb->trigger_read_event();
                     }
+
+                    MXS_WARNING("%s", ss.str().c_str());
 
                     // This is an error condition that is very likely to happen if something is broken in the
                     // prepared statement handling. Asserting that we never get here when we're testing helps

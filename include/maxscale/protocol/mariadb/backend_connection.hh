@@ -142,6 +142,7 @@ private:
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(GWBUF* buffer);
+    void pin_history_responses();
 
     GWBUF* track_response(GWBUF** buffer);
     bool   read_backend_handshake(mxs::Buffer&& buffer);
