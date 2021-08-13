@@ -19,7 +19,7 @@
     "mocha": "^7.1.1",
     "prettier": "^2.2.1",
     "tough-cookie": "^4.0.0",
-    "ws": "^7.3.1"
+    "ws": "^7.5.3"
   },
   "prettier": {
     "printWidth": 110

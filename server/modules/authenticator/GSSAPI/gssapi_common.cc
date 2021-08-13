@@ -71,7 +71,7 @@ std::string GSSAPIAuthenticatorModule::supported_protocol() const
 GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
     /** This is mainly for testing purposes */
-    const char default_princ_name[] = "mariadb/localhost.localdomain";
+    const std::string default_princ_name = "mariadb/localhost.localdomain";
 
     auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
@@ -79,13 +79,13 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
         const std::string princ_option = "principal_name";
         if (options->contains(princ_option))
         {
-            instance->principal_name = options->get_string(princ_option);
+            instance->m_service_principal = options->get_string(princ_option);
             options->remove(princ_option);
         }
         else
         {
-            instance->principal_name = default_princ_name;
-            MXS_NOTICE("Using default principal name: %s", instance->principal_name.c_str());
+            instance->m_service_principal = default_princ_name;
+            MXS_NOTICE("Using default principal name: %s", instance->m_service_principal.c_str());
         }
     }
     return instance;
@@ -93,14 +93,13 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
 
 mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
 {
-    auto new_ses = new(std::nothrow) GSSAPIClientAuthenticator(this);
-    return mariadb::SClientAuth(new_ses);
+    return std::make_unique<GSSAPIClientAuthenticator>(m_service_principal);
 }
 
 mariadb::SBackendAuth
 GSSAPIAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator(auth_data));
+    return std::make_unique<GSSAPIBackendAuthenticator>(auth_data);
 }
 
 std::string GSSAPIAuthenticatorModule::name() const

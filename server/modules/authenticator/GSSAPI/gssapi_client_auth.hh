@@ -17,28 +17,13 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
-class GSSAPIAuthenticatorModule;
-
-/** GSSAPI authentication states */
-enum gssapi_auth_state
-{
-    GSSAPI_AUTH_INIT = 0,
-    GSSAPI_AUTH_DATA_SENT,
-    GSSAPI_AUTH_TOKEN_READY,
-    GSSAPI_AUTH_OK,
-    GSSAPI_AUTH_FAILED
-};
-
-class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
+class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
-    ~GSSAPIClientAuthenticator() override;
+    GSSAPIClientAuthenticator(const std::string& service_principal);
 
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
-
-    uint8_t m_sequence {0};                 /**< The next packet sequence number */
 
 private:
     void copy_client_information(GWBUF* buffer);
@@ -48,6 +33,14 @@ private:
                        const mariadb::UserEntry* entry);
     GWBUF* create_auth_change_packet();
 
-    gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
-    uint8_t*          principal_name {nullptr};     /**< Principal name */
+    enum class State
+    {
+        INIT,
+        DATA_SENT,
+        TOKEN_READY,
+    };
+
+    State              m_state {State::INIT};   /**< Authentication state*/
+    uint8_t            m_sequence {0};          /**< The next packet sequence number */
+    const std::string& m_service_principal;     /**< Service principal */
 };

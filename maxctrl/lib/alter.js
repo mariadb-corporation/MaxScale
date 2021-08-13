@@ -174,9 +174,13 @@ exports.builder = function (yargs) {
             "To display the filter parameters, execute `show filter <filter>`. " +
               "Some filters support runtime configuration changes to all parameters. " +
               "Refer to the filter documentation for details on whether it supports " +
-              "runtime configuration changes and which parameters can be altered."
+              "runtime configuration changes and which parameters can be altered.\n" +
+              "\n" +
+              "Note: To pass options with dashes in them, surround them in both single and double quotes: \n" +
+              "\n" +
+              "      maxctrl alter filter my-namedserverfilter target01 '\"->master\"'"
           )
-          .usage("Usage: alter service <service> <key> <value> ...");
+          .usage("Usage: alter filter <filter> <key> <value> ...");
       },
       function (argv) {
         maxctrl(argv, function (host) {

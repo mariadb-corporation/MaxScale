@@ -19,21 +19,14 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using std::string;
 
-
-
-GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module)
-    : ClientAuthenticatorT(module)
+GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(const std::string& service_principal)
+    : m_service_principal(service_principal)
 {
-}
-
-GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
-{
-    MXS_FREE(principal_name);
 }
 
 /**
@@ -54,7 +47,7 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
     /** Client auth plugin name */
     const char auth_plugin_name[] = "auth_gssapi_client";
 
-    size_t principal_name_len = m_module.principal_name.length();
+    size_t principal_name_len = m_service_principal.length();
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
     GWBUF* buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
 
@@ -67,7 +60,7 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
         *data++ = 0xfe;                                             // AuthSwitchRequest command
         memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, m_module.principal_name.c_str(), principal_name_len);      // Plugin data
+        memcpy(data, m_service_principal.c_str(), principal_name_len);      // Plugin data
     }
 
     return buffer;
@@ -119,9 +112,9 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
 {
     auto rval = ExchRes::FAIL;
 
-    switch (state)
+    switch (m_state)
     {
-    case GSSAPI_AUTH_INIT:
+    case State::INIT:
         {
             /** We need to send the authentication switch packet to change the
              * authentication to something other than the 'mysql_native_password'
@@ -130,22 +123,22 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
             if (buffer)
             {
                 output->reset(buffer);
-                state = GSSAPI_AUTH_DATA_SENT;
+                m_state = State::DATA_SENT;
                 rval = ExchRes::INCOMPLETE;
             }
             break;
         }
 
-    case GSSAPI_AUTH_DATA_SENT:
+    case State::DATA_SENT:
         if (store_client_token(session, read_buffer))
         {
-            state = GSSAPI_AUTH_TOKEN_READY;
+            m_state = State::TOKEN_READY;
             rval = ExchRes::READY;
         }
         break;
 
     default:
-        MXS_ERROR("Unexpected authentication state: %d", state);
+        MXS_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
         mxb_assert(false);
         break;
     }
@@ -169,7 +162,7 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
     gss_buffer_desc server_buf = {0, 0};
     gss_cred_id_t credentials;
 
-    const char* pr = m_module.principal_name.c_str();
+    const char* pr = m_service_principal.c_str();
     server_buf.value = (void*)pr;
     server_buf.length = strlen(pr) + 1;
 
@@ -277,7 +270,7 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
 {
     AuthRes rval;
 
-    mxb_assert(state == GSSAPI_AUTH_TOKEN_READY);
+    mxb_assert(m_state == State::TOKEN_READY);
 
     /** We sent the principal name and the client responded with the GSSAPI
      * token that we must validate */
