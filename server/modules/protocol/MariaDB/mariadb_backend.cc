@@ -1406,7 +1406,8 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
             GWBUF* headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
             if (headerbuf)
             {
-                MXS_INFO("Sending proxy-protocol header '%s' to server '%s'.", proxy_header, m_server.name());
+                MXS_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
+                         (int)strlen(proxy_header) - 2, proxy_header, m_server.name());
                 if (m_dcb->writeq_append(headerbuf))
                 {
                     success = true;
