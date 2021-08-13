@@ -38,6 +38,8 @@ class ComERR;
 namespace nosql
 {
 
+using bsoncxx::stdx::string_view;
+
 class Command;
 
 using DocumentBuilder = bsoncxx::builder::basic::document;
@@ -343,6 +345,7 @@ const char COMMAND[]                         = "command";
 const char COMPILED[]                        = "compiled";
 const char CONFIG[]                          = "config";
 const char CONNECTION_ID[]                   = "connectionId";
+const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
 const char CURSORS_ALIVE[]                   = "cursorsAlive";
 const char CURSORS_KILLED[]                  = "cursorsKilled";
 const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";
@@ -366,6 +369,7 @@ const char HELP[]                            = "help";
 const char ID[]                              = "id";
 const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
+const char INDEXES[]                         = "indexes";
 const char INFO[]                            = "info";
 const char ISMASTER[]                        = "ismaster";
 const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
@@ -426,6 +430,7 @@ const char TYPE[]                            = "type";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
 const char U[]                               = "u";
+const char V[]                               = "v";
 const char VALID[]                           = "valid";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";

@@ -23,6 +23,297 @@ namespace nosql
 namespace command
 {
 
+class ManipulateIndexes : public SingleCommand
+{
+public:
+    using SingleCommand::SingleCommand;
+
+    ~ManipulateIndexes()
+    {
+        if (m_dcid)
+        {
+            Worker::get_current()->cancel_delayed_call(m_dcid);
+        }
+    }
+
+    string generate_sql() override final
+    {
+        ostringstream sql;
+        sql << "SELECT 1 FROM " << table() << " LIMIT 0";
+
+        return sql.str();
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    {
+        State state = READY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (m_action)
+        {
+        case NORMAL_ACTION:
+            state = translate_normal_action(std::move(mariadb_response), &pResponse);
+            break;
+
+        case CREATING_TABLE:
+            state = translate_creating_table(std::move(mariadb_response), &pResponse);
+            break;
+
+        case CREATING_DATABASE:
+            state = translate_creating_database(std::move(mariadb_response), &pResponse);
+            break;
+        }
+
+        *ppResponse = pResponse;
+
+        return state;
+    }
+
+protected:
+    enum TableAction
+    {
+        CREATE_IF_MISSING,
+        ERROR_IF_MISSING
+    };
+
+    void set_table_action(TableAction table_action)
+    {
+        m_table_action = table_action;
+    }
+
+    virtual GWBUF* handle_error(const ComERR& err)
+    {
+        if (err.code() == ER_NO_SUCH_TABLE)
+        {
+            ostringstream ss;
+            ss << "ns does not exist: " << table(Quoted::NO);
+
+            throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
+        }
+        else
+        {
+            throw MariaDBError(err);
+        }
+
+        return nullptr;
+    }
+
+    virtual GWBUF* collection_exists(bool created) = 0;
+
+private:
+    State translate_normal_action(mxs::Buffer&& mariadb_response, GWBUF **ppResponse)
+    {
+        State state = READY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+        case ComResponse::LOCAL_INFILE_PACKET:
+            throw_unexpected_packet();
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (m_table_action == CREATE_IF_MISSING && err.code() == ER_NO_SUCH_TABLE)
+                {
+                    if (m_database.config().auto_create_tables)
+                    {
+                        create_table();
+                        state = BUSY;
+                    }
+                    else
+                    {
+                        ostringstream ss;
+                        ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
+                           << "is false.";
+
+                        throw HardError(ss.str(), error::COMMAND_FAILED);
+                    }
+                }
+                else
+                {
+                    pResponse = handle_error(err);
+                }
+            }
+            break;
+
+        default:
+            pResponse = collection_exists(false);
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_action == Action::CREATING_TABLE);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            pResponse = collection_exists(true);
+            state = READY;
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                switch (err.code())
+                {
+                case ER_BAD_DB_ERROR:
+                    {
+                        if (err.message().find("Unknown database") == 0)
+                        {
+                            if (m_database.config().auto_create_databases)
+                            {
+                                create_database();
+                            }
+                            else
+                            {
+                                ostringstream ss;
+                                ss << "Database " << m_database.name() << " does not exist, and "
+                                   << "'auto_create_databases' is false.";
+
+                                throw HardError(ss.str(), error::COMMAND_FAILED);
+                            }
+                        }
+                        else
+                        {
+                            throw MariaDBError(err);
+                        }
+                    }
+                    break;
+
+                case ER_TABLE_EXISTS_ERROR:
+                    // Someone created it before we did.
+                    pResponse = collection_exists(false);
+                    state = READY;
+                    break;
+
+                default:
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_action == Action::CREATING_DATABASE);
+
+        State state = BUSY;
+        GWBUF* pResponse = nullptr;
+
+        ComResponse response(mariadb_response.data());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            create_table();
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                switch (err.code())
+                {
+                case  ER_DB_CREATE_EXISTS:
+                    // Someone else has created the database.
+                    create_table();
+                    break;
+
+                default:
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+        }
+
+        *ppResponse = pResponse;
+        return state;
+    }
+
+    void create_database()
+    {
+        mxb_assert(m_action == Action::CREATING_TABLE);
+        m_action = Action::CREATING_DATABASE;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    ostringstream ss;
+                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+
+                    send_downstream(ss.str());
+                }
+
+                return false;
+            });
+    }
+
+    void create_table()
+    {
+        mxb_assert(m_action != Action::CREATING_TABLE);
+        m_action = Action::CREATING_TABLE;
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    auto statement = nosql::table_create_statement(table(), m_database.config().id_length);
+
+                    send_downstream(statement);
+                }
+
+                return false;
+            });
+    }
+
+    enum Action
+    {
+        NORMAL_ACTION,
+        CREATING_TABLE,
+        CREATING_DATABASE
+    };
+
+    TableAction m_table_action { TableAction::ERROR_IF_MISSING };
+    Action      m_action       { NORMAL_ACTION };
+    uint32_t    m_dcid         { 0 };
+};
+
+
 // https://docs.mongodb.com/v4.4/reference/command/cloneCollectionAsCapped/
 
 // https://docs.mongodb.com/v4.4/reference/command/collMod/
@@ -247,6 +538,143 @@ private:
 
 
 // https://docs.mongodb.com/v4.4/reference/command/createIndexes/
+class CreateIndexes final : public ManipulateIndexes
+{
+public:
+    static constexpr const char* const KEY = "createIndexes";
+    static constexpr const char* const HELP = "";
+
+    using ManipulateIndexes::ManipulateIndexes;
+
+private:
+    void prepare() override
+    {
+        set_table_action(TableAction::CREATE_IF_MISSING);
+
+        auto indexes = required<bsoncxx::array::view>(key::INDEXES);
+
+        int nIndexes = 0;
+
+        for (const auto& element : indexes)
+        {
+            ++nIndexes;
+
+            if (element.type() != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "The elements of the 'indexes' array must be objects, but got "
+                   << bsoncxx::to_string(element.type());
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            auto index = static_cast<bsoncxx::document::view>(element.get_document());
+
+            auto key = index[key::KEY];
+            if (!key)
+            {
+                ostringstream ss;
+                ss << "Error in specification " << bsoncxx::to_json(index)
+                   << " :: caused by :: The 'key' field is a required "
+                   << "property of an index specification";
+
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
+
+            if (key.type() != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "Error in specification " << bsoncxx::to_json(index)
+                   << " :: caused by :: The field 'key' must be an object, but got "
+                   << bsoncxx::to_string(key.type());
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            auto name = index[key::NAME];
+            if (!name)
+            {
+                ostringstream ss;
+                ss << "Error in specification " << bsoncxx::to_json(index)
+                   << " :: caused by :: The 'name' field is a required "
+                   << "property of an index specification";
+
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
+
+            if (name.type() != bsoncxx::type::k_utf8)
+            {
+                ostringstream ss;
+                ss << "Error in specification " << bsoncxx::to_json(index)
+                   << " :: caused by :: The field 'name' must be a string, but got "
+                   << bsoncxx::to_string(name.type());
+
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
+
+            if (static_cast<string_view>(name.get_utf8()).compare("_id_") == 0)
+            {
+                if (!is_valid_key_for_id(key.get_document()))
+                {
+                    ostringstream ss;
+                    ss << "The index name '_id_' is reserved for the _id index, "
+                       << "which must have key pattern {_id: 1}, found key: "
+                       << bsoncxx::to_json(key.get_document());
+
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
+            }
+        }
+
+        if (nIndexes == 0)
+        {
+            ostringstream ss;
+            ss << "Must specify at least on index to create";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+    }
+
+    GWBUF* collection_exists(bool created) override
+    {
+        return report_success(created);
+    }
+
+    static bool is_valid_key_for_id(const bsoncxx::document::view& key)
+    {
+        for (const auto& field : key)
+        {
+            if (field.key().compare("_id") != 0)
+            {
+                return false;
+            }
+
+            int64_t v;
+            if (!nosql::get_number_as_integer(field, &v))
+            {
+                return false;
+            }
+
+            if (v != 1)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    GWBUF* report_success(bool created)
+    {
+        MXS_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+
+        DocumentBuilder doc;
+        doc.append(kvp(key::CREATED_COLLECTION_AUTOMATICALLY, created));
+        doc.append(kvp(key::OK, 1));
+
+        return create_response(doc.extract());
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/currentOp/
 
@@ -376,6 +804,77 @@ public:
 // https://docs.mongodb.com/v4.4/reference/command/dropConnections/
 
 // https://docs.mongodb.com/v4.4/reference/command/dropIndexes/
+class DropIndexes final : public ManipulateIndexes
+{
+public:
+    static constexpr const char* const KEY = "dropIndexes";
+    static constexpr const char* const HELP = "";
+
+    using ManipulateIndexes::ManipulateIndexes;
+
+private:
+    GWBUF* collection_exists(bool created) override
+    {
+        int32_t nIndexes_was = 1;
+
+        auto element = m_doc[key::INDEX];
+
+        if (element)
+        {
+            switch (element.type())
+            {
+            case bsoncxx::type::k_array:
+                {
+                    auto indexes = static_cast<bsoncxx::array::view>(element.get_array());
+
+                    for (const auto& index : indexes)
+                    {
+                        if (index.type() == bsoncxx::type::k_utf8)
+                        {
+                            check_index(index.get_utf8());
+                            // If a specific index was named, we assume the client knew what
+                            // it was doing and return 2. Namely, as the index _id_ always
+                            // exists, if there were additional indexes, there must at least
+                            // have been 2.
+                            nIndexes_was = 2;
+                        }
+                    }
+                }
+                break;
+
+            case bsoncxx::type::k_utf8:
+                {
+                    check_index(element.get_utf8());;
+                    nIndexes_was = 2; // See above.
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        MXS_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+
+        DocumentBuilder doc;
+        doc.append(kvp("nIndexesWas", nIndexes_was));
+        doc.append(kvp("ok", (int32_t)1));
+
+        return create_response(doc.extract());
+    }
+
+private:
+    void check_index(const string_view& s)
+    {
+        if (s.compare("_id_") == 0)
+        {
+            ostringstream ss;
+            ss << "cannot drop _id index";
+
+            throw SoftError(ss.str(), error::INVALID_OPTIONS);
+        }
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/filemd5/
 
@@ -715,6 +1214,37 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/listIndexes/
+class ListIndexes final : public ManipulateIndexes
+{
+public:
+    static constexpr const char* const KEY = "listIndexes";
+    static constexpr const char* const HELP = "";
+
+    using ManipulateIndexes::ManipulateIndexes;
+
+private:
+    GWBUF* collection_exists(bool created) override
+    {
+        DocumentBuilder key;
+        key.append(kvp(key::_ID, (int32_t)1));
+
+        DocumentBuilder first_batch;
+        first_batch.append(kvp(key::V, (int32_t)2)); // TODO: What is this?
+        first_batch.append(kvp(key::KEY, key.extract()));
+        first_batch.append(kvp(key::NAME, key::_ID_));
+
+        DocumentBuilder cursor;
+        cursor.append(kvp(key::ID, (int64_t)0));
+        cursor.append(kvp(key::NS, table(Quoted::NO)));
+        cursor.append(kvp(key::FIRST_BATCH, first_batch.extract()));
+
+        DocumentBuilder doc;
+        doc.append(kvp(key::CURSOR, cursor.extract()));
+        doc.append(kvp(key::OK, (int32_t)1));
+
+        return create_response(doc.extract());
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/logRotate/
 

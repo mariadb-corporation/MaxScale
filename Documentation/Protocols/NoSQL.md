@@ -746,6 +746,19 @@ Field | Type | Description
 ------|------|------------
 create| string | The name of the collection to create.
 
+### [createIndexes](https://docs.mongodb.com/v4.4/reference/command/createIndexes/)
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+createIndexes| string | The collection for which to create indexes.
+
+**NOTE** Currently it is not possible to create indexes, but the command
+will nonetheless return success, provide the index specification passes
+some rudimentary sanity checks. Note also that the collection will be
+created if it does not exist.
+
 ### [drop](https://docs.mongodb.com/v4.4/reference/command/drop/)
 
 The following fields are relevant.
@@ -761,6 +774,19 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 dropDatabase | any | Ignored.
+
+### [dropIndexes](https://docs.mongodb.com/v4.4/reference/command/dropIndexes/)
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+dropIndexes | any | Ignored.
+
+**NOTE** Currently it is not possible to create indexes and thus there
+will never be any indexes that could be dropped. However, provided the
+specfied collection exists, dropping indexes will always succeed except
+for an attempt to drop the built-in `_id_` index.
 
 ### [killCursors](https://docs.mongodb.com/v4.4/reference/command/killCursors/)
 
@@ -792,6 +818,19 @@ Field | Type | Description
 ------|------|------------
 listDatabases | any | Ignored.
 nameOnly | boolean | Optional. A flag to indicate whether the command should return just the database names, or return both database names and size information.
+
+### [listIndexes](https://docs.mongodb.com/v4.4/reference/command/listIndexes/)
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+listIndexes | string | The name of the collection.
+
+**NOTE** As it currently is not possible to actually create indexes,
+although an attempt to do so using `createIndexes` will succeed, the
+result will always only contain information about the built-in
+index `_id_`.
 
 ### [renameCollection](https://docs.mongodb.com/v4.4/reference/command/renameCollection/)
 
