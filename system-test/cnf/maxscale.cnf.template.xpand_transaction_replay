@@ -19,6 +19,7 @@ user=maxskysql
 password=skysql
 transaction_replay=true
 transaction_replay_retry_on_deadlock=true
+delayed_retry_timeout=30s
 
 [RCR]
 type=service
