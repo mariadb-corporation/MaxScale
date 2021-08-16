@@ -234,7 +234,7 @@ export default {
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
             loading_query_result: state => state.query.loading_query_result,
-            query_confirm_flag: state => state.query.query_confirm_flag,
+            query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
         }),
