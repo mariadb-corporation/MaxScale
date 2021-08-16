@@ -285,7 +285,7 @@ export default {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [`Connection successful`],
+                            text: [this.i18n.t('info.connSuccessful')],
                             type: 'success',
                         },
                         { root: true }
@@ -316,7 +316,7 @@ export default {
                         commit(
                             'SET_SNACK_BAR_MESSAGE',
                             {
-                                text: [`Disconnect successful`],
+                                text: [this.i18n.t('info.disconnectSuccessful')],
                                 type: 'success',
                             },
                             { root: true }
@@ -372,7 +372,7 @@ export default {
                         commit(
                             'SET_SNACK_BAR_MESSAGE',
                             {
-                                text: ['Connection is not found, please reconnect'],
+                                text: [this.i18n.t('info.notFoundConn')],
                                 type: 'error',
                             },
                             { root: true }

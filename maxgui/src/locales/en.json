@@ -152,6 +152,15 @@
     "showTrendline": "Show Trendline",
     "disconnectAll": "Disconnect all",
     "filterBy": "Filter by",
+    "visualization": "Visualization",
+    "noVisualization": "No Visualization",
+    "graph": "Graph",
+    "selectResultSet": "Select result set",
+    "emptySet": "Empty set",
+    "seconds": "{value} seconds",
+    "totalDuration": "Total Duration",
+    "networkDelay": "Network delay",
+    "exeTime": "Execution Time",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -185,7 +194,10 @@
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
         "queryShowConfirm": "{action} confirmation before running the queries",
         "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code style='line-height: unset;' class='pa-0 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set",
-        "disconnectAll": "You have opened connections, uncheck the box below to keep them opening."
+        "disconnectAll": "You have opened connections, uncheck the box below to keep them open.",
+        "notFoundConn": "Connection is not found, please reconnect",
+        "connSuccessful": "Connection successful",
+        "disconnectSuccessful": "Disconnect successful"
     },
 
     "$vuetify": {
