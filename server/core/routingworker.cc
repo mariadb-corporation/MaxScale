@@ -459,13 +459,16 @@ void RoutingWorker::process_timeouts()
             // improved by storing sessions ordered by service.
             int64_t pooling_time = pSes->service->config()->idle_session_pooling_time.count();
 
+            // Convert this into the internal tick representation, keeps things more accurate
+            pooling_time = MXS_SEC_TO_CLOCK(pooling_time);
+
             ClientDCB* pClient = pSes->client_dcb;
             if (pClient->state() == DCB::State::POLLING)
             {
-                auto idle = MXS_CLOCK_TO_SEC(now - pClient->last_read());
-                pSes->tick(idle);
+                auto idle = now - pClient->last_read();
+                pSes->tick(MXS_CLOCK_TO_SEC(idle));
 
-                if (pooling_time >= 0 && idle > pooling_time && pSes->can_pool_backends())
+                if (pooling_time >= 0 && idle >= pooling_time && pSes->can_pool_backends())
                 {
                     for (auto& backend : pSes->backend_connections())
                     {

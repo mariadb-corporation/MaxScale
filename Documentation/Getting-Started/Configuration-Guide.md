@@ -1745,9 +1745,14 @@ new connections to backends. *idle_session_pool_time* allows MaxScale to pool ba
 connections also for running sessions, and only re-attach the connection when the
 session is doing a query. This effectively allows multiple sessions to share
 backends connections. This *pre-emptive pooling* only affects idle sessions.
+
 *idle_session_pool_time* is given in seconds, and defines the amount of time a
 session must be idle before its backend connections may be pooled. It defaults
-to -1, which means disabled.
+to -1 seconds, which means disabled. All negative values disable this
+feature. If configured to a value of zero seconds, all connections that are idle
+are put back into the pool as soon as possible. As the worker threads check for
+idle connections roughly once per second, the worst-case idle time for a
+connection in this configuration is one second.
 
 This feature has a significant drawback: when a backend connection is reused, it
 needs to be restored to a correct state. This means reauthenticating and
