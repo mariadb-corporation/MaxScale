@@ -1761,15 +1761,30 @@ connection is actually ready for a query. If the session command history size
 exceeds the value of *max_sescmd_history*, pre-emptive pooling is disabled for
 the session.
 
-There are several situations where
-pooling needs to be disabled (temporarily or permanently) to avoid interfering
-with session state. MaxScale only detects the most obvious cases, e.g.
-transactions. When using pre-emptive pooling, avoid commands such as "LOCK
-TABLES" and "GET LOCK", and don't create or use temporary tables or prepared
-statements.
-
 This feature should only be used when minimizing the backend connection count is
 a priority, even at the cost of query delay and throughput.
+
+#### Limitations in `idle_session_pool_time`
+
+There are several situations where pooling needs to be disabled (temporarily or
+permanently) to avoid interfering with session state. MaxScale only detects the
+most obvious cases, e.g. open transactions.
+
+When using pre-emptive pooling, the connection state can only be considered
+stable for the duration of an open transaction. This means that the following
+should not be used:
+
+* Statements such as `LOCK TABLES` and `GET LOCK` or any other statement that
+  introduce state into the connection.
+
+* Temporary tables, user variable or session variables. This includes
+  `LAST_INSERT_ID()` which means the value returned by the connector must be
+  used and it should not be referred to in SQL.
+
+* Stored procedures that cause session level side-effects.
+
+* Use of prepared statements causes the pooling to be disabled for the duration
+  of the session.
 
 ## Server
 
