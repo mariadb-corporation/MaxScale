@@ -17,8 +17,7 @@ import queryHelper from './queryHelper'
  */
 function connStates() {
     return {
-        is_checking_active_conn: true,
-        active_conn_state: false,
+        is_validating_conn: true,
         conn_err_state: false,
         curr_cnct_resource: {},
     }
@@ -56,7 +55,6 @@ function resultStates() {
         loading_prvw_data: false,
         loading_prvw_data_details: false,
         loading_query_result: false,
-        query_request_sent_time: 0,
     }
 }
 /**
@@ -129,10 +127,8 @@ export default {
         db_tree: [],
         db_completion_list: [],
         // results states
-        prvw_data: {},
-        prvw_data_request_sent_time: 0,
-        prvw_data_details: {},
-        prvw_data_details_request_sent_time: 0,
+        prvw_data_map: {},
+        prvw_data_details_map: {},
         /**
          * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
          * because it's not possible at the moment to fetch query results using query id, it can only be read once.
@@ -152,11 +148,8 @@ export default {
         },
 
         // connection related mutations
-        SET_IS_CHECKING_ACTIVE_CONN(state, payload) {
-            patch_wke_property(state, { obj: { is_checking_active_conn: payload }, scope: this })
-        },
-        SET_ACTIVE_CONN_STATE(state, payload) {
-            patch_wke_property(state, { obj: { active_conn_state: payload }, scope: this })
+        SET_IS_VALIDATING_CONN(state, payload) {
+            patch_wke_property(state, { obj: { is_validating_conn: payload }, scope: this })
         },
         SET_CONN_ERR_STATE(state, payload) {
             patch_wke_property(state, { obj: { conn_err_state: payload }, scope: this })
@@ -202,7 +195,6 @@ export default {
         },
         ADD_CNCT_RESOURCE(state, payload) {
             state.cnct_resources.push(payload)
-            patch_wke_property(state, { obj: { curr_cnct_resource: payload }, scope: this })
         },
         DELETE_CNCT_RESOURCE(state, payload) {
             const idx = state.cnct_resources.indexOf(payload)
@@ -222,29 +214,29 @@ export default {
         SET_LOADING_PRVW_DATA(state, payload) {
             patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
         },
-        SET_PRVW_DATA(state, payload) {
-            state.prvw_data = payload
+        UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
+            state.prvw_data_map = {
+                ...state.prvw_data_map,
+                ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
+            }
         },
-        SET_PRVW_DATA_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_request_sent_time = payload
+        UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
+            state.prvw_data_details_map = {
+                ...state.prvw_data_details_map,
+                ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
+            }
         },
         SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
             patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
         },
-        SET_PRVW_DATA_DETAILS(state, payload) {
-            state.prvw_data_details = payload
-        },
-        SET_PRVW_DATA_DETAILS_REQUEST_SENT_TIME(state, payload) {
-            state.prvw_data_details_request_sent_time = payload
-        },
         SET_LOADING_QUERY_RESULT(state, payload) {
             patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
         },
-        UPDATE_QUERY_RESULTS_MAP(state, { id, resultSets }) {
-            state.query_results_map = { ...state.query_results_map, ...{ [id]: resultSets } }
-        },
-        SET_QUERY_REQUEST_SENT_TIME(state, payload) {
-            patch_wke_property(state, { obj: { query_request_sent_time: payload }, scope: this })
+        UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
+            state.query_results_map = {
+                ...state.query_results_map,
+                ...{ [id]: { ...state.query_results_map[id], ...payload } },
+            }
         },
 
         // worksheet mutations
@@ -303,8 +295,8 @@ export default {
                         id: connId,
                         name: body.target,
                     }
-                    commit('SET_ACTIVE_CONN_STATE', true)
                     commit('ADD_CNCT_RESOURCE', curr_cnct_resource)
+                    commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)
                     if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', false)
                 }
@@ -354,9 +346,9 @@ export default {
                 logger.error(e)
             }
         },
-        async checkActiveConn({ state, commit, dispatch }) {
+        async validatingConn({ state, commit, dispatch }) {
             try {
-                commit('SET_IS_CHECKING_ACTIVE_CONN', true)
+                commit('SET_IS_VALIDATING_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -371,11 +363,25 @@ export default {
                  */
                 dispatch('deleteInvalidConn', validCnctResources)
                 commit('SET_CNCT_RESOURCES', validCnctResources)
-                commit('SET_ACTIVE_CONN_STATE', Boolean(validConnIds.length))
-
-                commit('SET_IS_CHECKING_ACTIVE_CONN', false)
+                if (state.curr_cnct_resource.id) {
+                    let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
+                    if (!activeConnState) {
+                        this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
+                        dispatch('emptyQueryResult', state.curr_cnct_resource.id)
+                        dispatch('resetWkeStates', { cnctId: state.curr_cnct_resource.id })
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: ['Connection is not found, please reconnect'],
+                                type: 'error',
+                            },
+                            { root: true }
+                        )
+                    }
+                }
+                commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
-                const logger = this.vue.$logger('store-query-checkActiveConn')
+                const logger = this.vue.$logger('store-query-validatingConn')
                 logger.error(e)
             }
         },
@@ -705,8 +711,12 @@ export default {
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
                 commit(`SET_LOADING_${prvwMode}`, true)
-
-                commit(`SET_${prvwMode}_REQUEST_SENT_TIME`, new Date().valueOf())
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        request_sent_time: new Date().valueOf(),
+                    },
+                })
                 let sql
                 const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
                 switch (prvwMode) {
@@ -722,7 +732,12 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql, max_rows: rootState.persisted.query_max_rows }
                 )
-                commit(`SET_${prvwMode}`, Object.freeze(res.data.data))
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        data: Object.freeze(res.data.data),
+                    },
+                })
                 commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
                 commit(`SET_LOADING_${prvwMode}`, false)
@@ -737,7 +752,11 @@ export default {
         async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             try {
                 commit('SET_LOADING_QUERY_RESULT', true)
-                commit('SET_QUERY_REQUEST_SENT_TIME', new Date().valueOf())
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: state.active_wke_id,
+                    payload: { request_sent_time: new Date().valueOf() },
+                })
+
                 let res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     {
@@ -747,7 +766,7 @@ export default {
                 )
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: state.active_wke_id,
-                    resultSets: Object.freeze(res.data.data),
+                    payload: { results: Object.freeze(res.data.data) },
                 })
                 commit('SET_LOADING_QUERY_RESULT', false)
                 const USE_REG = /(use|drop database)\s/i
@@ -806,9 +825,23 @@ export default {
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        clearDataPreview({ commit }) {
-            commit('SET_PRVW_DATA', {})
-            commit('SET_PRVW_DATA_DETAILS', {})
+        clearDataPreview({ state, commit }) {
+            commit(`UPDATE_PRVW_DATA_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    data: {},
+                    request_sent_time: 0,
+                    total_duration: 0,
+                },
+            })
+            commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    data: {},
+                    request_sent_time: 0,
+                    total_duration: 0,
+                },
+            })
         },
         /**
          * Call this action when disconnect a connection to
@@ -841,7 +874,7 @@ export default {
             if (wke)
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: wke.id,
-                    resultSets: {},
+                    payload: { results: {}, request_sent_time: 0, total_duration: 0 },
                 })
         },
     },
@@ -854,42 +887,49 @@ export default {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
         getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
+
+        getResults: (state, getters) => {
+            const { results = {} } = getters.getQueryResult
+            return results
+        },
+        getQueryRequestSentTime: (state, getters) => {
+            const { request_sent_time = 0 } = getters.getQueryResult
+            return request_sent_time
+        },
         getQueryExeTime: (state, getters) => {
             if (state.loading_query_result) return -1
-            if (getters.getQueryResult.attributes)
-                return parseFloat(getters.getQueryResult.attributes.execution_time.toFixed(4))
+            const { attributes } = getters.getResults
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
             return 0
         },
-        getPrvwDataRes: state => mode => {
-            switch (mode) {
-                case 'PRVW_DATA': {
-                    if (state.prvw_data.attributes) return state.prvw_data.attributes.results[0]
-                    return {}
-                }
-                case 'PRVW_DATA_DETAILS': {
-                    if (state.prvw_data_details.attributes)
-                        return state.prvw_data_details.attributes.results[0]
-                    return {}
-                }
-            }
+        getQueryTotalDuration: (state, getters) => {
+            const { total_duration = 0 } = getters.getQueryResult
+            return total_duration
         },
-        getPrvwExeTime: state => mode => {
-            switch (mode) {
-                case 'PRVW_DATA': {
-                    if (state.loading_prvw_data) return -1
-                    if (state.prvw_data.attributes)
-                        return parseFloat(state.prvw_data.attributes.execution_time.toFixed(4))
-                    return 0
-                }
-                case 'PRVW_DATA_DETAILS': {
-                    if (state.loading_prvw_data_details) return -1
-                    if (state.prvw_data_details.attributes)
-                        return parseFloat(
-                            state.prvw_data_details.attributes.execution_time.toFixed(4)
-                        )
-                    return 0
-                }
-            }
+
+        getPrvwData: state => mode => {
+            let map = state[`${mode.toLowerCase()}_map`]
+            if (map) return map[state.active_wke_id] || {}
+            return {}
+        },
+        getPrvwDataRes: (state, getters) => mode => {
+            const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)
+            if (results.length) return results[0]
+            return {}
+        },
+        getPrvwExeTime: (state, getters) => mode => {
+            if (state[`loading_${mode.toLowerCase()}`]) return -1
+            const { data: { attributes } = {} } = getters.getPrvwData(mode)
+            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
+            return 0
+        },
+        getPrvwSentTime: (state, getters) => mode => {
+            const { request_sent_time = 0 } = getters.getPrvwData(mode)
+            return request_sent_time
+        },
+        getPrvwTotalDuration: (state, getters) => mode => {
+            const { total_duration = 0 } = getters.getPrvwData(mode)
+            return total_duration
         },
     },
 }

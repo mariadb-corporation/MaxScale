@@ -20,11 +20,11 @@
                                 <v-btn
                                     icon
                                     small
-                                    :disabled="!active_conn_state || loading_db_tree"
+                                    :disabled="shouldDisableBtn"
                                     v-on="on"
                                     @click="reloadSchema"
                                 >
-                                    <v-icon size="12" color="deep-ocean">
+                                    <v-icon size="12" :color="shouldDisableBtn ? '' : 'deep-ocean'">
                                         $vuetify.icons.reload
                                     </v-icon>
                                 </v-btn>
@@ -68,11 +68,11 @@
                         height="28"
                         class="std filter-objects"
                         :placeholder="$t('filterSchemaObjects')"
-                        :disabled="!active_conn_state || loading_db_tree"
+                        :disabled="shouldDisableBtn"
                     />
                 </div>
                 <db-list-tree
-                    v-if="active_conn_state && !loading_db_tree"
+                    v-if="!is_validating_conn && curr_cnct_resource.id && !loading_db_tree"
                     v-show="!is_sidebar_collapsed"
                     class="schema-list-wrapper"
                     @preview-data="
@@ -122,9 +122,10 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             loading_db_tree: state => state.query.loading_db_tree,
-            active_conn_state: state => state.query.active_conn_state,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
+            is_validating_conn: state => state.query.is_validating_conn,
         }),
         searchSchema: {
             get() {
@@ -133,6 +134,9 @@ export default {
             set(value) {
                 this.SET_SEARCH_SCHEMA(value)
             },
+        },
+        shouldDisableBtn() {
+            return !this.curr_cnct_resource.id || this.loading_db_tree
         },
     },
     methods: {

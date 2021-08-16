@@ -119,13 +119,13 @@ export default {
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
-            getQueryResult: 'query/getQueryResult',
+            getResults: 'query/getResults',
         }),
         resultSets() {
             let resSets = []
 
             let resSetArr = this.cloneRes(
-                this.$typy(this.getQueryResult, 'attributes.results').safeArray
+                this.$typy(this.getResults, 'attributes.results').safeArray
             )
             let resSetCount = 0
             for (const res of resSetArr) {

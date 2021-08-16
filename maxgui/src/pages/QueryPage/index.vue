@@ -80,7 +80,7 @@ export default {
     },
     async created() {
         this.$help.doubleRAF(() => this.setCtrDim())
-        await this.checkActiveConn()
+        await this.validatingConn()
     },
 
     async beforeRouteLeave(to, from, next) {
@@ -100,7 +100,7 @@ export default {
                             text: ['Connection is not found, please reconnect'],
                             type: 'error',
                         })
-                        await this.checkActiveConn()
+                        await this.validatingConn()
                         break
                     default:
                         this.confirmDelAll = true
@@ -114,7 +114,7 @@ export default {
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
         }),
         ...mapActions({
-            checkActiveConn: 'query/checkActiveConn',
+            validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
         }),
         setCtrDim() {
