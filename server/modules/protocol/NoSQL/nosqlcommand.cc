@@ -725,6 +725,155 @@ Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 }
 
 //
+// OpQueryCommand
+//
+std::string OpQueryCommand::description() const
+{
+    return "OP_QUERY";
+}
+
+GWBUF* OpQueryCommand::execute()
+{
+    GWBUF* pResponse = nullptr;
+
+    auto it = m_req.query().begin();
+    auto end = m_req.query().end();
+    for (; it != end; ++it)
+    {
+        auto element = *it;
+        auto command = element.key();
+
+        if (command.compare(command::IsMaster::KEY) == 0 || command.compare(key::ISMASTER) == 0)
+        {
+            DocumentBuilder doc;
+            command::IsMaster::populate_response(m_database, doc);
+
+            pResponse = create_response(doc.extract());
+            break;
+        }
+        else if (command.compare(key::QUERY) == 0)
+        {
+            // TODO: Honour m_req.fields().
+            ostringstream sql;
+            sql << "SELECT doc FROM " << table() << " ";
+
+            sql << query_to_where_clause(element.get_document());
+
+            send_downstream(sql.str());
+            break;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    if (it == end)
+    {
+        ostringstream ss;
+        ss << "No recognized command in OP_QUERY packet: " << bsoncxx::to_json(m_req.query());
+        throw HardError(ss.str(), error::INTERNAL_ERROR);
+    }
+
+    return pResponse;
+}
+
+Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    GWBUF* pResponse = nullptr;
+
+    ComResponse response(mariadb_response.data());
+
+    switch (response.type())
+    {
+    case ComResponse::ERR_PACKET:
+        {
+            ComERR err(response);
+
+            auto code = err.code();
+
+            if (code == ER_NO_SUCH_TABLE)
+            {
+                DocumentBuilder doc;
+                NoSQLCursor::create_first_batch(doc, table(Quoted::NO));
+
+                pResponse = create_response(doc.extract());
+            }
+            else
+            {
+                throw MariaDBError(err);
+            }
+        }
+        break;
+
+    case ComResponse::OK_PACKET:
+    case ComResponse::LOCAL_INFILE_PACKET:
+        mxb_assert(!true);
+        throw_unexpected_packet();
+
+    default:
+        {
+            uint8_t* pBuffer = mariadb_response.data();
+
+            ComQueryResponse cqr(&pBuffer);
+
+            auto nFields = cqr.nFields();
+            mxb_assert(nFields == 1); // Currently the whole document is selected.
+
+            for (size_t i = 0; i < nFields; ++i)
+            {
+                ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                m_names.push_back(column_def.name().to_string());
+                m_types.push_back(column_def.type());
+            }
+
+            // The there should be an EOF packet, which should be bypassed.
+            ComResponse eof(&pBuffer);
+            mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+            size_t size_of_documents = 0;
+            vector<bsoncxx::document::value> documents;
+            while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET) // pBuffer not advanced
+            {
+                CQRTextResultsetRow row(&pBuffer, m_types); // Advances pBuffer
+
+                auto it = row.begin();
+
+                string json;
+                // TODO: If we honour the 'fields' in OP_QUERY that needs to be
+                // TODO: dealt with here.
+
+                const auto& value = *it++;
+                mxb_assert(it == row.end());
+                // The value is now a JSON object.
+                json = value.as_string().to_string();
+
+                try
+                {
+                    auto doc = bsoncxx::from_json(json);
+
+                    size_of_documents += doc.view().length();
+                    documents.emplace_back(doc);
+                }
+                catch (const std::exception& x)
+                {
+                    ostringstream ss;
+                    ss << "Could not convert assumed JSON data to BSON: " << x.what();
+                    MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
+                    throw SoftError(ss.str(), error::COMMAND_FAILED);
+                }
+            }
+
+            pResponse = create_reply_response(size_of_documents, documents);
+        }
+    }
+
+    *ppNoSQL_response = pResponse;
+    return READY;
+}
+
+//
 // OpMsgCommand
 //
 OpMsgCommand::~OpMsgCommand()

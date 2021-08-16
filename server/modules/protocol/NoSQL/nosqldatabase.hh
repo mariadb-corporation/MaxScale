@@ -54,6 +54,11 @@ public:
         return m_context;
     }
 
+    const NoSQL::Context& context() const
+    {
+        return m_context;
+    }
+
     /**
      * @return The config.
      */
@@ -111,7 +116,7 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
+    GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
 
     /**
      * Handle an OP_UPDATE
@@ -124,7 +129,7 @@ public:
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
 
     /**
-     * Handle a NoSQL command.
+     * Handle an OP_MSG
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The message request.
@@ -135,9 +140,9 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_command(GWBUF* pRequest,
-                          const nosql::Msg& req,
-                          const bsoncxx::document::view& doc);
+    GWBUF* handle_msg(GWBUF* pRequest,
+                      const nosql::Msg& req,
+                      const bsoncxx::document::view& doc);
 
     /**
      * Convert a MariaDB response to a NoSQL response. Must only be called

@@ -59,13 +59,13 @@ GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
     return execute_command(std::move(sCommand));
 }
 
-GWBUF* nosql::Database::handle_query(GWBUF* pRequest, const nosql::Query& req)
+GWBUF* nosql::Database::handle_query(GWBUF* pRequest, nosql::Query&& req)
 {
     mxb_assert(is_ready());
 
-    OpMsgCommand::DocumentArguments arguments;
+    unique_ptr<Command> sCommand(new nosql::OpQueryCommand(this, pRequest, std::move(req)));
 
-    return execute(pRequest, req, req.query(), arguments);
+    return execute_command(std::move(sCommand));
 }
 
 GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
@@ -77,9 +77,9 @@ GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
     return execute_command(std::move(sCommand));
 }
 
-GWBUF* nosql::Database::handle_command(GWBUF* pRequest,
-                                       const nosql::Msg& req,
-                                       const bsoncxx::document::view& doc)
+GWBUF* nosql::Database::handle_msg(GWBUF* pRequest,
+                                   const nosql::Msg& req,
+                                   const bsoncxx::document::view& doc)
 {
     mxb_assert(is_ready());
 

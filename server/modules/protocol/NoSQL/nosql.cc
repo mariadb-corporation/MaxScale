@@ -2393,14 +2393,14 @@ GWBUF* nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req)
     return pResponse;
 }
 
-GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, const nosql::Query& req)
+GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req)
 {
     MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = m_sDatabase->handle_query(pRequest, req);
+    GWBUF* pResponse = m_sDatabase->handle_query(pRequest, std::move(req));
 
     if (pResponse)
     {
@@ -2431,7 +2431,7 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
             mxb_assert(!m_sDatabase.get());
             m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
 
-            pResponse = m_sDatabase->handle_command(pRequest, req, doc);
+            pResponse = m_sDatabase->handle_msg(pRequest, req, doc);
 
             if (pResponse)
             {

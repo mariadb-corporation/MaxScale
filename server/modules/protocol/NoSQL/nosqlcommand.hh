@@ -77,6 +77,9 @@ public:
 
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
+    GWBUF* create_reply_response(size_t size_of_documents,
+                                 const std::vector<bsoncxx::document::value>& documents) const;
+
     static void check_maximum_sql_length(int length);
     static void check_maximum_sql_length(const std::string& s)
     {
@@ -118,8 +121,6 @@ private:
     std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
                                                              size_t nDocuments) const;
 
-    GWBUF* create_reply_response(size_t size_of_documents,
-                                 const std::vector<bsoncxx::document::value>& documents) const;
     GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
 
     GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
@@ -140,16 +141,29 @@ protected:
     }
 
 protected:
-    std::string table() const
+    enum Quoted
     {
-        const auto& collection = m_req.collection();
+        NO,
+        YES
+    };
 
-        auto n = collection.find('.');
+    std::string table(Quoted quoted = Quoted::YES) const
+    {
+        if (quoted == Quoted::YES)
+        {
+            const auto& collection = m_req.collection();
 
-        auto d = collection.substr(0, n);
-        auto t = collection.substr(n + 1);
+            auto n = collection.find('.');
 
-        return '`' + d + "`.`" + t + '`';
+            auto d = collection.substr(0, n);
+            auto t = collection.substr(n + 1);
+
+            return '`' + d + "`.`" + t + '`';
+        }
+        else
+        {
+            return m_req.collection();
+        }
     }
 
     Packet m_req;
@@ -230,6 +244,30 @@ public:
     GWBUF* execute() override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+};
+
+//
+// OpQueryCommand
+//
+class OpQueryCommand : public PacketCommand<nosql::Query>
+{
+public:
+    OpQueryCommand(Database* pDatabase,
+                   GWBUF* pRequest,
+                   nosql::Query&& req)
+        : PacketCommand<nosql::Query>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    std::vector<std::string>      m_names;
+    std::vector<enum_field_types> m_types;
 };
 
 //
