@@ -23,11 +23,12 @@ then
        -y --force-yes"
   ${apt_cmd} update
   ${apt_cmd} install \
-       git wget build-essential \
-       libssl-dev mariadb-client php perl \
+       git wget build-essential libssl-dev \
+       mariadb-client mariadb-plugin-gssapi-client \
+       php perl \
        coreutils libjansson-dev zlib1g-dev \
        libsqlite3-dev libcurl4-gnutls-dev \
-       mariadb-test cmake libpam0g-dev oathtool \
+       mariadb-test cmake libpam0g-dev oathtool krb5-user \
        libatomic1 \
        libsasl2-dev libxml2-dev libkrb5-dev
 
