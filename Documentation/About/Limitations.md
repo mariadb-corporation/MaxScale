@@ -104,12 +104,6 @@ transaction or change the autocommit mode using a prepared statement.
 
 ## Authenticator limitations
 
-### Limitations in the GSSAPI authenticator
-
-Currently, MariaDB MaxScale only supports GSSAPI authentication when the backend
-connections use GSSAPI authentication. Client side GSSAPI authentication with a
-different backend authentication module is not supported.
-
 ### Limitations in the MySQL authenticator (MySQLAuth)
 
 * MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
