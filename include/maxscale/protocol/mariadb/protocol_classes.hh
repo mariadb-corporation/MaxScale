@@ -38,7 +38,7 @@ struct UserSearchSettings
 
     struct Listener
     {
-        // These user search settings are dependant on listener configuration. Stored in the protocol module.
+        // These user search settings are dependent on listener configuration. Stored in the protocol module.
         bool check_password {true};
         bool match_host_pattern {true};
         bool allow_anon_user {false};
