@@ -38,7 +38,7 @@
                         {{ item.name }}
                     </div>
                     <template v-else>
-                        <v-icon class="mr-2" size="16" color="accent-dark">
+                        <v-icon class="mr-2" size="16" :color="item.disabled ? '' : 'accent-dark'">
                             $vuetify.icons.server
                         </v-icon>
                         <truncate-string :text="item.name" :maxWidth="135" :nudgeLeft="32" />
@@ -50,7 +50,7 @@
                         >
                             <template v-slot:activator="{ on }">
                                 <v-btn
-                                    class="ml-2"
+                                    class="ml-2 disconnect-conn"
                                     height="24"
                                     width="24"
                                     fab
@@ -70,7 +70,7 @@
                 </div>
             </template>
         </v-select>
-
+        <!-- TODO: If resources have been connected, prevent it from being connected again -->
         <connection-dialog
             v-model="isConnDialogOpened"
             :handleSave="handleOpenConn"
@@ -100,7 +100,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import ConnectionDialog from './ConnectionDialog'
 export default {
     name: 'connection-manager',
@@ -122,10 +122,26 @@ export default {
             is_validating_conn: state => state.query.is_validating_conn,
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
+            worksheets_arr: state => state.query.worksheets_arr,
         }),
+        ...mapGetters({
+            getActiveWke: 'query/getActiveWke',
+        }),
+        usedConnections() {
+            return this.worksheets_arr.map(
+                wke => this.$typy(wke, 'curr_cnct_resource.id').safeString
+            )
+        },
         connOptions() {
             let options = [this.newConnOption]
-            if (this.cnct_resources.length) options.unshift(...this.cnct_resources)
+            const allCnctResources = JSON.parse(JSON.stringify(this.cnct_resources))
+            if (allCnctResources.length) {
+                allCnctResources.forEach(cnctRsrc => {
+                    if (this.curr_cnct_resource.id === cnctRsrc.id) cnctRsrc.disabled = false
+                    else cnctRsrc.disabled = this.usedConnections.includes(cnctRsrc.id)
+                })
+                options.unshift(...allCnctResources)
+            }
             return options
         },
         isCreatingNewConn() {
@@ -147,6 +163,7 @@ export default {
                     await this.validatingConn()
                     if (this.curr_cnct_resource.id) {
                         await this.initialFetch()
+                        this.changeWkeName(v.name)
                     }
                 }
             },
@@ -165,6 +182,7 @@ export default {
         }),
         ...mapMutations({
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
+            UPDATE_WKE: 'query/UPDATE_WKE',
         }),
         async initialFetch() {
             await this.reloadTreeNodes()
@@ -184,6 +202,11 @@ export default {
         async handleOpenConn(body) {
             await this.openConnect(body)
         },
+        changeWkeName(v) {
+            let newWke = this.$help.lodash.cloneDeep(this.getActiveWke)
+            newWke.name = v
+            this.UPDATE_WKE({ idx: this.worksheets_arr.indexOf(this.getActiveWke), wke: newWke })
+        },
     },
 }
 </script>
@@ -196,5 +219,8 @@ export default {
             border: thin solid $accent-dark;
         }
     }
+}
+.disconnect-conn {
+    pointer-events: all;
 }
 </style>

@@ -857,6 +857,7 @@ export default {
                 ...sidebarStates(),
                 ...resultStates(),
                 ...toolbarStates(),
+                name: 'WORKSHEET',
             }
             commit('UPDATE_WKE', { idx, wke })
             /**

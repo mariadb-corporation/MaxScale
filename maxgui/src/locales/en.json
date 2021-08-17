@@ -161,6 +161,7 @@
     "totalDuration": "Total Duration",
     "networkDelay": "Network delay",
     "exeTime": "Execution Time",
+    "connectedTo": "Connected to",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
