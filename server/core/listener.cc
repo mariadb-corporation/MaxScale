@@ -1081,7 +1081,6 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
                 if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
                 {
                     auto svc = static_cast<Service*>(m_config.service);
-
                     if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
                     {
                         return {};

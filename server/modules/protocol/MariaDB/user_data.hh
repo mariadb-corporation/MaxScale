@@ -37,7 +37,14 @@ public:
     using StringSetMap = std::map<std::string, StringSet>;
     using DBNameCmpMode = mariadb::UserSearchSettings::DBNameCmpMode;
 
-    void add_entry(const std::string& username, mariadb::UserEntry&& entry);
+    /**
+     * Add an entry to the user database. The entry is not added if the same username@host-combination
+     * already exists in the database.
+     *
+     * @param entry Entry to add
+     * @return True if entry was added
+     */
+    bool add_entry(mariadb::UserEntry&& entry);
 
     void add_db_grants(StringSetMap&& db_wc_grants, StringSetMap&& db_grants);
     void add_role_mapping(StringSetMap&& role_mapping);
@@ -201,6 +208,7 @@ public:
     void set_union_over_backends(bool union_over_backends) override;
     void set_strip_db_esc(bool strip_db_esc) override;
     void set_service(SERVICE* service) override;
+    void add_custom_user(const mariadb::UserEntry& entry);
     bool can_update_immediately() const;
 
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
@@ -221,7 +229,6 @@ public:
 
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
-
     enum class LoadResult
     {
         SUCCESS,
@@ -266,6 +273,12 @@ private:
     std::string          m_password;
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
+
+    /**
+     * Additional entries which need to be added to the user database even when they do not exist on
+     * backends. */
+    std::vector<mariadb::UserEntry> m_custom_entries;
+
 
     /** Fetch users from all backends and store the union. */
     std::atomic_bool m_union_over_backends {false};

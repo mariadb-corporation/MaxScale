@@ -2081,6 +2081,16 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
                       new_proto_name.c_str(), listenerz);
         }
     }
+
+    if (rval)
+    {
+        // Notify the protocol module that the user account manager has been successfully
+        // generated/checked. The protocol may want to add some final changes. Since multiple listeners
+        // can share a user account manager, different listeners can affect each other.
+        // TODO: figure out how to avoid such side effects. Right now this is not an issue, as
+        // this feature is very rarely used.
+        protocol_module->user_account_manager_created(m_usermanager.get());
+    }
     return rval;
 }
 
