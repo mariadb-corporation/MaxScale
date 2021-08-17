@@ -167,6 +167,7 @@
             type="run"
             :onSave="confirmRunning"
             minBodyWidth="768px"
+            closeImmediate
         >
             <template v-slot:body-prepend>
                 <div class="mb-4 sql-code-wrapper pa-2">

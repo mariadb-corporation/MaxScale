@@ -7,6 +7,7 @@
         :title="title"
         :saveText="type"
         :minBodyWidth="minBodyWidth"
+        :closeImmediate="closeImmediate"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
@@ -75,6 +76,7 @@ export default {
         item: { type: Object, default: null },
         smallInfo: { type: String, default: '' },
         minBodyWidth: { type: String, default: '466px' },
+        closeImmediate: { type: Boolean, default: false },
     },
     data() {
         return {
