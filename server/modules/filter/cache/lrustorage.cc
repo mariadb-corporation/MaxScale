@@ -491,7 +491,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
         else if (!existed)
         {
             MXS_ERROR("Could not put a value to the storage.");
-            free_node(i);
+            free_node(i, InvalidatorAction::IGNORE);
         }
     }
 
@@ -522,7 +522,7 @@ cache_result_t LRUStorage::do_del_value(Token* pToken, const CacheKey& key)
             m_stats.size -= i->second->size();
             --m_stats.items;
 
-            free_node(i);
+            free_node(i, InvalidatorAction::REMOVE);
         }
     }
 
@@ -556,7 +556,7 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
 
     while (m_pHead)
     {
-        free_node(m_pHead); // Adjusts m_pHead
+        free_node(m_pHead, InvalidatorAction::REMOVE); // Adjusts m_pHead
     }
 
     mxb_assert(!m_pHead);
@@ -653,7 +653,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
             if (!CACHE_RESULT_IS_STALE(result))
             {
                 // If it wasn't just stale we'll remove it.
-                free_node(i);
+                free_node(i, InvalidatorAction::REMOVE);
             }
         }
     }
@@ -806,10 +806,16 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
 /**
  * Free a node and update head/tail accordingly.
  *
- * @param pNode  The node to be freed.
+ * @param pNode   The node to be freed.
+ * @param action  What to do regarding the invalidator.
  */
-void LRUStorage::free_node(Node* pNode) const
+void LRUStorage::free_node(Node* pNode, InvalidatorAction action) const
 {
+    if (action == InvalidatorAction::REMOVE)
+    {
+        m_sInvalidator->remove_note(pNode);
+    }
+
     remove_node(pNode);
     delete pNode;
 
@@ -820,11 +826,12 @@ void LRUStorage::free_node(Node* pNode) const
 /**
  * Free the node referred to by the iterator and update head/tail accordingly.
  *
- * @param i   The map iterator.
+ * @param i       The map iterator.
+ * @param action  What to do regarding the invalidator.
  */
-void LRUStorage::free_node(NodesByKey::iterator& i) const
+void LRUStorage::free_node(NodesByKey::iterator& i, InvalidatorAction action) const
 {
-    free_node(i->second);   // A Node
+    free_node(i->second, action);   // A Node
     m_nodes_by_key.erase(i);
 }
 
@@ -928,7 +935,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
             if (pVacant_node)
             {
                 // We won't be using the node.
-                free_node(pVacant_node);
+                free_node(pVacant_node, InvalidatorAction::IGNORE);
 
                 *ppNode = pNode;
             }
@@ -1016,7 +1023,8 @@ bool LRUStorage::invalidate(Node* pNode, Context context)
 
     if (rv)
     {
-        free_node(pNode);
+        // It's the invalidator calling, so it will clean up itself, we should not.
+        free_node(pNode, InvalidatorAction::IGNORE);
     }
 
     return rv;
