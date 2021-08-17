@@ -62,7 +62,7 @@ void create_event(TestConnections& test)
     test.tprintf("Creating table, inserting data and scheduling an event.");
 
     test.maxscale->connect_maxscale();
-    auto conn = test.maxscale->open_rwsplit_connection2();
+    auto conn = test.maxscale->open_rwsplit_connection2_nodb();
     const char create_event_query[] = "CREATE EVENT %s ON SCHEDULE EVERY 1 SECOND "
                                       "DO UPDATE test.t1 SET c1 = c1 + 1;";
 

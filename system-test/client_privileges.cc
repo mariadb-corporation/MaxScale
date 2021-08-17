@@ -49,7 +49,7 @@ void test_main(TestConnections& test)
     test.repl->connect();
 
     auto& mxs = *test.maxscale;
-    auto conn = mxs.open_rwsplit_connection2();
+    auto conn = mxs.open_rwsplit_connection2_nodb();
 
     auto create_user = [&](const char* user, const char* pass) {
             conn->cmd_f("DROP USER IF EXISTS '%s'@'%%'", user);

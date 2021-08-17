@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     change_master(test, 3, 2, "", max_rlag);
 
     mxs.wait_for_monitor(2);
-    auto maxconn = mxs.open_rwsplit_connection2();
+    auto maxconn = mxs.open_rwsplit_connection2_nodb();
     maxconn->cmd(flush);
     sleep(1);   // sleep to detect replication lag
     mxs.wait_for_monitor(1);

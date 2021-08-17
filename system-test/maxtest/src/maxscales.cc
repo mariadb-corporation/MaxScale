@@ -584,6 +584,11 @@ std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& d
     return conn;
 }
 
+MaxScale::SMariaDB MaxScale::open_rwsplit_connection2_nodb()
+{
+    return open_rwsplit_connection2("");
+}
+
 Connection MaxScale::rwsplit(const std::string& db)
 {
     return Connection(ip4(), rwsplit_port, m_user_name, m_password, db, m_ssl);
