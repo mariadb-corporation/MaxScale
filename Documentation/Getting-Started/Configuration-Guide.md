@@ -1745,9 +1745,14 @@ new connections to backends. *idle_session_pool_time* allows MaxScale to pool ba
 connections also for running sessions, and only re-attach the connection when the
 session is doing a query. This effectively allows multiple sessions to share
 backends connections. This *pre-emptive pooling* only affects idle sessions.
+
 *idle_session_pool_time* is given in seconds, and defines the amount of time a
 session must be idle before its backend connections may be pooled. It defaults
-to -1, which means disabled.
+to -1 seconds, which means disabled. All negative values disable this
+feature. If configured to a value of zero seconds, all connections that are idle
+are put back into the pool as soon as possible. As the worker threads check for
+idle connections roughly once per second, the worst-case idle time for a
+connection in this configuration is one second.
 
 This feature has a significant drawback: when a backend connection is reused, it
 needs to be restored to a correct state. This means reauthenticating and
@@ -1756,15 +1761,30 @@ connection is actually ready for a query. If the session command history size
 exceeds the value of *max_sescmd_history*, pre-emptive pooling is disabled for
 the session.
 
-There are several situations where
-pooling needs to be disabled (temporarily or permanently) to avoid interfering
-with session state. MaxScale only detects the most obvious cases, e.g.
-transactions. When using pre-emptive pooling, avoid commands such as "LOCK
-TABLES" and "GET LOCK", and don't create or use temporary tables or prepared
-statements.
-
 This feature should only be used when minimizing the backend connection count is
 a priority, even at the cost of query delay and throughput.
+
+#### Limitations in `idle_session_pool_time`
+
+There are several situations where pooling needs to be disabled (temporarily or
+permanently) to avoid interfering with session state. MaxScale only detects the
+most obvious cases, e.g. open transactions.
+
+When using pre-emptive pooling, the connection state can only be considered
+stable for the duration of an open transaction. This means that the following
+should not be used:
+
+* Statements such as `LOCK TABLES` and `GET LOCK` or any other statement that
+  introduce state into the connection.
+
+* Temporary tables, user variable or session variables. This includes
+  `LAST_INSERT_ID()` which means the value returned by the connector must be
+  used and it should not be referred to in SQL.
+
+* Stored procedures that cause session level side-effects.
+
+* Use of prepared statements causes the pooling to be disabled for the duration
+  of the session.
 
 ## Server
 

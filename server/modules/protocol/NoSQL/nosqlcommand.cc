@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -174,9 +174,11 @@ struct ThisUnit
         { tolower(command::BuildInfo::KEY),               create_info<command::BuildInfo>() },
         { tolower(command::Count::KEY),                   create_info<command::Count>() },
         { tolower(command::Create::KEY),                  create_info<command::Create>() },
+        { tolower(command::CreateIndexes::KEY),           create_info<command::CreateIndexes>() },
         { tolower(command::Delete::KEY),                  create_info<command::Delete>() },
         { tolower(command::Distinct::KEY),                create_info<command::Distinct>() },
         { tolower(command::Drop::KEY),                    create_info<command::Drop>() },
+        { tolower(command::DropIndexes::KEY),             create_info<command::DropIndexes>() },
         { tolower(command::DropDatabase::KEY),            create_info<command::DropDatabase>() },
         { tolower(command::EndSessions::KEY),             create_info<command::EndSessions>() },
         { tolower(command::Find::KEY),                    create_info<command::Find>() },
@@ -191,6 +193,7 @@ struct ThisUnit
         { tolower(command::ListCommands::KEY),            create_info<command::ListCommands>() },
         { tolower(command::ListCollections::KEY),         create_info<command::ListCollections>() },
         { tolower(command::ListDatabases::KEY),           create_info<command::ListDatabases>() },
+        { tolower(command::ListIndexes::KEY),             create_info<command::ListIndexes>() },
         { tolower(command::Ping::KEY),                    create_info<command::Ping>() },
         { tolower(command::ReplSetGetStatus::KEY),        create_info<command::ReplSetGetStatus>() },
         { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },

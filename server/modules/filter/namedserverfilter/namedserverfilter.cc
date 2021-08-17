@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -53,8 +53,29 @@ namespace
 
 namespace cfg = mxs::config;
 using ParamString = mxs::config::ParamString;
-auto su = cfg::Param::AT_STARTUP;
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+auto su = cfg::Param::AT_RUNTIME;
+
+class Specification final : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+private:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override final
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const override final
+    {
+        return do_post_validate(json);
+    }
+};
+
+Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
 ParamString s_user(&s_spec, "user", "Only divert queries from this user", "", su);
 ParamString s_source(&s_spec, "source", "Only divert queries from these addresses", "", su);
@@ -67,8 +88,8 @@ cfg::ParamEnumMask<uint32_t> s_options(&s_spec, "options", "Regular expression o
                                        options_values, PCRE2_CASELESS, su);
 // Legacy parameters
 const char regex_desc[] = "Regular expression to match";
-ParamString s_match(&s_spec, "match", regex_desc, "", su);
-ParamString s_server(&s_spec, "server", "Server to divert matching queries", "", su);
+ParamString s_match(&s_spec, "match", regex_desc, "");
+ParamString s_server(&s_spec, "server", "Server to divert matching queries", "");
 
 // Indexed parameters
 const char target_desc[] = "Target to divert matching queries";
@@ -166,15 +187,136 @@ std::vector<MatchAndTarget> s_match_target_specs = {
     {&s_match21, &s_target21}, {&s_match22, &s_target22},
     {&s_match23, &s_target23}, {&s_match24, &s_target24},
     {&s_match25, &s_target25}};
+
+template<class Params>
+bool Specification::do_post_validate(Params params) const
+{
+    bool ok = true;
+
+    std::string legacy_match = s_match.get(params);
+    std::string legacy_target = s_server.get(params);
+    bool legacy_mode = false;
+    bool found = false;
+
+    if (legacy_match.empty() != legacy_target.empty())
+    {
+        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
+                  "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
+                  s_match.name().c_str(), s_server.name().c_str(),
+                  s_match01.name().c_str(), s_target01.name().c_str());
+        ok = false;
+    }
+    else if (!legacy_match.empty())
+    {
+        legacy_mode = true;
+
+        mxb::Regex re(legacy_match);
+
+        if (!re.valid())
+        {
+            MXS_ERROR("Invalid regular expression for '%s': %s",
+                      s_match.name().c_str(), re.error().c_str());
+            ok = false;
+        }
+
+        if (!SERVER::find_by_unique_name(legacy_target))
+        {
+            MXS_ERROR("'%s' is not a valid value for '%s'",
+                      legacy_target.c_str(), s_server.name().c_str());
+            ok = false;
+        }
+    }
+
+    for (const auto& a : s_match_target_specs)
+    {
+        std::string match = a.match->get(params);
+        std::string target = a.target->get(params);
+
+        if (match.empty() && target.empty())
+        {
+            continue;
+        }
+        else if (!match.empty() && !target.empty())
+        {
+            if (legacy_mode)
+            {
+                MXS_ERROR("Found both legacy parameters and indexed parameters. "
+                          "Use only one type of parameters.");
+                ok = false;
+                break;
+            }
+
+            found = true;
+
+            auto targets = config_break_list_string(target);
+
+            if (targets.size() == 1)
+            {
+                if (!SERVER::find_by_unique_name(targets[0])
+                    && targets[0] != "->master"
+                    && targets[0] != "->slave"
+                    && targets[0] != "->all")
+                {
+                    MXS_ERROR("'%s' is not a valid value for '%s'",
+                              targets[0].c_str(), a.target->name().c_str());
+                    ok = false;
+                }
+            }
+            else if (targets.size() > 1)
+            {
+                for (const auto& t : targets)
+                {
+                    if (!SERVER::find_by_unique_name(t))
+                    {
+                        MXS_ERROR("'%s' is not a valid value for '%s': %s",
+                                  targets[0].c_str(), a.target->name().c_str(), target.c_str());
+                        ok = false;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("Invalid target string for '%s': %s",
+                          a.target->name().c_str(), target.c_str());
+                ok = false;
+            }
+
+            mxb::Regex re(match);
+
+            if (!re.valid())
+            {
+                MXS_ERROR("Invalid regular expression for '%s': %s",
+                          a.match->name().c_str(), re.error().c_str());
+                ok = false;
+            }
+        }
+        else
+        {
+            const auto& defined = match.empty() ? a.target->name() : a.match->name();
+            const auto& not_defined = match.empty() ? a.match->name() : a.target->name();
+            MXB_ERROR("'%s' does not have a matching '%s'.", defined.c_str(), not_defined.c_str());
+            ok = false;
+        }
+    }
+
+    if (ok && !found && !legacy_mode)
+    {
+        MXS_ERROR("At least one match-target pair must be defined.");
+        ok = false;
+    }
+
+    return ok;
+}
 }
 
 RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, RegexHintFilter& filter,
-                                     bool active)
+                                     bool active, std::shared_ptr<RegexHintFilter::Setup>&& setup)
     : maxscale::FilterSession::FilterSession(session, service)
     , m_fil_inst(filter)
     , m_active(active)
+    , m_setup(std::move(setup))
 {
-    m_match_data = pcre2_match_data_create(m_fil_inst.ovector_size(), NULL);
+    m_match_data = pcre2_match_data_create(m_setup->ovector_size, NULL);
 }
 
 RegexHintFSession::~RegexHintFSession()
@@ -234,15 +376,16 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
     /* Check client IP against 'source' host option */
     auto& remote = session->client_remote();
     auto& remote_addr = session->client_connection()->dcb()->ip();
-    if (!m_sources.empty())
+    auto setup = *m_setup;
+    if (!setup->sources.empty())
     {
-        ip_found = check_source_host(remote.c_str(), &remote_addr);
+        ip_found = check_source_host(setup, remote.c_str(), &remote_addr);
         session_active = ip_found;
     }
     /* Don't check hostnames if ip is already found */
-    if (!m_hostnames.empty() && !ip_found)
+    if (!setup->hostnames.empty() && !ip_found)
     {
-        session_active = check_source_hostnames(&remote_addr);
+        session_active = check_source_hostnames(setup, &remote_addr);
     }
 
     /* Check client user against 'user' option */
@@ -250,7 +393,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
     {
         session_active = false;
     }
-    return new RegexHintFSession(session, service, *this, session_active);
+    return new RegexHintFSession(session, service, *this, session_active, std::move(setup));
 }
 
 /**
@@ -263,7 +406,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
 const RegexToServers* RegexHintFSession::find_servers(char* sql, int sql_len)
 {
     /* Go through the regex array and find a match. */
-    for (auto& regex_map : m_fil_inst.mapping())
+    for (auto& regex_map : m_setup->mapping)
     {
         pcre2_code* regex = regex_map.m_regex;
         int result = pcre2_match(regex, (PCRE2_SPTR)sql, sql_len, 0, 0, m_match_data, nullptr);
@@ -345,11 +488,13 @@ json_t* RegexHintFilter::diagnostics() const
     json_object_set_new(rval, "queries_diverted", json_integer(m_total_diverted));
     json_object_set_new(rval, "queries_undiverted", json_integer(m_total_undiverted));
 
-    if (m_mapping.size() > 0)
+    auto setup = *m_setup;
+
+    if (setup->mapping.size() > 0)
     {
         json_t* arr = json_array();
 
-        for (const auto& regex_map : m_mapping)
+        for (const auto& regex_map : setup->mapping)
         {
             json_t* obj = json_object();
             json_t* targets = json_array();
@@ -366,11 +511,11 @@ json_t* RegexHintFilter::diagnostics() const
         json_object_set_new(rval, "mappings", arr);
     }
 
-    if (!m_sources.empty())
+    if (!setup->sources.empty())
     {
         json_t* arr = json_array();
 
-        for (const auto& source : m_sources)
+        for (const auto& source : setup->sources)
         {
             json_array_append_new(arr, json_string(source.m_address.c_str()));
         }
@@ -407,23 +552,10 @@ bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
     auto targets_array = config_break_list_string(target);
     if (targets_array.size() > 1)
     {
-        /* The string contains a server list. Check that all names are valid. */
-        auto servers = SERVER::server_find_by_unique_names(targets_array);
-        for (size_t i = 0; i < servers.size(); i++)
+        for (const auto& elem : targets_array)
         {
-            if (servers[i] == nullptr)
-            {
-                error = true;
-                MXS_ERROR("'%s' is not a valid server name.", targets_array[i].c_str());
-            }
-        }
-
-        if (!error)
-        {
-            for (const auto& elem : targets_array)
-            {
-                m_targets.push_back(elem);
-            }
+            mxb_assert(SERVER::find_by_unique_name(elem));
+            m_targets.push_back(elem);
         }
     }
     else if (targets_array.size() == 1)
@@ -451,11 +583,15 @@ bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
         }
         else
         {
+            // This should no longer happen
+            mxb_assert(!true);
             error = true;
         }
     }
     else
     {
+        // This should no longer happen
+        mxb_assert(!true);
         // targets-list had no elements
         error = true;
     }
@@ -478,7 +614,8 @@ RegexToServers::~RegexToServers()
     pcre2_code_free(m_regex);
 }
 
-bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, const std::string& match,
+bool RegexHintFilter::regex_compile_and_add(const std::shared_ptr<Setup>& setup,
+                                            int pcre_ops, bool legacy_mode, const std::string& match,
                                             const std::string& target)
 {
     bool success = true;
@@ -499,7 +636,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, cons
         RegexToServers mapping_elem(match, regex);
         if (mapping_elem.add_targets(target, legacy_mode))
         {
-            m_mapping.push_back(std::move(mapping_elem));
+            setup->mapping.push_back(std::move(mapping_elem));
 
             /* Check what is the required match_data size for this pattern. The
              * largest value is used to form the match data. */
@@ -513,9 +650,9 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, cons
             else
             {
                 int required_ovec_size = capcount + 1;
-                if (required_ovec_size > m_ovector_size)
+                if (required_ovec_size > setup->ovector_size)
                 {
-                    m_ovector_size = required_ovec_size;
+                    setup->ovector_size = required_ovec_size;
                 }
             }
         }
@@ -531,6 +668,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, cons
         MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
                   match.c_str(), error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
+        mxb_assert_message(!true, "This should be detected earlier");
         success = false;
     }
     return success;
@@ -539,7 +677,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode, cons
 /**
  * Read all indexed regexes from the supplied configuration, compile them and form the mapping
  */
-void RegexHintFilter::form_regex_server_mapping(int pcre_ops)
+bool RegexHintFilter::form_regex_server_mapping(const std::shared_ptr<Setup>& setup, int pcre_ops)
 {
     auto& regex_values = m_settings.m_match_targets;
     bool error = false;
@@ -548,7 +686,6 @@ void RegexHintFilter::form_regex_server_mapping(int pcre_ops)
      * save found ones to array. */
     std::vector<Settings::MatchAndTarget> found_pairs;
 
-    const char missing_setting[] = "'%s' does not have a matching '%s'.";
     for (size_t i = 0; i < RegexHintFilter::Settings::n_regex_max; i++)
     {
         auto& param_definition = s_match_target_specs[i];
@@ -560,39 +697,23 @@ void RegexHintFilter::form_regex_server_mapping(int pcre_ops)
         /* Check that both the matchXY and targetXY settings are found. */
         bool match_exists = !param_val.match.empty();
         bool target_exists = !param_val.target.empty();
+        mxb_assert(match_exists == target_exists);
 
         if (match_exists && target_exists)
         {
             found_pairs.push_back(param_val);
         }
-        else if (match_exists)
+    }
+
+    for (const auto& elem : found_pairs)
+    {
+        if (!regex_compile_and_add(setup, pcre_ops, false, elem.match, elem.target))
         {
-            MXB_ERROR(missing_setting, param_name_match.c_str(), param_name_target.c_str());
-            error = true;
-        }
-        else if (target_exists)
-        {
-            MXB_ERROR(missing_setting, param_name_target.c_str(), param_name_match.c_str());
             error = true;
         }
     }
 
-    m_mapping.clear();
-    if (!error)
-    {
-        for (const auto& elem : found_pairs)
-        {
-            if (!regex_compile_and_add(pcre_ops, false, elem.match, elem.target))
-            {
-                error = true;
-            }
-        }
-    }
-
-    if (error)
-    {
-        m_mapping.clear();
-    }
+    return !error;
 }
 
 /**
@@ -603,13 +724,15 @@ void RegexHintFilter::form_regex_server_mapping(int pcre_ops)
  * @param ipv4        The client socket address struct
  * @return            true for match, false otherwise
  */
-bool RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage* ip)
+bool RegexHintFilter::check_source_host(const std::shared_ptr<Setup>& setup,
+                                        const char* remote,
+                                        const struct sockaddr_storage* ip)
 {
     bool rval = false;
     struct sockaddr_storage addr;
     memcpy(&addr, ip, sizeof(addr));
 
-    for (const auto& source : m_sources)
+    for (const auto& source : setup->sources)
     {
         rval = true;
 
@@ -676,7 +799,8 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
     return rval;
 }
 
-bool RegexHintFilter::check_source_hostnames(const struct sockaddr_storage* ip)
+bool RegexHintFilter::check_source_hostnames(const std::shared_ptr<Setup>& setup,
+                                             const struct sockaddr_storage* ip)
 {
     struct sockaddr_storage addr;
     memcpy(&addr, ip, sizeof(addr));
@@ -690,7 +814,7 @@ bool RegexHintFilter::check_source_hostnames(const struct sockaddr_storage* ip)
         return false;
     }
 
-    for (const auto& host : m_hostnames)
+    for (const auto& host : setup->hostnames)
     {
         if (strcmp(hbuf, host.c_str()) == 0)
         {
@@ -759,7 +883,7 @@ bool RegexHintFilter::validate_ipv4_address(const char* host)
  * @param input_host    The config source parameter
  * @return              The filled struct with netmask, or null on error
  */
-bool RegexHintFilter::add_source_address(const std::string& input_host)
+bool RegexHintFilter::add_source_address(const std::shared_ptr<Setup>& setup, const std::string& input_host)
 {
     std::string address(input_host);
     struct sockaddr_in6 ipv6 = {};
@@ -793,29 +917,24 @@ bool RegexHintFilter::add_source_address(const std::string& input_host)
     {
         return false;
     }
-    m_sources.emplace_back(address, ipv6, netmask);
+    setup->sources.emplace_back(address, ipv6, netmask);
     return true;
 }
 
-void RegexHintFilter::set_source_addresses(const std::string& host_names)
+void RegexHintFilter::set_source_addresses(const std::shared_ptr<Setup>& setup, const std::string& host_names)
 {
     for (const auto& host : mxs::strtok(host_names, ","))
     {
         std::string trimmed_host = host;
         mxb::trim(trimmed_host);
 
-        if (!add_source_address(trimmed_host))
+        if (!add_source_address(setup, trimmed_host))
         {
             MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. Adding it as hostname.",
                      trimmed_host.c_str());
-            m_hostnames.emplace_back(trimmed_host);
+            setup->hostnames.emplace_back(trimmed_host);
         }
     }
-}
-
-int RegexHintFilter::ovector_size() const
-{
-    return m_ovector_size;
 }
 
 bool RegexHintFilter::post_configure()
@@ -824,54 +943,42 @@ bool RegexHintFilter::post_configure()
     const char SERVER_STR[] = "server";
     const char TARGET_STR[] = "target";
 
+    auto setup = std::make_shared<Setup>();
     auto& sett = m_settings;
 
     if (!sett.m_source.empty())
     {
-        set_source_addresses(sett.m_source);
+        set_source_addresses(setup, sett.m_source);
     }
 
     int pcre_ops = sett.m_regex_options;
 
-    const bool legacy_mode = (!sett.m_match.empty() || !sett.m_server.empty());
     bool error = false;
-    if (legacy_mode && (sett.m_match.empty() || sett.m_server.empty()))
-    {
-        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
-                  "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
-                  MATCH_STR, SERVER_STR, MATCH_STR, TARGET_STR);
-        error = true;
-    }
-
     /* Try to form the mapping with indexed parameter names. */
-    form_regex_server_mapping(pcre_ops);
+    if (!form_regex_server_mapping(setup, pcre_ops))
+    {
+        error = true;
+    }
 
-    if (!legacy_mode && m_mapping.empty())
-    {
-        MXS_ERROR("Could not parse any indexed '%s'-'%s' pairs.", MATCH_STR, TARGET_STR);
-        error = true;
-    }
-    else if (legacy_mode && !m_mapping.empty())
-    {
-        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only one type of parameters.");
-        error = true;
-    }
-    else if (legacy_mode && m_mapping.empty())
+    const bool legacy_mode = (!sett.m_match.empty() || !sett.m_server.empty());
+
+    if (legacy_mode && setup->mapping.empty())
     {
         MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
-        if (!regex_compile_and_add(pcre_ops, true, sett.m_match, sett.m_server))
+        if (!regex_compile_and_add(setup, pcre_ops, true, sett.m_match, sett.m_server))
         {
             error = true;
         }
     }
-    return !error;
-}
 
-MappingVector& RegexHintFilter::mapping()
-{
-    return m_mapping;
+    if (!error)
+    {
+        m_setup.assign(setup);
+    }
+
+    return !error;
 }
 
 RegexHintFilter::RegexHintFilter(const std::string& name)

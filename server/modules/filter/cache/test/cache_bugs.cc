@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -69,6 +69,7 @@ int mxs_2727()
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
 
     cache_result_t result = pCache->get_key(string(), string(), "test", pSelect, &key);
+    gwbuf_free(pSelect);
 
     if (!CACHE_RESULT_IS_OK(result))
     {
@@ -104,6 +105,8 @@ int mxs_2727()
     {
         return 1;
     }
+
+    delete pCache;
 
     return 0;
 }

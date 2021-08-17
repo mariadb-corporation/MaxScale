@@ -49,21 +49,21 @@ int main(int argc, char** argv)
         }
 
         auto test_server_down = [&](int node_to_stop, int allowed_node) {
-            test.repl->stop_node(node_to_stop);
-            test.maxscale->wait_for_monitor(1);
-            int stopped_id = server_ids[node_to_stop];
-            int allowed_id = server_ids[allowed_node];
-            cout << "Stopped server " << stopped_id << ".\n";
-            cout << "Select-queries should go to server " << allowed_id << " only.\n";
-            IdSet allowed_set = {allowed_id};
-            // Test that queries only go to the correct server.
-            for (int i = 0; i < 5 && test.ok(); i++)
-            {
-                test.expect(check_server_id(maxconn, allowed_set), "%s", wrong_server);
-            }
-            test.repl->start_node(node_to_stop, "");
-	        cout << "Restarted server " << stopped_id << ".\n";
-        };
+                test.repl->stop_node(node_to_stop);
+                test.maxscale->wait_for_monitor(1);
+                int stopped_id = server_ids[node_to_stop];
+                int allowed_id = server_ids[allowed_node];
+                cout << "Stopped server " << stopped_id << ".\n";
+                cout << "Select-queries should go to server " << allowed_id << " only.\n";
+                IdSet allowed_set = {allowed_id};
+                // Test that queries only go to the correct server.
+                for (int i = 0; i < 5 && test.ok(); i++)
+                {
+                    test.expect(check_server_id(maxconn, allowed_set), "%s", wrong_server);
+                }
+                test.repl->start_node(node_to_stop, "");
+                cout << "Restarted server " << stopped_id << ".\n";
+            };
 
         if (test.ok())
         {
@@ -72,6 +72,13 @@ int main(int argc, char** argv)
         if (test.ok())
         {
             test_server_down(2, 1);
+        }
+        if (test.ok())
+        {
+            test.check_maxctrl("alter filter namedserverfilter target01 server1");
+            mysql_close(maxconn);
+            maxconn = test.maxscale->open_rwsplit_connection();
+            test_server_down(3, 0);
         }
     }
     mysql_close(maxconn);
@@ -93,7 +100,7 @@ bool check_server_id(MYSQL* conn, const IdSet& allowed_ids)
         int queried_id = atoi(str);
         if (allowed_ids.count(queried_id))
         {
-	        cout << "Query went to server " << queried_id << ".\n";
+            cout << "Query went to server " << queried_id << ".\n";
             id_ok = true;
         }
         else

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -65,7 +65,8 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
         if (test.global_result == 0)
         {
             test.tprintf("Maxscale was killed by systemd - ok");
-            test.maxscale->ssh_node_f(true, "rm -f /tmp/core*");
+            auto res = test.maxscale->ssh_output("rm -vf /tmp/core*", true);
+            test.expect(res.rc == 0, "Removing core files should work:\n%s", res.output.c_str());
         }
     }
 }

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -271,8 +271,15 @@ private:
     Node* vacate_lru();
     Node* vacate_lru(size_t space);
     bool  free_node_data(Node* pNode, Context context);
-    void  free_node(Node* pNode) const;
-    void  free_node(NodesByKey::iterator& i) const;
+
+    enum class InvalidatorAction
+    {
+        IGNORE, // Ignore the invalidator, just free the node.
+        REMOVE, // Free the node and remove it from the invalidator.
+    };
+
+    void  free_node(Node* pNode, InvalidatorAction action) const;
+    void  free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
     void  remove_node(Node* pNode) const;
     void  move_to_head(Node* pNode) const;
 

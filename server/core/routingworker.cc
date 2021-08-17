@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -459,13 +459,16 @@ void RoutingWorker::process_timeouts()
             // improved by storing sessions ordered by service.
             int64_t pooling_time = pSes->service->config()->idle_session_pooling_time.count();
 
+            // Convert this into the internal tick representation, keeps things more accurate
+            pooling_time = MXS_SEC_TO_CLOCK(pooling_time);
+
             ClientDCB* pClient = pSes->client_dcb;
             if (pClient->state() == DCB::State::POLLING)
             {
-                auto idle = MXS_CLOCK_TO_SEC(now - pClient->last_read());
-                pSes->tick(idle);
+                auto idle = now - pClient->last_read();
+                pSes->tick(MXS_CLOCK_TO_SEC(idle));
 
-                if (pooling_time >= 0 && idle > pooling_time && pSes->can_pool_backends())
+                if (pooling_time >= 0 && idle >= pooling_time && pSes->can_pool_backends())
                 {
                     for (auto& backend : pSes->backend_connections())
                     {

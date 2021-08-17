@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-diagnostic/
+// https://docs.mongodb.com/v4.4/reference/command/nav-diagnostic/
 //
 
 #include "defs.hh"
@@ -25,9 +25,9 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/availableQueryOptions/
+// https://docs.mongodb.com/v4.4/reference/command/availableQueryOptions/
 
-// https://docs.mongodb.com/manual/reference/command/buildInfo/
+// https://docs.mongodb.com/v4.4/reference/command/buildInfo/
 class BuildInfo final : public ImmediateCommand
 {
 public:
@@ -73,29 +73,29 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/collStats/
+// https://docs.mongodb.com/v4.4/reference/command/collStats/
 
-// https://docs.mongodb.com/manual/reference/command/connPoolStats/
+// https://docs.mongodb.com/v4.4/reference/command/connPoolStats/
 
-// https://docs.mongodb.com/manual/reference/command/connectionStatus/
+// https://docs.mongodb.com/v4.4/reference/command/connectionStatus/
 
-// https://docs.mongodb.com/manual/reference/command/cursorInfo/
+// https://docs.mongodb.com/v4.4/reference/command/cursorInfo/
 
-// https://docs.mongodb.com/manual/reference/command/dataSize/
+// https://docs.mongodb.com/v4.4/reference/command/dataSize/
 
-// https://docs.mongodb.com/manual/reference/command/dbHash/
+// https://docs.mongodb.com/v4.4/reference/command/dbHash/
 
-// https://docs.mongodb.com/manual/reference/command/dbStats/
+// https://docs.mongodb.com/v4.4/reference/command/dbStats/
 
-// https://docs.mongodb.com/manual/reference/command/diagLogging/
+// https://docs.mongodb.com/v4.4/reference/command/diagLogging/
 
-// https://docs.mongodb.com/manual/reference/command/driverOIDTest/
+// https://docs.mongodb.com/v4.4/reference/command/driverOIDTest/
 
-// https://docs.mongodb.com/manual/reference/command/explain/
+// https://docs.mongodb.com/v4.4/reference/command/explain/
 
-// https://docs.mongodb.com/manual/reference/command/features/
+// https://docs.mongodb.com/v4.4/reference/command/features/
 
-// https://docs.mongodb.com/manual/reference/command/getCmdLineOpts/
+// https://docs.mongodb.com/v4.4/reference/command/getCmdLineOpts/
 class GetCmdLineOpts final : public ImmediateCommand
 {
 public:
@@ -122,7 +122,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/getLog/
+// https://docs.mongodb.com/v4.4/reference/command/getLog/
 class GetLog;
 
 template<>
@@ -177,11 +177,11 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/hostInfo/
+// https://docs.mongodb.com/v4.4/reference/command/hostInfo/
 
-// https://docs.mongodb.com/manual/reference/command/isSelf/
+// https://docs.mongodb.com/v4.4/reference/command/isSelf/
 
-// https://docs.mongodb.com/manual/reference/command/listCommands/
+// https://docs.mongodb.com/v4.4/reference/command/listCommands/
 class ListCommands final : public ImmediateCommand
 {
 public:
@@ -201,11 +201,11 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/lockInfo/
+// https://docs.mongodb.com/v4.4/reference/command/lockInfo/
 
-// https://docs.mongodb.com/manual/reference/command/netstat/
+// https://docs.mongodb.com/v4.4/reference/command/netstat/
 
-// https://docs.mongodb.com/manual/reference/command/ping/
+// https://docs.mongodb.com/v4.4/reference/command/ping/
 class Ping final : public ImmediateCommand
 {
 public:
@@ -220,15 +220,15 @@ public:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/profile/
+// https://docs.mongodb.com/v4.4/reference/command/profile/
 
-// https://docs.mongodb.com/manual/reference/command/serverStatus/
+// https://docs.mongodb.com/v4.4/reference/command/serverStatus/
 
-// https://docs.mongodb.com/manual/reference/command/shardConnPoolStats/
+// https://docs.mongodb.com/v4.4/reference/command/shardConnPoolStats/
 
-// https://docs.mongodb.com/manual/reference/command/top/
+// https://docs.mongodb.com/v4.4/reference/command/top/
 
-// https://docs.mongodb.com/manual/reference/command/validate/
+// https://docs.mongodb.com/v4.4/reference/command/validate/
 class Validate final : public SingleCommand
 {
 public:
@@ -343,7 +343,7 @@ private:
     }
 };
 
-// https://docs.mongodb.com/manual/reference/command/whatsmyuri/
+// https://docs.mongodb.com/v4.4/reference/command/whatsmyuri/
 class WhatsMyUri final : public ImmediateCommand
 {
 public:

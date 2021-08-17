@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,7 +12,7 @@
  */
 
 //
-// https://docs.mongodb.com/manual/reference/command/nav-replication/
+// https://docs.mongodb.com/v4.4/reference/command/nav-replication/
 //
 
 #include "defs.hh"
@@ -23,9 +23,9 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/manual/reference/command/applyOps/
+// https://docs.mongodb.com/v4.4/reference/command/applyOps/
 
-// https://docs.mongodb.com/manual/reference/command/isMaster/
+// https://docs.mongodb.com/v4.4/reference/command/isMaster/
 class IsMaster final : public ImmediateCommand
 {
 public:
@@ -52,13 +52,13 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/replSetAbortPrimaryCatchUp/
+// https://docs.mongodb.com/v4.4/reference/command/replSetAbortPrimaryCatchUp/
 
-// https://docs.mongodb.com/manual/reference/command/replSetFreeze/
+// https://docs.mongodb.com/v4.4/reference/command/replSetFreeze/
 
-// https://docs.mongodb.com/manual/reference/command/replSetGetConfig/
+// https://docs.mongodb.com/v4.4/reference/command/replSetGetConfig/
 
-// https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
+// https://docs.mongodb.com/v4.4/reference/command/replSetGetStatus/
 class ReplSetGetStatus final : public ImmediateCommand
 {
 public:
@@ -74,17 +74,17 @@ public:
 };
 
 
-// https://docs.mongodb.com/manual/reference/command/replSetInitiate/
+// https://docs.mongodb.com/v4.4/reference/command/replSetInitiate/
 
-// https://docs.mongodb.com/manual/reference/command/replSetMaintenance/
+// https://docs.mongodb.com/v4.4/reference/command/replSetMaintenance/
 
-// https://docs.mongodb.com/manual/reference/command/replSetReconfig/
+// https://docs.mongodb.com/v4.4/reference/command/replSetReconfig/
 
-// https://docs.mongodb.com/manual/reference/command/replSetResizeOplog/
+// https://docs.mongodb.com/v4.4/reference/command/replSetResizeOplog/
 
-// https://docs.mongodb.com/manual/reference/command/replSetStepDown/
+// https://docs.mongodb.com/v4.4/reference/command/replSetStepDown/
 
-// https://docs.mongodb.com/manual/reference/command/replSetSyncFrom/
+// https://docs.mongodb.com/v4.4/reference/command/replSetSyncFrom/
 
 
 }

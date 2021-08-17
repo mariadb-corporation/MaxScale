@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -92,6 +92,14 @@ private:
         ERROR,      // The SM encountered an error. The connection should be closed.
     };
 
+    // Information about executed prepared statements
+    struct PSInfo
+    {
+        uint32_t real_id;                   // The actual ID we use when communicating with the database
+        uint16_t n_params {0};              // Number of parameters, used for COM_STMT_EXECUTE
+        bool     exec_metadata_sent {false};// Whether COM_STMT_EXECUTE metadata was sent
+    };
+
     State          m_state {State::HANDSHAKING};                /**< Connection state */
     HandShakeState m_hs_state {HandShakeState::SEND_PROHY_HDR}; /**< Handshake state */
 
@@ -142,6 +150,8 @@ private:
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(GWBUF* buffer);
+    void process_stmt_execute(GWBUF** buffer, uint32_t id, PSInfo& info);
+    void pin_history_responses();
 
     GWBUF* track_response(GWBUF** buffer);
     bool   read_backend_handshake(mxs::Buffer&& buffer);
@@ -166,6 +176,12 @@ private:
     void     set_reply_state(mxs::ReplyState state);
 
     const MariaDBUserCache* user_account_cache();
+
+    // Helper for getting the shared session data
+    MYSQL_session* mysql_session()
+    {
+        return static_cast<MYSQL_session*>(m_session->protocol_data());
+    }
 
     // Contains the necessary information required to track queries
     struct TrackedQuery
@@ -209,7 +225,7 @@ private:
     std::queue<TrackedQuery> m_track_queue;
 
     // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
-    std::unordered_map<uint32_t, uint32_t> m_ps_map;
+    std::unordered_map<uint32_t, PSInfo> m_ps_map;
 
     // The internal ID of the current query
     uint32_t m_current_id {0};

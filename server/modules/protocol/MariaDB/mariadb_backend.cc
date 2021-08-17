@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-07-14
+ * Change Date: 2025-08-17
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -160,6 +160,7 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 {
     std::unique_ptr<MariaDBBackendConnection> backend_conn(new MariaDBBackendConnection(server));
     backend_conn->assign_session(session, component);
+    backend_conn->pin_history_responses();
     return backend_conn;
 }
 
@@ -169,8 +170,7 @@ void MariaDBBackendConnection::finish_connection()
 
     if (m_state != State::POOLED)
     {
-        MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-        data->history_info.erase(this);
+        mysql_session()->history_info.erase(this);
     }
 
     // Always send a COM_QUIT to the backend being closed. This causes the connection to be closed faster.
@@ -202,6 +202,10 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
             MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
             rv = true;
+
+            // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
+            m_ps_map.clear();
+            pin_history_responses();
         }
     }
 
@@ -293,6 +297,61 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
         m_collect_result = true;
     }
     m_track_state = gwbuf_should_track_state(buffer);
+}
+
+void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
+{
+    size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((ps_info.n_params + 7) / 8);
+    uint8_t* ptr = gwbuf_link_data(*original) + types_offset;
+
+    if (*ptr == 0)
+    {
+        if (!ps_info.exec_metadata_sent)
+        {
+            MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+            auto it = data->exec_metadata.find(id);
+
+            // Although this check is practically always true, it will prevent a broken
+            // connector from crashing MaxScale.
+            if (it != data->exec_metadata.end())
+            {
+                const auto& metadata = it->second;
+
+                mxs::Buffer buf(*original);
+                mxs::Buffer newbuf(buf.length() + metadata.size());
+                auto data = newbuf.data();
+
+                memcpy(data, buf.data(), types_offset);
+                data += types_offset;
+
+                // Set to 1, we are sending the types
+                *data++ = 1;
+
+                // Splice the metadata into COM_STMT_EXECUTE
+                memcpy(data, metadata.data(), metadata.size());
+                data += metadata.size();
+
+                // Copy remaining data that is being sent and update the packet length
+                mxb_assert(buf.length() > types_offset + 1);
+                memcpy(data, buf.data() + types_offset + 1, buf.length() - types_offset - 1);
+                gw_mysql_set_byte3(newbuf.data(), newbuf.length() - MYSQL_HEADER_LEN);
+
+                // The old buffer is freed along with `buf`
+                *original = newbuf.release();
+
+                ps_info.exec_metadata_sent = true;
+            }
+            else
+            {
+                MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
+                            "execution with metadata and current execution doesn't contain it", id);
+            }
+        }
+    }
+    else
+    {
+        ps_info.exec_metadata_sent = true;
+    }
 }
 
 void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
@@ -578,7 +637,7 @@ void MariaDBBackendConnection::normal_read()
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
     uint64_t capabilities = service_get_capabilities(session->service);
-    capabilities |= static_cast<MYSQL_session*>(session->protocol_data())->client_protocol_capabilities();
+    capabilities |= mysql_session()->client_protocol_capabilities();
     bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) || m_collect_result)
@@ -686,7 +745,7 @@ void MariaDBBackendConnection::normal_read()
 
 void MariaDBBackendConnection::send_history()
 {
-    MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+    MYSQL_session* client_data = mysql_session();
 
     if (!client_data->history.empty())
     {
@@ -710,8 +769,6 @@ void MariaDBBackendConnection::send_history()
             m_dcb->writeq_append(buffer.release());
             m_history_responses.push_back(a.id());
         }
-
-        client_data->history_info[this].position = m_history_responses.front();
     }
 }
 
@@ -740,14 +797,13 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_dcb->session()->protocol_data());
+                MYSQL_session* client_data = mysql_session();
                 uint32_t id = m_history_responses.front();
                 auto it = client_data->history_responses.find(id);
                 mxb_assert(it != client_data->history_responses.end());
 
                 if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
                 {
-                    client_data->history_info[this].position = id;
                     m_history_responses.pop_front();
                 }
                 else
@@ -793,11 +849,24 @@ std::string MariaDBBackendConnection::create_response_mismatch_error()
     return ss.str();
 }
 
+void MariaDBBackendConnection::pin_history_responses()
+{
+    // Mark the start of the history responses that we're interested in. This guarantees that all responses
+    // remain in effect while the connection reset is ongoing. This is needed to correctly detect a
+    // COM_STMT_CLOSE that arrives after the connection creation and which caused the history to shrink.
+    MYSQL_session* client_data = mysql_session();
+
+    if (!client_data->history.empty())
+    {
+        client_data->history_info[this].position = client_data->history.front().id();
+    }
+}
+
 bool MariaDBBackendConnection::compare_responses()
 {
     bool ok = true;
     bool found = false;
-    MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    MYSQL_session* data = mysql_session();
     auto it = m_ids_to_check.begin();
 
     while (it != m_ids_to_check.end())
@@ -874,7 +943,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             if (m_state == State::READ_CHANGE_USER)
             {
                 // Fix the packet sequence number to be the same what the client expects
-                MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+                MYSQL_session* client_data = mysql_session();
                 buffer.data()[3] = client_data->next_sequence;
 
                 mxs::ReplyRoute route;
@@ -1065,11 +1134,15 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                     // Replace our generated ID with the real PS ID
                     uint8_t* ptr = GWBUF_DATA(queue) + MYSQL_PS_ID_OFFSET;
-                    mariadb::set_byte4(ptr, it->second);
+                    mariadb::set_byte4(ptr, it->second.real_id);
 
                     if (cmd == MXS_COM_STMT_CLOSE)
                     {
                         m_ps_map.erase(it);
+                    }
+                    else if (cmd == MXS_COM_STMT_EXECUTE)
+                    {
+                        process_stmt_execute(&queue, ps_id, it->second);
                     }
                 }
                 else if (ps_id != MARIADB_PS_DIRECT_EXEC_ID)
@@ -1079,11 +1152,24 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                     std::stringstream ss;
                     ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
                        << STRPACKETTYPE(cmd) << " by '" << m_session->user_and_host() << "'";
-                    MXS_WARNING("%s", ss.str().c_str());
 
                     // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
                     // sent, don't respond to it.
-                    if (cmd != MXS_COM_STMT_CLOSE)
+                    if (cmd == MXS_COM_STMT_CLOSE)
+                    {
+                        auto data = mysql_session();
+
+                        if (data->history_responses.find(ps_id) != data->history_responses.end())
+                        {
+                            // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to
+                            // but we have the response for it, we know that the COM_STMT_CLOSE was received
+                            // after the connection was opened but before we reached the history replay state.
+                            // This can be relied on as the history position is pinned to the lowest ID when
+                            // the connection is opened.
+                            return 1;
+                        }
+                    }
+                    else
                     {
                         GWBUF* err = mysql_create_custom_error(
                             1, 0, ER_UNKNOWN_STMT_HANDLER, ss.str().c_str());
@@ -1093,6 +1179,8 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                         m_dcb->readq_append(err);
                         m_dcb->trigger_read_event();
                     }
+
+                    MXS_WARNING("%s", ss.str().c_str());
 
                     // This is an error condition that is very likely to happen if something is broken in the
                     // prepared statement handling. Asserting that we never get here when we're testing helps
@@ -2193,7 +2281,8 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     stmt_id |= *it << 24;
     *it++ = internal_id >> 24;
 
-    m_ps_map[internal_id] = stmt_id;
+    auto& ps_map = m_ps_map[internal_id];
+    ps_map.real_id = stmt_id;
     MXS_INFO("PS internal ID %u maps to external ID %u on server '%s'",
              internal_id, stmt_id, m_dcb->server()->name());
 
@@ -2204,6 +2293,8 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
     // Parameters
     uint16_t params = *it++;
     params += *it++ << 8;
+
+    ps_map.n_params = params;
 
     // Always set our internal ID as the PS ID
     m_reply.set_generated_id(internal_id);
@@ -2339,7 +2430,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 {
     m_session = session;
     m_upstream = upstream;
-    MYSQL_session* client_data = static_cast<MYSQL_session*>(session->protocol_data());
+    MYSQL_session* client_data = mysql_session();
     m_auth_data.client_data = client_data;
     m_authenticator = client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
 }
@@ -2795,8 +2886,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
 
 void MariaDBBackendConnection::set_to_pooled()
 {
-    MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
-    data->history_info.erase(this);
+    mysql_session()->history_info.erase(this);
 
     m_session = nullptr;
     m_upstream = nullptr;
