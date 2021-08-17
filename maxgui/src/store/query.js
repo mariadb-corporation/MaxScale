@@ -278,7 +278,7 @@ export default {
                 logger.error(e)
             }
         },
-        async openConnect({ dispatch, commit }, body) {
+        async openConnect({ dispatch, commit }, { body, resourceType }) {
             try {
                 let res = await this.vue.$axios.post(`/sql?persist=yes`, body)
                 if (res.status === 201) {
@@ -294,6 +294,7 @@ export default {
                     const curr_cnct_resource = {
                         id: connId,
                         name: body.target,
+                        type: resourceType,
                     }
                     commit('ADD_CNCT_RESOURCE', curr_cnct_resource)
                     commit('SET_CURR_CNCT_RESOURCE', curr_cnct_resource)

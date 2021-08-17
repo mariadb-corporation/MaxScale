@@ -70,9 +70,9 @@
                 </div>
             </template>
         </v-select>
-        <!-- TODO: If resources have been connected, prevent it from being connected again -->
         <connection-dialog
             v-model="isConnDialogOpened"
+            :connOptions="connOptions"
             :handleSave="handleOpenConn"
             :onCancel="assignActiveConn"
             :onClose="assignActiveConn"
@@ -199,8 +199,8 @@ export default {
             this.$refs.confirmDialog.open()
             this.targetConn = item
         },
-        async handleOpenConn(body) {
-            await this.openConnect(body)
+        async handleOpenConn(opts) {
+            await this.openConnect(opts)
         },
         changeWkeName(v) {
             let newWke = this.$help.lodash.cloneDeep(this.getActiveWke)

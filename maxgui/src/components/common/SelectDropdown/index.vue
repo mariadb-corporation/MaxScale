@@ -26,6 +26,7 @@
         "
         :rules="rules.requiredField"
         :hide-details="!required"
+        :error-messages="errorMessages"
         @change="onChange"
     >
         <template v-slot:selection="{ item, index }">
@@ -70,6 +71,7 @@ export default {
         required: { type: Boolean, default: false },
         defaultItems: { type: [Array, Object], default: () => [] },
         showPlaceHolder: { type: Boolean, default: true },
+        errorMessages: { type: String, default: '' },
     },
     data() {
         return {
