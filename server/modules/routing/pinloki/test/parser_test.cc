@@ -57,7 +57,7 @@ struct DebugHandler : public pinloki::parser::Handler
 
     void show_binlogs() override
     {
-        result << "SHOW BINLOGS";
+        result << "SHOW BINARY LOGS";
     }
 
     void show_variables(const std::string& like) override
@@ -169,6 +169,9 @@ std::vector<std::pair<std::string, std::string>> tests =
     },
     {
         "SHOW MASTER STATUS", "SHOW MASTER STATUS"
+    },
+    {
+        "SHOW BINARY LOGS", "SHOW BINARY LOGS"
     },
 };
 

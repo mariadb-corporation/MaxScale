@@ -224,6 +224,18 @@ supports. The following commands are supported:
    * `@@global.gtid_slave_pos`: Set the position from which binlogrouter should
    start replicating. E.g. `SET @@global.gtid_slave_pos="0-1000-1234,1-1001-5678"`
 
+ * `SHOW VARIABLES LIKE '...'`
+
+   * Shows variables matching a string. The `LIKE` operator in `SHOW VARIABLES`
+     is mandatory for the binlogrouter. This means that a plain `SHOW VARIABLES`
+     is not currently supported. In addition, the `LIKE` operator in
+     binlogrouter only supports exact matches.
+
+     Currently the only variables that are returned are `gtid_slave_pos`,
+     `gtid_current_pos` and `gtid_binlog_pos` which return the current GTID
+     coordinates of the binlogrouter. In addition to these, the `server_id`
+     variable will return the configured server ID of the binlogrouter.
+
 ## Configuration Parameters
 
 The binlogrouter is configured similarly to how normal routers are configured in
