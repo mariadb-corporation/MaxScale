@@ -44,10 +44,10 @@ struct users;
  */
 typedef struct
 {
-    time_t started;         /**< The time when the service was started */
-    int    n_failed_starts; /**< Number of times this service has failed to start */
-    int    n_sessions;      /**< Number of sessions created on service since start */
-    int    n_current;       /**< Current number of sessions */
+    time_t   started;           /**< The time when the service was started */
+    int      n_failed_starts;   /**< Number of times this service has failed to start */
+    uint64_t n_sessions;        /**< Number of sessions created on service since start */
+    uint64_t n_current;         /**< Current number of sessions */
 } SERVICE_STATS;
 
 typedef struct server_ref_t

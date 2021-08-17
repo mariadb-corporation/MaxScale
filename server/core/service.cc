@@ -961,10 +961,10 @@ void dprintService(DCB* dcb, SERVICE* svc)
     }
 
     dcb_printf(dcb,
-               "\tTotal connections:                   %d\n",
+               "\tTotal connections:                   %lu\n",
                service->stats.n_sessions);
     dcb_printf(dcb,
-               "\tCurrently connected:                 %d\n",
+               "\tCurrently connected:                 %lu\n",
                service->stats.n_current);
 }
 
@@ -993,7 +993,7 @@ void dListServices(DCB* dcb)
         {
             mxb_assert(service->stats.n_current >= 0);
             dcb_printf(dcb,
-                       "%-25s | %-17s | %6d | %14d | ",
+                       "%-25s | %-17s | %6lu | %14lu | ",
                        service->name(),
                        service->router_name(),
                        service->stats.n_current,

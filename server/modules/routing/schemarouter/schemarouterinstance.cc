@@ -212,16 +212,16 @@ void SchemaRouter::diagnostics(DCB* dcb)
     /** Session command statistics */
     dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
     dcb_printf(dcb,
-               "Total number of queries: %d\n",
+               "Total number of queries: %lu\n",
                m_stats.n_queries);
     dcb_printf(dcb,
                "Percentage of session commands: %.2f\n",
                sescmd_pct);
     dcb_printf(dcb,
-               "Longest chain of stored session commands: %d\n",
+               "Longest chain of stored session commands: %lu\n",
                m_stats.longest_sescmd);
     dcb_printf(dcb,
-               "Session command history limit exceeded: %d times\n",
+               "Session command history limit exceeded: %lu times\n",
                m_stats.n_hist_exceeded);
 
     /** Session time statistics */
@@ -233,8 +233,8 @@ void SchemaRouter::diagnostics(DCB* dcb)
         dcb_printf(dcb, "Shortest session: %.2lf seconds\n", m_stats.ses_shortest);
         dcb_printf(dcb, "Average session length: %.2lf seconds\n", m_stats.ses_average);
     }
-    dcb_printf(dcb, "Shard map cache hits: %d\n", m_stats.shmap_cache_hit);
-    dcb_printf(dcb, "Shard map cache misses: %d\n", m_stats.shmap_cache_miss);
+    dcb_printf(dcb, "Shard map cache hits: %lu\n", m_stats.shmap_cache_hit);
+    dcb_printf(dcb, "Shard map cache misses: %lu\n", m_stats.shmap_cache_miss);
     dcb_printf(dcb, "\n");
 }
 

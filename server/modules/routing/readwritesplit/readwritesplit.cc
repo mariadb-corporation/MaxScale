@@ -317,7 +317,7 @@ void RWSplit::diagnostics(DCB* dcb)
                "\tNumber of router sessions:              %" PRIu64 "\n",
                stats().n_sessions);
     dcb_printf(dcb,
-               "\tCurrent no. of router sessions:         %d\n",
+               "\tCurrent no. of router sessions:         %lu\n",
                service()->stats.n_current);
     dcb_printf(dcb,
                "\tNumber of queries forwarded:            %" PRIu64 "\n",

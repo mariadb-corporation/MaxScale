@@ -496,13 +496,13 @@ void RCR::diagnostics(DCB* dcb)
     const char* weightby = serviceGetWeightingParameter(m_pService);
 
     dcb_printf(dcb,
-               "\tNumber of router sessions:    %d\n",
+               "\tNumber of router sessions:    %lu\n",
                m_stats.n_sessions);
     dcb_printf(dcb,
-               "\tCurrent no. of router sessions:	%d\n",
+               "\tCurrent no. of router sessions:	%lu\n",
                m_pService->stats.n_current);
     dcb_printf(dcb,
-               "\tNumber of queries forwarded:      %d\n",
+               "\tNumber of queries forwarded:      %lu\n",
                m_stats.n_queries);
     if (*weightby)
     {

@@ -162,7 +162,7 @@ public:
     /* Server connection and usage statistics */
     struct ConnStats
     {
-        int      n_connections = 0; /**< Number of connections */
+        uint64_t n_connections = 0; /**< Number of connections */
         int      n_current = 0;     /**< Current connections */
         int      n_current_ops = 0; /**< Current active operations */
         int      n_persistent = 0;  /**< Current persistent pool */

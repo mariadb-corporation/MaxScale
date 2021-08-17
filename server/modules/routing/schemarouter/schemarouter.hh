@@ -51,7 +51,7 @@ struct Config
     bool                  debug;            /**< Enable verbose debug messages to clients */
     pcre2_code*           ignore_regex;     /**< Regular expression used to ignore tables */
     pcre2_match_data*     ignore_match_data;/**< Match data for @c ignore_regex */
-    std::set<std::string> ignored_tables;      /**< Set of ignored tables */
+    std::set<std::string> ignored_tables;   /**< Set of ignored tables */
     SERVER*               preferred_server; /**< Server to prefer in conflict situations */
 
     Config(MXS_CONFIG_PARAMETER* conf);
@@ -70,17 +70,17 @@ typedef std::shared_ptr<Config> SConfig;
  */
 struct Stats
 {
-    int n_queries;          /*< Number of queries forwarded    */
-    int n_sescmd;           /*< Number of session commands */
-    int longest_sescmd;     /*< Longest chain of stored session commands */
-    int n_hist_exceeded;    /*< Number of sessions that exceeded session
-                             * command history limit */
-    int    sessions;        /*< Number of sessions */
-    int    shmap_cache_hit; /*< Shard map was found from the cache */
-    int    shmap_cache_miss;/*< No shard map found from the cache */
-    double ses_longest;     /*< Longest session */
-    double ses_shortest;    /*< Shortest session */
-    double ses_average;     /*< Average session length */
+    uint64_t n_queries;         /*< Number of queries forwarded    */
+    uint64_t n_sescmd;          /*< Number of session commands */
+    uint64_t longest_sescmd;    /*< Longest chain of stored session commands */
+    uint64_t n_hist_exceeded;   /*< Number of sessions that exceeded session
+                                 * command history limit */
+    uint64_t sessions;          /*< Number of sessions */
+    uint64_t shmap_cache_hit;   /*< Shard map was found from the cache */
+    uint64_t shmap_cache_miss;  /*< No shard map found from the cache */
+    double   ses_longest;       /*< Longest session */
+    double   ses_shortest;      /*< Shortest session */
+    double   ses_average;       /*< Average session length */
 
     Stats()
         : n_queries(0)

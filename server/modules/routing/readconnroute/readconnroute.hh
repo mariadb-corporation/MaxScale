@@ -84,8 +84,8 @@ private:
  */
 struct Stats
 {
-    int n_sessions = 0;     /**< Number sessions created     */
-    int n_queries = 0;      /**< Number of queries forwarded */
+    uint64_t n_sessions = 0;    /**< Number sessions created     */
+    uint64_t n_queries = 0;     /**< Number of queries forwarded */
 };
 
 /**

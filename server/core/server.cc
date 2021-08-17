@@ -370,7 +370,7 @@ void Server::printServer()
     printf("\tServer:                       %s\n", address);
     printf("\tProtocol:                     %s\n", m_settings.protocol.c_str());
     printf("\tPort:                         %d\n", port);
-    printf("\tTotal connections:            %d\n", stats.n_connections);
+    printf("\tTotal connections:            %lu\n", stats.n_connections);
     printf("\tCurrent connections:          %d\n", stats.n_current);
     printf("\tPersistent connections:       %d\n", stats.n_persistent);
     printf("\tPersistent actual max:        %d\n", persistmax);
@@ -496,7 +496,7 @@ void Server::print_to_dcb(DCB* dcb) const
                        elem.first.c_str(), elem.second.c_str());
         }
     }
-    dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
+    dcb_printf(dcb, "\tNumber of connections:               %lu\n", server->stats.n_connections);
     dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
     dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
     dcb_printf(dcb, "\tNumber of routed packets:            %lu\n", server->stats.packets);
