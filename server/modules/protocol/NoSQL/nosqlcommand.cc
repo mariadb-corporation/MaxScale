@@ -917,21 +917,6 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           const nosql::Query& query,
-                                           const bsoncxx::document::view& doc,
-                                           const DocumentArguments& arguments)
-{
-    auto p = get_info(doc);
-
-    const string& name = p.first;
-    CreatorFunction create = p.second.create;
-
-    return create(name, pDatabase, pRequest, &query, nullptr, doc, arguments);
-}
-
-//static
-unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
-                                           GWBUF* pRequest,
                                            const nosql::Msg& msg,
                                            const bsoncxx::document::view& doc,
                                            const DocumentArguments& arguments)

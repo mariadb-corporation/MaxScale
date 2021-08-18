@@ -279,11 +279,10 @@ public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
-    template<class ConcretePacket>
     OpMsgCommand(const std::string& name,
                  Database* pDatabase,
                  GWBUF* pRequest,
-                 const ConcretePacket& req,
+                 const nosql::Msg& req,
                  const bsoncxx::document::view& doc,
                  const DocumentArguments& arguments)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
@@ -293,12 +292,6 @@ public:
         , m_arguments(arguments)
     {
     }
-
-    static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
-                                             GWBUF* pRequest,
-                                             const nosql::Query& req,
-                                             const bsoncxx::document::view& doc,
-                                             const DocumentArguments& arguments);
 
     static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
                                              GWBUF* pRequest,
@@ -429,7 +422,7 @@ protected:
     virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
 
     const std::string       m_name;
-    Packet                  m_req;
+    const nosql::Msg        m_req;
     bsoncxx::document::view m_doc;
     DocumentArguments       m_arguments;
 
@@ -437,11 +430,6 @@ private:
     ResponseKind response_kind(const Msg& req)
     {
         return req.checksum_present() ? ResponseKind::MSG_WITH_CHECKSUM : ResponseKind::MSG;
-    }
-
-    ResponseKind response_kind(const Query&)
-    {
-        return ResponseKind::REPLY;
     }
 
     mutable std::string m_quoted_table;
