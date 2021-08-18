@@ -71,7 +71,7 @@
                     depressed
                     small
                     color="accent-dark"
-                    :loading="loading_query_result"
+                    :loading="getLoadingQueryResult"
                     :disabled="!query_txt.all || !curr_cnct_resource.id"
                     v-on="on"
                     @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
@@ -210,7 +210,7 @@
  * Public License.
  */
 
-import { mapActions, mapState, mapMutations } from 'vuex'
+import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
 import QueryConfigDialog from './QueryConfigDialog'
@@ -234,10 +234,13 @@ export default {
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
             db_tree: state => state.query.db_tree,
-            loading_query_result: state => state.query.loading_query_result,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
+            active_wke_id: state => state.query.active_wke_id,
+        }),
+        ...mapGetters({
+            getLoadingQueryResult: 'query/getLoadingQueryResult',
         }),
     },
     methods: {
@@ -270,15 +273,20 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            if (this.loading_query_result) return null
+            if (this.getLoadingQueryResult) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
+                    if (this.query_txt.all)
+                        await this.fetchQueryResult({
+                            query: this.query_txt.all,
+                            active_wke_id: this.active_wke_id,
+                            curr_cnct_resource: this.curr_cnct_resource,
+                        })
                     break
                 case 'selected':
                     if (this.query_txt.selected)
-                        await this.fetchQueryResult(this.query_txt.selected)
+                        await this.fetchQueryResult({ query: this.query_txt.selected })
                     break
             }
         },

@@ -52,9 +52,6 @@ function editorStates() {
 function resultStates() {
     return {
         curr_query_mode: 'QUERY_VIEW',
-        loading_prvw_data: false,
-        loading_prvw_data_details: false,
-        loading_query_result: false,
     }
 }
 /**
@@ -211,9 +208,6 @@ export default {
         SET_CURR_QUERY_MODE(state, payload) {
             patch_wke_property(state, { obj: { curr_query_mode: payload }, scope: this })
         },
-        SET_LOADING_PRVW_DATA(state, payload) {
-            patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
-        },
         UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
             state.prvw_data_map = {
                 ...state.prvw_data_map,
@@ -225,12 +219,6 @@ export default {
                 ...state.prvw_data_details_map,
                 ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
             }
-        },
-        SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
-            patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
-        },
-        SET_LOADING_QUERY_RESULT(state, payload) {
-            patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
         },
         UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
             state.query_results_map = {
@@ -711,11 +699,13 @@ export default {
          */
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
-                commit(`SET_LOADING_${prvwMode}`, true)
+                const request_sent_time = new Date().valueOf()
                 commit(`UPDATE_${prvwMode}_MAP`, {
                     id: state.active_wke_id,
                     payload: {
-                        request_sent_time: new Date().valueOf(),
+                        request_sent_time,
+                        total_duration: 0,
+                        [`loading_${prvwMode.toLowerCase()}`]: true,
                     },
                 })
                 let sql
@@ -733,15 +723,23 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql, max_rows: rootState.persisted.query_max_rows }
                 )
+                const now = new Date().valueOf()
+                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 commit(`UPDATE_${prvwMode}_MAP`, {
                     id: state.active_wke_id,
                     payload: {
                         data: Object.freeze(res.data.data),
+                        total_duration: parseFloat(total_duration),
+                        [`loading_${prvwMode.toLowerCase()}`]: false,
                     },
                 })
-                commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
-                commit(`SET_LOADING_${prvwMode}`, false)
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        [`loading_${prvwMode.toLowerCase()}`]: false,
+                    },
+                })
                 const logger = this.vue.$logger('store-query-fetchPrvw')
                 logger.error(e)
             }
@@ -750,30 +748,44 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
+        async fetchQueryResult(
+            { commit, dispatch, rootState },
+            { query, active_wke_id, curr_cnct_resource }
+        ) {
             try {
-                commit('SET_LOADING_QUERY_RESULT', true)
+                const request_sent_time = new Date().valueOf()
                 commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: state.active_wke_id,
-                    payload: { request_sent_time: new Date().valueOf() },
+                    id: active_wke_id,
+                    payload: {
+                        request_sent_time,
+                        total_duration: 0,
+                        loading_query_result: true,
+                    },
                 })
 
-                let res = await this.vue.$axios.post(
-                    `/sql/${state.curr_cnct_resource.id}/queries`,
-                    {
-                        sql: query,
-                        max_rows: rootState.persisted.query_max_rows,
-                    }
-                )
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: state.active_wke_id,
-                    payload: { results: Object.freeze(res.data.data) },
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql: query,
+                    max_rows: rootState.persisted.query_max_rows,
                 })
-                commit('SET_LOADING_QUERY_RESULT', false)
+                const now = new Date().valueOf()
+                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: active_wke_id,
+                    payload: {
+                        results: Object.freeze(res.data.data),
+                        total_duration: parseFloat(total_duration),
+                        loading_query_result: false,
+                    },
+                })
+
                 const USE_REG = /(use|drop database)\s/i
                 if (query.match(USE_REG)) await dispatch('updateActiveDb')
             } catch (e) {
-                commit('SET_LOADING_QUERY_RESULT', false)
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: active_wke_id,
+                    payload: { loading_query_result: false },
+                })
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
             }
@@ -830,6 +842,7 @@ export default {
             commit(`UPDATE_PRVW_DATA_MAP`, {
                 id: state.active_wke_id,
                 payload: {
+                    loading_prvw_data: false,
                     data: {},
                     request_sent_time: 0,
                     total_duration: 0,
@@ -838,6 +851,7 @@ export default {
             commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
                 id: state.active_wke_id,
                 payload: {
+                    loading_prvw_data_details: false,
                     data: {},
                     request_sent_time: 0,
                     total_duration: 0,
@@ -876,7 +890,12 @@ export default {
             if (wke)
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: wke.id,
-                    payload: { results: {}, request_sent_time: 0, total_duration: 0 },
+                    payload: {
+                        loading_query_result: false,
+                        results: {},
+                        request_sent_time: 0,
+                        total_duration: 0,
+                    },
                 })
         },
     },
@@ -888,8 +907,13 @@ export default {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
-        getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
 
+        // Query result getters
+        getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
+        getLoadingQueryResult: (state, getters) => {
+            const { loading_query_result = false } = getters.getQueryResult
+            return loading_query_result
+        },
         getResults: (state, getters) => {
             const { results = {} } = getters.getQueryResult
             return results
@@ -899,7 +923,7 @@ export default {
             return request_sent_time
         },
         getQueryExeTime: (state, getters) => {
-            if (state.loading_query_result) return -1
+            if (getters.getLoadingQueryResult) return -1
             const { attributes } = getters.getResults
             if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
             return 0
@@ -908,11 +932,14 @@ export default {
             const { total_duration = 0 } = getters.getQueryResult
             return total_duration
         },
-
+        // preview data getters
         getPrvwData: state => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
             if (map) return map[state.active_wke_id] || {}
             return {}
+        },
+        getLoadingPrvw: (state, getters) => mode => {
+            return getters.getPrvwData(mode)[`loading_${mode.toLowerCase()}`] || false
         },
         getPrvwDataRes: (state, getters) => mode => {
             const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)

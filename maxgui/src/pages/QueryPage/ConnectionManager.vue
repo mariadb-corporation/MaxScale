@@ -160,6 +160,10 @@ export default {
                 if (this.isCreatingNewConn) this.openConnDialog()
                 else if (this.$typy(v, 'id').isDefined) {
                     this.SET_CURR_CNCT_RESOURCE(v)
+                    /**
+                     * TODO: since the introduction of parallel querying of worksheets
+                     * The below actions shouldn't be called when switching between worksheets
+                     */
                     await this.validatingConn()
                     if (this.curr_cnct_resource.id) {
                         await this.initialFetch()

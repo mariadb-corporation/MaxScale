@@ -42,12 +42,12 @@
             </v-tabs>
             <v-spacer />
             <keep-alive>
+                <!-- TODO: Refactor duration-timer to make it work with parallel queries among worksheets-->
                 <duration-timer
                     v-if="getQueryRequestSentTime"
                     :startTime="getQueryRequestSentTime"
                     :executionTime="getQueryExeTime"
                     :totalDuration="getQueryTotalDuration"
-                    @total-duration="updateDuration"
                 />
             </keep-alive>
 
@@ -74,8 +74,8 @@
 
         <template>
             <v-skeleton-loader
-                v-if="loading_query_result"
-                :loading="loading_query_result"
+                v-if="getLoadingQueryResult"
+                :loading="getLoadingQueryResult"
                 type="table: table-thead, table-tbody"
                 :height="dynDim.height - headerHeight"
             />
@@ -119,7 +119,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapMutations, mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 import DurationTimer from './DurationTimer'
 export default {
@@ -147,10 +147,10 @@ export default {
     },
     computed: {
         ...mapState({
-            loading_query_result: state => state.query.loading_query_result,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
+            getLoadingQueryResult: 'query/getLoadingQueryResult',
             getResults: 'query/getResults',
             getQueryRequestSentTime: 'query/getQueryRequestSentTime',
             getQueryExeTime: 'query/getQueryExeTime',
@@ -187,9 +187,6 @@ export default {
         this.unwatchResultData()
     },
     methods: {
-        ...mapMutations({
-            UPDATE_QUERY_RESULTS_MAP: 'query/UPDATE_QUERY_RESULTS_MAP',
-        }),
         addResultDataWatcher() {
             this.unwatchResultData = this.$watch('resultData', () => {
                 if (this.getErrTabName()) this.activeResSet = this.getErrTabName()
@@ -207,14 +204,6 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
-        },
-        updateDuration(v) {
-            this.UPDATE_QUERY_RESULTS_MAP({
-                id: this.active_wke_id,
-                payload: {
-                    total_duration: v,
-                },
-            })
         },
     },
 }
