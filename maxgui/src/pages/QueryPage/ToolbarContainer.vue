@@ -6,7 +6,7 @@
         class="query-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
-        <connection-manager />
+        <connection-manager :disabled="getLoadingQueryResult" />
         <!-- Use database section-->
         <v-btn
             id="active-db"
@@ -16,7 +16,7 @@
             depressed
             small
             color="accent-dark"
-            :disabled="!curr_cnct_resource.id"
+            :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
         >
             <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
@@ -99,7 +99,7 @@
                     depressed
                     small
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="!curr_cnct_resource.id"
+                    :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
                     v-on="on"
                     @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >

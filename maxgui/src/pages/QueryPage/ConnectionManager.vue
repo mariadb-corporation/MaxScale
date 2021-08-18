@@ -16,6 +16,7 @@
             item-text="name"
             return-object
             :placeholder="$t('selectConnection')"
+            :disabled="disabled"
             @change="onSelectConn"
         >
             <template v-slot:selection="{ item }">
@@ -107,6 +108,9 @@ export default {
     name: 'connection-manager',
     components: {
         ConnectionDialog,
+    },
+    props: {
+        disabled: { type: Boolean, required: true },
     },
     data() {
         return {

@@ -1,5 +1,10 @@
 <template>
-    <div class="fill-height">
+    <div
+        class="fill-height"
+        :class="{
+            'not-allowed': getLoadingQueryResult,
+        }"
+    >
         <div class="db-tb-list" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
             <div class="visible-when-expand fill-height">
                 <div class="schema-list-tools">
@@ -129,6 +134,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
+            getLoadingQueryResult: 'query/getLoadingQueryResult',
         }),
         searchSchema: {
             get() {
