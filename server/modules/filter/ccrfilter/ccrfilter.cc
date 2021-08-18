@@ -371,7 +371,7 @@ int CCRSession::routeQuery(GWBUF* queue)
             {
                 queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
                 filter->m_stats.n_add_time++;
-                MXS_INFO("%.0f seconds left", dt);
+                MXS_INFO("%.0f seconds left", config.time.count() - dt);
             }
         }
     }
