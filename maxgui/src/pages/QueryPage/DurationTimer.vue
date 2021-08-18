@@ -7,25 +7,31 @@
             content-class="shadow-drop pa-3"
         >
             <template v-slot:activator="{ on }">
-                <pre v-on="on"> {{ duration }} seconds</pre>
+                <pre v-on="on">  {{ $t('seconds', { value: duration }) }}</pre>
             </template>
             <v-sheet min-width="220" max-width="450" class="color text-small-text">
                 <div class="d-flex align-center color text-navigation font-weight-bold">
-                    <span>Total Duration:</span>
+                    <span>{{ $t('totalDuration') }}:</span>
                     <v-spacer />
-                    <span>{{ duration }} seconds</span>
+                    <span> {{ $t('seconds', { value: duration }) }}</span>
                 </div>
                 <div class="d-flex align-center">
-                    <span>Network delay</span>
+                    <span>{{ $t('networkDelay') }} </span>
                     <v-spacer />
                     <span class="color text-navigation">
-                        {{ Math.abs(duration - executionTime).toFixed(4) }} seconds
+                        {{
+                            $t('seconds', {
+                                value: Math.abs(duration - executionTime).toFixed(4),
+                            })
+                        }}
                     </span>
                 </div>
                 <div class="d-flex align-center">
-                    <span>Execution Time:</span>
+                    <span>{{ $t('exeTime') }}: </span>
                     <v-spacer />
-                    <span class="color text-navigation"> {{ executionTime }} seconds</span>
+                    <span class="color text-navigation">
+                        {{ $t('seconds', { value: executionTime }) }}
+                    </span>
                 </div>
             </v-sheet>
         </v-tooltip>

@@ -1,7 +1,7 @@
 <template>
     <div class="pa-4">
-        <h5 class="mb-4">Visualization</h5>
-        <label class="field__label color text-small-text"> Graph</label>
+        <h5 class="mb-4">{{ $t('visualization') }}</h5>
+        <label class="field__label color text-small-text"> {{ $t('graph') }}</label>
         <v-select
             v-model="selectedChart"
             :items="chartTypes"
@@ -16,8 +16,8 @@
             :height="36"
             hide-details="auto"
         />
-        <div v-if="selectedChart !== 'No Visualization'" class="mt-4">
-            <label class="field__label color text-small-text"> Select result set</label>
+        <div v-if="selectedChart !== $t('noVisualization')" class="mt-4">
+            <label class="field__label color text-small-text"> {{ $t('selectResultSet') }}</label>
             <v-select
                 v-model="resSet"
                 :items="resultSets"
@@ -38,7 +38,7 @@
             <template v-if="resSet">
                 <!-- Don't show axis inputs if result set is empty -->
                 <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 color text-small-text">
-                    Empty set
+                    {{ $t('emptySet') }}
                 </div>
                 <template v-for="a in ['x', 'y']" v-else>
                     <div :key="a" class="mt-2">
@@ -95,9 +95,9 @@ export default {
 
     data() {
         return {
-            selectedChart: 'No Visualization',
+            selectedChart: this.$t('noVisualization'),
             chartTypes: [
-                'No Visualization',
+                this.$t('noVisualization'),
                 'Line',
                 'Scatter',
                 'Bar - Vertical',

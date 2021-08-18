@@ -12,36 +12,38 @@
                 :key="wke.id"
                 :href="`#${wke.id}`"
                 class="pa-0 tab-btn text-none"
-                active-class="tab-btn--active font-weight-medium"
-                :ripple="activeWkeID !== wke.id"
             >
-                <div
-                    style="min-width:160px"
-                    class="fill-height d-flex align-center justify-space-between px-3"
-                    @click.prevent="activeWkeID === wke.id ? (editableTabName = true) : () => null"
+                <v-tooltip
+                    :disabled="!Boolean(wke.curr_cnct_resource.name)"
+                    top
+                    transition="slide-x-transition"
+                    content-class="shadow-drop"
                 >
-                    <v-text-field
-                        v-if="activeWkeID === wke.id && editableTabName"
-                        :value="wke.name"
-                        autofocus
-                        height="32"
-                        class="std tab-name-input ma-0 pa-0"
-                        hide-details
-                        @input="v => changeWkeName({ wke, v })"
-                        @blur="editableTabName = false"
-                    />
-                    <truncate-string v-else :text="wke.name" :maxWidth="112" />
-
-                    <v-btn
-                        v-if="worksheets_arr.length > 1"
-                        class="ml-1 del-wke-btn"
-                        icon
-                        x-small
-                        @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
-                    >
-                        <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
-                    </v-btn>
-                </div>
+                    <template v-slot:activator="{ on }">
+                        <div
+                            style="min-width:160px"
+                            class="fill-height d-flex align-center justify-space-between px-3"
+                            v-on="on"
+                        >
+                            <span class="d-inline-block text-truncate" style="width:112px">
+                                {{ wke.name }}
+                            </span>
+                            <v-btn
+                                v-if="worksheets_arr.length > 1"
+                                class="ml-1 del-wke-btn"
+                                icon
+                                x-small
+                                @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                            >
+                                <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
+                            </v-btn>
+                        </div>
+                    </template>
+                    <span class="color text-text py-2 px-4">
+                        {{ $t('connectedTo') }}
+                        {{ $typy(wke, 'curr_cnct_resource.name').safeString }}
+                    </span>
+                </v-tooltip>
             </v-tab>
             <v-btn
                 :disabled="!cnct_resources.length"
@@ -98,7 +100,6 @@ export default {
     data() {
         return {
             wkeNavHeight: 32,
-            editableTabName: false,
         }
     },
     computed: {
@@ -121,16 +122,10 @@ export default {
             ADD_NEW_WKE: 'query/ADD_NEW_WKE',
             DELETE_WKE: 'query/DELETE_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
-            UPDATE_WKE: 'query/UPDATE_WKE',
         }),
         addNewWs() {
             this.ADD_NEW_WKE()
             this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
-        },
-        changeWkeName({ wke, v }) {
-            let newWke = this.$help.lodash.cloneDeep(wke)
-            newWke.name = v
-            this.UPDATE_WKE({ idx: this.worksheets_arr.indexOf(wke), wke: newWke })
         },
     },
 }
@@ -151,9 +146,6 @@ export default {
             }
         }
     }
-}
-.tab-btn--active {
-    cursor: text !important;
 }
 ::v-deep .tab-name-input {
     height: 100%;

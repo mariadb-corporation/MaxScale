@@ -210,14 +210,6 @@ export default {
             this.handleSetSidebarPct()
         },
     },
-    async created() {
-        /*For development testing */
-        if (process.env.NODE_ENV === 'development')
-            this.SET_QUERY_TXT({
-                ...this.query_txt,
-                all: 'SELECT * FROM test.randStr; SELECT * FROM mysql.help_topic',
-            })
-    },
     activated() {
         this.$help.doubleRAF(() => {
             this.handleSetSidebarPct()

@@ -86,9 +86,11 @@
                             class="mt-2"
                             :entityName="selectedResourceType"
                             :items="resourceItems"
+                            :defaultItems="defSelectedRsrc"
                             clearable
                             showPlaceHolder
                             required
+                            :errorMessages="errRsrcMsg"
                             @get-selected-items="selectedResource = $event"
                         />
                     </v-col>
@@ -191,6 +193,7 @@ export default {
     name: 'connection-dialog',
     props: {
         value: { type: Boolean, required: true },
+        connOptions: { type: Array, required: true },
         handleSave: { type: Function, required: true },
         onCancel: { type: Function, required: true },
         onClose: { type: Function, required: true },
@@ -199,6 +202,7 @@ export default {
         return {
             selectedResourceType: '',
             selectedResource: [],
+            defSelectedRsrc: {},
             hasChanged: false,
             isPwdVisible: false,
             body: {
@@ -215,6 +219,7 @@ export default {
             },
             isFormValid: false,
             resourceTypes: ['servers', 'services', 'listeners'],
+            errRsrcMsg: '',
         }
     },
     computed: {
@@ -232,15 +237,40 @@ export default {
             },
         },
         resourceItems() {
-            return this.rc_target_names_map[this.selectedResourceType] || []
+            const selectedRsrcType = this.selectedResourceType
+            // Get list of resource name that have been connected
+            const connectedResourceNames = this.connOptions.reduce((acc, item) => {
+                if (item.type === selectedRsrcType) {
+                    acc.push(item.name)
+                }
+                return acc
+            }, [])
+
+            const allRsrcs = this.rc_target_names_map[selectedRsrcType] || []
+
+            // Keep only resources that have not been connected
+            const availRsrcs = allRsrcs.reduce(function(acc, rsrc) {
+                if (!connectedResourceNames.includes(rsrc.id)) {
+                    acc.push(rsrc)
+                }
+                return acc
+            }, [])
+            return availRsrcs
         },
         hasSavingErr() {
             return this.conn_err_state
         },
     },
     watch: {
-        selectedResourceType(v) {
-            if (v) this.handleResourceSelect(v)
+        async selectedResourceType(v) {
+            if (v) {
+                await this.handleResourceSelect(v)
+                if (this.resourceItems.length) {
+                    this.defSelectedRsrc = this.resourceItems[0]
+                    this.errRsrcMsg = ''
+                } else
+                    this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType: v })
+            }
         },
         isOpened(v) {
             // reset to initial state and bind this context
@@ -258,8 +288,11 @@ export default {
         async onSave() {
             const { id: resourceName = null } = this.selectedResource[0] || {}
             await this.handleSave({
-                target: resourceName,
-                ...this.body,
+                body: {
+                    target: resourceName,
+                    ...this.body,
+                },
+                resourceType: this.selectedResourceType,
             })
         },
     },

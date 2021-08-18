@@ -106,6 +106,8 @@ export default {
         lazyValidation: { type: Boolean, default: true },
         hasSavingErr: { type: Boolean, default: false },
         hasFormDivider: { type: Boolean, default: false },
+        // close dialog immediately, don't wait for submit
+        closeImmediate: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -135,6 +137,15 @@ export default {
         async keydownHandler() {
             if (this.isFormValid && this.hasChanged) await this.save()
         },
+        async closeCleanUp() {
+            this.closeDialog()
+            if (this.$refs.form) {
+                this.$refs.form.reset()
+                this.$refs.form.resetValidation()
+            }
+            // wait time out for loading animation
+            await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
+        },
         async save() {
             await this.$refs.form.validate()
             if (!this.isFormValid) {
@@ -146,16 +157,9 @@ export default {
                 })
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
+                if (this.closeImmediate) await this.closeCleanUp()
                 await this.onSave()
-                if (!this.hasSavingErr) {
-                    this.closeDialog()
-                    if (this.$refs.form) {
-                        this.$refs.form.reset()
-                        this.$refs.form.resetValidation()
-                    }
-                    // wait time out for loading animation
-                    await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
-                }
+                if (!this.hasSavingErr && !this.closeImmediate) await this.closeCleanUp()
             }
         },
     },

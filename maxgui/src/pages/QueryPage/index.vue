@@ -97,7 +97,7 @@ export default {
                         break
                     case '/404':
                         this.SET_SNACK_BAR_MESSAGE({
-                            text: ['Connection is not found, please reconnect'],
+                            text: [this.$t('info.notFoundConn')],
                             type: 'error',
                         })
                         await this.validatingConn()
