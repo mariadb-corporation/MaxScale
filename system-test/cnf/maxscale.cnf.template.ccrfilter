@@ -14,6 +14,7 @@ monitor_interval=1000
 [ccrfilter]
 type=filter
 module=ccrfilter
+options=ignorecase
 time=10
 ###count=3
 ###match=t2
