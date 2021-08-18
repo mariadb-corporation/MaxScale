@@ -71,28 +71,30 @@
                         :disabled="shouldDisableBtn"
                     />
                 </div>
-                <db-list-tree
-                    v-if="!is_validating_conn && curr_cnct_resource.id && !loading_db_tree"
-                    v-show="!is_sidebar_collapsed"
-                    class="schema-list-wrapper"
-                    @preview-data="
-                        schemaId =>
-                            handleFetchPreview({
-                                SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
-                                schemaId,
-                            })
-                    "
-                    @view-details="
-                        schemaId =>
-                            handleFetchPreview({
-                                SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                                schemaId,
-                            })
-                    "
-                    @load-children="handleLoadChildren"
-                    @use-db="useDb"
-                    v-on="$listeners"
-                />
+                <keep-alive>
+                    <db-list-tree
+                        v-if="curr_cnct_resource.id && !getLoadingDbTree"
+                        v-show="!is_sidebar_collapsed"
+                        class="schema-list-wrapper"
+                        @preview-data="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
+                                    schemaId,
+                                })
+                        "
+                        @view-details="
+                            schemaId =>
+                                handleFetchPreview({
+                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+                                    schemaId,
+                                })
+                        "
+                        @load-children="handleLoadChildren"
+                        @use-db="useDb"
+                        v-on="$listeners"
+                    />
+                </keep-alive>
             </div>
         </div>
     </div>
@@ -112,7 +114,7 @@
  * Public License.
  */
 import DbListTree from './DbListTree'
-import { mapState, mapActions, mapMutations } from 'vuex'
+import { mapState, mapActions, mapMutations, mapGetters } from 'vuex'
 export default {
     name: 'sidebar-container',
     components: {
@@ -121,11 +123,12 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            loading_db_tree: state => state.query.loading_db_tree,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
-            is_validating_conn: state => state.query.is_validating_conn,
+        }),
+        ...mapGetters({
+            getLoadingDbTree: 'query/getLoadingDbTree',
         }),
         searchSchema: {
             get() {
@@ -136,7 +139,7 @@ export default {
             },
         },
         shouldDisableBtn() {
-            return !this.curr_cnct_resource.id || this.loading_db_tree
+            return !this.curr_cnct_resource.id || this.getLoadingDbTree
         },
     },
     methods: {

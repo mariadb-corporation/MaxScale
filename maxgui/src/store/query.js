@@ -27,7 +27,6 @@ function connStates() {
  */
 function sidebarStates() {
     return {
-        loading_db_tree: false,
         is_sidebar_collapsed: false,
         search_schema: '',
         active_db: '',
@@ -121,8 +120,7 @@ export default {
         is_fullscreen: false,
         rc_target_names_map: {},
         // sidebar states
-        db_tree: [],
-        db_completion_list: [],
+        db_tree_map: [],
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -159,11 +157,11 @@ export default {
         SET_SEARCH_SCHEMA(state, payload) {
             patch_wke_property(state, { obj: { search_schema: payload }, scope: this })
         },
-        SET_LOADING_DB_TREE(state, payload) {
-            patch_wke_property(state, { obj: { loading_db_tree: payload }, scope: this })
-        },
-        SET_DB_TREE(state, payload) {
-            state.db_tree = payload
+        UPDATE_DB_TREE_MAP(state, { id, payload }) {
+            state.db_tree_map = {
+                ...state.db_tree_map,
+                ...{ [id]: { ...state.db_tree_map[id], ...payload } },
+            }
         },
         SET_ACTIVE_TREE_NODE(state, payload) {
             patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
@@ -175,9 +173,6 @@ export default {
         // editor mutations
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
-        },
-        SET_DB_CMPL_LIST(state, payload) {
-            state.db_completion_list = payload
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
@@ -391,6 +386,15 @@ export default {
                 const logger = this.vue.$logger('store-query-deleteInvalidConn')
                 logger.error(e)
             }
+        },
+
+        /**
+         * @param {Object} chosenConn  Chosen connection
+         */
+        async initialFetch({ dispatch }, chosenConn) {
+            await dispatch('reloadTreeNodes')
+            await dispatch('updateActiveDb')
+            dispatch('changeWkeName', chosenConn.name)
         },
         /**
          *
@@ -652,15 +656,20 @@ export default {
                 return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
-        async updateTreeNodes({ commit, dispatch, state }, node) {
+        async updateTreeNodes({ commit, dispatch, state, getters }, node) {
             try {
                 const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
                     node,
-                    db_tree: state.db_tree,
-                    cmpList: state.db_completion_list,
+                    db_tree: getters.getDbTreeData,
+                    cmpList: getters.getDbCmplList,
                 })
-                commit('SET_DB_TREE', new_db_tree)
-                commit('SET_DB_CMPL_LIST', new_cmp_list)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        data: new_db_tree,
+                        db_completion_list: new_cmp_list,
+                    },
+                })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-updateTreeNodes')
                 logger.error(e)
@@ -669,7 +678,12 @@ export default {
         async reloadTreeNodes({ commit, dispatch, state }) {
             try {
                 const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
-                commit('SET_LOADING_DB_TREE', true)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        loading_db_tree: true,
+                    },
+                })
                 const { db_tree, cmpList } = await dispatch('getDbs')
                 let tree = db_tree
                 let completionList = cmpList
@@ -685,11 +699,21 @@ export default {
                         if (completionList.length) completionList = new_cmp_list
                     }
                 }
-                commit('SET_DB_TREE', tree)
-                commit('SET_DB_CMPL_LIST', completionList)
-                commit('SET_LOADING_DB_TREE', false)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        loading_db_tree: false,
+                        data: tree,
+                        db_completion_list: completionList,
+                    },
+                })
             } catch (e) {
-                commit('SET_LOADING_DB_TREE', false)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        loading_db_tree: false,
+                    },
+                })
                 const logger = this.vue.$logger('store-query-reloadTreeNodes')
                 logger.error(e)
             }
@@ -833,6 +857,15 @@ export default {
                 logger.error(e)
             }
         },
+
+        changeWkeName({ state, getters, commit }, name) {
+            let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
+            newWke.name = name
+            commit('UPDATE_WKE', {
+                idx: state.worksheets_arr.indexOf(getters.getActiveWke),
+                wke: newWke,
+            })
+        },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
@@ -900,14 +933,23 @@ export default {
         },
     },
     getters: {
-        getDbCmplList: state => {
-            // remove duplicated labels
-            return uniqBy(state.db_completion_list, 'label')
-        },
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
-
+        // sidebar getters
+        getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},
+        getDbTreeData: (state, getters) => {
+            return getters.getCurrDbTree.data || []
+        },
+        getDbNodes: (state, getters) => {
+            return getters.getDbTreeData.map(node => ({ name: node.name, id: node.id }))
+        },
+        getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
+        getDbCmplList: (state, getters) => {
+            if (getters.getCurrDbTree.db_completion_list)
+                return uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
+            return []
+        },
         // Query result getters
         getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
         getLoadingQueryResult: (state, getters) => {

@@ -1,8 +1,8 @@
 <template>
     <!-- TODO: Virtual scroll treeview -->
-    <div v-if="db_tree.length">
+    <div v-if="getDbTreeData.length">
         <m-treeview
-            :items="db_tree"
+            :items="getDbTreeData"
             :search="$parent.searchSchema"
             :filter="filter"
             hoverable
@@ -102,7 +102,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
 export default {
     name: 'db-list-tree',
     data() {
@@ -133,7 +133,9 @@ export default {
         ...mapState({
             active_tree_node: state => state.query.active_tree_node,
             expanded_nodes: state => state.query.expanded_nodes,
-            db_tree: state => state.query.db_tree,
+        }),
+        ...mapGetters({
+            getDbTreeData: 'query/getDbTreeData',
         }),
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
@@ -155,31 +157,39 @@ export default {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
         },
-        expandedNodes: {
-            deep: true,
-            handler(v, oV) {
-                // Don't SET_EXPANDED_NODES when old length of expandedNodes is 0.
-                if (oV.length) {
-                    let nodes = this.minimizeNodes(v)
-                    //   The order is important which is used to reload the schema and update the tree
-                    //   Sort expandedNodes by level property
-                    nodes.sort((a, b) => a.level - b.level)
-                    // Auto collapse all expanded nodes if schema node is collapsed
-                    let validLevels = nodes.map(node => node.level)
-                    if (validLevels[0] === 0) this.SET_EXPANDED_NODES(nodes)
-                    else this.SET_EXPANDED_NODES([])
-                }
-            },
-        },
     },
-    created() {
+    activated() {
         this.expandedNodes = this.expanded_nodes
+        this.addExpandedNodesWatcher()
+    },
+    deactivated() {
+        this.rmExpandedNodesWatcher()
     },
     methods: {
         ...mapMutations({
             SET_ACTIVE_TREE_NODE: 'query/SET_ACTIVE_TREE_NODE',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
         }),
+        addExpandedNodesWatcher() {
+            this.rmExpandedNodesWatcher = this.$watch(
+                'expandedNodes',
+                (v, oV) => {
+                    const oldNodeIds = oV.map(node => node.id)
+                    const newNodeIds = v.map(node => node.id)
+                    if (!this.$help.lodash.isEqual(newNodeIds, oldNodeIds)) {
+                        let nodes = this.minimizeNodes(v)
+                        //   The order is important which is used to reload the schema and update the tree
+                        //   Sort expandedNodes by level property
+                        nodes.sort((a, b) => a.level - b.level)
+                        // Auto collapse all expanded nodes if schema node is collapsed
+                        let validLevels = nodes.map(node => node.level)
+                        if (validLevels[0] === 0) this.SET_EXPANDED_NODES(nodes)
+                        else this.SET_EXPANDED_NODES([])
+                    }
+                },
+                { deep: true }
+            )
+        },
         /**
          * @param {Array} nodes - array of nodes
          * @returns {Array} minimized nodes where each node is an object with id and type props

@@ -35,7 +35,7 @@
         >
             <v-list>
                 <v-list-item
-                    v-for="db in db_tree"
+                    v-for="db in getDbNodes"
                     :key="db.id"
                     dense
                     link
@@ -233,7 +233,6 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
-            db_tree: state => state.query.db_tree,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
@@ -241,6 +240,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingQueryResult: 'query/getLoadingQueryResult',
+            getDbNodes: 'query/getDbNodes',
         }),
     },
     methods: {
