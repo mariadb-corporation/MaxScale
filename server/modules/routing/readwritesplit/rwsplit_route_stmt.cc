@@ -1054,6 +1054,14 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
         }
     }
+    else if (cmd == MXS_COM_STMT_PREPARE)
+    {
+        // This is here to avoid a debug assertion in the ps_store_response call that is hit when we're locked
+        // to the master due to strict_multi_stmt or strict_sp_calls and the user executes a prepared
+        // statement. The previous PS ID is tracked in ps_store and asserted to be the same in
+        // ps_store_result.
+        m_qc.ps_store(buffer.get(), buffer.id());
+    }
 
     if (store)
     {

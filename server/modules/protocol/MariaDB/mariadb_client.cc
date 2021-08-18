@@ -1038,26 +1038,31 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
         m_session_data->history.clear();
         break;
 
-    default:
-        if (m_qc.target_is_all(info.target()))
-        {
-            buffer.set_id(m_next_id);
-            m_pending_cmd = buffer;     // Keep a copy for the session command history
-            should_record = true;
-
-            if (cmd == MXS_COM_STMT_PREPARE
-                || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
-            {
-                // This will silence the warnings about unknown PS IDs
-                m_qc.ps_store(buffer.get(), m_next_id);
-            }
-
-            if (++m_next_id == MAX_SESCMD_ID)
-            {
-                m_next_id = 1;
-            }
-        }
+    case MXS_COM_STMT_PREPARE:
+        should_record = true;
         break;
+
+    default:
+        should_record = m_qc.target_is_all(info.target());
+        break;
+    }
+
+    if (should_record)
+    {
+        buffer.set_id(m_next_id);
+        m_pending_cmd = buffer;     // Keep a copy for the session command history
+        should_record = true;
+
+        if (cmd == MXS_COM_STMT_PREPARE || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
+        {
+            // This will silence the warnings about unknown PS IDs
+            m_qc.ps_store(buffer.get(), m_next_id);
+        }
+
+        if (++m_next_id == MAX_SESCMD_ID)
+        {
+            m_next_id = 1;
+        }
     }
 
     return should_record;
