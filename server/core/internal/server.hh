@@ -289,7 +289,11 @@ public:
 
     void set_extra_port(int new_port) override;
 
-    uint64_t status() const override;
+    uint64_t status() const override
+    {
+        return m_status;
+    }
+
     void     set_status(uint64_t bit) override;
     void     clear_status(uint64_t bit) override;
     void     assign_status(uint64_t status) override;
@@ -451,7 +455,10 @@ public:
     ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server);
     ~ServerEndpoint() override;
 
-    mxs::Target* target() const override;
+    mxs::Target* target() const override
+    {
+        return m_server;
+    }
 
     bool connect() override;
 
