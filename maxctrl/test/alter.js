@@ -32,11 +32,9 @@ describe("Alter Commands", function () {
   });
 
   it("alters server with multiple parameters", function () {
-    return verifyCommand("alter server server1 port 1234 address 1.2.3.4", "servers/server1").then(function (
-      res
-    ) {
+    return verifyCommand("alter server server1 port 1234 priority 1", "servers/server1").then(function (res) {
       res.data.attributes.parameters.port.should.equal(1234);
-      res.data.attributes.parameters.address.should.equal("1.2.3.4");
+      res.data.attributes.parameters.priority.should.equal(1);
     });
   });
 
@@ -46,9 +44,9 @@ describe("Alter Commands", function () {
   });
 
   it("alters server with multiple key=value parameters", async function () {
-    var res = await verifyCommand("alter server server1 port=7654 address=4.3.2.1", "servers/server1");
+    var res = await verifyCommand("alter server server1 port=7654 priority=2", "servers/server1");
     res.data.attributes.parameters.port.should.equal(7654);
-    res.data.attributes.parameters.address.should.equal("4.3.2.1");
+    res.data.attributes.parameters.priority.should.equal(2);
   });
 
   it("will not alter server with bad parameters", function () {
