@@ -161,7 +161,7 @@ R"(\" RATE_LIMIT 3 30
             const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' "
                                                "IDENTIFIED VIA pam USING '%s';";
             auto create_user_query = mxb::string_printf(create_pam_user_fmt, pam_user, pam_config_name);
-            auto admin_conn = mxs.open_rwsplit_connection2();
+            auto admin_conn = mxs.open_rwsplit_connection2_nodb();
             admin_conn->cmd(create_user_query);
             auto grant_query = mxb::string_printf("GRANT SELECT on test.* TO '%s'@'%%';", pam_user);
             admin_conn->cmd(grant_query);

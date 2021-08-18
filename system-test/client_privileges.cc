@@ -52,7 +52,7 @@ void test_main(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
-    auto conn = mxs.open_rwsplit_connection2();
+    auto conn = mxs.open_rwsplit_connection2_nodb();
 
     auto db_scopeuser = conn->create_user(db_user, "%", db_pass);
     auto table_scopeuser = conn->create_user(table_user, "%", table_pass);
