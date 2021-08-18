@@ -275,7 +275,7 @@ DECLARE_ATTR_RULE(show_slave, "show slave", ShowType);
 DECLARE_ATTR_RULE(show_all_slaves, "show all slaves", ShowType);
 DECLARE_ATTR_RULE(show_binlogs, "binary logs", ShowType);
 DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
-DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINLOGS or VARIABLES", Show);
+DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINARY LOGS or VARIABLES LIKE '...'", Show);
 DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_RULE(global_or_session, "GLOBAL or SESSION");
