@@ -142,8 +142,8 @@ public:
 
             if (this->options != 0)
             {
-                this->match.set_options(options);
-                this->ignore.set_options(options);
+                this->match = mxs::config::RegexValue(this->match.text, this->options);
+                this->ignore = mxs::config::RegexValue(this->ignore.text, this->options);
             }
         }
 
