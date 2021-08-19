@@ -244,9 +244,9 @@ const session_fields = [
     description: "How long the session has been idle, in seconds",
   },
   {
-    name: 'Client TLS Cipher',
-    path: 'attributes.client.cipher',
-    description: 'Client TLS cipher'
+    name: "Client TLS Cipher",
+    path: "attributes.client.cipher",
+    description: "Client TLS cipher",
   },
   {
     name: "Connections",
@@ -540,21 +540,39 @@ const qc_cache_fields = [
   },
 ];
 
+// Note: These are only used as the headings for the table and to generate the field descriptions. This is why the "path" field is not defined.
 const show_dbusers_fields = [
   {
-    name: "Users",
-    path: "attributes.authenticator_diagnostics[]",
-    description: "The list of users",
+    name: "User",
+    description: "The user name of the account",
   },
   {
-    name: "Listener",
-    path: "id",
-    description: "Listener name",
+    name: "Host",
+    description: "The host of the account",
   },
   {
-    name: "Authenticator",
-    path: "attributes.parameters.authenticator",
-    description: "The authenticator used by the listener",
+    name: "Plugin",
+    description: "Authentication plugin",
+  },
+  {
+    name: "TLS",
+    description: "Whether TLS is required from this user",
+  },
+  {
+    name: "Super",
+    description: "Does the user have a SUPER grant",
+  },
+  {
+    name: "Global",
+    description: "Does the user have global database access",
+  },
+  {
+    name: "Proxy",
+    description: "Whether this is a proxy user",
+  },
+  {
+    name: "Role",
+    description: "The default role for this user",
   },
 ];
 
@@ -935,18 +953,35 @@ exports.builder = function (yargs) {
       "Show database users of the service",
       function (yargs) {
         return yargs
-          .epilog("Show information about the database users of the service")
+          .epilog(
+            "Show information about the database users of the service." +
+              fieldDescriptions(show_dbusers_fields)
+          )
           .wrap(null)
           .usage("Usage: show dbusers <service>");
       },
       function (argv) {
-        maxctrl(argv, function (host) {
-          return getSubCollection(
-            host,
-            "services/" + argv.service,
-            "attributes.listeners[]",
-            show_dbusers_fields
-          );
+        maxctrl(argv, async function (host) {
+          var res = await getJson(host, "services/" + argv.service);
+
+          var table = [];
+
+          if (res.data.attributes.users) {
+            for (var user of res.data.attributes.users) {
+              table.push([
+                user.user,
+                user.host,
+                user.plugin,
+                user.ssl,
+                user.super_priv,
+                user.global_priv,
+                user.proxy_priv,
+                user.default_role,
+              ]);
+            }
+          }
+
+          return rawCollectionAsTable(table, show_dbusers_fields);
         });
       }
     )

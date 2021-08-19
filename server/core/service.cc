@@ -931,8 +931,9 @@ static json_t* service_listener_json_data(const char* host, const SERVICE* servi
     return NULL;
 }
 
-json_t* service_attributes(const char* host, const SERVICE* service)
+json_t* service_attributes(const char* host, const SERVICE* svc)
 {
+    const Service* service = static_cast<const Service*>(svc);
     json_t* attr = json_object();
 
     json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
@@ -966,6 +967,14 @@ json_t* service_attributes(const char* host, const SERVICE* service)
     /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
     json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(host, service));
+
+    if (const auto* manager = service->user_account_manager())
+    {
+        if (json_t* users = manager->users_to_json())
+        {
+            json_object_set_new(attr, "users", users);
+        }
+    }
 
     return attr;
 }
@@ -1687,6 +1696,11 @@ void Service::decref()
 }
 
 UserAccountManager* Service::user_account_manager()
+{
+    return m_usermanager.get();
+}
+
+const UserAccountManager* Service::user_account_manager() const
 {
     return m_usermanager.get();
 }
