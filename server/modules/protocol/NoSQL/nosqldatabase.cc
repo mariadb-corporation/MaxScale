@@ -77,13 +77,11 @@ GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
     return execute_command(std::move(sCommand));
 }
 
-GWBUF* nosql::Database::handle_msg(GWBUF* pRequest,
-                                   const nosql::Msg& req,
-                                   const bsoncxx::document::view& doc)
+GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
 {
     mxb_assert(is_ready());
 
-    return execute(pRequest, req, doc, req.arguments());
+    return execute(pRequest, req);
 }
 
 GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)

@@ -2431,7 +2431,7 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
             mxb_assert(!m_sDatabase.get());
             m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
 
-            pResponse = m_sDatabase->handle_msg(pRequest, req, doc);
+            pResponse = m_sDatabase->handle_msg(pRequest, req);
 
             if (pResponse)
             {

@@ -33,8 +33,6 @@ public:
 
         if (!command.empty())
         {
-            string name = static_cast<string>(command.begin()->key());
-
             DocumentArguments arguments;
             unique_ptr<OpMsgCommand> sCommand;
 

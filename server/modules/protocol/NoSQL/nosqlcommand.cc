@@ -98,23 +98,13 @@ template<class ConcreteCommand>
 unique_ptr<OpMsgCommand> create_command(const string& name,
                                         Database* pDatabase,
                                         GWBUF* pRequest,
-                                        const Query* pQuery,
-                                        const Msg* pMsg,
+                                        const Msg& msg,
                                         const bsoncxx::document::view& doc,
                                         const OpMsgCommand::DocumentArguments& arguments)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
-    if (pQuery)
-    {
-        mxb_assert(!pMsg);
-        sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, *pQuery, doc, arguments));
-    }
-    else
-    {
-        mxb_assert(pMsg);
-        sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, *pMsg, doc, arguments));
-    }
+    sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, msg, doc, arguments));
 
     return sCommand;
 }
@@ -122,8 +112,7 @@ unique_ptr<OpMsgCommand> create_command(const string& name,
 using CreatorFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                      Database* pDatabase,
                                                      GWBUF* pRequest,
-                                                     const Query* pQuery,
-                                                     const Msg* pMsg,
+                                                     const Msg& msg,
                                                      const bsoncxx::document::view& doc,
                                                      const OpMsgCommand::DocumentArguments& arguments);
 
@@ -917,6 +906,14 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
+                                           const nosql::Msg& msg)
+{
+    return get(pDatabase, pRequest, msg, msg.document(), msg.arguments());
+}
+
+//static
+unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
+                                           GWBUF* pRequest,
                                            const nosql::Msg& msg,
                                            const bsoncxx::document::view& doc,
                                            const DocumentArguments& arguments)
@@ -926,7 +923,7 @@ unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
     const string& name = p.first;
     CreatorFunction create = p.second.create;
 
-    return create(name, pDatabase, pRequest, nullptr, &msg, doc, arguments);
+    return create(name, pDatabase, pRequest, msg, doc, arguments);
 }
 
 GWBUF* OpMsgCommand::create_empty_response() const
