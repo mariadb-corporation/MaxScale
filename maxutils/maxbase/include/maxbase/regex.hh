@@ -135,16 +135,6 @@ public:
     }
 
     /**
-     * Set PCRE2 options
-     *
-     * @param options The options to set
-     */
-    void set_options(uint32_t options)
-    {
-        m_options = options;
-    }
-
-    /**
      * Get PCRE2 options
      *
      * @return Current PCRE2 options

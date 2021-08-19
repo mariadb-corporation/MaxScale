@@ -1395,6 +1395,12 @@ RegexValue ParamRegex::create_default(const char* zRegex)
     return value;
 }
 
+RegexValue::RegexValue(const std::string& text, uint32_t options)
+{
+    MXB_AT_DEBUG(bool rv = ) regex_from_string(text.c_str(), options, this);
+    mxb_assert(rv);
+}
+
 /**
  * ParamServer
  */

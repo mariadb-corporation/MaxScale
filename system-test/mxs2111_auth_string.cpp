@@ -18,7 +18,8 @@ int main(int argc, char** argv)
             test.maxscale->disconnect();
         };
 
-    batch({"CREATE USER 'test' IDENTIFIED BY 'test'",
+    batch({"DROP USER IF EXISTS 'test'",
+           "CREATE USER 'test' IDENTIFIED BY 'test'",
            "GRANT SELECT ON *.* TO test",
            "SET PASSWORD FOR 'test' = PASSWORD('test')"});
 

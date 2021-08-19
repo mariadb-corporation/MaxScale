@@ -116,6 +116,27 @@ int main(int argc, char* argv[])
     test->add_result(is_master(test->maxscale->conn_rwsplit[0]),
                      "Master should NOT reply to the fifth SELECT");
 
+    test->tprintf("Test that options=ignorecase works");
+
+    test->maxscale->close_maxscale_connections();
+    test->maxscale->ssh_node("sed -i -e 's/match=.*/match=INSERT/' /etc/maxscale.cnf", true);
+    test->maxscale->restart_maxscale();
+    test->maxscale->connect_maxscale();
+
+    for (const char* query : {"insert into test.t2 values (1)", "INSERT INTO test.t2 VALUES (1)"})
+    {
+        test->try_query(test->maxscale->conn_rwsplit[0], "%s", query);
+        test->add_result(!is_master(test->maxscale->conn_rwsplit[0]),
+                         "Master should reply to the first SELECT");
+        test->add_result(!is_master(test->maxscale->conn_rwsplit[0]),
+                         "Master should reply to the second SELECT");
+        test->add_result(!is_master(test->maxscale->conn_rwsplit[0]),
+                         "Master should reply to the third SELECT");
+        test->add_result(is_master(test->maxscale->conn_rwsplit[0]),
+                         "Master should NOT reply to the fourth SELECT");
+        test->add_result(is_master(test->maxscale->conn_rwsplit[0]),
+                         "Master should NOT reply to the fifth SELECT");
+    }
 
     test->tprintf("Change test setup for `count` and `ignore`, expects the same "
                   "results as previous test.");
