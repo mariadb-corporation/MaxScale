@@ -342,31 +342,19 @@ export default {
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
-                const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-
-                const validCnctResources = state.cnct_resources.filter(rsrc =>
-                    validConnIds.includes(rsrc.id)
-                )
-                /**
-                 * deleteInvalidConn should be called before calling SET_CNCT_RESOURCES
-                 * as deleteInvalidConn use current state.cnct_resources to get invalid cnct resources
-                 */
-                dispatch('deleteInvalidConn', validCnctResources)
-                commit('SET_CNCT_RESOURCES', validCnctResources)
-                if (state.curr_cnct_resource.id) {
-                    let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
-                    if (!activeConnState) {
-                        this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
-                        dispatch('resetWkeStates', state.curr_cnct_resource.id)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.notFoundConn')],
-                                type: 'error',
-                            },
-                            { root: true }
-                        )
-                    }
+                if (resConnIds.length === 0) {
+                    dispatch('resetAllWkeStates')
+                    commit('SET_CNCT_RESOURCES', [])
+                } else {
+                    const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
+                    const validCnctResources = state.cnct_resources.filter(rsrc =>
+                        validConnIds.includes(rsrc.id)
+                    )
+                    const invalidCnctResources = state.cnct_resources.filter(
+                        rsrc => !validCnctResources.includes(rsrc)
+                    )
+                    dispatch('deleteInvalidConn', invalidCnctResources)
+                    commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
                 commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
@@ -374,18 +362,12 @@ export default {
                 logger.error(e)
             }
         },
-        deleteInvalidConn({ state, dispatch }, validCnctResources) {
+        deleteInvalidConn({ dispatch }, invalidCnctResources) {
             try {
-                const invalidCnctResources = this.vue.$help.lodash.xorWith(
-                    state.cnct_resources,
-                    validCnctResources,
-                    this.vue.$help.lodash.isEqual
-                )
-                if (invalidCnctResources.length)
-                    invalidCnctResources.forEach(id => {
-                        this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('resetWkeStates', id)
-                    })
+                invalidCnctResources.forEach(id => {
+                    this.vue.$help.deleteCookie(`conn_id_body_${id}`)
+                    dispatch('resetWkeStates', id)
+                })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-deleteInvalidConn')
                 logger.error(e)
@@ -895,6 +877,19 @@ export default {
             commit('UPDATE_DB_TREE_MAP', payload)
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
+        },
+        resetAllWkeStates({ state, commit }) {
+            for (const [idx, targetWke] of state.worksheets_arr.entries()) {
+                const wke = {
+                    ...targetWke,
+                    ...connStates(),
+                    ...sidebarStates(),
+                    ...resultStates(),
+                    ...toolbarStates(),
+                    name: 'WORKSHEET',
+                }
+                commit('UPDATE_WKE', { idx, wke })
+            }
         },
         /**
          * Call this action when disconnect a connection to
