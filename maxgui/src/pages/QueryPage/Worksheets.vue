@@ -50,7 +50,7 @@
                                 class="ml-1 del-wke-btn"
                                 icon
                                 x-small
-                                @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                                @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                             >
                                 <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
                             </v-btn>
@@ -102,7 +102,7 @@
  * Public License.
  */
 
-import { mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
 import ToolbarContainer from './ToolbarContainer'
 export default {
@@ -138,8 +138,10 @@ export default {
     methods: {
         ...mapMutations({
             ADD_NEW_WKE: 'query/ADD_NEW_WKE',
-            DELETE_WKE: 'query/DELETE_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
+        }),
+        ...mapActions({
+            handleDeleteWke: 'query/handleDeleteWke',
         }),
         addNewWs() {
             this.ADD_NEW_WKE()

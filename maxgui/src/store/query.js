@@ -158,10 +158,12 @@ export default {
             patch_wke_property(state, { obj: { search_schema: payload }, scope: this })
         },
         UPDATE_DB_TREE_MAP(state, { id, payload }) {
-            state.db_tree_map = {
-                ...state.db_tree_map,
-                ...{ [id]: { ...state.db_tree_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.db_tree_map, id)
+            else
+                state.db_tree_map = {
+                    ...state.db_tree_map,
+                    ...{ [id]: { ...state.db_tree_map[id], ...payload } },
+                }
         },
         SET_ACTIVE_TREE_NODE(state, payload) {
             patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
@@ -204,22 +206,28 @@ export default {
             patch_wke_property(state, { obj: { curr_query_mode: payload }, scope: this })
         },
         UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
-            state.prvw_data_map = {
-                ...state.prvw_data_map,
-                ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.prvw_data_map, id)
+            else
+                state.prvw_data_map = {
+                    ...state.prvw_data_map,
+                    ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
+                }
         },
         UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
-            state.prvw_data_details_map = {
-                ...state.prvw_data_details_map,
-                ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.prvw_data_details_map, id)
+            else
+                state.prvw_data_details_map = {
+                    ...state.prvw_data_details_map,
+                    ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
+                }
         },
         UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
-            state.query_results_map = {
-                ...state.query_results_map,
-                ...{ [id]: { ...state.query_results_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.query_results_map, id)
+            else
+                state.query_results_map = {
+                    ...state.query_results_map,
+                    ...{ [id]: { ...state.query_results_map[id], ...payload } },
+                }
         },
 
         // worksheet mutations
@@ -307,8 +315,7 @@ export default {
                         )
 
                     commit('DELETE_CNCT_RESOURCE', targetCnctResource)
-                    dispatch('emptyQueryResult', cnctId)
-                    dispatch('resetWkeStates', { cnctId: cnctId })
+                    dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
@@ -319,7 +326,6 @@ export default {
             try {
                 const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
                 for (let i = 0; i < cnctResources.length; i++) {
-                    dispatch('emptyQueryResult', cnctResources[i].id)
                     await dispatch('disconnect', {
                         showSnackbar: false,
                         id: cnctResources[i].id,
@@ -351,8 +357,7 @@ export default {
                     let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
                     if (!activeConnState) {
                         this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
-                        dispatch('emptyQueryResult', state.curr_cnct_resource.id)
-                        dispatch('resetWkeStates', { cnctId: state.curr_cnct_resource.id })
+                        dispatch('resetWkeStates', state.curr_cnct_resource.id)
                         commit(
                             'SET_SNACK_BAR_MESSAGE',
                             {
@@ -379,8 +384,7 @@ export default {
                 if (invalidCnctResources.length)
                     invalidCnctResources.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('emptyQueryResult', id)
-                        dispatch('resetWkeStates', { cnctId: id })
+                        dispatch('resetWkeStates', id)
                     })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-deleteInvalidConn')
@@ -395,6 +399,11 @@ export default {
             await dispatch('reloadTreeNodes')
             await dispatch('updateActiveDb')
             dispatch('changeWkeName', chosenConn.name)
+        },
+        handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
+            const targetWke = state.worksheets_arr[wkeIdx]
+            dispatch('releaseMemory', targetWke.id)
+            commit('DELETE_WKE', wkeIdx)
         },
         /**
          *
@@ -866,6 +875,37 @@ export default {
                 wke: newWke,
             })
         },
+        releaseMemory({ commit }, wkeId) {
+            const payload = { id: wkeId }
+            commit('UPDATE_QUERY_RESULTS_MAP', payload)
+            commit('UPDATE_DB_TREE_MAP', payload)
+            commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
+            commit('UPDATE_PRVW_DATA_MAP', payload)
+        },
+        /**
+         * Call this action when disconnect a connection to
+         * clear the state of the worksheet having that connection to its initial state
+         */
+        resetWkeStates({ state, commit, dispatch }, cnctId) {
+            const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
+            dispatch('releaseMemory', targetWke.id)
+            const idx = state.worksheets_arr.indexOf(targetWke)
+            // reset everything to initial state except editorStates()
+            const wke = {
+                ...targetWke,
+                ...connStates(),
+                ...sidebarStates(),
+                ...resultStates(),
+                ...toolbarStates(),
+                name: 'WORKSHEET',
+            }
+            commit('UPDATE_WKE', { idx, wke })
+            /**
+             * if connection id to be deleted is equal to current connected
+             * resource of active worksheet, update standalone wke states
+             */
+            if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
+        },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
@@ -890,46 +930,6 @@ export default {
                     total_duration: 0,
                 },
             })
-        },
-        /**
-         * Call this action when disconnect a connection to
-         * clear the state of the worksheet having that connection to its initial state
-         */
-        resetWkeStates({ state, commit }, { cnctId }) {
-            const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
-            const idx = state.worksheets_arr.indexOf(targetWke)
-            // reset everything to initial state except editorStates()
-            const wke = {
-                ...targetWke,
-                ...connStates(),
-                ...sidebarStates(),
-                ...resultStates(),
-                ...toolbarStates(),
-                name: 'WORKSHEET',
-            }
-            commit('UPDATE_WKE', { idx, wke })
-            /**
-             * if connection id to be deleted is equal to current connected
-             * resource of active worksheet, update standalone wke states
-             */
-            if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
-        },
-        /**
-         * Call this action when a connection is disconnected
-         * @param {Number} cnctId - Worksheet connection id
-         */
-        emptyQueryResult({ state, commit }, cnctId) {
-            const wke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
-            if (wke)
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: wke.id,
-                    payload: {
-                        loading_query_result: false,
-                        results: {},
-                        request_sent_time: 0,
-                        total_duration: 0,
-                    },
-                })
         },
     },
     getters: {
