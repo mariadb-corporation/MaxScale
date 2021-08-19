@@ -393,7 +393,13 @@ public:
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
             mxb_assert(gwbuf_is_contiguous(m_pStmt));
-            m_canonical = maxscale::extract_sql(pStmt);
+
+            char* psql;
+            int length;
+            modutil_extract_SQL(pStmt, &psql, &length);
+            m_canonical.resize(length);
+            std::memcpy((void*)m_canonical.data(), psql, length);
+
             maxsimd::get_canonical(&m_canonical, &this_thread.markers);
 
             if (modutil_is_SQL_prepare(pStmt))
