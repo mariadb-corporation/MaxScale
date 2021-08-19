@@ -171,8 +171,8 @@ bool QlaInstance::Settings::post_configure(const std::map<std::string, mxs::Conf
     write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
     write_stdout_log = (log_file_types & LOG_FILE_STDOUT);
     session_data_flags = log_file_data_flags & ~LOG_DATA_SESSION;
-    exclude.set_options(options);
-    match.set_options(options);
+    exclude = mxs::config::RegexValue(exclude.pattern(), options);
+    match = mxs::config::RegexValue(match.pattern(), options);
     return m_instance->post_configure();
 }
 

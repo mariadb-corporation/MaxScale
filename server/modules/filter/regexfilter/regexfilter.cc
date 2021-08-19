@@ -223,7 +223,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         return false;
     }
 
-    m_v.match.set_options(m_v.options);
+    m_v.match = mxs::config::RegexValue(m_v.match.pattern(), m_v.options);
     m_values.assign(m_v);
     return true;
 }

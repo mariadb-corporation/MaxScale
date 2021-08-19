@@ -226,7 +226,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
             // Unknown PS ID, can't route this query
             std::stringstream ss;
             ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
-               << ") for " << STRPACKETTYPE(info.command()) << "given to MaxScale";
+               << ") for " << STRPACKETTYPE(info.command()) << " given to MaxScale";
             err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
         }
         else
@@ -1053,6 +1053,14 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             info.target = target;
             MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
         }
+    }
+    else if (cmd == MXS_COM_STMT_PREPARE)
+    {
+        // This is here to avoid a debug assertion in the ps_store_response call that is hit when we're locked
+        // to the master due to strict_multi_stmt or strict_sp_calls and the user executes a prepared
+        // statement. The previous PS ID is tracked in ps_store and asserted to be the same in
+        // ps_store_result.
+        m_qc.ps_store(buffer.get(), buffer.id());
     }
 
     if (store)

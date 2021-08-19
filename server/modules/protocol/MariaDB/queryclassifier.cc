@@ -972,6 +972,11 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     {
         command = mxs_mysql_get_command(pBuffer);
 
+        if (qc_mysql_is_ps_command(command))
+        {
+            stmt_id = ps_id_internal_get(pBuffer);
+        }
+
         /**
          * If the session is inside a read-only transaction, we trust that the
          * server acts properly even when non-read-only queries are executed.
@@ -1042,8 +1047,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
             else if (qc_mysql_is_ps_command(command))
             {
-                stmt_id = ps_id_internal_get(pBuffer);
-
                 if (const auto* ps = m_sPs_manager->get(stmt_id))
                 {
                     type_mask = ps->type;

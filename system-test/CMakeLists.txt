@@ -900,6 +900,9 @@ add_test_executable(mxs3617_lost_packets.cc mxs3617_lost_packets replication LAB
 # MXS-3623: Race condition in COM_CHANGE_USER handling
 add_test_executable(mxs3623_persistent_change_user.cc mxs3623_persistent_change_user mxs3623_persistent_change_user LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3458: Prepared statements fail if strict_sp_calls is enabled
+add_test_executable(mxs3458_ps_with_strict_sp.cc mxs3458_ps_with_strict_sp mxs3458_ps_with_strict_sp LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

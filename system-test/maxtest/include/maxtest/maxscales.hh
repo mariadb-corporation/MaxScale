@@ -231,7 +231,21 @@ public:
      */
     MYSQL* open_rwsplit_connection(const std::string& db = "test");
 
-    SMariaDB open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB open_rwsplit_connection2(const std::string& db = "test");
+
+    /**
+     * Same as above except no default database.
+     *
+     * @return Connection object
+     */
+    SMariaDB open_rwsplit_connection2_nodb();
+
+    /**
+     * Try to open an RWSplit-connection using the given database. Failure is not a test error.
+     *
+     * @param db Database to connect to
+     * @return Connection object. Call 'is_open' to check success.
+     */
     SMariaDB try_open_rwsplit_connection(const std::string& db = "");
     SMariaDB try_open_rwsplit_connection(const std::string& user, const std::string& pass,
                                          const std::string& db = "");

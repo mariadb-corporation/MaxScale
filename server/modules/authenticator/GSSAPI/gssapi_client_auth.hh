@@ -26,12 +26,10 @@ public:
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
 private:
-    void copy_client_information(GWBUF* buffer);
-    bool store_client_token(MYSQL_session* session, GWBUF* buffer);
-    bool validate_gssapi_token(uint8_t* token, size_t len, char** output);
-    bool validate_user(MYSQL_session* session, const char* princ,
-                       const mariadb::UserEntry* entry);
-    GWBUF* create_auth_change_packet();
+    void store_client_token(MYSQL_session* session, GWBUF* buffer);
+    bool validate_gssapi_token(MYSQL_session* ses, const mariadb::UserEntry* entry);
+
+    mxs::Buffer create_auth_change_packet();
 
     enum class State
     {

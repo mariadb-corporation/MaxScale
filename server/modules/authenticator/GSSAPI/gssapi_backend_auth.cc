@@ -29,9 +29,7 @@ mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
     mxs::Buffer rval(buflen);
     auto* ptr = rval.data();
-    mariadb::set_byte3(ptr, auth_token_len);
-    ptr += 3;
-    *ptr++ = m_sequence;
+    ptr = mariadb::write_header(ptr, auth_token_len, m_sequence);
     if (auth_token_len > 0)
     {
         memcpy(ptr, auth_token.data(), auth_token_len);

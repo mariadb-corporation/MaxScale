@@ -275,8 +275,8 @@ CCRSession::CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instan
 {
     if (int options = m_instance.config().options.get())
     {
-        m_match.set_options(options);
-        m_ignore.set_options(options);
+        m_match = mxs::config::RegexValue(m_match.pattern(), options);
+        m_ignore = mxs::config::RegexValue(m_ignore.pattern(), options);
     }
 }
 
@@ -357,7 +357,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
             {
                 queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
                 filter->m_stats.n_add_time++;
-                MXS_INFO("%.0f seconds left", dt);
+                MXS_INFO("%.0f seconds left", m_time.count() - dt);
             }
         }
     }

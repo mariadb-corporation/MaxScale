@@ -19,7 +19,7 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 /** Report GSSAPI errors */
-void report_error(OM_uint32 major, OM_uint32 minor);
+void report_error(OM_uint32 major, OM_uint32 minor, const char* failed_func);
 
 class GSSAPIAuthenticatorModule : public mariadb::AuthenticatorModule
 {
