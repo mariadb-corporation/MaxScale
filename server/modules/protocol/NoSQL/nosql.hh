@@ -487,7 +487,9 @@ class Packet
 {
 public:
     Packet(const Packet&) = default;
+    Packet(Packet&& rhs) = default;
     Packet& operator = (const Packet&) = default;
+    Packet& operator = (Packet&&) = default;
 
     Packet(const uint8_t* pData, const uint8_t* pEnd)
         : m_pEnd(pEnd)
@@ -675,6 +677,7 @@ class Query final : public Packet
 {
 public:
     Query(const Packet& packet);
+    Query(Query&& rhs) = default;
 
     uint32_t flags() const
     {
@@ -710,9 +713,6 @@ public:
     {
         return m_fields;
     }
-
-    Query(const Query&) = default;
-    Query& operator = (const Query&) = default;
 
     std::ostream& out(std::ostream& o) const override
     {
@@ -805,9 +805,8 @@ public:
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
     Msg(const Packet& packet);
-
-    Msg(const Msg&) = default;
-    Msg& operator = (const Msg&) = default;
+    Msg(const Msg& rhs) = default;
+    Msg(Msg&& rhs) = default;
 
     bool checksum_present() const
     {
@@ -976,8 +975,7 @@ private:
     GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
     GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
-
-    GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
+    GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
     State              m_state { READY };
     Context            m_context;

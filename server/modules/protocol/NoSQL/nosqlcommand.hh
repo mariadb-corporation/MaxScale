@@ -282,12 +282,24 @@ public:
     OpMsgCommand(const std::string& name,
                  Database* pDatabase,
                  GWBUF* pRequest,
-                 const nosql::Msg& req,
+                 nosql::Msg&& req)
+        : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
+        , m_name(name)
+        , m_req(std::move(req))
+        , m_doc(m_req.document())
+        , m_arguments(m_req.arguments())
+    {
+    }
+
+    OpMsgCommand(const std::string& name,
+                 Database* pDatabase,
+                 GWBUF* pRequest,
+                 nosql::Msg&& req,
                  const bsoncxx::document::view& doc,
                  const DocumentArguments& arguments)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
         , m_name(name)
-        , m_req(req)
+        , m_req(std::move(req))
         , m_doc(doc)
         , m_arguments(arguments)
     {
@@ -295,11 +307,11 @@ public:
 
     static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
                                              GWBUF* pRequest,
-                                             const nosql::Msg& req);
+                                             nosql::Msg&& req);
 
     static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
                                              GWBUF* pRequest,
-                                             const nosql::Msg& req,
+                                             nosql::Msg&& req,
                                              const bsoncxx::document::view& doc,
                                              const DocumentArguments& arguments);
 
