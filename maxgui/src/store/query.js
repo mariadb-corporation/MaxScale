@@ -30,7 +30,6 @@ function sidebarStates() {
         is_sidebar_collapsed: false,
         search_schema: '',
         active_db: '',
-        active_tree_node: {},
         expanded_nodes: [],
     }
 }
@@ -120,7 +119,7 @@ export default {
         is_fullscreen: false,
         rc_target_names_map: {},
         // sidebar states
-        db_tree_map: [],
+        db_tree_map: {},
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -164,9 +163,6 @@ export default {
                     ...state.db_tree_map,
                     ...{ [id]: { ...state.db_tree_map[id], ...payload } },
                 }
-        },
-        SET_ACTIVE_TREE_NODE(state, payload) {
-            patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
         },
         SET_EXPANDED_NODES(state, payload) {
             patch_wke_property(state, { obj: { expanded_nodes: payload }, scope: this })
@@ -947,6 +943,9 @@ export default {
         },
         // sidebar getters
         getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},
+        getActiveTreeNode: (state, getters) => {
+            return getters.getCurrDbTree.active_tree_node || {}
+        },
         getDbTreeData: (state, getters) => {
             return getters.getCurrDbTree.data || []
         },

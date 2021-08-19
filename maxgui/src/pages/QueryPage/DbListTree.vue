@@ -131,11 +131,12 @@ export default {
     },
     computed: {
         ...mapState({
-            active_tree_node: state => state.query.active_tree_node,
             expanded_nodes: state => state.query.expanded_nodes,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
+            getActiveTreeNode: 'query/getActiveTreeNode',
         }),
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
@@ -145,11 +146,18 @@ export default {
         },
         activeNodes: {
             get() {
-                return [this.active_tree_node]
+                return [this.getActiveTreeNode]
             },
             set(v) {
                 const activeNodes = this.minimizeNodes(v)
-                if (activeNodes.length) this.SET_ACTIVE_TREE_NODE(activeNodes[0])
+                if (activeNodes.length) {
+                    this.UPDATE_DB_TREE_MAP({
+                        id: this.active_wke_id,
+                        payload: {
+                            active_tree_node: activeNodes[0],
+                        },
+                    })
+                }
             },
         },
     },
@@ -167,7 +175,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_ACTIVE_TREE_NODE: 'query/SET_ACTIVE_TREE_NODE',
+            UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
         }),
         addExpandedNodesWatcher() {
