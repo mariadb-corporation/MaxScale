@@ -40,6 +40,11 @@ available to the service. The first server labeled as the Master with the best
 rank will be chosen. This means that a monitor must be configured for the
 MariaDB server where the data is to be inserted.
 
+### Required Grants
+
+The user defined by the `user` parameter of the service must have `INSERT` and
+`CREATE` privileges on all tables that are created.
+
 ## Parameters
 
 ### `bootstrap_servers`
