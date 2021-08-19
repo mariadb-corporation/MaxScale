@@ -410,7 +410,7 @@ export default {
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
          */
-        async getDbs({ state }) {
+        async getDbs({ state, commit }) {
             try {
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
@@ -421,48 +421,60 @@ export default {
                 let cmpList = []
                 let db_tree = []
                 const nodeType = 'Schema'
-
-                const dataRows = this.vue.$help.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
-
-                dataRows.forEach(row => {
-                    db_tree.push({
-                        type: nodeType,
-                        name: row.SCHEMA_NAME,
-                        id: row.SCHEMA_NAME,
-                        data: row,
-                        draggable: true,
-                        level: 0,
-                        children: [
-                            {
-                                type: 'Tables',
-                                name: 'Tables',
-                                // only use to identify active node
-                                id: `${row.SCHEMA_NAME}.Tables`,
-                                draggable: false,
-                                level: 1,
-                                children: [],
-                            },
-                            {
-                                type: 'Stored Procedures',
-                                name: 'Stored Procedures',
-                                // only use to identify active node
-                                id: `${row.SCHEMA_NAME}.Stored Procedures`,
-                                draggable: false,
-                                level: 1,
-                                children: [],
-                            },
-                        ],
+                if (res.data.data.attributes.results[0].data) {
+                    const dataRows = this.vue.$help.getObjectRows({
+                        columns: res.data.data.attributes.results[0].fields,
+                        rows: res.data.data.attributes.results[0].data,
                     })
-                    cmpList.push({
-                        label: row.SCHEMA_NAME,
-                        detail: 'SCHEMA',
-                        insertText: `\`${row.SCHEMA_NAME}\``,
-                        type: nodeType,
+                    dataRows.forEach(row => {
+                        db_tree.push({
+                            type: nodeType,
+                            name: row.SCHEMA_NAME,
+                            id: row.SCHEMA_NAME,
+                            data: row,
+                            draggable: true,
+                            level: 0,
+                            children: [
+                                {
+                                    type: 'Tables',
+                                    name: 'Tables',
+                                    // only use to identify active node
+                                    id: `${row.SCHEMA_NAME}.Tables`,
+                                    draggable: false,
+                                    level: 1,
+                                    children: [],
+                                },
+                                {
+                                    type: 'Stored Procedures',
+                                    name: 'Stored Procedures',
+                                    // only use to identify active node
+                                    id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                    draggable: false,
+                                    level: 1,
+                                    children: [],
+                                },
+                            ],
+                        })
+                        cmpList.push({
+                            label: row.SCHEMA_NAME,
+                            detail: 'SCHEMA',
+                            insertText: `\`${row.SCHEMA_NAME}\``,
+                            type: nodeType,
+                        })
                     })
-                })
+                } else {
+                    const errArr = Object.entries(res.data.data.attributes.results[0]).map(
+                        arr => `${arr[0]}: ${arr[1]}`
+                    )
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: errArr,
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                }
                 return { db_tree, cmpList }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-getDbs')
@@ -694,28 +706,30 @@ export default {
                     },
                 })
                 const { db_tree, cmpList } = await dispatch('getDbs')
-                let tree = db_tree
-                let completionList = cmpList
-                const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
-                for (let i = 0; i < expanded_nodes.length; i++) {
-                    if (hasChildNodes.includes(expanded_nodes[i].type)) {
-                        const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
-                            node: expanded_nodes[i],
-                            db_tree: tree,
-                            cmpList: completionList,
-                        })
-                        if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
-                        if (completionList.length) completionList = new_cmp_list
+                if (db_tree.length) {
+                    let tree = db_tree
+                    let completionList = cmpList
+                    const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
+                    for (let i = 0; i < expanded_nodes.length; i++) {
+                        if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                            const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                                node: expanded_nodes[i],
+                                db_tree: tree,
+                                cmpList: completionList,
+                            })
+                            if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
+                            if (completionList.length) completionList = new_cmp_list
+                        }
                     }
+                    commit('UPDATE_DB_TREE_MAP', {
+                        id: state.active_wke_id,
+                        payload: {
+                            loading_db_tree: false,
+                            data: tree,
+                            db_completion_list: completionList,
+                        },
+                    })
                 }
-                commit('UPDATE_DB_TREE_MAP', {
-                    id: state.active_wke_id,
-                    payload: {
-                        loading_db_tree: false,
-                        data: tree,
-                        db_completion_list: completionList,
-                    },
-                })
             } catch (e) {
                 commit('UPDATE_DB_TREE_MAP', {
                     id: state.active_wke_id,
