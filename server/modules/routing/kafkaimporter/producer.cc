@@ -96,9 +96,13 @@ Producer::ConnectionInfo Producer::find_master() const
 
 bool Producer::connect()
 {
-    bool ok = true;
+    bool ok = false;
 
-    if (!is_connected())
+    if (is_connected())
+    {
+        ok = true;
+    }
+    else
     {
         if (auto master = find_master())
         {
@@ -113,10 +117,14 @@ bool Producer::connect()
                                     master.password.c_str(),
                                     nullptr, master.port, nullptr, 0))
             {
-                ok = false;
                 MXS_ERROR("Failed to connect to '%s': %s", master.name.c_str(), mysql_error(m_mysql));
                 mysql_close(m_mysql);
                 m_mysql = nullptr;
+            }
+            else
+            {
+                MXS_INFO("Connected to '%s'", master.name.c_str());
+                ok = true;
             }
         }
         else
