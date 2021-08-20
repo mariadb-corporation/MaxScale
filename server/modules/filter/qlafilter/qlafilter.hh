@@ -20,6 +20,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.hh>
+#include <maxsimd/canonical.hh>
 
 class QlaFilterSession;
 struct LogEventElems;
@@ -107,6 +108,7 @@ public:
     public:
         Settings(const std::string& name, QlaInstance* instance);
 
+        bool        use_canonical_form {false};
         bool        write_unified_log {false};
         bool        write_session_log {false};
         bool        write_stdout_log {false};
@@ -195,11 +197,6 @@ private:
         LogEventData& operator=(const LogEventData&) = default;
         LogEventData() = default;
 
-        ~LogEventData()
-        {
-            mxb_assert(query_clone == NULL);
-        }
-
         /* Date string buffer size */
         static const int DATE_BUF_SIZE = 20;
 
@@ -210,17 +207,18 @@ private:
          */
         void clear()
         {
-            gwbuf_free(query_clone);
             *this = LogEventData();
         }
 
-        bool     has_message {false};               // Does message data exist?
-        GWBUF*   query_clone {nullptr};             // Clone of the query buffer.
-        char     query_date[DATE_BUF_SIZE] {'\0'};  // Text representation of date.
-        timespec begin_time {0, 0};                 // Timer value at the moment of receiving query.
+        bool        has_message {false};               // Does message data exist?
+        std::string sql;                               // Sql, in canonical form if asked for
+        char        query_date[DATE_BUF_SIZE] {'\0'};  // Text representation of date.
+        timespec    begin_time {0, 0};                 // Timer value at the moment of receiving query.
     };
 
     LogEventData m_event_data;      /* Information about the latest event, used if logging execution time. */
+
+    maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
 
     void        write_log_entries(const LogEventElems& elems);
     void        write_session_log_entry(const std::string& entry);
@@ -234,14 +232,12 @@ private:
 struct LogEventElems
 {
     const char* date_string {nullptr};  /**< Formatted date */
-    const char* query {nullptr};        /**< Query. Not necessarily 0-terminated */
-    int         querylen {0};           /**< Length of query */
+    const std::string& sql;
     int         elapsed_ms {0};         /**< Processing time on backend */
 
-    LogEventElems(const char* date_string, const char* query, int querylen, int elapsed_ms = -1)
+    LogEventElems(const char* date_string, const std::string& sql, int elapsed_ms = -1)
         : date_string(date_string)
-        , query(query)
-        , querylen(querylen)
+        , sql(sql)
         , elapsed_ms(elapsed_ms)
     {
     }
