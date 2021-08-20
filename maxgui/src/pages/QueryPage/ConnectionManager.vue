@@ -128,6 +128,7 @@ export default {
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             worksheets_arr: state => state.query.worksheets_arr,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getActiveWke: 'query/getActiveWke',
@@ -177,7 +178,7 @@ export default {
         async onSelectConn(v) {
             if (this.isCreatingNewConn) this.openConnDialog()
             else if (this.$typy(v, 'id').isDefined) {
-                this.SET_CURR_CNCT_RESOURCE(v)
+                this.SET_CURR_CNCT_RESOURCE({ payload: v, active_wke_id: this.active_wke_id })
                 if (this.curr_cnct_resource.id) {
                     await this.initialFetch(v)
                 }

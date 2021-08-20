@@ -236,7 +236,6 @@ export default {
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
-            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getLoadingQueryResult: 'query/getLoadingQueryResult',
@@ -277,16 +276,11 @@ export default {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.query_txt.all)
-                        await this.fetchQueryResult({
-                            query: this.query_txt.all,
-                            active_wke_id: this.active_wke_id,
-                            curr_cnct_resource: this.curr_cnct_resource,
-                        })
+                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
                     break
                 case 'selected':
                     if (this.query_txt.selected)
-                        await this.fetchQueryResult({ query: this.query_txt.selected })
+                        await this.fetchQueryResult(this.query_txt.selected)
                     break
             }
         },
