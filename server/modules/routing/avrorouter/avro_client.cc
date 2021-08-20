@@ -570,8 +570,11 @@ bool AvroSession::stream_data()
 
             if (maxavro_get_error(m_file_handle) != MAXAVRO_ERR_NONE)
             {
-                MXS_ERROR("Reading Avro file failed with error '%s'.",
-                          maxavro_get_error_string(m_file_handle));
+                std::string msg = maxavro_get_error_string(m_file_handle);
+                MXS_ERROR("Reading Avro file failed with error '%s'.", msg.c_str());
+
+                m_client->write(("ERR fatal error: " + msg).c_str());
+                m_client->dcb()->trigger_hangup_event();
             }
 
             m_last_sent_pos = m_file_handle->records_read;
