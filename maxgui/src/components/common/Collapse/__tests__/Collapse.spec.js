@@ -32,9 +32,9 @@ describe('Collapse.vue', () => {
         })
     })
 
-    it('Should collapse when toggle arrow is clicked', () => {
+    it('Should collapse when toggle arrow is clicked', async () => {
         // this calls toggleOnClick cb which is handled in parent component
-        wrapper.find('.arrow-toggle').trigger('click')
+        await wrapper.find('.arrow-toggle').trigger('click')
         // component is collapsed when isContentVisible === false
         expect(wrapper.props().isContentVisible).to.be.false
     })

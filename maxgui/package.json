@@ -8,7 +8,6 @@
         "serve": "vue-cli-service serve --mode development",
         "build": "vue-cli-service build",
         "test:unit": "NODE_OPTIONS=--max_old_space_size=2048 vue-cli-service test:unit -t 5000 -r tests/unit/bootstrap.js src/**/*.spec.js",
-        "test:e2e": "vue-cli-service test:e2e",
         "lint": "vue-cli-service lint",
         "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'",
         "test-dev": "NODE_OPTIONS=--max_old_space_size=2048 vue-cli-service test:unit --watch -t 5000 -r tests/unit/bootstrap.js src/**/*.spec.js"
@@ -69,8 +68,6 @@
         "@vue/test-utils": "^1.0.3",
         "canvas": "^2.6.1",
         "chai": "^4.3.4",
-        "chromedriver": "^89.0.0",
-        "geckodriver": "^1.22.3",
         "prettier": "^1.19.1",
         "sinon": "9.0.2",
         "sinon-chai": "3.5.0"
