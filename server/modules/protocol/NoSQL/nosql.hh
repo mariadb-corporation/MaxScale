@@ -975,8 +975,8 @@ private:
     GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
     GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
+    GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
 
-    GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
     GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 
     State              m_state { READY };

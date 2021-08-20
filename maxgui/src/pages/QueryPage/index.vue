@@ -68,14 +68,19 @@ export default {
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
             getActiveWke: 'query/getActiveWke',
+            getDbTreeData: 'query/getDbTreeData',
         }),
     },
     watch: {
         is_fullscreen() {
             this.$help.doubleRAF(() => this.setCtrDim())
         },
-        active_wke_id(v) {
+        async active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
+        },
+        async curr_cnct_resource(v) {
+            if (v.id && this.getDbTreeData.length === 0)
+                await this.initialFetch(this.curr_cnct_resource)
         },
     },
     async created() {
@@ -116,6 +121,7 @@ export default {
         ...mapActions({
             validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
+            initialFetch: 'query/initialFetch',
         }),
         setCtrDim() {
             const { width, height } = this.$refs.paneContainer.getBoundingClientRect()

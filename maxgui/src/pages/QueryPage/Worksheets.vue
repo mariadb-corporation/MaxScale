@@ -12,6 +12,7 @@
                 :key="wke.id"
                 :href="`#${wke.id}`"
                 class="pa-0 tab-btn text-none"
+                active-class="tab-btn--active"
             >
                 <v-tooltip
                     :disabled="!Boolean(wke.curr_cnct_resource.name)"
@@ -25,15 +26,31 @@
                             class="fill-height d-flex align-center justify-space-between px-3"
                             v-on="on"
                         >
-                            <span class="d-inline-block text-truncate" style="width:112px">
-                                {{ wke.name }}
-                            </span>
+                            <div class="d-inline-flex align-center">
+                                <span
+                                    class="tab-name d-inline-block text-truncate"
+                                    style="max-width:88px"
+                                >
+                                    {{ wke.name }}
+                                </span>
+                                <template v-for="(value, name) in query_results_map">
+                                    <v-progress-circular
+                                        v-if="wke.id === name && value.loading_query_result"
+                                        :key="name"
+                                        class="ml-2"
+                                        size="16"
+                                        width="2"
+                                        color="primary"
+                                        indeterminate
+                                    />
+                                </template>
+                            </div>
                             <v-btn
                                 v-if="worksheets_arr.length > 1"
                                 class="ml-1 del-wke-btn"
                                 icon
                                 x-small
-                                @click="DELETE_WKE(worksheets_arr.indexOf(wke))"
+                                @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                             >
                                 <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
                             </v-btn>
@@ -85,7 +102,7 @@
  * Public License.
  */
 
-import { mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
 import ToolbarContainer from './ToolbarContainer'
 export default {
@@ -107,6 +124,7 @@ export default {
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
+            query_results_map: state => state.query.query_results_map,
         }),
         activeWkeID: {
             get() {
@@ -120,8 +138,10 @@ export default {
     methods: {
         ...mapMutations({
             ADD_NEW_WKE: 'query/ADD_NEW_WKE',
-            DELETE_WKE: 'query/DELETE_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
+        }),
+        ...mapActions({
+            handleDeleteWke: 'query/handleDeleteWke',
         }),
         addNewWs() {
             this.ADD_NEW_WKE()

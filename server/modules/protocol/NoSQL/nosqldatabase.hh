@@ -54,6 +54,11 @@ public:
         return m_context;
     }
 
+    const NoSQL::Context& context() const
+    {
+        return m_context;
+    }
+
     /**
      * @return The config.
      */
@@ -111,7 +116,7 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_query(GWBUF* pRequest, const nosql::Query& req);
+    GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
 
     /**
      * Handle an OP_UPDATE
@@ -124,20 +129,16 @@ public:
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
 
     /**
-     * Handle a NoSQL command.
+     * Handle an OP_MSG
      *
      * @pRequest    The GWBUF holding data of @c req.
      * @req         The message request.
-     * @doc         The document containing the command; *must* be intended for the
-     *              database this instance represents.
      *
      * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_command(GWBUF* pRequest,
-                          const nosql::Msg& req,
-                          const bsoncxx::document::view& doc);
+    GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
 
     /**
      * Convert a MariaDB response to a NoSQL response. Must only be called
@@ -181,13 +182,9 @@ private:
     GWBUF* execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand);
     GWBUF* execute_command(std::unique_ptr<Command> sCommand);
 
-    template<class ConcretePacket>
-    GWBUF* execute(GWBUF* pRequest,
-                   const ConcretePacket& req,
-                   const bsoncxx::document::view& doc,
-                   const OpMsgCommand::DocumentArguments& arguments)
+    GWBUF* execute(GWBUF* pRequest, const nosql::Msg& req)
     {
-        auto sCommand = nosql::OpMsgCommand::get(this, pRequest, req, doc, arguments);
+        auto sCommand = nosql::OpMsgCommand::get(this, pRequest, req);
 
         return execute_msg_command(std::move(sCommand));
     }

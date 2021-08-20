@@ -6,7 +6,7 @@
         class="query-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
-        <connection-manager />
+        <connection-manager :disabled="getLoadingQueryResult" />
         <!-- Use database section-->
         <v-btn
             id="active-db"
@@ -16,7 +16,7 @@
             depressed
             small
             color="accent-dark"
-            :disabled="!curr_cnct_resource.id"
+            :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
         >
             <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
@@ -35,7 +35,7 @@
         >
             <v-list>
                 <v-list-item
-                    v-for="db in db_tree"
+                    v-for="db in getDbNodes"
                     :key="db.id"
                     dense
                     link
@@ -71,7 +71,7 @@
                     depressed
                     small
                     color="accent-dark"
-                    :loading="loading_query_result"
+                    :loading="getLoadingQueryResult"
                     :disabled="!query_txt.all || !curr_cnct_resource.id"
                     v-on="on"
                     @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
@@ -99,7 +99,7 @@
                     depressed
                     small
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="!curr_cnct_resource.id"
+                    :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
                     v-on="on"
                     @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >
@@ -210,7 +210,7 @@
  * Public License.
  */
 
-import { mapActions, mapState, mapMutations } from 'vuex'
+import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
 import QueryConfigDialog from './QueryConfigDialog'
@@ -233,11 +233,14 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
-            db_tree: state => state.query.db_tree,
-            loading_query_result: state => state.query.loading_query_result,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
+            active_wke_id: state => state.query.active_wke_id,
+        }),
+        ...mapGetters({
+            getLoadingQueryResult: 'query/getLoadingQueryResult',
+            getDbNodes: 'query/getDbNodes',
         }),
     },
     methods: {
@@ -270,15 +273,20 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            if (this.loading_query_result) return null
+            if (this.getLoadingQueryResult) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
+                    if (this.query_txt.all)
+                        await this.fetchQueryResult({
+                            query: this.query_txt.all,
+                            active_wke_id: this.active_wke_id,
+                            curr_cnct_resource: this.curr_cnct_resource,
+                        })
                     break
                 case 'selected':
                     if (this.query_txt.selected)
-                        await this.fetchQueryResult(this.query_txt.selected)
+                        await this.fetchQueryResult({ query: this.query_txt.selected })
                     break
             }
         },

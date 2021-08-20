@@ -36,6 +36,11 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        populate_response(m_database, doc);
+    }
+
+    static void populate_response(const Database& database, DocumentBuilder& doc)
+    {
         doc.append(kvp(key::ISMASTER, true));
         doc.append(kvp(key::TOPOLOGY_VERSION, topology_version()));
         doc.append(kvp(key::MAX_BSON_OBJECT_SIZE, protocol::MAX_BSON_OBJECT_SIZE));
@@ -43,7 +48,7 @@ public:
         doc.append(kvp(key::MAX_WRITE_BATCH_SIZE, protocol::MAX_WRITE_BATCH_SIZE));
         doc.append(kvp(key::LOCALTIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
         doc.append(kvp(key::LOGICAL_SESSION_TIMEOUT_MINUTES, 30));
-        doc.append(kvp(key::CONNECTION_ID, m_database.context().connection_id()));
+        doc.append(kvp(key::CONNECTION_ID, database.context().connection_id()));
         doc.append(kvp(key::MIN_WIRE_VERSION, MIN_WIRE_VERSION));
         doc.append(kvp(key::MAX_WIRE_VERSION, MAX_WIRE_VERSION));
         doc.append(kvp(key::READ_ONLY, false));

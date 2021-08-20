@@ -4,7 +4,11 @@
             <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
                 <span> {{ $t('results') }} </span>
             </v-tab>
-            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.PRVW_DATA}`">
+            <v-tab
+                :disabled="getLoadingQueryResult"
+                color="primary"
+                :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
+            >
                 <span>{{ $t('dataPrvw') }} </span>
             </v-tab>
         </v-tabs>
@@ -47,7 +51,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapGetters } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
 export default {
@@ -74,6 +78,9 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
+        }),
+        ...mapGetters({
+            getLoadingQueryResult: 'query/getLoadingQueryResult',
         }),
         componentDynDim() {
             /*

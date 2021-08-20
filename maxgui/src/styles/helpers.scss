@@ -17,6 +17,14 @@
 .move {
     cursor: move;
 }
+.not-allowed {
+    cursor: not-allowed !important;
+    z-index: 1;
+    * {
+        z-index: 0;
+        pointer-events: none !important;
+    }
+}
 
 .hide {
     display: none !important;

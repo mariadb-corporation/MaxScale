@@ -16,6 +16,8 @@
             item-text="name"
             return-object
             :placeholder="$t('selectConnection')"
+            :disabled="disabled"
+            @change="onSelectConn"
         >
             <template v-slot:selection="{ item }">
                 <div class="d-flex align-center pl-1">
@@ -107,6 +109,9 @@ export default {
     components: {
         ConnectionDialog,
     },
+    props: {
+        disabled: { type: Boolean, required: true },
+    },
     data() {
         return {
             isConnDialogOpened: false,
@@ -154,20 +159,6 @@ export default {
             if (!v && this.connOptions.length === 1) this.openConnDialog()
             else this.assignActiveConn()
         },
-        chosenConn: {
-            deep: true,
-            async handler(v) {
-                if (this.isCreatingNewConn) this.openConnDialog()
-                else if (this.$typy(v, 'id').isDefined) {
-                    this.SET_CURR_CNCT_RESOURCE(v)
-                    await this.validatingConn()
-                    if (this.curr_cnct_resource.id) {
-                        await this.initialFetch()
-                        this.changeWkeName(v.name)
-                    }
-                }
-            },
-        },
         curr_cnct_resource(v) {
             if (!this.$help.lodash.isEqual(v, this.chosenConn)) this.chosenConn = v
         },
@@ -177,16 +168,20 @@ export default {
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
             validatingConn: 'query/validatingConn',
-            reloadTreeNodes: 'query/reloadTreeNodes',
-            updateActiveDb: 'query/updateActiveDb',
+            initialFetch: 'query/initialFetch',
         }),
         ...mapMutations({
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
             UPDATE_WKE: 'query/UPDATE_WKE',
         }),
-        async initialFetch() {
-            await this.reloadTreeNodes()
-            await this.updateActiveDb()
+        async onSelectConn(v) {
+            if (this.isCreatingNewConn) this.openConnDialog()
+            else if (this.$typy(v, 'id').isDefined) {
+                this.SET_CURR_CNCT_RESOURCE(v)
+                if (this.curr_cnct_resource.id) {
+                    await this.initialFetch(v)
+                }
+            }
         },
         assignActiveConn() {
             if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
@@ -201,11 +196,6 @@ export default {
         },
         async handleOpenConn(opts) {
             await this.openConnect(opts)
-        },
-        changeWkeName(v) {
-            let newWke = this.$help.lodash.cloneDeep(this.getActiveWke)
-            newWke.name = v
-            this.UPDATE_WKE({ idx: this.worksheets_arr.indexOf(this.getActiveWke), wke: newWke })
         },
     },
 }

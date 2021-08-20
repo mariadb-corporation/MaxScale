@@ -18,6 +18,8 @@
 #include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
 
+using std::string;
+
 /**
  * @brief Report GSSAPI errors
  *
@@ -60,12 +62,12 @@ std::string GSSAPIAuthenticatorModule::supported_protocol() const
 GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
     /** This is mainly for testing purposes */
-    const std::string default_princ_name = "mariadb/localhost.localdomain";
+    const string default_princ_name = "mariadb/localhost.localdomain";
 
     auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
     {
-        const std::string princ_option = "principal_name";
+        const string princ_option = "principal_name";
         if (options->contains(princ_option))
         {
             instance->m_service_principal = options->get_string(princ_option);
@@ -75,6 +77,15 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
         {
             instance->m_service_principal = default_princ_name;
             MXS_NOTICE("Using default principal name: %s", instance->m_service_principal.c_str());
+        }
+
+        const string keytab_option = "gssapi_keytab_path";
+        if (options->contains(keytab_option))
+        {
+            string keytab_path = options->get_string(keytab_option);
+            MXS_INFO("Setting default krb5 keytab environment variable to '%s'.", keytab_path.c_str());
+            setenv("KRB5_KTNAME", keytab_path.c_str(), 1);
+            options->remove(keytab_option);
         }
     }
     return instance;

@@ -28,11 +28,10 @@ namespace command
 class OrderedCommand : public MultiCommand
 {
 public:
-    template<class ConcretePacket>
     OrderedCommand(const std::string& name,
                    Database* pDatabase,
                    GWBUF* pRequest,
-                   const ConcretePacket& req,
+                   const nosql::Msg& req,
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
@@ -278,11 +277,10 @@ public:
     static constexpr const char* const KEY = "delete";
     static constexpr const char* const HELP = "";
 
-    template<class ConcretePacket>
     Delete(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const ConcretePacket& req,
+           const nosql::Msg& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DELETES)
@@ -572,18 +570,15 @@ public:
     static constexpr const char* const KEY = "insert";
     static constexpr const char* const HELP = "";
 
-    template<class ConcretePacket>
     Insert(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const ConcretePacket& req,
+           const nosql::Msg& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DOCUMENTS)
     {
     }
-
-    using OrderedCommand::OrderedCommand;
 
     using Worker = mxb::Worker;
 
@@ -1192,11 +1187,10 @@ public:
     static constexpr const char* const KEY = "update";
     static constexpr const char* const HELP = "";
 
-    template<class ConcretePacket>
     Update(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const ConcretePacket& req,
+           const nosql::Msg& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::UPDATES)

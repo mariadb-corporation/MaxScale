@@ -75,12 +75,7 @@ export default {
     },
     computed: {
         isGettingEndTime() {
-            return this.executionTime === -1
-        },
-    },
-    watch: {
-        isGettingEndTime(v) {
-            if (!v) this.$emit('total-duration', this.duration)
+            return this.totalDuration === 0
         },
     },
     activated() {
@@ -104,7 +99,7 @@ export default {
             if (this.isGettingEndTime) {
                 this.duration = parseFloat(currSec)
                 requestAnimationFrame(this.updateSecond)
-            }
+            } else this.duration = this.totalDuration
         },
     },
 }

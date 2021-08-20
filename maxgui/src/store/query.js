@@ -27,7 +27,6 @@ function connStates() {
  */
 function sidebarStates() {
     return {
-        loading_db_tree: false,
         is_sidebar_collapsed: false,
         search_schema: '',
         active_db: '',
@@ -52,9 +51,6 @@ function editorStates() {
 function resultStates() {
     return {
         curr_query_mode: 'QUERY_VIEW',
-        loading_prvw_data: false,
-        loading_prvw_data_details: false,
-        loading_query_result: false,
     }
 }
 /**
@@ -124,8 +120,7 @@ export default {
         is_fullscreen: false,
         rc_target_names_map: {},
         // sidebar states
-        db_tree: [],
-        db_completion_list: [],
+        db_tree_map: [],
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -162,11 +157,13 @@ export default {
         SET_SEARCH_SCHEMA(state, payload) {
             patch_wke_property(state, { obj: { search_schema: payload }, scope: this })
         },
-        SET_LOADING_DB_TREE(state, payload) {
-            patch_wke_property(state, { obj: { loading_db_tree: payload }, scope: this })
-        },
-        SET_DB_TREE(state, payload) {
-            state.db_tree = payload
+        UPDATE_DB_TREE_MAP(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state.db_tree_map, id)
+            else
+                state.db_tree_map = {
+                    ...state.db_tree_map,
+                    ...{ [id]: { ...state.db_tree_map[id], ...payload } },
+                }
         },
         SET_ACTIVE_TREE_NODE(state, payload) {
             patch_wke_property(state, { obj: { active_tree_node: payload }, scope: this })
@@ -178,9 +175,6 @@ export default {
         // editor mutations
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, { obj: { query_txt: payload }, scope: this })
-        },
-        SET_DB_CMPL_LIST(state, payload) {
-            state.db_completion_list = payload
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
@@ -211,32 +205,29 @@ export default {
         SET_CURR_QUERY_MODE(state, payload) {
             patch_wke_property(state, { obj: { curr_query_mode: payload }, scope: this })
         },
-        SET_LOADING_PRVW_DATA(state, payload) {
-            patch_wke_property(state, { obj: { loading_prvw_data: payload }, scope: this })
-        },
         UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
-            state.prvw_data_map = {
-                ...state.prvw_data_map,
-                ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.prvw_data_map, id)
+            else
+                state.prvw_data_map = {
+                    ...state.prvw_data_map,
+                    ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
+                }
         },
         UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
-            state.prvw_data_details_map = {
-                ...state.prvw_data_details_map,
-                ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
-            }
-        },
-        SET_LOADING_PRVW_DATA_DETAILS(state, payload) {
-            patch_wke_property(state, { obj: { loading_prvw_data_details: payload }, scope: this })
-        },
-        SET_LOADING_QUERY_RESULT(state, payload) {
-            patch_wke_property(state, { obj: { loading_query_result: payload }, scope: this })
+            if (!payload) this.vue.$delete(state.prvw_data_details_map, id)
+            else
+                state.prvw_data_details_map = {
+                    ...state.prvw_data_details_map,
+                    ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
+                }
         },
         UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
-            state.query_results_map = {
-                ...state.query_results_map,
-                ...{ [id]: { ...state.query_results_map[id], ...payload } },
-            }
+            if (!payload) this.vue.$delete(state.query_results_map, id)
+            else
+                state.query_results_map = {
+                    ...state.query_results_map,
+                    ...{ [id]: { ...state.query_results_map[id], ...payload } },
+                }
         },
 
         // worksheet mutations
@@ -324,8 +315,7 @@ export default {
                         )
 
                     commit('DELETE_CNCT_RESOURCE', targetCnctResource)
-                    dispatch('emptyQueryResult', cnctId)
-                    dispatch('resetWkeStates', { cnctId: cnctId })
+                    dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
@@ -336,7 +326,6 @@ export default {
             try {
                 const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
                 for (let i = 0; i < cnctResources.length; i++) {
-                    dispatch('emptyQueryResult', cnctResources[i].id)
                     await dispatch('disconnect', {
                         showSnackbar: false,
                         id: cnctResources[i].id,
@@ -353,32 +342,19 @@ export default {
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
-                const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-
-                const validCnctResources = state.cnct_resources.filter(rsrc =>
-                    validConnIds.includes(rsrc.id)
-                )
-                /**
-                 * deleteInvalidConn should be called before calling SET_CNCT_RESOURCES
-                 * as deleteInvalidConn use current state.cnct_resources to get invalid cnct resources
-                 */
-                dispatch('deleteInvalidConn', validCnctResources)
-                commit('SET_CNCT_RESOURCES', validCnctResources)
-                if (state.curr_cnct_resource.id) {
-                    let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
-                    if (!activeConnState) {
-                        this.vue.$help.deleteCookie(`conn_id_body_${state.curr_cnct_resource.id}`)
-                        dispatch('emptyQueryResult', state.curr_cnct_resource.id)
-                        dispatch('resetWkeStates', { cnctId: state.curr_cnct_resource.id })
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.notFoundConn')],
-                                type: 'error',
-                            },
-                            { root: true }
-                        )
-                    }
+                if (resConnIds.length === 0) {
+                    dispatch('resetAllWkeStates')
+                    commit('SET_CNCT_RESOURCES', [])
+                } else {
+                    const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
+                    const validCnctResources = state.cnct_resources.filter(rsrc =>
+                        validConnIds.includes(rsrc.id)
+                    )
+                    const invalidCnctResources = state.cnct_resources.filter(
+                        rsrc => !validCnctResources.includes(rsrc)
+                    )
+                    dispatch('deleteInvalidConn', invalidCnctResources)
+                    commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
                 commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
@@ -386,30 +362,37 @@ export default {
                 logger.error(e)
             }
         },
-        deleteInvalidConn({ state, dispatch }, validCnctResources) {
+        deleteInvalidConn({ dispatch }, invalidCnctResources) {
             try {
-                const invalidCnctResources = this.vue.$help.lodash.xorWith(
-                    state.cnct_resources,
-                    validCnctResources,
-                    this.vue.$help.lodash.isEqual
-                )
-                if (invalidCnctResources.length)
-                    invalidCnctResources.forEach(id => {
-                        this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('emptyQueryResult', id)
-                        dispatch('resetWkeStates', { cnctId: id })
-                    })
+                invalidCnctResources.forEach(id => {
+                    this.vue.$help.deleteCookie(`conn_id_body_${id}`)
+                    dispatch('resetWkeStates', id)
+                })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-deleteInvalidConn')
                 logger.error(e)
             }
+        },
+
+        /**
+         * @param {Object} chosenConn  Chosen connection
+         */
+        async initialFetch({ dispatch }, chosenConn) {
+            await dispatch('reloadTreeNodes')
+            await dispatch('updateActiveDb')
+            dispatch('changeWkeName', chosenConn.name)
+        },
+        handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
+            const targetWke = state.worksheets_arr[wkeIdx]
+            dispatch('releaseMemory', targetWke.id)
+            commit('DELETE_WKE', wkeIdx)
         },
         /**
          *
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
          */
-        async getDbs({ state }) {
+        async getDbs({ state, commit }) {
             try {
                 const res = await this.vue.$axios.post(
                     `/sql/${state.curr_cnct_resource.id}/queries`,
@@ -420,48 +403,60 @@ export default {
                 let cmpList = []
                 let db_tree = []
                 const nodeType = 'Schema'
-
-                const dataRows = this.vue.$help.getObjectRows({
-                    columns: res.data.data.attributes.results[0].fields,
-                    rows: res.data.data.attributes.results[0].data,
-                })
-
-                dataRows.forEach(row => {
-                    db_tree.push({
-                        type: nodeType,
-                        name: row.SCHEMA_NAME,
-                        id: row.SCHEMA_NAME,
-                        data: row,
-                        draggable: true,
-                        level: 0,
-                        children: [
-                            {
-                                type: 'Tables',
-                                name: 'Tables',
-                                // only use to identify active node
-                                id: `${row.SCHEMA_NAME}.Tables`,
-                                draggable: false,
-                                level: 1,
-                                children: [],
-                            },
-                            {
-                                type: 'Stored Procedures',
-                                name: 'Stored Procedures',
-                                // only use to identify active node
-                                id: `${row.SCHEMA_NAME}.Stored Procedures`,
-                                draggable: false,
-                                level: 1,
-                                children: [],
-                            },
-                        ],
+                if (res.data.data.attributes.results[0].data) {
+                    const dataRows = this.vue.$help.getObjectRows({
+                        columns: res.data.data.attributes.results[0].fields,
+                        rows: res.data.data.attributes.results[0].data,
                     })
-                    cmpList.push({
-                        label: row.SCHEMA_NAME,
-                        detail: 'SCHEMA',
-                        insertText: `\`${row.SCHEMA_NAME}\``,
-                        type: nodeType,
+                    dataRows.forEach(row => {
+                        db_tree.push({
+                            type: nodeType,
+                            name: row.SCHEMA_NAME,
+                            id: row.SCHEMA_NAME,
+                            data: row,
+                            draggable: true,
+                            level: 0,
+                            children: [
+                                {
+                                    type: 'Tables',
+                                    name: 'Tables',
+                                    // only use to identify active node
+                                    id: `${row.SCHEMA_NAME}.Tables`,
+                                    draggable: false,
+                                    level: 1,
+                                    children: [],
+                                },
+                                {
+                                    type: 'Stored Procedures',
+                                    name: 'Stored Procedures',
+                                    // only use to identify active node
+                                    id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                    draggable: false,
+                                    level: 1,
+                                    children: [],
+                                },
+                            ],
+                        })
+                        cmpList.push({
+                            label: row.SCHEMA_NAME,
+                            detail: 'SCHEMA',
+                            insertText: `\`${row.SCHEMA_NAME}\``,
+                            type: nodeType,
+                        })
                     })
-                })
+                } else {
+                    const errArr = Object.entries(res.data.data.attributes.results[0]).map(
+                        arr => `${arr[0]}: ${arr[1]}`
+                    )
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: errArr,
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                }
                 return { db_tree, cmpList }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-getDbs')
@@ -664,15 +659,20 @@ export default {
                 return { new_db_tree: {}, new_cmp_list: [] }
             }
         },
-        async updateTreeNodes({ commit, dispatch, state }, node) {
+        async updateTreeNodes({ commit, dispatch, state, getters }, node) {
             try {
                 const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
                     node,
-                    db_tree: state.db_tree,
-                    cmpList: state.db_completion_list,
+                    db_tree: getters.getDbTreeData,
+                    cmpList: getters.getDbCmplList,
                 })
-                commit('SET_DB_TREE', new_db_tree)
-                commit('SET_DB_CMPL_LIST', new_cmp_list)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        data: new_db_tree,
+                        db_completion_list: new_cmp_list,
+                    },
+                })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-updateTreeNodes')
                 logger.error(e)
@@ -681,27 +681,44 @@ export default {
         async reloadTreeNodes({ commit, dispatch, state }) {
             try {
                 const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
-                commit('SET_LOADING_DB_TREE', true)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        loading_db_tree: true,
+                    },
+                })
                 const { db_tree, cmpList } = await dispatch('getDbs')
-                let tree = db_tree
-                let completionList = cmpList
-                const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
-                for (let i = 0; i < expanded_nodes.length; i++) {
-                    if (hasChildNodes.includes(expanded_nodes[i].type)) {
-                        const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
-                            node: expanded_nodes[i],
-                            db_tree: tree,
-                            cmpList: completionList,
-                        })
-                        if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
-                        if (completionList.length) completionList = new_cmp_list
+                if (db_tree.length) {
+                    let tree = db_tree
+                    let completionList = cmpList
+                    const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
+                    for (let i = 0; i < expanded_nodes.length; i++) {
+                        if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                            const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                                node: expanded_nodes[i],
+                                db_tree: tree,
+                                cmpList: completionList,
+                            })
+                            if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
+                            if (completionList.length) completionList = new_cmp_list
+                        }
                     }
+                    commit('UPDATE_DB_TREE_MAP', {
+                        id: state.active_wke_id,
+                        payload: {
+                            loading_db_tree: false,
+                            data: tree,
+                            db_completion_list: completionList,
+                        },
+                    })
                 }
-                commit('SET_DB_TREE', tree)
-                commit('SET_DB_CMPL_LIST', completionList)
-                commit('SET_LOADING_DB_TREE', false)
             } catch (e) {
-                commit('SET_LOADING_DB_TREE', false)
+                commit('UPDATE_DB_TREE_MAP', {
+                    id: state.active_wke_id,
+                    payload: {
+                        loading_db_tree: false,
+                    },
+                })
                 const logger = this.vue.$logger('store-query-reloadTreeNodes')
                 logger.error(e)
             }
@@ -711,11 +728,13 @@ export default {
          */
         async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
             try {
-                commit(`SET_LOADING_${prvwMode}`, true)
+                const request_sent_time = new Date().valueOf()
                 commit(`UPDATE_${prvwMode}_MAP`, {
                     id: state.active_wke_id,
                     payload: {
-                        request_sent_time: new Date().valueOf(),
+                        request_sent_time,
+                        total_duration: 0,
+                        [`loading_${prvwMode.toLowerCase()}`]: true,
                     },
                 })
                 let sql
@@ -733,15 +752,23 @@ export default {
                     `/sql/${state.curr_cnct_resource.id}/queries`,
                     { sql, max_rows: rootState.persisted.query_max_rows }
                 )
+                const now = new Date().valueOf()
+                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 commit(`UPDATE_${prvwMode}_MAP`, {
                     id: state.active_wke_id,
                     payload: {
                         data: Object.freeze(res.data.data),
+                        total_duration: parseFloat(total_duration),
+                        [`loading_${prvwMode.toLowerCase()}`]: false,
                     },
                 })
-                commit(`SET_LOADING_${prvwMode}`, false)
             } catch (e) {
-                commit(`SET_LOADING_${prvwMode}`, false)
+                commit(`UPDATE_${prvwMode}_MAP`, {
+                    id: state.active_wke_id,
+                    payload: {
+                        [`loading_${prvwMode.toLowerCase()}`]: false,
+                    },
+                })
                 const logger = this.vue.$logger('store-query-fetchPrvw')
                 logger.error(e)
             }
@@ -750,30 +777,44 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
+        async fetchQueryResult(
+            { commit, dispatch, rootState },
+            { query, active_wke_id, curr_cnct_resource }
+        ) {
             try {
-                commit('SET_LOADING_QUERY_RESULT', true)
+                const request_sent_time = new Date().valueOf()
                 commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: state.active_wke_id,
-                    payload: { request_sent_time: new Date().valueOf() },
+                    id: active_wke_id,
+                    payload: {
+                        request_sent_time,
+                        total_duration: 0,
+                        loading_query_result: true,
+                    },
                 })
 
-                let res = await this.vue.$axios.post(
-                    `/sql/${state.curr_cnct_resource.id}/queries`,
-                    {
-                        sql: query,
-                        max_rows: rootState.persisted.query_max_rows,
-                    }
-                )
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: state.active_wke_id,
-                    payload: { results: Object.freeze(res.data.data) },
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql: query,
+                    max_rows: rootState.persisted.query_max_rows,
                 })
-                commit('SET_LOADING_QUERY_RESULT', false)
+                const now = new Date().valueOf()
+                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: active_wke_id,
+                    payload: {
+                        results: Object.freeze(res.data.data),
+                        total_duration: parseFloat(total_duration),
+                        loading_query_result: false,
+                    },
+                })
+
                 const USE_REG = /(use|drop database)\s/i
                 if (query.match(USE_REG)) await dispatch('updateActiveDb')
             } catch (e) {
-                commit('SET_LOADING_QUERY_RESULT', false)
+                commit('UPDATE_QUERY_RESULTS_MAP', {
+                    id: active_wke_id,
+                    payload: { loading_query_result: false },
+                })
                 const logger = this.vue.$logger('store-query-fetchQueryResult')
                 logger.error(e)
             }
@@ -821,35 +862,42 @@ export default {
                 logger.error(e)
             }
         },
-        /**
-         * This action clears prvw_data and prvw_data_details to empty object.
-         * Call this action when user selects option in the sidebar.
-         * This ensure sub-tabs in Data Preview tab are generated with fresh data
-         */
-        clearDataPreview({ state, commit }) {
-            commit(`UPDATE_PRVW_DATA_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
+
+        changeWkeName({ state, getters, commit }, name) {
+            let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
+            newWke.name = name
+            commit('UPDATE_WKE', {
+                idx: state.worksheets_arr.indexOf(getters.getActiveWke),
+                wke: newWke,
             })
-            commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
-            })
+        },
+        releaseMemory({ commit }, wkeId) {
+            const payload = { id: wkeId }
+            commit('UPDATE_QUERY_RESULTS_MAP', payload)
+            commit('UPDATE_DB_TREE_MAP', payload)
+            commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
+            commit('UPDATE_PRVW_DATA_MAP', payload)
+        },
+        resetAllWkeStates({ state, commit }) {
+            for (const [idx, targetWke] of state.worksheets_arr.entries()) {
+                const wke = {
+                    ...targetWke,
+                    ...connStates(),
+                    ...sidebarStates(),
+                    ...resultStates(),
+                    ...toolbarStates(),
+                    name: 'WORKSHEET',
+                }
+                commit('UPDATE_WKE', { idx, wke })
+            }
         },
         /**
          * Call this action when disconnect a connection to
          * clear the state of the worksheet having that connection to its initial state
          */
-        resetWkeStates({ state, commit }, { cnctId }) {
+        resetWkeStates({ state, commit, dispatch }, cnctId) {
             const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
+            dispatch('releaseMemory', targetWke.id)
             const idx = state.worksheets_arr.indexOf(targetWke)
             // reset everything to initial state except editorStates()
             const wke = {
@@ -868,28 +916,55 @@ export default {
             if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
         },
         /**
-         * Call this action when a connection is disconnected
-         * @param {Number} cnctId - Worksheet connection id
+         * This action clears prvw_data and prvw_data_details to empty object.
+         * Call this action when user selects option in the sidebar.
+         * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        emptyQueryResult({ state, commit }, cnctId) {
-            const wke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
-            if (wke)
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: wke.id,
-                    payload: { results: {}, request_sent_time: 0, total_duration: 0 },
-                })
+        clearDataPreview({ state, commit }) {
+            commit(`UPDATE_PRVW_DATA_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    loading_prvw_data: false,
+                    data: {},
+                    request_sent_time: 0,
+                    total_duration: 0,
+                },
+            })
+            commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
+                id: state.active_wke_id,
+                payload: {
+                    loading_prvw_data_details: false,
+                    data: {},
+                    request_sent_time: 0,
+                    total_duration: 0,
+                },
+            })
         },
     },
     getters: {
-        getDbCmplList: state => {
-            // remove duplicated labels
-            return uniqBy(state.db_completion_list, 'label')
-        },
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },
+        // sidebar getters
+        getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},
+        getDbTreeData: (state, getters) => {
+            return getters.getCurrDbTree.data || []
+        },
+        getDbNodes: (state, getters) => {
+            return getters.getDbTreeData.map(node => ({ name: node.name, id: node.id }))
+        },
+        getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
+        getDbCmplList: (state, getters) => {
+            if (getters.getCurrDbTree.db_completion_list)
+                return uniqBy(getters.getCurrDbTree.db_completion_list, 'label')
+            return []
+        },
+        // Query result getters
         getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
-
+        getLoadingQueryResult: (state, getters) => {
+            const { loading_query_result = false } = getters.getQueryResult
+            return loading_query_result
+        },
         getResults: (state, getters) => {
             const { results = {} } = getters.getQueryResult
             return results
@@ -899,7 +974,7 @@ export default {
             return request_sent_time
         },
         getQueryExeTime: (state, getters) => {
-            if (state.loading_query_result) return -1
+            if (getters.getLoadingQueryResult) return -1
             const { attributes } = getters.getResults
             if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
             return 0
@@ -908,11 +983,14 @@ export default {
             const { total_duration = 0 } = getters.getQueryResult
             return total_duration
         },
-
+        // preview data getters
         getPrvwData: state => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
             if (map) return map[state.active_wke_id] || {}
             return {}
+        },
+        getLoadingPrvw: (state, getters) => mode => {
+            return getters.getPrvwData(mode)[`loading_${mode.toLowerCase()}`] || false
         },
         getPrvwDataRes: (state, getters) => mode => {
             const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)

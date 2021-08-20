@@ -33,23 +33,10 @@ public:
 
         if (!command.empty())
         {
-            string name = static_cast<string>(command.begin()->key());
-
             DocumentArguments arguments;
             unique_ptr<OpMsgCommand> sCommand;
 
-            if (m_req.opcode() == MONGOC_OPCODE_QUERY)
-            {
-                Query& query = static_cast<Query&>(m_req);
-
-                sCommand = OpMsgCommand::get(&m_database, m_pRequest, query, command, arguments);
-            }
-            else
-            {
-                Msg& msg = static_cast<Msg&>(m_req);
-
-                sCommand = OpMsgCommand::get(&m_database, m_pRequest, msg, command, arguments);
-            }
+            sCommand = OpMsgCommand::get(&m_database, m_pRequest, m_req, command, arguments);
 
             try
             {

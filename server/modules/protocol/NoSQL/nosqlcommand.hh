@@ -77,6 +77,9 @@ public:
 
     GWBUF* create_response(const bsoncxx::document::value& doc) const;
 
+    GWBUF* create_reply_response(size_t size_of_documents,
+                                 const std::vector<bsoncxx::document::value>& documents) const;
+
     static void check_maximum_sql_length(int length);
     static void check_maximum_sql_length(const std::string& s)
     {
@@ -118,8 +121,6 @@ private:
     std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
                                                              size_t nDocuments) const;
 
-    GWBUF* create_reply_response(size_t size_of_documents,
-                                 const std::vector<bsoncxx::document::value>& documents) const;
     GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
 
     GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
@@ -140,16 +141,29 @@ protected:
     }
 
 protected:
-    std::string table() const
+    enum Quoted
     {
-        const auto& collection = m_req.collection();
+        NO,
+        YES
+    };
 
-        auto n = collection.find('.');
+    std::string table(Quoted quoted = Quoted::YES) const
+    {
+        if (quoted == Quoted::YES)
+        {
+            const auto& collection = m_req.collection();
 
-        auto d = collection.substr(0, n);
-        auto t = collection.substr(n + 1);
+            auto n = collection.find('.');
 
-        return '`' + d + "`.`" + t + '`';
+            auto d = collection.substr(0, n);
+            auto t = collection.substr(n + 1);
+
+            return '`' + d + "`.`" + t + '`';
+        }
+        else
+        {
+            return m_req.collection();
+        }
     }
 
     Packet m_req;
@@ -233,6 +247,30 @@ public:
 };
 
 //
+// OpQueryCommand
+//
+class OpQueryCommand : public PacketCommand<nosql::Query>
+{
+public:
+    OpQueryCommand(Database* pDatabase,
+                   GWBUF* pRequest,
+                   nosql::Query&& req)
+        : PacketCommand<nosql::Query>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    std::vector<std::string>      m_names;
+    std::vector<enum_field_types> m_types;
+};
+
+//
 // OpMsgCommand
 //
 class OpMsgCommand : public Command
@@ -241,11 +279,10 @@ public:
     using DocumentVector = std::vector<bsoncxx::document::view>;
     using DocumentArguments = std::unordered_map<std::string, DocumentVector>;
 
-    template<class ConcretePacket>
     OpMsgCommand(const std::string& name,
                  Database* pDatabase,
                  GWBUF* pRequest,
-                 const ConcretePacket& req,
+                 const nosql::Msg& req,
                  const bsoncxx::document::view& doc,
                  const DocumentArguments& arguments)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
@@ -258,9 +295,7 @@ public:
 
     static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
                                              GWBUF* pRequest,
-                                             const nosql::Query& req,
-                                             const bsoncxx::document::view& doc,
-                                             const DocumentArguments& arguments);
+                                             const nosql::Msg& req);
 
     static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
                                              GWBUF* pRequest,
@@ -390,20 +425,15 @@ protected:
      */
     virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
 
-    const std::string       m_name;
-    Packet                  m_req;
-    bsoncxx::document::view m_doc;
-    DocumentArguments       m_arguments;
+    const std::string              m_name;
+    const nosql::Msg               m_req;
+    const bsoncxx::document::view& m_doc;
+    const DocumentArguments&       m_arguments;
 
 private:
     ResponseKind response_kind(const Msg& req)
     {
         return req.checksum_present() ? ResponseKind::MSG_WITH_CHECKSUM : ResponseKind::MSG;
-    }
-
-    ResponseKind response_kind(const Query&)
-    {
-        return ResponseKind::REPLY;
     }
 
     mutable std::string m_quoted_table;

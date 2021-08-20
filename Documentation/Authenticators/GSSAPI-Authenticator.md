@@ -1,11 +1,9 @@
 # GSSAPI Client Authenticator
 
-GSSAPI is an authentication protocol that is commonly implemented with
-Kerberos on Unix or Active Directory on Windows. This document describes
-the GSSAPI authentication in MaxScale.
-
-The _GSSAPIAuth_ module implements the client side authentication and the
-_GSSAPIBackendAuth_ module implements the backend authentication.
+GSSAPI is an authentication protocol that is commonly implemented with Kerberos
+on Unix or Active Directory on Windows. This document describes GSSAPI
+authentication in MaxScale. The authentication module name in MaxScale is
+*GSSAPIAuth*.
 
 ## Preparing the GSSAPI system
 
@@ -20,7 +18,8 @@ is a good example on how to set it up.
 The next step is to copy the keytab file from the server where MariaDB is
 installed to the server where MaxScale is located. The keytab file must be
 placed in the configured default location which almost always is
-`/etc/krb5.keytab`.
+`/etc/krb5.keytab`. Alternatively, the keytab filepath can be given as an
+authenticator option.
 
 To take GSSAPI authentication into use, add the following to the listener.
 
@@ -29,20 +28,9 @@ authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/localhost.localdomain@EXAMPLE.COM
 ```
 
-Change the principal name to the same value you configured for the MariaDB
-server.
-
-After the listeners are configured, add the following to all servers that use GSSAPI users.
-
-```
-authenticator=GSSAPIBackendAuth
-```
+The principal name should be the same as on the MariaDB servers.
 
 ## Authenticator options
-
-The client side GSSAPIAuth authenticator supports one option, the service
-principal name that MaxScale sends to the client. The backend authenticator
-module has no options.
 
 ### `principal_name`
 
@@ -52,6 +40,19 @@ for this option is _mariadb/localhost.localdomain_.
 
 This parameter *must* be the same as the principal name that the backend MariaDB
 server uses.
+
+### `gssapi_keytab_path`
+
+Keytab file location. This should be an absolute path to the file containing the
+keytab. If not defined, Kerberos will search from a default location, usually
+`/etc/krb5.keytab`. This path is set to an environment variable. This means that
+multiple listeners with GSSAPIAuth will override each other. If using multiple
+GSSAPI authenticators, either do not set this option or use the same value for
+all listeners.
+
+```
+authenticator_options=principal_name=mymariadb@EXAMPLE.COM,gssapi_keytab_path=/home/user/mymariadb.keytab
+```
 
 ## Implementation details
 
@@ -64,19 +65,12 @@ The GSSAPI plugin authentication starts when the database server sends the
 service principal name in the AuthSwitchRequest packet. The principal name will
 usually be in the form `service@REALM.COM`.
 
-The client will then request a token for this service from the GSSAPI server and
-send the token to the database server. The database server will verify the
-authenticity of the token by contacting the GSSAPI server and if the token is
-authentic, the server sends the final OK packet.
-
-## Limitations
-
-Client side GSSAPI authentication is only supported when the backend
-connections use GSSAPI authentication.
-
-See the [Limitations](../About/Limitations.md) document for more details.
+The client searches its local cache for a token for the service or may request
+it from the GSSAPI server. If found, the client sends the token to the database
+server. The database server verifies the authenticity of the token using its
+keytab file and sends the final OK packet to the client.
 
 ## Building the module
 
-The GSSAPI authenticator modules require the GSSAPI and the SQLite3 development
-libraries (krb5-devel and sqlite-devel on CentOS 7).
+The GSSAPI authenticator modules require the GSSAPI development libraries
+(krb5-devel on CentOS 7).

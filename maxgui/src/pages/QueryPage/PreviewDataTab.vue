@@ -41,7 +41,6 @@
                         :startTime="getPrvwSentTime(activeView)"
                         :executionTime="getPrvwExeTime(activeView)"
                         :totalDuration="getPrvwTotalDuration(activeView)"
-                        @total-duration="updateDuration"
                     />
                 </keep-alive>
                 <v-tooltip
@@ -131,8 +130,6 @@ export default {
     },
     computed: {
         ...mapState({
-            loading_prvw_data: state => state.query.loading_prvw_data,
-            loading_prvw_data_details: state => state.query.loading_prvw_data_details,
             active_tree_node: state => state.query.active_tree_node,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
@@ -144,12 +141,16 @@ export default {
             getPrvwSentTime: 'query/getPrvwSentTime',
             getPrvwExeTime: 'query/getPrvwExeTime',
             getPrvwTotalDuration: 'query/getPrvwTotalDuration',
+            getLoadingPrvw: 'query/getLoadingPrvw',
         }),
         validConn() {
             return Boolean(this.active_tree_node.id && this.curr_cnct_resource.id)
         },
         isPrwDataLoading() {
-            return this.loading_prvw_data || this.loading_prvw_data_details
+            return (
+                this.getLoadingPrvw(this.SQL_QUERY_MODES.PRVW_DATA) ||
+                this.getLoadingPrvw(this.SQL_QUERY_MODES.PRVW_DATA_DETAILS)
+            )
         },
         activeView: {
             get() {
@@ -174,8 +175,6 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
-            UPDATE_PRVW_DATA_MAP: 'query/UPDATE_PRVW_DATA_MAP',
-            UPDATE_PRVW_DATA_DETAILS_MAP: 'query/UPDATE_PRVW_DATA_DETAILS_MAP',
         }),
         ...mapActions({
             fetchPrvw: 'query/fetchPrvw',
@@ -191,7 +190,7 @@ export default {
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.SQL_QUERY_MODES.PRVW_DATA: {
                         const hasActiveNode = this.$typy(this.active_tree_node, 'id').safeObject
-                        const isFetchingAlready = this[`loading_${this.activeView.toLowerCase()}`]
+                        const isFetchingAlready = this.getLoadingPrvw(this.activeView)
                         const isDataEmpty = this.$typy(this.getPrvwDataRes(this.activeView))
                             .isEmptyObject
                         if (hasActiveNode && !isFetchingAlready && isDataEmpty)
@@ -212,7 +211,6 @@ export default {
                     if (!this.getPrvwDataRes(SQL_QUERY_MODE).fields) {
                         await this.fetchActiveNodeData(SQL_QUERY_MODE)
                     }
-
                     break
             }
         },
@@ -223,14 +221,6 @@ export default {
             await this.fetchPrvw({
                 tblId: this.$typy(this.active_tree_node, 'id').safeObject,
                 prvwMode: SQL_QUERY_MODE,
-            })
-        },
-        updateDuration(v) {
-            this[`UPDATE_${this.activeView}_MAP`]({
-                id: this.active_wke_id,
-                payload: {
-                    total_duration: v,
-                },
             })
         },
     },
