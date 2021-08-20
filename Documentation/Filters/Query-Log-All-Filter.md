@@ -118,7 +118,9 @@ flush=true
 ### `append`
 
 Append new entries to log files instead of overwriting them. The default is
-false.
+true.
+NOTE: the default was changed from false to true, as of the following
+versions: 2.4.18, 2.5.16 and 6.2.
 
 ```
 append=true
