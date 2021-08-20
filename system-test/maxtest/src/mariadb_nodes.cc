@@ -136,7 +136,7 @@ bool MariaDBCluster::robust_connect(int n)
 
     for (int i = 0; i < n; i++)
     {
-        if (connect() == 0)
+        if (connect("") == 0)
         {
             // Connected successfully, return immediately
             rval = true;
@@ -290,7 +290,7 @@ bool MariaDBCluster::create_base_users(int node)
     vm->run_sql_query(drop_query);
     string create_query = mxb::string_printf(
         R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;)",
-                                             admin_user.c_str(), admin_pw.c_str(), admin_user.c_str());
+        admin_user.c_str(), admin_pw.c_str(), admin_user.c_str());
     auto res = vm->run_sql_query(create_query);
 
     bool rval = false;
