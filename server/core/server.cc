@@ -384,9 +384,6 @@ Server::Settings::Settings(const std::string& name)
     , m_priority(this, &s_priority)
     , m_monitoruser(this, &s_monitoruser)
     , m_monitorpw(this, &s_monitorpw)
-    , m_persistpoolmax(this, &s_persistpoolmax, [name](int64_t val) {
-                           persistpoolmax_modified(name, val);
-                       })
     , m_persistmaxtime(this, &s_persistmaxtime)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
@@ -400,10 +397,13 @@ Server::Settings::Settings(const std::string& name)
     , m_ssl_verify_peer_certificate(this, &s_ssl_verify_peer_certificate)
     , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
     , m_ssl_cipher(this, &s_ssl_cipher)
+    , m_persistpoolmax(this, &s_persistpoolmax, [name](int64_t val) {
+                           persistpoolmax_modified(name, val);
+                       })
 {
 }
 
-bool Server::Settings::post_configure(const std::map<string,mxs::ConfigParameters>& nested)
+bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParameters>& nested)
 {
     mxb_assert(nested.empty());
 
@@ -1035,7 +1035,7 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
         mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
     }
 
-    m_query_time.start(opr); // always measure
+    m_query_time.start(opr);    // always measure
 
     return rval;
 }
@@ -1046,7 +1046,7 @@ bool ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs
     mxb_assert(is_open());
     down.push_back(this);
 
-    m_query_time.stop(); // always measure
+    m_query_time.stop();    // always measure
 
     if (m_query_time.opr() == Operation::READ)
     {

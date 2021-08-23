@@ -294,9 +294,9 @@ public:
         return m_status;
     }
 
-    void     set_status(uint64_t bit) override;
-    void     clear_status(uint64_t bit) override;
-    void     assign_status(uint64_t status) override;
+    void set_status(uint64_t bit) override;
+    void clear_status(uint64_t bit) override;
+    void assign_status(uint64_t status) override;
 
     std::shared_ptr<mxs::SSLContext> ssl() const;
 
@@ -309,11 +309,11 @@ public:
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
     void     clear_gtid_list() override;
 
-    uint8_t    charset() const override;
-    void       set_charset(uint8_t charset) override;
-    bool       proxy_protocol() const override;
-    void       set_proxy_protocol(bool proxy_protocol) override;
-    bool       is_mxs_service() const override;
+    uint8_t charset() const override;
+    void    set_charset(uint8_t charset) override;
+    bool    proxy_protocol() const override;
+    void    set_proxy_protocol(bool proxy_protocol) override;
+    bool    is_mxs_service() const override;
 
     // response distribution for this thread and server
     maxscale::ResponseDistribution&       response_distribution(mxb::MeasureTime::Operation opr);
@@ -324,7 +324,7 @@ public:
 
     bool is_resp_distribution_enabled() const
     {
-        return true; // TODO make configurable before first release
+        return true;    // TODO make configurable before first release
     }
 
 private:
@@ -381,8 +381,6 @@ private:
         mxs::config::String m_monitoruser;
         // @see monpw
         mxs::config::String m_monitorpw;
-        // Maximum size of persistent connections pool
-        mxs::config::Count m_persistpoolmax;
         // Maximum number of seconds connection can live
         mxs::config::Seconds m_persistmaxtime;
         // Send proxy-protocol header to backends when connecting routing sessions
@@ -404,6 +402,11 @@ private:
         mxs::config::Bool   m_ssl_verify_peer_certificate;
         mxs::config::Bool   m_ssl_verify_peer_host;
         mxs::config::String m_ssl_cipher;
+
+        // Maximum size of persistent connections pool
+        // NOTE: Keep this last so that we can initialize it last. For some unknown reason the Uncrustify
+        // comma placement stops working after the line that initializes this.
+        mxs::config::Count m_persistpoolmax;
 
     protected:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
@@ -487,6 +490,6 @@ private:
 
     maxbase::MeasureTime m_query_time;
 
-    maxscale::ResponseDistribution& m_read_distribution;   // reference to entry in WorkerGlobal
-    maxscale::ResponseDistribution& m_write_distribution;  // reference to entry in WorkerGlobal
+    maxscale::ResponseDistribution& m_read_distribution;    // reference to entry in WorkerGlobal
+    maxscale::ResponseDistribution& m_write_distribution;   // reference to entry in WorkerGlobal
 };
