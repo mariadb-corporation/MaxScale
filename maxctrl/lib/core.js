@@ -324,7 +324,7 @@ async function readCommands(argv) {
   argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
 }
 
-function askQuestion(argv) {
+async function askQuestion(argv) {
   if (!process.stdin.isTTY) {
     return readCommands(argv);
   }
@@ -342,27 +342,21 @@ function askQuestion(argv) {
     },
   ];
 
-  return inquirer.prompt(question).then((answers) => {
-    cmd = answers.maxctrl;
-    if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
-      return Promise.resolve();
-    } else {
-      return doCommand(base_opts.join(" ") + " " + cmd).then(
-        (output) => {
-          if (output) {
-            console.log(output);
-          }
-          return askQuestion();
-        },
-        (err) => {
-          if (err) {
-            console.log(err);
-          } else {
-            console.log("An undefined error has occurred");
-          }
-          return askQuestion();
-        }
-      );
+  while (true) {
+    try {
+      const answers = await inquirer.prompt(question);
+      cmd = answers.maxctrl;
+
+      if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
+        break;
+      }
+
+      const output = await doCommand(base_opts.join(" ") + " " + cmd);
+      if (output) {
+        console.log(output);
+      }
+    } catch (err) {
+      console.log(err ? err : "An undefined error has occurred");
     }
-  });
+  }
 }
