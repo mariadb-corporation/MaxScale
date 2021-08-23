@@ -50,9 +50,12 @@
                                 class="ml-1 del-wke-btn"
                                 icon
                                 x-small
-                                @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
+                                :disabled="is_querying_map[wke.id]"
+                                @click.stop="handleDeleteWke(worksheets_arr.indexOf(wke))"
                             >
-                                <v-icon size="8" color="error"> $vuetify.icons.close</v-icon>
+                                <v-icon size="8" :color="is_querying_map[wke.id] ? '' : 'error'">
+                                    $vuetify.icons.close
+                                </v-icon>
                             </v-btn>
                         </div>
                     </template>
@@ -125,6 +128,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
             query_results_map: state => state.query.query_results_map,
+            is_querying_map: state => state.query.is_querying_map,
         }),
         activeWkeID: {
             get() {
