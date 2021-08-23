@@ -157,7 +157,7 @@
                             {{ $t('timeout') }}
                         </label>
                         <v-text-field
-                            v-model="body.timeout"
+                            v-model.number="body.timeout"
                             type="number"
                             class="std error--text__bottom"
                             name="timeout"
