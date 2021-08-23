@@ -76,6 +76,9 @@ typedef struct worker_message
 namespace maxbase
 {
 
+const int WORKER_STATISTICS::MAXNFDS;
+const int64_t WORKER_STATISTICS::N_QUEUE_TIMES;
+
 WorkerLoad::WorkerLoad()
     : m_load_1_hour(60)                     // 60 minutes in an hour
     , m_load_1_minute(60, &m_load_1_hour)   // 60 seconds in a minute
@@ -825,13 +828,13 @@ void Worker::poll_waitevents()
 
             m_statistics.evq_avg = nFds_total / nPolls_effective;
 
-            m_statistics.evq_max = std::max(m_statistics.evq_max, int64_t(nfds)); // evq_max could be int
+            m_statistics.evq_max = std::max(m_statistics.evq_max, int64_t(nfds));   // evq_max could be int
 
             ++m_statistics.n_pollev;
 
             m_state = PROCESSING;
 
-            ++m_statistics.n_fds[std::min(nfds-1, STATISTICS::MAXNFDS - 1)];
+            ++m_statistics.n_fds[std::min(nfds - 1, STATISTICS::MAXNFDS - 1)];
         }
 
         // Set loop_now before the loop, and inside the loop
