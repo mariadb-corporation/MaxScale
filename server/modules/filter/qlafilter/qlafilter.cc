@@ -133,7 +133,7 @@ cfg::ParamBool s_flush(
     cfg::Param::AT_STARTUP);
 
 cfg::ParamBool s_append(
-    &s_spec, "append", "Append new entries to log files instead of overwriting them", false,
+    &s_spec, "append", "Append new entries to log files instead of overwriting them", true,
     cfg::Param::AT_STARTUP);
 
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,

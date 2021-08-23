@@ -1543,7 +1543,7 @@ json_t* UserDatabase::users_to_json() const
             auto entry = json_pack("{s:s, s:s, s:s, s:b, s:b, s:b, s:b, s:s}",
                                    "user", elem.username.c_str(), "host", elem.host_pattern.c_str(),
                                    "plugin", elem.plugin.c_str(), "ssl", elem.ssl,
-                                   "super priv", elem.super_priv, "global priv", elem.global_db_priv,
+                                   "super_priv", elem.super_priv, "global_priv", elem.global_db_priv,
                                    "proxy_priv", elem.proxy_priv,
                                    "default_role", elem.default_role.cend());
             json_array_append_new(rval, entry);

@@ -221,6 +221,7 @@ public:
     void sync_user_account_caches() override;
 
     mxs::UserAccountManager* user_account_manager();
+    const mxs::UserAccountManager* user_account_manager() const;
 
     /**
      * Set the user account manager for a service to match the given protocol. If the service already
