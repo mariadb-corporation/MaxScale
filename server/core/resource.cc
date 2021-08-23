@@ -853,6 +853,7 @@ HttpResponse cb_log_data(const HttpRequest& request)
     int rows = 50;
     auto size = request.get_option("page[size]");
     auto cursor = request.get_option("page[cursor]");
+    auto priority = mxb::strtok(request.get_option("priority"), ",");
 
     if (!size.empty())
     {
@@ -866,12 +867,16 @@ HttpResponse cb_log_data(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_OK, mxs_log_data_to_json(request.host(), cursor, rows));
+    return HttpResponse(MHD_HTTP_OK, mxs_log_data_to_json(request.host(), cursor, rows,
+                                                          {priority.begin(), priority.end()}));
 }
 
 HttpResponse cb_log_stream(const HttpRequest& request)
 {
-    if (auto fn = mxs_logs_stream(request.get_option("page[cursor]")))
+    auto cursor = request.get_option("page[cursor]");
+    auto priority = mxb::strtok(request.get_option("priority"), ",");
+
+    if (auto fn = mxs_logs_stream(cursor, {priority.begin(), priority.end()}))
     {
         return HttpResponse(fn);
     }
