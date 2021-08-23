@@ -2,7 +2,7 @@
     <div
         class="fill-height"
         :class="{
-            'not-allowed': getLoadingQueryResult,
+            'not-allowed': getIsQuerying && !getLoadingDbTree,
         }"
     >
         <div class="db-tb-list" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
@@ -134,7 +134,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
-            getLoadingQueryResult: 'query/getLoadingQueryResult',
+            getIsQuerying: 'query/getIsQuerying',
         }),
         searchSchema: {
             get() {

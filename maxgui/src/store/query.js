@@ -117,6 +117,7 @@ export default {
     state: {
         // connection related states
         is_validating_conn: true,
+        is_querying_map: {},
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
@@ -153,6 +154,14 @@ export default {
                 scope: this,
                 active_wke_id,
             })
+        },
+        UPDATE_IS_QUERYING_MAP(state, { id, payload }) {
+            if (payload === undefined) this.vue.$delete(state.is_querying_map, id)
+            else
+                state.is_querying_map = {
+                    ...state.is_querying_map,
+                    [id]: payload,
+                }
         },
 
         // Sidebar tree schema mutations
@@ -428,6 +437,34 @@ export default {
             commit('DELETE_WKE', wkeIdx)
         },
         /**
+         * Wrapper action which is used to send async querying action.
+         * It should be used for actions that may take long time to response
+         * and update is_querying_map state of each worksheet which can be used
+         * to prevent parallel requests of a same connection.
+         * @param {Function} action async action
+         */
+        async queryingActionWrapper({ state, commit }, action) {
+            const active_wke_id = state.active_wke_id
+            try {
+                commit('UPDATE_IS_QUERYING_MAP', {
+                    id: active_wke_id,
+                    payload: true,
+                })
+                await action()
+                commit('UPDATE_IS_QUERYING_MAP', {
+                    id: active_wke_id,
+                    payload: false,
+                })
+            } catch (e) {
+                commit('UPDATE_IS_QUERYING_MAP', {
+                    id: active_wke_id,
+                    payload: false,
+                })
+                const logger = this.vue.$logger('store-query-queryingActionWrapper')
+                logger.error(e)
+            }
+        },
+        /**
          *
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
@@ -696,17 +733,19 @@ export default {
         async updateTreeNodes({ commit, dispatch, state, getters }, node) {
             const active_wke_id = state.active_wke_id
             try {
-                const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
-                    node,
-                    db_tree: getters.getDbTreeData,
-                    cmpList: getters.getDbCmplList,
-                })
-                commit('UPDATE_DB_TREE_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        data: new_db_tree,
-                        db_completion_list: new_cmp_list,
-                    },
+                await dispatch('queryingActionWrapper', async () => {
+                    const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
+                        node,
+                        db_tree: getters.getDbTreeData,
+                        cmpList: getters.getDbCmplList,
+                    })
+                    commit('UPDATE_DB_TREE_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            data: new_db_tree,
+                            db_completion_list: new_cmp_list,
+                        },
+                    })
                 })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-updateTreeNodes')
@@ -717,37 +756,42 @@ export default {
             const active_wke_id = state.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
             try {
-                commit('UPDATE_DB_TREE_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        loading_db_tree: true,
-                    },
-                })
-                const { db_tree, cmpList } = await dispatch('getDbs')
-                if (db_tree.length) {
-                    let tree = db_tree
-                    let completionList = cmpList
-                    const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
-                    for (let i = 0; i < expanded_nodes.length; i++) {
-                        if (hasChildNodes.includes(expanded_nodes[i].type)) {
-                            const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
-                                node: expanded_nodes[i],
-                                db_tree: tree,
-                                cmpList: completionList,
-                            })
-                            if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
-                            if (completionList.length) completionList = new_cmp_list
-                        }
-                    }
+                await dispatch('queryingActionWrapper', async () => {
                     commit('UPDATE_DB_TREE_MAP', {
                         id: active_wke_id,
                         payload: {
-                            loading_db_tree: false,
-                            data: tree,
-                            db_completion_list: completionList,
+                            loading_db_tree: true,
                         },
                     })
-                }
+                    const { db_tree, cmpList } = await dispatch('getDbs')
+                    if (db_tree.length) {
+                        let tree = db_tree
+                        let completionList = cmpList
+                        const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
+                        for (let i = 0; i < expanded_nodes.length; i++) {
+                            if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                                const { new_db_tree, new_cmp_list } = await dispatch(
+                                    'getTreeData',
+                                    {
+                                        node: expanded_nodes[i],
+                                        db_tree: tree,
+                                        cmpList: completionList,
+                                    }
+                                )
+                                if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
+                                if (completionList.length) completionList = new_cmp_list
+                            }
+                        }
+                        commit('UPDATE_DB_TREE_MAP', {
+                            id: active_wke_id,
+                            payload: {
+                                loading_db_tree: false,
+                                data: tree,
+                                db_completion_list: completionList,
+                            },
+                        })
+                    }
+                })
             } catch (e) {
                 commit('UPDATE_DB_TREE_MAP', {
                     id: active_wke_id,
@@ -762,43 +806,45 @@ export default {
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */
-        async fetchPrvw({ state, rootState, commit }, { tblId, prvwMode }) {
+        async fetchPrvw({ state, rootState, commit, dispatch }, { tblId, prvwMode }) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
-                commit(`UPDATE_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        request_sent_time,
-                        total_duration: 0,
-                        [`loading_${prvwMode.toLowerCase()}`]: true,
-                    },
-                })
-                let sql
-                const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
-                switch (prvwMode) {
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
-                        sql = `SELECT * FROM ${escapedTblId};`
-                        break
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                        sql = `DESCRIBE ${escapedTblId};`
-                        break
-                }
+                await dispatch('queryingActionWrapper', async () => {
+                    commit(`UPDATE_${prvwMode}_MAP`, {
+                        id: active_wke_id,
+                        payload: {
+                            request_sent_time,
+                            total_duration: 0,
+                            [`loading_${prvwMode.toLowerCase()}`]: true,
+                        },
+                    })
+                    let sql
+                    const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
+                    switch (prvwMode) {
+                        case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
+                            sql = `SELECT * FROM ${escapedTblId};`
+                            break
+                        case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
+                            sql = `DESCRIBE ${escapedTblId};`
+                            break
+                    }
 
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                    sql,
-                    max_rows: rootState.persisted.query_max_rows,
-                })
-                const now = new Date().valueOf()
-                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                commit(`UPDATE_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        data: Object.freeze(res.data.data),
-                        total_duration: parseFloat(total_duration),
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
-                    },
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+                    const now = new Date().valueOf()
+                    const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+                    commit(`UPDATE_${prvwMode}_MAP`, {
+                        id: active_wke_id,
+                        payload: {
+                            data: Object.freeze(res.data.data),
+                            total_duration: parseFloat(total_duration),
+                            [`loading_${prvwMode.toLowerCase()}`]: false,
+                        },
+                    })
                 })
             } catch (e) {
                 commit(`UPDATE_${prvwMode}_MAP`, {
@@ -820,33 +866,35 @@ export default {
             const curr_cnct_resource = state.curr_cnct_resource
             const request_sent_time = new Date().valueOf()
             try {
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        request_sent_time,
-                        total_duration: 0,
-                        loading_query_result: true,
-                    },
-                })
+                await dispatch('queryingActionWrapper', async () => {
+                    commit('UPDATE_QUERY_RESULTS_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            request_sent_time,
+                            total_duration: 0,
+                            loading_query_result: true,
+                        },
+                    })
 
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                    sql: query,
-                    max_rows: rootState.persisted.query_max_rows,
-                })
-                const now = new Date().valueOf()
-                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql: query,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+                    const now = new Date().valueOf()
+                    const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        results: Object.freeze(res.data.data),
-                        total_duration: parseFloat(total_duration),
-                        loading_query_result: false,
-                    },
-                })
+                    commit('UPDATE_QUERY_RESULTS_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            results: Object.freeze(res.data.data),
+                            total_duration: parseFloat(total_duration),
+                            loading_query_result: false,
+                        },
+                    })
 
-                const USE_REG = /(use|drop database)\s/i
-                if (query.match(USE_REG)) await dispatch('updateActiveDb')
+                    const USE_REG = /(use|drop database)\s/i
+                    if (query.match(USE_REG)) await dispatch('updateActiveDb')
+                })
             } catch (e) {
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
@@ -914,6 +962,7 @@ export default {
             commit('UPDATE_DB_TREE_MAP', payload)
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
+            commit('UPDATE_IS_QUERYING_MAP', payload)
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -981,6 +1030,9 @@ export default {
     getters: {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
+        },
+        getIsQuerying: state => {
+            return state.is_querying_map[state.active_wke_id] || false
         },
         // sidebar getters
         getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},
