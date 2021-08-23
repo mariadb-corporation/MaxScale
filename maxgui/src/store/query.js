@@ -352,7 +352,6 @@ export default {
                             },
                             { root: true }
                         )
-
                     commit('DELETE_CNCT_RESOURCE', targetCnctResource)
                     dispatch('resetWkeStates', cnctId)
                 }
@@ -372,6 +371,16 @@ export default {
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnectAll')
+                logger.error(e)
+            }
+        },
+        clearConn({ commit, dispatch, state }) {
+            try {
+                const curr_cnct_resource = state.curr_cnct_resource
+                commit('DELETE_CNCT_RESOURCE', curr_cnct_resource)
+                dispatch('resetWkeStates', curr_cnct_resource.id)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-clearConn')
                 logger.error(e)
             }
         },

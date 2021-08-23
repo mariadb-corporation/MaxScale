@@ -83,6 +83,7 @@
             ref="confirmDialog"
             :title="$t('disconnectConn')"
             type="disconnect"
+            closeImmediate
             :item="{ id: targetConn.name }"
             :onSave="() => disconnect({ showSnackbar: true, id: targetConn.id })"
         />
