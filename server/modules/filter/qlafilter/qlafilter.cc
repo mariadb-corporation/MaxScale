@@ -1010,7 +1010,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 PARAM_FLUSH,    MXS_MODULE_PARAM_BOOL,          "false"
             },
             {
-                PARAM_APPEND,   MXS_MODULE_PARAM_BOOL,          "false"
+                PARAM_APPEND,   MXS_MODULE_PARAM_BOOL,          "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

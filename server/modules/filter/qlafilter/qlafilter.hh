@@ -103,7 +103,7 @@ public:
         uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
         std::string filebase;                   /* The filename base */
         bool        flush_writes {false};       /* Flush log file after every write? */
-        bool        append {false};             /* Open files in append-mode? */
+        bool        append {true};              /* Open files in append-mode? */
         std::string query_newline;              /* Character(s) used to replace a newline within a query */
         std::string separator;                  /*  Character(s) used to separate elements */
         std::string user_name;                  /* The user name to filter on */
