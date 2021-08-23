@@ -193,6 +193,34 @@ bool SharedData::run_shell_command(const string& cmd, const string& errmsg)
     return rval;
 }
 
+mxt::CmdResult SharedData::run_shell_cmd_output(const string& cmd)
+{
+    mxt::CmdResult rval;
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (pipe)
+    {
+        const size_t buflen = 1024;
+        string collected_output;
+        collected_output.reserve(buflen);   // May end up larger.
+
+        char buffer[buflen];
+        while (fgets(buffer, buflen, pipe))
+        {
+            collected_output.append(buffer);
+        }
+        mxb::rtrim(collected_output);
+        rval.output = std::move(collected_output);
+
+        int exit_code = pclose(pipe);
+        rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
+    }
+    else
+    {
+        log.add_failure("popen() failed when running command '%s' on the local machine.", cmd.c_str());
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);

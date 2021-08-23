@@ -2,7 +2,7 @@
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_filter)" class="px-6">
             <page-header :currentFilter="current_filter" />
-            <v-row>
+            <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-table

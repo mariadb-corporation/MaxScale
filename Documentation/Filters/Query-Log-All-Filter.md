@@ -112,6 +112,17 @@ If *reply_time* is enabled, the log entry is written when the first reply from
 server is received. Otherwise, the entry is written when receiving query from
 client.
 
+### `use_canonical_form`
+
+When this option is true the canonical form of the query is logged. In the
+canonical form all user defined constants are replaced with question marks.
+The default is false, i.e. log the sql as is.
+This option is available starting from MaxScale version 6.2.
+
+```
+use_canonical_form=true
+```
+
 ### `flush`
 
 Flush log files after every write. The default is false.

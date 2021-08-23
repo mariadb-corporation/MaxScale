@@ -138,7 +138,7 @@ public:
      *         it will be returned to the client, in the latter case @c clientReply
      *         of the client protocol will eventually be called.
      */
-    GWBUF* handle_msg(GWBUF* pRequest, const nosql::Msg& req);
+    GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
     /**
      * Convert a MariaDB response to a NoSQL response. Must only be called
@@ -179,15 +179,7 @@ private:
         m_state = READY;
     }
 
-    GWBUF* execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand);
     GWBUF* execute_command(std::unique_ptr<Command> sCommand);
-
-    GWBUF* execute(GWBUF* pRequest, const nosql::Msg& req)
-    {
-        auto sCommand = nosql::OpMsgCommand::get(this, pRequest, req);
-
-        return execute_msg_command(std::move(sCommand));
-    }
 
     using SCommand = std::unique_ptr<Command>;
 

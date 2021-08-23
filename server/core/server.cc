@@ -467,11 +467,6 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-uint64_t Server::status() const
-{
-    return m_status;
-}
-
 void Server::set_status(uint64_t bit)
 {
     m_status |= bit;
@@ -964,11 +959,6 @@ ServerEndpoint::~ServerEndpoint()
     {
         close();
     }
-}
-
-mxs::Target* ServerEndpoint::target() const
-{
-    return m_server;
 }
 
 bool ServerEndpoint::connect()

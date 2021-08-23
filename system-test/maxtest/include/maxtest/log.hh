@@ -1,5 +1,6 @@
 #pragma once
 
+#include <maxtest/ccdefs.hh>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -7,6 +8,12 @@
 
 namespace maxtest
 {
+
+struct CmdResult
+{
+    int         rc{-1};
+    std::string output;
+};
 
 using BoolFuncArray = std::vector<std::function<bool (void)>>;
 
@@ -61,7 +68,23 @@ struct SharedData
     std::string test_name;      /**< Test name */
 
     bool concurrent_run(const BoolFuncArray& funcs);
+
+    /**
+     * Run a shell command locally. Failure is a test error.
+     *
+     * @param cmd Command string
+     * @param errmsg Optional error message
+     * @return True on success
+     */
     bool run_shell_command(const std::string& cmd, const std::string& errmsg);
+
+    /**
+     * Run a shell command locally, reading output. Failure is not a test error.
+     *
+     * @param cmd Command string
+     * @return Return value and output
+     */
+    mxt::CmdResult run_shell_cmd_output(const std::string& cmd);
 };
 
 /**

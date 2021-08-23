@@ -31,11 +31,21 @@ public:
     OrderedCommand(const std::string& name,
                    Database* pDatabase,
                    GWBUF* pRequest,
-                   const nosql::Msg& req,
+                   nosql::Msg&& req,
+                   const std::string& array_key)
+        : MultiCommand(name, pDatabase, pRequest, std::move(req))
+        , m_key(array_key)
+    {
+    }
+
+    OrderedCommand(const std::string& name,
+                   Database* pDatabase,
+                   GWBUF* pRequest,
+                   nosql::Msg&& req,
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
-        : MultiCommand(name, pDatabase, pRequest, req, doc, arguments)
+        : MultiCommand(name, pDatabase, pRequest, std::move(req), doc, arguments)
         , m_key(array_key)
     {
     }
@@ -280,10 +290,18 @@ public:
     Delete(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const nosql::Msg& req,
+           nosql::Msg&& req)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::DELETES)
+    {
+    }
+
+    Delete(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           nosql::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
-        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DELETES)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::DELETES)
     {
     }
 
@@ -573,10 +591,18 @@ public:
     Insert(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const nosql::Msg& req,
+           nosql::Msg&& req)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::DOCUMENTS)
+    {
+    }
+
+    Insert(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           nosql::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
-        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::DOCUMENTS)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::DOCUMENTS)
     {
     }
 
@@ -1190,10 +1216,18 @@ public:
     Update(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           const nosql::Msg& req,
+           nosql::Msg&& req)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::UPDATES)
+    {
+    }
+
+    Update(const std::string& name,
+           Database* pDatabase,
+           GWBUF* pRequest,
+           nosql::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
-        : OrderedCommand(name, pDatabase, pRequest, req, doc, arguments, key::UPDATES)
+        : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::UPDATES)
     {
     }
 

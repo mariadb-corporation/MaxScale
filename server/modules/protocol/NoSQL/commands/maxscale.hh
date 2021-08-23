@@ -36,7 +36,8 @@ public:
             DocumentArguments arguments;
             unique_ptr<OpMsgCommand> sCommand;
 
-            sCommand = OpMsgCommand::get(&m_database, m_pRequest, m_req, command, arguments);
+            nosql::Msg req(m_req);
+            sCommand = OpMsgCommand::get(&m_database, m_pRequest, std::move(req), command, arguments);
 
             try
             {

@@ -10,6 +10,7 @@
 #include <maxtest/ccdefs.hh>
 #include <maxbase/string.hh>
 #include <maxtest/mariadb_func.hh>
+#include <maxtest/log.hh>
 
 typedef std::set<std::string> StringSet;
 
@@ -17,12 +18,6 @@ namespace maxtest
 {
 class SharedData;
 class TestLogger;
-
-struct CmdResult
-{
-    int         rc{-1};
-    std::string output;
-};
 
 using NetworkConfig = std::map<std::string, std::string>;
 

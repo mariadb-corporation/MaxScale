@@ -367,31 +367,7 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
         total_cmd.append(m_ssh_cmd_p1).append(" ").append(ssh_cmd_p2);
     }
 
-    mxt::CmdResult rval;
-    FILE* pipe = popen(total_cmd.c_str(), "r");
-    if (pipe)
-    {
-        const size_t buflen = 1024;
-        string collected_output;
-        collected_output.reserve(buflen);   // May end up larger.
-
-        char buffer[buflen];
-        while (fgets(buffer, buflen, pipe))
-        {
-            collected_output.append(buffer);
-        }
-        mxb::rtrim(collected_output);
-        rval.output = std::move(collected_output);
-
-        int exit_code = pclose(pipe);
-        rval.rc = (WIFEXITED(exit_code)) ? WEXITSTATUS(exit_code) : 256;
-    }
-    else
-    {
-        log().add_failure("popen() failed when running command '%s' on %s.",
-                          total_cmd.c_str(), m_name.c_str());
-    }
-    return rval;
+    return m_shared.run_shell_cmd_output(total_cmd);
 }
 
 void VMNode::write_node_env_vars()

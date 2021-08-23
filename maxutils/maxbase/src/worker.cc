@@ -785,7 +785,7 @@ void Worker::poll_waitevents()
     {
         m_state = POLLING;
 
-        atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
+        ++m_statistics.n_polls;
 
         auto now = mxb::Clock::now();
 
@@ -825,16 +825,13 @@ void Worker::poll_waitevents()
 
             m_statistics.evq_avg = nFds_total / nPolls_effective;
 
-            if (nfds > m_statistics.evq_max)
-            {
-                m_statistics.evq_max = nfds;
-            }
+            m_statistics.evq_max = std::max(m_statistics.evq_max, int64_t(nfds)); // evq_max could be int
 
-            mxb::atomic::add(&m_statistics.n_pollev, 1, mxb::atomic::RELAXED);
+            ++m_statistics.n_pollev;
 
             m_state = PROCESSING;
 
-            m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
+            ++m_statistics.n_fds[std::min(nfds-1, STATISTICS::MAXNFDS - 1)];
         }
 
         // Set loop_now before the loop, and inside the loop
@@ -847,59 +844,23 @@ void Worker::poll_waitevents()
             int64_t started = time_in_100ms_ticks(loop_now);
             int64_t qtime = started - cycle_start;
 
-            if (qtime > STATISTICS::N_QUEUE_TIMES)
-            {
-                m_statistics.qtimes[STATISTICS::N_QUEUE_TIMES]++;
-            }
-            else
-            {
-                m_statistics.qtimes[qtime]++;
-            }
-
+            ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
             MXB_POLL_DATA* data = (MXB_POLL_DATA*)events[i].data.ptr;
-
             uint32_t actions = data->handler(data, this, events[i].events);
 
-            if (actions & MXB_POLL_ACCEPT)
-            {
-                mxb::atomic::add(&m_statistics.n_accept, 1, mxb::atomic::RELAXED);
-            }
-
-            if (actions & MXB_POLL_READ)
-            {
-                mxb::atomic::add(&m_statistics.n_read, 1, mxb::atomic::RELAXED);
-            }
-
-            if (actions & MXB_POLL_WRITE)
-            {
-                mxb::atomic::add(&m_statistics.n_write, 1, mxb::atomic::RELAXED);
-            }
-
-            if (actions & MXB_POLL_HUP)
-            {
-                mxb::atomic::add(&m_statistics.n_hup, 1, mxb::atomic::RELAXED);
-            }
-
-            if (actions & MXB_POLL_ERROR)
-            {
-                mxb::atomic::add(&m_statistics.n_error, 1, mxb::atomic::RELAXED);
-            }
+            m_statistics.n_accept += bool(actions & MXB_POLL_ACCEPT);
+            m_statistics.n_read += bool(actions & MXB_POLL_READ);
+            m_statistics.n_write += bool(actions & MXB_POLL_WRITE);
+            m_statistics.n_hup += bool(actions & MXB_POLL_HUP);
+            m_statistics.n_error += bool(actions & MXB_POLL_ERROR);
 
             /** Calculate event execution statistics */
             loop_now = maxbase::Clock::now();
             qtime = time_in_100ms_ticks(loop_now) - started;
 
-            if (qtime > STATISTICS::N_QUEUE_TIMES)
-            {
-                m_statistics.exectimes[STATISTICS::N_QUEUE_TIMES]++;
-            }
-            else
-            {
-                m_statistics.exectimes[qtime]++;
-            }
-
+            ++m_statistics.exectimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 

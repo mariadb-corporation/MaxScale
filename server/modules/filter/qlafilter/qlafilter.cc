@@ -62,6 +62,10 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
+cfg::ParamBool s_use_canonical_form(
+    &s_spec, "use_canonical_form", "Write queries in canonical form", false,
+    cfg::Param::AT_STARTUP);
+
 cfg::ParamRegex s_match(
     &s_spec, "match", "Only log queries matching this pattern", "",
     cfg::Param::AT_STARTUP);
@@ -149,6 +153,7 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
     , m_instance(instance)
 {
+    add_native(&Settings::use_canonical_form, &s_use_canonical_form);
     add_native(&Settings::filebase, &s_filebase);
     add_native(&Settings::flush_writes, &s_flush);
     add_native(&Settings::append, &s_append);
@@ -403,6 +408,13 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         LogEventData& event = m_event_data;
+
+        event.sql.assign(query, query_len);
+        if (m_instance.m_settings.use_canonical_form)
+        {
+            maxsimd::get_canonical(&event.sql, &m_markers);
+        }
+
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
             // Print current date to a buffer. Use the buffer in the event data struct even if execution time
@@ -423,16 +435,12 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
                 event.clear();
             }
             clock_gettime(CLOCK_MONOTONIC, &event.begin_time);
-            if (data_flags & QlaInstance::LOG_DATA_QUERY)
-            {
-                event.query_clone = gwbuf_clone(queue);
-            }
             event.has_message = true;
         }
         else
         {
             // If execution times are not logged, write the log entry now.
-            LogEventElems elems(event.query_date, query, query_len);
+            LogEventElems elems(event.query_date, event.sql);
             write_log_entries(elems);
         }
     }
@@ -448,20 +456,13 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
         mxb_assert(data_flags & QlaInstance::LOG_DATA_REPLY_TIME);
 
-        char* sql = nullptr;
-        int sql_len = 0;
-        if (data_flags & QlaInstance::LOG_DATA_QUERY)
-        {
-            modutil_extract_SQL(event.query_clone, &sql, &sql_len);
-        }
-
         // Calculate elapsed time in milliseconds.
         timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);   // Gives time in seconds + nanoseconds
         double elapsed_ms = 1E3 * (now.tv_sec - event.begin_time.tv_sec)
             + (now.tv_nsec - event.begin_time.tv_nsec) / (double)1E6;
 
-        LogEventElems elems(event.query_date, sql, sql_len, std::floor(elapsed_ms + 0.5));
+        LogEventElems elems(event.query_date, event.sql, std::floor(elapsed_ms + 0.5));
         write_log_entries(elems);
         event.clear();
     }
@@ -621,14 +622,14 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         output << curr_sep;
         if (!m_instance.m_settings.query_newline.empty())
         {
-            print_string_replace_newlines(elems.query, elems.querylen,
+            print_string_replace_newlines(elems.sql.data(), elems.sql.length(),
                                           m_instance.m_settings.query_newline.c_str(),
                                           &output);
         }
         else
         {
             // The newline replacement is an empty string so print the query as is
-            output.write(elems.query, elems.querylen);
+            output.write(elems.sql.data(), elems.sql.length());
         }
         curr_sep = real_sep;
     }

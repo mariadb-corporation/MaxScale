@@ -77,11 +77,33 @@ GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
     return execute_command(std::move(sCommand));
 }
 
-GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, const nosql::Msg& req)
+GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
 {
     mxb_assert(is_ready());
 
-    return execute(pRequest, req);
+    GWBUF* pResponse = nullptr;
+
+    auto sCommand = nosql::OpMsgCommand::get(this, pRequest, std::move(req));
+
+    if (sCommand->is_admin() && m_name != "admin")
+    {
+        SoftError error(sCommand->name() + " may only be run against the admin database.",
+                        error::UNAUTHORIZED);
+        m_context.set_last_error(error.create_last_error());
+
+        pResponse = error.create_response(*sCommand.get());
+    }
+    else if (sCommand->name() != command::GetLastError::KEY)
+    {
+        m_context.reset_error();
+    }
+
+    if (!pResponse)
+    {
+        pResponse = execute_command(std::move(sCommand));
+    }
+
+    return pResponse;
 }
 
 GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
@@ -120,31 +142,6 @@ GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
         m_sCommand.reset();
 
         set_ready();
-    }
-
-    return pResponse;
-}
-
-GWBUF* nosql::Database::execute_msg_command(std::unique_ptr<OpMsgCommand> sCommand)
-{
-    GWBUF* pResponse = nullptr;
-
-    if (sCommand->is_admin() && m_name != "admin")
-    {
-        SoftError error(sCommand->name() + " may only be run against the admin database.",
-                        error::UNAUTHORIZED);
-        m_context.set_last_error(error.create_last_error());
-
-        pResponse = error.create_response(*sCommand.get());
-    }
-    else if (sCommand->name() != command::GetLastError::KEY)
-    {
-        m_context.reset_error();
-    }
-
-    if (!pResponse)
-    {
-        pResponse = execute_command(std::move(sCommand));
     }
 
     return pResponse;

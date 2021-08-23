@@ -14,9 +14,9 @@
 
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
-                        <v-row>
+                        <v-row class="my-0">
                             <v-col class="py-0 my-0" cols="4">
-                                <v-row class="pa-0 ma-0">
+                                <v-row class="my-0 pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
                                             ref="statistics-table"

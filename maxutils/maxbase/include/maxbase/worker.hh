@@ -39,11 +39,8 @@ namespace maxbase
 
 struct WORKER_STATISTICS
 {
-    enum
-    {
-        MAXNFDS       = 10,
-        N_QUEUE_TIMES = 30
-    };
+    static const int     MAXNFDS = 10;
+    static const int64_t N_QUEUE_TIMES = 30;
 
     int64_t n_read = 0;     /*< Number of read events   */
     int64_t n_write = 0;    /*< Number of write events  */

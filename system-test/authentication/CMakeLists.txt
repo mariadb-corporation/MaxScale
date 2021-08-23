@@ -14,3 +14,7 @@ add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cpp
 # HEAVY to prevent runs on general test runs.
 add_test_executable_ex(NAME pam_authentication_2fa SOURCE pam_authentication_2fa.cpp
         CONFIG pam_authentication_2fa.cnf VMS repl_backend LABELS HEAVY)
+
+# GSSAPI/Kerberos authentication. MXS-3733.
+add_test_executable_ex(NAME gss_authentication SOURCE gss_authentication.cc
+        CONFIG gss_authentication.cnf VMS repl_backend)

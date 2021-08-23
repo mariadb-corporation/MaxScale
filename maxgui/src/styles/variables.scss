@@ -64,42 +64,42 @@ $headings: (
         'line-height': 3.1875rem,
         'font-family': 'adrianna',
     ),
-    'text-subtitle-1': (
+    'subtitle-1': (
         'size': 1rem,
         'weight': 400,
         'line-height': 1.75rem,
         'letter-spacing': 0.009375em,
         'font-family': $body-font-family,
     ),
-    'text-subtitle-2': (
+    'subtitle-2': (
         'size': 0.875rem,
         'weight': 500,
         'line-height': 1.375rem,
         'letter-spacing': 0.0071428571em,
         'font-family': $body-font-family,
     ),
-    'text-body-2': (
-        'size': 0.875rem,
-        'weight': 400,
-        'letter-spacing': 0.0178571429em,
-        'line-height': 1.25rem,
-        'font-family': $body-font-family,
-    ),
-    'text-body-1': (
+    'body-1': (
         'size': 1rem,
         'weight': 400,
         'letter-spacing': 0.03125em,
         'line-height': 1.5rem,
         'font-family': $body-font-family,
     ),
-    'text-caption': (
+    'body-2': (
+        'size': 0.875rem,
+        'weight': 400,
+        'letter-spacing': 0.0178571429em,
+        'line-height': 1.25rem,
+        'font-family': $body-font-family,
+    ),
+    'caption': (
         'size': 0.75rem,
         'weight': 400,
         'letter-spacing': 0.0333333333em,
         'line-height': 1.25rem,
         'font-family': $body-font-family,
     ),
-    'text-overline': (
+    'overline': (
         'size': 0.625rem,
         'weight': 400,
         'letter-spacing': 0.1666666667em,
@@ -107,9 +107,8 @@ $headings: (
         'font-family': $body-font-family,
     ),
 );
-$code-color: #525a65 !important;
 // override v-card
-$card-text-font-size: map-deep-get($headings, 'text-subtitle-2', 'size');
+$card-text-font-size: map-deep-get($headings, 'subtitle-2', 'size');
 $card-text-line-height: 1.125rem;
 // override v-dialog
 $dialog-border-radius: 0.625rem;
@@ -132,7 +131,7 @@ $btn-letter-spacing: -0.1px;
 $menu-content-border-radius: 10px;
 // override v-snackbar
 $snackbar-border-radius: 10px;
-$snackbar-font-size: map-deep-get($headings, 'text-subtitle-1', 'size');
+$snackbar-font-size: map-deep-get($headings, 'subtitle-1', 'size');
 $snackbar-multi-line-content-min-height: 50px;
 
 // override v-text-field

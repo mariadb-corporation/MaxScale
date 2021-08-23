@@ -95,49 +95,73 @@ public:
 using namespace nosql;
 
 template<class ConcreteCommand>
-unique_ptr<OpMsgCommand> create_command(const string& name,
-                                        Database* pDatabase,
-                                        GWBUF* pRequest,
-                                        const Msg& msg,
-                                        const bsoncxx::document::view& doc,
-                                        const OpMsgCommand::DocumentArguments& arguments)
+unique_ptr<OpMsgCommand> create_default_command(const string& name,
+                                                Database* pDatabase,
+                                                GWBUF* pRequest,
+                                                Msg&& msg)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
-    sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, msg, doc, arguments));
+    sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, std::move(msg)));
 
     return sCommand;
 }
 
-using CreatorFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
-                                                     Database* pDatabase,
-                                                     GWBUF* pRequest,
-                                                     const Msg& msg,
-                                                     const bsoncxx::document::view& doc,
-                                                     const OpMsgCommand::DocumentArguments& arguments);
+template<class ConcreteCommand>
+unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
+                                                 Database* pDatabase,
+                                                 GWBUF* pRequest,
+                                                 Msg&& msg,
+                                                 const bsoncxx::document::view& doc,
+                                                 const OpMsgCommand::DocumentArguments& arguments)
+{
+    unique_ptr<ConcreteCommand> sCommand;
+
+    sCommand.reset(new ConcreteCommand(name, pDatabase, pRequest, std::move(msg), doc, arguments));
+
+    return sCommand;
+}
+
+using CreateDefaultFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
+                                                           Database* pDatabase,
+                                                           GWBUF* pRequest,
+                                                           Msg&& msg);
+
+using CreateDiagnoseFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
+                                                            Database* pDatabase,
+                                                            GWBUF* pRequest,
+                                                            Msg&& msg,
+                                                            const bsoncxx::document::view& doc,
+                                                            const OpMsgCommand::DocumentArguments& arguments);
 
 struct CommandInfo
 {
     CommandInfo()
         : zKey(nullptr)
         , zHelp(nullptr)
-        , create(nullptr)
+        , create_default(nullptr)
+        , create_diagnose(nullptr)
         , is_admin(false)
     {
     }
 
-    CommandInfo(const char* zKey, const char* zHelp, CreatorFunction create, bool is_admin)
+    CommandInfo(const char* zKey, const char* zHelp,
+                CreateDefaultFunction create_default,
+                CreateDiagnoseFunction create_diagnose,
+                bool is_admin)
         : zKey(zKey)
         , zHelp(zHelp)
-        , create(create)
+        , create_default(create_default)
+        , create_diagnose(create_diagnose)
         , is_admin(is_admin)
     {
     }
 
-    const char*     zKey;
-    const char*     zHelp;
-    CreatorFunction create;
-    bool            is_admin;
+    const char*           zKey;
+    const char*           zHelp;
+    CreateDefaultFunction create_default;
+    CreateDiagnoseFunction  create_diagnose;
+    bool                  is_admin;
 };
 
 template<class ConcreteCommand>
@@ -145,7 +169,8 @@ CommandInfo create_info()
 {
     return CommandInfo(ConcreteCommand::KEY,
                        ConcreteCommand::HELP,
-                       &create_command<ConcreteCommand>,
+                       &create_default_command<ConcreteCommand>,
+                       &create_diagnose_command<ConcreteCommand>,
                        command::IsAdmin<ConcreteCommand>::is_admin);
 }
 
@@ -891,10 +916,11 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
         }
     }
 
-    if (!info.create)
+    if (!info.create_default)
     {
         name = "unknown";
-        info.create = &create_command<Unknown>;
+        info.create_default = &create_default_command<Unknown>;
+        info.create_diagnose = &create_diagnose_command<Unknown>;
         info.is_admin = false;
     }
 
@@ -906,24 +932,29 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           const nosql::Msg& msg)
+                                           nosql::Msg&& msg)
 {
-    return get(pDatabase, pRequest, msg, msg.document(), msg.arguments());
+    auto p = get_info(msg.document());
+
+    const string& name = p.first;
+    CreateDefaultFunction create = p.second.create_default;
+
+    return create(name, pDatabase, pRequest, std::move(msg));
 }
 
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           const nosql::Msg& msg,
+                                           nosql::Msg&& msg,
                                            const bsoncxx::document::view& doc,
                                            const DocumentArguments& arguments)
 {
     auto p = get_info(doc);
 
     const string& name = p.first;
-    CreatorFunction create = p.second.create;
+    CreateDiagnoseFunction create = p.second.create_diagnose;
 
-    return create(name, pDatabase, pRequest, msg, doc, arguments);
+    return create(name, pDatabase, pRequest, std::move(msg), doc, arguments);
 }
 
 GWBUF* OpMsgCommand::create_empty_response() const

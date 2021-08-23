@@ -7,7 +7,7 @@
                     <truncate-string
                         :maxWidth="260"
                         :nudgeLeft="16"
-                        :text="$typy(active_tree_node, 'id').safeObject"
+                        :text="$typy(getActiveTreeNode, 'id').safeObject"
                     />
                 </div>
                 <v-tabs
@@ -130,11 +130,9 @@ export default {
     },
     computed: {
         ...mapState({
-            active_tree_node: state => state.query.active_tree_node,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
-            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
@@ -142,9 +140,10 @@ export default {
             getPrvwExeTime: 'query/getPrvwExeTime',
             getPrvwTotalDuration: 'query/getPrvwTotalDuration',
             getLoadingPrvw: 'query/getLoadingPrvw',
+            getActiveTreeNode: 'query/getActiveTreeNode',
         }),
         validConn() {
-            return Boolean(this.active_tree_node.id && this.curr_cnct_resource.id)
+            return Boolean(this.getActiveTreeNode.id && this.curr_cnct_resource.id)
         },
         isPrwDataLoading() {
             return (
@@ -168,9 +167,8 @@ export default {
             if (!this.isPrwDataLoading && this.validConn) await this.handleFetch(activeView)
         },
     },
-    async activated() {
+    activated() {
         this.setHeaderHeight()
-        await this.autoFetchActiveNode()
     },
     methods: {
         ...mapMutations({
@@ -183,21 +181,7 @@ export default {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
         },
-        async autoFetchActiveNode() {
-            if (this.curr_cnct_resource.id)
-                switch (this.activeView) {
-                    // Auto fetch preview data if there is active_tree_node in localStorage
-                    case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                    case this.SQL_QUERY_MODES.PRVW_DATA: {
-                        const hasActiveNode = this.$typy(this.active_tree_node, 'id').safeObject
-                        const isFetchingAlready = this.getLoadingPrvw(this.activeView)
-                        const isDataEmpty = this.$typy(this.getPrvwDataRes(this.activeView))
-                            .isEmptyObject
-                        if (hasActiveNode && !isFetchingAlready && isDataEmpty)
-                            await this.fetchActiveNodeData(this.activeView)
-                    }
-                }
-        },
+
         /**
          * This function checks if there is no preview data or details data
          * before dispatching action to fetch either preview data or details
@@ -219,7 +203,7 @@ export default {
          */
         async fetchActiveNodeData(SQL_QUERY_MODE) {
             await this.fetchPrvw({
-                tblId: this.$typy(this.active_tree_node, 'id').safeObject,
+                tblId: this.$typy(this.getActiveTreeNode, 'id').safeObject,
                 prvwMode: SQL_QUERY_MODE,
             })
         },
