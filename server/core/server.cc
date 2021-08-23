@@ -741,7 +741,7 @@ json_t* Server::response_distribution_to_json(Operation opr) const
         json_object_set_new(row_obj, "total", json_real(mxb::to_secs(element.total)));
         json_object_set_new(row_obj, "count", json_integer(element.count));
 
-        json_array_append(arr, row_obj);
+        json_array_append_new(arr, row_obj);
     }
     json_object_set_new(distr_obj, "distribution", arr);
     json_object_set_new(distr_obj, "range_base",
