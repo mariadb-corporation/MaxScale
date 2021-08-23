@@ -1144,7 +1144,22 @@ string element_to_value(const document_element_or_array_item& x, const string& o
     switch (x.type())
     {
     case bsoncxx::type::k_double:
-        ss << x.get_double();
+        {
+            double d = x.get_double();
+
+            // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
+            char buffer[28];
+
+            sprintf(buffer, "%.20g", d);
+
+            ss << buffer;
+
+            if (strpbrk(buffer, ".e") == nullptr)
+            {
+                // No decimal point, add ".0" to prevent this number from being an integer.
+                ss << ".0";
+            }
+        }
         break;
 
     case bsoncxx::type::k_utf8:
