@@ -373,8 +373,10 @@ input:-webkit-autofill:active {
 .mariadb-code-style {
     white-space: nowrap !important;
     background-color: transparent !important;
+    color: $code-color !important;
     box-shadow: none;
     line-height: 1.5rem;
+    font-weight: 900 !important;
     padding: 0px 5px 0 10px !important;
     &::before,
     &::after {

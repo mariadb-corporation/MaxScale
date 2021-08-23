@@ -3,7 +3,7 @@
         <v-sheet v-if="!$help.lodash.isEmpty(current_monitor)" class="px-6">
             <page-header :currentMonitor="current_monitor" :onEditSucceeded="fetchMonitor" />
             <overview-header :currentMonitor="current_monitor" @switch-over="handleSwitchover" />
-            <v-row>
+            <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->
                 <v-col cols="6">
                     <details-parameters-table

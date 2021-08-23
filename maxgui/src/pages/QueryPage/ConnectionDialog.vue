@@ -72,7 +72,7 @@
         </template>
         <template v-slot:form-body>
             <v-container class="pa-1">
-                <v-row class="mx-n1">
+                <v-row class="my-0 mx-n1">
                     <v-col v-if="selectedResourceType" cols="12" md="12" class="pa-1">
                         <label class="field__label color text-small-text label-required">
                             {{

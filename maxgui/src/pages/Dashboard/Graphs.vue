@@ -1,5 +1,5 @@
 <template>
-    <v-row style="margin-right:-8px;margin-left:-8px">
+    <v-row style="margin:0px -8px">
         <v-col cols="4" style="padding:0px 8px">
             <outlined-overview-card :tile="false">
                 <template v-slot:title>

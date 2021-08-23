@@ -34,7 +34,7 @@
         >
             <template v-slot:form-body>
                 <v-container class="pa-1">
-                    <v-row class="mx-n1">
+                    <v-row class="my-0 mx-n1">
                         <v-col cols="12" md="12" class="pa-1">
                             <label class="field__label color text-small-text label-required">
                                 {{ $t('fileName') }}
