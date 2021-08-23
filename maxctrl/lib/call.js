@@ -43,7 +43,12 @@ exports.builder = function (yargs) {
               "maxscale/modules/" + argv.module + "/" + argv.command + "?" + argv.params.join("&"),
               { method: verb }
             ).then(function (resp) {
-              return JSON.stringify(resp, null, 4);
+              if (resp.meta) {
+                // The command responded with something. The generated output is contained in the meta field.
+                return JSON.stringify(resp.meta, null, 4);
+              }
+
+              return resp;
             });
           });
         });
