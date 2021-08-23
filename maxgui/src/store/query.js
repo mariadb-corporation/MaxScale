@@ -17,7 +17,6 @@ import queryHelper from './queryHelper'
  */
 function connStates() {
     return {
-        is_validating_conn: true,
         conn_err_state: false,
         curr_cnct_resource: {},
     }
@@ -116,6 +115,8 @@ function patch_wke_property(state, { obj, scope, active_wke_id }) {
 export default {
     namespaced: true,
     state: {
+        // connection related states
+        is_validating_conn: true,
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
@@ -143,12 +144,8 @@ export default {
         },
 
         // connection related mutations
-        SET_IS_VALIDATING_CONN(state, { payload, active_wke_id }) {
-            patch_wke_property(state, {
-                obj: { is_validating_conn: payload },
-                scope: this,
-                active_wke_id,
-            })
+        SET_IS_VALIDATING_CONN(state, payload) {
+            state.is_validating_conn = payload
         },
         SET_CONN_ERR_STATE(state, { payload, active_wke_id }) {
             patch_wke_property(state, {
@@ -370,9 +367,8 @@ export default {
             }
         },
         async validatingConn({ state, commit, dispatch }) {
-            const active_wke_id = state.active_wke_id
             try {
-                commit('SET_IS_VALIDATING_CONN', { payload: true, active_wke_id })
+                commit('SET_IS_VALIDATING_CONN', true)
                 const res = await this.vue.$axios.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -387,12 +383,21 @@ export default {
                     const invalidCnctResources = state.cnct_resources.filter(
                         rsrc => !validCnctResources.includes(rsrc)
                     )
+                    if (state.curr_cnct_resource.id) {
+                        let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
+                        if (!activeConnState) {
+                            this.vue.$help.deleteCookie(
+                                `conn_id_body_${state.curr_cnct_resource.id}`
+                            )
+                            dispatch('resetWkeStates', state.curr_cnct_resource.id)
+                        }
+                    }
                     dispatch('deleteInvalidConn', invalidCnctResources)
                     commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
-                commit('SET_IS_VALIDATING_CONN', { payload: false, active_wke_id })
+                commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
-                commit('SET_IS_VALIDATING_CONN', { payload: false, active_wke_id })
+                commit('SET_IS_VALIDATING_CONN', false)
                 const logger = this.vue.$logger('store-query-validatingConn')
                 logger.error(e)
             }

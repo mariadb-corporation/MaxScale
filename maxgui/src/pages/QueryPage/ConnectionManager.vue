@@ -168,7 +168,6 @@ export default {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
-            validatingConn: 'query/validatingConn',
             initialFetch: 'query/initialFetch',
         }),
         ...mapMutations({
