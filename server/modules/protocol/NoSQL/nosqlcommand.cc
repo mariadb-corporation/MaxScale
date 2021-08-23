@@ -752,41 +752,43 @@ GWBUF* OpQueryCommand::execute()
 
     auto it = m_req.query().begin();
     auto end = m_req.query().end();
-    for (; it != end; ++it)
-    {
-        auto element = *it;
-        auto command = element.key();
-
-        if (command.compare(command::IsMaster::KEY) == 0 || command.compare(key::ISMASTER) == 0)
-        {
-            DocumentBuilder doc;
-            command::IsMaster::populate_response(m_database, doc);
-
-            pResponse = create_response(doc.extract());
-            break;
-        }
-        else if (command.compare(key::QUERY) == 0)
-        {
-            // TODO: Honour m_req.fields().
-            ostringstream sql;
-            sql << "SELECT doc FROM " << table() << " ";
-
-            sql << query_to_where_clause(element.get_document());
-
-            send_downstream(sql.str());
-            break;
-        }
-        else
-        {
-            ++it;
-        }
-    }
 
     if (it == end)
     {
-        ostringstream ss;
-        ss << "No recognized command in OP_QUERY packet: " << bsoncxx::to_json(m_req.query());
-        throw HardError(ss.str(), error::INTERNAL_ERROR);
+        bsoncxx::document::view query;
+        send_query(query);
+    }
+    else
+    {
+        for (; it != end; ++it)
+        {
+            auto element = *it;
+            auto command = element.key();
+
+            if (command.compare(command::IsMaster::KEY) == 0 || command.compare(key::ISMASTER) == 0)
+            {
+                DocumentBuilder doc;
+                command::IsMaster::populate_response(m_database, doc);
+
+                pResponse = create_response(doc.extract());
+                break;
+            }
+            else if (command.compare(key::QUERY) == 0)
+            {
+                send_query(element.get_document());
+                break;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if (it == end)
+        {
+            // Ok, we assume the whole document is a query.
+            send_query(m_req.query());
+        }
     }
 
     return pResponse;
@@ -885,6 +887,26 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
 
     *ppNoSQL_response = pResponse;
     return READY;
+}
+
+void OpQueryCommand::send_query(const bsoncxx::document::view& query)
+{
+    // TODO: Honour m_req.fields().
+
+    ostringstream sql;
+    sql << "SELECT doc FROM " << table();
+
+    if (!query.empty())
+    {
+        auto where = query_to_where_clause(query);
+
+        if (!where.empty())
+        {
+            sql << " " << where;
+        }
+    }
+
+    send_downstream(sql.str());
 }
 
 //
