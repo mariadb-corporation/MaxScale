@@ -79,6 +79,7 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
         {
             MXS_ERROR("Sync marker mismatch.");
         }
+        file->last_error = MAXAVRO_ERR_IO;
         return false;
     }
 
