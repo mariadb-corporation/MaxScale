@@ -51,7 +51,7 @@
                                 icon
                                 x-small
                                 :disabled="is_querying_map[wke.id]"
-                                @click.stop="handleDeleteWke(worksheets_arr.indexOf(wke))"
+                                @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                             >
                                 <v-icon size="8" :color="is_querying_map[wke.id] ? '' : 'error'">
                                     $vuetify.icons.close
