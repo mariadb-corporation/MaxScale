@@ -1,8 +1,8 @@
-# MariaDB MaxScale 6.1 Release Notes
+# MariaDB MaxScale 6.1.0 Release Notes
 
-Release 6.1 is a GA release.
+Release 6.1.0 is a GA release.
 
-This document describes the changes in release 6.1, when compared to the
+This document describes the changes in release 6.1.0, when compared to the
 previous release in the same series.
 
 If you are upgrading from an older major version of MaxScale, please read the
