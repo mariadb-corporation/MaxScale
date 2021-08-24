@@ -1,11 +1,19 @@
 <template>
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
-            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`">
+            <v-tab
+                :disabled="getIsQuerying && !getLoadingQueryResult"
+                color="primary"
+                :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
+            >
                 <span> {{ $t('results') }} </span>
             </v-tab>
             <v-tab
-                :disabled="getLoadingQueryResult"
+                :disabled="
+                    getIsQuerying &&
+                        !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA) &&
+                        !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA_DETAILS)
+                "
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.PRVW_DATA}`"
             >
@@ -80,7 +88,9 @@ export default {
             curr_query_mode: state => state.query.curr_query_mode,
         }),
         ...mapGetters({
+            getIsQuerying: 'query/getIsQuerying',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
+            getLoadingPrvw: 'query/getLoadingPrvw',
         }),
         componentDynDim() {
             /*

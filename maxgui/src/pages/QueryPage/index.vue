@@ -105,6 +105,8 @@ export default {
                             text: [this.$t('info.notFoundConn')],
                             type: 'error',
                         })
+                        this.cancelLeave()
+                        this.clearConn()
                         await this.validatingConn()
                         break
                     default:
@@ -122,6 +124,7 @@ export default {
             validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
             initialFetch: 'query/initialFetch',
+            clearConn: 'query/clearConn',
         }),
         setCtrDim() {
             const { width, height } = this.$refs.paneContainer.getBoundingClientRect()

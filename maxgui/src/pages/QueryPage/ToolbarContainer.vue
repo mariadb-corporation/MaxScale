@@ -6,7 +6,7 @@
         class="query-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
-        <connection-manager :disabled="getLoadingQueryResult" />
+        <connection-manager :disabled="getIsQuerying" />
         <!-- Use database section-->
         <v-btn
             id="active-db"
@@ -16,7 +16,7 @@
             depressed
             small
             color="accent-dark"
-            :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
+            :disabled="!curr_cnct_resource.id || getIsQuerying"
         >
             <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
@@ -72,7 +72,11 @@
                     small
                     color="accent-dark"
                     :loading="getLoadingQueryResult"
-                    :disabled="!query_txt.all || !curr_cnct_resource.id"
+                    :disabled="
+                        !query_txt.all ||
+                            !curr_cnct_resource.id ||
+                            (getIsQuerying && !getLoadingQueryResult)
+                    "
                     v-on="on"
                     @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
                 >
@@ -99,7 +103,7 @@
                     depressed
                     small
                     :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="!curr_cnct_resource.id || getLoadingQueryResult"
+                    :disabled="!curr_cnct_resource.id || getIsQuerying"
                     v-on="on"
                     @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                 >
@@ -236,9 +240,9 @@ export default {
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
-            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
+            getIsQuerying: 'query/getIsQuerying',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getDbNodes: 'query/getDbNodes',
         }),
@@ -273,20 +277,15 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            if (this.getLoadingQueryResult) return null
+            if (this.getLoadingQueryResult || this.getIsQuerying) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.query_txt.all)
-                        await this.fetchQueryResult({
-                            query: this.query_txt.all,
-                            active_wke_id: this.active_wke_id,
-                            curr_cnct_resource: this.curr_cnct_resource,
-                        })
+                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
                     break
                 case 'selected':
                     if (this.query_txt.selected)
-                        await this.fetchQueryResult({ query: this.query_txt.selected })
+                        await this.fetchQueryResult(this.query_txt.selected)
                     break
             }
         },
