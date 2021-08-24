@@ -42,7 +42,6 @@
             </v-tabs>
             <v-spacer />
             <keep-alive>
-                <!-- TODO: Refactor duration-timer to make it work with parallel queries among worksheets-->
                 <duration-timer
                     v-if="getQueryRequestSentTime"
                     :startTime="getQueryRequestSentTime"
