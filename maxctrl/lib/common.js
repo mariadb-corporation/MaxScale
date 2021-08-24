@@ -424,6 +424,13 @@ module.exports = function () {
     return Promise.reject(colors.red("Error: ") + err);
   };
 
+  // Prints a warning for live users, piped output into scripts won't contain these
+  this.warning = function (msg) {
+    if (!this.argv.tsv && process.stdout.isTTY) {
+      console.log(colors.yellow("Warning: ") + msg);
+    }
+  };
+
   this.rDnsOption = {
     shortname: "rdns",
     optionOn: "rdns=true",

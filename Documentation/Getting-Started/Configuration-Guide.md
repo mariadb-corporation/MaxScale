@@ -226,6 +226,10 @@ part of the multi-line parameter.
 Section names may not contain whitespace and must not start with the characters
 `@@`, but otherwise there are no restrictions.
 
+As the object names are used to form URLs in the MaxScale REST API, they must be
+safe for use in URLs. This means that only alphanumeric characters (i.e. `a-z`
+`A-Z` and `0-9`) and the special characters `_.~-` can be used.
+
 ## Special Parameter Types
 
 ### Sizes
