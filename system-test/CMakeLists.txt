@@ -1112,24 +1112,6 @@ add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution
 # END: tests with 15 machines backend      #
 ############################################
 
-############################################
-# BEGIN: Kerberos tests                    #
-############################################
-
-# These tests have some issues and may affect other tests as they do not cleanup after themselves.
-# Run with BREAKS_REPL tag to ensure they are ran on a different test VM in parallel runs. Also run these
-# tests last so they cannot affect earlier tests.
-
-# Creates KDC and tries authrization via GSSAPI (both client and backend)
-# works only with yum-based distributions
-# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
-add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY UNSTABLE BREAKS_REPL gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY UNSTABLE BREAKS_REPL gssapi
-        BACKEND_SSL LISTENER_SSL REPL_BACKEND)
-
-############################################
-# END: Kerberos tests                      #
-############################################
 
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
