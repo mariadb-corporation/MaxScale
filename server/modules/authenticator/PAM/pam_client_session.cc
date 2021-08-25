@@ -209,6 +209,17 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
                 MXB_INFO("Incoming user '%s' mapped to '%s'.",
                          session->user.c_str(), res.mapped_user.c_str());
                 session->user = res.mapped_user;    // TODO: Think if using a separate field would be better.
+                // If a password for the user is found in the passwords map, use that. Otherwise, try
+                // passwordless authentication.
+                const auto& it = m_backend_pwds.find(res.mapped_user);
+                if (it != m_backend_pwds.end())
+                {
+                    MXB_INFO("Using password found in backend passwords file for '%s'.",
+                             res.mapped_user.c_str());
+                    auto begin = it->second.pw_hash;
+                    auto end = begin + SHA_DIGEST_LENGTH;
+                    session->backend_token.assign(begin, end);
+                }
             }
         }
     }
@@ -226,10 +237,11 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
 }
 
 PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, AuthMode mode,
-                                               BackendMapping be_mapping)
+                                               BackendMapping be_mapping, const PasswordMap& backend_pwds)
     : m_cleartext_plugin(cleartext_plugin)
     , m_mode(mode)
     , m_be_mapping(be_mapping)
+    , m_backend_pwds(backend_pwds)
 {
 }
 

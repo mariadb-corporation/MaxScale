@@ -19,6 +19,8 @@
 
 #include <maxscale/ccdefs.hh>
 #include <string>
+#include <unordered_map>
+#include <openssl/sha.h>
 
 extern const std::string DIALOG;    /* PAM client helper plugin name */
 extern const int DIALOG_SIZE;       /* The total storage required */
@@ -41,3 +43,10 @@ enum class BackendMapping
     NONE,       /**< No mapping, default */
     MARIADB     /**< Mapped to a MariaDB user */
 };
+
+struct PasswordHash
+{
+    uint8_t pw_hash[SHA_DIGEST_LENGTH] {0};
+};
+// Map from username to MariaDB password hash.
+using PasswordMap = std::unordered_map<std::string, PasswordHash>;
