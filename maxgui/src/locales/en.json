@@ -162,6 +162,9 @@
     "networkDelay": "Network delay",
     "exeTime": "Execution Time",
     "connectedTo": "Connected to",
+    "historyAndFavorite": "History/Favorite",
+    "history": "History",
+    "favorite": "Favorite",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

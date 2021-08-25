@@ -156,7 +156,10 @@ export default {
                 return this.curr_query_mode
             },
             set(value) {
-                if (this.curr_query_mode !== this.SQL_QUERY_MODES.QUERY_VIEW)
+                if (
+                    this.curr_query_mode === this.SQL_QUERY_MODES.PRVW_DATA ||
+                    this.curr_query_mode === this.SQL_QUERY_MODES.PRVW_DATA_DETAILS
+                )
                     this.SET_CURR_QUERY_MODE(value)
             },
         },

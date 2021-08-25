@@ -19,9 +19,10 @@
             >
                 <span>{{ $t('dataPrvw') }} </span>
             </v-tab>
+            <v-tab color="primary" :href="`#${SQL_QUERY_MODES.HISTORY}`">
+                <span>{{ $t('historyAndFavorite') }} </span>
+            </v-tab>
         </v-tabs>
-
-        <!-- TODO: use vanila vuejs transtion to have similar reverse v-tab-item transtion -->
         <v-slide-x-transition>
             <keep-alive>
                 <result-tab
@@ -33,8 +34,19 @@
                     :dynDim="componentDynDim"
                 />
                 <preview-data-tab
-                    v-else
+                    v-else-if="
+                        activeTab === SQL_QUERY_MODES.PRVW_DATA ||
+                            activeTab === SQL_QUERY_MODES.PRVW_DATA_DETAILS
+                    "
                     ref="prvwDataTab"
+                    :style="{
+                        height: `calc(100% - 24px)`,
+                    }"
+                    :class="tabItemClass"
+                    :dynDim="componentDynDim"
+                />
+                <history-and-favorite
+                    v-else
                     :style="{
                         height: `calc(100% - 24px)`,
                     }"
@@ -62,11 +74,13 @@
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import PreviewDataTab from './PreviewDataTab'
 import ResultTab from './ResultTab'
+import HistoryAndFavorite from './HistoryAndFavorite'
 export default {
     name: 'query-result',
     components: {
         PreviewDataTab,
         ResultTab,
+        HistoryAndFavorite,
     },
     props: {
         dynDim: {
@@ -101,13 +115,13 @@ export default {
         },
         activeTab: {
             get() {
-                /* There are only two tab mode in this component. So PRVW_DATA_DETAILS will be
-                 * equal to PRVW_DATA
-                 */
                 switch (this.curr_query_mode) {
                     case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                     case this.SQL_QUERY_MODES.PRVW_DATA:
                         return this.SQL_QUERY_MODES.PRVW_DATA
+                    case this.SQL_QUERY_MODES.FAVORITE:
+                    case this.SQL_QUERY_MODES.HISTORY:
+                        return this.SQL_QUERY_MODES.HISTORY
                     default:
                         return this.curr_query_mode
                 }
