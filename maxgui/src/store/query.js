@@ -855,6 +855,16 @@ export default {
                             [`loading_${prvwMode.toLowerCase()}`]: false,
                         },
                     })
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        {
+                            startTime: now,
+                            query: sql,
+                            res,
+                            connection_name: curr_cnct_resource.name,
+                        },
+                        { root: true }
+                    )
                 },
                 actionName: 'fetchPrvw',
                 catchAction: () => {
@@ -904,6 +914,11 @@ export default {
 
                     const USE_REG = /(use|drop database)\s/i
                     if (query.match(USE_REG)) await dispatch('updateActiveDb')
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        { startTime: now, query, res, connection_name: curr_cnct_resource.name },
+                        { root: true }
+                    )
                 },
                 actionName: 'fetchQueryResult',
                 catchAction: () => {
