@@ -178,4 +178,5 @@ private:
     state_t                     m_state;
     ResponseState               m_res;
     MaskingFilterConfig::Values m_config;
+    const bool                  m_bypass;
 };

@@ -128,6 +128,8 @@ MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
     : maxscale::FilterSession(pSession, pService)
     , m_state(IGNORING_RESPONSE)
     , m_config(pFilter->config())
+    , m_bypass(!m_config.sRules->has_rule_for(pSession->user().c_str(),
+                                              pSession->client_remote().c_str()))
 {
 }
 
@@ -257,6 +259,11 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
 
 bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
+    if (m_bypass)
+    {
+        return FilterSession::routeQuery(pPacket);
+    }
+
     ComRequest request(pPacket);
 
     // TODO: Breaks if responses are not waited for, before the next request is sent.
@@ -326,6 +333,11 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
 bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(gwbuf_is_contiguous(pPacket));
+
+    if (m_bypass)
+    {
+        return FilterSession::clientReply(pPacket, down, reply);
+    }
 
     ComResponse response(pPacket);
 
