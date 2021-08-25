@@ -1443,27 +1443,6 @@ string default_field_and_value_to_comparison(const std::string& field,
         + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
 }
 
-string field_and_value_to_in_comparison(const std::string& field,
-                                        const bsoncxx::document::element& element,
-                                        const string& mariadb_op,
-                                        const string& nosql_op,
-                                        ElementValueToString value_to_string)
-{
-    string rv;
-    string s = value_to_string(element, nosql_op);
-
-    if (!s.empty())
-    {
-        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
-    }
-    else
-    {
-        rv = "(false)";
-    }
-
-    return rv;
-}
-
 string field_and_value_to_nin_comparison(const std::string& field,
                                          const bsoncxx::document::element& element,
                                          const string& mariadb_op,
@@ -1491,7 +1470,6 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$in",     { "IN",     &element_to_array, field_and_value_to_in_comparison } },
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
@@ -1528,11 +1506,54 @@ string get_op_and_value(const bsoncxx::document::view& doc)
     return rv;
 }
 
-string all_to_condition(const string& field, const bsoncxx::document::element& element)
+enum class ArrayOp
 {
+    AND,
+    OR
+};
+
+inline const char* to_description(ArrayOp op)
+{
+    switch (op)
+    {
+    case ArrayOp::AND:
+        return "$and";
+
+    case ArrayOp::OR:
+        return "$or";
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+inline const char* to_logical_operator(ArrayOp op)
+{
+    switch (op)
+    {
+    case ArrayOp::AND:
+        return " AND ";
+
+    case ArrayOp::OR:
+        return " OR ";
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+string array_op_to_condition(const string& field,
+                             const bsoncxx::document::element& element,
+                             ArrayOp array_op)
+{
+    const char* zDescription = to_description(array_op);
+
     if (element.type() != bsoncxx::type::k_array)
     {
-        throw SoftError("$all needs an array", error::BAD_VALUE);
+        ostringstream ss;
+        ss << zDescription << " needs an array";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
     }
 
     ostringstream ss;
@@ -1612,12 +1633,12 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
             }
             else
             {
-                ss << " AND ";
+                ss << " " << to_logical_operator(array_op) << " ";
             }
 
             ss << "(";
 
-            auto value = element_to_value(one_element, "$all");
+            auto value = element_to_value(one_element, zDescription);
 
             bool first_path = true;
             for (const auto& path : paths)
@@ -1861,7 +1882,11 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
         else if (nosql_op == "$all")
         {
-            rv = all_to_condition(field, element);
+            rv = array_op_to_condition(field, element, ArrayOp::AND);
+        }
+        else if (nosql_op == "$in")
+        {
+            rv = array_op_to_condition(field, element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
