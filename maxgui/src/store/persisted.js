@@ -19,6 +19,7 @@ export default {
         query_max_rows: 10000,
         query_confirm_flag: 1,
         query_history: [],
+        query_favorite: [],
     },
     mutations: {
         SET_QUERY_MAX_ROW(state, payload) {
@@ -30,6 +31,10 @@ export default {
         UPDATE_QUERY_HISTORY(state, { idx, payload }) {
             if (idx) state.query_history.splice(idx, 1)
             else state.query_history.push(payload)
+        },
+        UPDATE_QUERY_FAVORITE(state, { idx, payload }) {
+            if (idx) state.query_favorite.splice(idx, 1)
+            else state.query_favorite.push(payload)
         },
     },
     actions: {
@@ -47,6 +52,15 @@ export default {
                     }),
                     execution_time: res.data.data.attributes.execution_time.toFixed(4),
                     sql: query,
+                },
+            })
+        },
+        pushQueryFavorite({ commit }, { date, name, sql }) {
+            commit('UPDATE_QUERY_FAVORITE', {
+                payload: {
+                    date,
+                    name,
+                    sql,
                 },
             })
         },

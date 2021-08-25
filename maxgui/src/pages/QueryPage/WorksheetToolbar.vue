@@ -3,7 +3,7 @@
         outlined
         elevation="0"
         height="45"
-        class="query-toolbar"
+        class="wke-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
         <connection-manager :disabled="getIsQuerying" />
@@ -139,7 +139,7 @@
             closeImmediate
         >
             <template v-slot:body-prepend>
-                <div class="mb-4 sql-code-wrapper pa-2">
+                <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
                         :value="query_txt.selected ? query_txt.selected : query_txt.all"
                         class="readonly-editor fill-height"
@@ -262,26 +262,8 @@ export default {
         width: 16px !important;
     }
 }
-.sql-code-wrapper {
-    background-color: $reflection;
-    height: 300px;
-}
-::v-deep .readonly-editor {
-    .overflow-guard {
-        .monaco-editor,
-        .monaco-editor-background,
-        .monaco-editor .inputarea.ime-input {
-            background-color: #e8eef1;
-        }
-        .margin {
-            background-color: #e8eef1;
-        }
-        .view-line {
-            background-color: $reflection;
-        }
-    }
-}
-::v-deep.query-toolbar {
+
+::v-deep.wke-toolbar {
     .v-toolbar__content {
         padding: 4px 12px;
     }
