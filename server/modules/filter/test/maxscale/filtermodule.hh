@@ -47,8 +47,8 @@ public:
          *
          * @return A new filter session or NULL if the creation failed.
          */
-        std::auto_ptr<Session> newSession(MXS_SESSION* pSession, SERVICE* pService,
-                                          mxs::Routable* pDown, mxs::Routable* pUp);
+        std::unique_ptr<Session> newSession(MXS_SESSION* pSession, SERVICE* pService,
+                                            mxs::Routable* pDown, mxs::Routable* pUp);
 
     private:
         friend class FilterModule;
@@ -113,7 +113,7 @@ public:
      *
      * @return A new instance or NULL if creation failed.
      */
-    std::auto_ptr<Instance> createInstance(const char* zName, mxs::ConfigParameters* pParameters);
+    std::unique_ptr<Instance> createInstance(const char* zName, mxs::ConfigParameters* pParameters);
 
 private:
     friend class Instance;

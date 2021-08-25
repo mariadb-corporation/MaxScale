@@ -109,9 +109,9 @@ class SpecificModule : public Module
 public:
     typedef SpecificModule<T, API> Base;
 
-    static std::auto_ptr<T> load(const char* zFile_name)
+    static std::unique_ptr<T> load(const char* zFile_name)
     {
-        std::auto_ptr<T> sT;
+        std::unique_ptr<T> sT;
 
         const MXS_MODULE* pModule = Module::get(zFile_name, T::type);
 

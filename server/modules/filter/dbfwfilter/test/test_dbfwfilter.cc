@@ -790,10 +790,10 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);
 
-            auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
-                                                                                         service,
-                                                                                         router_session.as_downstream(),
-                                                                                         client.as_upstream());
+            auto sFilter_session = filter_instance.newSession(&session,
+                                                              service,
+                                                              router_session.as_downstream(),
+                                                              client.as_upstream());
 
             if (sFilter_session.get())
             {
@@ -838,7 +838,7 @@ int test(FilterModule& filter_module, const FW_TEST& t)
     params->set("action", zAction);
     params->set("rules", file.name());
 
-    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", params);
+    auto sInstance = filter_module.createInstance("test", params);
 
     if (sInstance.get())
     {
@@ -943,7 +943,7 @@ int run()
 {
     int rv = 1;
 
-    auto_ptr<FilterModule> sModule = FilterModule::load("dbfwfilter");
+    auto sModule = FilterModule::load("dbfwfilter");
 
     if (sModule.get())
     {

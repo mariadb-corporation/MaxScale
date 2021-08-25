@@ -21,7 +21,7 @@
 
 #include "maskingrules.hh"
 
-using std::auto_ptr;
+using std::shared_ptr;
 using std::string;
 
 namespace
@@ -128,12 +128,12 @@ MaskingFilter* MaskingFilter::create(const char* zName)
 bool MaskingFilter::post_configure()
 {
     bool ok = false;
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
+    shared_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
 
     if (sRules.get())
     {
         ok = true;
-        m_sRules.reset(sRules.release());
+        m_sRules = sRules;
 
         if (m_config.treat_string_arg_as_field())
         {
@@ -180,7 +180,7 @@ std::shared_ptr<MaskingRules> MaskingFilter::rules() const
 bool MaskingFilter::reload()
 {
     bool rval = false;
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
+    shared_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
 
     if (sRules.get())
     {
@@ -188,7 +188,7 @@ bool MaskingFilter::reload()
                    m_config.name().c_str(),
                    m_config.rules().c_str());
 
-        m_sRules.reset(sRules.release());
+        m_sRules = sRules;
         rval = true;
     }
     else

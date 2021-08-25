@@ -67,7 +67,7 @@ public:
             virtual bool matches(const char* zUser, const char* zHost) const = 0;
         };
 
-        typedef std::shared_ptr<Account> SAccount;
+        typedef std::unique_ptr<Account> SAccount;
 
         /**
          * Constructor of base Rule class
@@ -83,8 +83,8 @@ public:
         Rule(const std::string& column,
              const std::string& table,
              const std::string& database,
-             const std::vector<SAccount>& applies_to,
-             const std::vector<SAccount>& exempted);
+             std::vector<SAccount>&& applies_to,
+             std::vector<SAccount>&& exempted);
         virtual ~Rule();
 
         std::string match() const;
@@ -185,8 +185,8 @@ public:
         ReplaceRule(const std::string& column,
                     const std::string& table,
                     const std::string& database,
-                    const std::vector<SAccount>& applies_to,
-                    const std::vector<SAccount>& exempted,
+                    std::vector<SAccount>&& applies_to,
+                    std::vector<SAccount>&& exempted,
                     const std::string& value,
                     const std::string& fill);
 
@@ -209,7 +209,7 @@ public:
          *
          * @return A Rule instance or NULL.
          */
-        static std::auto_ptr<Rule> create_from(json_t* pRule);
+        static std::unique_ptr<Rule> create_from(json_t* pRule);
 
         /**
          * Rewrite the column value based on rules
@@ -243,8 +243,8 @@ public:
         ObfuscateRule(const std::string& column,
                       const std::string& table,
                       const std::string& database,
-                      const std::vector<SAccount>& applies_to,
-                      const std::vector<SAccount>& exempted);
+                      std::vector<SAccount>&& applies_to,
+                      std::vector<SAccount>&& exempted);
 
         ~ObfuscateRule();
 
@@ -256,7 +256,7 @@ public:
          *
          * @return A Rule instance or NULL.
          */
-        static std::auto_ptr<Rule> create_from(json_t* pRule);
+        static std::unique_ptr<Rule> create_from(json_t* pRule);
 
         /**
          * Obfuscate the column value based on rules
@@ -289,8 +289,8 @@ public:
         MatchRule(const std::string& column,
                   const std::string& table,
                   const std::string& database,
-                  const std::vector<SAccount>& applies_to,
-                  const std::vector<SAccount>& exempted,
+                  std::vector<SAccount>&& applies_to,
+                  std::vector<SAccount>&& exempted,
                   pcre2_code* regexp,
                   const std::string& value,
                   const std::string& fill);
@@ -319,7 +319,7 @@ public:
          *
          * @return A Rule instance or NULL.
          */
-        static std::auto_ptr<Rule> create_from(json_t* pRule);
+        static std::unique_ptr<Rule> create_from(json_t* pRule);
 
         /**
          * Rewrite the column value based on rules
@@ -348,7 +348,7 @@ public:
      * @return A rules object, or NULL if the rules could not be loaded.
      *         or parsed.
      */
-    static std::auto_ptr<MaskingRules> load(const char* zPath);
+    static std::unique_ptr<MaskingRules> load(const char* zPath);
 
     /**
      * Parse rules
@@ -357,7 +357,7 @@ public:
      *
      * @return A rules object, or NULL if the rules could not be parsed.
      */
-    static std::auto_ptr<MaskingRules> parse(const char* zJson);
+    static std::unique_ptr<MaskingRules> parse(const char* zJson);
 
     /**
      * Create rules from JSON object.
@@ -366,7 +366,7 @@ public:
      *
      * @return A rules object, or NULL if the rules could not be created.
      */
-    static std::auto_ptr<MaskingRules> create_from(json_t* pRoot);
+    static std::unique_ptr<MaskingRules> create_from(json_t* pRoot);
 
     /**
      * Return the rule object that matches a column definition and user/host.
@@ -402,7 +402,7 @@ public:
                              const char* zUser,
                              const char* zHost) const;
 
-    typedef std::shared_ptr<Rule> SRule;
+    typedef std::unique_ptr<Rule> SRule;
 
     /**
      * Is there any rule for the specified user.
@@ -415,7 +415,7 @@ public:
     bool has_rule_for(const char* zUser, const char* zHost) const;
 
 private:
-    MaskingRules(json_t* pRoot, const std::vector<SRule>& rules);
+    MaskingRules(json_t* pRoot, std::vector<SRule>&& rules);
 
 private:
     MaskingRules(const MaskingRules&);

@@ -312,10 +312,10 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     mock::ResultSetBackend backend;
     mock::RouterSession router_session(&backend, &session);
 
-    auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
-                                                                                 service,
-                                                                                 router_session.as_downstream(),
-                                                                                 client.as_upstream());
+    auto sFilter_session = filter_instance.newSession(&session,
+                                                      service,
+                                                      router_session.as_downstream(),
+                                                      client.as_upstream());
 
     if (sFilter_session.get())
     {
@@ -342,7 +342,7 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
     params->set("cached_data", "shared");
     params->set("selects", "verify_cacheable");
 
-    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", params);
+    auto sInstance = filter_module.createInstance("test", params);
 
     if (sInstance.get())
     {
@@ -360,7 +360,7 @@ int run()
 {
     int rv = 1;
 
-    auto_ptr<FilterModule> sModule = FilterModule::load("cache");
+    shared_ptr<FilterModule> sModule = FilterModule::load("cache");
 
     if (sModule.get())
     {

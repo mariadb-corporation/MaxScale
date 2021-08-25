@@ -15,7 +15,7 @@
 #include "maxscale/filtermodule.hh"
 #include "../../../core/internal/modules.hh"
 
-using std::auto_ptr;
+using std::unique_ptr;
 
 namespace maxscale
 {
@@ -26,10 +26,10 @@ namespace maxscale
 
 const char* FilterModule::zName = MODULE_FILTER;
 
-auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
-                                                              mxs::ConfigParameters* pParameters)
+unique_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
+                                                                mxs::ConfigParameters* pParameters)
 {
-    auto_ptr<Instance> sInstance;
+    unique_ptr<Instance> sInstance;
 
     mxs::Filter* pFilter = m_pApi->createInstance(zName);
 
@@ -63,12 +63,12 @@ FilterModule::Instance::~Instance()
     m_module.destroyInstance(m_pInstance);
 }
 
-auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
-                                                                   SERVICE* pService,
-                                                                   mxs::Routable* down,
-                                                                   mxs::Routable* up)
+unique_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
+                                                                     SERVICE* pService,
+                                                                     mxs::Routable* down,
+                                                                     mxs::Routable* up)
 {
-    auto_ptr<Session> sFilter_session;
+    unique_ptr<Session> sFilter_session;
 
     auto pFilter_session = m_module.newSession(m_pInstance, pSession, pService);
 
