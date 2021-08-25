@@ -137,14 +137,20 @@ export default {
         async keydownHandler() {
             if (this.isFormValid && this.hasChanged) await this.save()
         },
-        async closeCleanUp() {
-            this.closeDialog()
+        cleanUp() {
             if (this.$refs.form) {
                 this.$refs.form.reset()
                 this.$refs.form.resetValidation()
             }
+        },
+        async waitClose() {
+            this.closeDialog()
             // wait time out for loading animation
             await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
+        },
+        handleCloseImmediate() {
+            this.closeDialog()
+            this.SET_OVERLAY_TYPE(null)
         },
         async save() {
             await this.$refs.form.validate()
@@ -157,9 +163,10 @@ export default {
                 })
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
-                if (this.closeImmediate) await this.closeCleanUp()
+                if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
                 await this.onSave()
-                if (!this.hasSavingErr && !this.closeImmediate) await this.closeCleanUp()
+                if (!this.hasSavingErr && !this.closeImmediate) await this.waitClose()
+                this.cleanUp()
             }
         },
     },
