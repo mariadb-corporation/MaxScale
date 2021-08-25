@@ -1235,6 +1235,10 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         }
         break;
 
+    case bsoncxx::type::k_null:
+        ss << "'null'";
+        break;
+
     default:
         {
             ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
@@ -1639,6 +1643,7 @@ string array_op_to_condition(const string& field,
             ss << "(";
 
             auto value = element_to_value(one_element, zDescription);
+            bool is_null = one_element.type() == bsoncxx::type::k_null;
 
             bool first_path = true;
             for (const auto& path : paths)
@@ -1657,6 +1662,11 @@ string array_op_to_condition(const string& field,
 
                 string json_search = ss2.str();
 
+                if (is_null)
+                {
+                    ss << "(";
+                }
+
                 ss << "(";
                 ss << "(" << json_search << " IS NOT NULL)";
 
@@ -1670,6 +1680,13 @@ string array_op_to_condition(const string& field,
 
                 ss << " AND (INSTR(" << json_search << ", \"][\") = 0)";
                 ss << ")";
+
+                if (is_null)
+                {
+                    ss << " OR ";
+                    ss << "(JSON_CONTAINS_PATH(doc, 'all', " << path << ") = 0)";
+                    ss << ")";
+                }
             }
 
             ss << ")";
