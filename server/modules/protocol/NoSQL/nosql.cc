@@ -1443,8 +1443,9 @@ string default_field_and_value_to_comparison(const std::string& field,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    return "(JSON_EXTRACT(doc, '$." + field + "') "
-        + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
+    return "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
+        + "AND (JSON_EXTRACT(doc, '$." + field + "') "
+        + mariadb_op + " " + value_to_string(element, nosql_op) + "))";
 }
 
 string field_and_value_to_nin_comparison(const std::string& field,
@@ -1884,10 +1885,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 
             auto doc = element.get_document();
 
-            // According to the documentation, an absent field will always match. That's
-            // what the 'IS NULL' takes care of.
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
-                + "OR NOT JSON_EXTRACT(doc, '$." + field + "') " + get_op_and_value(doc) + ")";
+            rv = "(NOT " + get_comparison_condition(field, doc) + ")";
         }
         else if (nosql_op == "$elemMatch")
         {
