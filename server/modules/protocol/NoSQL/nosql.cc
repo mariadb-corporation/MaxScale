@@ -1545,24 +1545,113 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
     }
     else
     {
+        vector<string> paths;
+
+        auto i = field.find('.');
+
+        if (i == string::npos)
+        {
+            // A field like "a" becomes "'$.a'". No array selector on single fields as
+            // we also want a match for a direct value (and not just value in array), as
+            // that seems to be required.
+            string path = "'$." + field + "'";
+            paths.push_back(path);
+        }
+        else
+        {
+            // A field like "a.b" must be split into the alternatives "'$.a[*].b'" and "'$.a.b'".
+            // The array selector must not be on the last field.
+            vector<string> fields;
+            decltype(i) j = 0;
+            while (i != string::npos)
+            {
+                fields.push_back(field.substr(j, i - j));
+                j = ++i;
+                i = field.find('.', i);
+            }
+            fields.push_back(field.substr(j));
+
+            for (i = 0; i < fields.size(); ++i)
+            {
+                string path("'$");
+                for (j = 0; j < i; ++j)
+                {
+                    path += '.';
+                    path += fields[j];
+                }
+
+                path += '.';
+                path += fields[i];
+
+                if (i < fields.size() - 1)
+                {
+                    // Do not add array selector to last part.
+                    path += "[*]";
+                }
+
+                for (j = i + 1; j < fields.size(); ++j)
+                {
+                    path += '.';
+                    path += fields[j];
+                }
+
+                path += '\'';
+
+                paths.push_back(path);
+            }
+        }
+
         ss << "(";
 
-        bool first = true;
+        bool first_element = true;
         for (const auto& one_element : all_elements)
         {
-            if (first)
+            if (first_element)
             {
-                first = false;
+                first_element = false;
             }
             else
             {
                 ss << " AND ";
             }
 
-            ss << "(JSON_SEARCH(doc, 'all', "
-               << element_to_value(one_element, "$all")
-               << ", NULL, '$." << field
-               << "') IS NOT NULL)";
+            ss << "(";
+
+            auto value = element_to_value(one_element, "$all");
+
+            bool first_path = true;
+            for (const auto& path : paths)
+            {
+                if (first_path)
+                {
+                    first_path = false;
+                }
+                else
+                {
+                    ss << " OR ";
+                }
+
+                ostringstream ss2;
+                ss2 << "JSON_SEARCH(doc, 'all', " << value << ", NULL, " << path << ")";
+
+                string json_search = ss2.str();
+
+                ss << "(";
+                ss << "(" << json_search << " IS NOT NULL)";
+
+                // Searching for "{$all: [2]}" will turn into a select like
+                // SELECT ... WHERE (((JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]') IS NOT NULL)));
+                // That WHERE will match a row like '{ "a" : [ [ 2.0 ] ] }', although it shouldn't,
+                // as the the 'a' array does not contain an element '2.0', but an array element that
+                // contains the '2.0' element. The JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]')
+                // will for that row return "$.a[0][0]". Thus, "][" can be used for excluding
+                // such rows.
+
+                ss << " AND (INSTR(" << json_search << ", \"][\") = 0)";
+                ss << ")";
+            }
+
+            ss << ")";
         }
 
         ss << ")";
