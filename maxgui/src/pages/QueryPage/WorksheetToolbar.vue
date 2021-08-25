@@ -125,45 +125,6 @@
                 {{ $t('visualizedConfig', { action: show_vis_sidebar ? $t('hide') : $t('show') }) }}
             </span>
         </v-tooltip>
-        <!-- Settings section-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="ml-2"
-                    icon
-                    small
-                    v-on="on"
-                    @click="queryConfigDialog = !queryConfigDialog"
-                >
-                    <v-icon size="16" color="accent-dark">
-                        $vuetify.icons.settings
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
-        </v-tooltip>
-
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
-                    <v-icon size="20" color="accent-dark">
-                        fullscreen{{ is_fullscreen ? '_exit' : '' }}
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
-        </v-tooltip>
-
-        <query-config-dialog v-model="queryConfigDialog" />
-
         <confirm-dialog
             v-if="query_confirm_flag"
             ref="runConfirmDialog"
@@ -217,18 +178,16 @@
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
-import QueryConfigDialog from './QueryConfigDialog'
+
 export default {
-    name: 'toolbar-container',
+    name: 'worksheet-toolbar',
     components: {
         ConnectionManager,
         'readonly-query-editor': QueryEditor,
-        'query-config-dialog': QueryConfigDialog,
     },
     data() {
         return {
             dontShowConfirm: false,
-            queryConfigDialog: false,
         }
     },
     computed: {
@@ -249,7 +208,6 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_FULLSCREEN: 'query/SET_FULLSCREEN',
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
@@ -289,7 +247,6 @@ export default {
                     break
             }
         },
-        onSaveConfig() {},
     },
 }
 </script>
