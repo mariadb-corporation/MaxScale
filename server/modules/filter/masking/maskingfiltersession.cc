@@ -126,12 +126,8 @@ MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
                                            SERVICE* pService,
                                            const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession, pService)
-    , m_filter(*pFilter)
     , m_state(IGNORING_RESPONSE)
-{
-}
-
-MaskingFilterSession::~MaskingFilterSession()
+    , m_config(pFilter->config())
 {
 }
 
@@ -160,11 +156,9 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
 
     bool acceptable = true;
 
-    const MaskingFilter::Config& config = m_filter.config();
-
     if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
     {
-        if (config.check_user_variables())
+        if (m_config.check_user_variables)
         {
             if (is_variable_defined(pPacket, zUser, zHost))
             {
@@ -178,7 +172,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
 
         if (op == QUERY_OP_SELECT)
         {
-            if (config.check_unions() || config.check_subqueries())
+            if (m_config.check_unions || m_config.check_subqueries)
             {
                 if (is_union_or_subquery_used(pPacket, zUser, zHost))
                 {
@@ -187,7 +181,7 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
             }
         }
 
-        if (acceptable && config.prevent_function_usage())
+        if (acceptable && m_config.prevent_function_usage)
         {
             if (is_function_used(pPacket, zUser, zHost))
             {
@@ -203,11 +197,11 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    uint32_t option = m_filter.config().treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(option);
 
     if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
-        || !m_filter.config().require_fully_parsed())
+        || !m_config.require_fully_parsed)
     {
         if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
@@ -245,11 +239,11 @@ bool MaskingFilterSession::check_binary_query(GWBUF* pPacket)
 {
     bool rv = false;
 
-    uint32_t option = m_filter.config().treat_string_arg_as_field() ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
+    uint32_t option = m_config.treat_string_arg_as_field ? QC_OPTION_STRING_ARG_AS_FIELD : 0;
     EnableOption enable(option);
 
     if (qc_parse(pPacket, QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS) == QC_QUERY_PARSED
-        || !m_filter.config().require_fully_parsed())
+        || !m_config.require_fully_parsed)
     {
         rv = check_query(pPacket);
     }
@@ -269,9 +263,9 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
     switch (request.command())
     {
     case MXS_COM_QUERY:
-        m_res.reset(request.command(), m_filter.rules());
+        m_res.reset(request.command(), m_config.sRules);
 
-        if (m_filter.config().is_parsing_needed())
+        if (m_config.is_parsing_needed())
         {
             if (check_textual_query(pPacket))
             {
@@ -289,7 +283,7 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_STMT_PREPARE:
-        if (m_filter.config().is_parsing_needed())
+        if (m_config.is_parsing_needed())
         {
             if (check_binary_query(pPacket))
             {
@@ -307,7 +301,7 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_STMT_EXECUTE:
-        m_res.reset(request.command(), m_filter.rules());
+        m_res.reset(request.command(), m_config.sRules);
         m_state = EXPECTING_RESPONSE;
         break;
 
@@ -533,7 +527,7 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
 
 void MaskingFilterSession::handle_large_payload()
 {
-    if (m_filter.config().large_payload() == Config::LARGE_ABORT)
+    if (m_config.large_payload == Config::LARGE_ABORT)
     {
         MXS_WARNING("Payload > 16MB, closing the connection.");
         m_pSession->kill();
@@ -568,7 +562,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
                         LEncString s = value.as_string();
                         pRule->rewrite(s);
                     }
-                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    else if (m_config.warn_type_mismatch == Config::WARN_ALWAYS)
                     {
                         warn_of_type_mismatch(*pRule);
                     }
@@ -596,7 +590,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
                         LEncString s = value.as_string();
                         pRule->rewrite(s);
                     }
-                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    else if (m_config.warn_type_mismatch == Config::WARN_ALWAYS)
                     {
                         warn_of_type_mismatch(*pRule);
                     }
@@ -616,15 +610,13 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
 {
     bool is_used = false;
 
-    SMaskingRules sRules = m_filter.rules();
-
-    auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+    auto pred1 = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
+            const MaskingRules::Rule* pRule = m_config.sRules->get_rule_for(field_info, zUser, zHost);
 
             return pRule ? true : false;
         };
 
-    auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
+    auto pred2 = [this, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
             const QC_FIELD_INFO* begin = function_info.fields;
             const QC_FIELD_INFO* end = begin + function_info.n_fields;
 
@@ -663,19 +655,17 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
     bool is_defined = false;
 
-    SMaskingRules sRules = m_filter.rules();
-
-    auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    auto pred = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
             bool rv = false;
 
             if (strcmp(field_info.column, "*") == 0)
             {
                 // If "*" is used, then we must block if there is any rule for the current user.
-                rv = sRules->has_rule_for(zUser, zHost);
+                rv = m_config.sRules->has_rule_for(zUser, zHost);
             }
             else
             {
-                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+                rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
             }
 
             return rv;
@@ -718,28 +708,23 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost)
 {
     mxb_assert(qc_get_operation(pPacket) == QUERY_OP_SELECT);
-
-    const MaskingFilter::Config& config = m_filter.config();
-
-    mxb_assert(config.check_unions() || config.check_subqueries());
+    mxb_assert(m_config.check_unions || m_config.check_subqueries);
 
     bool is_used = false;
 
-    SMaskingRules sRules = m_filter.rules();
-
     uint32_t mask = 0;
 
-    if (config.check_unions())
+    if (m_config.check_unions)
     {
         mask |= QC_FIELD_UNION;
     }
 
-    if (config.check_subqueries())
+    if (m_config.check_subqueries)
     {
         mask |= QC_FIELD_SUBQUERY;
     }
 
-    auto pred = [&sRules, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
+    auto pred = [this, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
             bool rv = false;
 
             if (field_info.context & mask)
@@ -747,11 +732,11 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
                 if (strcmp(field_info.column, "*") == 0)
                 {
                     // If "*" is used, then we must block if there is any rule for the current user.
-                    rv = sRules->has_rule_for(zUser, zHost);
+                    rv = m_config.sRules->has_rule_for(zUser, zHost);
                 }
                 else
                 {
-                    rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+                    rv = m_config.sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
                 }
             }
 
@@ -774,7 +759,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
 
         std::stringstream ss;
 
-        if (config.check_unions() && (i->context & QC_FIELD_UNION))
+        if (m_config.check_unions && (i->context & QC_FIELD_UNION))
         {
             if (strcmp(zColumn, "*") == 0)
             {
@@ -787,7 +772,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
                    << "' is used in the second or subsequent SELECT of a UNION, access is denied.";
             }
         }
-        else if (config.check_subqueries() && (i->context & QC_FIELD_SUBQUERY))
+        else if (m_config.check_subqueries && (i->context & QC_FIELD_SUBQUERY))
         {
             if (strcmp(zColumn, "*") == 0)
             {

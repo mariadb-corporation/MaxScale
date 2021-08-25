@@ -15,9 +15,11 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/workerlocal.hh>
 #include <string>
 
 class MaskingFilter;
+class MaskingRules;
 
 class MaskingFilterConfig : public mxs::config::Configuration
 {
@@ -45,70 +47,41 @@ public:
     {
     }
 
-    large_payload_t large_payload() const
+    struct Values
     {
-        return m_large_payload;
-    }
+        large_payload_t      large_payload;
+        std::string          rules;
+        warn_type_mismatch_t warn_type_mismatch;
+        bool                 prevent_function_usage;
+        bool                 check_user_variables;
+        bool                 check_unions;
+        bool                 check_subqueries;
+        bool                 require_fully_parsed;
+        bool                 treat_string_arg_as_field;
 
-    const std::string& rules() const
-    {
-        return m_rules;
-    }
+        std::shared_ptr<MaskingRules> sRules;
 
-    warn_type_mismatch_t warn_type_mismatch() const
-    {
-        return m_warn_type_mismatch;
-    }
+        bool is_parsing_needed() const
+        {
+            return prevent_function_usage || check_user_variables || check_unions || check_subqueries;
+        }
+    };
 
-    bool prevent_function_usage() const
+    const Values& values() const
     {
-        return m_prevent_function_usage;
-    }
-
-    bool check_user_variables() const
-    {
-        return m_check_user_variables;
-    }
-
-    bool check_unions() const
-    {
-        return m_check_unions;
-    }
-
-    bool check_subqueries() const
-    {
-        return m_check_subqueries;
-    }
-
-    bool require_fully_parsed() const
-    {
-        return m_require_fully_parsed;
-    }
-
-    bool treat_string_arg_as_field() const
-    {
-        return m_treat_string_arg_as_field;
-    }
-
-    bool is_parsing_needed() const
-    {
-        return prevent_function_usage() || check_user_variables() || check_unions() || check_subqueries();
+        return *m_values;
     }
 
     static void populate(MXS_MODULE& info);
+
+    bool reload_rules();
 
 protected:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
-    large_payload_t      m_large_payload;
-    std::string          m_rules;
-    warn_type_mismatch_t m_warn_type_mismatch;
-    bool                 m_prevent_function_usage;
-    bool                 m_check_user_variables;
-    bool                 m_check_unions;
-    bool                 m_check_subqueries;
-    bool                 m_require_fully_parsed;
-    bool                 m_treat_string_arg_as_field;
-    MaskingFilter&       m_filter;
+    MaskingFilter& m_filter;
+
+    Values                    m_v;
+    mxs::WorkerGlobal<Values> m_values;
 };

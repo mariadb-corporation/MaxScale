@@ -18,16 +18,17 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include "maskingrules.hh"
+#include "maskingfilterconfig.hh"
 
 class MaskingFilter;
-class MaskingFilterConfig;
 
 class MaskingFilterSession : public maxscale::FilterSession
 {
 public:
-    typedef MaskingFilterConfig Config;
+    typedef std::shared_ptr<MaskingRules> SMaskingRules;
+    typedef MaskingFilterConfig           Config;
 
-    ~MaskingFilterSession();
+    ~MaskingFilterSession() = default;
 
     static MaskingFilterSession* create(MXS_SESSION* pSession,
                                         SERVICE* pService,
@@ -72,7 +73,6 @@ private:
     bool is_union_or_subquery_used(GWBUF* pPacket, const char* zUser, const char* zHost);
 
 private:
-    typedef std::shared_ptr<MaskingRules> SMaskingRules;
 
     class ResponseState
     {
@@ -175,7 +175,7 @@ private:
         bool                                   m_some_rule_matches; /*<! At least one rule matches. */
     };
 
-    const MaskingFilter& m_filter;
-    state_t              m_state;
-    ResponseState        m_res;
+    state_t                     m_state;
+    ResponseState               m_res;
+    MaskingFilterConfig::Values m_config;
 };
