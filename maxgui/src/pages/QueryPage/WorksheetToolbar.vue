@@ -87,7 +87,11 @@
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ query_txt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
+                {{
+                    query_txt.selected
+                        ? `${$t('runSelectedStatements')}\nCmd/Ctrl + Enter`
+                        : `${$t('runAllStatements')}\nCmd/Ctrl + Shift + Enter`
+                }}
             </span>
         </v-tooltip>
         <!-- Visualize section-->

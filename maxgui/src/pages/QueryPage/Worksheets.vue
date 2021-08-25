@@ -82,8 +82,8 @@
                 :style="{
                     height: `calc(100% - ${wkeNavHeight + 45}px)`,
                 }"
-                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
-                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
+                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('selected')"
+                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('all')"
             />
         </keep-alive>
     </div>
