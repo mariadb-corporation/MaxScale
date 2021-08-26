@@ -447,8 +447,8 @@ SListener listener_find_by_address(const std::string& address, unsigned short po
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    os << "[" << m_name << "]\n"
-       << "type=listener\n";
+    os << "[" << m_name << "]\n";
+    mxb_assert(m_params.contains(CN_TYPE));
 
     for (const auto& p : m_params)
     {
