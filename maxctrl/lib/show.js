@@ -909,7 +909,7 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getCollectionAsResource(host, "maxscale/threads", thread_fields);
+          return getTransposedCollection(host, "maxscale/threads", thread_fields);
         });
       }
     )
