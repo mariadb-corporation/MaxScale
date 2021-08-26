@@ -21,7 +21,7 @@
                     icon
                     small
                     color="accent-dark"
-                    :disabled="!query_txt.all"
+                    :disabled="!query_txt"
                     v-on="on"
                     @click="openFavoriteDialog"
                 >
@@ -32,7 +32,7 @@
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
                 {{
-                    query_txt.selected
+                    selected_query_txt
                         ? `${$t('saveStatementsToFavorite', {
                               quantity: $t('selected'),
                           })}\nCmd/Ctrl + S`
@@ -84,7 +84,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
+                        :value="selected_query_txt ? selected_query_txt : query_txt"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -149,6 +149,7 @@ export default {
             cnct_resources: state => state.query.cnct_resources,
             worksheets_arr: state => state.query.worksheets_arr,
             query_txt: state => state.query.query_txt,
+            selected_query_txt: state => state.query.selected_query_txt,
         }),
     },
     methods: {
@@ -175,10 +176,10 @@ export default {
         },
         addToFavorite() {
             let payload = {
-                sql: this.query_txt.all,
+                sql: this.query_txt,
                 ...this.favorite,
             }
-            if (this.query_txt.selected) payload.sql = this.query_txt.selected
+            if (this.selected_query_txt) payload.sql = this.selected_query_txt
             this.pushQueryFavorite(payload)
         },
     },

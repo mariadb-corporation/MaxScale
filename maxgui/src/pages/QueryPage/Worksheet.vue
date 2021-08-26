@@ -46,12 +46,7 @@
                                         class="editor pt-2 pl-2"
                                         :cmplList="getDbCmplList"
                                         isKeptAlive
-                                        @on-selection="
-                                            SET_QUERY_TXT({
-                                                ...query_txt,
-                                                selected: $event,
-                                            })
-                                        "
+                                        @on-selection="SET_SELECTED_QUERY_TXT($event)"
                                         v-on="$listeners"
                                     />
                                 </template>
@@ -172,10 +167,10 @@ export default {
         },
         allQueryTxt: {
             get() {
-                return this.query_txt.all
+                return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT({ ...this.query_txt, all: value })
+                this.SET_QUERY_TXT(value)
             },
         },
     },
@@ -228,6 +223,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
+            SET_SELECTED_QUERY_TXT: 'query/SET_SELECTED_QUERY_TXT',
         }),
         addShowVisSidebarWatcher() {
             this.unwatchShowVisSidebar = this.$watch('show_vis_sidebar', v => {
