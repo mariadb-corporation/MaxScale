@@ -189,6 +189,13 @@ QlaInstance* QlaInstance::create(const std::string name, mxs::ConfigParameters* 
             my_instance->m_re_match = re_match.release();
             my_instance->m_re_exclude = re_exclude.release();
             my_instance->m_ovec_size = ovec_size;
+
+            if (my_instance->m_settings.write_stdout_log)
+            {
+                string entry = my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags);
+                my_instance->write_stdout_log_entry(entry);
+            }
+
             // Try to open the unified log file
             if (my_instance->m_settings.write_unified_log)
             {
@@ -199,12 +206,6 @@ QlaInstance* QlaInstance::create(const std::string name, mxs::ConfigParameters* 
                     delete my_instance;
                     my_instance = NULL;
                 }
-            }
-
-            if (my_instance->m_settings.write_stdout_log)
-            {
-                string entry = my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags);
-                my_instance->write_stdout_log_entry(entry);
             }
         }
     }
