@@ -213,6 +213,14 @@ export default {
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getDbNodes: 'query/getDbNodes',
         }),
+        //Prevent parallel querying
+        shouldDisableExecute() {
+            return (
+                !this.query_txt ||
+                !this.curr_cnct_resource.id ||
+                (this.getIsQuerying && this.getLoadingQueryResult)
+            )
+        },
     },
     methods: {
         ...mapMutations({
@@ -237,12 +245,13 @@ export default {
             )
         },
         async handleRun(mode) {
-            this.activeRunMode = mode
-            if (!this.query_confirm_flag) await this.onRun(mode)
-            else if (this.shouldOpenDialog(mode)) {
-                this.dontShowConfirm = false // clear checkbox state
-                this.$refs.runConfirmDialog.open()
-            }
+            if (!this.shouldDisableExecute)
+                if (!this.query_confirm_flag) await this.onRun(mode)
+                else if (this.shouldOpenDialog(mode)) {
+                    this.activeRunMode = mode
+                    this.dontShowConfirm = false // clear checkbox state
+                    this.$refs.runConfirmDialog.open()
+                }
         },
         async confirmRunning() {
             await this.onRun(this.activeRunMode)
@@ -252,7 +261,6 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            if (this.getLoadingQueryResult || this.getIsQuerying) return null
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
