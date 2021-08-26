@@ -167,6 +167,7 @@
     "selected": "selected",
     "all": "all",
     "name": "Name",
+    "saveStatementsToFavorite": "Save {quantity} statements to favorite",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

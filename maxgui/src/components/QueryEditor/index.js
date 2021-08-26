@@ -272,6 +272,11 @@ export default {
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
                     run: () => this.$emit('onCtrlEnter'),
                 },
+                {
+                    label: this.$t('saveStatementsToFavorite', { quantity: '' }),
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
+                    run: () => this.$emit('onCtrlS'),
+                },
             ]
             for (const item of actionDescriptors) {
                 this.editor.addAction({

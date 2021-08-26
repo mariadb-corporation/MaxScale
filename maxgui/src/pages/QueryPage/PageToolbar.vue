@@ -167,12 +167,14 @@ export default {
             this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
         },
         openFavoriteDialog() {
-            this.favorite.date = this.$help.dateFormat({
-                value: new Date(),
-                formatType: 'DATE_RFC2822',
-            })
-            this.favorite.name = `Favorite statements - ${this.favorite.date}`
-            this.$refs.favoriteConfirmDialog.open()
+            if (this.query_txt) {
+                this.favorite.date = this.$help.dateFormat({
+                    value: new Date(),
+                    formatType: 'DATE_RFC2822',
+                })
+                this.favorite.name = `Favorite statements - ${this.favorite.date}`
+                this.$refs.favoriteConfirmDialog.open()
+            }
         },
         addToFavorite() {
             let payload = {

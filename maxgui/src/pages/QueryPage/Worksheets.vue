@@ -71,9 +71,9 @@
                     </v-tooltip>
                 </v-tab>
             </v-tabs>
-            <page-toolbar />
+            <page-toolbar ref="pageToolbar" />
         </div>
-        <worksheet-toolbar ref="toolbarContainer" />
+        <worksheet-toolbar ref="wkeToolbar" />
         <keep-alive>
             <worksheet
                 v-if="activeWkeID"
@@ -82,8 +82,9 @@
                 :style="{
                     height: `calc(100% - ${wkeNavHeight + 45}px)`,
                 }"
-                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('selected')"
-                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('all')"
+                @onCtrlEnter="() => $refs.wkeToolbar.handleRun('selected')"
+                @onCtrlShiftEnter="() => $refs.wkeToolbar.handleRun('all')"
+                @onCtrlS="() => $refs.pageToolbar.openFavoriteDialog()"
             />
         </keep-alive>
     </div>
