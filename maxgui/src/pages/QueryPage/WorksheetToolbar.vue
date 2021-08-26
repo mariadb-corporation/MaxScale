@@ -143,7 +143,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
+                        :value="activeRunMode === 'selected' ? query_txt.selected : query_txt.all"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -194,6 +194,7 @@ export default {
     data() {
         return {
             dontShowConfirm: false,
+            activeRunMode: 'all',
         }
     },
     computed: {
@@ -227,6 +228,7 @@ export default {
         },
 
         async handleRun(mode) {
+            this.activeRunMode = mode
             if (!this.query_confirm_flag) await this.onRun(mode)
             else {
                 this.dontShowConfirm = false // clear checkbox state
@@ -234,7 +236,7 @@ export default {
             }
         },
         async confirmRunning() {
-            await this.onRun(this.query_txt.selected ? 'selected' : 'all')
+            await this.onRun(this.activeRunMode)
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
