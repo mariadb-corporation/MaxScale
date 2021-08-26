@@ -1,11 +1,23 @@
 <template>
-    <div v-resize.quiet="setCtrDim" class="fill-height">
+    <div
+        v-resize.quiet="setCtrDim"
+        v-shortkey="{
+            'win-ctrl-s': ['ctrl', 's'],
+            'mac-cmd-s': ['meta', 's'],
+            'win-ctrl-enter': ['ctrl', 'enter'],
+            'mac-cmd-enter': ['meta', 'enter'],
+            'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
+            'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
+        }"
+        class="fill-height"
+        @shortkey="handleShortkey"
+    >
         <div
             ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': is_fullscreen }"
         >
-            <worksheets :ctrDim="ctrDim" />
+            <worksheets ref="wkesRef" :ctrDim="ctrDim" />
             <confirm-dialog
                 ref="confirmDialog"
                 :title="$t('confirmations.leavePage')"
@@ -139,6 +151,23 @@ export default {
         },
         cancelLeave() {
             this.to = null
+        },
+        handleShortkey(e) {
+            const wkes = this.$refs.wkesRef.$refs
+            switch (e.srcKey) {
+                case 'win-ctrl-s':
+                case 'mac-cmd-s':
+                    wkes.pageToolbar.openFavoriteDialog()
+                    break
+                case 'win-ctrl-enter':
+                case 'mac-cmd-enter':
+                    wkes.wkeToolbar.handleRun('selected')
+                    break
+                case 'win-ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    wkes.wkeToolbar.handleRun('all')
+                    break
+            }
         },
     },
 }
