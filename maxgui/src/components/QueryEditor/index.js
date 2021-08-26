@@ -261,14 +261,14 @@ export default {
             // Add custom commands to palette list
             const actionDescriptors = [
                 {
-                    label: this.$t('runAllStatements'),
+                    label: this.$t('runStatements', { quantity: this.$t('all') }),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
                     ],
                     run: () => this.$emit('onCtrlShiftEnter'),
                 },
                 {
-                    label: this.$t('runSelectedStatements'),
+                    label: this.$t('runStatements', { quantity: this.$t('selected') }),
                     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
                     run: () => this.$emit('onCtrlEnter'),
                 },

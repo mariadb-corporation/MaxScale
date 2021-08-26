@@ -33,8 +33,12 @@
             <span style="white-space: pre;" class="d-inline-block text-center">
                 {{
                     query_txt.selected
-                        ? `${$t('saveSelectedStatementsToFavorite')}\nCmd/Ctrl + S`
-                        : `${$t('saveAllStatementsToFavorite')}\nCmd/Ctrl + Shift + S`
+                        ? `${$t('saveStatementsToFavorite', {
+                              quantity: $t('selected'),
+                          })}\nCmd/Ctrl + S`
+                        : `${$t('saveStatementsToFavorite', {
+                              quantity: $t('all'),
+                          })}\nCmd/Ctrl + Shift + S`
                 }}
             </span>
         </v-tooltip>
