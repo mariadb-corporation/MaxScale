@@ -266,6 +266,9 @@ public:
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
 private:
+    void send_query(const bsoncxx::document::view& query);
+
+private:
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
 };

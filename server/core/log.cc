@@ -134,7 +134,7 @@ sd_journal* open_journal(const std::string& cursor)
     return j;
 }
 
-json_t* entry_to_json(sd_journal* j)
+json_t* entry_to_json(sd_journal* j, const std::set<std::string>& priorities)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, "id", json_string(get_cursor(j).c_str()));
@@ -162,6 +162,13 @@ json_t* entry_to_json(sd_journal* j)
             {
                 // Convert the numeric priority value to the string value
                 value = mxb_log_level_to_string(atoi(value.c_str()));
+
+                if (!priorities.empty() && priorities.find(value) == priorities.end())
+                {
+                    json_decref(obj);
+                    obj = nullptr;
+                    break;
+                }
             }
 
             std::transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -176,7 +183,8 @@ class JournalStream
 {
 public:
 
-    static std::shared_ptr<JournalStream> create(const std::string& cursor)
+    static std::shared_ptr<JournalStream> create(const std::string& cursor,
+                                                 const std::set<std::string>& priorities)
     {
         std::shared_ptr<JournalStream> rval;
 
@@ -191,7 +199,7 @@ public:
                 sd_journal_previous(j);
             }
 
-            rval = std::make_shared<JournalStream>(j);
+            rval = std::make_shared<JournalStream>(j, priorities);
         }
 
         return rval;
@@ -203,16 +211,19 @@ public:
 
         if (sd_journal_next(m_j) > 0)
         {
-            json_t* json = entry_to_json(m_j);
-            rval = mxs::json_dump(json, JSON_COMPACT);
-            json_decref(json);
+            if (json_t* json = entry_to_json(m_j, m_priorities))
+            {
+                rval = mxs::json_dump(json, JSON_COMPACT);
+                json_decref(json);
+            }
         }
 
         return rval;
     }
 
-    JournalStream(sd_journal* j)
+    JournalStream(sd_journal* j, const std::set<std::string>& priorities)
         : m_j(j)
+        , m_priorities(priorities)
     {
     }
 
@@ -222,12 +233,14 @@ public:
     }
 
 private:
-    sd_journal* m_j;
+    sd_journal*           m_j;
+    std::set<std::string> m_priorities;
 };
 
 #endif
 
-std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
+std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
+                                            const std::set<std::string>& priority)
 {
     json_t* arr = json_array();
     Cursors cursors;
@@ -242,7 +255,10 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
                 cursors.current = get_cursor(j);
             }
 
-            json_array_insert_new(arr, 0, entry_to_json(j));
+            if (json_t* row = entry_to_json(j, priority))
+            {
+                json_array_insert_new(arr, 0, row);
+            }
         }
 
         if (sd_journal_previous(j) > 0)
@@ -257,7 +273,7 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows)
     return {arr, cursors};
 }
 
-json_t* line_to_json(std::string line, int id)
+json_t* line_to_json(std::string line, int id, const std::set<std::string>& priorities)
 {
     // The timestamp is always the same size followed by three empty spaces. If high precision logging
     // is enabled, the timestamp string is four characters longer.
@@ -334,6 +350,11 @@ json_t* line_to_json(std::string line, int id)
 
     mxb::trim(line);
 
+    if (!priorities.empty() && priorities.find(priority) == priorities.end())
+    {
+        return nullptr;
+    }
+
     json_t* obj = json_object();
     json_object_set_new(obj, "id", json_string(std::to_string(id).c_str()));
     json_object_set_new(obj, "message", json_string(line.c_str()));
@@ -358,7 +379,8 @@ json_t* line_to_json(std::string line, int id)
     return obj;
 }
 
-std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
+std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows,
+                                            const std::set<std::string>& priorities)
 {
     Cursors cursors;
     json_t* arr = json_array();
@@ -379,7 +401,7 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows)
 
         for (std::string line; std::getline(file, line) && num_lines < rows; ++num_lines)
         {
-            if (json_t* obj = line_to_json(line, n + num_lines))
+            if (json_t* obj = line_to_json(line, n + num_lines, priorities))
             {
                 json_array_append_new(arr, obj);
             }
@@ -400,7 +422,8 @@ class LogStream
 {
 public:
 
-    static std::shared_ptr<LogStream> create(const std::string& cursor)
+    static std::shared_ptr<LogStream> create(const std::string& cursor,
+                                             const std::set<std::string>& priorities)
     {
         std::shared_ptr<LogStream> rval;
         std::ifstream file(mxb_log_get_filename());
@@ -426,7 +449,7 @@ public:
                 }
             }
 
-            rval = std::make_shared<LogStream>(std::move(file), n);
+            rval = std::make_shared<LogStream>(std::move(file), n, priorities);
         }
 
         return rval;
@@ -438,7 +461,7 @@ public:
 
         for (std::string line; std::getline(m_file, line);)
         {
-            if (json_t* obj = line_to_json(line, m_lineno++))
+            if (json_t* obj = line_to_json(line, m_lineno++, m_priorities))
             {
                 rval = mxs::json_dump(obj, JSON_COMPACT);
                 json_decref(obj);
@@ -452,15 +475,17 @@ public:
         return rval;
     }
 
-    LogStream(std::ifstream&& file, int lineno)
+    LogStream(std::ifstream&& file, int lineno, const std::set<std::string>& priorities)
         : m_file(std::move(file))
         , m_lineno(lineno)
+        , m_priorities(priorities)
     {
     }
 
 private:
-    std::ifstream m_file;
-    int           m_lineno = 0;
+    std::ifstream         m_file;
+    int                   m_lineno = 0;
+    std::set<std::string> m_priorities;
 };
 
 json_t* get_log_priorities()
@@ -535,7 +560,8 @@ json_t* mxs_logs_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
 }
 
-json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows)
+json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
+                             const std::set<std::string>& priorities)
 {
     json_t* attr = json_object();
     const auto& cnf = mxs::Config::get();
@@ -545,12 +571,12 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
 
     if (cnf.syslog.get())
     {
-        std::tie(log, cursors) = get_syslog_data(cursor, rows);
+        std::tie(log, cursors) = get_syslog_data(cursor, rows, priorities);
         log_source = "syslog";
     }
     else if (cnf.maxlog.get())
     {
-        std::tie(log, cursors) = get_maxlog_data(cursor, rows);
+        std::tie(log, cursors) = get_maxlog_data(cursor, rows, priorities);
         log_source = "maxlog";
     }
 
@@ -570,32 +596,39 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
     // Create pagination links
     json_t* links = json_object_get(rval, CN_LINKS);
     std::string base = json_string_value(json_object_get(links, "self"));
+    std::string prio;
+
+    if (!priorities.empty())
+    {
+        prio = "&priority=" + mxb::join(priorities);
+    }
 
     if (!cursors.prev.empty())
     {
-        auto prev = base + "?page[cursor]=" + cursors.prev + "&page[size]=" + std::to_string(rows);
+        auto prev = base + "?page[cursor]=" + cursors.prev + "&page[size]=" + std::to_string(rows) + prio;
         json_object_set_new(links, "prev", json_string(prev.c_str()));
     }
 
     if (!cursors.current.empty())
     {
-        auto self = base + "?page[cursor]=" + cursors.current + "&page[size]=" + std::to_string(rows);
+        auto self = base + "?page[cursor]=" + cursors.current + "&page[size]=" + std::to_string(rows) + prio;
         json_object_set_new(links, "self", json_string(self.c_str()));
     }
 
-    auto last = base + "?page[size]=" + std::to_string(rows);
+    auto last = base + "?page[size]=" + std::to_string(rows) + prio;
     json_object_set_new(links, "last", json_string(last.c_str()));
 
     return rval;
 }
 
-std::function<std::string()> mxs_logs_stream(const std::string& cursor)
+std::function<std::string()> mxs_logs_stream(const std::string& cursor,
+                                             const std::set<std::string>& priorities)
 {
     const auto& cnf = mxs::Config::get();
 
     if (cnf.syslog.get())
     {
-        if (auto stream = JournalStream::create(cursor))
+        if (auto stream = JournalStream::create(cursor, priorities))
         {
             return [stream]() {
                        return stream->get_value();
@@ -604,7 +637,7 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor)
     }
     else if (cnf.maxlog.get())
     {
-        if (auto stream = LogStream::create(cursor))
+        if (auto stream = LogStream::create(cursor, priorities))
         {
             return [stream]() {
                        return stream->get_value();

@@ -579,6 +579,16 @@ This endpoint supports the following parameters:
     Optionally, the `id` values in the returned data can be used as the values
     for this parameter to read data from a known point in the file.
 
+- `priority`
+
+  - Include messages only from these log levels. The default is to include all
+    messages.
+
+    The value given should be a comma-separated list of log priorities. The
+    priorities are `alert`, `error`, `warning`, `notice`, `info` and
+    `debug`. Note that the `debug` log level is only used in debug builds of
+    MaxScale.
+
 #### Response
 
 `Status: 200 OK`
@@ -667,6 +677,16 @@ This endpoint supports the following parameters:
     To stream data from a known point, first read the data via the
     `/v1/maxscale/logs/data` endpoint and then use the `id` value of the newest
     log message (i.e. the first value in the `log` array) to start the stream.
+
+- `priority`
+
+  - Include messages only from these log levels. The default is to include all
+    messages.
+
+    The value given should be a comma-separated list of log priorities. The
+    priorities are `alert`, `error`, `warning`, `notice`, `info` and
+    `debug`. Note that the `debug` log level is only used in debug builds of
+    MaxScale.
 
 #### Response
 

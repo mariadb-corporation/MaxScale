@@ -21,7 +21,27 @@ var yargs = require("yargs");
 const maxctrl_version = require("./version.js").version;
 
 // Global options given at startup
-var base_opts = [];
+var base_opts = {};
+
+// These options can only be given at startup
+const base_opts_keys = [
+  "--user",
+  "--password",
+  "--hosts",
+  "--timeout",
+  "--tsv",
+  "--secure",
+  "--tls-verify-server-cert",
+  "--tls-key",
+  "--tls-cert",
+  "--tls-passphrase",
+  "--tls-ca-cert",
+  "--config",
+  "--skip-sync",
+];
+
+// These are only used to check that the options aren't used in interactive mode
+const base_opts_short_keys = ["-u", "-p", "-h", "-c", "-t", "-s", "-n"];
 
 const default_filename = "~/.maxctrl.cnf";
 const expanded_default_filename = os.homedir() + "/.maxctrl.cnf";
@@ -248,21 +268,12 @@ function program() {
           }
         }
 
-        base_opts = [
-          "--user=" + argv.user,
-          "--password=" + argv.password,
-          "--hosts=" + argv.hosts,
-          "--timeout=" + argv.timeout,
-          "--tsv=" + argv.tsv,
-          "--secure=" + argv.secure,
-          "--tls-verify-server-cert=" + argv["tls-verify-server-cert"],
-        ];
-
         // Only set the string options if they are defined, otherwise we'll end up with the value as
         // the string 'undefined'
-        for (i of ["tls-key", "tls-cert", "tls-passphrase", "tls-ca-cert"]) {
-          if (argv[i]) {
-            base_opts.push("--" + i + "=" + argv[i]);
+        for (var i of base_opts_keys) {
+          const key = i.replace(/-*/, "");
+          if (argv[key]) {
+            base_opts[key] = argv[key];
           }
         }
 
@@ -324,7 +335,7 @@ async function readCommands(argv) {
   argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
 }
 
-function askQuestion(argv) {
+async function askQuestion(argv) {
   if (!process.stdin.isTTY) {
     return readCommands(argv);
   }
@@ -342,27 +353,40 @@ function askQuestion(argv) {
     },
   ];
 
-  return inquirer.prompt(question).then((answers) => {
-    cmd = answers.maxctrl;
-    if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
-      return Promise.resolve();
-    } else {
-      return doCommand(base_opts.join(" ") + " " + cmd).then(
-        (output) => {
-          if (output) {
-            console.log(output);
-          }
-          return askQuestion();
-        },
-        (err) => {
-          if (err) {
-            console.log(err);
-          } else {
-            console.log("An undefined error has occurred");
-          }
-          return askQuestion();
-        }
-      );
+  const _ = require("lodash");
+  const parse = require("shell-quote").parse;
+
+  // All short and long form options, for checking if they are used.
+  const keys = base_opts_keys.concat(base_opts_short_keys);
+
+  // The actual base options given during startup, joined into one string.
+  const options = Object.keys(base_opts)
+    .map((k) => "--" + k + "=" + base_opts[k])
+    .join(" ");
+
+  while (true) {
+    try {
+      const answers = await inquirer.prompt(question);
+      cmd = answers.maxctrl;
+
+      const opts = parse(cmd).map((v) => v.replace(/=.*/, ""));
+      const conflicting = _.intersection(opts, keys);
+
+      if (conflicting.length > 0) {
+        console.log("Global options cannot be redefined in interactive mode: " + conflicting.join(", "));
+        continue;
+      }
+
+      if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
+        break;
+      }
+
+      const output = await doCommand(options + " " + cmd);
+      if (output) {
+        console.log(output);
+      }
+    } catch (err) {
+      console.log(err ? err : "An undefined error has occurred");
     }
-  });
+  }
 }

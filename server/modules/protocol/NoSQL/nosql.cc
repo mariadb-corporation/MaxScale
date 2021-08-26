@@ -1144,7 +1144,22 @@ string element_to_value(const document_element_or_array_item& x, const string& o
     switch (x.type())
     {
     case bsoncxx::type::k_double:
-        ss << x.get_double();
+        {
+            double d = x.get_double();
+
+            // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
+            char buffer[28];
+
+            sprintf(buffer, "%.20g", d);
+
+            ss << buffer;
+
+            if (strpbrk(buffer, ".e") == nullptr)
+            {
+                // No decimal point, add ".0" to prevent this number from being an integer.
+                ss << ".0";
+            }
+        }
         break;
 
     case bsoncxx::type::k_utf8:
@@ -1218,6 +1233,10 @@ string element_to_value(const document_element_or_array_item& x, const string& o
 
             ss << ")";
         }
+        break;
+
+    case bsoncxx::type::k_null:
+        ss << "'null'";
         break;
 
     default:
@@ -1424,29 +1443,9 @@ string default_field_and_value_to_comparison(const std::string& field,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    return "(JSON_EXTRACT(doc, '$." + field + "') "
-        + mariadb_op + " " + value_to_string(element, nosql_op) + ")";
-}
-
-string field_and_value_to_in_comparison(const std::string& field,
-                                        const bsoncxx::document::element& element,
-                                        const string& mariadb_op,
-                                        const string& nosql_op,
-                                        ElementValueToString value_to_string)
-{
-    string rv;
-    string s = value_to_string(element, nosql_op);
-
-    if (!s.empty())
-    {
-        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
-    }
-    else
-    {
-        rv = "(false)";
-    }
-
-    return rv;
+    return "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
+        + "AND (JSON_EXTRACT(doc, '$." + field + "') "
+        + mariadb_op + " " + value_to_string(element, nosql_op) + "))";
 }
 
 string field_and_value_to_nin_comparison(const std::string& field,
@@ -1476,7 +1475,6 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$in",     { "IN",     &element_to_array, field_and_value_to_in_comparison } },
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
@@ -1513,11 +1511,54 @@ string get_op_and_value(const bsoncxx::document::view& doc)
     return rv;
 }
 
-string all_to_condition(const string& field, const bsoncxx::document::element& element)
+enum class ArrayOp
 {
+    AND,
+    OR
+};
+
+inline const char* to_description(ArrayOp op)
+{
+    switch (op)
+    {
+    case ArrayOp::AND:
+        return "$and";
+
+    case ArrayOp::OR:
+        return "$or";
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+inline const char* to_logical_operator(ArrayOp op)
+{
+    switch (op)
+    {
+    case ArrayOp::AND:
+        return " AND ";
+
+    case ArrayOp::OR:
+        return " OR ";
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+string array_op_to_condition(const string& field,
+                             const bsoncxx::document::element& element,
+                             ArrayOp array_op)
+{
+    const char* zDescription = to_description(array_op);
+
     if (element.type() != bsoncxx::type::k_array)
     {
-        throw SoftError("$all needs an array", error::BAD_VALUE);
+        ostringstream ss;
+        ss << zDescription << " needs an array";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
     }
 
     ostringstream ss;
@@ -1530,24 +1571,126 @@ string all_to_condition(const string& field, const bsoncxx::document::element& e
     }
     else
     {
+        vector<string> paths;
+
+        auto i = field.find('.');
+
+        if (i == string::npos)
+        {
+            // A field like "a" becomes "'$.a'". No array selector on single fields as
+            // we also want a match for a direct value (and not just value in array), as
+            // that seems to be required.
+            string path = "'$." + field + "'";
+            paths.push_back(path);
+        }
+        else
+        {
+            // A field like "a.b" must be split into the alternatives "'$.a[*].b'" and "'$.a.b'".
+            // The array selector must not be on the last field.
+            vector<string> fields;
+            decltype(i) j = 0;
+            while (i != string::npos)
+            {
+                fields.push_back(field.substr(j, i - j));
+                j = ++i;
+                i = field.find('.', i);
+            }
+            fields.push_back(field.substr(j));
+
+            for (i = 0; i < fields.size(); ++i)
+            {
+                string path("'$");
+                for (j = 0; j < i; ++j)
+                {
+                    path += '.';
+                    path += fields[j];
+                }
+
+                path += '.';
+                path += fields[i];
+
+                if (i < fields.size() - 1)
+                {
+                    // Do not add array selector to last part.
+                    path += "[*]";
+                }
+
+                for (j = i + 1; j < fields.size(); ++j)
+                {
+                    path += '.';
+                    path += fields[j];
+                }
+
+                path += '\'';
+
+                paths.push_back(path);
+            }
+        }
+
         ss << "(";
 
-        bool first = true;
+        bool first_element = true;
         for (const auto& one_element : all_elements)
         {
-            if (first)
+            if (first_element)
             {
-                first = false;
+                first_element = false;
             }
             else
             {
-                ss << " AND ";
+                ss << " " << to_logical_operator(array_op) << " ";
             }
 
-            ss << "(JSON_SEARCH(doc, 'all', "
-               << element_to_value(one_element, "$all")
-               << ", NULL, '$." << field
-               << "') IS NOT NULL)";
+            ss << "(";
+
+            auto value = element_to_value(one_element, zDescription);
+            bool is_null = one_element.type() == bsoncxx::type::k_null;
+
+            bool first_path = true;
+            for (const auto& path : paths)
+            {
+                if (first_path)
+                {
+                    first_path = false;
+                }
+                else
+                {
+                    ss << " OR ";
+                }
+
+                ostringstream ss2;
+                ss2 << "JSON_SEARCH(doc, 'all', " << value << ", NULL, " << path << ")";
+
+                string json_search = ss2.str();
+
+                if (is_null)
+                {
+                    ss << "(";
+                }
+
+                ss << "(";
+                ss << "(" << json_search << " IS NOT NULL)";
+
+                // Searching for "{$all: [2]}" will turn into a select like
+                // SELECT ... WHERE (((JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]') IS NOT NULL)));
+                // That WHERE will match a row like '{ "a" : [ [ 2.0 ] ] }', although it shouldn't,
+                // as the the 'a' array does not contain an element '2.0', but an array element that
+                // contains the '2.0' element. The JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]')
+                // will for that row return "$.a[0][0]". Thus, "][" can be used for excluding
+                // such rows.
+
+                ss << " AND (INSTR(" << json_search << ", \"][\") = 0)";
+                ss << ")";
+
+                if (is_null)
+                {
+                    ss << " OR ";
+                    ss << "(JSON_CONTAINS_PATH(doc, 'all', " << path << ") = 0)";
+                    ss << ")";
+                }
+            }
+
+            ss << ")";
         }
 
         ss << ")";
@@ -1742,10 +1885,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 
             auto doc = element.get_document();
 
-            // According to the documentation, an absent field will always match. That's
-            // what the 'IS NULL' takes care of.
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
-                + "OR NOT JSON_EXTRACT(doc, '$." + field + "') " + get_op_and_value(doc) + ")";
+            rv = "(NOT " + get_comparison_condition(field, doc) + ")";
         }
         else if (nosql_op == "$elemMatch")
         {
@@ -1757,7 +1897,11 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
         else if (nosql_op == "$all")
         {
-            rv = all_to_condition(field, element);
+            rv = array_op_to_condition(field, element, ArrayOp::AND);
+        }
+        else if (nosql_op == "$in")
+        {
+            rv = array_op_to_condition(field, element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {

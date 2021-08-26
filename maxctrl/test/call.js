@@ -5,7 +5,7 @@ describe("Module Commands", function () {
 
   it("call command", function () {
     return doCommand("call command qlafilter log QLA").then(function (output) {
-      JSON.parse(output).meta.should.have.lengthOf(1);
+      JSON.parse(output).should.have.lengthOf(1);
     });
   });
 

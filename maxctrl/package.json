@@ -30,6 +30,7 @@
     "lodash": "^4.17.21",
     "lodash-getpath": "^0.2.4",
     "readline-sync": "^1.4.9",
+    "shell-quote": "^1.7.2",
     "yargs": "^17.0.1"
   },
   "devDependencies": {

@@ -450,9 +450,11 @@ export default {
          * It should be used for actions that may take long time to response
          * and update is_querying_map state of each worksheet which can be used
          * to prevent parallel requests of a same connection.
-         * @param {Function} action async action
+         * @param {Function} payload.action async action
+         * @param {Function} payload.actionName Action name. Using to trace error caller
+         * @param {Function} payload.catchAction catch action if action function failed
          */
-        async queryingActionWrapper({ state, commit }, action) {
+        async queryingActionWrapper({ state, commit }, { action, actionName, catchAction }) {
             const active_wke_id = state.active_wke_id
             try {
                 commit('UPDATE_IS_QUERYING_MAP', {
@@ -469,8 +471,9 @@ export default {
                     id: active_wke_id,
                     payload: false,
                 })
-                const logger = this.vue.$logger('store-query-queryingActionWrapper')
+                const logger = this.vue.$logger(`store-query-${actionName}`)
                 logger.error(e)
+                catchAction()
             }
         },
         /**
@@ -741,8 +744,8 @@ export default {
         },
         async updateTreeNodes({ commit, dispatch, state, getters }, node) {
             const active_wke_id = state.active_wke_id
-            try {
-                await dispatch('queryingActionWrapper', async () => {
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
                     const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
                         node,
                         db_tree: getters.getDbTreeData,
@@ -755,17 +758,15 @@ export default {
                             db_completion_list: new_cmp_list,
                         },
                     })
-                })
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-updateTreeNodes')
-                logger.error(e)
-            }
+                },
+                actionName: 'updateTreeNodes',
+            })
         },
         async reloadTreeNodes({ commit, dispatch, state }) {
             const active_wke_id = state.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
-            try {
-                await dispatch('queryingActionWrapper', async () => {
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
                     commit('UPDATE_DB_TREE_MAP', {
                         id: active_wke_id,
                         payload: {
@@ -800,17 +801,17 @@ export default {
                             },
                         })
                     }
-                })
-            } catch (e) {
-                commit('UPDATE_DB_TREE_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        loading_db_tree: false,
-                    },
-                })
-                const logger = this.vue.$logger('store-query-reloadTreeNodes')
-                logger.error(e)
-            }
+                },
+                actionName: 'reloadTreeNodes',
+                catchAction: () => {
+                    commit('UPDATE_DB_TREE_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            loading_db_tree: false,
+                        },
+                    })
+                },
+            })
         },
         /**
          * @param {String} tblId - Table id (database_name.table_name).
@@ -819,8 +820,8 @@ export default {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
-            try {
-                await dispatch('queryingActionWrapper', async () => {
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
                     commit(`UPDATE_${prvwMode}_MAP`, {
                         id: active_wke_id,
                         payload: {
@@ -854,17 +855,27 @@ export default {
                             [`loading_${prvwMode.toLowerCase()}`]: false,
                         },
                     })
-                })
-            } catch (e) {
-                commit(`UPDATE_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
-                    },
-                })
-                const logger = this.vue.$logger('store-query-fetchPrvw')
-                logger.error(e)
-            }
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        {
+                            startTime: now,
+                            query: sql,
+                            res,
+                            connection_name: curr_cnct_resource.name,
+                        },
+                        { root: true }
+                    )
+                },
+                actionName: 'fetchPrvw',
+                catchAction: () => {
+                    commit(`UPDATE_${prvwMode}_MAP`, {
+                        id: active_wke_id,
+                        payload: {
+                            [`loading_${prvwMode.toLowerCase()}`]: false,
+                        },
+                    })
+                },
+            })
         },
 
         /**
@@ -874,8 +885,8 @@ export default {
             const active_wke_id = state.active_wke_id
             const curr_cnct_resource = state.curr_cnct_resource
             const request_sent_time = new Date().valueOf()
-            try {
-                await dispatch('queryingActionWrapper', async () => {
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
                     commit('UPDATE_QUERY_RESULTS_MAP', {
                         id: active_wke_id,
                         payload: {
@@ -903,15 +914,20 @@ export default {
 
                     const USE_REG = /(use|drop database)\s/i
                     if (query.match(USE_REG)) await dispatch('updateActiveDb')
-                })
-            } catch (e) {
-                commit('UPDATE_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: { loading_query_result: false },
-                })
-                const logger = this.vue.$logger('store-query-fetchQueryResult')
-                logger.error(e)
-            }
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        { startTime: now, query, res, connection_name: curr_cnct_resource.name },
+                        { root: true }
+                    )
+                },
+                actionName: 'fetchQueryResult',
+                catchAction: () => {
+                    commit('UPDATE_QUERY_RESULTS_MAP', {
+                        id: active_wke_id,
+                        payload: { loading_query_result: false },
+                    })
+                },
+            })
         },
         /**
          * @param {String} db - database name

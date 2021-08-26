@@ -45,6 +45,7 @@
                                         v-model="allQueryTxt"
                                         class="editor pt-2 pl-2"
                                         :cmplList="getDbCmplList"
+                                        isKeptAlive
                                         @on-selection="
                                             SET_QUERY_TXT({
                                                 ...query_txt,

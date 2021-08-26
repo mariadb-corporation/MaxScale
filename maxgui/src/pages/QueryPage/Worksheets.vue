@@ -1,82 +1,79 @@
 <template>
     <div class="fill-height worksheet-wrapper">
-        <v-tabs
-            v-model="activeWkeID"
-            show-arrows
-            hide-slider
-            :height="wkeNavHeight"
-            class="tab-navigation--btn-style wke-navigation"
-        >
-            <v-tab
-                v-for="wke in worksheets_arr"
-                :key="wke.id"
-                :href="`#${wke.id}`"
-                class="pa-0 tab-btn text-none"
-                active-class="tab-btn--active"
+        <div class="d-flex flex-row">
+            <v-tabs
+                v-model="activeWkeID"
+                show-arrows
+                hide-slider
+                :height="wkeNavHeight"
+                class="tab-navigation--btn-style wke-navigation flex-grow-0"
+                :style="{ maxWidth: `calc(100% - ${pageToolbarWidth}px)` }"
             >
-                <v-tooltip
-                    :disabled="!Boolean(wke.curr_cnct_resource.name)"
-                    top
-                    transition="slide-x-transition"
-                    content-class="shadow-drop"
+                <v-tab
+                    v-for="wke in worksheets_arr"
+                    :key="wke.id"
+                    :href="`#${wke.id}`"
+                    class="pa-0 tab-btn text-none"
+                    active-class="tab-btn--active"
                 >
-                    <template v-slot:activator="{ on }">
-                        <div
-                            style="min-width:160px"
-                            class="fill-height d-flex align-center justify-space-between px-3"
-                            v-on="on"
-                        >
-                            <div class="d-inline-flex align-center">
-                                <span
-                                    class="tab-name d-inline-block text-truncate"
-                                    style="max-width:88px"
-                                >
-                                    {{ wke.name }}
-                                </span>
-                                <template v-for="(value, name) in query_results_map">
-                                    <v-progress-circular
-                                        v-if="wke.id === name && value.loading_query_result"
-                                        :key="name"
-                                        class="ml-2"
-                                        size="16"
-                                        width="2"
-                                        color="primary"
-                                        indeterminate
-                                    />
-                                </template>
-                            </div>
-                            <v-btn
-                                v-if="worksheets_arr.length > 1"
-                                class="ml-1 del-wke-btn"
-                                icon
-                                x-small
-                                :disabled="is_querying_map[wke.id]"
-                                @click.stop="handleDeleteWke(worksheets_arr.indexOf(wke))"
+                    <v-tooltip
+                        :disabled="!Boolean(wke.curr_cnct_resource.name)"
+                        top
+                        transition="slide-x-transition"
+                        content-class="shadow-drop"
+                    >
+                        <template v-slot:activator="{ on }">
+                            <div
+                                style="min-width:160px"
+                                class="fill-height d-flex align-center justify-space-between px-3"
+                                v-on="on"
                             >
-                                <v-icon size="8" :color="is_querying_map[wke.id] ? '' : 'error'">
-                                    $vuetify.icons.close
-                                </v-icon>
-                            </v-btn>
-                        </div>
-                    </template>
-                    <span class="color text-text py-2 px-4">
-                        {{ $t('connectedTo') }}
-                        {{ $typy(wke, 'curr_cnct_resource.name').safeString }}
-                    </span>
-                </v-tooltip>
-            </v-tab>
-            <v-btn
-                :disabled="!cnct_resources.length"
-                height="32"
-                width="32"
-                class="ml-2"
-                icon
-                @click="addNewWs"
-            >
-                <v-icon size="18" color="deep-ocean">add</v-icon>
-            </v-btn>
-        </v-tabs>
-        <toolbar-container ref="toolbarContainer" />
+                                <div class="d-inline-flex align-center">
+                                    <span
+                                        class="tab-name d-inline-block text-truncate"
+                                        style="max-width:88px"
+                                    >
+                                        {{ wke.name }}
+                                    </span>
+                                    <template v-for="(value, name) in query_results_map">
+                                        <v-progress-circular
+                                            v-if="wke.id === name && value.loading_query_result"
+                                            :key="name"
+                                            class="ml-2"
+                                            size="16"
+                                            width="2"
+                                            color="primary"
+                                            indeterminate
+                                        />
+                                    </template>
+                                </div>
+                                <v-btn
+                                    v-if="worksheets_arr.length > 1"
+                                    class="ml-1 del-wke-btn"
+                                    icon
+                                    x-small
+                                    :disabled="is_querying_map[wke.id]"
+                                    @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
+                                >
+                                    <v-icon
+                                        size="8"
+                                        :color="is_querying_map[wke.id] ? '' : 'error'"
+                                    >
+                                        $vuetify.icons.close
+                                    </v-icon>
+                                </v-btn>
+                            </div>
+                        </template>
+                        <span class="color text-text py-2 px-4">
+                            {{ $t('connectedTo') }}
+                            {{ $typy(wke, 'curr_cnct_resource.name').safeString }}
+                        </span>
+                    </v-tooltip>
+                </v-tab>
+            </v-tabs>
+            <page-toolbar />
+        </div>
+        <worksheet-toolbar ref="toolbarContainer" />
         <keep-alive>
             <worksheet
                 v-if="activeWkeID"
@@ -85,8 +82,8 @@
                 :style="{
                     height: `calc(100% - ${wkeNavHeight + 45}px)`,
                 }"
-                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('all')"
-                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('selected')"
+                @onCtrlEnter="() => $refs.toolbarContainer.handleRun('selected')"
+                @onCtrlShiftEnter="() => $refs.toolbarContainer.handleRun('all')"
             />
         </keep-alive>
     </div>
@@ -107,12 +104,14 @@
 
 import { mapActions, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
-import ToolbarContainer from './ToolbarContainer'
+import WorksheetToolbar from './WorksheetToolbar'
+import PageToolbar from './PageToolbar.vue'
 export default {
     name: 'worksheets',
     components: {
         Worksheet,
-        ToolbarContainer,
+        WorksheetToolbar,
+        PageToolbar,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -120,13 +119,13 @@ export default {
     data() {
         return {
             wkeNavHeight: 32,
+            pageToolbarWidth: 106,
         }
     },
     computed: {
         ...mapState({
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
-            cnct_resources: state => state.query.cnct_resources,
             query_results_map: state => state.query.query_results_map,
             is_querying_map: state => state.query.is_querying_map,
         }),
@@ -141,24 +140,22 @@ export default {
     },
     methods: {
         ...mapMutations({
-            ADD_NEW_WKE: 'query/ADD_NEW_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
         }),
         ...mapActions({
             handleDeleteWke: 'query/handleDeleteWke',
         }),
-        addNewWs() {
-            this.ADD_NEW_WKE()
-            this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
-        },
     },
 }
 </script>
 <style lang="scss" scoped>
 .wke-navigation {
-    border-right: 1px solid $table-border !important;
+    border-left: 1px solid $table-border !important;
     border-top: 1px solid $table-border !important;
     .tab-btn {
+        &:first-of-type {
+            border-left: none !important;
+        }
         border-bottom: none !important;
         border-top: none !important;
         .del-wke-btn {

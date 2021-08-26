@@ -70,6 +70,7 @@ export default {
         cmplList: { type: Array, default: () => [] },
         readOnly: { type: Boolean, default: false },
         options: { type: Object, default: () => {} },
+        isKeptAlive: { type: Boolean, default: false },
     },
 
     model: {
@@ -131,7 +132,14 @@ export default {
         this.initMonaco(this.monaco)
     },
     beforeDestroy() {
+        this.completionProvider.dispose()
         if (this.editor) this.editor.dispose()
+    },
+    activated() {
+        if (this.isKeptAlive) this.registerCompleters()
+    },
+    deactivated() {
+        if (this.isKeptAlive) this.completionProvider.dispose()
     },
     methods: {
         codeFormatter(v) {
@@ -229,26 +237,9 @@ export default {
                     'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js'
                 )
             })
+
+            if (!this.isKeptAlive) this.registerCompleters()
             const scope = this
-            // Lang register
-            monaco.languages.registerCompletionItemProvider(this.language, {
-                provideCompletionItems: function(model, position) {
-                    const wordObj = model.getWordUntilPosition(position)
-                    const range = {
-                        startLineNumber: position.lineNumber,
-                        endLineNumber: position.lineNumber,
-                        startColumn: wordObj.startColumn,
-                        endColumn: wordObj.endColumn,
-                    }
-
-                    const match = scope.completionItemLabels.find(label =>
-                        label.includes(wordObj.word)
-                    )
-
-                    const suggestions = match ? scope.createCompleters(range) : []
-                    return { suggestions }
-                },
-            })
             monaco.languages.registerDocumentFormattingEditProvider(this.language, {
                 provideDocumentFormattingEdits: model => [
                     {
@@ -270,16 +261,16 @@ export default {
             // Add custom commands to palette list
             const actionDescriptors = [
                 {
-                    label: 'Execute all statements',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-                    run: () => this.$emit('onCtrlEnter'),
-                },
-                {
-                    label: 'Execute selected statements',
+                    label: this.$t('runAllStatements'),
                     keybindings: [
                         monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
                     ],
                     run: () => this.$emit('onCtrlShiftEnter'),
+                },
+                {
+                    label: this.$t('runSelectedStatements'),
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+                    run: () => this.$emit('onCtrlEnter'),
                 },
             ]
             for (const item of actionDescriptors) {
@@ -292,6 +283,30 @@ export default {
                     ...item,
                 })
             }
+        },
+        registerCompleters() {
+            const scope = this
+            this.completionProvider = monaco.languages.registerCompletionItemProvider(
+                this.language,
+                {
+                    provideCompletionItems: function(model, position) {
+                        const wordObj = model.getWordUntilPosition(position)
+                        const range = {
+                            startLineNumber: position.lineNumber,
+                            endLineNumber: position.lineNumber,
+                            startColumn: wordObj.startColumn,
+                            endColumn: wordObj.endColumn,
+                        }
+
+                        const match = scope.completionItemLabels.find(label =>
+                            label.includes(wordObj.word)
+                        )
+
+                        const suggestions = match ? scope.createCompleters(range) : []
+                        return { suggestions }
+                    },
+                }
+            )
         },
         createCompleters(range) {
             return this.completionItems.map(item => ({ ...item, range }))

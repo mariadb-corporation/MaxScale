@@ -26,5 +26,7 @@ export const APP_CONFIG = Object.freeze({
         PRVW_DATA: 'PRVW_DATA',
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
         QUERY_VIEW: 'QUERY_VIEW',
+        HISTORY: 'HISTORY',
+        FAVORITE: 'FAVORITE',
     }),
 })

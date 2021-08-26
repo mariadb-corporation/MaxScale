@@ -3,7 +3,7 @@
         outlined
         elevation="0"
         height="45"
-        class="query-toolbar"
+        class="wke-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
         <connection-manager :disabled="getIsQuerying" />
@@ -87,7 +87,11 @@
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
-                {{ query_txt.selected ? $t('runSelectedStatements') : $t('runAllStatements') }}
+                {{
+                    query_txt.selected
+                        ? `${$t('runSelectedStatements')}\nCmd/Ctrl + Enter`
+                        : `${$t('runAllStatements')}\nCmd/Ctrl + Shift + Enter`
+                }}
             </span>
         </v-tooltip>
         <!-- Visualize section-->
@@ -125,45 +129,6 @@
                 {{ $t('visualizedConfig', { action: show_vis_sidebar ? $t('hide') : $t('show') }) }}
             </span>
         </v-tooltip>
-        <!-- Settings section-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="ml-2"
-                    icon
-                    small
-                    v-on="on"
-                    @click="queryConfigDialog = !queryConfigDialog"
-                >
-                    <v-icon size="16" color="accent-dark">
-                        $vuetify.icons.settings
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
-        </v-tooltip>
-
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
-                    <v-icon size="20" color="accent-dark">
-                        fullscreen{{ is_fullscreen ? '_exit' : '' }}
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
-        </v-tooltip>
-
-        <query-config-dialog v-model="queryConfigDialog" />
-
         <confirm-dialog
             v-if="query_confirm_flag"
             ref="runConfirmDialog"
@@ -174,7 +139,7 @@
             closeImmediate
         >
             <template v-slot:body-prepend>
-                <div class="mb-4 sql-code-wrapper pa-2">
+                <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
                         :value="query_txt.selected ? query_txt.selected : query_txt.all"
                         class="readonly-editor fill-height"
@@ -217,18 +182,16 @@
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
-import QueryConfigDialog from './QueryConfigDialog'
+
 export default {
-    name: 'toolbar-container',
+    name: 'worksheet-toolbar',
     components: {
         ConnectionManager,
         'readonly-query-editor': QueryEditor,
-        'query-config-dialog': QueryConfigDialog,
     },
     data() {
         return {
             dontShowConfirm: false,
-            queryConfigDialog: false,
         }
     },
     computed: {
@@ -249,7 +212,6 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_FULLSCREEN: 'query/SET_FULLSCREEN',
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
@@ -289,7 +251,6 @@ export default {
                     break
             }
         },
-        onSaveConfig() {},
     },
 }
 </script>
@@ -301,26 +262,8 @@ export default {
         width: 16px !important;
     }
 }
-.sql-code-wrapper {
-    background-color: $reflection;
-    height: 300px;
-}
-::v-deep .readonly-editor {
-    .overflow-guard {
-        .monaco-editor,
-        .monaco-editor-background,
-        .monaco-editor .inputarea.ime-input {
-            background-color: #e8eef1;
-        }
-        .margin {
-            background-color: #e8eef1;
-        }
-        .view-line {
-            background-color: $reflection;
-        }
-    }
-}
-::v-deep.query-toolbar {
+
+::v-deep.wke-toolbar {
     .v-toolbar__content {
         padding: 4px 12px;
     }

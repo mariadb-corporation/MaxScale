@@ -1,0 +1,19 @@
+.readonly-sql-code-wrapper {
+    background-color: $reflection;
+    height: 300px;
+}
+.readonly-editor {
+    .overflow-guard {
+        .monaco-editor,
+        .monaco-editor-background,
+        .monaco-editor .inputarea.ime-input {
+            background-color: #e8eef1;
+        }
+        .margin {
+            background-color: #e8eef1;
+        }
+        .view-line {
+            background-color: $reflection;
+        }
+    }
+}
