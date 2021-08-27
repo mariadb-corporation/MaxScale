@@ -63,9 +63,9 @@ const char wrong_mod_type[] = "Module '%s' is a %s, not a %s.";
 
 struct LOADED_MODULE
 {
-    MXS_MODULE* info{nullptr};  /**< The module information */
-    void*       handle{nullptr};/**< The handle returned by dlopen */
-    std::string filepath;       /**< Path to file */
+    MXS_MODULE* info {nullptr};     /**< The module information */
+    void*       handle {nullptr};   /**< The handle returned by dlopen */
+    std::string filepath;           /**< Path to file */
 
     LOADED_MODULE(void* dlhandle, MXS_MODULE* info, const string& filepath)
         : info(info)
@@ -683,18 +683,22 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     }
 
     json_t* core_params = nullptr;
+    std::set<std::string> ignored;
 
     if (mod_info->modapi == mxs::ModuleType::ROUTER)
     {
         core_params = Service::specification()->to_json();
+        ignored = {CN_SERVERS, CN_TARGETS, CN_ROUTER, CN_TYPE, CN_CLUSTER, CN_FILTERS};
     }
     else if (mod_info->modapi == mxs::ModuleType::PROTOCOL)
     {
         core_params = Listener::specification()->to_json();
+        ignored = {CN_TYPE};
     }
     else if (mod_info->modapi == mxs::ModuleType::FILTER)
     {
         core_params = FilterDef::specification()->to_json();
+        ignored = {CN_TYPE, CN_MODULE};
     }
     else if (mod_info->modapi == mxs::ModuleType::MONITOR)
     {
@@ -703,6 +707,26 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 
     if (core_params)
     {
+        size_t idx = 0;
+
+        while (!ignored.empty() && idx < json_array_size(core_params))
+        {
+            json_t* val = json_array_get(core_params, idx);
+            json_t* name = json_object_get(val, "name");
+            mxb_assert(json_is_string(name));
+            const char* str = json_string_value(name);
+
+            if (ignored.find(str) != ignored.end())
+            {
+                ignored.erase(str);
+                json_array_remove(core_params, idx);
+            }
+            else
+            {
+                ++idx;
+            }
+        }
+
         json_array_extend(params, core_params);
         json_decref(core_params);
     }
