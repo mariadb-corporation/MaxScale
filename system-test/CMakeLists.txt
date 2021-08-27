@@ -926,6 +926,9 @@ add_test_executable(mxs1949_warn_user_injection.cpp mxs1949_warn_user_injection 
 # MXS-2106: NULL values with avrorouter
 add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorouter REPL_BACKEND)
 
+# MXS-3580: Avrorouter multidomain gtid support.
+add_test_executable(avro_gtid.cc avro_gtid avro_gtid LABELS avrorouter REPL_BACKEND)
+
 ############################################
 # END: avrorouter tests                    #
 ############################################
