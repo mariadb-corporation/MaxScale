@@ -8,13 +8,13 @@
     >
         <template v-slot:content>
             <select-dropdown
-                :entityName="relationshipsType"
+                v-model="selectedItems"
                 :defaultItems="defaultItems"
                 :items="items"
+                :entityName="relationshipsType"
                 :multiple="multiple"
                 :clearable="clearable"
                 :required="required"
-                @get-selected-items="selectedItems = $event"
             />
         </template>
     </collapse>
@@ -37,11 +37,11 @@
 This component takes items array props to render v-select component for selecting relationship data.
 Eg : items=[{id:'row_server_1', type:'servers'}]
 relationshipsType props is to defined to render correct text, display what relationship type is being target
-When getSelectedItems is called by parent component, it returns selectedItems
+When getSelectedItems is called by parent component, it returns selectedItems as an array regardless the value
+of multiple props since the valid value for resource relationship must be an array
 */
 export default {
     name: 'resource-relationships',
-
     props: {
         relationshipsType: { type: String, required: true },
         items: { type: Array, required: true },
@@ -59,7 +59,9 @@ export default {
     },
     methods: {
         getSelectedItems() {
-            return this.selectedItems
+            if (this.$typy(this.selectedItems).isNull) return []
+            if (this.$typy(this.selectedItems).isArray) return this.selectedItems
+            return [this.selectedItems]
         },
     },
 }

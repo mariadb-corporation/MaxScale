@@ -82,16 +82,14 @@
                             }}
                         </label>
                         <select-dropdown
-                            :key="selectedResourceType"
-                            class="mt-2"
-                            :entityName="selectedResourceType"
+                            v-model="selectedResource"
                             :items="resourceItems"
                             :defaultItems="defSelectedRsrc"
+                            :entityName="selectedResourceType"
                             clearable
                             showPlaceHolder
                             required
                             :errorMessages="errRsrcMsg"
-                            @get-selected-items="selectedResource = $event"
                         />
                     </v-col>
 
@@ -286,7 +284,7 @@ export default {
             if (!this.rc_target_names_map[val]) await this.fetchRcTargetNames(val)
         },
         async onSave() {
-            const { id: resourceName = null } = this.selectedResource[0] || {}
+            const { id: resourceName = null } = this.selectedResource
             await this.handleSave({
                 body: {
                     target: resourceName,

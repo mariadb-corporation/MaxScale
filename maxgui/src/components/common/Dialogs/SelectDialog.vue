@@ -17,14 +17,14 @@
 
             <select-dropdown
                 ref="selectDropdown"
-                :entityName="entityName"
-                :items="itemsList"
+                v-model="selectedItems"
                 :defaultItems="defaultItems"
+                :items="itemsList"
+                :entityName="entityName"
                 :multiple="multiple"
                 :clearable="clearable"
                 :showPlaceHolder="false"
                 @has-changed="hasChanged = $event"
-                @get-selected-items="handleGetSelectedItems"
             />
             <slot name="body-append"></slot>
         </template>
@@ -46,7 +46,7 @@
  */
 /*
 This component emits two events
-@selected-items: value = Array
+@selected-items: value: Array
 @on-open: event triggered after dialog is opened
 */
 export default {
@@ -78,6 +78,14 @@ export default {
                 this.hasChanged = this.$refs.selectDropdown.hasChanged
             } else this.selectedItems = []
         },
+        selectedItems: {
+            deep: true,
+            handler(v) {
+                if (this.$typy(v).isNull) this.$emit('selected-items', [])
+                else if (this.$typy(v).isArray) this.$emit('selected-items', v)
+                else this.$emit('selected-items', [v])
+            },
+        },
     },
 
     methods: {
@@ -99,10 +107,6 @@ export default {
         async onSaveHandler() {
             await this.onSave()
             this.closeDialog()
-        },
-        handleGetSelectedItems(items) {
-            this.selectedItems = items
-            this.$emit('selected-items', items)
         },
     },
 }
