@@ -1009,23 +1009,25 @@ export default {
          */
         resetWkeStates({ state, commit, dispatch }, cnctId) {
             const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
-            dispatch('releaseMemory', targetWke.id)
-            const idx = state.worksheets_arr.indexOf(targetWke)
-            // reset everything to initial state except editorStates()
-            const wke = {
-                ...targetWke,
-                ...connStates(),
-                ...sidebarStates(),
-                ...resultStates(),
-                ...toolbarStates(),
-                name: 'WORKSHEET',
+            if (targetWke) {
+                dispatch('releaseMemory', targetWke.id)
+                const idx = state.worksheets_arr.indexOf(targetWke)
+                // reset everything to initial state except editorStates()
+                const wke = {
+                    ...targetWke,
+                    ...connStates(),
+                    ...sidebarStates(),
+                    ...resultStates(),
+                    ...toolbarStates(),
+                    name: 'WORKSHEET',
+                }
+                commit('UPDATE_WKE', { idx, wke })
+                /**
+                 * if connection id to be deleted is equal to current connected
+                 * resource of active worksheet, update standalone wke states
+                 */
+                if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
             }
-            commit('UPDATE_WKE', { idx, wke })
-            /**
-             * if connection id to be deleted is equal to current connected
-             * resource of active worksheet, update standalone wke states
-             */
-            if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
         },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
