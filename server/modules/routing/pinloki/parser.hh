@@ -64,7 +64,7 @@ using ChangeMasterValues = std::map<ChangeMasterType, std::string>;
 
 struct Handler
 {
-    virtual void select(const std::vector<std::string>& values) = 0;
+    virtual void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) = 0;
     virtual void set(const std::string& key, const std::string& value) = 0;
 
     virtual void change_master_to(const ChangeMasterValues& values) = 0;

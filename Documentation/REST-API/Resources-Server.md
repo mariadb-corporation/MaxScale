@@ -2,6 +2,8 @@
 
 A server resource represents a backend database server.
 
+[TOC]
+
 ## Resource Operations
 
 The _:name_ in all of the URIs must be the name of a server in MaxScale.
@@ -20,13 +22,16 @@ Get a single server.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/servers/server1"
-    },
     "data": {
-        "id": "server1",
-        "type": "servers",
         "attributes": {
+            "gtid_binlog_pos": "0-3000-9",
+            "gtid_current_pos": "0-3000-9",
+            "last_event": "server_down",
+            "lock_held": null,
+            "master_group": null,
+            "master_id": -1,
+            "name": "server1",
+            "node_id": 3000,
             "parameters": {
                 "address": "127.0.0.1",
                 "disk_space_threshold": null,
@@ -44,44 +49,50 @@ Get a single server.
                 "ssl_ca_cert": null,
                 "ssl_cert": null,
                 "ssl_cert_verify_depth": 9,
+                "ssl_cipher": null,
                 "ssl_key": null,
                 "ssl_verify_peer_certificate": false,
                 "ssl_verify_peer_host": false,
                 "ssl_version": "MAX"
             },
-            "state": "Master, Running",
-            "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
-            "replication_lag": 0,
-            "statistics": {
-                "connections": 0,
-                "total_connections": 0,
-                "max_connections": 0,
-                "active_operations": 0,
-                "routed_packets": 0,
-                "persistent_connections": 0,
-                "adaptive_avg_select_time": "0ns"
-            },
-            "node_id": 3000,
-            "master_id": -1,
-            "last_event": "master_up",
-            "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
-            "name": "server1",
-            "server_id": 3000,
             "read_only": false,
-            "gtid_current_pos": "0-3000-24",
-            "gtid_binlog_pos": "0-3000-24",
-            "master_group": null,
-            "lock_held": null,
-            "slave_connections": []
+            "replication_lag": 0,
+            "server_id": 3000,
+            "slave_connections": [],
+            "state": "Master, Running",
+            "statistics": {
+                "active_operations": 0,
+                "adaptive_avg_select_time": "0ns",
+                "connection_pool_empty": 0,
+                "connections": 1,
+                "max_connections": 1,
+                "max_pool_size": 0,
+                "persistent_connections": 0,
+                "reused_connections": 0,
+                "routed_packets": 0,
+                "total_connections": 1
+            },
+            "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
+            "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
         },
+        "id": "server1",
         "links": {
             "self": "http://localhost:8989/v1/servers/server1"
         },
         "relationships": {
-            "services": {
+            "monitors": {
+                "data": [
+                    {
+                        "id": "MariaDB-Monitor",
+                        "type": "monitors"
+                    }
+                ],
                 "links": {
-                    "self": "http://localhost:8989/v1/services/"
-                },
+                    "related": "http://localhost:8989/v1/monitors/",
+                    "self": "http://localhost:8989/v1/servers/server1/relationships/monitors"
+                }
+            },
+            "services": {
                 "data": [
                     {
                         "id": "RW-Split-Router",
@@ -91,20 +102,17 @@ Get a single server.
                         "id": "Read-Connection-Router",
                         "type": "services"
                     }
-                ]
-            },
-            "monitors": {
+                ],
                 "links": {
-                    "self": "http://localhost:8989/v1/monitors/"
-                },
-                "data": [
-                    {
-                        "id": "MariaDB-Monitor",
-                        "type": "monitors"
-                    }
-                ]
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/servers/server1/relationships/services"
+                }
             }
-        }
+        },
+        "type": "servers"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/servers/server1"
     }
 }
 ```
@@ -123,14 +131,17 @@ Response contains a resource collection with all servers.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/servers/"
-    },
     "data": [
         {
-            "id": "server1",
-            "type": "servers",
             "attributes": {
+                "gtid_binlog_pos": "0-3000-9",
+                "gtid_current_pos": "0-3000-9",
+                "last_event": "server_down",
+                "lock_held": null,
+                "master_group": null,
+                "master_id": -1,
+                "name": "server1",
+                "node_id": 3000,
                 "parameters": {
                     "address": "127.0.0.1",
                     "disk_space_threshold": null,
@@ -148,44 +159,50 @@ Response contains a resource collection with all servers.
                     "ssl_ca_cert": null,
                     "ssl_cert": null,
                     "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
                     "ssl_key": null,
                     "ssl_verify_peer_certificate": false,
                     "ssl_verify_peer_host": false,
                     "ssl_version": "MAX"
                 },
-                "state": "Master, Running",
-                "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
-                "replication_lag": 0,
-                "statistics": {
-                    "connections": 0,
-                    "total_connections": 0,
-                    "max_connections": 0,
-                    "active_operations": 0,
-                    "routed_packets": 0,
-                    "persistent_connections": 0,
-                    "adaptive_avg_select_time": "0ns"
-                },
-                "node_id": 3000,
-                "master_id": -1,
-                "last_event": "master_up",
-                "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
-                "name": "server1",
-                "server_id": 3000,
                 "read_only": false,
-                "gtid_current_pos": "0-3000-24",
-                "gtid_binlog_pos": "0-3000-24",
-                "master_group": null,
-                "lock_held": null,
-                "slave_connections": []
+                "replication_lag": 0,
+                "server_id": 3000,
+                "slave_connections": [],
+                "state": "Master, Running",
+                "statistics": {
+                    "active_operations": 0,
+                    "adaptive_avg_select_time": "0ns",
+                    "connection_pool_empty": 0,
+                    "connections": 1,
+                    "max_connections": 1,
+                    "max_pool_size": 0,
+                    "persistent_connections": 0,
+                    "reused_connections": 0,
+                    "routed_packets": 0,
+                    "total_connections": 1
+                },
+                "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
+                "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
             },
+            "id": "server1",
             "links": {
                 "self": "http://localhost:8989/v1/servers/server1"
             },
             "relationships": {
-                "services": {
+                "monitors": {
+                    "data": [
+                        {
+                            "id": "MariaDB-Monitor",
+                            "type": "monitors"
+                        }
+                    ],
                     "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
+                        "related": "http://localhost:8989/v1/monitors/",
+                        "self": "http://localhost:8989/v1/servers/server1/relationships/monitors"
+                    }
+                },
+                "services": {
                     "data": [
                         {
                             "id": "RW-Split-Router",
@@ -195,25 +212,25 @@ Response contains a resource collection with all servers.
                             "id": "Read-Connection-Router",
                             "type": "services"
                         }
-                    ]
-                },
-                "monitors": {
+                    ],
                     "links": {
-                        "self": "http://localhost:8989/v1/monitors/"
-                    },
-                    "data": [
-                        {
-                            "id": "MariaDB-Monitor",
-                            "type": "monitors"
-                        }
-                    ]
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/servers/server1/relationships/services"
+                    }
                 }
-            }
+            },
+            "type": "servers"
         },
         {
-            "id": "server2",
-            "type": "servers",
             "attributes": {
+                "gtid_binlog_pos": "0-3000-9",
+                "gtid_current_pos": "0-3000-9",
+                "last_event": "server_down",
+                "lock_held": null,
+                "master_group": null,
+                "master_id": 3000,
+                "name": "server2",
+                "node_id": 3001,
                 "parameters": {
                     "address": "127.0.0.1",
                     "disk_space_threshold": null,
@@ -231,78 +248,85 @@ Response contains a resource collection with all servers.
                     "ssl_ca_cert": null,
                     "ssl_cert": null,
                     "ssl_cert_verify_depth": 9,
+                    "ssl_cipher": null,
                     "ssl_key": null,
                     "ssl_verify_peer_certificate": false,
                     "ssl_verify_peer_host": false,
                     "ssl_version": "MAX"
                 },
-                "state": "Slave, Running",
-                "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
-                "replication_lag": 0,
-                "statistics": {
-                    "connections": 0,
-                    "total_connections": 0,
-                    "max_connections": 0,
-                    "active_operations": 0,
-                    "routed_packets": 0,
-                    "persistent_connections": 0,
-                    "adaptive_avg_select_time": "0ns"
-                },
-                "node_id": 3001,
-                "master_id": 3000,
-                "last_event": "slave_up",
-                "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
-                "name": "server2",
-                "server_id": 3001,
                 "read_only": false,
-                "gtid_current_pos": "0-3000-24",
-                "gtid_binlog_pos": "0-3000-24",
-                "master_group": null,
-                "lock_held": null,
+                "replication_lag": 0,
+                "server_id": 3001,
                 "slave_connections": [
                     {
                         "connection_name": "",
-                        "master_host": "127.0.0.1",
-                        "master_port": 3000,
-                        "slave_io_running": "Yes",
-                        "slave_sql_running": "Yes",
-                        "seconds_behind_master": 0,
-                        "master_server_id": 3000,
+                        "gtid_io_pos": "",
                         "last_io_error": "",
                         "last_sql_error": "",
-                        "gtid_io_pos": ""
+                        "master_host": "127.0.0.1",
+                        "master_port": 3000,
+                        "master_server_id": 3000,
+                        "seconds_behind_master": 0,
+                        "slave_io_running": "Yes",
+                        "slave_sql_running": "Yes"
                     }
-                ]
+                ],
+                "state": "Slave, Running",
+                "statistics": {
+                    "active_operations": 0,
+                    "adaptive_avg_select_time": "0ns",
+                    "connection_pool_empty": 0,
+                    "connections": 1,
+                    "max_connections": 1,
+                    "max_pool_size": 0,
+                    "persistent_connections": 0,
+                    "reused_connections": 0,
+                    "routed_packets": 2,
+                    "total_connections": 1
+                },
+                "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
+                "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
             },
+            "id": "server2",
             "links": {
                 "self": "http://localhost:8989/v1/servers/server2"
             },
             "relationships": {
-                "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
-                    "data": [
-                        {
-                            "id": "RW-Split-Router",
-                            "type": "services"
-                        }
-                    ]
-                },
                 "monitors": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/monitors/"
-                    },
                     "data": [
                         {
                             "id": "MariaDB-Monitor",
                             "type": "monitors"
                         }
-                    ]
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/monitors/",
+                        "self": "http://localhost:8989/v1/servers/server2/relationships/monitors"
+                    }
+                },
+                "services": {
+                    "data": [
+                        {
+                            "id": "RW-Split-Router",
+                            "type": "services"
+                        },
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/servers/server2/relationships/services"
+                    }
                 }
-            }
+            },
+            "type": "servers"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/servers/"
+    }
 }
 ```
 

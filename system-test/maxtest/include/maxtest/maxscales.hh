@@ -26,6 +26,7 @@ struct ServerInfo
     static constexpr bitfield MASTER = (1 << 1);
     static constexpr bitfield SLAVE = (1 << 2);
     static constexpr bitfield RELAY = (1 << 3);
+    static constexpr bitfield MAINT = (1 << 4);
     static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
     static constexpr bitfield BLR = (1 << 12);
     static constexpr bitfield DOWN = (1 << 13);
@@ -127,6 +128,7 @@ private:
 class MaxScale
 {
 public:
+    using SMariaDB = std::unique_ptr<mxt::MariaDB>;
     enum service
     {
         RWSPLIT,
@@ -177,11 +179,11 @@ public:
     MYSQL* routers[3] {nullptr, nullptr, nullptr};
     int    ports[3] {-1, -1, -1};   /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
-    std::string maxscale_cnf;       /**< full name of Maxscale configuration file */
-    std::string maxscale_log_dir;   /**< name of log files directory */
+    const std::string& cnf_path() const;
+    const std::string& log_dir() const;
 
-    std::string user_name;  /**< User name to access backend nodes */
-    std::string password;   /**< Password to access backend nodes */
+    const std::string& user_name() const;
+    const std::string& password() const;
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
@@ -229,7 +231,25 @@ public:
      */
     MYSQL* open_rwsplit_connection(const std::string& db = "test");
 
-    std::unique_ptr<mxt::MariaDB> open_rwsplit_connection2(const std::string& db = "");
+    SMariaDB open_rwsplit_connection2(const std::string& db = "test");
+
+    /**
+     * Same as above except no default database.
+     *
+     * @return Connection object
+     */
+    SMariaDB open_rwsplit_connection2_nodb();
+
+    /**
+     * Try to open an RWSplit-connection using the given database. Failure is not a test error.
+     *
+     * @param db Database to connect to
+     * @return Connection object. Call 'is_open' to check success.
+     */
+    SMariaDB try_open_rwsplit_connection(const std::string& db = "");
+
+    enum class SslMode {ON, OFF};
+    SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& db = "");
 
     /**
      * Get a readwritesplit Connection
@@ -327,6 +347,8 @@ public:
 
     mxt::ServersInfo get_servers();
 
+    int get_master_server_id();
+
     /**
      * Wait until all running monitors have ticked.
      *
@@ -334,11 +356,20 @@ public:
      */
     void wait_for_monitor(int intervals = 1);
 
+    /**
+     * First sleep a given number of seconds, then wait for monitor. This is required in some cases
+     * where the test needs to wait for some external effect along with the monitor.
+     *
+     * @param sleep_s Sleep time in seconds
+     * @param intervals Monitor intervals
+     */
+    void sleep_and_wait_for_monitor(int sleep_s, int intervals);
+
     mxt::CmdResult ssh_output(const std::string& cmd, bool sudo = true);
 
     int ssh_node(const std::string& cmd, bool sudo);
 
-    int ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
+    int  ssh_node_f(bool sudo, const char* format, ...) mxb_attribute((format(printf, 3, 4)));
     bool copy_to_node(const char* src, const char* dest);
     bool copy_from_node(const char* src, const char* dest);
 
@@ -373,6 +404,8 @@ public:
      */
     void check_servers_status(const std::vector<mxt::ServerInfo::bitfield>& expected_status);
 
+    void check_print_servers_status(const std::vector<mxt::ServerInfo::bitfield>& expected_status);
+
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
     void alter_service(const std::string& svc_name, const std::string& setting, const std::string& value);
     void alter_server(const std::string& srv_name, const std::string& setting, const std::string& value);
@@ -390,10 +423,14 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    std::unique_ptr<mxt::VMNode> m_vmnode;
+    std::string m_user_name;    /**< User name to access backend nodes */
+    std::string m_password;     /**< Password to access backend nodes */
+    std::string m_cnf_path;     /**< Maxscale configuration file path */
+    std::string m_log_dir;      /**< MaxScale log files directory path */
+    std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 
-    std::string      m_binlog_dir;  /**< Directory of binlog files (for binlog router) */
-    mxt::SharedData& m_shared;
+    mxt::SharedData&             m_shared;
+    std::unique_ptr<mxt::VMNode> m_vmnode;
 
     mxt::TestLogger& log() const;
     bool             verbose() const;

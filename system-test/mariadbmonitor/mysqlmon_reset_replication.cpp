@@ -49,7 +49,7 @@ void test_main(TestConnections& test)
     auto& mxs = *test.maxscale;
 
     // Set up test table
-    auto maxconn = mxs.open_rwsplit_connection2("test");
+    auto maxconn = mxs.open_rwsplit_connection2();
     test.tprintf("Creating table and inserting data.");
     maxconn->cmd("CREATE OR REPLACE TABLE test.t1(c1 INT)");
     int insert_val = 1;

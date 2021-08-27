@@ -44,7 +44,6 @@ const StringSet recognized_mdbci_labels =
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
-const int TEST_SKIPPED = 202;   // Exit code when skipping test. Should match value expected by cmake.
 }
 
 namespace maxscale
@@ -53,7 +52,6 @@ namespace maxscale
 static bool start = true;
 static std::string required_repl_version;
 static bool restart_galera = false;
-static bool require_galera = false;
 static bool require_columnstore = false;
 }
 
@@ -96,11 +94,6 @@ void TestConnections::skip_maxscale_start(bool value)
 void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
-}
-
-void TestConnections::require_galera(bool value)
-{
-    maxscale::require_galera = value;
 }
 
 void TestConnections::require_columnstore(bool value)
@@ -380,53 +373,34 @@ int TestConnections::setup_vms()
     bool maxscale_installed = false;
 
     bool vms_found = false;
-    if (read_network_config() && required_machines_are_running())
+    if (m_recreate_vms)
     {
-        vms_found = true;
-    }
-    else
-    {
-        // Not all VMs were found. Call MDBCI first time.
-        if (call_mdbci_and_check())
+        // User has requested to recreate all VMs required by current test.
+        if (call_mdbci_and_check("--recreate"))
         {
             vms_found = true;
             maxscale_installed = true;
         }
     }
-
-    bool nodes_ok = false;
-    if (vms_found)
+    else
     {
-        if (initialize_nodes())
+        if (read_network_config() && required_machines_are_running())
         {
-            nodes_ok = true;
+            vms_found = true;
         }
         else
         {
-            tprintf("Recreating VMs because node check failed.");
-        }
-
-        if (!nodes_ok)
-        {
-            // Node init failed, call mdbci again. Is this worth even trying?
-            if (call_mdbci_and_check("--recreate"))
+            // Not all VMs were found. Call MDBCI.
+            if (call_mdbci_and_check())
             {
+                vms_found = true;
                 maxscale_installed = true;
-                if (initialize_nodes())
-                {
-                    nodes_ok = true;
-                }
-            }
-
-            if (!nodes_ok)
-            {
-                add_failure("Could not initialize nodes even after 'mdbci --recreate'. Exiting.");
             }
         }
     }
 
     int rval = MDBCI_FAIL;
-    if (nodes_ok)
+    if (vms_found && initialize_nodes())
     {
         rval = 0;
         if (m_reinstall_maxscale)
@@ -445,9 +419,13 @@ int TestConnections::setup_vms()
         if (rval == 0 && maxscale_installed)
         {
             string src = string(mxt::SOURCE_DIR) + "/mdbci/add_core_cnf.sh";
-            maxscale->copy_to_node(src.c_str(), maxscale->access_homedir());
-            maxscale->ssh_node_f(true, "%s/add_core_cnf.sh %s", maxscale->access_homedir(),
-                                 verbose() ? "verbose" : "");
+            for (int i = 0; i < n_maxscales(); i++)
+            {
+                auto mxs = my_maxscale(i);
+                auto homedir = mxs->access_homedir();
+                mxs->copy_to_node(src.c_str(), homedir);
+                mxs->ssh_node_f(true, "%s/add_core_cnf.sh %s", homedir, verbose() ? "verbose" : "");
+            }
         }
     }
 
@@ -826,8 +804,8 @@ void TestConnections::init_maxscale(int m)
                     "iptables -F INPUT;"
                     "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                     "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                    mxs->maxscale_cnf.c_str(),
-                    mxs->maxscale_log_dir.c_str());
+                    mxs->cnf_path().c_str(),
+                    mxs->log_dir().c_str());
     if (maxscale::start)
     {
         expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
@@ -895,43 +873,8 @@ void TestConnections::revert_replicate_from_master()
 
     for (int i = 1; i < repl->N; i++)
     {
-        repl->set_slave(repl->nodes[i], repl->ip_private(0), repl->port[0]);
-        execute_query(repl->nodes[i], "start slave");
+        repl->replicate_from(i, 0);
     }
-}
-
-int TestConnections::start_mm()
-{
-    tprintf("Stopping maxscale\n");
-    int rval = maxscale->stop_maxscale();
-
-    tprintf("Stopping all backend nodes\n");
-    rval += repl->stop_nodes() ? 0 : 1;
-
-    for (int i = 0; i < 2; i++)
-    {
-        tprintf("Starting back node %d\n", i);
-        rval += repl->start_node(i, (char*) "");
-    }
-
-    repl->connect();
-    for (int i = 0; i < 2; i++)
-    {
-        execute_query(repl->nodes[i], "stop slave");
-        execute_query(repl->nodes[i], "reset master");
-    }
-
-    execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
-
-    repl->set_slave(repl->nodes[0], repl->ip_private(1), repl->port[1]);
-    repl->set_slave(repl->nodes[1], repl->ip_private(0), repl->port[0]);
-
-    repl->close_connections();
-
-    tprintf("Starting back Maxscale\n");
-    rval += maxscale->start_maxscale();
-
-    return rval;
 }
 
 bool TestConnections::log_matches(const char* pattern)
@@ -1159,7 +1102,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
             }
 
             galera_conn[i] =
-                open_conn(4016, maxscale->ip4(), maxscale->user_name, maxscale->password, maxscale_ssl);
+                open_conn(4016, maxscale->ip4(), maxscale->user_name(), maxscale->password(), maxscale_ssl);
             if (mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;
@@ -1729,6 +1672,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
         {"fix-clusters",       no_argument,       0, 'f'},
+        {"recreate-vms",       no_argument,       0, 'c'},
         {0,                    0,                 0, 0  }
     };
 
@@ -1736,7 +1680,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlmef::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzlmefc::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1817,6 +1761,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'f':
             printf("Fixing clusters after test.\n");
             m_fix_clusters_after = true;
+            break;
+
+        case 'c':
+            printf("Recreating all test VMs.\n");
+            m_recreate_vms = true;
             break;
 
         default:
@@ -2039,10 +1988,22 @@ int TestConnections::run_test_script(const char* script, const char* name)
     auto test_dir = mxt::SOURCE_DIR;
     setenv("src_dir", test_dir, 1);
 
-    string script_cmd = mxb::string_printf("%s/%s %s", test_dir, script, name);
-    int script_res = system(script_cmd.c_str());
+    string script_cmd = access(script, F_OK) == 0 ?
+        mxb::string_printf("%s %s", script, name) :
+        mxb::string_printf("%s/%s %s", test_dir, script, name);
+    int rc = system(script_cmd.c_str());
 
-    expect(script_res == 0, "Test %s exited with return code %d", name, script_res);
+    if (WIFEXITED(rc))
+    {
+        rc = WEXITSTATUS(rc);
+    }
+    else
+    {
+        tprintf("Command '%s' failed. Error: %s", script_cmd.c_str(), mxb_strerror(errno));
+        rc = 256;
+    }
+
+    expect(rc == 0, "Script %s exited with code %d", script_cmd.c_str(), rc);
 
     return global_result;
 }

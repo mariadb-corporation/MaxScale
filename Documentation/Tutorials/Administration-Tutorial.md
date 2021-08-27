@@ -263,6 +263,26 @@ A server can only be destroyed if it is not used by any services or monitors. To
 automatically remove the server from the services and monitors that use it, use
 the `--force` flag.
 
+#### Drain a Server
+
+```
+maxctrl set server db-server-1 drain
+```
+
+When a server is set into the `drain` state, no new connections to it are
+created. Unlike to the `maintenance` state which immediately closes all
+connections, the `drain` state allows existing connections to be gracefully
+closed.
+
+To remove the `drain` state, use `clear server` command:
+
+```
+maxctrl clear server db-server-1 drain
+```
+
+Servers with the `Master` state cannot be drained. To drain them, first perform
+a switchover to another node and then drain the server.
+
 ### Managing Monitors
 
 #### Create a new Monitor

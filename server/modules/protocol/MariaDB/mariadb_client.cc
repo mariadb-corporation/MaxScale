@@ -88,7 +88,7 @@ string get_version_string(SERVICE* service)
 
     // Older applications don't understand versions other than 5 and cause strange problems.
     // The MariaDB Server also prepends 5.5.5- to its version strings, and this is not shown by clients.
-    if (service_vrs[0] != '5')
+    if (service_vrs[0] != '5' && service_vrs[0] != '8')
     {
         const char prefix[] = "5.5.5-";
         service_vrs = prefix + service_vrs;
@@ -96,20 +96,32 @@ string get_version_string(SERVICE* service)
     return service_vrs;
 }
 
-bool supports_extended_caps(SERVICE* service)
+enum class CapTypes
 {
-    bool rval = false;
+    XPAND,      // XPand, doesn't include SESSION_TRACK as it doesn't support it
+    NORMAL,     // The normal capabilities but without the extra MariaDB-only bits
+    MARIADB,    // All capabilities
+};
 
+CapTypes get_supported_cap_types(SERVICE* service)
+{
     for (SERVER* s : service->reachable_servers())
     {
-        if (s->info().version_num().total >= 100200)
+        if (s->info().type() == SERVER::VersionInfo::Type::XPAND)
         {
-            rval = true;
-            break;
+            // At least one node is XPand and since it's the most restrictive, we can return early.
+            return CapTypes::XPAND;
+        }
+        else if (s->info().version_num().total >= 100200)
+        {
+            // TODO: This is "bug compatible" with older releases where the MariaDB extra capabilities are
+            // sent if at least one node is version 10.2 or higher. This should behave according to the lowest
+            // version reachable from this service to make sure all nodes behave in a roughly similar manner.
+            return CapTypes::MARIADB;
         }
     }
 
-    return rval;
+    return CapTypes::NORMAL;
 }
 
 uint32_t parse_packet_length(GWBUF* buffer)
@@ -381,13 +393,20 @@ bool MariaDBClientConnection::send_server_handshake()
 
     // 8 bytes of capabilities, sent in three parts.
     uint64_t caps = GW_MYSQL_CAPABILITIES_SERVER;
-    bool extended_caps = supports_extended_caps(service);
-    if (extended_caps)
+    auto cap_types = get_supported_cap_types(service);
+
+    if (cap_types == CapTypes::MARIADB)
     {
         // A MariaDB 10.2 server or later omits the CLIENT_MYSQL capability. This signals that it supports
         // extended capabilities.
         caps &= ~GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
         caps |= MXS_EXTRA_CAPS_SERVER64;
+    }
+
+    if (cap_types == CapTypes::XPAND)
+    {
+        // XPand doesn't support SESSION_TRACK
+        caps &= ~GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     }
 
     if (require_ssl())
@@ -421,7 +440,9 @@ bool MariaDBClientConnection::send_server_handshake()
     ptr = mariadb::set_bytes(ptr, 0, 6);
 
     // Capabilities part 3 or 4 filler bytes.
-    ptr = (extended_caps) ? mariadb::copy_bytes(ptr, caps_le + 4, 4) : mariadb::set_bytes(ptr, 0, 4);
+    ptr = cap_types == CapTypes::MARIADB ?
+        mariadb::copy_bytes(ptr, caps_le + 4, 4) :
+        mariadb::set_bytes(ptr, 0, 4);
 
     // Scramble part 2.
     ptr = mariadb::copy_bytes(ptr, scramble_storage + 8, 12);

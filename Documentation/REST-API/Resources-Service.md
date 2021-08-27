@@ -3,6 +3,8 @@
 A service resource represents a service inside MaxScale. A service is a
 collection of network listeners, filters, a router and a set of backend servers.
 
+[TOC]
+
 ## Resource Operations
 
 The _:name_ in all of the URIs must be the name of a service in MaxScale.
@@ -21,79 +23,150 @@ Get a single service.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/services/Read-Connection-Router"
-    },
     "data": {
-        "id": "Read-Connection-Router",
-        "type": "services",
         "attributes": {
-            "router": "readconnroute",
-            "state": "Started",
-            "router_diagnostics": {
-                "connections": 0,
-                "current_connections": 1,
-                "queries": 0
-            },
-            "started": "Mon May 22 12:54:05 2017",
-            "total_connections": 1,
-            "connections": 1,
-            "parameters": { // Service parameters
-                "router_options": "master",
-                "user": "maxuser",
-                "password": "maxpwd",
-                "enable_root_user": false,
-                "max_retry_interval": 3600,
-                "max_connections": 0,
-                "connection_timeout": 0,
-                "auth_all_servers": false,
-                "strip_db_esc": true,
-                "localhost_match_wildcard_host": true,
-                "version_string": "",
-                "log_auth_warnings": true,
-                "retry_on_failure": true
-            },
-            "listeners": [ // Listeners that point to this service (deprecated)
+            "connections": 0,
+            "listeners": [
                 {
                     "attributes": {
                         "parameters": {
+                            "address": "::",
+                            "authenticator": null,
+                            "authenticator_options": "",
+                            "connection_init_sql_file": null,
                             "port": 4008,
                             "protocol": "MariaDBClient",
-                            "authenticator": "MySQLAuth"
-                        }
+                            "socket": null,
+                            "sql_mode": null,
+                            "ssl": "false",
+                            "ssl_ca_cert": null,
+                            "ssl_cert": null,
+                            "ssl_cert_verify_depth": 9,
+                            "ssl_cipher": null,
+                            "ssl_crl": null,
+                            "ssl_key": null,
+                            "ssl_verify_peer_certificate": false,
+                            "ssl_verify_peer_host": false,
+                            "ssl_version": "MAX"
+                        },
+                        "state": "Running"
                     },
                     "id": "Read-Connection-Listener",
+                    "relationships": {
+                        "services": {
+                            "data": [
+                                {
+                                    "id": "Read-Connection-Router",
+                                    "type": "services"
+                                }
+                            ],
+                            "links": {
+                                "related": "http://localhost:8989/v1/services/",
+                                "self": "http://localhost:8989/v1/listeners/Read-Connection-Listener/relationships/services/"
+                            }
+                        }
+                    },
                     "type": "listeners"
                 }
-            ]
+            ],
+            "parameters": {
+                "auth_all_servers": false,
+                "cluster": null,
+                "connection_keepalive": 300,
+                "connection_timeout": 0,
+                "enable_root_user": false,
+                "localhost_match_wildcard_host": true,
+                "log_auth_warnings": true,
+                "max_connections": 0,
+                "net_write_timeout": 0,
+                "password": "*****",
+                "rank": "primary",
+                "retain_last_statements": -1,
+                "router_options": "master",
+                "session_trace": false,
+                "session_track_trx_state": false,
+                "strip_db_esc": true,
+                "targets": "server1,server2",
+                "user": "maxuser",
+                "version_string": null
+            },
+            "router": "readconnroute",
+            "router_diagnostics": {
+                "queries": 0,
+                "server_query_statistics": []
+            },
+            "started": "Fri Jul 16 09:51:10 2021",
+            "state": "Started",
+            "statistics": {
+                "active_operations": 0,
+                "connections": 0,
+                "max_connections": 0,
+                "routed_packets": 0,
+                "total_connections": 0
+            },
+            "total_connections": 0
+        },
+        "id": "Read-Connection-Router",
+        "links": {
+            "self": "http://localhost:8989/v1/services/Read-Connection-Router"
         },
         "relationships": {
-            "servers": {
-                "links": {
-                    "self": "http://localhost:8989/v1/servers/"
-                },
-                "data": [ // List of servers that this service uses
+            "filters": {
+                "data": [
                     {
-                        "id": "server1",
-                        "type": "servers"
+                        "id": "QLA",
+                        "type": "filters"
+                    },
+                    {
+                        "id": "Hint",
+                        "type": "filters"
                     }
-                ]
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/filters/",
+                    "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/filters"
+                }
             },
             "listeners": {
-                "links": {
-                    "self": "http://localhost:8989/v1/listeners/"
-                },
-                "data": [ // Listeners that point to this service
+                "data": [
                     {
                         "id": "Read-Connection-Listener",
                         "type": "listeners"
                     }
-                ]
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/listeners/",
+                    "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/listeners"
+                }
+            },
+            "servers": {
+                "data": [
+                    {
+                        "id": "server1",
+                        "type": "servers"
+                    },
+                    {
+                        "id": "server2",
+                        "type": "servers"
+                    }
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/servers/",
+                    "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/servers"
+                }
+            },
+            "services": {
+                "data": [],
+                "links": {
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/services"
+                }
             }
         },
-        "links": {
-            "self": "http://localhost:8989/v1/services/Read-Connection-Router"
-        }
+        "type": "services"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/services/Read-Connection-Router"
     }
 }
 ```
@@ -112,82 +185,307 @@ Get all services.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/services/"
-    },
-    "data": [ // Collection of service resources
+    "data": [
         {
-            "id": "Read-Connection-Router",
-            "type": "services",
             "attributes": {
-                "router": "readconnroute",
-                "state": "Started",
-                "router_diagnostics": {
-                    "connections": 0,
-                    "current_connections": 1,
-                    "queries": 0
-                },
-                "started": "Mon May 22 13:00:46 2017",
-                "total_connections": 1,
                 "connections": 1,
-                "parameters": {
-                    "router_options": "master",
-                    "user": "maxuser",
-                    "password": "maxpwd",
-                    "enable_root_user": false,
-                    "max_retry_interval": 3600,
-                    "max_connections": 0,
-                    "connection_timeout": 0,
-                    "auth_all_servers": false,
-                    "strip_db_esc": true,
-                    "localhost_match_wildcard_host": true,
-                    "version_string": "",
-                    "log_auth_warnings": true,
-                    "retry_on_failure": true
-                },
                 "listeners": [
                     {
                         "attributes": {
                             "parameters": {
-                                "port": 4008,
+                                "address": "::",
+                                "authenticator": null,
+                                "authenticator_options": "",
+                                "connection_init_sql_file": null,
+                                "port": 4006,
                                 "protocol": "MariaDBClient",
-                                "authenticator": "MySQLAuth"
+                                "socket": null,
+                                "sql_mode": null,
+                                "ssl": "false",
+                                "ssl_ca_cert": null,
+                                "ssl_cert": null,
+                                "ssl_cert_verify_depth": 9,
+                                "ssl_cipher": null,
+                                "ssl_crl": null,
+                                "ssl_key": null,
+                                "ssl_verify_peer_certificate": false,
+                                "ssl_verify_peer_host": false,
+                                "ssl_version": "MAX"
+                            },
+                            "state": "Running"
+                        },
+                        "id": "RW-Split-Listener",
+                        "relationships": {
+                            "services": {
+                                "data": [
+                                    {
+                                        "id": "RW-Split-Router",
+                                        "type": "services"
+                                    }
+                                ],
+                                "links": {
+                                    "related": "http://localhost:8989/v1/services/",
+                                    "self": "http://localhost:8989/v1/listeners/RW-Split-Listener/relationships/services/"
+                                }
                             }
                         },
-                        "id": "Read-Connection-Listener",
                         "type": "listeners"
                     }
-                ]
-            },
-            "relationships": {
-                "servers": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/servers/"
-                    },
-                    "data": [
+                ],
+                "parameters": {
+                    "auth_all_servers": false,
+                    "causal_reads": "false",
+                    "causal_reads_timeout": 10000,
+                    "cluster": "MariaDB-Monitor",
+                    "connection_keepalive": 300,
+                    "connection_timeout": 0,
+                    "delayed_retry": false,
+                    "delayed_retry_timeout": 10000,
+                    "disable_sescmd_history": false,
+                    "enable_root_user": false,
+                    "lazy_connect": false,
+                    "localhost_match_wildcard_host": true,
+                    "log_auth_warnings": true,
+                    "master_accept_reads": false,
+                    "master_failure_mode": "fail_instantly",
+                    "master_reconnection": false,
+                    "max_connections": 0,
+                    "max_sescmd_history": 50,
+                    "max_slave_connections": "255",
+                    "max_slave_replication_lag": 0,
+                    "net_write_timeout": 0,
+                    "optimistic_trx": false,
+                    "password": "*****",
+                    "prune_sescmd_history": false,
+                    "rank": "primary",
+                    "retain_last_statements": -1,
+                    "retry_failed_reads": true,
+                    "router_options": null,
+                    "session_trace": false,
+                    "session_track_trx_state": false,
+                    "slave_connections": 255,
+                    "slave_selection_criteria": "LEAST_CURRENT_OPERATIONS",
+                    "strict_multi_stmt": false,
+                    "strict_sp_calls": false,
+                    "strip_db_esc": true,
+                    "targets": null,
+                    "transaction_replay": false,
+                    "transaction_replay_attempts": 5,
+                    "transaction_replay_max_size": "1073741824",
+                    "transaction_replay_retry_on_deadlock": false,
+                    "use_sql_variables_in": "all",
+                    "user": "maxuser",
+                    "version_string": null
+                },
+                "router": "readwritesplit",
+                "router_diagnostics": {
+                    "queries": 2,
+                    "replayed_transactions": 0,
+                    "ro_transactions": 0,
+                    "route_all": 0,
+                    "route_master": 0,
+                    "route_slave": 2,
+                    "rw_transactions": 0,
+                    "server_query_statistics": [
                         {
-                            "id": "server1",
-                            "type": "servers"
+                            "avg_selects_per_session": 0,
+                            "avg_sess_duration": "0ns",
+                            "id": "server2",
+                            "read": 2,
+                            "total": 2,
+                            "write": 0
                         }
                     ]
                 },
+                "started": "Fri Jul 16 09:51:10 2021",
+                "state": "Started",
+                "statistics": {
+                    "active_operations": 0,
+                    "connections": 1,
+                    "max_connections": 1,
+                    "routed_packets": 2,
+                    "total_connections": 1
+                },
+                "total_connections": 1
+            },
+            "id": "RW-Split-Router",
+            "links": {
+                "self": "http://localhost:8989/v1/services/RW-Split-Router"
+            },
+            "relationships": {
                 "listeners": {
+                    "data": [
+                        {
+                            "id": "RW-Split-Listener",
+                            "type": "listeners"
+                        }
+                    ],
                     "links": {
-                        "self": "http://localhost:8989/v1/listeners/"
-                    },
+                        "related": "http://localhost:8989/v1/listeners/",
+                        "self": "http://localhost:8989/v1/services/RW-Split-Router/relationships/listeners"
+                    }
+                },
+                "monitors": {
+                    "data": [
+                        {
+                            "id": "MariaDB-Monitor",
+                            "type": "monitors"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/monitors/",
+                        "self": "http://localhost:8989/v1/services/RW-Split-Router/relationships/monitors"
+                    }
+                }
+            },
+            "type": "services"
+        },
+        {
+            "attributes": {
+                "connections": 0,
+                "listeners": [
+                    {
+                        "attributes": {
+                            "parameters": {
+                                "address": "::",
+                                "authenticator": null,
+                                "authenticator_options": "",
+                                "connection_init_sql_file": null,
+                                "port": 4008,
+                                "protocol": "MariaDBClient",
+                                "socket": null,
+                                "sql_mode": null,
+                                "ssl": "false",
+                                "ssl_ca_cert": null,
+                                "ssl_cert": null,
+                                "ssl_cert_verify_depth": 9,
+                                "ssl_cipher": null,
+                                "ssl_crl": null,
+                                "ssl_key": null,
+                                "ssl_verify_peer_certificate": false,
+                                "ssl_verify_peer_host": false,
+                                "ssl_version": "MAX"
+                            },
+                            "state": "Running"
+                        },
+                        "id": "Read-Connection-Listener",
+                        "relationships": {
+                            "services": {
+                                "data": [
+                                    {
+                                        "id": "Read-Connection-Router",
+                                        "type": "services"
+                                    }
+                                ],
+                                "links": {
+                                    "related": "http://localhost:8989/v1/services/",
+                                    "self": "http://localhost:8989/v1/listeners/Read-Connection-Listener/relationships/services/"
+                                }
+                            }
+                        },
+                        "type": "listeners"
+                    }
+                ],
+                "parameters": {
+                    "auth_all_servers": false,
+                    "cluster": null,
+                    "connection_keepalive": 300,
+                    "connection_timeout": 0,
+                    "enable_root_user": false,
+                    "localhost_match_wildcard_host": true,
+                    "log_auth_warnings": true,
+                    "max_connections": 0,
+                    "net_write_timeout": 0,
+                    "password": "*****",
+                    "rank": "primary",
+                    "retain_last_statements": -1,
+                    "router_options": "master",
+                    "session_trace": false,
+                    "session_track_trx_state": false,
+                    "strip_db_esc": true,
+                    "targets": "server1,server2",
+                    "user": "maxuser",
+                    "version_string": null
+                },
+                "router": "readconnroute",
+                "router_diagnostics": {
+                    "queries": 0,
+                    "server_query_statistics": []
+                },
+                "started": "Fri Jul 16 09:51:10 2021",
+                "state": "Started",
+                "statistics": {
+                    "active_operations": 0,
+                    "connections": 0,
+                    "max_connections": 0,
+                    "routed_packets": 0,
+                    "total_connections": 0
+                },
+                "total_connections": 0
+            },
+            "id": "Read-Connection-Router",
+            "links": {
+                "self": "http://localhost:8989/v1/services/Read-Connection-Router"
+            },
+            "relationships": {
+                "filters": {
+                    "data": [
+                        {
+                            "id": "QLA",
+                            "type": "filters"
+                        },
+                        {
+                            "id": "Hint",
+                            "type": "filters"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/filters/",
+                        "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/filters"
+                    }
+                },
+                "listeners": {
                     "data": [
                         {
                             "id": "Read-Connection-Listener",
                             "type": "listeners"
                         }
-                    ]
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/listeners/",
+                        "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/listeners"
+                    }
+                },
+                "servers": {
+                    "data": [
+                        {
+                            "id": "server1",
+                            "type": "servers"
+                        },
+                        {
+                            "id": "server2",
+                            "type": "servers"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/servers/",
+                        "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/servers"
+                    }
+                },
+                "services": {
+                    "data": [],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/services/Read-Connection-Router/relationships/services"
+                    }
                 }
             },
-            "links": {
-                "self": "http://localhost:8989/v1/services/Read-Connection-Router"
-            }
+            "type": "services"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/services/"
+    }
 }
 ```
 
@@ -458,7 +756,7 @@ GET /v1/services/:name/listeners
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#get-all-listeners) listeners endpoint instead.
+[this](Resources-Listener.md#get-all-listeners) listeners endpoint instead.
 
 ### Get a single service listener
 
@@ -466,7 +764,7 @@ This endpoint is deprecated, use the
 GET /v1/services/:name/listeners/:listener
 ```
 
-This endpoint is deprecated, use the [this](Resource-Listener.md#get-a-listener)
+This endpoint is deprecated, use the [this](Resources-Listener.md#get-a-listener)
 listeners endpoint instead.
 
 ### Create a new listener
@@ -476,7 +774,7 @@ POST /v1/services/:name/listeners
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#create-a-new-listener) listeners endpoint instead.
+[this](Resources-Listener.md#create-a-new-listener) listeners endpoint instead.
 
 ### Destroy a listener
 
@@ -485,4 +783,4 @@ DELETE /v1/services/:service/listeners/:name
 ```
 
 This endpoint is deprecated, use the
-[this](Resource-Listener.md#destroy-a-listener) listeners endpoint instead.
+[this](Resources-Listener.md#destroy-a-listener) listeners endpoint instead.

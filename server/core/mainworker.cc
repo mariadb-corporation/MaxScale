@@ -52,15 +52,6 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     this_unit.pMain = this;
     this_thread.pMain = this;
-
-    delayed_call(100, &MainWorker::inc_ticks);
-
-    const auto& config = mxs::Config::get();
-
-    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
-    {
-        order_balancing_dc();
-    }
 }
 
 MainWorker::~MainWorker()
@@ -195,6 +186,15 @@ void MainWorker::start_rebalancing()
 bool MainWorker::pre_run()
 {
     bool rval = false;
+
+    delayed_call(100, &MainWorker::inc_ticks);
+
+    const auto& config = mxs::Config::get();
+
+    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
+    {
+        order_balancing_dc();
+    }
 
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {

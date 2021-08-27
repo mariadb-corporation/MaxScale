@@ -177,10 +177,64 @@ supports. The following commands are supported:
 
      * `@master_binlog_checksum`: Always `CRC32`.
 
+     * `@@session.auto_increment_increment`: Always `1`
+
+     * `@@character_set_client`: Always `utf8`
+
+     * `@@character_set_connection`: Always `utf8`
+
+     * `@@character_set_results`: Always `utf8`
+
+     * `@@character_set_server`: Always `utf8mb4`
+
+     * `@@collation_server`: Always `utf8mb4_general_ci`
+
+     * `@@collation_connection`: Always `utf8_general_ci`
+
+     * `@@init_connect`: Always an empty string
+
+     * `@@interactive_timeout`: Always `28800`
+
+     * `@@license`: Always `BSL`
+
+     * `@@lower_case_table_names`: Always `0`
+
+     * `@@max_allowed_packet`: Always `16777216`
+
+     * `@@net_write_timeout`: Always `60`
+
+     * `@@performance_schema`: Always `0`
+
+     * `@@query_cache_size`: Always `1048576`
+
+     * `@@query_cache_type`: Always `OFF`
+
+     * `@@sql_mode`: Always an empty string
+
+     * `@@system_time_zone`: Always `UTC`
+
+     * `@@time_zone`: Always `SYSTEM`
+
+     * `@@tx_isolation`: Always `REPEATABLE-READ`
+
+     * `@@wait_timeout`: Always `28800`
+
  * `SET`
 
    * `@@global.gtid_slave_pos`: Set the position from which binlogrouter should
    start replicating. E.g. `SET @@global.gtid_slave_pos="0-1000-1234,1-1001-5678"`
+
+ * `SHOW VARIABLES LIKE '...'`
+
+   * Shows variables matching a string. The `LIKE` operator in `SHOW VARIABLES`
+     is mandatory for the binlogrouter. This means that a plain `SHOW VARIABLES`
+     is not currently supported. In addition, the `LIKE` operator in
+     binlogrouter only supports exact matches.
+
+     Currently the only variables that are returned are `gtid_slave_pos`,
+     `gtid_current_pos` and `gtid_binlog_pos` which return the current GTID
+     coordinates of the binlogrouter. In addition to these, the `server_id`
+     variable will return the configured server ID of the binlogrouter.
 
 ## Configuration Parameters
 

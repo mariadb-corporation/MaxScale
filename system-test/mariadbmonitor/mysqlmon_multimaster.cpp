@@ -62,8 +62,9 @@ int main(int argc, char* argv[])
     change_master(test, 3, 2, "", max_rlag);
 
     mxs.wait_for_monitor(2);
-    auto maxconn = mxs.open_rwsplit_connection2();
+    auto maxconn = mxs.open_rwsplit_connection2_nodb();
     maxconn->cmd(flush);
+    sleep(1);   // sleep to detect replication lag
     mxs.wait_for_monitor(1);
 
     auto servers_info = mxs.get_servers();
@@ -104,6 +105,7 @@ int main(int argc, char* argv[])
     mxs.wait_for_monitor(1);
 
     maxconn->cmd(flush);
+    sleep(1);
     mxs.wait_for_monitor(1);
 
     servers_info = mxs.get_servers();
@@ -170,6 +172,7 @@ int main(int argc, char* argv[])
 
     mxs.wait_for_monitor(1);
     maxconn->cmd(flush);
+    sleep(1);
     mxs.wait_for_monitor(2);
     maxconn->query(show);
 
@@ -183,6 +186,7 @@ int main(int argc, char* argv[])
     test.tprintf("Test 8 - Diamond topology with no delay");
 
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
+    sleep(1);
     mxs.wait_for_monitor(2);
 
     servers_info = mxs.get_servers();

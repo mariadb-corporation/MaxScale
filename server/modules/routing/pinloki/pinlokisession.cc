@@ -25,6 +25,33 @@ using std::chrono::steady_clock;
 namespace
 {
 
+// Some common constants usually queried by various client libraries and monitoring solutions. The values were
+// extracted from MariaDB 10.5.10 with minor modifications, namely @@license and @@sql_mode.
+const std::map<std::string, std::string> constant_variables =
+{
+    {"@@session.auto_increment_increment", "1"                 },
+    {"@@character_set_client",             "utf8"              },
+    {"@@character_set_connection",         "utf8"              },
+    {"@@character_set_results",            "utf8"              },
+    {"@@character_set_server",             "utf8mb4"           },
+    {"@@collation_server",                 "utf8mb4_general_ci"},
+    {"@@collation_connection",             "utf8_general_ci"   },
+    {"@@init_connect",                     ""                  },
+    {"@@interactive_timeout",              "28800"             },
+    {"@@license",                          "BSL"               },
+    {"@@lower_case_table_names",           "0"                 },
+    {"@@max_allowed_packet",               "16777216"          },
+    {"@@net_write_timeout",                "60"                },
+    {"@@performance_schema",               "0"                 },
+    {"@@query_cache_size",                 "1048576"           },
+    {"@@query_cache_type",                 "OFF"               },
+    {"@@sql_mode",                         ""                  },
+    {"@@system_time_zone",                 "UTC"               },
+    {"@@time_zone",                        "SYSTEM"            },
+    {"@@tx_isolation",                     "REPEATABLE-READ"   },
+    {"@@wait_timeout",                     "28800"             },
+};
+
 GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
 {
     auto rset = ResultSet::create(columns);
@@ -213,7 +240,7 @@ void PinlokiSession::send(GWBUF* buffer)
     mxs::RouterSession::clientReply(buffer, down, reply);
 }
 
-void PinlokiSession::select(const std::vector<std::string>& fields)
+void PinlokiSession::select(const std::vector<std::string>& fields, const std::vector<std::string>& aliases)
 {
     static const std::set<std::string> gtid_pos_sel_var =
     {
@@ -279,9 +306,18 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         {
             a = m_router->gtid_io_pos().to_string();
         }
+        else
+        {
+            auto it = constant_variables.find(val);
+
+            if (it != constant_variables.end())
+            {
+                a = it->second;
+            }
+        }
     }
 
-    send(create_resultset(fields, values));
+    send(create_resultset(aliases, values));
 }
 
 void PinlokiSession::set(const std::string& key, const std::string& value)

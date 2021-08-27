@@ -364,7 +364,7 @@ std::string clean_up_pathname(std::string path)
  * @param mask Bitmask to use
  * @return True if directory exists or it was successfully created, false on error
  */
-static bool mkdir_all_internal(char* path, mode_t mask)
+static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
 {
     bool rval = false;
 
@@ -377,7 +377,7 @@ static bool mkdir_all_internal(char* path, mode_t mask)
             if (ndir)
             {
                 *ndir = '\0';
-                if (mkdir_all_internal(path, mask))
+                if (mkdir_all_internal(path, mask, log_errors))
                 {
                     /** Creation of the parent directory was successful, try to
                      * create the directory again */
@@ -386,22 +386,18 @@ static bool mkdir_all_internal(char* path, mode_t mask)
                     {
                         rval = true;
                     }
-                    else
+                    else if (log_errors)
                     {
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
-                                  path,
-                                  errno,
-                                  mxs_strerror(errno));
+                                  path, errno, mxs_strerror(errno));
                     }
                 }
             }
         }
-        else
+        else if (log_errors)
         {
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      path,
-                      errno,
-                      mxs_strerror(errno));
+                      path, errno, mxs_strerror(errno));
         }
     }
     else
@@ -412,15 +408,7 @@ static bool mkdir_all_internal(char* path, mode_t mask)
     return rval;
 }
 
-/**
- * @brief Create a directory and any parent directories that do not exist
- *
- *
- * @param path Path to create
- * @param mask Bitmask to use
- * @return True if directory exists or it was successfully created, false on error
- */
-bool mxs_mkdir_all(const char* path, int mask)
+bool mxs_mkdir_all(const char* path, int mask, bool log_errors)
 {
     char local_path[strlen(path) + 1];
     strcpy(local_path, path);
@@ -430,7 +418,7 @@ bool mxs_mkdir_all(const char* path, int mask)
         local_path[sizeof(local_path) - 2] = '\0';
     }
 
-    return mkdir_all_internal(local_path, (mode_t)mask);
+    return mkdir_all_internal(local_path, (mode_t)mask, log_errors);
 }
 
 /**

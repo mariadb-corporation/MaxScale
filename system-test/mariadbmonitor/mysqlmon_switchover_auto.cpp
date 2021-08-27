@@ -12,7 +12,6 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include "fail_switch_rejoin_common.cpp"
 #include <iostream>
 #include <string>
 
@@ -26,55 +25,43 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.repl->connect();
+    auto& mxs = *test.maxscale;
+    auto& log = test.logger();
+    auto& repl = *test.repl;
+
     const int N = 4;
+    const int disk_check_wait = 3;      // Monitor checks disk info every 2s.
 
     // Enable the disks-plugin on all servers. Has to be done before MaxScale is on to prevent disk space
-    // monitoring from disabling itself.
+    // monitoring from disabling itself due to errors.
     bool disks_plugin_loaded = false;
     const char strict_mode[] = "SET GLOBAL gtid_strict_mode=%i;";
-    test.repl->connect();
+    repl.connect();
     for (int i = 0; i < N; i++)
     {
-        MYSQL* conn = test.repl->nodes[i];
+        MYSQL* conn = repl.nodes[i];
         test.try_query(conn, "INSTALL SONAME 'disks';");
         test.try_query(conn, strict_mode, 1);
     }
 
     if (test.ok())
     {
-        cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
-                "Starting MaxScale.\n";
-        test.maxscale->start_and_check_started();
-        test.maxscale->wait_for_monitor(4);
+        test.tprintf("Disks-plugin installed and gtid_strict_mode enabled on all servers. "
+                     "Starting MaxScale.");
+        mxs.start_and_check_started();
+        sleep(disk_check_wait);
+        mxs.wait_for_monitor(1);
         disks_plugin_loaded = true;
     }
     else
     {
-        cout << "Test preparations failed.\n";
+        test.tprintf("Test preparations failed.");
     }
 
-    auto set_to_string = [](const StringSet& str_set) -> string {
-            string rval;
-            for (const string& elem : str_set)
-            {
-                rval += elem + ",";
-            }
-            return rval;
-        };
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto maint = mxt::ServerInfo::MAINT | mxt::ServerInfo::RUNNING;
 
-    auto expect_server_status = [&test, &set_to_string](const string& server_name, const string& status) {
-            auto status_set = test.maxscale->get_server_status(server_name.c_str());
-            string status_str = set_to_string(status_set);
-            bool found = (status_set.count(status) == 1);
-            test.expect(found, "%s was not %s as was expected. Status: %s.",
-                        server_name.c_str(), status.c_str(), status_str.c_str());
-        };
-
-    string server_names[] = {"server1", "server2", "server3", "server4"};
-    string master = "Master";
-    string slave = "Slave";
-    string maint = "Maintenance";
     const char insert_query[] = "INSERT INTO test.t1 VALUES (%i);";
     int insert_val = 1;
 
@@ -87,74 +74,64 @@ int main(int argc, char** argv)
         test.try_query(maxconn, insert_query, insert_val++);
         mysql_close(maxconn);
 
-        get_output(test);
-        print_gtids(test);
-
-        expect_server_status(server_names[0], master);
-        expect_server_status(server_names[1], maint);   // Always out of disk space
-        expect_server_status(server_names[2], slave);
-        expect_server_status(server_names[3], slave);
+        auto status = mxs.get_servers();
+        status.print();
+        // server2 is always out of disk space.
+        status.check_servers_status({master, maint, slave, slave});
     }
 
     if (test.ok())
     {
         // If ok so far, change the disk space threshold to something really small to force a switchover.
-        cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:1");
-        sleep(4);   // The disk space is checked depending on wall clock time.
-        test.maxscale->wait_for_monitor(4);
+        log.log_msg("Changing disk space threshold for the monitor, should cause a switchover.");
+        mxs.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:0");
+        sleep(disk_check_wait);
+        mxs.wait_for_monitor(1);
 
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
         // still replicating from server1. server1 was redirected to the new master. Although server1
         // is low on disk space, it is not set to maintenance since it is a relay.
-        expect_server_status(server_names[0], slave);
-        expect_server_status(server_names[1], maint);
-        expect_server_status(server_names[2], master);
-        expect_server_status(server_names[3], slave);
+        mxs.check_servers_status({slave | mxt::ServerInfo::RELAY, maint, master, slave});
 
         // Check that writes are working.
-        auto maxconn = test.maxscale->open_rwsplit_connection();
+        auto maxconn = mxs.open_rwsplit_connection();
         test.try_query(maxconn, insert_query, insert_val);
         mysql_close(maxconn);
 
-        get_output(test);
-        print_gtids(test);
+        mxs.wait_for_monitor();
+        mxs.get_servers().print();
 
-        cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:100");
-        sleep(4);   // To update disk space status
-        test.maxscale->wait_for_monitor(2);
-        get_output(test);
+        log.log_msg("Changing disk space threshold for the monitor, should prevent low disk switchovers.");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:99");
+        sleep(disk_check_wait);
+        mxs.wait_for_monitor(1);
     }
 
     // Use the reset-replication command to fix the situation.
-    cout << "Running reset-replication to fix the situation.\n";
+    log.log_msg("Running reset-replication to fix the situation.");
     test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
-    sleep(4);
-    test.maxscale->wait_for_monitor(4);
-    get_output(test);
+    sleep(disk_check_wait);
+    mxs.wait_for_monitor(1);
     // Check that no auto switchover has happened.
-    expect_server_status(server_names[0], master);
-    expect_server_status(server_names[1], maint);
-    expect_server_status(server_names[2], slave);
-    expect_server_status(server_names[3], slave);
+    mxs.check_print_servers_status({master, maint, slave, slave});
 
     const char drop_query[] = "DROP TABLE test.t1;";
-    auto maxconn = test.maxscale->open_rwsplit_connection();
+    auto maxconn = mxs.open_rwsplit_connection();
     test.try_query(maxconn, drop_query);
     mysql_close(maxconn);
 
     if (disks_plugin_loaded)
     {
+        repl.connect();
         // Disable the disks-plugin on all servers.
         for (int i = 0; i < N; i++)
         {
-            MYSQL* conn = test.repl->nodes[i];
+            MYSQL* conn = repl.nodes[i];
             test.try_query(conn, "UNINSTALL SONAME 'disks';");
             test.try_query(conn, strict_mode, 0);
         }
     }
 
-    test.repl->disconnect();
+    repl.disconnect();
     return test.global_result;
 }

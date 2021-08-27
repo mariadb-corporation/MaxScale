@@ -42,12 +42,13 @@ add_test_executable(config_test.cpp config_test replication LABELS LIGHT CONFIG)
 add_subdirectory(cdc_datatypes)
 
 ############################################
-# BEGIN: Tests that require GTID           #
+# BEGIN: Normal tests                      #
 ############################################
 
 add_subdirectory(mariadbmonitor)
 add_subdirectory(pinloki)
 add_subdirectory(config_sync)
+add_subdirectory(schemarouter)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
@@ -113,13 +114,6 @@ add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrit
 # KafkaCDC tests
 add_subdirectory(kafka)
 
-############################################
-# END: Tests that require GTID             #
-############################################
-
-############################################
-# BEGIN: Normal tests                      #
-############################################
 
 add_subdirectory(nosqlprotocol)
 
@@ -301,9 +295,6 @@ add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwri
 # Test with extremely big blob inserting
 add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
 
-# Schemarouter implicit database detection
-add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit_db LABELS schemarouter REPL_BACKEND)
-
 # Retry reads with persistent connections
 add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
@@ -316,9 +307,6 @@ add_test_executable(max_connections.cpp max_connections replication LABELS MySQL
 
 # Checks tha Maxscale processis running as 'maxscale' user
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
-
-# Test of multi master monitor
-add_test_executable(mm.cpp mm mm LABELS mysqlmon BREAKS_REPL REPL_BACKEND)
 
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
@@ -346,11 +334,8 @@ add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit
 add_test_executable(mxs365.cpp mxs365 replication LABELS readwritesplit REPL_BACKEND)
 
 # Test users with different level privileges: database, table, column and procedure.
-# MXS-37, MXS-3303
+# MXS-37, MXS-3303, MXS-1958
 add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
-
-# Connect repeatedly to Schema router and execute simple query, check if auth is ok
-add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND BREAKS_REPL)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol readwritesplit REPL_BACKEND)
@@ -450,6 +435,9 @@ add_test_executable(cache_users.cpp cache_users cache_users LABELS cachefilter R
 # Test of Cache filter - distributed storages, transparently taken in and out of use
 add_test_executable(cache_distributed.cpp cache_distributed cache_distributed LABELS cachefilter REPL_BACKEND)
 
+# Test of Cache bug MXS-3694
+add_test_executable(cache_mxs3694.cpp cache_mxs3694 cache_mxs3694 LABELS cachefilter REPL_BACKEND)
+
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
 
@@ -525,10 +513,6 @@ add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS
 # MXS-1678: Stopping IO thread on relay master causes it to be promoted as master
 # https://jira.mariadb.org/browse/MXS-1678
 add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS mysqlmon REPL_BACKEND)
-
-# MXS-1713: SchemaRouter unable to process SHOW DATABASES for a lot of schemas
-# https://jira.mariadb.org/browse/MXS-1713
-add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS schemarouter REPL_BACKEND)
 
 # MXS-1731: Empty version_string is not detected
 # https://jira.mariadb.org/browse/MXS-1731
@@ -634,9 +618,6 @@ add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_
 # Test readwritesplit multi-statement handling
 add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt LABELS readwritesplit REPL_BACKEND)
 
-# Schemarouter duplicate database detection test: create DB on all nodes and then try query againt schema router
-add_test_executable(schemarouter_duplicate.cpp schemarouter_duplicate schemarouter_duplicate LABELS schemarouter REPL_BACKEND)
-
 # Test 10.3 SEQUENCE objects
 add_test_executable(sequence.cpp sequence replication LABELS LIGHT REPL_BACKEND)
 
@@ -645,12 +626,6 @@ add_test_executable(compound_statement.cpp compound_statement replication LABELS
 
 # test for 'max_sescmd_history' and 'connection_timeout' parameters
 add_test_executable(session_limits.cpp session_limits session_limits LABELS readwritesplit REPL_BACKEND)
-
-# Test of schema router
-add_test_executable(sharding.cpp sharding sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
-# MXS-1160: LOAD DATA LOCAL INFILE with schemarouter
-add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
@@ -691,14 +666,6 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 
 # Run MaxCtrl test suite
 # add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
-
-
-# Creates KDC and tries authrization via GSSAPI (both client and backend)
-# works only with yum-based distributions
-# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
-add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL LISTENER_SSL
-        REPL_BACKEND)
 
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
@@ -753,23 +720,9 @@ add_test_executable(mxs1929_start_from_scratch.cpp mxs1929_start_from_scratch mx
 # https://jira.mariadb.org/browse/MXS-1932
 add_test_executable(mxs1932_hidden_cnf.cpp mxs1932_hidden_cnf replication LABELS REPL_BACKEND)
 
-# MXS-1958: Users with insert-only privileges don't work
-# https://jira.mariadb.org/browse/MXS-1958
-add_test_executable(mxs1958_insert_priv.cpp mxs1958_insert_priv replication LABELS REPL_BACKEND)
-# TODO: Remove this once MXS-1958 is fixed
-set_tests_properties(mxs1958_insert_priv PROPERTIES WILL_FAIL TRUE)
-
-# MXS-1849: Table family sharding router
-# https://jira.mariadb.org/browse/MXS-1849
-add_test_executable(mxs1849_table_sharding.cpp mxs1849_table_sharding mxs1849_table_sharding LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
 # MXS-1985: MaxScale hangs on concurrent KILL processing
 # https://jira.mariadb.org/browse/MXS-1985
 add_test_executable(mxs1985_kill_hang.cpp mxs1985_kill_hang replication LABELS REPL_BACKEND)
-
-# MXS-1113: Support of prepared statement for schemarouter
-# https://jira.mariadb.org/browse/MXS-1113
-add_test_executable(mxs1113_schemarouter_ps.cpp mxs1113_schemarouter_ps mxs1113_schemarouter_ps LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
 # MXS-2037: Wildcards not working with source in Named Server Filter
 # https://jira.mariadb.org/browse/MXS-2037
@@ -850,9 +803,6 @@ add_test_executable(mxs2609_history_replay.cpp mxs2609_history_replay mxs2609_hi
 # MXS-2621: Incorrect SQL if lower_case_table_names is used.
 add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2621_lower_case_tables LABELS REPL_BACKEND)
 
-# MXS-2631: Duplicate system tables not ignored
-add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_tables mxs2631_ignore_system_tables LABELS schemarouter BREAKS_REPL REPL_BACKEND)
-
 # Service-to-Service routing with readwritesplit
 add_test_executable(sts_readwritesplit.cpp sts_readwritesplit sts_readwritesplit LABELS readwritesplit REPL_BACKEND)
 
@@ -887,9 +837,6 @@ add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS RE
 # MXS-3565: Target selection for COM_STMT_EXECUTION without metadata isn't done correctly
 add_test_executable(mxs2750_com_stmt_exec.cc mxs2750_com_stmt_exec replication LABELS readwritesplit REPL_BACKEND)
 
-# MXS-2793: Schemarouter multi-table joins
-add_test_executable(mxs2793_multi_table.cpp mxs2793_multi_table mxs2793_multi_table LABELS schemarouter REPL_BACKEND)
-
 # MXS-2878: Verify that TLS is required
 add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_ssl LABELS REPL_BACKEND)
 
@@ -901,9 +848,6 @@ add_test_executable(connection_init_queries.cc connection_init_queries connectio
 
 # MXS-2919: Slaves with broken replication should not be used
 add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_broken_slaves LABELS REPL_BACKEND readwritesplit)
-
-# MXS-2972: Caching of shards must take servers into notice
-add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard_caching LABELS REPL_BACKEND schemarouter)
 
 # MXS-3218: Crash with LOAD DATA LOCAL INFILE
 add_test_executable(mxs3218_ldli_crash.cc mxs3218_ldli_crash replication LABELS REPL_BACKEND)
@@ -1108,61 +1052,80 @@ add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution
 #add_test_executable_notest(long_test.cpp long_test_big replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Tries INSERTs with size close to 0x0ffffff * N
-add_test_derived(different_size_rwsplit_big different_size_rwsplit replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY )
+#add_test_derived(different_size_rwsplit_big different_size_rwsplit replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY )
 
 # Check how Maxscale works in case of one slave failure, only one slave is configured
-add_test_derived(slave_failover_big slave_failover replication.one_slave LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(slave_failover_big slave_failover replication.one_slave LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend
-add_test_derived(sql_queries_big sql_queries replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(sql_queries_big sql_queries replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Check temporal tables commands functionality
-add_test_derived(temporal_tables_big temporal_tables replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(temporal_tables_big temporal_tables replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Check if prepared statement works via Maxscale (via RWSplit)
-add_test_derived(prepared_statement_big prepared_statement replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(prepared_statement_big prepared_statement replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Connect to ReadConn in master mode and check if there is only one backend connection to master
-add_test_derived(readconnrouter_master_big readconnrouter_master replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(readconnrouter_master_big readconnrouter_master replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Creates 100 connections to ReadConn in slave mode and check if connections are distributed among all slaves
-add_test_derived(readconnrouter_slave_big readconnrouter_slave replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(readconnrouter_slave_big readconnrouter_slave replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
-add_test_derived(rw_select_insert_big rw_select_insert replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(rw_select_insert_big rw_select_insert replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Checks connections are distributed equaly among backends
-add_test_derived(rwsplit_conn_num_big rwsplit_conn_num repl_lgc LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(rwsplit_conn_num_big rwsplit_conn_num repl_lgc LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Check that there is one connection to Master and one connection to one of slaves
-add_test_derived(rwsplit_connect_big rwsplit_connect replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(rwsplit_connect_big rwsplit_connect replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
 
 # Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
 # (different filter sequence and configuration, but the same test, see .cnf for details)
-add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 # Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-add_test_derived(bug471_big rhint_basic bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
+#add_test_derived(bug471_big rhint_basic bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
 
-set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
-set_tests_properties(slave_failover_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(sql_queries_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(temporal_tables_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(prepared_statement_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(readconnrouter_master_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(readconnrouter_slave_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(rw_select_insert_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(rwsplit_conn_num_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(rwsplit_connect_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(bug585_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(bug587_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(bug587_1_big PROPERTIES TIMEOUT 3600)
-set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
+#set_tests_properties(slave_failover_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(sql_queries_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(temporal_tables_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(prepared_statement_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(readconnrouter_master_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(readconnrouter_slave_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(rw_select_insert_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(rwsplit_conn_num_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(rwsplit_connect_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(bug585_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(bug587_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(bug587_1_big PROPERTIES TIMEOUT 3600)
+#set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 
 ############################################
 # END: tests with 15 machines backend      #
+############################################
+
+############################################
+# BEGIN: Kerberos tests                    #
+############################################
+
+# These tests have some issues and may affect other tests as they do not cleanup after themselves.
+# Run with BREAKS_REPL tag to ensure they are ran on a different test VM in parallel runs. Also run these
+# tests last so they cannot affect earlier tests.
+
+# Creates KDC and tries authrization via GSSAPI (both client and backend)
+# works only with yum-based distributions
+# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
+add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY UNSTABLE BREAKS_REPL gssapi REPL_BACKEND)
+add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY UNSTABLE BREAKS_REPL gssapi
+        BACKEND_SSL LISTENER_SSL REPL_BACKEND)
+
+############################################
+# END: Kerberos tests                      #
 ############################################
 
 ###############################

@@ -271,8 +271,15 @@ private:
     Node* vacate_lru();
     Node* vacate_lru(size_t space);
     bool  free_node_data(Node* pNode, Context context);
-    void  free_node(Node* pNode) const;
-    void  free_node(NodesByKey::iterator& i) const;
+
+    enum class InvalidatorAction
+    {
+        IGNORE, // Ignore the invalidator, just free the node.
+        REMOVE, // Free the node and remove it from the invalidator.
+    };
+
+    void  free_node(Node* pNode, InvalidatorAction action) const;
+    void  free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
     void  remove_node(Node* pNode) const;
     void  move_to_head(Node* pNode) const;
 

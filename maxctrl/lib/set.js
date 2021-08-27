@@ -30,11 +30,17 @@ exports.builder = function (yargs) {
         return yargs
           .epilog(
             "If <server> is monitored by a monitor, this command should " +
-              "only be used to set the server into the `maintenance` state. " +
+              "only be used to set the server into the `maintenance` or the `drain` state. " +
               "Any other states will be overridden by the monitor on the next " +
               "monitoring interval. To manually control server states, use the " +
               "`stop monitor <name>` command to stop the monitor before setting " +
-              "the server states manually."
+              "the server states manually.\n" +
+              "\n" +
+              "When a server is set into the `drain` state, no new connections to " +
+              "it are allowed but existing connections are allowed to gracefully close. " +
+              "Servers with the `Master` status cannot be drained or " +
+              "set into maintenance mode. To clear a state set by this command, use " +
+              "the `clear server` command."
           )
           .usage("Usage: set server <server> <state>");
       },

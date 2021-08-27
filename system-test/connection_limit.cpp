@@ -52,7 +52,7 @@ void check_with_wrong_pw(int router, int max_conn, TestConnections& test)
     {
         MYSQL* failed_conn = open_conn(
             test.maxscale->ports[router], test.maxscale->ip4(),
-            test.maxscale->user_name, wrong_pw,
+            test.maxscale->user_name(), wrong_pw,
             test.maxscale_ssl);
         auto error = mysql_errno(failed_conn);
         if (error == 0)
@@ -77,8 +77,8 @@ void check_max_conn(int router, int max_conn, TestConnections& test)
     for (i = 0; i < max_conn; i++)
     {
         conn[i] = open_conn(test.maxscale->ports[router], mxs_ip,
-                            test.maxscale->user_name,
-                            test.maxscale->password,
+                            test.maxscale->user_name(),
+                            test.maxscale->password(),
                             test.maxscale_ssl);
         if (mysql_errno(conn[i]) != 0)
         {
@@ -86,8 +86,8 @@ void check_max_conn(int router, int max_conn, TestConnections& test)
         }
     }
     conn[max_conn] = open_conn(test.maxscale->ports[router], mxs_ip,
-                               test.maxscale->user_name,
-                               test.maxscale->password,
+                               test.maxscale->user_name(),
+                               test.maxscale->password(),
                                test.maxscale_ssl);
     if (mysql_errno(conn[i]) != 1040)
     {

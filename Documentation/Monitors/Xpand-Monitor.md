@@ -41,6 +41,11 @@ To ensure that the Xpand monitor will be able to start, it is adviseable
 to provide _more_ than one server to cater for the case that not all nodes
 are always up when MaxScale starts.
 
+**Note:** All services that use servers monitored by xpandmon should use
+  the `cluster` parameter to define the set of servers they use. This will
+  guarantee that the services use servers that are valid members of the
+  XPand cluster.
+
 ```
 [TheXpandMonitor]
 type=monitor
@@ -49,6 +54,12 @@ servers=server1,server2,server3
 user=myuser
 password=mypwd
 
+[MyService]
+type=service
+router=readconnroute
+cluster=TheXpandMonitor
+user=myuser
+password=mypwd
 ```
 
 ## Dynamic Servers

@@ -148,8 +148,15 @@ struct ChangeMasterSymbols : x3::symbols<CMT>
 // Concrete types that the result consists of
 //
 
-// An individual field in a SELECT statement
-using Field = x3::variant<int, double, std::string>;
+// An individual field in a SELECT statement. Having the std::string as the first value allows empty values to
+// be conveniently detected during extraction.
+using Field = x3::variant<std::string, int, double>;
+
+struct SelectField
+{
+    Field orig_name;    // The original name of the field
+    Field alias_name;   // The user-defined alias for the field
+};
 
 // A key-value with variant values
 struct Variable
@@ -168,7 +175,7 @@ struct ChangeMasterVariable
 // SELECT is a list of fields
 struct Select
 {
-    std::vector<Field> values;
+    std::vector<SelectField> values;
 };
 
 // SET is a list of key-value pairs
@@ -259,6 +266,7 @@ DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(func, "function", std::string);
 DECLARE_ATTR_RULE(field, "intentifier, function, string or number", Field);
+DECLARE_ATTR_RULE(select_field, "field definition", SelectField);
 DECLARE_ATTR_RULE(master_gtid_wait, "MASTER_GTID_WAIT", MasterGtidWait);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
@@ -267,7 +275,7 @@ DECLARE_ATTR_RULE(show_slave, "show slave", ShowType);
 DECLARE_ATTR_RULE(show_all_slaves, "show all slaves", ShowType);
 DECLARE_ATTR_RULE(show_binlogs, "binary logs", ShowType);
 DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
-DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINLOGS or VARIABLES", Show);
+DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINARY LOGS or VARIABLES LIKE '...'", Show);
 DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_RULE(global_or_session, "GLOBAL or SESSION");
@@ -299,6 +307,11 @@ const auto q_str_def = sq_str | dq_str;
 const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
 const auto variable_def = str > eq > field;
 
+// Field definition for SELECT statements
+// NOTE: This syntax allows for a field to have a trailing "AS" constant that does nothing. Strictly speaking
+//       this isn't allowed but it keeps the grammar extremely simple.
+const auto select_field_def = field >> -x3::omit[x3::lit("AS")] >> -field;
+
 // Preliminary SELECT MASTER_GTID_WAIT support. This isn't the prettiest solution but it allows testing
 // without modifications to the SELECT grammar.
 //
@@ -309,7 +322,7 @@ const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT"
     > x3::lit(")");
 
 // SET and SELECT commands
-const auto select_def = x3::lit("SELECT") > field % ',' > -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
+const auto select_def = x3::lit("SELECT") > select_field % ',' > -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
 
 const auto set_names_def = x3::string("NAMES") > (str | q_str);
 const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION") | x3::lit("@@global.")];
@@ -358,7 +371,7 @@ const auto grammar_def = x3::no_case[
     | set_statement] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
-BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
+BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, select_field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_all_slaves, show_binlogs, show_variables, show, set_names,
                     global_or_session, show_options, func, master_gtid_wait,
                     change_master_variable, change_master, slave, purge_logs, end_of_input,
@@ -375,14 +388,21 @@ struct ResultVisitor : public boost::static_visitor<>
 
     void operator()(Select& s)
     {
-        std::vector<std::string> values;
+        std::vector<std::string> names;
+        std::vector<std::string> aliases;
 
         for (const auto& a : s.values)
         {
-            values.push_back(get<std::string>(a));
+            names.push_back(get<std::string>(a.orig_name));
+            aliases.push_back(get<std::string>(a.alias_name));
+
+            if (aliases.back().empty())
+            {
+                aliases.back() = names.back();
+            }
         }
 
-        m_handler->select(values);
+        m_handler->select(names, aliases);
     }
 
     void operator()(Variable& a)
@@ -526,6 +546,7 @@ BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, connection_name, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 BOOST_FUSION_ADAPT_STRUCT(PurgeLogs, up_to);
 BOOST_FUSION_ADAPT_STRUCT(MasterGtidWait, gtid, timeout);
+BOOST_FUSION_ADAPT_STRUCT(SelectField, orig_name, alias_name);
 
 namespace pinloki
 {

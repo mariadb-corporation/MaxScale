@@ -57,6 +57,7 @@ protected:
     void update_server_status(mxs::MonitorServer* monitored_server) override;
     void pre_tick() override;
     void post_tick() override;
+    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
 
 private:
     int  m_disableMasterFailback;       /**< Monitor flag for Galera Cluster Master failback */

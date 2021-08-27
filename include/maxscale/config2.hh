@@ -1123,6 +1123,14 @@ public:
     RegexValue(const RegexValue&) = default;
     RegexValue& operator=(const RegexValue&) = default;
 
+    /**
+     * Creates a new RegexValue from a text pattern
+     */
+    RegexValue(const std::string& text, uint32_t options);
+
+    /**
+     * Creates a RegexValue from an already compiled pattern
+     */
     RegexValue(const std::string& text,
                std::unique_ptr<pcre2_code> sCode,
                uint32_t ovec_size,

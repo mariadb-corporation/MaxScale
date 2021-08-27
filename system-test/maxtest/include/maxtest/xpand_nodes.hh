@@ -38,6 +38,7 @@ public:
 private:
     bool check_replication() override;
     bool reset_server(int i) override;
+    bool create_xpand_users(int node);
 
     std::string anonymous_users_query() const override;
     std::string block_command(int node) const override;

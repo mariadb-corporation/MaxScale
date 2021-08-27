@@ -42,6 +42,9 @@ Auth Error    | The monitor cannot login and query the server due to insufficien
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
 
+For more information on how to manually set these states via MaxCtrl, read the
+[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
+
 ### Monitor
 
 A monitor module is capable of monitoring the state of a particular kind
@@ -129,33 +132,40 @@ default user is removed, the credentials must always be provded.
 The following list of global configuration parameters can **NOT** be changed at
 runtime and can only be defined in a configuration file:
 
-* `threads`
-* `log_to_shm`
+* `admin_auth`
+* `admin_enabled`
+* `admin_gui`
+* `admin_host`
+* `admin_pam_readonly_service`
+* `admin_pam_readwrite_service`
+* `admin_port`
+* `admin_secure_gui`
+* `admin_ssl_ca_cert`
+* `admin_ssl_cert`
+* `admin_ssl_key`
+* `admin_ssl_version`
+* `cachedir`
+* `connector_plugindir`
+* `datadir`
+* `debug`
+* `debug`
+* `execdir`
+* `language`
+* `libdir`
+* `load_persisted_configs`
+* `local_address`
 * `log_augmentation`
 * `log_warn_super_user`
 * `logdir`
-* `datadir`
-* `libdir`
-* `cachedir`
-* `piddir`
-* `execdir`
-* `connector_plugindir`
-* `persistdir`
 * `module_configdir`
-* `language`
-* `query_classifier`
+* `persistdir`
+* `piddir`
 * `query_classifier_args`
-* `substitute_variables`
+* `query_classifier`
+* `query_retries`
 * `sql_mode`
-* `local_address`
-* `users_refresh_time`
-* `users_refresh_interval`
-* `load_persisted_configs`
-* `admin_ssl_key`
-* `admin_ssl_cert`
-* `admin_ssl_ca_cert`
-* `admin_ssl_version`
-* `admin_enabled`
+* `substitute_variables`
+* `threads`
 
 All other parameters that relate to objects can be altered at runtime or can be
 changed by destroying and recreating the object in question.
@@ -524,15 +534,6 @@ maxlog=1
 
 To enable logging to the MariaDB MaxScale log file use the value 1 and to
 disable use the value 0.
-
-### `log_to_shm`
-
-**Note:** This parameter has been removed in 2.4.0: do not use it
-
-In older MaxScale versions, the actual log file was created in `/dev/shm` and
-a symbolic link to that file was stored in place of the normal MaxScale log.
-If you want to store the log in shared memory, define the directory with
-`logdir` in `/dev/shm`.
 
 ### `log_warning`
 

@@ -953,6 +953,7 @@ void Worker::tick()
 
 uint32_t Worker::add_delayed_call(DelayedCall* pCall)
 {
+    mxb_assert(Worker::get_current() == this);
     bool adjust = true;
 
     if (!m_sorted_calls.empty())
@@ -1007,6 +1008,7 @@ void Worker::adjust_timer()
 
 bool Worker::cancel_delayed_call(uint32_t id)
 {
+    mxb_assert(Worker::get_current() == this || m_state == FINISHED);
     bool found = false;
 
     auto i = m_calls.find(id);

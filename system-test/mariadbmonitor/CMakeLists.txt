@@ -1,3 +1,7 @@
+# Two-server multimaster topology
+add_test_executable_ex(NAME mariadbmon_multimaster_simple SOURCE mariadbmon_multimaster_simple.cc
+        CONFIG mariadbmon_multimaster_simple.cnf VMS repl_backend LABELS mysqlmon)
+
 # MySQL Monitor with Multi-master configurations
 add_test_executable_ex(NAME mysqlmon_multimaster SOURCE mysqlmon_multimaster.cpp
         CONFIG mysqlmon_multimaster.cnf VMS repl_backend LABELS mysqlmon)
@@ -117,7 +121,8 @@ add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_swit
 add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc
         CONFIG master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
-# Two MaxScales with cooperative monitoring.
+# Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
+# to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
         CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
-        LABELS mysqlmon)
+        LABELS mysqlmon BREAKS_REPL)

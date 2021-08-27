@@ -394,9 +394,9 @@ bool Replicator::Imp::load_gtid_state()
     }
     else
     {
-        if (errno == ENOENT)
+        if (errno == ENOENT || errno == 0)
         {
-            //  No GTID file, use the GTID provided in the configuration
+            //  No GTID file or empty file, use the GTID provided in the configuration
             rval = true;
         }
         else

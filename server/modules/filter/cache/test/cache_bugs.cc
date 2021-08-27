@@ -69,6 +69,7 @@ int mxs_2727()
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
 
     cache_result_t result = pCache->get_key(string(), string(), "test", pSelect, &key);
+    gwbuf_free(pSelect);
 
     if (!CACHE_RESULT_IS_OK(result))
     {
@@ -104,6 +105,8 @@ int mxs_2727()
     {
         return 1;
     }
+
+    delete pCache;
 
     return 0;
 }

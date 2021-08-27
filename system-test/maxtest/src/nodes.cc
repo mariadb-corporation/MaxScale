@@ -482,6 +482,12 @@ mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)
     return run_cmd_output(cmd, CmdPriv::SUDO);
 }
 
+mxt::CmdResult VMNode::run_sql_query(const std::string& sql)
+{
+    string cmd = mxb::string_printf("mysql -N -s -e \"%s\"", sql.c_str());
+    return run_cmd_output_sudo(cmd);
+}
+
 bool VMNode::copy_to_node_sudo(const string& src, const string& dest)
 {
     const char err_fmt[] = "Command '%s' failed. Output: %s";

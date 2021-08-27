@@ -3,6 +3,8 @@
 A monitor resource represents a monitor inside MaxScale that monitors one or
 more servers.
 
+[TOC]
+
 ## Resource Operations
 
 The _:name_ in all of the URIs must be the name of a monitor in MaxScale.
@@ -21,17 +23,101 @@ Get a single monitor.
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
-    },
     "data": {
-        "id": "MariaDB-Monitor", // Name of the monitor
-        "type": "monitors",
+        "attributes": {
+            "module": "mariadbmon",
+            "monitor_diagnostics": {
+                "master": "server1",
+                "master_gtid_domain_id": 0,
+                "primary": null,
+                "server_info": [
+                    {
+                        "gtid_binlog_pos": "0-3000-9",
+                        "gtid_current_pos": "0-3000-9",
+                        "lock_held": null,
+                        "master_group": null,
+                        "name": "server1",
+                        "read_only": false,
+                        "server_id": 3000,
+                        "slave_connections": []
+                    },
+                    {
+                        "gtid_binlog_pos": "0-3000-9",
+                        "gtid_current_pos": "0-3000-9",
+                        "lock_held": null,
+                        "master_group": null,
+                        "name": "server2",
+                        "read_only": false,
+                        "server_id": 3001,
+                        "slave_connections": [
+                            {
+                                "connection_name": "",
+                                "gtid_io_pos": "",
+                                "last_io_error": "",
+                                "last_sql_error": "",
+                                "master_host": "127.0.0.1",
+                                "master_port": 3000,
+                                "master_server_id": 3000,
+                                "seconds_behind_master": 0,
+                                "slave_io_running": "Yes",
+                                "slave_sql_running": "Yes"
+                            }
+                        ]
+                    }
+                ],
+                "state": "Idle"
+            },
+            "parameters": {
+                "assume_unique_hostnames": true,
+                "auto_failover": false,
+                "auto_rejoin": false,
+                "backend_connect_attempts": 1,
+                "backend_connect_timeout": 3,
+                "backend_read_timeout": 3,
+                "backend_write_timeout": 3,
+                "cooperative_monitoring_locks": "none",
+                "demotion_sql_file": null,
+                "detect_replication_lag": false,
+                "detect_stale_master": null,
+                "detect_stale_slave": null,
+                "detect_standalone_master": null,
+                "disk_space_check_interval": 0,
+                "disk_space_threshold": null,
+                "enforce_read_only_slaves": false,
+                "enforce_simple_topology": false,
+                "events": "all",
+                "failcount": 5,
+                "failover_timeout": 90,
+                "handle_events": true,
+                "ignore_external_masters": false,
+                "journal_max_age": 28800,
+                "maintenance_on_low_disk_space": true,
+                "master_conditions": "primary_monitor_master",
+                "master_failure_timeout": 10,
+                "monitor_interval": 5000,
+                "password": "*****",
+                "promotion_sql_file": null,
+                "replication_master_ssl": false,
+                "replication_password": null,
+                "replication_user": null,
+                "script": null,
+                "script_timeout": 90,
+                "servers_no_promotion": null,
+                "slave_conditions": "none",
+                "switchover_on_low_disk_space": false,
+                "switchover_timeout": 90,
+                "user": "maxuser",
+                "verify_master_failure": true
+            },
+            "state": "Running",
+            "ticks": 58
+        },
+        "id": "MariaDB-Monitor",
+        "links": {
+            "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
+        },
         "relationships": {
-            "servers": { // Servers that are monitored by this monitor
-                "links": {
-                    "self": "http://localhost:8989/v1/servers/"
-                },
+            "servers": {
                 "data": [
                     {
                         "id": "server1",
@@ -41,98 +127,29 @@ Get a single monitor.
                         "id": "server2",
                         "type": "servers"
                     }
-                ]
-            }
-        },
-        "attributes": {
-            "module": "mariadbmon", // The module that the monitor uses
-            "state": "Running", // Monitor state
-            "ticks": 1, // The number of monitoring cycles the monitor has done
-            "parameters": { // Monitor parameters
-                "user": "maxuser",
-                "password": "*****",
-                "monitor_interval": 5000,
-                "backend_connect_timeout": 3,
-                "backend_read_timeout": 1,
-                "backend_write_timeout": 2,
-                "backend_connect_attempts": 1,
-                "journal_max_age": 28800,
-                "disk_space_threshold": null,
-                "disk_space_check_interval": 0,
-                "script": null,
-                "script_timeout": 90,
-                "events": "all",
-                "detect_replication_lag": false,
-                "detect_stale_master": true,
-                "detect_stale_slave": true,
-                "detect_standalone_master": true,
-                "failcount": 5,
-                "ignore_external_masters": false,
-                "auto_failover": false,
-                "failover_timeout": 90,
-                "switchover_timeout": 90,
-                "replication_user": null,
-                "replication_password": null,
-                "replication_master_ssl": false,
-                "verify_master_failure": true,
-                "master_failure_timeout": 10,
-                "auto_rejoin": false,
-                "enforce_read_only_slaves": false,
-                "servers_no_promotion": null,
-                "promotion_sql_file": null,
-                "demotion_sql_file": null,
-                "switchover_on_low_disk_space": false,
-                "maintenance_on_low_disk_space": true,
-                "handle_events": true,
-                "assume_unique_hostnames": true,
-                "enforce_simple_topology": false,
-                "cooperative_monitoring_locks": "none"
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/servers/",
+                    "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/servers"
+                }
             },
-            "monitor_diagnostics": { // Diagnostic output from the monitor, depends on the monitor module
-                "master": "server1",
-                "master_gtid_domain_id": 0,
-                "state": "Idle",
-                "primary": null,
-                "server_info": [
+            "services": {
+                "data": [
                     {
-                        "name": "server1",
-                        "server_id": 3000,
-                        "read_only": false,
-                        "gtid_current_pos": "0-3000-24",
-                        "gtid_binlog_pos": "0-3000-24",
-                        "master_group": null,
-                        "lock_held": null,
-                        "slave_connections": []
-                    },
-                    {
-                        "name": "server2",
-                        "server_id": 3001,
-                        "read_only": false,
-                        "gtid_current_pos": "0-3000-24",
-                        "gtid_binlog_pos": "0-3000-24",
-                        "master_group": null,
-                        "lock_held": null,
-                        "slave_connections": [
-                            {
-                                "connection_name": "",
-                                "master_host": "127.0.0.1",
-                                "master_port": 3000,
-                                "slave_io_running": "Yes",
-                                "slave_sql_running": "Yes",
-                                "seconds_behind_master": 0,
-                                "master_server_id": 3000,
-                                "last_io_error": "",
-                                "last_sql_error": "",
-                                "gtid_io_pos": ""
-                            }
-                        ]
+                        "id": "RW-Split-Router",
+                        "type": "services"
                     }
-                ]
+                ],
+                "links": {
+                    "related": "http://localhost:8989/v1/services/",
+                    "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/services"
+                }
             }
         },
-        "links": {
-            "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
-        }
+        "type": "monitors"
+    },
+    "links": {
+        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
     }
 }
 ```
@@ -150,20 +167,103 @@ Get all monitors.
 `Status: 200 OK`
 
 ```javascript
-// See `/v1/monitors/:name` for a descriptions of the fields
 {
-    "links": {
-        "self": "http://localhost:8989/v1/monitors/"
-    },
     "data": [
         {
+            "attributes": {
+                "module": "mariadbmon",
+                "monitor_diagnostics": {
+                    "master": "server1",
+                    "master_gtid_domain_id": 0,
+                    "primary": null,
+                    "server_info": [
+                        {
+                            "gtid_binlog_pos": "0-3000-9",
+                            "gtid_current_pos": "0-3000-9",
+                            "lock_held": null,
+                            "master_group": null,
+                            "name": "server1",
+                            "read_only": false,
+                            "server_id": 3000,
+                            "slave_connections": []
+                        },
+                        {
+                            "gtid_binlog_pos": "0-3000-9",
+                            "gtid_current_pos": "0-3000-9",
+                            "lock_held": null,
+                            "master_group": null,
+                            "name": "server2",
+                            "read_only": false,
+                            "server_id": 3001,
+                            "slave_connections": [
+                                {
+                                    "connection_name": "",
+                                    "gtid_io_pos": "",
+                                    "last_io_error": "",
+                                    "last_sql_error": "",
+                                    "master_host": "127.0.0.1",
+                                    "master_port": 3000,
+                                    "master_server_id": 3000,
+                                    "seconds_behind_master": 0,
+                                    "slave_io_running": "Yes",
+                                    "slave_sql_running": "Yes"
+                                }
+                            ]
+                        }
+                    ],
+                    "state": "Idle"
+                },
+                "parameters": {
+                    "assume_unique_hostnames": true,
+                    "auto_failover": false,
+                    "auto_rejoin": false,
+                    "backend_connect_attempts": 1,
+                    "backend_connect_timeout": 3,
+                    "backend_read_timeout": 3,
+                    "backend_write_timeout": 3,
+                    "cooperative_monitoring_locks": "none",
+                    "demotion_sql_file": null,
+                    "detect_replication_lag": false,
+                    "detect_stale_master": null,
+                    "detect_stale_slave": null,
+                    "detect_standalone_master": null,
+                    "disk_space_check_interval": 0,
+                    "disk_space_threshold": null,
+                    "enforce_read_only_slaves": false,
+                    "enforce_simple_topology": false,
+                    "events": "all",
+                    "failcount": 5,
+                    "failover_timeout": 90,
+                    "handle_events": true,
+                    "ignore_external_masters": false,
+                    "journal_max_age": 28800,
+                    "maintenance_on_low_disk_space": true,
+                    "master_conditions": "primary_monitor_master",
+                    "master_failure_timeout": 10,
+                    "monitor_interval": 5000,
+                    "password": "*****",
+                    "promotion_sql_file": null,
+                    "replication_master_ssl": false,
+                    "replication_password": null,
+                    "replication_user": null,
+                    "script": null,
+                    "script_timeout": 90,
+                    "servers_no_promotion": null,
+                    "slave_conditions": "none",
+                    "switchover_on_low_disk_space": false,
+                    "switchover_timeout": 90,
+                    "user": "maxuser",
+                    "verify_master_failure": true
+                },
+                "state": "Running",
+                "ticks": 58
+            },
             "id": "MariaDB-Monitor",
-            "type": "monitors",
+            "links": {
+                "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
+            },
             "relationships": {
                 "servers": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/servers/"
-                    },
                     "data": [
                         {
                             "id": "server1",
@@ -173,100 +273,31 @@ Get all monitors.
                             "id": "server2",
                             "type": "servers"
                         }
-                    ]
-                }
-            },
-            "attributes": {
-                "module": "mariadbmon",
-                "state": "Running",
-                "ticks": 13,
-                "parameters": {
-                    "user": "maxuser",
-                    "password": "*****",
-                    "monitor_interval": 5000,
-                    "backend_connect_timeout": 3,
-                    "backend_read_timeout": 1,
-                    "backend_write_timeout": 2,
-                    "backend_connect_attempts": 1,
-                    "journal_max_age": 28800,
-                    "disk_space_threshold": null,
-                    "disk_space_check_interval": 0,
-                    "script": null,
-                    "script_timeout": 90,
-                    "events": "all",
-                    "detect_replication_lag": false,
-                    "detect_stale_master": true,
-                    "detect_stale_slave": true,
-                    "detect_standalone_master": true,
-                    "failcount": 5,
-                    "ignore_external_masters": false,
-                    "auto_failover": false,
-                    "failover_timeout": 90,
-                    "switchover_timeout": 90,
-                    "replication_user": null,
-                    "replication_password": null,
-                    "replication_master_ssl": false,
-                    "verify_master_failure": true,
-                    "master_failure_timeout": 10,
-                    "auto_rejoin": false,
-                    "enforce_read_only_slaves": false,
-                    "servers_no_promotion": null,
-                    "promotion_sql_file": null,
-                    "demotion_sql_file": null,
-                    "switchover_on_low_disk_space": false,
-                    "maintenance_on_low_disk_space": true,
-                    "handle_events": true,
-                    "assume_unique_hostnames": true,
-                    "enforce_simple_topology": false,
-                    "cooperative_monitoring_locks": "none"
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/servers/",
+                        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/servers"
+                    }
                 },
-                "monitor_diagnostics": {
-                    "master": "server1",
-                    "master_gtid_domain_id": 0,
-                    "state": "Idle",
-                    "primary": null,
-                    "server_info": [
+                "services": {
+                    "data": [
                         {
-                            "name": "server1",
-                            "server_id": 3000,
-                            "read_only": false,
-                            "gtid_current_pos": "0-3000-24",
-                            "gtid_binlog_pos": "0-3000-24",
-                            "master_group": null,
-                            "lock_held": null,
-                            "slave_connections": []
-                        },
-                        {
-                            "name": "server2",
-                            "server_id": 3001,
-                            "read_only": false,
-                            "gtid_current_pos": "0-3000-24",
-                            "gtid_binlog_pos": "0-3000-24",
-                            "master_group": null,
-                            "lock_held": null,
-                            "slave_connections": [
-                                {
-                                    "connection_name": "",
-                                    "master_host": "127.0.0.1",
-                                    "master_port": 3000,
-                                    "slave_io_running": "Yes",
-                                    "slave_sql_running": "Yes",
-                                    "seconds_behind_master": 0,
-                                    "master_server_id": 3000,
-                                    "last_io_error": "",
-                                    "last_sql_error": "",
-                                    "gtid_io_pos": ""
-                                }
-                            ]
+                            "id": "RW-Split-Router",
+                            "type": "services"
                         }
-                    ]
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor/relationships/services"
+                    }
                 }
             },
-            "links": {
-                "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
-            }
+            "type": "monitors"
         }
-    ]
+    ],
+    "links": {
+        "self": "http://localhost:8989/v1/monitors/"
+    }
 }
 ```
 

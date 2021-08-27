@@ -124,7 +124,7 @@ private:
                               const std::string& target_role) const;
     bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
 
-    bool address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const;
+    bool address_matches_host_pattern(const std::string& addr, const mariadb::UserEntry& entry) const;
 
     enum class HostPatternMode
     {

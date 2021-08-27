@@ -105,7 +105,7 @@ int MariaDBCluster::connect(int i, const std::string& db)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), user_name, password, 50, m_ssl);
+        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), m_user_name, m_password, 50, m_ssl);
     }
 
     if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
@@ -168,10 +168,10 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     auto prefixc = nwconf_prefix().c_str();
 
     string key_user = mxb::string_printf("%s_user", prefixc);
-    user_name = envvar_get_set(key_user.c_str(), "skysql");
+    m_user_name = envvar_get_set(key_user.c_str(), "skysql");
 
     string key_pw = mxb::string_printf("%s_password", prefixc);
-    password = envvar_get_set(key_pw.c_str(), "skysql");
+    m_password = envvar_get_set(key_pw.c_str(), "skysql");
 
     string key_ssl = mxb::string_printf("%s_ssl", prefixc);
     setenv(key_ssl.c_str(), m_ssl ? "true" : "false", 1);
@@ -233,8 +233,8 @@ void MariaDBCluster::print_env()
         printf("%s node %d \t%s\tPort=%d\n", namec, i, ip4(i), port[i]);
         printf("%s Access user %s\n", namec, access_user(i));
     }
-    printf("%s User name %s\n", namec, user_name.c_str());
-    printf("%s Password %s\n", namec, password.c_str());
+    printf("%s User name %s\n", namec, m_user_name.c_str());
+    printf("%s Password %s\n", namec, m_password.c_str());
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -283,20 +283,18 @@ bool MariaDBCluster::create_base_users(int node)
 {
     using mxt::MariaDBServer;
 
-    // Create users for replication as well as the users that are used by the tests
-    string script_file = mxb::string_printf("%s/create_user.sh", m_test_dir.c_str());
-    copy_to_node(node, script_file.c_str(), access_homedir(node));
-
-    string cmd = mxb::string_printf("export require_ssl=\"%s\"; export node_user=\"%s\"; "
-                                    "export node_password=\"%s\"; "
-                                    "%s/create_user.sh \"%s\" %s",
-                                    m_ssl ? "REQUIRE SSL" : "", user_name.c_str(),
-                                    password.c_str(),
-                                    access_homedir(0), m_socket_cmd[0].c_str(), type_string().c_str());
-    int rc = ssh_node_f(node, true, "%s", cmd.c_str());
+    // Create the basic test admin user with ssh as the backend may not accept external connections.
+    // The sql-command given to ssh must escape double quotes.
+    auto vm = this->node(node);
+    string drop_query = mxb::string_printf(R"(drop user \"%s\";)", admin_user.c_str());
+    vm->run_sql_query(drop_query);
+    string create_query = mxb::string_printf(
+        R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;)",
+                                             admin_user.c_str(), admin_pw.c_str(), admin_user.c_str());
+    auto res = vm->run_sql_query(create_query);
 
     bool rval = false;
-    if (rc == 0)
+    if (res.rc == 0)
     {
         auto be = backend(node);
         be->update_status();
@@ -320,7 +318,8 @@ bool MariaDBCluster::create_base_users(int node)
 
         auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
 
-        if (gen_all_grants_user("repl", "repl", SslMode::OFF)
+        if (gen_all_grants_user(m_user_name, m_password, ssl_mode)
+            && gen_all_grants_user("repl", "repl", SslMode::OFF)
             && gen_all_grants_user("skysql", "skysql", ssl_mode)
             && gen_all_grants_user("maxskysql", "skysql", ssl_mode)
             && gen_all_grants_user("maxuser", "maxuser", ssl_mode))
@@ -335,8 +334,8 @@ bool MariaDBCluster::create_base_users(int node)
     }
     else
     {
-        logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i.",
-                          cmd.c_str(), name().c_str(), node, rc);
+        logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i, %s.",
+                          create_query.c_str(), name().c_str(), node, res.rc, res.output.c_str());
     }
     return rval;
 }
@@ -888,16 +887,6 @@ const char* MariaDBCluster::ip4(int i) const
     return Nodes::ip4(i);
 }
 
-void MariaDBCluster::disable_ssl()
-{
-    for (int i = 0; i < N; i++)
-    {
-        stop_node(i);
-        ssh_node(i, "rm -f /etc/my.cnf.d/ssl.cnf", true);
-        start_node(i);
-    }
-}
-
 bool MariaDBCluster::using_ipv6() const
 {
     return m_use_ipv6;
@@ -1035,7 +1024,7 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
 
 bool MariaDBCluster::check_normal_conns()
 {
-    return check_conns(this->user_name, this->password);
+    return check_conns(m_user_name, m_password);
 }
 
 bool MariaDBCluster::check_conns(const std::string& a_user_name, const std::string& a_password)
@@ -1153,6 +1142,16 @@ mxt::MariaDBUserDef MariaDBCluster::service_user_def() const
     return rval;
 }
 
+const std::string& MariaDBCluster::user_name() const
+{
+    return m_user_name;
+}
+
+const std::string& MariaDBCluster::password() const
+{
+    return m_password;
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
@@ -1207,7 +1206,7 @@ bool MariaDBServer::update_status()
 
 MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl, const std::string& db)
 {
-    return try_open_connection(ssl, m_cluster.user_name, m_cluster.password, db);
+    return try_open_connection(ssl, m_cluster.user_name(), m_cluster.password(), db);
 }
 
 MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl,
@@ -1302,6 +1301,11 @@ int MariaDBServer::port()
     return m_cluster.port[m_ind];
 }
 
+int MariaDBServer::ind() const
+{
+    return m_ind;
+}
+
 mxt::MariaDB* MariaDBServer::admin_connection()
 {
     // Can assume that the connection has been created.
@@ -1342,7 +1346,8 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
     bool create_ok = false;
     bool grant_error = false;
 
-    // Xpand does not support "if exists" so simply disregard any errors on the "drop" query.
+    // Xpand lacks support for "if exists" so avoid it and simply disregard any errors on the "drop" query.
+    // Xpand also does not understand "require none", so instead use empty string.
     c->try_cmd_f("drop user %s;", userhostc);
     string require;
     if (supports_require)

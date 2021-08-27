@@ -302,9 +302,9 @@ class RWSplit : public mxs::Router
 public:
     struct gtid
     {
-        uint32_t domain;
-        uint32_t server_id;
-        uint64_t sequence;
+        uint32_t domain {0};
+        uint32_t server_id {0};
+        uint64_t sequence {0};
 
         static gtid from_string(const std::string& str);
         std::string to_string() const;
@@ -387,11 +387,11 @@ private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
 
-    SERVICE*                                      m_service;/**< Service where the router belongs*/
+    SERVICE*                                      m_service;    /**< Service where the router belongs*/
     RWSConfig                                     m_config;
     Stats                                         m_stats;
     mxs::WorkerGlobal<TargetSessionStats>         m_server_stats;
     mxs::WorkerGlobal<maxbase::CumulativeAverage> m_avg_sescmd_sz;
-    gtid                                          m_last_gtid {0, 0, 0};
+    std::map<uint32_t, gtid>                      m_last_gtid;
     mutable mxb::shared_mutex                     m_last_gtid_lock;
 };

@@ -8,8 +8,8 @@
 bool try_connect(TestConnections& test)
 {
     const char* ip = test.maxscale->ip4();
-    const char* user = test.maxscale->user_name.c_str();
-    const char* pw = test.maxscale->password.c_str();
+    const char* user = test.maxscale->user_name().c_str();
+    const char* pw = test.maxscale->password().c_str();
     const char* db = "test_db";
 
     MYSQL* rwsplit = open_conn_db(test.maxscale->rwsplit_port, ip, db, user, pw, false);
@@ -43,8 +43,8 @@ int main(int argc, char* argv[])
     test.tprintf("Connecting to RWSplit again to recreate 'test_db' db");
     MYSQL* conn = open_conn_no_db(test.maxscale->rwsplit_port,
                                   test.maxscale->ip4(),
-                           test.maxscale->user_name,
-                           test.maxscale->password,
+                                  test.maxscale->user_name(),
+                                  test.maxscale->password(),
                            test.maxscale_ssl);
     test.add_result(conn == NULL, "Error connecting to MaxScale");
 
@@ -62,8 +62,8 @@ int main(int argc, char* argv[])
     test.tprintf("Trying simple operations with t1 ");
     conn = open_conn_no_db(test.maxscale->rwsplit_port,
                            test.maxscale->ip4(),
-                           test.maxscale->user_name,
-                           test.maxscale->password,
+                           test.maxscale->user_name(),
+                           test.maxscale->password(),
                            test.maxscale_ssl);
     test.try_query(conn, "USE test_db");
     test.try_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1)");

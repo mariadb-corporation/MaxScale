@@ -32,6 +32,11 @@ class TestConnections
 {
 public:
     using StringSet = std::set<std::string>;
+    TestConnections(const TestConnections& rhs) = delete;
+    TestConnections& operator=(const TestConnections& rhs) = delete;
+
+    // Exit code for skipping tests. Should match value expected by cmake.
+    static constexpr const int TEST_SKIPPED = 202;
 
     TestConnections();
 
@@ -105,9 +110,6 @@ public:
     /** Test requires a certain backend version  */
     static void require_repl_version(const char* version);
 
-    /** Require that galera is present*/
-    static void require_galera(bool value);
-
     /** Require that columnstore is present*/
     static void require_columnstore(bool value);
 
@@ -142,12 +144,6 @@ public:
      * @brief Stop binlogrouter replication from master
      */
     void revert_replicate_from_master();
-
-    /**
-     * @brief start_mm configure first node as Master for second, Second as Master for first
-     * @return  0 in case of success
-     */
-    int start_mm();
 
     /**
      * @brief Test that connections to MaxScale are in the expected state
@@ -373,6 +369,7 @@ private:
     bool m_mxs_manual_debug {false};    /**< Manually debugging MaxScale? */
     bool m_fix_clusters_after {false};  /**< Fix clusters after test? */
     bool m_enable_timeout {true};       /**< Is timeout enabled? */
+    bool m_recreate_vms {false};        /**< Wipeout and recreate test VMs. */
 
     /* If false, logs from backends are not copied (needed with Aurora RDS backend or similar) */
     bool m_backend_log_copy {true};

@@ -125,30 +125,6 @@ public:
 
     CCRConfig(CCRConfig&& rhs) = default;
 
-    bool post_configure()
-    {
-        bool rv = true;
-
-        if (this->global && (this->count != 0))
-        {
-            MXS_ERROR("'count' and 'global' cannot be used at the same time.");
-            rv = false;
-        }
-
-        if (rv)
-        {
-            this->ovector_size = std::max(this->match.ovec_size, this->ignore.ovec_size);
-
-            if (this->options != 0)
-            {
-                this->match.set_options(options);
-                this->ignore.set_options(options);
-            }
-        }
-
-        return rv;
-    }
-
     mxs::config::RegexValue match;
     mxs::config::RegexValue ignore;
     std::chrono::seconds    time;
@@ -335,7 +311,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
             {
                 queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
                 filter->m_stats.n_add_time++;
-                MXS_INFO("%.0f seconds left", dt);
+                MXS_INFO("%.0f seconds left", config.time.count() - dt);
             }
         }
     }

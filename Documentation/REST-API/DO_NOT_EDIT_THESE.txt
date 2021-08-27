@@ -1,0 +1,2 @@
+These files are generated from the files in the ./templates/ directory. Read
+./templates/README.md for instructions on how to generate the documentation.

@@ -38,8 +38,8 @@ int main(int argc, char** argv)
 
     const string extra_port_sett = "extra_port=" + extra_port_str;
 
-    string user = test.repl->user_name;
-    string pw = test.repl->password;
+    string user = test.repl->user_name();
+    string pw = test.repl->password();
 
     for (int i = 0; i < N_extra_port; i++)
     {

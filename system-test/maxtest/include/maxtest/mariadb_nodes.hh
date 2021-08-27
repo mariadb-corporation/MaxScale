@@ -93,6 +93,7 @@ public:
 
     VMNode& vm_node();
     int     port();
+    int     ind() const;
 
     /**
      * Delete user, then create it with the grants listed.
@@ -170,8 +171,8 @@ public:
     MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
     int    port[N_MAX];     /**< MariaDB port for every backend node */
 
-    std::string user_name;  /**< User name to access backend nodes */
-    std::string password;   /**< Password to access backend nodes */
+    const std::string& user_name() const;
+    const std::string& password() const;
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");
@@ -181,7 +182,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(ip4(i), port[i], user_name, password, db, m_ssl);
+        return Connection(ip4(i), port[i], m_user_name, m_password, db, m_ssl);
     }
 
     /**
@@ -333,11 +334,6 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * Disables the server SSL configuration
-     */
-    void disable_ssl();
-
-    /**
      * @brief Close all connections to this node
      *
      * This will kill all connections that have been created to this node.
@@ -432,7 +428,7 @@ public:
     /**
      * Ping or open admin connections to all servers.
      *
-     * @return Number of succesfull connections
+     * @return Number of successful connections
      */
     int ping_or_open_admin_connections();
 
@@ -492,6 +488,14 @@ protected:
 
     bool check_conns(const std::string& user, const std::string& password);
 
+    /**
+     * Run a function on every backend concurrently.
+     *
+     * @param func Function which take backend index and returns true on success.
+     * @return True if all function executions returned success.
+     */
+    bool run_on_every_backend(const std::function<bool(int)>& func);
+
     std::string m_test_dir;             /**< path to test application */
     /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
     std::string m_cnf_server_prefix;
@@ -503,11 +507,13 @@ private:
     bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
     int  m_n_req_backends {0};  /**< Number of backends required by test */
 
+    std::string m_user_name;    /**< User name to access backend nodes */
+    std::string m_password;     /**< Password to access backend nodes */
+
     std::vector<std::unique_ptr<mxt::MariaDBServer>> m_backends;
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
     bool reset_servers();
-    bool run_on_every_backend(const std::function<bool(int)>& func);
 
     /**
      * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.

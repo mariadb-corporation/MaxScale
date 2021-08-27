@@ -34,47 +34,28 @@ public:
     const std::string& type_string() const override;
 
     /**
-     * @brief find_master Tries to find Master node
-     * @return Index of Master node
-     */
-    int find_master();
-
-    /**
      * @brief change_master set a new master node for Master/Slave setup
      * @param NewMaster index of new Master node
      * @param OldMaster index of current Master node
      */
     void change_master(int NewMaster, int OldMaster);
 
-    /**
-     * @brief Creates 'repl' user on all nodes
-     * @return 0 if everything is ok
-     */
-    int set_repl_user();
-
-    /**
-     * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
-     * @param MYSQL conn struct of slave node
-     * @param master_host IP address of master node
-     * @param master_port port of master node
-     * @return 0 if everything is ok
-     */
-    int set_slave(MYSQL* conn, const char* master_host, int master_port);
+    enum class GtidType {CURRENT_POS, SLAVE_POS};
 
     /**
      * Configure a server as a slave of another server
      *
-     * The servers are configured with GTID replicating using the configured
-     * GTID position, either slave_pos or current_pos.
-     *
      * @param slave  The node index to assign as slave
      * @param master The node index of the master
-     * @param type   Replication type
      */
-    void replicate_from(int slave, int master, const char* type = "current_pos");
+    void replicate_from(int slave, int master);
 
-    // Replicates from a host and a port instead of a known server
-    void replicate_from(int slave, const std::string& host, uint16_t port, const char* type = "current_pos");
+    /*
+     * Replicates from a host and a port instead of a known server */
+    void replicate_from(int slave, const std::string& host, uint16_t port);
+
+    void replicate_from(int slave, const std::string& host, uint16_t port,
+                        GtidType type, const std::string& conn_name, bool reset);
 
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;

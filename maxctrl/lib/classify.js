@@ -13,12 +13,36 @@
 require("./common.js")();
 
 const classify_fields = [
-  { "Parse result": "attributes.parse_result" },
-  { "Type mask": "attributes.type_mask" },
-  { Operation: "attributes.operation" },
-  { "Has where clause": "attributes.has_where_clause" },
-  { Fields: "attributes.fields" },
-  { Functions: "attributes.functions" },
+  {
+    name: "Parse result",
+    path: "attributes.parse_result",
+    description: "The result of the parsing",
+  },
+  {
+    name: "Type mask",
+    path: "attributes.type_mask",
+    description: "The query type mask",
+  },
+  {
+    name: "Operation",
+    path: "attributes.operation",
+    description: "The query operation",
+  },
+  {
+    name: "Has where clause",
+    path: "attributes.has_where_clause",
+    description: "Whether the query has a WHERE clause",
+  },
+  {
+    name: "Fields",
+    path: "attributes.fields",
+    description: "The fields the query accesses",
+  },
+  {
+    name: "Functions",
+    path: "attributes.functions",
+    description: "Functions that are used by the query",
+  },
 ];
 
 exports.command = "classify <statement>";
