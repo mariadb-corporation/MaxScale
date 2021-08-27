@@ -34,12 +34,14 @@ int main(int argc, char** argv)
     param.is_unsigned = false;
     param.error = &err;
 
+    uint64_t len = 0;
     uint64_t buffer2 = 0;
     MYSQL_BIND param_res;
     param_res.buffer = &buffer2;
     param_res.is_null = &isnull;
     param_res.error = &err;
     param_res.buffer_type = MYSQL_TYPE_LONG;
+    param_res.length = &len;
 
     std::string query = "SELECT ?";
 
