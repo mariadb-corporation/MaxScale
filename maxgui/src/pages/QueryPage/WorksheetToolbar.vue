@@ -254,8 +254,8 @@ export default {
                 }
         },
         async confirmRunning() {
-            await this.onRun(this.activeRunMode)
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
+            await this.onRun(this.activeRunMode)
         },
         /**
          * @param {String} mode Mode to execute query: All or selected
