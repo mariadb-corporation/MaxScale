@@ -130,6 +130,7 @@ export default {
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
+            conn_err_state: state => state.query.conn_err_state,
         }),
         ...mapGetters({
             getActiveWke: 'query/getActiveWke',
@@ -196,7 +197,16 @@ export default {
             this.targetConn = item
         },
         async handleOpenConn(opts) {
+            /**
+             *  When creating new connection, if current worksheet has been binded to
+             *  a connection already, after successful connecting, dispatch initialFetch
+             *  to reload schemas tree and other related components
+             */
+
+            const hasConnectionAlready = Boolean(this.curr_cnct_resource.id)
             await this.openConnect(opts)
+            if (hasConnectionAlready && !this.conn_err_state)
+                await this.initialFetch(this.curr_cnct_resource)
         },
     },
 }
