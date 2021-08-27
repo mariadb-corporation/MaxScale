@@ -90,6 +90,7 @@ describe('SelectDropdown.vue', () => {
 
     it(`Should render clear button when clearable props is true`, async () => {
         await wrapper.setProps({
+            value: singleChoiceItems[0],
             clearable: true,
             items: singleChoiceItems,
             defaultItems: singleChoiceItems[0],
@@ -100,13 +101,14 @@ describe('SelectDropdown.vue', () => {
     it(`Should render pre-selected item accurately when defaultItems props
       is passed with a valid object and multiple props is false`, async () => {
         await wrapper.setProps({
+            value: singleChoiceItems[0],
             entityName: 'monitors',
             multiple: false,
             items: singleChoiceItems,
             defaultItems: singleChoiceItems[0],
         })
 
-        let preSelectedItem = wrapper.vm.$data.selectedItems
+        let preSelectedItem = wrapper.vm.selectedItems
         expect(preSelectedItem).to.be.an('object')
         expect(preSelectedItem.id).to.be.equal(singleChoiceItems[0].id)
         const selectionSpans = wrapper.findAll('.v-select__selection')
@@ -115,14 +117,15 @@ describe('SelectDropdown.vue', () => {
     })
     it(`Should render pre-selected items accurately when defaultItems props
       is passed with a valid array and multiple props is true`, async () => {
+        const initialValue = [multipleChoiceItems[0], multipleChoiceItems[1]]
         await wrapper.setProps({
+            value: initialValue,
             entityName: 'services',
             multiple: true,
             items: multipleChoiceItems,
-            defaultItems: [multipleChoiceItems[0], multipleChoiceItems[1]],
+            defaultItems: initialValue,
         })
-
-        let preSelectedItems = wrapper.vm.$data.selectedItems
+        let preSelectedItems = wrapper.vm.selectedItems
         expect(preSelectedItems).to.be.an('array')
         preSelectedItems.forEach((item, i) =>
             expect(item.id).to.be.equal(multipleChoiceItems[i].id)
@@ -131,51 +134,6 @@ describe('SelectDropdown.vue', () => {
         expect(selectionSpans.length).to.be.equal(2)
         expect(selectionSpans.at(0).html()).to.be.include(multipleChoiceItems[0].id)
         expect(selectionSpans.at(1).html()).to.be.include('(+1 others)')
-    })
-
-    it(`Should emit get-selected-items and return array
-      when multiple props is true`, async () => {
-        /* ---------------  Test get-selected-items event ------------------------ */
-        await wrapper.setProps({
-            entityName: 'services',
-            multiple: true,
-            items: multipleChoiceItems,
-        })
-        let chosenItems = []
-        wrapper.vm.$on('get-selected-items', values => {
-            chosenItems = values
-        })
-
-        // mockup onchange event when selecting items
-        multipleChoiceItems.forEach(async item => {
-            await itemSelectMock(wrapper, item)
-        })
-
-        expect(chosenItems).to.be.an('array')
-        chosenItems.forEach((item, i) => {
-            expect(item.id).to.be.equal(multipleChoiceItems[i].id)
-        })
-    })
-    it(`Should emit get-selected-items and return array
-      when multiple props is false`, async () => {
-        /* ---------------  Test get-selected-items event ------------------------ */
-        await wrapper.setProps({
-            entityName: 'monitors',
-            multiple: false,
-            items: singleChoiceItems,
-        })
-        let chosenItems = []
-        wrapper.vm.$on('get-selected-items', values => {
-            chosenItems = values
-        })
-        // mockup onchange event when selecting an item
-        await itemSelectMock(wrapper, singleChoiceItems[0])
-
-        expect(chosenItems).to.be.an('array')
-        expect(chosenItems.length).to.be.equal(1)
-        chosenItems.forEach((item, i) => {
-            expect(item.id).to.be.equal(singleChoiceItems[i].id)
-        })
     })
 
     it(`Should emit has-changed event and return accurate value
