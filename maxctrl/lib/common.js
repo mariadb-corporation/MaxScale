@@ -190,6 +190,19 @@ module.exports = function () {
   };
 
   // Request a resource collection and format it as a string
+  this.getTransposedCollection = async function (host, resource, fields) {
+    var arr = await getRawCollection(host, resource, fields);
+    var table = getTable([]);
+
+    for (var i = 0; i < fields.length; i++) {
+      var row = [colors.cyan(fields[i].name)].concat(arr.map((v) => v[i]));
+      table.push(row);
+    }
+
+    return tableToString(table);
+  };
+
+  // Request a resource collection and format it as a string
   this.getCollection = async function (host, resource, fields) {
     var res = await getRawCollection(host, resource, fields);
     return rawCollectionAsTable(res, fields);
@@ -422,6 +435,13 @@ module.exports = function () {
   // Return an error message as a rejected promise
   this.error = function (err) {
     return Promise.reject(colors.red("Error: ") + err);
+  };
+
+  // Prints a warning for live users, piped output into scripts won't contain these
+  this.warning = function (msg) {
+    if (!this.argv.tsv && process.stdout.isTTY) {
+      console.log(colors.yellow("Warning: ") + msg);
+    }
   };
 
   this.rDnsOption = {

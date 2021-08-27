@@ -379,9 +379,11 @@ Listener::Config::Config(const std::string& name, Listener* listener)
 
 bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
+    std::string protocol_name = mxb::lower_case_copy(protocol->name);
     mxb_assert(nested_params.size() <= 1);
     mxb_assert(nested_params.size() == 0
-               || (nested_params.size() == 1 && nested_params.find(protocol->name) != nested_params.end()));
+               || (nested_params.size() == 1
+                   && nested_params.find(protocol_name) != nested_params.end()));
 
     if (port > 0 && !socket.empty())
     {
@@ -406,7 +408,7 @@ bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 
     if (nested_params.size() == 1)
     {
-        params = nested_params.at(protocol->name);
+        params = nested_params.at(protocol_name);
     }
 
     return m_listener->post_configure(params);

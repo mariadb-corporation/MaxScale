@@ -1483,13 +1483,18 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
 
     if (!ptr)
     {
-        if ((ptr = config_context_create(section)) == NULL)
-        {
-            return 0;
-        }
-
+        ptr = config_context_create(section);
+        MXB_OOM_IFNULL(ptr);
         ptr->m_next = cntxt->m_next;
         cntxt->m_next = ptr;
+
+        if (!std::all_of(ptr->m_name.begin(), ptr->m_name.end(), [](char c) {
+                             return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
+                         }))
+        {
+            MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
+                        "the REST API or MaxCtrl.", ptr->name());
+        }
     }
 
     if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)

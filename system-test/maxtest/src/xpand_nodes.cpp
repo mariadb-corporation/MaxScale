@@ -342,7 +342,8 @@ bool XpandCluster::create_xpand_users(int node)
     service_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
 
     auto be = backend(node);
-    if (be->create_user(xpmon_user, ssl_mode(), false) && be->create_user(service_user, ssl_mode(), false))
+    bool sr = supports_require();
+    if (be->create_user(xpmon_user, ssl_mode(), sr) && be->create_user(service_user, ssl_mode(), sr))
     {
         rval = true;
     }

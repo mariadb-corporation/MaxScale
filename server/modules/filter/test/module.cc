@@ -16,8 +16,6 @@
 #include <string>
 #include "../../../core/internal/modules.hh"
 
-using std::auto_ptr;
-
 namespace maxscale
 {
 

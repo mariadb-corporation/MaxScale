@@ -972,7 +972,7 @@ void Worker::adjust_timer()
 
 bool Worker::cancel_delayed_call(uint32_t id)
 {
-    mxb_assert(Worker::get_current() == this);
+    mxb_assert(Worker::get_current() == this || m_state == FINISHED);
     bool found = false;
 
     auto i = m_calls.find(id);

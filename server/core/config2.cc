@@ -164,6 +164,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
         {
             string head = name.substr(0, i);
             string tail = name.substr(i + 1);
+            mxb::lower_case(head);
 
             nested_parameters[head].set(tail, value);
         }
@@ -182,7 +183,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                 {
                     if (pParam->takes_parameters())
                     {
-                        parameters_with_params[value] = pParam;
+                        parameters_with_params[mxb::lower_case_copy(value)] = pParam;
                     }
                 }
                 else

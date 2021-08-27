@@ -21,7 +21,7 @@
 
 #include "maskingrules.hh"
 
-using std::auto_ptr;
+using std::shared_ptr;
 using std::string;
 
 namespace
@@ -125,36 +125,6 @@ MaskingFilter* MaskingFilter::create(const char* zName)
     return new MaskingFilter(zName);
 }
 
-bool MaskingFilter::post_configure()
-{
-    bool ok = false;
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
-
-    if (sRules.get())
-    {
-        ok = true;
-        m_sRules.reset(sRules.release());
-
-        if (m_config.treat_string_arg_as_field())
-        {
-            QC_CACHE_PROPERTIES cache_properties;
-            qc_get_cache_properties(&cache_properties);
-
-            if (cache_properties.max_size != 0)
-            {
-                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
-                           "disabling the query classifier cache.",
-                           m_config.name().c_str());
-
-                cache_properties.max_size = 0;
-                qc_set_cache_properties(&cache_properties);
-            }
-        }
-    }
-
-    return ok;
-}
-
 MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
     return MaskingFilterSession::create(pSession, pService, this);
@@ -172,30 +142,20 @@ uint64_t MaskingFilter::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
 }
 
-std::shared_ptr<MaskingRules> MaskingFilter::rules() const
-{
-    return m_sRules;
-}
-
 bool MaskingFilter::reload()
 {
-    bool rval = false;
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
+    bool rval = m_config.reload_rules();
+    const auto& cnf = config();
 
-    if (sRules.get())
+    if (rval)
     {
         MXS_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
-                   m_config.name().c_str(),
-                   m_config.rules().c_str());
-
-        m_sRules.reset(sRules.release());
-        rval = true;
+                   m_config.name().c_str(), cnf.rules.c_str());
     }
     else
     {
         MXS_ERROR("Rules for masking filter '%s' could not be reloaded from '%s'.",
-                  m_config.name().c_str(),
-                  m_config.rules().c_str());
+                  m_config.name().c_str(), cnf.rules.c_str());
     }
 
     return rval;

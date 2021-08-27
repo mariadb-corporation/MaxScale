@@ -24,10 +24,9 @@
 #include <maxscale/utils.hh>
 #include <maxscale/json_api.hh>
 
-using std::auto_ptr;
+using std::unique_ptr;
 using std::string;
 using std::vector;
-using std::shared_ptr;
 using maxscale::Closer;
 
 namespace
@@ -61,9 +60,9 @@ public:
     {
     }
 
-    static shared_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
+    static unique_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
     {
-        return shared_ptr<MaskingRules::Rule::Account>(new AccountVerbatim(user, host));
+        return unique_ptr<MaskingRules::Rule::Account>(new AccountVerbatim(user, host));
     }
 
     string user() const override
@@ -116,9 +115,9 @@ public:
         pcre2_code_free(m_pCode);
     }
 
-    static shared_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
+    static unique_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
     {
-        shared_ptr<MaskingRules::Rule::Account> sAccount;
+        unique_ptr<MaskingRules::Rule::Account> sAccount;
 
         int errcode;
         PCRE2_SIZE erroffset;
@@ -133,7 +132,7 @@ public:
         {
             Closer<pcre2_code*> code(pCode);
 
-            sAccount = shared_ptr<AccountRegexp>(new AccountRegexp(user, host, pCode));
+            sAccount.reset(new AccountRegexp(user, host, pCode));
 
             // Ownership of pCode has been moved to the AccountRegexp object.
             code.release();
@@ -211,9 +210,9 @@ private:
  * @return Either an AccountVerbatim or AccountRegexp, depending on whether
  *         the provided account name contains wildcards or not.
  */
-shared_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
+unique_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
 {
-    shared_ptr<MaskingRules::Rule::Account> sAccount;
+    unique_ptr<MaskingRules::Rule::Account> sAccount;
 
     size_t len = strlen(zAccount);
     char account[len + 1];
@@ -288,7 +287,7 @@ shared_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
  */
 bool get_accounts(const char* zName,
                   json_t* pStrings,
-                  vector<shared_ptr<MaskingRules::Rule::Account>>& accounts)
+                  vector<unique_ptr<MaskingRules::Rule::Account>>& accounts)
 {
     mxb_assert(json_is_array(pStrings));
 
@@ -304,11 +303,11 @@ bool get_accounts(const char* zName,
 
         if (json_is_string(pString))
         {
-            shared_ptr<MaskingRules::Rule::Account> sAccount = create_account(json_string_value(pString));
+            auto sAccount = create_account(json_string_value(pString));
 
             if (sAccount)
             {
-                accounts.push_back(sAccount);
+                accounts.push_back(std::move(sAccount));
             }
             else
             {
@@ -335,7 +334,7 @@ bool get_accounts(const char* zName,
  *
  * @return True, if all rules could be created.
  */
-bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rule>>& rules)
+bool create_rules_from_array(json_t* pRules, vector<unique_ptr<MaskingRules::Rule>>& rules)
 {
     mxb_assert(json_is_array(pRules));
 
@@ -351,7 +350,7 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
 
         if (json_is_object(pRule))
         {
-            auto_ptr<MaskingRules::Rule> sRule;
+            unique_ptr<MaskingRules::Rule> sRule;
             json_t* pObfuscate = json_object_get(pRule, KEY_OBFUSCATE);
             json_t* pReplace = json_object_get(pRule, KEY_REPLACE);
 
@@ -381,7 +380,7 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
 
             if (sRule.get())
             {
-                rules.push_back(shared_ptr<MaskingRules::Rule>(sRule.release()));
+                rules.push_back(std::move(sRule));
             }
             else
             {
@@ -409,7 +408,7 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
  * @return True, if all rules could be created.
  */
 bool create_rules_from_root(json_t* pRoot,
-                            vector<shared_ptr<MaskingRules::Rule>>& rules)
+                            vector<unique_ptr<MaskingRules::Rule>>& rules)
 {
     bool parsed = false;
     json_t* pRules = json_object_get(pRoot, KEY_RULES);
@@ -440,7 +439,6 @@ inline bool is_same_name(const std::string& lhs, const LEncString& rhs)
 {
     return rhs.case_eq(lhs);
 }
-
 }
 
 //
@@ -462,24 +460,24 @@ MaskingRules::Rule::Account::~Account()
 MaskingRules::Rule::Rule(const std::string& column,
                          const std::string& table,
                          const std::string& database,
-                         const std::vector<SAccount>& applies_to,
-                         const std::vector<SAccount>& exempted)
+                         std::vector<SAccount>&& applies_to,
+                         std::vector<SAccount>&& exempted)
     : m_column(column)
     , m_table(table)
     , m_database(database)
-    , m_applies_to(applies_to)
-    , m_exempted(exempted)
+    , m_applies_to(std::move(applies_to))
+    , m_exempted(std::move(exempted))
 {
 }
 
 MaskingRules::ReplaceRule::ReplaceRule(const std::string& column,
                                        const std::string& table,
                                        const std::string& database,
-                                       const std::vector<SAccount>& applies_to,
-                                       const std::vector<SAccount>& exempted,
+                                       std::vector<SAccount>&& applies_to,
+                                       std::vector<SAccount>&& exempted,
                                        const std::string& value,
                                        const std::string& fill)
-    : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
+    : MaskingRules::Rule::Rule(column, table, database, std::move(applies_to), std::move(exempted))
     , m_value(value)
     , m_fill(fill)
 {
@@ -488,21 +486,21 @@ MaskingRules::ReplaceRule::ReplaceRule(const std::string& column,
 MaskingRules::ObfuscateRule::ObfuscateRule(const std::string& column,
                                            const std::string& table,
                                            const std::string& database,
-                                           const std::vector<SAccount>& applies_to,
-                                           const std::vector<SAccount>& exempted)
-    : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
+                                           std::vector<SAccount>&& applies_to,
+                                           std::vector<SAccount>&& exempted)
+    : MaskingRules::Rule::Rule(column, table, database, std::move(applies_to), std::move(exempted))
 {
 }
 
 MaskingRules::MatchRule::MatchRule(const std::string& column,
                                    const std::string& table,
                                    const std::string& database,
-                                   const std::vector<SAccount>& applies_to,
-                                   const std::vector<SAccount>& exempted,
+                                   std::vector<SAccount>&& applies_to,
+                                   std::vector<SAccount>&& exempted,
                                    pcre2_code* regexp,
                                    const std::string& value,
                                    const std::string& fill)
-    : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
+    : MaskingRules::Rule::Rule(column, table, database, std::move(applies_to), std::move(exempted))
     , m_regexp(regexp)
     , m_value(value)
     , m_fill(fill)
@@ -666,8 +664,8 @@ static json_t* rule_get_fill(json_t* pDoc)
  * @return              True on success, false on errors.
  */
 static bool rule_run_common_checks(json_t* pRule,
-                                   vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
-                                   vector<shared_ptr<MaskingRules::Rule::Account>>* exempted)
+                                   vector<unique_ptr<MaskingRules::Rule::Account>>* applies_to,
+                                   vector<unique_ptr<MaskingRules::Rule::Account>>* exempted)
 {
     json_t* pApplies_to = json_object_get(pRule, KEY_APPLIES_TO);
     json_t* pExempted = json_object_get(pRule, KEY_EXEMPTED);
@@ -751,8 +749,8 @@ static bool rule_get_common_values(json_t* pRule,
  * @return              True on success, false on errors
  */
 bool rule_get_values(json_t* pRule,
-                     vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
-                     vector<shared_ptr<MaskingRules::Rule::Account>>* exempted,
+                     vector<unique_ptr<MaskingRules::Rule::Account>>* applies_to,
+                     vector<unique_ptr<MaskingRules::Rule::Account>>* exempted,
                      std::string* column,
                      std::string* table,
                      std::string* database,
@@ -902,15 +900,15 @@ bool rule_get_value_fill(json_t* pRule,
 }
 
 // static
-auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRule)
+unique_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRule)
 {
     mxb_assert(json_is_object(pRule));
 
     json_t* pReplace;
     std::string column, table, database, value, fill;
-    vector<shared_ptr<MaskingRules::Rule::Account>> applies_to;
-    vector<shared_ptr<MaskingRules::Rule::Account>> exempted;
-    auto_ptr<MaskingRules::Rule> sRule;
+    vector<unique_ptr<MaskingRules::Rule::Account>> applies_to;
+    vector<unique_ptr<MaskingRules::Rule::Account>> exempted;
+    unique_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
     if (rule_get_values(pRule,
@@ -923,27 +921,27 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
         && rule_get_value_fill(pRule, &value, &fill))   // get value/fill
     {
         // Apply value/fill: instantiate the ReplaceRule class
-        sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
-                                                                                  table,
-                                                                                  database,
-                                                                                  applies_to,
-                                                                                  exempted,
-                                                                                  value,
-                                                                                  fill));
+        sRule = unique_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
+                                                                                    table,
+                                                                                    database,
+                                                                                    std::move(applies_to),
+                                                                                    std::move(exempted),
+                                                                                    value,
+                                                                                    fill));
     }
 
     return sRule;
 }
 
 // static
-auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pRule)
+unique_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pRule)
 {
     mxb_assert(json_is_object(pRule));
 
     std::string column, table, database;
-    vector<shared_ptr<MaskingRules::Rule::Account>> applies_to;
-    vector<shared_ptr<MaskingRules::Rule::Account>> exempted;
-    auto_ptr<MaskingRules::Rule> sRule;
+    vector<unique_ptr<MaskingRules::Rule::Account>> applies_to;
+    vector<unique_ptr<MaskingRules::Rule::Account>> exempted;
+    unique_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
     if (rule_get_values(pRule,
@@ -954,11 +952,11 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pR
                         &database,
                         KEY_OBFUSCATE))
     {
-        sRule = auto_ptr<MaskingRules::Rule>(new MaskingRules::ObfuscateRule(column,
-                                                                             table,
-                                                                             database,
-                                                                             applies_to,
-                                                                             exempted));
+        sRule = unique_ptr<MaskingRules::Rule>(new MaskingRules::ObfuscateRule(column,
+                                                                               table,
+                                                                               database,
+                                                                               std::move(applies_to),
+                                                                               std::move(exempted)));
     }
 
     return sRule;
@@ -997,14 +995,14 @@ static pcre2_code* rule_compile_pcre2_match(const char* match_string)
 }
 
 // static
-auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
+unique_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
 {
     mxb_assert(json_is_object(pRule));
 
     std::string column, table, database, value, fill, match;
-    vector<shared_ptr<MaskingRules::Rule::Account>> applies_to;
-    vector<shared_ptr<MaskingRules::Rule::Account>> exempted;
-    auto_ptr<MaskingRules::Rule> sRule;
+    vector<unique_ptr<MaskingRules::Rule::Account>> applies_to;
+    vector<unique_ptr<MaskingRules::Rule::Account>> exempted;
+    unique_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
     // Note: the match rule has same rule_type of "replace"
@@ -1030,14 +1028,14 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
             {
                 Closer<pcre2_code*> code(pCode);
                 // Instantiate the MatchRule class
-                sRule = auto_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(column,
-                                                                                      table,
-                                                                                      database,
-                                                                                      applies_to,
-                                                                                      exempted,
-                                                                                      pCode,
-                                                                                      value,
-                                                                                      fill));
+                sRule = unique_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(column,
+                                                                                        table,
+                                                                                        database,
+                                                                                        std::move(applies_to),
+                                                                                        std::move(exempted),
+                                                                                        pCode,
+                                                                                        value,
+                                                                                        fill));
 
                 // Ownership of pCode has been moved to the MatchRule object.
                 code.release();
@@ -1322,9 +1320,9 @@ void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
 // MaskingRules
 //
 
-MaskingRules::MaskingRules(json_t* pRoot, const std::vector<SRule>& rules)
+MaskingRules::MaskingRules(json_t* pRoot, std::vector<SRule>&& rules)
     : m_pRoot(pRoot)
-    , m_rules(rules)
+    , m_rules(std::move(rules))
 {
     json_incref(m_pRoot);
 }
@@ -1335,9 +1333,9 @@ MaskingRules::~MaskingRules()
 }
 
 // static
-auto_ptr<MaskingRules> MaskingRules::load(const char* zPath)
+unique_ptr<MaskingRules> MaskingRules::load(const char* zPath)
 {
-    auto_ptr<MaskingRules> sRules;
+    unique_ptr<MaskingRules> sRules;
 
     FILE* pFile = fopen(zPath, "r");
 
@@ -1374,9 +1372,9 @@ auto_ptr<MaskingRules> MaskingRules::load(const char* zPath)
 }
 
 // static
-auto_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
+unique_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
 {
-    auto_ptr<MaskingRules> sRules;
+    unique_ptr<MaskingRules> sRules;
 
     json_error_t error;
     json_t* pRoot = json_loads(zJson, JSON_DISABLE_EOF_CHECK, &error);
@@ -1399,15 +1397,15 @@ auto_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
 }
 
 // static
-std::auto_ptr<MaskingRules> MaskingRules::create_from(json_t* pRoot)
+std::unique_ptr<MaskingRules> MaskingRules::create_from(json_t* pRoot)
 {
-    auto_ptr<MaskingRules> sRules;
+    unique_ptr<MaskingRules> sRules;
 
     vector<SRule> rules;
 
     if (create_rules_from_root(pRoot, rules))
     {
-        sRules = auto_ptr<MaskingRules>(new MaskingRules(pRoot, rules));
+        sRules = unique_ptr<MaskingRules>(new MaskingRules(pRoot, std::move(rules)));
     }
 
     return sRules;
@@ -1481,7 +1479,7 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_
 
 bool MaskingRules::has_rule_for(const char* zUser, const char* zHost) const
 {
-    auto i = std::find_if(m_rules.begin(), m_rules.end(), [zUser, zHost](SRule sRule) {
+    auto i = std::find_if(m_rules.begin(), m_rules.end(), [zUser, zHost](const SRule& sRule) {
                               return sRule->matches_account(zUser, zHost);
                           });
 

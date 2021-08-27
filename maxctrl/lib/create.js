@@ -19,6 +19,12 @@ function to_obj(obj, value) {
   return obj;
 }
 
+function checkName(name) {
+  if (name.match(/[^a-zA-Z0-9_.~-]/)) {
+    warning("The name '" + name + "' contains URL-unsafe characters.");
+  }
+}
+
 function validateParams(argv, params) {
   var rval = null;
   params.forEach((value) => {
@@ -182,6 +188,8 @@ exports.builder = function (yargs) {
         }
 
         maxctrl(argv, function (host) {
+          checkName(argv.name);
+
           return doRequest(host, "servers", { method: "POST", data: server });
         });
       }
@@ -248,6 +256,8 @@ exports.builder = function (yargs) {
         }
 
         maxctrl(argv, function (host) {
+          checkName(argv.name);
+
           if (err) {
             return Promise.reject(err);
           }
@@ -296,6 +306,8 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
+          checkName(argv.name);
+
           err = validateParams(argv, argv.params);
           if (err) {
             return Promise.reject(err);
@@ -361,6 +373,8 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
+          checkName(argv.name);
+
           var filter = {
             data: {
               id: argv.name,
@@ -465,6 +479,8 @@ exports.builder = function (yargs) {
       },
       function (argv) {
         maxctrl(argv, function (host) {
+          checkName(argv.name);
+
           if (!Number.isInteger(argv.port) || argv.port <= 0) {
             return Promise.reject("'" + argv.port + "' is not a valid value for port");
           }

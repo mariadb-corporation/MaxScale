@@ -44,13 +44,10 @@ public:
         return m_config;
     }
 
-    const Config& config() const
+    const Config::Values& config() const
     {
-        return m_config;
+        return m_config.values();
     }
-    SMaskingRules rules() const;
-
-    bool post_configure();
 
 private:
     MaskingFilter(const char* zName);
@@ -59,6 +56,5 @@ private:
     MaskingFilter& operator=(const MaskingFilter&);
 
 private:
-    Config        m_config;
-    SMaskingRules m_sRules;
+    Config m_config;
 };

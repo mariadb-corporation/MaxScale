@@ -237,7 +237,7 @@ public:
         {
             const rule_test& test = rule_tests[i];
 
-            auto_ptr<MaskingRules> sRules = MaskingRules::parse(test.zJson);
+            auto sRules = MaskingRules::parse(test.zJson);
 
             if ((sRules.get() && !test.valid) || (!sRules.get() && test.valid))
             {
@@ -253,25 +253,23 @@ public:
         int rc = EXIT_SUCCESS;
 
         using std::shared_ptr;
-        auto_ptr<MaskingRules> sRules = MaskingRules::parse(valid_users);
+        auto sRules = MaskingRules::parse(valid_users);
         mxb_assert(sRules.get());
 
-        const vector<shared_ptr<MaskingRules::Rule>>& rules = sRules->m_rules;
+        const auto& rules = sRules->m_rules;
         mxb_assert(rules.size() == 1);
 
-        shared_ptr<MaskingRules::Rule> sRule = rules[0];
+        const auto& sRule = rules[0];
 
-        const vector<shared_ptr<MaskingRules::Rule::Account>>& accounts = sRule->applies_to();
+        const auto& accounts = sRule->applies_to();
         mxb_assert(accounts.size() == nExpected_accounts);
 
         int j = 0;
-        for (vector<shared_ptr<MaskingRules::Rule::Account>>::const_iterator i = accounts.begin();
-             i != accounts.end();
-             ++i)
+        for (const auto& acc : accounts)
         {
             const expected_account& account = expected_accounts[j];
 
-            string user = (*i)->user();
+            string user = acc->user();
 
             if (user != account.zUser)
             {
@@ -279,7 +277,7 @@ public:
                 rc = EXIT_FAILURE;
             }
 
-            string host = (*i)->host();
+            string host = acc->host();
 
             if (host != account.zHost)
             {
