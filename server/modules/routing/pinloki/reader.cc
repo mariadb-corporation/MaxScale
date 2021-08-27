@@ -80,8 +80,16 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
         if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
         {
             MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
-            start_reading();
-            continue_poll = false;
+
+            try
+            {
+                start_reading();
+                continue_poll = false;
+            }
+            catch (const mxb::Exception& err)
+            {
+                MXS_ERROR("Failed to start reading: %s", err.what());
+            }
         }
         else
         {

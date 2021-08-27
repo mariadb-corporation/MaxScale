@@ -1216,8 +1216,8 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl,
 {
     auto conn = std::make_unique<mxt::MariaDB>(m_vm.log());
     auto& sett = conn->connection_settings();
-    sett.user = m_cluster.user_name();
-    sett.password = m_cluster.password();
+    sett.user = user;
+    sett.password = password;
     if (ssl == SslMode::ON)
     {
         sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);
@@ -1349,8 +1349,15 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
     // Xpand lacks support for "if exists" so avoid it and simply disregard any errors on the "drop" query.
     // Xpand also does not understand "require none", so instead use empty string.
     c->try_cmd_f("drop user %s;", userhostc);
+    string require;
+    if (supports_require)
+    {
+        require += "require ";
+        require += (ssl == SslMode::ON ? "ssl" : "none");
+    }
+
     if (c->try_cmd_f("create user %s identified by '%s' %s;",
-                     userhostc, user.password.c_str(), ssl == SslMode::ON ? "require ssl" : ""))
+                     userhostc, user.password.c_str(), require.c_str()))
     {
         create_ok = true;
 

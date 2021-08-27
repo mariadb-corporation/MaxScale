@@ -1,12 +1,12 @@
-# MariaDB MaxScale 6.1.0 Release Notes -- 2021-07-15
+# MariaDB MaxScale 6.1.1 Release Notes
 
-Release 6.1.0 is a GA release.
+Release 6.1.1 is a GA release.
 
-This document describes the changes in release 6.1.0, when compared to the
+This document describes the changes in release 6.1.1, when compared to the
 previous release in the same series.
 
 If you are upgrading from an older major version of MaxScale, please read the
-[upgrading document](../Upgrading/Upgrading-To-MaxScale-6.md) for
+[upgrading document](../Upgrading/Upgrading-To-MaxScale-6.1.md) for
 this MaxScale version.
 
 For any problems you encounter, please consider submitting a bug
@@ -14,9 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
-* [MXS-3661](https://jira.mariadb.org/browse/MXS-3661) The list of servers might get duplicated for routers using mariadbmon
-* [MXS-3660](https://jira.mariadb.org/browse/MXS-3660) MaxScale crashes if backend connection creation fails on a system error
-* [MXS-3658](https://jira.mariadb.org/browse/MXS-3658) If the monitor is dynamic, both static and volatile servers will be used.
+* [MXS-3697](https://jira.mariadb.org/browse/MXS-3697) MaxCtrl config file check fails when executed from the root directory
 
 ## Known Issues and Limitations
 
