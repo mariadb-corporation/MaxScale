@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <maxbase/assert.h>
 #include <maxbase/atomic.hh>
+#include <maxbase/condition_variable.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
 
@@ -111,7 +112,7 @@ public:
 
         WatchdogNotifier& m_notifier;
         std::atomic<bool> m_ticking;
-        Ticker*           m_pTicker { nullptr }; /*< Watchdog ticker, if systemd enabled. */
+        Ticker*           m_pTicker {nullptr};  /*< Watchdog ticker, if systemd enabled. */
     };
 
     /**
@@ -194,10 +195,11 @@ private:
     void notify_systemd_watchdog();
 
     std::thread                    m_thread;
-    mxb::Semaphore                 m_sem;
-    std::chrono::seconds           m_interval;        /*< Duration between notifications, if any. */
+    std::atomic<bool>              m_running {true};
+    std::mutex                     m_cond_lock;
+    mxb::ConditionVariable         m_cond;
+    std::chrono::seconds           m_interval;  /*< Duration between notifications, if any. */
     std::unordered_set<Dependent*> m_dependents;
     std::mutex                     m_dependents_lock;
 };
-
 }
