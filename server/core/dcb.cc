@@ -1838,7 +1838,12 @@ int ClientDCB::port() const
 BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager)
 {
     BackendDCB* rval = nullptr;
+    // Start the watchdog notifier, the getaddrinfo call done by connect_socket() can take a long time in some
+    // corner cases.
+    session->worker()->start_watchdog_workaround();
     int fd = connect_socket(server->address(), server->port());
+    session->worker()->stop_watchdog_workaround();
+
     if (fd >= 0)
     {
         rval = new(std::nothrow) BackendDCB(server, fd, session, manager);
