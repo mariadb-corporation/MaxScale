@@ -37,10 +37,7 @@ function sidebarStates() {
  */
 function editorStates() {
     return {
-        query_txt: {
-            all: '',
-            selected: '',
-        },
+        query_txt: '',
     }
 }
 /**
@@ -130,7 +127,8 @@ export default {
          * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
          * because it's not possible at the moment to fetch query results using query id, it can only be read once.
          */
-        query_results_map: {}, //
+        query_results_map: {},
+        selected_query_txt: '',
         // worksheet states
         worksheets_arr: [defWorksheetState()],
         active_wke_id: '',
@@ -202,6 +200,9 @@ export default {
                 scope: this,
                 active_wke_id: state.active_wke_id,
             })
+        },
+        SET_SELECTED_QUERY_TXT(state, payload) {
+            state.selected_query_txt = payload
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {

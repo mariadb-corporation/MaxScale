@@ -21,7 +21,7 @@
                     icon
                     small
                     color="accent-dark"
-                    :disabled="!query_txt.all"
+                    :disabled="!query_txt"
                     v-on="on"
                     @click="openFavoriteDialog"
                 >
@@ -32,9 +32,13 @@
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
                 {{
-                    query_txt.selected
-                        ? `${$t('saveSelectedStatementsToFavorite')}\nCmd/Ctrl + S`
-                        : `${$t('saveAllStatementsToFavorite')}\nCmd/Ctrl + Shift + S`
+                    selected_query_txt
+                        ? `${$t('saveStatementsToFavorite', {
+                              quantity: $t('selected'),
+                          })}\nCmd/Ctrl + S`
+                        : `${$t('saveStatementsToFavorite', {
+                              quantity: $t('all'),
+                          })}\nCmd/Ctrl + Shift + S`
                 }}
             </span>
         </v-tooltip>
@@ -80,7 +84,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
+                        :value="selected_query_txt ? selected_query_txt : query_txt"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -145,6 +149,7 @@ export default {
             cnct_resources: state => state.query.cnct_resources,
             worksheets_arr: state => state.query.worksheets_arr,
             query_txt: state => state.query.query_txt,
+            selected_query_txt: state => state.query.selected_query_txt,
         }),
     },
     methods: {
@@ -162,19 +167,21 @@ export default {
             this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
         },
         openFavoriteDialog() {
-            this.favorite.date = this.$help.dateFormat({
-                value: new Date(),
-                formatType: 'DATE_RFC2822',
-            })
-            this.favorite.name = `Favorite statements - ${this.favorite.date}`
-            this.$refs.favoriteConfirmDialog.open()
+            if (this.query_txt) {
+                this.favorite.date = this.$help.dateFormat({
+                    value: new Date(),
+                    formatType: 'DATE_RFC2822',
+                })
+                this.favorite.name = `Favorite statements - ${this.favorite.date}`
+                this.$refs.favoriteConfirmDialog.open()
+            }
         },
         addToFavorite() {
             let payload = {
-                sql: this.query_txt.all,
+                sql: this.query_txt,
                 ...this.favorite,
             }
-            if (this.query_txt.selected) payload.sql = this.query_txt.selected
+            if (this.selected_query_txt) payload.sql = this.selected_query_txt
             this.pushQueryFavorite(payload)
         },
     },

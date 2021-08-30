@@ -73,12 +73,12 @@
                     color="accent-dark"
                     :loading="getLoadingQueryResult"
                     :disabled="
-                        !query_txt.all ||
+                        !query_txt ||
                             !curr_cnct_resource.id ||
                             (getIsQuerying && !getLoadingQueryResult)
                     "
                     v-on="on"
-                    @click="() => handleRun(query_txt.selected ? 'selected' : 'all')"
+                    @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
                 >
                     <v-icon size="16" class="mr-2">
                         $vuetify.icons.running
@@ -88,9 +88,11 @@
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
                 {{
-                    query_txt.selected
-                        ? `${$t('runSelectedStatements')}\nCmd/Ctrl + Enter`
-                        : `${$t('runAllStatements')}\nCmd/Ctrl + Shift + Enter`
+                    selected_query_txt
+                        ? `${$t('runStatements', { quantity: $t('selected') })}\nCmd/Ctrl + Enter`
+                        : `${$t('runStatements', {
+                              quantity: $t('all'),
+                          })}\nCmd/Ctrl + Shift + Enter`
                 }}
             </span>
         </v-tooltip>
@@ -141,7 +143,7 @@
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="query_txt.selected ? query_txt.selected : query_txt.all"
+                        :value="activeRunMode === 'selected' ? selected_query_txt : query_txt"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -192,6 +194,7 @@ export default {
     data() {
         return {
             dontShowConfirm: false,
+            activeRunMode: 'all',
         }
     },
     computed: {
@@ -203,6 +206,7 @@ export default {
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
+            selected_query_txt: state => state.query.selected_query_txt,
         }),
         ...mapGetters({
             getIsQuerying: 'query/getIsQuerying',
@@ -223,16 +227,25 @@ export default {
         async handleSelectDb(db) {
             await this.useDb(db)
         },
-
+        /**
+         * Only open dialog when its corresponding query text exists
+         */
+        shouldOpenDialog(mode) {
+            return (
+                (mode === 'selected' && this.selected_query_txt) ||
+                (mode === 'all' && this.query_txt)
+            )
+        },
         async handleRun(mode) {
+            this.activeRunMode = mode
             if (!this.query_confirm_flag) await this.onRun(mode)
-            else {
+            else if (this.shouldOpenDialog(mode)) {
                 this.dontShowConfirm = false // clear checkbox state
                 this.$refs.runConfirmDialog.open()
             }
         },
         async confirmRunning() {
-            await this.onRun(this.query_txt.selected ? 'selected' : 'all')
+            await this.onRun(this.activeRunMode)
             if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
         },
         /**
@@ -243,11 +256,11 @@ export default {
             this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
             switch (mode) {
                 case 'all':
-                    if (this.query_txt.all) await this.fetchQueryResult(this.query_txt.all)
+                    if (this.query_txt) await this.fetchQueryResult(this.query_txt)
                     break
                 case 'selected':
-                    if (this.query_txt.selected)
-                        await this.fetchQueryResult(this.query_txt.selected)
+                    if (this.selected_query_txt)
+                        await this.fetchQueryResult(this.selected_query_txt)
                     break
             }
         },

@@ -810,10 +810,10 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
 
             if (code == ER_NO_SUCH_TABLE)
             {
-                DocumentBuilder doc;
-                NoSQLCursor::create_first_batch(doc, table(Quoted::NO));
+                size_t size_of_documents = 0;
+                vector<bsoncxx::document::value> documents;
 
-                pResponse = create_response(doc.extract());
+                pResponse = create_reply_response(size_of_documents, documents);
             }
             else
             {
