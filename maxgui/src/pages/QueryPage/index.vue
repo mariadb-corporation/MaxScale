@@ -73,14 +73,12 @@ export default {
     computed: {
         ...mapState({
             is_fullscreen: state => state.query.is_fullscreen,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
             getActiveWke: 'query/getActiveWke',
-            getDbTreeData: 'query/getDbTreeData',
         }),
     },
     watch: {
@@ -89,10 +87,6 @@ export default {
         },
         async active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
-        },
-        async curr_cnct_resource(v) {
-            if (v.id && this.getDbTreeData.length === 0)
-                await this.initialFetch(this.curr_cnct_resource)
         },
     },
     async created() {
@@ -135,7 +129,6 @@ export default {
         ...mapActions({
             validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
-            initialFetch: 'query/initialFetch',
             clearConn: 'query/clearConn',
         }),
         setCtrDim() {

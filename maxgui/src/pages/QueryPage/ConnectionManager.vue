@@ -134,6 +134,7 @@ export default {
         }),
         ...mapGetters({
             getActiveWke: 'query/getActiveWke',
+            getDbTreeData: 'query/getDbTreeData',
         }),
         usedConnections() {
             return this.worksheets_arr.map(
@@ -162,8 +163,15 @@ export default {
             if (!v && this.connOptions.length === 1) this.openConnDialog()
             else this.assignActiveConn()
         },
-        curr_cnct_resource(v) {
-            if (!this.$help.lodash.isEqual(v, this.chosenConn)) this.chosenConn = v
+        curr_cnct_resource: {
+            deep: true,
+            async handler(v) {
+                if (!this.$help.lodash.isEqual(v, this.chosenConn)) {
+                    this.chosenConn = v
+                    if (v.id && this.getDbTreeData.length === 0)
+                        await this.initialFetch(this.curr_cnct_resource)
+                }
+            },
         },
     },
     methods: {
