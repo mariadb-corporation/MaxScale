@@ -75,7 +75,13 @@ public:
 
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
-    GWBUF* create_response(const bsoncxx::document::value& doc) const;
+    enum class IsError
+    {
+        NO,
+        YES
+    };
+
+    GWBUF* create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
 
     GWBUF* create_reply_response(size_t size_of_documents,
                                  const std::vector<bsoncxx::document::value>& documents) const;
@@ -86,7 +92,6 @@ public:
         check_maximum_sql_length(s.length());
     }
 
-protected:
     enum class ResponseKind
     {
         REPLY,
@@ -94,6 +99,12 @@ protected:
         MSG_WITH_CHECKSUM
     };
 
+    ResponseKind response_kind() const
+    {
+        return m_response_kind;
+    }
+
+protected:
     Command(Database* pDatabase,
             GWBUF* pRequest,
             int32_t request_id,
@@ -119,9 +130,10 @@ protected:
 
 private:
     std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
-                                                             size_t nDocuments) const;
+                                                             size_t nDocuments,
+                                                             IsError is_error) const;
 
-    GWBUF* create_reply_response(const bsoncxx::document::value& doc) const;
+    GWBUF* create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const;
 
     GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
 

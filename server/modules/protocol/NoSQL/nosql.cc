@@ -709,12 +709,18 @@ GWBUF* nosql::SoftError::create_response(const Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
-void nosql::SoftError::create_response(const Command&, DocumentBuilder& doc) const
+void nosql::SoftError::create_response(const Command& command, DocumentBuilder& doc) const
 {
     doc.append(kvp(key::OK, 0));
+    if (command.response_kind() == Command::ResponseKind::REPLY)
+    {
+        // TODO: Turning on the error bit in the OP_REPLY is not sufficient, but "$err"
+        // TODO: must be set as well. Figure out why, because it should not be needed.
+        doc.append(kvp("$err", what()));
+    }
     doc.append(kvp(key::ERRMSG, what()));
     doc.append(kvp(key::CODE, m_code));
     doc.append(kvp(key::CODE_NAME, nosql::error::name(m_code)));
@@ -755,7 +761,7 @@ GWBUF* nosql::HardError::create_response(const nosql::Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
 void nosql::HardError::create_response(const Command&, DocumentBuilder& doc) const
@@ -781,7 +787,7 @@ GWBUF* nosql::MariaDBError::create_response(const Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
 void nosql::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
