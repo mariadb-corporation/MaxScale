@@ -95,7 +95,14 @@ export default {
     props: {
         value: { type: Array, required: true },
         label: { type: String, required: true },
-        cols: { type: Array, required: true },
+        cols: {
+            type: Array,
+            validator: arr => {
+                if (!arr.length) return true
+                else return arr.filter(item => 'text' in item).length === arr.length
+            },
+            required: true,
+        },
         maxHeight: { type: Number, required: true },
     },
     data() {
@@ -113,7 +120,9 @@ export default {
             },
         },
         columnList() {
-            let list = this.$help.lodash.cloneDeep(this.cols).map((h, i) => ({ index: i, name: h }))
+            let list = this.$help.lodash
+                .cloneDeep(this.cols)
+                .map((h, i) => ({ index: i, name: h.text }))
             return list.filter(obj => this.$help.ciStrIncludes(`${obj.name}`, this.filterHeader))
         },
         isAllHeaderChecked() {

@@ -183,7 +183,14 @@ export default {
     name: 'result-data-table',
     props: {
         rows: { type: Array, required: true },
-        headers: { type: Array, required: true },
+        headers: {
+            type: Array,
+            validator: arr => {
+                if (!arr.length) return true
+                else return arr.filter(item => 'text' in item).length === arr.length
+            },
+            required: true,
+        },
     },
     data() {
         return {
@@ -217,7 +224,7 @@ export default {
             for (let i = 0; i < this.rows.length; ++i) {
                 let obj = {}
                 for (const [n, header] of this.headers.entries()) {
-                    obj[`${header}`] = this.rows[i][n]
+                    obj[`${header.text}`] = this.rows[i][n]
                 }
                 arr.push(obj)
             }
@@ -229,7 +236,7 @@ export default {
             else delimiter = this.custDelimiter
             let str = ''
             if (this.hasHeaders) {
-                let headers = this.headers.map(header => this.escapeCsv(header))
+                let headers = this.headers.map(header => this.escapeCsv(header.text))
                 str = `${headers.join(delimiter)}\r\n`
             }
             str += this.rows

@@ -98,7 +98,9 @@ export default {
                 case this.SQL_QUERY_MODES.FAVORITE:
                     data = this.query_favorite
             }
-            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty)
+            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => ({
+                text: field,
+            }))
         },
         rows() {
             let data = []
