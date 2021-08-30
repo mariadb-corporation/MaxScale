@@ -104,12 +104,12 @@ export default {
         'table-header': TableHeader,
     },
     props: {
-        headers: { type: Array, require: true },
-        rows: { type: Array, require: true },
-        height: { type: Number, require: true },
-        itemHeight: { type: Number, require: true },
-        boundingWidth: { type: Number, require: true },
-        benched: { type: Number, require: true },
+        headers: { type: Array, required: true },
+        rows: { type: Array, required: true },
+        height: { type: Number, required: true },
+        itemHeight: { type: Number, required: true },
+        boundingWidth: { type: Number, required: true },
+        benched: { type: Number, required: true },
         isVertTable: { type: Boolean, default: false },
     },
     data() {

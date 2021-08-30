@@ -93,10 +93,10 @@
 export default {
     name: 'columns-list',
     props: {
-        value: { type: Array, require: true },
-        label: { type: String, require: true },
-        cols: { type: Array, require: true },
-        maxHeight: { type: Number, require: true },
+        value: { type: Array, required: true },
+        label: { type: String, required: true },
+        cols: { type: Array, required: true },
+        maxHeight: { type: Number, required: true },
     },
     data() {
         return {

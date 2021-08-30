@@ -90,10 +90,10 @@ export default {
         'column-list': ColumnList,
     },
     props: {
-        headers: { type: Array, require: true },
-        rows: { type: Array, require: true },
-        height: { type: Number, require: true },
-        width: { type: Number, require: true },
+        headers: { type: Array, required: true },
+        rows: { type: Array, required: true },
+        height: { type: Number, required: true },
+        width: { type: Number, required: true },
     },
     data() {
         return {

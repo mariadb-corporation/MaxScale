@@ -59,11 +59,11 @@
 export default {
     name: 'table-header',
     props: {
-        headers: { type: Array, require: true },
-        boundingWidth: { type: Number, require: true },
-        headerStyle: { type: Object, require: true },
+        headers: { type: Array, required: true },
+        boundingWidth: { type: Number, required: true },
+        headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        rowsLength: { type: Number, require: true },
+        rowsLength: { type: Number, required: true },
     },
     data() {
         return {
