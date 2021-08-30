@@ -1571,122 +1571,182 @@ string array_op_to_condition(const string& field,
     }
     else
     {
-        vector<string> paths;
+        bool is_single = (++all_elements.begin() == all_elements.end());
 
-        auto i = field.find('.');
-
-        if (i == string::npos)
-        {
-            // A field like "a" becomes "'$.a'". No array selector on single fields as
-            // we also want a match for a direct value (and not just value in array), as
-            // that seems to be required.
-            string path = "'$." + field + "'";
-            paths.push_back(path);
-        }
-        else
-        {
-            // A field like "a.b" must be split into the alternatives "'$.a[*].b'" and "'$.a.b'".
-            // The array selector must not be on the last field.
-            vector<string> fields;
-            decltype(i) j = 0;
-            while (i != string::npos)
-            {
-                fields.push_back(field.substr(j, i - j));
-                j = ++i;
-                i = field.find('.', i);
-            }
-            fields.push_back(field.substr(j));
-
-            for (i = 0; i < fields.size(); ++i)
-            {
-                string path("'$");
-                for (j = 0; j < i; ++j)
-                {
-                    path += '.';
-                    path += fields[j];
-                }
-
-                path += '.';
-                path += fields[i];
-
-                if (i < fields.size() - 1)
-                {
-                    // Do not add array selector to last part.
-                    path += "[*]";
-                }
-
-                for (j = i + 1; j < fields.size(); ++j)
-                {
-                    path += '.';
-                    path += fields[j];
-                }
-
-                path += '\'';
-
-                paths.push_back(path);
-            }
-        }
+        auto i = field.find_last_of('.');
+        bool is_scoped = (i != string::npos);
 
         ss << "(";
 
-        bool first_element = true;
-        for (const auto& one_element : all_elements)
+        if (array_op == ArrayOp::AND)
         {
-            if (first_element)
+            auto add_element_array = [zDescription](ostream& ss, const bsoncxx::array::view& all_elements)
             {
-                first_element = false;
+                bool is_null = false;
+                bool first_element = true;
+                for (const auto& one_element : all_elements)
+                {
+                    if (one_element.type() == bsoncxx::type::k_null)
+                    {
+                        is_null = true;
+                    }
+                    else
+                    {
+                        if (first_element)
+                        {
+                            first_element = false;
+                        }
+                        else
+                        {
+                            ss << ", ";
+                        }
+
+                        ss << element_to_value(one_element, zDescription);
+                    }
+                }
+
+                return is_null;
+            };
+
+            if (is_scoped)
+            {
+                bool is_null = false;
+                string path;
+                path = field.substr(0, i);
+                path += "[*].";
+                path += field.substr(i + 1);
+
+                ss << "(";
+                bool add_or = false;
+                for (auto p : { field, path })
+                {
+                    if (add_or)
+                    {
+                        ss << " OR ";
+                    }
+                    else
+                    {
+                        add_or = true;
+                    }
+
+                    ss << "(JSON_CONTAINS(";
+                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY(";
+                    if (add_element_array(ss, all_elements))
+                    {
+                        is_null = true;
+                    }
+                    ss << ")) = 1)";
+
+                    if (is_single)
+                    {
+                        ss << "OR (JSON_CONTAINS(";
+                        ss << "JSON_EXTRACT(doc, '$." << p << "'), "
+                           << element_to_value(*all_elements.begin(), zDescription)
+                           << ") = 1)";
+                    }
+
+                    if (is_null)
+                    {
+                        ss << " OR (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    }
+                };
+                ss << ")";
             }
             else
             {
-                ss << " " << to_logical_operator(array_op) << " ";
+                ss << "(JSON_CONTAINS(doc, JSON_ARRAY(";
+                bool is_null = add_element_array(ss, all_elements);
+                ss << "), '$." << field << "') = 1)";
+
+                if (is_single)
+                {
+                    ss << "OR (JSON_CONTAINS(";
+                    ss << "JSON_EXTRACT(doc, '$." << field << "'), "
+                       << element_to_value(*all_elements.begin(), zDescription)
+                       << ") = 1)";
+                }
+
+                if (is_null)
+                {
+                    ss << " OR (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                }
             }
+        }
+        else
+        {
+            mxb_assert(array_op == ArrayOp::OR);
 
             ss << "(";
 
-            auto value = element_to_value(one_element, zDescription);
-            bool is_null = one_element.type() == bsoncxx::type::k_null;
-
-            bool first_path = true;
-            for (const auto& path : paths)
+            bool first_element = true;
+            for (const auto& one_element : all_elements)
             {
-                if (first_path)
+                if (first_element)
                 {
-                    first_path = false;
+                    first_element = false;
                 }
                 else
                 {
                     ss << " OR ";
                 }
 
-                ostringstream ss2;
-                ss2 << "JSON_SEARCH(doc, 'all', " << value << ", NULL, " << path << ")";
-
-                string json_search = ss2.str();
+                bool is_null = (one_element.type() == bsoncxx::type::k_null);
 
                 if (is_null)
                 {
-                    ss << "(";
+                    ss << " (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
                 }
-
-                ss << "(";
-                ss << "(" << json_search << " IS NOT NULL)";
-
-                // Searching for "{$all: [2]}" will turn into a select like
-                // SELECT ... WHERE (((JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]') IS NOT NULL)));
-                // That WHERE will match a row like '{ "a" : [ [ 2.0 ] ] }', although it shouldn't,
-                // as the the 'a' array does not contain an element '2.0', but an array element that
-                // contains the '2.0' element. The JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]')
-                // will for that row return "$.a[0][0]". Thus, "][" can be used for excluding
-                // such rows.
-
-                ss << " AND (INSTR(" << json_search << ", \"][\") = 0)";
-                ss << ")";
-
-                if (is_null)
+                else
                 {
-                    ss << " OR ";
-                    ss << "(JSON_CONTAINS_PATH(doc, 'all', " << path << ") = 0)";
-                    ss << ")";
+                    if (is_scoped)
+                    {
+                        string path;
+                        path = field.substr(0, i);
+                        path += "[*].";
+                        path += field.substr(i + 1);
+
+                        ss << "(";
+                        bool add_or = false;
+                        for (auto p : { field, path })
+                        {
+                            if (add_or)
+                            {
+                                ss << " OR ";
+                            }
+                            else
+                            {
+                                add_or = true;
+                            }
+
+                            ss << "(JSON_CONTAINS(";
+                            ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
+                               << element_to_value(one_element, zDescription)
+                               << ")) = 1)";
+
+                            if (is_single)
+                            {
+                                ss << "OR (JSON_CONTAINS(";
+                                ss << "JSON_EXTRACT(doc, '$." << p << "'), "
+                                   << element_to_value(one_element, zDescription)
+                                   << ") = 1)";
+                            }
+                        }
+                        ss << ")";
+                    }
+                    else
+                    {
+                        ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
+                           << element_to_value(one_element, zDescription)
+                           << "), '$." << field << "') = 1)";
+
+                        if (is_single)
+                        {
+                            ss << "OR (JSON_CONTAINS(";
+                            ss << "JSON_EXTRACT(doc, '$." << field << "'), "
+                               << element_to_value(one_element, zDescription)
+                               << ") = 1)";
+                        }
+                    }
                 }
             }
 
