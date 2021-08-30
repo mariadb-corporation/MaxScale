@@ -106,7 +106,10 @@ export default {
         lazyValidation: { type: Boolean, default: true },
         hasSavingErr: { type: Boolean, default: false },
         hasFormDivider: { type: Boolean, default: false },
-        // close dialog immediately, don't wait for submit
+        /**
+         * close dialog immediately, don't wait for submit
+         * Limitation: form needs to be cleared manually on parent component
+         */
         closeImmediate: { type: Boolean, default: false },
     },
     data() {
@@ -125,9 +128,8 @@ export default {
             this.$emit('input', false)
         },
         cancel() {
-            this.$refs.form.reset()
-            this.$refs.form.resetValidation()
             if (this.onCancel) this.onCancel()
+            this.cleanUp()
             this.closeDialog()
         },
         close() {
@@ -144,9 +146,10 @@ export default {
             }
         },
         async waitClose() {
-            this.closeDialog()
             // wait time out for loading animation
             await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
+            this.cleanUp()
+            this.closeDialog()
         },
         handleCloseImmediate() {
             this.closeDialog()
@@ -166,7 +169,6 @@ export default {
                 if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
                 await this.onSave()
                 if (!this.hasSavingErr && !this.closeImmediate) await this.waitClose()
-                this.cleanUp()
             }
         },
     },
