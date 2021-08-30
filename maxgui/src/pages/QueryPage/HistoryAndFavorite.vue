@@ -21,8 +21,17 @@
             </v-tabs>
         </div>
         <keep-alive>
-            <!-- TODO:Showing history/favorite tables here  -->
-            <div :style="{ height: `${dynDim.height - headerHeight}px` }"></div>
+            <table-list
+                v-if="
+                    activeView === SQL_QUERY_MODES.HISTORY ||
+                        activeView === SQL_QUERY_MODES.FAVORITE
+                "
+                :key="activeView"
+                :height="dynDim.height - headerHeight"
+                :width="dynDim.width"
+                :headers="headers"
+                :rows="rows"
+            />
         </keep-alive>
     </div>
 </template>
@@ -41,8 +50,12 @@
  * Public License.
  */
 import { mapState, mapMutations } from 'vuex'
+import ResultDataTable from './ResultDataTable'
 export default {
     name: 'history-and-favorite',
+    components: {
+        'table-list': ResultDataTable,
+    },
     props: {
         dynDim: {
             type: Object,
@@ -61,6 +74,8 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
+            query_history: state => state.persisted.query_history,
+            query_favorite: state => state.persisted.query_favorite,
         }),
         activeView: {
             get() {
@@ -73,6 +88,28 @@ export default {
                 )
                     this.SET_CURR_QUERY_MODE(value)
             },
+        },
+        headers() {
+            let data = []
+            switch (this.activeView) {
+                case this.SQL_QUERY_MODES.HISTORY:
+                    data = this.query_history
+                    break
+                case this.SQL_QUERY_MODES.FAVORITE:
+                    data = this.query_favorite
+            }
+            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty)
+        },
+        rows() {
+            let data = []
+            switch (this.activeView) {
+                case this.SQL_QUERY_MODES.HISTORY:
+                    data = this.query_history
+                    break
+                case this.SQL_QUERY_MODES.FAVORITE:
+                    data = this.query_favorite
+            }
+            return data.map(item => Object.values(item))
         },
     },
     activated() {
