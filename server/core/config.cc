@@ -1130,6 +1130,7 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
                             processor_count);
             }
 
+            // TODO: Update documentation once this limitation is removed
             if (value > MXS_MAX_ROUTING_THREADS)
             {
                 MXS_WARNING("Number of threads set to %d, which is greater than the "

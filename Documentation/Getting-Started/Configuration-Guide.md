@@ -353,6 +353,8 @@ You can explicitly enable automatic configuration of this value by setting the
 value to `auto`. This way MariaDB MaxScale will detect the number of available
 processors and set the amount of threads to be equal to that number.
 
+The maximum value for threads is 100.
+
 ```
 # Valid options are:
 #       threads=[<number of threads> | auto ]

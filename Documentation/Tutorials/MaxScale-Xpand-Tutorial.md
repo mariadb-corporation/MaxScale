@@ -45,6 +45,7 @@ server is down when MaxScale starts.
 
 In the Xpand monitor section, the bootstrap servers are referred to
 in the same way as "ordinary" servers are referred to in other monitors.
+
 ```
 [Xpand]
 type=monitor
@@ -53,6 +54,16 @@ servers=Bootstrap-1
 user=USER
 password=PASSWORD
 ```
+
+The user defined by the `user` parameter needs the following grants:
+
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT SELECT ON system.membership TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.nodeinfo TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.softfailed_nodes TO 'maxscale'@'maxscalehost';
+```
+
 The bootstrap servers are only used for connecting to the Xpand
 cluster; thereafter the Xpand monitor will dynamically find out the
 cluster configuration.
@@ -95,6 +106,15 @@ user=USER
 password=PASSWORD
 cluster=Xpand
 ```
+
+The user defined by the `user` parameter needs the following grants:
+
+```
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
+GRANT SELECT ON system.users TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON system.user_acl TO 'maxscale'@'maxscalehost';
+```
+
 Note that the service does *not* list any specific servers, but
 instead refers, using the argument `cluster`, to the Xpand monitor.
 

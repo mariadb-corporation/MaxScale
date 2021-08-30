@@ -44,8 +44,11 @@ void WebSocket::create(int fd, MHD_UpgradeResponseHandle* urh, std::function<std
     // Send the initial payload and then add it to the worker to see when the socket drains
     if (ws->send() && worker->add_fd(fd, EVENTS, ws.get()))
     {
-        // Also add a delayed callback to make sure any additional data is eventually delivered
-        ws->m_dcid = worker->delayed_call(1000, &WebSocket::delayed_send, ws.get());
+        worker->call(
+            [&]() {
+                // Also add a delayed callback to make sure any additional data is eventually delivered
+                ws->m_dcid = worker->delayed_call(1000, &WebSocket::delayed_send, ws.get());
+            }, mxb::Worker::EXECUTE_AUTO);
 
         // All the connections need to be stored to be able to close them when the system is going down.
         std::lock_guard<std::mutex> guard(this_unit.lock);
