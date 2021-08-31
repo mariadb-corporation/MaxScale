@@ -98,9 +98,27 @@ export default {
                 case this.SQL_QUERY_MODES.FAVORITE:
                     data = this.query_favorite
             }
-            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => ({
-                text: field,
-            }))
+            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => {
+                let header = {
+                    text: field,
+                }
+                // assign default width to each column to have better view
+                switch (field) {
+                    case 'date':
+                        header.width = 150
+                        break
+                    case 'connection_name':
+                        header.width = 180
+                        break
+                    case 'time':
+                        header.width = 90
+                        break
+                    case 'execution_time':
+                        header.width = 150
+                        break
+                }
+                return header
+            })
         },
         rows() {
             let data = []

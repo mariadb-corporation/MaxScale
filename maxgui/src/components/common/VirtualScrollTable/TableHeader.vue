@@ -9,7 +9,9 @@
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
-                        maxWidth: $help.handleAddPxUnit(headerWidthMap[i]),
+                        maxWidth: header.width
+                            ? $help.handleAddPxUnit(header.width)
+                            : $help.handleAddPxUnit(headerWidthMap[i]),
                         minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                     }"
                     class="th d-flex align-center px-3"
@@ -56,6 +58,13 @@
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
+ */
+/*
+ *
+ headers: {
+  width?: string | number, default width when header is rendered
+  maxWidth?: string | number,
+}
  */
 export default {
     name: 'table-header',
@@ -130,7 +139,7 @@ export default {
             for (const [i, header] of this.tableHeaders.entries()) {
                 headerWidthMap = {
                     ...headerWidthMap,
-                    [i]: header.width ? header.width : 'unset',
+                    [i]: header.maxWidth ? header.maxWidth : 'unset',
                 }
             }
             this.headerWidthMap = headerWidthMap

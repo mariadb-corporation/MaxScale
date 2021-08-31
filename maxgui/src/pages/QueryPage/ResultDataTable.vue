@@ -118,7 +118,7 @@ export default {
         },
         tableHeaders() {
             const headers = this.headers.length
-                ? [{ text: '#', width: 'max-content' }, ...this.headers]
+                ? [{ text: '#', maxWidth: 'max-content' }, ...this.headers]
                 : []
             return headers
         },
