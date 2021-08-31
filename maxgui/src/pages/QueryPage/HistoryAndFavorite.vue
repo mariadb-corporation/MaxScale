@@ -31,7 +31,22 @@
                 :width="dynDim.width"
                 :headers="headers"
                 :rows="rows"
-            />
+            >
+                <template v-slot:date="{ data: { cell, maxWidth } }">
+                    <truncate-string
+                        :text="
+                            `${$help.dateFormat({
+                                value: cell,
+                                formatType:
+                                    activeView === SQL_QUERY_MODES.HISTORY
+                                        ? 'ddd, DD MMM YYYY'
+                                        : 'DATE_RFC2822',
+                            })}`
+                        "
+                        :maxWidth="maxWidth"
+                    />
+                </template>
+            </table-list>
         </keep-alive>
     </div>
 </template>

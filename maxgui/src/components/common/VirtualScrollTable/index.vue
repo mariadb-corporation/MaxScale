@@ -47,10 +47,15 @@
                                     minWidth: $help.handleAddPxUnit(cellWidthMap[1]),
                                 }"
                             >
-                                <truncate-string
-                                    :text="`${cell}`"
-                                    :maxWidth="$typy(cellWidthMap[i]).safeNumber - 24"
-                                />
+                                <slot
+                                    :name="headers[1].text"
+                                    :data="{ cell, header: headers[1], maxWidth: cellMaxWidth(1) }"
+                                >
+                                    <truncate-string
+                                        :text="`${cell}`"
+                                        :maxWidth="cellMaxWidth(1)"
+                                    />
+                                </slot>
                             </div>
                         </div>
                     </template>
@@ -66,10 +71,12 @@
                             minWidth: $help.handleAddPxUnit(cellWidthMap[i]),
                         }"
                     >
-                        <truncate-string
-                            :text="`${cell}`"
-                            :maxWidth="$typy(cellWidthMap[i]).safeNumber - 24"
-                        />
+                        <slot
+                            :name="headers[i].text"
+                            :data="{ cell, header: headers[i], maxWidth: cellMaxWidth(i) }"
+                        >
+                            <truncate-string :text="`${cell}`" :maxWidth="cellMaxWidth(i)" />
+                        </slot>
                     </div>
                 </div>
             </template>
@@ -189,6 +196,9 @@ export default {
         onSorting({ sortBy, isDesc }) {
             this.idxOfSortingCol = this.headers.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
+        },
+        cellMaxWidth(i) {
+            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
         },
     },
 }

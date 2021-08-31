@@ -63,7 +63,14 @@
                 :height="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
-            />
+            >
+                <template
+                    v-for="h in visibleHeaders"
+                    v-slot:[h.text]="{ data: { cell, header, maxWidth } }"
+                >
+                    <slot :name="`${h.text}`" :data="{ cell, header, maxWidth }" />
+                </template>
+            </virtual-scroll-table>
         </keep-alive>
     </div>
 </template>
