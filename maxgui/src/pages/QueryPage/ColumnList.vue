@@ -129,7 +129,7 @@ export default {
             return this.selectedIdxs.length === this.cols.length
         },
     },
-    created() {
+    activated() {
         this.showAllHeaders()
     },
     methods: {
