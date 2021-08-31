@@ -36,11 +36,11 @@ void try_password(TestConnections* Test, char* pass)
                                         "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
                                         "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
                                         "sed -i \"s/password=.*/password=$(cat /tmp/pw.txt)/\" /etc/maxscale.cnf && "
-                                        "service maxscale restart && "
+                                        "systemctl restart maxscale && "
                                         "sleep 3 && "
                                         "sed -i 's/user=.*/user=maxskysql/' /etc/maxscale.cnf && "
                                         "sed -i 's/password=.*/password=skysql/' /etc/maxscale.cnf && "
-                                        "service maxscale restart",
+                                        "systemctl restart maxscale",
                                         pass);
 
     Test->add_result(rc, "Failed to encrypt password '%s'", pass);

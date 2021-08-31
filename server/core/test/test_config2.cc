@@ -130,6 +130,7 @@ struct TestEntry
     const char* zText;
     bool        valid;
     T           value;
+    const char* zSerialized {nullptr};
 };
 
 #define elements_in_array(x) (sizeof(x) / sizeof(x[0]))
@@ -157,6 +158,12 @@ int test(T& value, const TestEntry<typename T::value_type>* pEntries, int nEntri
             if (value.get() != entry.value)
             {
                 cout << value.to_string() << " != " << entry.value << endl;
+                ++nErrors;
+            }
+
+            if (entry.zSerialized && value.to_string() != entry.zSerialized)
+            {
+                cout << value.to_string() << " != " << entry.zSerialized << endl;
                 ++nErrors;
             }
         }
@@ -411,11 +418,14 @@ int test_string(config::String& value)
 {
     static const TestEntry<config::String::value_type> entries[] =
     {
-        {"blah",     true, "blah"  },
-        {"\"blah\"", true, "blah"  },
-        {"'blah'",   true, "blah"  },
-        {"123",      true, "123"   },
-        {"`blah`",   true, "`blah`"},
+        {"blah",     true, "blah"      },
+        {"\"blah\"", true, "blah"      },
+        {"'blah'",   true, "blah"      },
+        {"123",      true, "123"       },
+        {"`blah`",   true, "`blah`"    },
+        {" ",        true, " ", "\" \""},
+        {" hello",   true, " hello", "\" hello\""},
+        {"hello ",   true, "hello ", "\"hello \""},
 
         {"'blah\"",  false}
     };

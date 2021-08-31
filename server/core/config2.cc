@@ -1801,7 +1801,14 @@ std::string ParamString::to_string(value_type value) const
 
     if (!value.empty())
     {
-        rval = m_quotes == Quotes::IGNORED ? value : '"' + value + '"';
+        if (m_quotes != Quotes::IGNORED || isspace(value.front()) || isspace(value.back()))
+        {
+            rval = '"' + value + '"';
+        }
+        else
+        {
+            rval = value;
+        }
     }
 
     return rval;

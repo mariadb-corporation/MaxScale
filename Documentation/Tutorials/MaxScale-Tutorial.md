@@ -16,6 +16,10 @@ that MaxScale is installed using default options.
 Building from source code in GitHub is covered in
 [Building from Source](../Getting-Started/Building-MaxScale-from-Source-Code.md).
 
+**Note:** This tutorial is for normal MariaDB installations. Read the
+  [MaxScale Xpand Tutorial](./MaxScale-Xpand-Tutorial.md) for a tutorial on how
+  to set up a native Xpand cluster.
+
 ## Installing MaxScale
 
 The precise installation process varies from one distribution to another. Details on
