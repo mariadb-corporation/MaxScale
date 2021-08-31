@@ -32,24 +32,24 @@
                                 :key="`${cell}_${cellWidthMap[0]}_0`"
                                 class="td fill-height d-flex align-center border-bottom-none px-3"
                                 :style="{
-                                    minWidth: `${cellWidthMap[0]}px`,
+                                    minWidth: $help.handleAddPxUnit(cellWidthMap[0]),
                                 }"
                             >
                                 <truncate-string
                                     :text="`${headers[i].text}`.toUpperCase()"
-                                    :maxWidth="cellWidthMap[0] - 24"
+                                    :maxWidth="$typy(cellWidthMap[0]).safeNumber - 24"
                                 />
                             </div>
                             <div
                                 :key="`${cell}_${cellWidthMap[1]}_1`"
                                 class="td fill-height d-flex align-center no-border px-3"
                                 :style="{
-                                    minWidth: `${cellWidthMap[1]}px`,
+                                    minWidth: $help.handleAddPxUnit(cellWidthMap[1]),
                                 }"
                             >
                                 <truncate-string
                                     :text="`${cell}`"
-                                    :maxWidth="cellWidthMap[1] - 24"
+                                    :maxWidth="$typy(cellWidthMap[i]).safeNumber - 24"
                                 />
                             </div>
                         </div>
@@ -63,10 +63,13 @@
                         class="td px-3"
                         :style="{
                             height: lineHeight,
-                            minWidth: `${cellWidthMap[i]}px`,
+                            minWidth: $help.handleAddPxUnit(cellWidthMap[i]),
                         }"
                     >
-                        <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
+                        <truncate-string
+                            :text="`${cell}`"
+                            :maxWidth="$typy(cellWidthMap[i]).safeNumber - 24"
+                        />
                     </div>
                 </div>
             </template>

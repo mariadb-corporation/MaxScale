@@ -117,7 +117,9 @@ export default {
             return res
         },
         tableHeaders() {
-            const headers = this.headers.length ? [{ text: '#' }, ...this.headers] : []
+            const headers = this.headers.length
+                ? [{ text: '#', width: 'max-content' }, ...this.headers]
+                : []
             return headers
         },
         rowsWithIndex() {

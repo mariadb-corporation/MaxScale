@@ -9,7 +9,8 @@
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
-                        maxWidth: `${headerWidthMap[i]}px`,
+                        maxWidth: $help.handleAddPxUnit(headerWidthMap[i]),
+                        minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                     }"
                     class="th d-flex align-center px-3"
                     :class="{
@@ -21,7 +22,7 @@
                     <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
                         :text="`${header.text}`.toUpperCase()"
-                        :maxWidth="headerWidthMap[i] - 46"
+                        :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
                     />
                     <span v-if="header.text === '#'" class="ml-1 color text-field-text">
                         ({{ rowsLength }})
@@ -85,7 +86,12 @@ export default {
             return `calc(100% - ${this.getScrollbarWidth()}px)`
         },
         tableHeaders() {
-            return this.isVertTable ? [{ text: 'COLUMN' }, { text: 'VALUE' }] : this.headers
+            return this.isVertTable
+                ? [
+                      { text: 'COLUMN', width: '20%' },
+                      { text: 'VALUE', width: '80%' },
+                  ]
+                : this.headers
         },
         enableSorting() {
             return this.rowsLength <= 10000 && !this.isVertTable
@@ -93,9 +99,8 @@ export default {
     },
     watch: {
         tableHeaders() {
-            // reset width to unset then get width and assign
-            this.$nextTick(() => this.resetHeaderWidth())
-            this.$nextTick(() => this.assignHeaderWidthMap())
+            this.resetHeaderWidth()
+            this.$nextTick(() => this.$nextTick(() => this.assignHeaderWidthMap()))
         },
         boundingWidth() {
             this.resetHeaderWidth()
@@ -119,22 +124,16 @@ export default {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
-    // When virtual-scroll-table is wrapped in keep-alive, table col width needs to be recalculated
-    activated() {
-        this.$nextTick(() => this.resetHeaderWidth())
-        this.$nextTick(() => this.assignHeaderWidthMap())
-    },
     methods: {
         resetHeaderWidth() {
-            if (this.$refs[`header__${0}`])
-                // set all header maxWidth to unset to get auto width
-                for (let i = 0; i < this.tableHeaders.length; i++) {
-                    if (this.$refs[`header__${i}`].length) {
-                        let headerStyle = this.$refs[`header__${i}`][0].style
-                        headerStyle.maxWidth = 'unset'
-                        headerStyle.minWidth = 'unset'
-                    }
+            let headerWidthMap = {}
+            for (const [i, header] of this.tableHeaders.entries()) {
+                headerWidthMap = {
+                    ...headerWidthMap,
+                    [i]: header.width ? header.width : 'unset',
                 }
+            }
+            this.headerWidthMap = headerWidthMap
         },
         resizerMouseDown(e, i) {
             this.currColIndex = i
@@ -157,7 +156,7 @@ export default {
                         this.nxtCol.style.maxWidth == newNxtColW
                         this.nxtCol.style.minWidth = newNxtColW
                     }
-                    this.$help.doubleRAF(() => this.assignHeaderWidthMap())
+                    this.$nextTick(() => this.assignHeaderWidthMap())
                 }
             }
         },
