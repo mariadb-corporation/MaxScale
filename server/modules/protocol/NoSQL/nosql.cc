@@ -1214,6 +1214,22 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         ss << "'null'";
         break;
 
+    case bsoncxx::type::k_regex:
+        {
+            ostringstream ss2;
+
+            auto r = x.get_regex();
+            if (r.options.length() != 0)
+            {
+                ss2 << "(?" << r.options << ")";
+            }
+
+            ss2 << r.regex;
+
+            ss << "REGEXP '" << escape_essential_chars(ss2.str()) << "'";
+        }
+        break;
+
     default:
         {
             ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
@@ -1567,16 +1583,20 @@ string array_op_to_condition(const string& field,
                     }
                     else
                     {
-                        if (first_element)
+                        // Regexes cannot be added, as they are not values to be compared.
+                        if (one_element.type() != bsoncxx::type::k_regex)
                         {
-                            first_element = false;
-                        }
-                        else
-                        {
-                            ss << ", ";
-                        }
+                            if (first_element)
+                            {
+                                first_element = false;
+                            }
+                            else
+                            {
+                                ss << ", ";
+                            }
 
-                        ss << element_to_value(one_element, zDescription);
+                            ss << element_to_value(one_element, zDescription);
+                        }
                     }
                 }
 
@@ -1691,10 +1711,17 @@ string array_op_to_condition(const string& field,
                                 add_or = true;
                             }
 
-                            ss << "(JSON_CONTAINS(";
-                            ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                               << element_to_value(one_element, zDescription)
-                               << ")) = 1)";
+                            if (one_element.type() != bsoncxx::type::k_regex)
+                            {
+                                ss << "(JSON_CONTAINS(";
+                                ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
+                                   << element_to_value(one_element, zDescription)
+                                   << ")) = 1)";
+                            }
+                            else
+                            {
+                                ss << "false";
+                            }
 
                             ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
                                << element_to_value(one_element, zDescription)
@@ -1990,17 +2017,26 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             }
         }
 
-        if (type == bsoncxx::type::k_document)
+        switch (type)
         {
+        case bsoncxx::type::k_document:
             condition = get_comparison_condition(field, element.get_document());
-        }
-        else
-        {
-            auto value = element_to_value(element);
-            condition
-                = "(JSON_CONTAINS(JSON_EXTRACT(doc, '$." + field + "'), " + value + ") "
-                + " OR "
-                + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
+            break;
+
+        case bsoncxx::type::k_regex:
+            condition = "(JSON_VALUE(doc, '$." + field + "') " + element_to_value(element) + ")";
+            break;
+
+        case bsoncxx::type::k_array:
+            // TODO: This probably needs to be dealt with explicitly.
+        default:
+            {
+                auto value = element_to_value(element);
+                condition
+                    = "(JSON_CONTAINS(JSON_EXTRACT(doc, '$." + field + "'), " + value + ") "
+                    + " OR "
+                    + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
+            }
         }
     }
 
