@@ -30,12 +30,12 @@
 
 using std::string;
 using std::vector;
+using std::move;
 using mxq::MariaDB;
 using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;
 using UserEntry = mariadb::UserEntry;
 using UserEntryType = mariadb::UserEntryType;
-using SUserEntry = std::unique_ptr<UserEntry>;
 using mariadb::UserSearchSettings;
 using mariadb::UserEntryResult;
 using ServerType = SERVER::VersionInfo::Type;
@@ -281,6 +281,7 @@ bool MariaDBUserManager::update_users()
 {
     mxq::MariaDB con;
     std::vector<SERVER*> backends;
+    std::vector<mariadb::UserEntry> custom_entries;
     auto& sett = con.connection_settings();
 
     // Copy all arraylike settings under a lock.
@@ -288,6 +289,7 @@ bool MariaDBUserManager::update_users()
     sett.user = m_username;
     sett.password = m_password;
     backends = m_backends;
+    custom_entries = m_custom_entries;
     lock.unlock();
 
     sett.password = mxs::decrypt_password(sett.password);
@@ -397,8 +399,38 @@ bool MariaDBUserManager::update_users()
     {
         // Got some data. Update the master database if the contents differ. Usually they don't.
         string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
-        string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
-                                        temp_userdata.n_entries(), datasource.c_str(), m_service->name());
+        string msg;
+
+        if (custom_entries.empty())
+        {
+            msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
+                                     temp_userdata.n_entries(), datasource.c_str(), m_service->name());
+        }
+        else
+        {
+            // If users loading succeeded, add any custom entries here. This way, the thread-specific caches
+            // will not update when a user load from backend fails.
+            int added = 0;
+            for (const auto& custom_entry : custom_entries)
+            {
+                auto temp_custom_entry = custom_entry;
+                if (temp_userdata.add_entry(std::move(temp_custom_entry)))
+                {
+                    added++;
+                }
+                else
+                {
+                    MXB_WARNING("Cannot add custom user account '%s'@'%s' for service '%s', as a similar "
+                                "user account was read from %s.",
+                                custom_entry.username.c_str(), custom_entry.host_pattern.c_str(),
+                                m_service->name(), datasource.c_str());
+                }
+            }
+
+            msg = mxb::string_printf(
+                "Read %lu user@host entries from %s and added %i custom entr(y/ies) for service '%s'",
+                temp_userdata.n_entries(), datasource.c_str(), added, m_service->name());
+        }
 
         // The comparison is not trivially cheap if there are many user entries,
         // but it avoids unnecessary user cache updates which would involve copying all
@@ -553,10 +585,8 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
     {
         while (users->next_row())
         {
-            auto username = users->get_string(ind_user);
-
             UserEntry new_entry;
-            new_entry.username = username;
+            new_entry.username = users->get_string(ind_user);
             new_entry.host_pattern = users->get_string(ind_host);
 
             // Treat the user as having global privileges if any of the following global privileges
@@ -590,7 +620,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
                 new_entry.default_role = users->get_string(ind_def_role);
             }
 
-            output->add_entry(username, std::move(new_entry));
+            output->add_entry(std::move(new_entry));
         }
     }
     return has_required_fields;
@@ -718,7 +748,7 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
                 new_entry.password = pw;
                 new_entry.plugin = users->get_string(ind_plugin);
                 new_entry.global_db_priv = true;    // TODO: Fix later!
-                output->add_entry(username, std::move(new_entry));
+                output->add_entry(std::move(new_entry));
             }
         }
     }
@@ -907,6 +937,29 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
+void MariaDBUserManager::add_custom_user(const mariadb::UserEntry& entry)
+{
+    bool duplicate_found = false;
+    Guard guard(m_settings_lock);
+    for (const auto& custom_entry : m_custom_entries)
+    {
+        if (entry.username == custom_entry.username && entry.host_pattern == custom_entry.host_pattern)
+        {
+            duplicate_found = true;
+        }
+    }
+
+    if (duplicate_found)
+    {
+        MXB_ERROR("Cannot add custom user entry '%s'@'%s', as it already exists for service '%s'.",
+                  entry.username.c_str(), entry.host_pattern.c_str(), m_service->name());
+    }
+    else
+    {
+        m_custom_entries.push_back(entry);
+    }
+}
+
 /**
  * Generates the string "<user>@<host>"
  */
@@ -919,9 +972,10 @@ std::string UserDatabase::form_db_mapping_key(const string& user, const string& 
     return rval;
 }
 
-void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
+bool UserDatabase::add_entry(mariadb::UserEntry&& entry)
 {
-    auto& entrylist = m_users[username];
+    bool rval = false;
+    auto& entrylist = m_users[entry.username];
     // Find the correct spot to insert. If the hostname pattern already exists, do nothing. Copies should
     // only exist when summing users from all servers or when processing Xpand users.
     auto low_bound = std::lower_bound(entrylist.begin(), entrylist.end(), entry,
@@ -929,8 +983,10 @@ void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
     // lower_bound is the first valid (not "smaller") position to insert. It can be equal to the new element.
     if (low_bound == entrylist.end() || low_bound->host_pattern != entry.host_pattern)
     {
-        entrylist.insert(low_bound, entry);
+        entrylist.insert(low_bound, std::move(entry));
+        rval = true;
     }
+    return rval;
 }
 
 void UserDatabase::clear()
@@ -1668,7 +1724,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     }
     else if (sett.listener.allow_anon_user)
     {
-        // Try find an anonymous entry. Such an entry has empty username and matches any client username.
+        // Try to find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
         auto anon_found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) :

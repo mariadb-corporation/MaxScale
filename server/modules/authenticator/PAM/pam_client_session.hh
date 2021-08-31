@@ -24,7 +24,8 @@ class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
     using AuthMode = mxb::pam::AuthMode;
-    PamClientAuthenticator(bool cleartext_plugin, AuthMode mode, BackendMapping be_mapping);
+    PamClientAuthenticator(bool cleartext_plugin, AuthMode mode, BackendMapping be_mapping,
+                           const PasswordMap& backend_pwds);
 
     ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
@@ -47,6 +48,7 @@ private:
     const bool           m_cleartext_plugin {false};    /**< Is "pam_use_cleartext_plugin" enabled? */
     const AuthMode       m_mode {AuthMode::PW};
     const BackendMapping m_be_mapping {BackendMapping::NONE};   /**< Backend authenticator mapping */
+    const PasswordMap&   m_backend_pwds;
 
     maxscale::Buffer create_2fa_prompt_packet() const;
 };

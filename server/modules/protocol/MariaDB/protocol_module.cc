@@ -179,8 +179,22 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
             }
             params->remove(opt_lower_case);
         }
+
+        if (!read_custom_user_options(*params))
+        {
+            error = true;
+        }
     }
     return !error;
+}
+
+void MySQLProtocolModule::user_account_manager_created(mxs::UserAccountManager& manager)
+{
+    if (m_custom_entry)
+    {
+        auto& maria_manager = static_cast<MariaDBUserManager&>(manager);
+        maria_manager.add_custom_user(*m_custom_entry);
+    }
 }
 
 mxs::ProtocolModule::AuthenticatorList
@@ -310,6 +324,64 @@ bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::Confi
         }
     }
     return !error;
+}
+
+bool MySQLProtocolModule::read_custom_user_options(mxs::ConfigParameters& params)
+{
+    const string opt_custom_user_un = "custom_user_name";
+    const string opt_custom_user_pw = "custom_user_pw";
+    const string opt_custom_user_host = "custom_user_host";
+    const string opt_custom_user_plugin = "custom_user_plugin";
+    const string opt_custom_user_authstr = "custom_user_auth_str";
+
+    string name, pw, host, plugin, authstr;
+    auto read_str = [&params](const string& opt_name, string* target) {
+            if (params.contains(opt_name))
+            {
+                *target = params.get_string(opt_name);
+                params.remove(opt_name);
+            }
+        };
+
+    read_str(opt_custom_user_un, &name);
+    read_str(opt_custom_user_pw, &pw);
+    read_str(opt_custom_user_host, &host);
+    read_str(opt_custom_user_plugin, &plugin);
+    read_str(opt_custom_user_authstr, &authstr);
+
+    bool rval = true;
+    // If using a custom user, at least host must be given. Other three settings default to empty.
+    // Not giving host while giving any other setting is an error.
+    if (host.empty())
+    {
+        auto check_is_empty = [&](const string& opt, const string& val) {
+                if (!val.empty())
+                {
+                    MXB_ERROR("'%s' is not set when '%s' is set. Set '%s' when using custom user.",
+                              opt_custom_user_host.c_str(), opt.c_str(), opt_custom_user_host.c_str());
+                    rval = false;
+                }
+            };
+
+        check_is_empty(opt_custom_user_un, name);
+        check_is_empty(opt_custom_user_pw, pw);
+        check_is_empty(opt_custom_user_plugin, plugin);
+        check_is_empty(opt_custom_user_authstr, authstr);
+    }
+    else
+    {
+        auto entry = std::make_unique<mariadb::UserEntry>();
+        entry->username = name;
+        entry->password = pw;
+        entry->host_pattern = host;
+        entry->plugin = plugin;
+        entry->auth_string = authstr;
+        entry->global_db_priv = true;
+        entry->proxy_priv = true;
+        entry->super_priv = true;
+        m_custom_entry = move(entry);
+    }
+    return rval;
 }
 
 namespace
