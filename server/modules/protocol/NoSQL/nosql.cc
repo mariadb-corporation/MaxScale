@@ -1645,10 +1645,9 @@ string array_op_to_condition(const string& field,
 
                     if (is_single)
                     {
-                        ss << "OR (JSON_CONTAINS(";
-                        ss << "JSON_EXTRACT(doc, '$." << p << "'), "
+                        ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
                            << element_to_value(*all_elements.begin(), zDescription)
-                           << ") = 1)";
+                           << ")";
                     }
 
                     if (is_null)
@@ -1666,15 +1665,14 @@ string array_op_to_condition(const string& field,
 
                 if (is_single)
                 {
-                    ss << "OR (JSON_CONTAINS(";
-                    ss << "JSON_EXTRACT(doc, '$." << field << "'), "
+                    ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
                        << element_to_value(*all_elements.begin(), zDescription)
-                       << ") = 1)";
+                       << ")";
                 }
 
                 if (is_null)
                 {
-                    ss << " OR (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
                 }
             }
         }
@@ -1700,7 +1698,7 @@ string array_op_to_condition(const string& field,
 
                 if (is_null)
                 {
-                    ss << " (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
                 }
                 else
                 {
@@ -1729,13 +1727,9 @@ string array_op_to_condition(const string& field,
                                << element_to_value(one_element, zDescription)
                                << ")) = 1)";
 
-                            if (is_single)
-                            {
-                                ss << "OR (JSON_CONTAINS(";
-                                ss << "JSON_EXTRACT(doc, '$." << p << "'), "
-                                   << element_to_value(one_element, zDescription)
-                                   << ") = 1)";
-                            }
+                            ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                               << element_to_value(one_element, zDescription)
+                               << ")";
                         }
                         ss << ")";
                     }
@@ -1745,13 +1739,9 @@ string array_op_to_condition(const string& field,
                            << element_to_value(one_element, zDescription)
                            << "), '$." << field << "') = 1)";
 
-                        if (is_single)
-                        {
-                            ss << "OR (JSON_CONTAINS(";
-                            ss << "JSON_EXTRACT(doc, '$." << field << "'), "
-                               << element_to_value(one_element, zDescription)
-                               << ") = 1)";
-                        }
+                        ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                           << element_to_value(one_element, zDescription)
+                           << ")";
                     }
                 }
             }
