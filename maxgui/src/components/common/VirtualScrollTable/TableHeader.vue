@@ -4,7 +4,7 @@
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div
                     v-for="(header, i) in tableHeaders"
-                    :key="`${header}_${i}`"
+                    :key="`${header.text}_${i}`"
                     :ref="`header__${i}`"
                     :style="{
                         ...headerStyle,
@@ -14,16 +14,16 @@
                     class="th d-flex align-center px-3"
                     :class="{
                         pointer: enableSorting,
-                        [`sort--active ${sortOrder}`]: activeSort === header,
+                        [`sort--active ${sortOrder}`]: activeSort === header.text,
                     }"
-                    @click="() => (enableSorting ? handleSort(header) : null)"
+                    @click="() => (enableSorting ? handleSort(header.text) : null)"
                 >
                     <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
-                        :text="`${header}`.toUpperCase()"
+                        :text="`${header.text}`.toUpperCase()"
                         :maxWidth="headerWidthMap[i] - 46"
                     />
-                    <span v-if="header === '#'" class="ml-1 color text-field-text">
+                    <span v-if="header.text === '#'" class="ml-1 color text-field-text">
                         ({{ rowsLength }})
                     </span>
                     <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
@@ -59,11 +59,11 @@
 export default {
     name: 'table-header',
     props: {
-        headers: { type: Array, require: true },
-        boundingWidth: { type: Number, require: true },
-        headerStyle: { type: Object, require: true },
+        headers: { type: Array, required: true },
+        boundingWidth: { type: Number, required: true },
+        headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        rowsLength: { type: Number, require: true },
+        rowsLength: { type: Number, required: true },
     },
     data() {
         return {
@@ -85,7 +85,7 @@ export default {
             return `calc(100% - ${this.getScrollbarWidth()}px)`
         },
         tableHeaders() {
-            return this.isVertTable ? ['COLUMN', 'VALUE'] : this.headers
+            return this.isVertTable ? [{ text: 'COLUMN' }, { text: 'VALUE' }] : this.headers
         },
         enableSorting() {
             return this.rowsLength <= 10000 && !this.isVertTable

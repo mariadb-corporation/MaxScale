@@ -86,7 +86,7 @@
                                 v-if="$typy(resSet, 'data').isDefined"
                                 :height="dynDim.height - headerHeight"
                                 :width="dynDim.width"
-                                :headers="resSet.fields"
+                                :headers="resSet.fields.map(field => ({ text: field }))"
                                 :rows="resSet.data"
                             />
                             <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">

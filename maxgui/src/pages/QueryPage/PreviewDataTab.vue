@@ -83,7 +83,11 @@
                         :key="activeView"
                         :height="dynDim.height - headerHeight"
                         :width="dynDim.width"
-                        :headers="$typy(getPrvwDataRes(activeView), 'fields').safeArray"
+                        :headers="
+                            $typy(getPrvwDataRes(activeView), 'fields').safeArray.map(field => ({
+                                text: field,
+                            }))
+                        "
                         :rows="$typy(getPrvwDataRes(activeView), 'data').safeArray"
                     />
                 </keep-alive>

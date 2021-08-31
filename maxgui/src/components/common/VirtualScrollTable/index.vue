@@ -36,7 +36,7 @@
                                 }"
                             >
                                 <truncate-string
-                                    :text="`${headers[i]}`.toUpperCase()"
+                                    :text="`${headers[i].text}`.toUpperCase()"
                                     :maxWidth="cellWidthMap[0] - 24"
                                 />
                             </div>
@@ -104,12 +104,19 @@ export default {
         'table-header': TableHeader,
     },
     props: {
-        headers: { type: Array, require: true },
-        rows: { type: Array, require: true },
-        height: { type: Number, require: true },
-        itemHeight: { type: Number, require: true },
-        boundingWidth: { type: Number, require: true },
-        benched: { type: Number, require: true },
+        headers: {
+            type: Array,
+            validator: arr => {
+                if (!arr.length) return true
+                else return arr.filter(item => 'text' in item).length === arr.length
+            },
+            required: true,
+        },
+        rows: { type: Array, required: true },
+        height: { type: Number, required: true },
+        itemHeight: { type: Number, required: true },
+        boundingWidth: { type: Number, required: true },
+        benched: { type: Number, required: true },
         isVertTable: { type: Boolean, default: false },
     },
     data() {
@@ -172,8 +179,12 @@ export default {
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
+        /**
+         * @param {String} payload.sortBy  sort by header name
+         * @param {Boolean} payload.isDesc  isDesc
+         */
         onSorting({ sortBy, isDesc }) {
-            this.idxOfSortingCol = this.headers.indexOf(sortBy)
+            this.idxOfSortingCol = this.headers.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
     },

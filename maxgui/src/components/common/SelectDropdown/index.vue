@@ -27,7 +27,6 @@
         :rules="rules.requiredField"
         :hide-details="!required"
         :error-messages="errorMessages"
-        @change="onChange"
     >
         <template v-slot:selection="{ item, index }">
             <span v-if="index === 0" class="v-select__selection v-select__selection--comma">
@@ -57,25 +56,30 @@
  * Public License.
  */
 /*
-This component emits two events:
-@get-selected-items always return Array regardless multiple props is true or false
+This component emits an event:
 @has-changed: value = boolean
 */
 export default {
     name: 'select-dropdown',
     props: {
-        entityName: { type: String, required: true },
+        value: {
+            validator(value) {
+                return typeof value === 'object' || Array.isArray(value)
+            },
+            default: () => [],
+            required: true,
+        },
+        defaultItems: { type: [Array, Object], default: () => [] },
         items: { type: Array, required: true },
+        entityName: { type: String, required: true },
         multiple: { type: Boolean, default: false },
         clearable: { type: Boolean, default: false },
         required: { type: Boolean, default: false },
-        defaultItems: { type: [Array, Object], default: () => [] },
         showPlaceHolder: { type: Boolean, default: true },
         errorMessages: { type: String, default: '' },
     },
     data() {
         return {
-            selectedItems: [],
             rules: {
                 requiredField: [val => this.validateRequired(val)],
             },
@@ -87,27 +91,32 @@ export default {
             let isEqual = this.$help.lodash.isEqual(this.selectedItems, this.defaultItems)
             return !isEqual
         },
+        selectedItems: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
     },
 
     watch: {
-        defaultItems: function(val) {
-            this.selectedItems = val
-            this.onChange(val)
+        defaultItems: {
+            deep: true,
+            handler(val) {
+                this.selectedItems = val
+            },
+        },
+        hasChanged(v) {
+            this.$emit('has-changed', v)
         },
     },
 
     methods: {
-        //always return array
-        onChange(val) {
-            this.$emit('has-changed', this.hasChanged)
-            let value = val
-            if (val && !this.multiple) value = [val]
-            // val is undefined when items are cleared by clearable props in v-select
-            else if (val === undefined) value = []
-            this.$emit('get-selected-items', value)
-        },
         validateRequired(val) {
-            if ((val === undefined || val.length === 0) && this.required) {
+            // val is null when items are cleared by clearable props in v-select
+            if ((val === null || val.length === 0) && this.required) {
                 return `${this.$tc(this.entityName, this.multiple ? 2 : 1)} is required`
             }
             return true

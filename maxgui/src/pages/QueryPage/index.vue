@@ -1,11 +1,23 @@
 <template>
-    <div v-resize.quiet="setCtrDim" class="fill-height">
+    <div
+        v-resize.quiet="setCtrDim"
+        v-shortkey="{
+            'win-ctrl-s': ['ctrl', 's'],
+            'mac-cmd-s': ['meta', 's'],
+            'win-ctrl-enter': ['ctrl', 'enter'],
+            'mac-cmd-enter': ['meta', 'enter'],
+            'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
+            'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
+        }"
+        class="fill-height"
+        @shortkey="handleShortkey"
+    >
         <div
             ref="paneContainer"
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': is_fullscreen }"
         >
-            <worksheets :ctrDim="ctrDim" />
+            <worksheets ref="wkesRef" :ctrDim="ctrDim" />
             <confirm-dialog
                 ref="confirmDialog"
                 :title="$t('confirmations.leavePage')"
@@ -61,14 +73,12 @@ export default {
     computed: {
         ...mapState({
             is_fullscreen: state => state.query.is_fullscreen,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
             getActiveWke: 'query/getActiveWke',
-            getDbTreeData: 'query/getDbTreeData',
         }),
     },
     watch: {
@@ -77,10 +87,6 @@ export default {
         },
         async active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
-        },
-        async curr_cnct_resource(v) {
-            if (v.id && this.getDbTreeData.length === 0)
-                await this.initialFetch(this.curr_cnct_resource)
         },
     },
     async created() {
@@ -123,7 +129,6 @@ export default {
         ...mapActions({
             validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
-            initialFetch: 'query/initialFetch',
             clearConn: 'query/clearConn',
         }),
         setCtrDim() {
@@ -139,6 +144,23 @@ export default {
         },
         cancelLeave() {
             this.to = null
+        },
+        handleShortkey(e) {
+            const wkes = this.$refs.wkesRef.$refs
+            switch (e.srcKey) {
+                case 'win-ctrl-s':
+                case 'mac-cmd-s':
+                    wkes.pageToolbar.openFavoriteDialog()
+                    break
+                case 'win-ctrl-enter':
+                case 'mac-cmd-enter':
+                    wkes.wkeToolbar.handleRun('selected')
+                    break
+                case 'win-ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    wkes.wkeToolbar.handleRun('all')
+                    break
+            }
         },
     },
 }

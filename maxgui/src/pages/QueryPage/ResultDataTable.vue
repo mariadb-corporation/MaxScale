@@ -90,10 +90,17 @@ export default {
         'column-list': ColumnList,
     },
     props: {
-        headers: { type: Array, require: true },
-        rows: { type: Array, require: true },
-        height: { type: Number, require: true },
-        width: { type: Number, require: true },
+        headers: {
+            type: Array,
+            validator: arr => {
+                if (!arr.length) return true
+                else return arr.filter(item => 'text' in item).length === arr.length
+            },
+            required: true,
+        },
+        rows: { type: Array, required: true },
+        height: { type: Number, required: true },
+        width: { type: Number, required: true },
     },
     data() {
         return {
@@ -110,7 +117,7 @@ export default {
             return res
         },
         tableHeaders() {
-            const headers = this.headers.length ? ['#', ...this.headers] : []
+            const headers = this.headers.length ? [{ text: '#' }, ...this.headers] : []
             return headers
         },
         rowsWithIndex() {
@@ -120,7 +127,7 @@ export default {
             return this.filteredRows.map(row => row.filter((cell, i) => i !== 0))
         },
         visHeaders_wo_idx() {
-            return this.visibleHeaders.filter(header => header !== '#')
+            return this.visibleHeaders.filter(header => header.text !== '#')
         },
         filteredRows() {
             const rows = this.rowsWithIndex.map(row =>
