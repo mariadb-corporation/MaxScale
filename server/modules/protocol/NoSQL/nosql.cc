@@ -1996,7 +1996,11 @@ string get_comparison_condition(const bsoncxx::document::element& element)
         }
         else
         {
-            condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + element_to_value(element) + ")";
+            auto value = element_to_value(element);
+            condition
+                = "(JSON_CONTAINS(JSON_EXTRACT(doc, '$." + field + "'), " + value + ") "
+                + " OR "
+                + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
         }
     }
 
