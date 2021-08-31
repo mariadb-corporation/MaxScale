@@ -77,7 +77,7 @@
         <confirm-dialog
             ref="favoriteConfirmDialog"
             :title="$t('confirmations.addToFavorite')"
-            type="run"
+            type="add"
             :onSave="addToFavorite"
             minBodyWidth="768px"
         >
