@@ -104,6 +104,8 @@ int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::documen
         throw std::runtime_error(ss.str());
     }
 
+    *pView = bsoncxx::document::view(pData, size);
+
     return size;
 }
 
