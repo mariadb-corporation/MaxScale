@@ -958,24 +958,6 @@ string get_and_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-string get_and_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$and") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_and_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$and must be an array", nosql::error::BAD_VALUE);
-    }
-
-    return condition;
-}
-
 // https://docs.mongodb.com/manual/reference/operator/query/nor/#op._S_nor
 string get_nor_condition(const bsoncxx::array::view& array)
 {
@@ -1014,24 +996,6 @@ string get_nor_condition(const bsoncxx::array::view& array)
     if (!condition.empty())
     {
         condition = "(" + condition + ")";
-    }
-
-    return condition;
-}
-
-string get_nor_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$nor") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_nor_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$nor must be an array", nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -1080,24 +1044,6 @@ string get_or_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-string get_or_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$or") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_or_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$or must be an array", nosql::error::BAD_VALUE);
-    }
-
-    return condition;
-}
-
 // https://docs.mongodb.com/manual/reference/operator/query/#logical
 string get_logical_condition(const bsoncxx::document::element& element)
 {
@@ -1105,17 +1051,40 @@ string get_logical_condition(const bsoncxx::document::element& element)
 
     const auto& key = element.key();
 
+    auto get_array = [](const char* zOp, const bsoncxx::document::element& element)
+    {
+        if (element.type() != bsoncxx::type::k_array)
+        {
+            ostringstream ss;
+            ss << zOp << " must be an array";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        auto array = static_cast<bsoncxx::array::view>(element.get_array());
+
+        auto begin = array.begin();
+        auto end = array.end();
+
+        if (begin == end)
+        {
+            throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
+        }
+
+        return array;
+    };
+
     if (key.compare("$and") == 0)
     {
-        condition = get_and_condition(element);
+        condition = get_and_condition(get_array("$and", element));
     }
     else if (key.compare("$nor") == 0)
     {
-        condition = get_nor_condition(element);
+        condition = get_nor_condition(get_array("$nor", element));
     }
     else if (key.compare("$or") == 0)
     {
-        condition = get_or_condition(element);
+        condition = get_or_condition(get_array("$or", element));
     }
     else
     {
