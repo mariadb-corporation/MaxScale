@@ -2285,7 +2285,89 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
-nosql::UpdateKind nosql::get_update_kind(const bsoncxx::document::element& update_specification)
+namespace
+{
+
+enum class UpdateKind
+{
+    AGGREGATION_PIPELINE, // Element is an array
+    REPLACEMENT_DOCUMENT, // Element is a document
+    UPDATE_OPERATORS,     // Element is a document
+    INVALID
+};
+
+UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    if (update_specification.empty())
+    {
+        kind = UpdateKind::REPLACEMENT_DOCUMENT;
+    }
+    else
+    {
+        for (auto field : update_specification)
+        {
+            const char* pData = field.key().data(); // Not necessarily null-terminated.
+
+            string_view name(field.key().data(), field.key().length());
+
+            if (*pData == '$')
+            {
+                if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
+                {
+                    if (name.compare("$set") != 0 && name.compare("$unset") != 0)
+                    {
+                        // TODO: This will now terminate the whole processing,
+                        // TODO: but this should actually be returned as a write
+                        // TODO: error for the particular update object.
+                        ostringstream ss;
+                        ss << "Unknown modifier: " << name
+                           << ". Expected a valid update modifier or "
+                           << "pipeline-style update specified as an array. "
+                           << "Currently the only supported update operators are $set and $unset.";
+
+                        throw SoftError(ss.str(), error::COMMAND_FAILED);
+                    }
+
+                    kind = UpdateKind::UPDATE_OPERATORS;
+                }
+                else
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "The dollar ($) prefixed field '" << name << "' in '" << name << "' "
+                       << "is not valid for storage.";
+
+                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                }
+            }
+            else
+            {
+                if (kind == UpdateKind::INVALID)
+                {
+                    kind = UpdateKind::REPLACEMENT_DOCUMENT;
+                }
+                else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "Unknown modifier: " << name
+                       << ". Expected  a valid update modifier or "
+                       << "pipeline-style update specified as an array";
+
+                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                }
+            }
+        }
+    }
+
+    mxb_assert(kind != UpdateKind::INVALID);
+
+    return kind;
+}
+
+UpdateKind get_update_kind(const bsoncxx::document::element& update_specification)
 {
     UpdateKind kind = UpdateKind::INVALID;
 
@@ -2295,72 +2377,16 @@ nosql::UpdateKind nosql::get_update_kind(const bsoncxx::document::element& updat
         kind = UpdateKind::AGGREGATION_PIPELINE;
         break;
 
-    case bsoncxx::type::k_document:
-        {
-            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
-
-            if (doc.empty())
-            {
-                kind = UpdateKind::REPLACEMENT_DOCUMENT;
-            }
-            else
-            {
-                for (auto field : doc)
-                {
-                    const char* pData = field.key().data(); // Not necessarily null-terminated.
-
-                    if (*pData == '$')
-                    {
-                        string name(pData, field.key().length());
-
-                        if (name != "$set" && name != "$unset")
-                        {
-                            ostringstream ss;
-                            ss << "Currently the only supported update operators are $set and $unset.";
-                            throw SoftError(ss.str(), error::COMMAND_FAILED);
-                        }
-                        else
-                        {
-                            if (kind == UpdateKind::INVALID)
-                            {
-                                kind = UpdateKind::UPDATE_OPERATORS;
-                            }
-                            else if (kind != UpdateKind::UPDATE_OPERATORS)
-                            {
-                                MXS_ERROR("'%s' contains both fields and update operators.",
-                                          bsoncxx::to_json(doc).c_str());
-                                kind = UpdateKind::INVALID;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (kind == UpdateKind::INVALID)
-                        {
-                            kind = UpdateKind::REPLACEMENT_DOCUMENT;
-                        }
-                        else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
-                        {
-                            MXS_ERROR("'%s' contains both fields and update operators.",
-                                      bsoncxx::to_json(doc).c_str());
-                            kind = UpdateKind::INVALID;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        break;
-
     default:
-        throw SoftError("Update argument must be either an object or an array", error::FAILED_TO_PARSE);
+        kind = get_update_kind(update_specification.get_document());
     }
+
+    mxb_assert(kind != UpdateKind::INVALID);
 
     return kind;
 }
 
-string nosql::convert_update_operations(const bsoncxx::document::view& update_operations)
+string convert_update_operations(const bsoncxx::document::view& update_operations)
 {
     string rv;
 
@@ -2423,12 +2449,40 @@ string nosql::convert_update_operations(const bsoncxx::document::view& update_op
     return rv;
 }
 
+void update_specification_to_set_value(UpdateKind kind,
+                                       const bsoncxx::document::view& update_specification,
+                                       ostream& sql)
+{
+    switch (kind)
+    {
+    case UpdateKind::REPLACEMENT_DOCUMENT:
+        {
+            auto json = bsoncxx::to_json(update_specification);
+            json = escape_essential_chars(std::move(json));
+
+            sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
+        }
+        break;
+
+    case UpdateKind::UPDATE_OPERATORS:
+        sql << convert_update_operations(update_specification);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+}
+
 string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
                                                 const bsoncxx::document::element& update_specification)
 {
-    stringstream sql;
+    ostringstream sql;
 
-    switch (get_update_kind(update_specification))
+    auto kind = get_update_kind(update_specification);
+
+    switch (kind)
     {
     case UpdateKind::AGGREGATION_PIPELINE:
         {
@@ -2441,32 +2495,20 @@ string nosql::update_specification_to_set_value(const bsoncxx::document::view& u
         }
         break;
 
-    case UpdateKind::REPLACEMENT_DOCUMENT:
-        {
-            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
-            auto json = bsoncxx::to_json(doc);
-            json = escape_essential_chars(std::move(json));
-
-            sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
-        }
-        break;
-
-    case UpdateKind::UPDATE_OPERATORS:
-        {
-            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
-            sql << convert_update_operations(doc);
-        }
-        break;
-
-    case UpdateKind::INVALID:
-        {
-            string message("Invalid combination of updates: '");
-            message += bsoncxx::to_json(update_command);
-            message += "'.";
-
-            throw HardError(message, error::COMMAND_FAILED);
-        }
+    default:
+        update_specification_to_set_value(kind, update_specification.get_document(), sql);
     }
+
+    return sql.str();
+}
+
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
+{
+    ostringstream sql;
+
+    auto kind = get_update_kind(update_specification);
+
+    update_specification_to_set_value(kind, update_specification, sql);
 
     return sql.str();
 }

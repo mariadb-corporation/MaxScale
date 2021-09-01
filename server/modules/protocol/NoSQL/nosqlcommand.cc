@@ -684,22 +684,20 @@ string OpUpdateCommand::description() const
 
 GWBUF* OpUpdateCommand::execute()
 {
-    ostringstream sql;
-    sql << "UPDATE " << table() << " SET DOC = ";
-
-    // TODO: In principle the document may be something else than a
-    // TODO: simple replacement document.
-    auto json = escape_essential_chars(bsoncxx::to_json(m_req.update()));
-
-    sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$')) ";
-    sql << query_to_where_clause(m_req.selector());
-
     if (m_req.is_upsert())
     {
         MXS_WARNING("OP_UPDATE(%s): upsert not supported, "
                     "selector: '%s', document: '%s'.",
-                    m_req.zCollection(), bsoncxx::to_json(m_req.selector()).c_str(), json.c_str());
+                    m_req.zCollection(),
+                    bsoncxx::to_json(m_req.selector()).c_str(),
+                    bsoncxx::to_json(m_req.update()).c_str());
     }
+
+    ostringstream sql;
+    sql << "UPDATE " << table() << " SET DOC = "
+        << update_specification_to_set_value(m_req.update())
+        << " "
+        << query_to_where_clause(m_req.selector());
 
     if (!m_req.is_multi())
     {
