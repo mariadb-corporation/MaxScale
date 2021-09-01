@@ -1627,7 +1627,7 @@ string array_op_to_condition(const string& field,
                     }
 
                     ss << "(JSON_CONTAINS(";
-                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY(";
+                    ss << "JSON_QUERY(doc, '$." << p << "'), JSON_ARRAY(";
                     if (add_element_array(ss, all_elements))
                     {
                         is_null = true;
@@ -2035,7 +2035,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             {
                 auto value = element_to_value(element);
                 condition
-                    = "(JSON_CONTAINS(JSON_EXTRACT(doc, '$." + field + "'), " + value + ") "
+                    = "((JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), " + value + ") = 1)"
                     + " OR "
                     + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
             }
