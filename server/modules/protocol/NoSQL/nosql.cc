@@ -2035,7 +2035,10 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             {
                 auto value = element_to_value(element);
                 condition
-                    = "((JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), " + value + ") = 1)"
+                    // Without the explicit check for NULL, this does not work when NOT due to $nor
+                    // is stashed in front of the whole thing.
+                    = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
+                    + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), " + value + ") = 1)"
                     + " OR "
                     + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
             }
