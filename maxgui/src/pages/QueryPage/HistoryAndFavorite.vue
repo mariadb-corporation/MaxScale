@@ -121,15 +121,21 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
+                        //TODO: uncomment this when customGroup is added
+                        /*header.groupable = true */
                         break
                     case 'connection_name':
                         header.width = 180
+                        header.groupable = true
                         break
                     case 'time':
                         header.width = 90
                         break
                     case 'execution_time':
                         header.width = 150
+                        break
+                    case 'sql':
+                        header.groupable = true
                         break
                 }
                 return header
