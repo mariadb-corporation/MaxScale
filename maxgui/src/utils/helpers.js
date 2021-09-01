@@ -571,6 +571,33 @@ export function handleAddPxUnit(value) {
     return value
 }
 
+/**
+ * This function is not working on macOs as the scrollbar is only showed when scrolling.
+ * However, on Macos, scrollbar is placed above the content (overlay) instead of taking up space
+ * of the content. So in macOs, this returns 0.
+ * @returns {Number} scrollbar width
+ */
+export function getScrollbarWidth() {
+    // Creating invisible container
+    const outer = document.createElement('div')
+    outer.style.visibility = 'hidden'
+    outer.style.overflow = 'scroll' // forcing scrollbar to appear
+    outer.style.msOverflowStyle = 'scrollbar' // needed for WinJS apps
+    document.body.appendChild(outer)
+
+    // Creating inner element and placing it in the container
+    const inner = document.createElement('div')
+    outer.appendChild(inner)
+
+    // Calculating difference between container's full width and the child width
+    const scrollbarWidth = outer.offsetWidth - inner.offsetWidth
+
+    // Removing temporary elements from the DOM
+    outer.parentNode.removeChild(outer)
+
+    return scrollbarWidth
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -614,6 +641,7 @@ Object.defineProperties(Vue.prototype, {
                 getObjectRows,
                 pxToPct,
                 handleAddPxUnit,
+                getScrollbarWidth,
             }
         },
     },
