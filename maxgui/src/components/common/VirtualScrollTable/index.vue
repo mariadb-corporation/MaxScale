@@ -51,10 +51,10 @@
                                 }"
                             >
                                 <slot
-                                    :name="visHeaders[1].text"
+                                    :name="visHeaders[i].text"
                                     :data="{
                                         cell,
-                                        header: visHeaders[1],
+                                        header: visHeaders[i],
                                         maxWidth: cellMaxWidth(1),
                                     }"
                                 >
