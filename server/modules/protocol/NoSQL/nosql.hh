@@ -483,6 +483,19 @@ std::string query_to_where_clause(const bsoncxx::document::view& filter);
 
 std::string sort_to_order_by(const bsoncxx::document::view& sort);
 
+enum class UpdateKind
+{
+    AGGREGATION_PIPELINE,
+    REPLACEMENT_DOCUMENT,
+    UPDATE_OPERATORS,
+    INVALID
+};
+
+UpdateKind get_update_kind(const bsoncxx::document::element& update_specification);
+
+std::string convert_update_operations(const bsoncxx::document::view& update_operations);
+
+
 class Packet
 {
 public:

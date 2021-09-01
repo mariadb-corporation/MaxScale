@@ -1277,7 +1277,7 @@ private:
 
         switch (get_update_kind(u))
         {
-        case AGGREGATION_PIPELINE:
+        case UpdateKind::AGGREGATION_PIPELINE:
             {
                 string message("Aggregation pipeline not supported: '");
                 message += bsoncxx::to_json(update);
@@ -1288,7 +1288,7 @@ private:
             }
             break;
 
-        case REPLACEMENT_DOCUMENT:
+        case UpdateKind::REPLACEMENT_DOCUMENT:
             {
                 auto json = bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()));
                 json = escape_essential_chars(std::move(json));
@@ -1297,14 +1297,14 @@ private:
             }
             break;
 
-        case UPDATE_OPERATORS:
+        case UpdateKind::UPDATE_OPERATORS:
             {
                 auto doc = static_cast<bsoncxx::document::view>(u.get_document());
-                sql << translate_update_operations(doc);
+                sql << convert_update_operations(doc);
             }
             break;
 
-        case INVALID:
+        case UpdateKind::INVALID:
             {
                 string message("Invalid combination of updates: '");
                 message += bsoncxx::to_json(update);
@@ -1326,152 +1326,6 @@ private:
         }
 
         return sql.str();
-    }
-
-    enum Kind
-    {
-        AGGREGATION_PIPELINE,
-        REPLACEMENT_DOCUMENT,
-        UPDATE_OPERATORS,
-        INVALID
-    };
-
-    Kind get_update_kind(const bsoncxx::document::element& element)
-    {
-        Kind kind = INVALID;
-
-        switch (element.type())
-        {
-        case bsoncxx::type::k_array:
-            kind = AGGREGATION_PIPELINE;
-            break;
-
-        case bsoncxx::type::k_document:
-            {
-                auto doc = static_cast<bsoncxx::document::view>(element.get_document());
-
-                if (doc.empty())
-                {
-                    kind = REPLACEMENT_DOCUMENT;
-                }
-                else
-                {
-                    for (auto field : doc)
-                    {
-                        const char* pData = field.key().data(); // Not necessarily null-terminated.
-
-                        if (*pData == '$')
-                        {
-                            string name(pData, field.key().length());
-
-                            if (name != "$set" && name != "$unset")
-                            {
-                                ostringstream ss;
-                                ss << "Currently the only supported update operators are $set and $unset.";
-                                throw SoftError(ss.str(), error::COMMAND_FAILED);
-                            }
-                            else
-                            {
-                                if (kind == INVALID)
-                                {
-                                    kind = UPDATE_OPERATORS;
-                                }
-                                else if (kind != UPDATE_OPERATORS)
-                                {
-                                    MXS_ERROR("'%s' contains both fields and update operators.",
-                                              bsoncxx::to_json(doc).c_str());
-                                    kind = INVALID;
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (kind == INVALID)
-                            {
-                                kind = REPLACEMENT_DOCUMENT;
-                            }
-                            else if (kind != REPLACEMENT_DOCUMENT)
-                            {
-                                MXS_ERROR("'%s' contains both fields and update operators.",
-                                          bsoncxx::to_json(doc).c_str());
-                                kind = INVALID;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-
-        default:
-            throw SoftError("Update argument must be either an object or an array", error::FAILED_TO_PARSE);
-        }
-
-        return kind;
-    }
-
-    string translate_update_operations(const bsoncxx::document::view& doc)
-    {
-        string rv;
-
-        for (auto element : doc)
-        {
-            if (!rv.empty())
-            {
-                rv += ", ";
-            }
-
-            bool add_value = true;
-
-            if (element.key().compare("$set") == 0)
-            {
-                rv += "JSON_SET(doc, ";
-            }
-            else if (element.key().compare("$unset") == 0)
-            {
-                rv += "JSON_REMOVE(doc, ";
-                add_value = false;
-            }
-            else
-            {
-                // In get_update_kind() it is established that it is either $set or $unset.
-                // This is to catch a changed there without a change here.
-                mxb_assert(!true);
-            }
-
-            auto fields = static_cast<bsoncxx::document::view>(element.get_document());
-
-            string s;
-            for (auto field : fields)
-            {
-                if (!s.empty())
-                {
-                    s += ", ";
-                }
-
-                string key = field.key().data();
-                key = escape_essential_chars(std::move(key));
-
-                s += "'$.";
-                s += key;
-                s += "'";
-
-                if (add_value)
-                {
-                    s += ", ";
-                    s += nosql::to_value(field);
-                }
-            }
-
-            rv += s;
-
-            rv += ")";
-        }
-
-        rv += " ";
-
-        return rv;
     }
 
     void interpret(const ComOK& response) override

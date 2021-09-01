@@ -2282,6 +2282,144 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
+nosql::UpdateKind nosql::get_update_kind(const bsoncxx::document::element& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    switch (update_specification.type())
+    {
+    case bsoncxx::type::k_array:
+        kind = UpdateKind::AGGREGATION_PIPELINE;
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
+
+            if (doc.empty())
+            {
+                kind = UpdateKind::REPLACEMENT_DOCUMENT;
+            }
+            else
+            {
+                for (auto field : doc)
+                {
+                    const char* pData = field.key().data(); // Not necessarily null-terminated.
+
+                    if (*pData == '$')
+                    {
+                        string name(pData, field.key().length());
+
+                        if (name != "$set" && name != "$unset")
+                        {
+                            ostringstream ss;
+                            ss << "Currently the only supported update operators are $set and $unset.";
+                            throw SoftError(ss.str(), error::COMMAND_FAILED);
+                        }
+                        else
+                        {
+                            if (kind == UpdateKind::INVALID)
+                            {
+                                kind = UpdateKind::UPDATE_OPERATORS;
+                            }
+                            else if (kind != UpdateKind::UPDATE_OPERATORS)
+                            {
+                                MXS_ERROR("'%s' contains both fields and update operators.",
+                                          bsoncxx::to_json(doc).c_str());
+                                kind = UpdateKind::INVALID;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (kind == UpdateKind::INVALID)
+                        {
+                            kind = UpdateKind::REPLACEMENT_DOCUMENT;
+                        }
+                        else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
+                        {
+                            MXS_ERROR("'%s' contains both fields and update operators.",
+                                      bsoncxx::to_json(doc).c_str());
+                            kind = UpdateKind::INVALID;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        break;
+
+    default:
+        throw SoftError("Update argument must be either an object or an array", error::FAILED_TO_PARSE);
+    }
+
+    return kind;
+}
+
+string nosql::convert_update_operations(const bsoncxx::document::view& update_operations)
+{
+    string rv;
+
+    for (auto element : update_operations)
+    {
+        if (!rv.empty())
+        {
+            rv += ", ";
+        }
+
+        bool add_value = true;
+
+        if (element.key().compare("$set") == 0)
+        {
+            rv += "JSON_SET(doc, ";
+        }
+        else if (element.key().compare("$unset") == 0)
+        {
+            rv += "JSON_REMOVE(doc, ";
+            add_value = false;
+        }
+        else
+        {
+            // In get_update_kind() it is established that it is either $set or $unset.
+            // This is to catch a changed there without a change here.
+            mxb_assert(!true);
+        }
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        string s;
+        for (auto field : fields)
+        {
+            if (!s.empty())
+            {
+                s += ", ";
+            }
+
+            string key = field.key().data();
+            key = escape_essential_chars(std::move(key));
+
+            s += "'$.";
+            s += key;
+            s += "'";
+
+            if (add_value)
+            {
+                s += ", ";
+                s += nosql::to_value(field);
+            }
+        }
+
+        rv += s;
+
+        rv += ")";
+    }
+
+    rv += " ";
+
+    return rv;
+}
+
 bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
 {
     bool rv = true;
