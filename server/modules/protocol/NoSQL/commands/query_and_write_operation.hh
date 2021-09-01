@@ -1275,47 +1275,8 @@ private:
                             error::LOCATION40414);
         }
 
-        switch (get_update_kind(u))
-        {
-        case UpdateKind::AGGREGATION_PIPELINE:
-            {
-                string message("Aggregation pipeline not supported: '");
-                message += bsoncxx::to_json(update);
-                message += "'.";
-
-                MXB_ERROR("%s", message.c_str());
-                throw HardError(message, error::COMMAND_FAILED);
-            }
-            break;
-
-        case UpdateKind::REPLACEMENT_DOCUMENT:
-            {
-                auto json = bsoncxx::to_json(static_cast<bsoncxx::document::view>(u.get_document()));
-                json = escape_essential_chars(std::move(json));
-
-                sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
-            }
-            break;
-
-        case UpdateKind::UPDATE_OPERATORS:
-            {
-                auto doc = static_cast<bsoncxx::document::view>(u.get_document());
-                sql << convert_update_operations(doc);
-            }
-            break;
-
-        case UpdateKind::INVALID:
-            {
-                string message("Invalid combination of updates: '");
-                message += bsoncxx::to_json(update);
-                message += "'.";
-
-                throw HardError(message, error::COMMAND_FAILED);
-            }
-        }
-
+        sql << update_specification_to_set_value(update, u);
         sql << " ";
-
         sql << query_to_where_clause(q.get_document());
 
         auto multi = update[key::MULTI];

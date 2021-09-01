@@ -495,6 +495,9 @@ UpdateKind get_update_kind(const bsoncxx::document::element& update_specificatio
 
 std::string convert_update_operations(const bsoncxx::document::view& update_operations);
 
+std::string update_specification_to_set_value(const bsoncxx::document::view& update_command,
+                                              const bsoncxx::document::element& update_specification);
+
 
 class Packet
 {

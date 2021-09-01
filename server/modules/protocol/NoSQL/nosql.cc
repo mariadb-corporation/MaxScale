@@ -2423,6 +2423,54 @@ string nosql::convert_update_operations(const bsoncxx::document::view& update_op
     return rv;
 }
 
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
+                                                const bsoncxx::document::element& update_specification)
+{
+    stringstream sql;
+
+    switch (get_update_kind(update_specification))
+    {
+    case UpdateKind::AGGREGATION_PIPELINE:
+        {
+            string message("Aggregation pipeline not supported: '");
+            message += bsoncxx::to_json(update_command);
+            message += "'.";
+
+            MXB_ERROR("%s", message.c_str());
+            throw HardError(message, error::COMMAND_FAILED);
+        }
+        break;
+
+    case UpdateKind::REPLACEMENT_DOCUMENT:
+        {
+            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
+            auto json = bsoncxx::to_json(doc);
+            json = escape_essential_chars(std::move(json));
+
+            sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
+        }
+        break;
+
+    case UpdateKind::UPDATE_OPERATORS:
+        {
+            auto doc = static_cast<bsoncxx::document::view>(update_specification.get_document());
+            sql << convert_update_operations(doc);
+        }
+        break;
+
+    case UpdateKind::INVALID:
+        {
+            string message("Invalid combination of updates: '");
+            message += bsoncxx::to_json(update_command);
+            message += "'.";
+
+            throw HardError(message, error::COMMAND_FAILED);
+        }
+    }
+
+    return sql.str();
+}
+
 bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
 {
     bool rv = true;
