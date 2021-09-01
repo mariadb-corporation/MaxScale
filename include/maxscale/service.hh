@@ -129,6 +129,9 @@ public:
              * Can backend connections be pooled while session is still running? Configured as seconds the
              * session must be idle before backend connections can be pooled. */
             std::chrono::seconds idle_session_pooling_time;
+
+            std::string user_accounts_file_path;        /**< Additional users file **/
+            uint32_t    user_accounts_file_usage {0};   /**< Bitfield defining when to read users **/
         };
 
         const mxs::WorkerGlobal<Values>& values() const

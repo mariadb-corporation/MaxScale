@@ -223,6 +223,19 @@ cfg::ParamSeconds s_idle_session_pool_time(
     cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1),
     cfg::ParamSeconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
 
+cfg::ParamPath s_user_accounts_file(
+    &s_spec, "user_accounts_file", "Load additional users from a file",
+    cfg::ParamPath::Options::R | cfg::ParamPath::Options::F, "", cfg::Param::AT_STARTUP);
+
+cfg::ParamEnumMask<uint32_t> s_user_accounts_file_usage(
+    &s_spec, "user_accounts_file_usage",
+    "When the user accounts file can be read",
+    {
+        {UserAccountsFileUsage::WHEN_SERVER_OK, "when_server_ok"},
+        {UserAccountsFileUsage::WHEN_SERVER_FAIL, "when_server_fail"},
+        {UserAccountsFileUsage::FILE_ONLY, "file_only"},
+    }, UserAccountsFileUsage::WHEN_SERVER_OK, cfg::Param::AT_STARTUP);
+
 template<class Params>
 bool ServiceSpec::do_post_validate(Params params) const
 {
@@ -501,6 +514,8 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::disable_sescmd_history, &s_disable_sescmd_history);
     add_native(&Config::m_v, &Values::max_sescmd_history, &s_max_sescmd_history);
     add_native(&Config::m_v, &Values::idle_session_pooling_time, &s_idle_session_pool_time);
+    add_native(&Config::m_v, &Values::user_accounts_file_path, &s_user_accounts_file);
+    add_native(&Config::m_v, &Values::user_accounts_file_usage, &s_user_accounts_file_usage);
 }
 
 Service::Service(const std::string& name, const std::string& router_name)
@@ -1919,14 +1934,15 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // Once the object is set, it can not change as this would indicate a change in service
     // backend protocol.
     mxb_assert(!m_usermanager);
-    m_usermanager = std::move(user_manager);
-    const auto& config = *m_config.values();
-    m_usermanager->set_credentials(config.user, config.password);
-    m_usermanager->set_backends(m_data->servers);
-    m_usermanager->set_union_over_backends(config.users_from_all);
-    m_usermanager->set_strip_db_esc(config.strip_db_esc);
-    m_usermanager->set_service(this);
 
+    const auto& config = *m_config.values();
+    user_manager->set_credentials(config.user, config.password);
+    user_manager->set_backends(m_data->servers);
+    user_manager->set_union_over_backends(config.users_from_all);
+    user_manager->set_strip_db_esc(config.strip_db_esc);
+    user_manager->set_user_accounts_file(config.user_accounts_file_path, config.user_accounts_file_usage);
+    user_manager->set_service(this);
+    m_usermanager = std::move(user_manager);
     // Message each routingworker to initialize their own user caches. Wait for completion so that
     // the admin thread and workers see the same object.
     mxb::Semaphore sem;
