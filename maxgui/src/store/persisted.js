@@ -30,11 +30,11 @@ export default {
         },
         UPDATE_QUERY_HISTORY(state, { idx, payload }) {
             if (idx) state.query_history.splice(idx, 1)
-            else state.query_history.push(payload)
+            else state.query_history.unshift(payload)
         },
         UPDATE_QUERY_FAVORITE(state, { idx, payload }) {
             if (idx) state.query_favorite.splice(idx, 1)
-            else state.query_favorite.push(payload)
+            else state.query_favorite.unshift(payload)
         },
     },
     actions: {
