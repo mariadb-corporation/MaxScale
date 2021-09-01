@@ -69,7 +69,7 @@
                 </div>
                 <div v-else-if="isGroupRow(row)" class="tr tr--group" :style="{ lineHeight }">
                     <div
-                        class="td px-3 td-col-span"
+                        class="d-flex align-center td pl-1 pr-3 td-col-span"
                         :style="{
                             height: lineHeight,
                             width: '100%',
@@ -90,7 +90,22 @@
                                 $expand
                             </v-icon>
                         </v-btn>
-                        {{ row.groupBy }} : {{ row.value }}
+                        <div
+                            class="tr--group__content d-inline-flex align-center"
+                            :style="{ maxWidth: `${maxRowGroupWidth}px` }"
+                        >
+                            <truncate-string
+                                class="font-weight-bold"
+                                :text="`${row.groupBy}`"
+                                :maxWidth="maxRowGroupWidth * 0.1"
+                            />
+                            <span class="d-inline-block val-separator mr-4">:</span>
+                            <truncate-string
+                                :text="`${row.value}`"
+                                :maxWidth="maxRowGroupWidth * 0.9"
+                            />
+                        </div>
+
                         <v-btn class="ml-2" width="24" height="24" icon @click="handleUngroup">
                             <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
                         </v-btn>
@@ -190,6 +205,14 @@ export default {
         },
         rowHeight() {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
+        },
+        maxRowGroupWidth() {
+            /** A workaround to get maximum width of row group header
+             * 17 is the total width of padding and border of table
+             * 28 is the width of toggle button
+             * 32 is the width of ungroup button
+             */
+            return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
         },
         tableRows() {
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
