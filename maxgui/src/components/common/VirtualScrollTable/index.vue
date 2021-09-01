@@ -192,54 +192,12 @@ export default {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
         tableRows() {
-            //TODO: Break down to smaller functions
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
              * Though it comes with pitfalls and should be used for ajax data
              */
             let rows = JSON.parse(JSON.stringify(this.rows))
-            if (this.idxOfSortingCol !== -1) {
-                rows.sort((a, b) => {
-                    if (this.isDesc)
-                        return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
-                    else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
-                })
-            }
-            if (this.idxOfGroupCol !== -1 && !this.isVertTable) {
-                //TODO: Provide customGroup which is useful for grouping timestamp value by date
-                let groupRows = []
-                let hash = {}
-                rows.forEach(row =>
-                    (hash[row[this.idxOfGroupCol]] || (hash[row[this.idxOfGroupCol]] = [])).push(
-                        row
-                    )
-                )
-                this.assignTotalGroupsLength(Object.keys(hash).length)
-                Object.keys(hash).forEach(v => {
-                    groupRows.push({
-                        groupBy: this.activeGroupBy,
-                        value: v,
-                        groupLength: hash[v].length,
-                    })
-                    groupRows = [
-                        ...groupRows,
-                        ...hash[v].map(r => r.filter((_, idx) => idx !== this.idxOfGroupCol)),
-                    ]
-                })
-                let hiddenRowIdxs = []
-                if (this.collapsedRowGroups.length) {
-                    for (const [i, r] of groupRows.entries()) {
-                        if (this.isRowCollapsed(r)) {
-                            hiddenRowIdxs = [
-                                ...hiddenRowIdxs,
-                                ...Array(r.groupLength)
-                                    .fill()
-                                    .map((_, n) => n + i + 1),
-                            ]
-                        }
-                    }
-                }
-                return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
-            }
+            if (this.idxOfSortingCol !== -1) this.handleSort(rows)
+            if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
         },
         visHeaders() {
@@ -273,6 +231,9 @@ export default {
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
+        cellMaxWidth(i) {
+            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+        },
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc
@@ -281,8 +242,35 @@ export default {
             this.idxOfSortingCol = this.visHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
-        cellMaxWidth(i) {
-            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+        /**
+         * @param {Array} rows - 2d array to be sorted
+         */
+        handleSort(rows) {
+            rows.sort((a, b) => {
+                if (this.isDesc) return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
+                else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
+            })
+        },
+        handleGroupRows(rows) {
+            //TODO: Provide customGroup which is useful for grouping timestamp value by date
+            let groupRows = []
+            let hash = {}
+            rows.forEach(row =>
+                (hash[row[this.idxOfGroupCol]] || (hash[row[this.idxOfGroupCol]] = [])).push(row)
+            )
+            this.assignTotalGroupsLength(Object.keys(hash).length)
+            Object.keys(hash).forEach(v => {
+                groupRows.push({
+                    groupBy: this.activeGroupBy,
+                    value: v,
+                    groupLength: hash[v].length,
+                })
+                groupRows = [
+                    ...groupRows,
+                    ...hash[v].map(r => r.filter((_, idx) => idx !== this.idxOfGroupCol)),
+                ]
+            })
+            return this.handleFilterGroupRows(groupRows)
         },
         /**
          * @param {Object} payload.activeGroupBy - header name
@@ -292,6 +280,26 @@ export default {
             this.activeGroupBy = activeGroupBy
             this.activeGroupByHeader = header
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
+        },
+        /**
+         * @param {Array} groupRows - rows that have been grouped
+         * @returns {Array} - filtered rows by collapsedRowGroups values
+         */
+        handleFilterGroupRows(groupRows) {
+            let hiddenRowIdxs = []
+            if (this.collapsedRowGroups.length) {
+                for (const [i, r] of groupRows.entries()) {
+                    if (this.isRowCollapsed(r)) {
+                        hiddenRowIdxs = [
+                            ...hiddenRowIdxs,
+                            ...Array(r.groupLength)
+                                .fill()
+                                .map((_, n) => n + i + 1),
+                        ]
+                    }
+                }
+            }
+            return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
         },
         /**
          * totalGroupsLength is used mainly to calculate total number of rows (row groups are not counted)
