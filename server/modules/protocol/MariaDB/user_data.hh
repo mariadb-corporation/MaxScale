@@ -209,7 +209,7 @@ public:
     void set_strip_db_esc(bool strip_db_esc) override;
     void set_user_accounts_file(const std::string& filepath, uint32_t file_usage) override;
     void set_service(SERVICE* service) override;
-    void add_custom_user(const mariadb::UserEntry& entry);
+
     bool can_update_immediately() const;
 
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
@@ -275,11 +275,6 @@ private:
     std::string          m_password;
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
-
-    /**
-     * Additional entries which need to be added to the user database even when they do not exist on
-     * backends. */
-    std::vector<mariadb::UserEntry> m_custom_entries;
 
     /** User accounts file related settings. */
     std::string           m_user_accounts_file;

@@ -297,7 +297,6 @@ bool MariaDBUserManager::update_users()
     sett.user = m_username;
     sett.password = m_password;
     backends = m_backends;
-    custom_entries = m_custom_entries;
     user_accounts_file = m_user_accounts_file;
     lock.unlock();
 
@@ -956,29 +955,6 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
                                "clients logging in to a specific database.";
             MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
         }
-    }
-}
-
-void MariaDBUserManager::add_custom_user(const mariadb::UserEntry& entry)
-{
-    bool duplicate_found = false;
-    Guard guard(m_settings_lock);
-    for (const auto& custom_entry : m_custom_entries)
-    {
-        if (entry.username == custom_entry.username && entry.host_pattern == custom_entry.host_pattern)
-        {
-            duplicate_found = true;
-        }
-    }
-
-    if (duplicate_found)
-    {
-        MXB_ERROR("Cannot add custom user entry '%s'@'%s', as it already exists for service '%s'.",
-                  entry.username.c_str(), entry.host_pattern.c_str(), m_service->name());
-    }
-    else
-    {
-        m_custom_entries.push_back(entry);
     }
 }
 

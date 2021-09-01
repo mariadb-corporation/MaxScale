@@ -129,15 +129,6 @@ public:
         return nullptr;
     }
 
-    /**
-     * Listener calls this during its creation right after the user account manager has been created.
-     *
-     * @param manager The generated user account manager
-     */
-    virtual void user_account_manager_created(mxs::UserAccountManager& manager)
-    {
-    }
-
     virtual uint64_t capabilities() const
     {
         return 0;
@@ -440,8 +431,8 @@ MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api =
 
 namespace UserAccountsFileUsage
 {
-constexpr uint32_t WHEN_SERVER_OK = (1 << 0);    /* Default. Use file when normal fetch succeeded. */
-constexpr uint32_t WHEN_SERVER_FAIL = (1 << 1);  /* Use file when normal fetch failed. */
-constexpr uint32_t FILE_ONLY = (1 << 2);         /* Use file only. Overrides other settings. */
+constexpr uint32_t WHEN_SERVER_OK = (1 << 0);   /* Default. Use file when normal fetch succeeded. */
+constexpr uint32_t WHEN_SERVER_FAIL = (1 << 1); /* Use file when normal fetch failed. */
+constexpr uint32_t FILE_ONLY = (1 << 2);        /* Use file only. Overrides other settings. */
 }
 }
