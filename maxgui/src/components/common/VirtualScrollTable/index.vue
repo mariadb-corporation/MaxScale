@@ -274,25 +274,36 @@ export default {
                 else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
             })
         },
-        handleGroupRows(rows) {
+        /** This groups 2d array with same value at provided index to a Map
+         * @param {Array} rows - 2d array to be grouped into a Map
+         * @returns {Map} - returns map with value as key and value is a matrix (2d array)
+         */
+        groupValues({ rows, idx }) {
             //TODO: Provide customGroup which is useful for grouping timestamp value by date
+            let map = new Map()
+            rows.forEach(row => {
+                const key = row[idx]
+                let matrix = map.get(key) || [] // assign an empty arr if not found
+                matrix.push(row)
+                map.set(key, matrix)
+            })
+            return map
+        },
+        handleGroupRows(rows) {
+            const rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
+            this.assignTotalGroupsLength(rowMap.size)
             let groupRows = []
-            let hash = {}
-            rows.forEach(row =>
-                (hash[row[this.idxOfGroupCol]] || (hash[row[this.idxOfGroupCol]] = [])).push(row)
-            )
-            this.assignTotalGroupsLength(Object.keys(hash).length)
-            Object.keys(hash).forEach(v => {
+            for (const [key, value] of rowMap) {
                 groupRows.push({
                     groupBy: this.activeGroupBy,
-                    value: v,
-                    groupLength: hash[v].length,
+                    value: key,
+                    groupLength: value.length,
                 })
                 groupRows = [
                     ...groupRows,
-                    ...hash[v].map(r => r.filter((_, idx) => idx !== this.idxOfGroupCol)),
+                    ...value.map(row => row.filter((_, idx) => idx !== this.idxOfGroupCol)),
                 ]
-            })
+            }
             return this.handleFilterGroupRows(groupRows)
         },
         /**
