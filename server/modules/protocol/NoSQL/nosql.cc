@@ -1638,7 +1638,9 @@ string array_op_to_condition(const string& field,
                     {
                         is_null = true;
                     }
-                    ss << ")) = 1)";
+                    ss << ")) = 1 AND JSON_EXTRACT(doc, '$." << p << "[*][*]') IS NULL)";
+
+                    // With the [*][*] above we e.g. exclude [[2]] when looking for [2].
 
                     if (is_single)
                     {
@@ -1649,7 +1651,7 @@ string array_op_to_condition(const string& field,
 
                     if (is_null)
                     {
-                        ss << " OR (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                        ss << " OR (JSON_EXTRACT(doc, '$." << p << "') IS NULL)";
                     }
                 };
                 ss << ")";
@@ -1658,7 +1660,8 @@ string array_op_to_condition(const string& field,
             {
                 ss << "(JSON_CONTAINS(doc, JSON_ARRAY(";
                 bool is_null = add_element_array(ss, all_elements);
-                ss << "), '$." << field << "') = 1)";
+                ss << "), '$." << field << "') = 1"
+                   <<  " AND JSON_EXTRACT(doc, '$." << field << "[*][*]') IS NULL)";
 
                 if (is_single)
                 {
