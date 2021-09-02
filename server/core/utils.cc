@@ -610,6 +610,11 @@ int open_network_socket(enum mxs_socket_type type,
 
                         memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
 
+                        // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
+                        // at the bind() stage but can theoretically cause them to appear in the connect()
+                        // stage.
+                        int one = 1;
+                        setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
                         if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
                         {

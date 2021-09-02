@@ -109,7 +109,7 @@ bool GaleraCluster::check_replication()
         fflush(stdout);
     }
 
-    if (connect() == 0)
+    if (connect("") == 0)
     {
         Row r = get_row(nodes[0], "SHOW STATUS WHERE Variable_name='wsrep_cluster_size'");
 
