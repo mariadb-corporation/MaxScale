@@ -483,6 +483,12 @@ std::string query_to_where_clause(const bsoncxx::document::view& filter);
 
 std::string sort_to_order_by(const bsoncxx::document::view& sort);
 
+std::string update_specification_to_set_value(const bsoncxx::document::view& update_command,
+                                              const bsoncxx::document::element& update_specification);
+
+std::string update_specification_to_set_value(const bsoncxx::document::view& update_specification);
+
+
 class Packet
 {
 public:

@@ -303,13 +303,13 @@ void Command::throw_unexpected_packet()
     throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
 }
 
-GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
+GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     GWBUF* pResponse = nullptr;
 
     if (m_response_kind == ResponseKind::REPLY)
     {
-        pResponse = create_reply_response(doc);
+        pResponse = create_reply_response(doc, is_error);
     }
     else
     {
@@ -319,12 +319,18 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc) const
     return pResponse;
 }
 
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents, size_t nDocuments) const
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents,
+                                                             size_t nDocuments,
+                                                             IsError is_error) const
 {
     // TODO: In the following is assumed that whatever is returned will
     // TODO: fit into a MongoDB packet.
 
-    int32_t response_flags = MONGOC_QUERY_AWAIT_DATA;
+    int32_t response_flags = 0;
+    if (is_error == IsError::YES)
+    {
+        response_flags |= MONGOC_REPLY_QUERY_FAILURE;
+    }
     int64_t cursor_id = 0;
     int32_t starting_from = 0;
     int32_t number_returned = nDocuments;
@@ -357,7 +363,7 @@ GWBUF* Command::create_reply_response(size_t size_of_documents,
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size());
+    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size(), IsError::NO);
 
     for (const auto& doc : documents)
     {
@@ -371,7 +377,7 @@ GWBUF* Command::create_reply_response(size_t size_of_documents,
     return pResponse;
 }
 
-GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
+GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
 
@@ -381,7 +387,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc) const
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1);
+    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1, is_error);
 
     memcpy(pData, doc_view.data(), doc_view.length());
 
@@ -678,22 +684,20 @@ string OpUpdateCommand::description() const
 
 GWBUF* OpUpdateCommand::execute()
 {
-    ostringstream sql;
-    sql << "UPDATE " << table() << " SET DOC = ";
-
-    // TODO: In principle the document may be something else than a
-    // TODO: simple replacement document.
-    auto json = escape_essential_chars(bsoncxx::to_json(m_req.update()));
-
-    sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$')) ";
-    sql << query_to_where_clause(m_req.selector());
-
     if (m_req.is_upsert())
     {
         MXS_WARNING("OP_UPDATE(%s): upsert not supported, "
                     "selector: '%s', document: '%s'.",
-                    m_req.zCollection(), bsoncxx::to_json(m_req.selector()).c_str(), json.c_str());
+                    m_req.zCollection(),
+                    bsoncxx::to_json(m_req.selector()).c_str(),
+                    bsoncxx::to_json(m_req.update()).c_str());
     }
+
+    ostringstream sql;
+    sql << "UPDATE " << table() << " SET DOC = "
+        << update_specification_to_set_value(m_req.update())
+        << " "
+        << query_to_where_clause(m_req.selector());
 
     if (!m_req.is_multi())
     {

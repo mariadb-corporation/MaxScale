@@ -104,6 +104,8 @@ int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::documen
         throw std::runtime_error(ss.str());
     }
 
+    *pView = bsoncxx::document::view(pData, size);
+
     return size;
 }
 
@@ -709,12 +711,18 @@ GWBUF* nosql::SoftError::create_response(const Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
-void nosql::SoftError::create_response(const Command&, DocumentBuilder& doc) const
+void nosql::SoftError::create_response(const Command& command, DocumentBuilder& doc) const
 {
     doc.append(kvp(key::OK, 0));
+    if (command.response_kind() == Command::ResponseKind::REPLY)
+    {
+        // TODO: Turning on the error bit in the OP_REPLY is not sufficient, but "$err"
+        // TODO: must be set as well. Figure out why, because it should not be needed.
+        doc.append(kvp("$err", what()));
+    }
     doc.append(kvp(key::ERRMSG, what()));
     doc.append(kvp(key::CODE, m_code));
     doc.append(kvp(key::CODE_NAME, nosql::error::name(m_code)));
@@ -755,7 +763,7 @@ GWBUF* nosql::HardError::create_response(const nosql::Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
 void nosql::HardError::create_response(const Command&, DocumentBuilder& doc) const
@@ -781,7 +789,7 @@ GWBUF* nosql::MariaDBError::create_response(const Command& command) const
     DocumentBuilder doc;
     create_response(command, doc);
 
-    return command.create_response(doc.extract());
+    return command.create_response(doc.extract(), Command::IsError::YES);
 }
 
 void nosql::MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
@@ -952,24 +960,6 @@ string get_and_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-string get_and_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$and") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_and_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$and must be an array", nosql::error::BAD_VALUE);
-    }
-
-    return condition;
-}
-
 // https://docs.mongodb.com/manual/reference/operator/query/nor/#op._S_nor
 string get_nor_condition(const bsoncxx::array::view& array)
 {
@@ -1008,24 +998,6 @@ string get_nor_condition(const bsoncxx::array::view& array)
     if (!condition.empty())
     {
         condition = "(" + condition + ")";
-    }
-
-    return condition;
-}
-
-string get_nor_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$nor") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_nor_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$nor must be an array", nosql::error::BAD_VALUE);
     }
 
     return condition;
@@ -1074,24 +1046,6 @@ string get_or_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-string get_or_condition(const bsoncxx::document::element& element)
-{
-    mxb_assert(element.key().compare("$or") == 0);
-
-    string condition;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        condition = get_or_condition(element.get_array());
-    }
-    else
-    {
-        throw nosql::SoftError("$or must be an array", nosql::error::BAD_VALUE);
-    }
-
-    return condition;
-}
-
 // https://docs.mongodb.com/manual/reference/operator/query/#logical
 string get_logical_condition(const bsoncxx::document::element& element)
 {
@@ -1099,17 +1053,40 @@ string get_logical_condition(const bsoncxx::document::element& element)
 
     const auto& key = element.key();
 
+    auto get_array = [](const char* zOp, const bsoncxx::document::element& element)
+    {
+        if (element.type() != bsoncxx::type::k_array)
+        {
+            ostringstream ss;
+            ss << zOp << " must be an array";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        auto array = static_cast<bsoncxx::array::view>(element.get_array());
+
+        auto begin = array.begin();
+        auto end = array.end();
+
+        if (begin == end)
+        {
+            throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
+        }
+
+        return array;
+    };
+
     if (key.compare("$and") == 0)
     {
-        condition = get_and_condition(element);
+        condition = get_and_condition(get_array("$and", element));
     }
     else if (key.compare("$nor") == 0)
     {
-        condition = get_nor_condition(element);
+        condition = get_nor_condition(get_array("$nor", element));
     }
     else if (key.compare("$or") == 0)
     {
-        condition = get_or_condition(element);
+        condition = get_or_condition(get_array("$or", element));
     }
     else
     {
@@ -1237,6 +1214,22 @@ string element_to_value(const document_element_or_array_item& x, const string& o
 
     case bsoncxx::type::k_null:
         ss << "'null'";
+        break;
+
+    case bsoncxx::type::k_regex:
+        {
+            ostringstream ss2;
+
+            auto r = x.get_regex();
+            if (r.options.length() != 0)
+            {
+                ss2 << "(?" << r.options << ")";
+            }
+
+            ss2 << r.regex;
+
+            ss << "REGEXP '" << escape_essential_chars(ss2.str()) << "'";
+        }
         break;
 
     default:
@@ -1571,122 +1564,189 @@ string array_op_to_condition(const string& field,
     }
     else
     {
-        vector<string> paths;
+        bool is_single = (++all_elements.begin() == all_elements.end());
 
-        auto i = field.find('.');
-
-        if (i == string::npos)
-        {
-            // A field like "a" becomes "'$.a'". No array selector on single fields as
-            // we also want a match for a direct value (and not just value in array), as
-            // that seems to be required.
-            string path = "'$." + field + "'";
-            paths.push_back(path);
-        }
-        else
-        {
-            // A field like "a.b" must be split into the alternatives "'$.a[*].b'" and "'$.a.b'".
-            // The array selector must not be on the last field.
-            vector<string> fields;
-            decltype(i) j = 0;
-            while (i != string::npos)
-            {
-                fields.push_back(field.substr(j, i - j));
-                j = ++i;
-                i = field.find('.', i);
-            }
-            fields.push_back(field.substr(j));
-
-            for (i = 0; i < fields.size(); ++i)
-            {
-                string path("'$");
-                for (j = 0; j < i; ++j)
-                {
-                    path += '.';
-                    path += fields[j];
-                }
-
-                path += '.';
-                path += fields[i];
-
-                if (i < fields.size() - 1)
-                {
-                    // Do not add array selector to last part.
-                    path += "[*]";
-                }
-
-                for (j = i + 1; j < fields.size(); ++j)
-                {
-                    path += '.';
-                    path += fields[j];
-                }
-
-                path += '\'';
-
-                paths.push_back(path);
-            }
-        }
+        auto i = field.find_last_of('.');
+        bool is_scoped = (i != string::npos);
 
         ss << "(";
 
-        bool first_element = true;
-        for (const auto& one_element : all_elements)
+        if (array_op == ArrayOp::AND)
         {
-            if (first_element)
+            auto add_element_array = [zDescription](ostream& ss, const bsoncxx::array::view& all_elements)
             {
-                first_element = false;
+                bool is_null = false;
+                bool first_element = true;
+                for (const auto& one_element : all_elements)
+                {
+                    if (one_element.type() == bsoncxx::type::k_null)
+                    {
+                        is_null = true;
+                    }
+                    else
+                    {
+                        // Regexes cannot be added, as they are not values to be compared.
+                        if (one_element.type() != bsoncxx::type::k_regex)
+                        {
+                            if (first_element)
+                            {
+                                first_element = false;
+                            }
+                            else
+                            {
+                                ss << ", ";
+                            }
+
+                            ss << element_to_value(one_element, zDescription);
+                        }
+                    }
+                }
+
+                return is_null;
+            };
+
+            if (is_scoped)
+            {
+                bool is_null = false;
+                string path;
+                path = field.substr(0, i);
+                path += "[*].";
+                path += field.substr(i + 1);
+
+                ss << "(";
+                bool add_or = false;
+                for (auto p : { field, path })
+                {
+                    if (add_or)
+                    {
+                        ss << " OR ";
+                    }
+                    else
+                    {
+                        add_or = true;
+                    }
+
+                    // JSON_EXTRACT has to be used here, because, given a
+                    // document like '{"a" : [ { "x" : 1.0 }, { "x" : 2.0 } ] }'}
+                    // and a query like 'c.find({ "a.x" : { "$all" : [ 1, 2 ] } }',
+                    // the JSON_EXTRACT below will with the path '$.a[*].x' return
+                    // for that document the array '[1.0, 2.0]', which will match
+                    // the array, which is what we want.
+                    ss << "(JSON_CONTAINS(";
+                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY(";
+                    if (add_element_array(ss, all_elements))
+                    {
+                        is_null = true;
+                    }
+                    ss << ")) = 1)";
+
+                    if (is_single)
+                    {
+                        ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                           << element_to_value(*all_elements.begin(), zDescription)
+                           << ")";
+                    }
+
+                    if (is_null)
+                    {
+                        ss << " OR (true AND JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    }
+                };
+                ss << ")";
             }
             else
             {
-                ss << " " << to_logical_operator(array_op) << " ";
+                ss << "(JSON_CONTAINS(doc, JSON_ARRAY(";
+                bool is_null = add_element_array(ss, all_elements);
+                ss << "), '$." << field << "') = 1)";
+
+                if (is_single)
+                {
+                    ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                       << element_to_value(*all_elements.begin(), zDescription)
+                       << ")";
+                }
+
+                if (is_null)
+                {
+                    ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                }
             }
+        }
+        else
+        {
+            mxb_assert(array_op == ArrayOp::OR);
 
             ss << "(";
 
-            auto value = element_to_value(one_element, zDescription);
-            bool is_null = one_element.type() == bsoncxx::type::k_null;
-
-            bool first_path = true;
-            for (const auto& path : paths)
+            bool first_element = true;
+            for (const auto& one_element : all_elements)
             {
-                if (first_path)
+                if (first_element)
                 {
-                    first_path = false;
+                    first_element = false;
                 }
                 else
                 {
                     ss << " OR ";
                 }
 
-                ostringstream ss2;
-                ss2 << "JSON_SEARCH(doc, 'all', " << value << ", NULL, " << path << ")";
-
-                string json_search = ss2.str();
+                bool is_null = (one_element.type() == bsoncxx::type::k_null);
 
                 if (is_null)
                 {
-                    ss << "(";
+                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
                 }
-
-                ss << "(";
-                ss << "(" << json_search << " IS NOT NULL)";
-
-                // Searching for "{$all: [2]}" will turn into a select like
-                // SELECT ... WHERE (((JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]') IS NOT NULL)));
-                // That WHERE will match a row like '{ "a" : [ [ 2.0 ] ] }', although it shouldn't,
-                // as the the 'a' array does not contain an element '2.0', but an array element that
-                // contains the '2.0' element. The JSON_SEARCH(doc, 'all', 2.0, NULL, '$.a[*]')
-                // will for that row return "$.a[0][0]". Thus, "][" can be used for excluding
-                // such rows.
-
-                ss << " AND (INSTR(" << json_search << ", \"][\") = 0)";
-                ss << ")";
-
-                if (is_null)
+                else
                 {
-                    ss << " OR ";
-                    ss << "(JSON_CONTAINS_PATH(doc, 'all', " << path << ") = 0)";
-                    ss << ")";
+                    if (is_scoped)
+                    {
+                        string path;
+                        path = field.substr(0, i);
+                        path += "[*].";
+                        path += field.substr(i + 1);
+
+                        ss << "(";
+                        bool add_or = false;
+                        for (auto p : { field, path })
+                        {
+                            if (add_or)
+                            {
+                                ss << " OR ";
+                            }
+                            else
+                            {
+                                add_or = true;
+                            }
+
+                            if (one_element.type() != bsoncxx::type::k_regex)
+                            {
+                                ss << "(JSON_CONTAINS(";
+                                ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
+                                   << element_to_value(one_element, zDescription)
+                                   << ")) = 1)";
+                            }
+                            else
+                            {
+                                ss << "false";
+                            }
+
+                            ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                               << element_to_value(one_element, zDescription)
+                               << ")";
+                        }
+                        ss << ")";
+                    }
+                    else
+                    {
+                        ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
+                           << element_to_value(one_element, zDescription)
+                           << "), '$." << field << "') = 1)";
+
+                        ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                           << element_to_value(one_element, zDescription)
+                           << ")";
+                    }
                 }
             }
 
@@ -1965,13 +2025,29 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             }
         }
 
-        if (type == bsoncxx::type::k_document)
+        switch (type)
         {
+        case bsoncxx::type::k_document:
             condition = get_comparison_condition(field, element.get_document());
-        }
-        else
-        {
-            condition = "( JSON_EXTRACT(doc, '$." + field + "') = " + element_to_value(element) + ")";
+            break;
+
+        case bsoncxx::type::k_regex:
+            condition = "(JSON_VALUE(doc, '$." + field + "') " + element_to_value(element) + ")";
+            break;
+
+        case bsoncxx::type::k_array:
+            // TODO: This probably needs to be dealt with explicitly.
+        default:
+            {
+                auto value = element_to_value(element);
+                condition
+                    // Without the explicit check for NULL, this does not work when NOT due to $nor
+                    // is stashed in front of the whole thing.
+                    = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
+                    + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), " + value + ") = 1)"
+                    + " OR "
+                    + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
+            }
         }
     }
 
@@ -2213,6 +2289,234 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
     }
 
     return order_by;
+}
+
+namespace
+{
+
+enum class UpdateKind
+{
+    AGGREGATION_PIPELINE, // Element is an array
+    REPLACEMENT_DOCUMENT, // Element is a document
+    UPDATE_OPERATORS,     // Element is a document
+    INVALID
+};
+
+UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    if (update_specification.empty())
+    {
+        kind = UpdateKind::REPLACEMENT_DOCUMENT;
+    }
+    else
+    {
+        for (auto field : update_specification)
+        {
+            const char* pData = field.key().data(); // Not necessarily null-terminated.
+
+            string_view name(field.key().data(), field.key().length());
+
+            if (*pData == '$')
+            {
+                if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
+                {
+                    if (name.compare("$set") != 0 && name.compare("$unset") != 0)
+                    {
+                        // TODO: This will now terminate the whole processing,
+                        // TODO: but this should actually be returned as a write
+                        // TODO: error for the particular update object.
+                        ostringstream ss;
+                        ss << "Unknown modifier: " << name
+                           << ". Expected a valid update modifier or "
+                           << "pipeline-style update specified as an array. "
+                           << "Currently the only supported update operators are $set and $unset.";
+
+                        throw SoftError(ss.str(), error::COMMAND_FAILED);
+                    }
+
+                    kind = UpdateKind::UPDATE_OPERATORS;
+                }
+                else
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "The dollar ($) prefixed field '" << name << "' in '" << name << "' "
+                       << "is not valid for storage.";
+
+                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                }
+            }
+            else
+            {
+                if (kind == UpdateKind::INVALID)
+                {
+                    kind = UpdateKind::REPLACEMENT_DOCUMENT;
+                }
+                else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "Unknown modifier: " << name
+                       << ". Expected  a valid update modifier or "
+                       << "pipeline-style update specified as an array";
+
+                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                }
+            }
+        }
+    }
+
+    mxb_assert(kind != UpdateKind::INVALID);
+
+    return kind;
+}
+
+UpdateKind get_update_kind(const bsoncxx::document::element& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    switch (update_specification.type())
+    {
+    case bsoncxx::type::k_array:
+        kind = UpdateKind::AGGREGATION_PIPELINE;
+        break;
+
+    default:
+        kind = get_update_kind(update_specification.get_document());
+    }
+
+    mxb_assert(kind != UpdateKind::INVALID);
+
+    return kind;
+}
+
+string convert_update_operations(const bsoncxx::document::view& update_operations)
+{
+    string rv;
+
+    for (auto element : update_operations)
+    {
+        if (!rv.empty())
+        {
+            rv += ", ";
+        }
+
+        bool add_value = true;
+
+        if (element.key().compare("$set") == 0)
+        {
+            rv += "JSON_SET(doc, ";
+        }
+        else if (element.key().compare("$unset") == 0)
+        {
+            rv += "JSON_REMOVE(doc, ";
+            add_value = false;
+        }
+        else
+        {
+            // In get_update_kind() it is established that it is either $set or $unset.
+            // This is to catch a changed there without a change here.
+            mxb_assert(!true);
+        }
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        string s;
+        for (auto field : fields)
+        {
+            if (!s.empty())
+            {
+                s += ", ";
+            }
+
+            string key = field.key().data();
+            key = escape_essential_chars(std::move(key));
+
+            s += "'$.";
+            s += key;
+            s += "'";
+
+            if (add_value)
+            {
+                s += ", ";
+                s += nosql::to_value(field);
+            }
+        }
+
+        rv += s;
+
+        rv += ")";
+    }
+
+    rv += " ";
+
+    return rv;
+}
+
+void update_specification_to_set_value(UpdateKind kind,
+                                       const bsoncxx::document::view& update_specification,
+                                       ostream& sql)
+{
+    switch (kind)
+    {
+    case UpdateKind::REPLACEMENT_DOCUMENT:
+        {
+            auto json = bsoncxx::to_json(update_specification);
+            json = escape_essential_chars(std::move(json));
+
+            sql << "JSON_SET('" << json << "', '$._id', JSON_EXTRACT(id, '$'))";
+        }
+        break;
+
+    case UpdateKind::UPDATE_OPERATORS:
+        sql << convert_update_operations(update_specification);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+}
+
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
+                                                const bsoncxx::document::element& update_specification)
+{
+    ostringstream sql;
+
+    auto kind = get_update_kind(update_specification);
+
+    switch (kind)
+    {
+    case UpdateKind::AGGREGATION_PIPELINE:
+        {
+            string message("Aggregation pipeline not supported: '");
+            message += bsoncxx::to_json(update_command);
+            message += "'.";
+
+            MXB_ERROR("%s", message.c_str());
+            throw HardError(message, error::COMMAND_FAILED);
+        }
+        break;
+
+    default:
+        update_specification_to_set_value(kind, update_specification.get_document(), sql);
+    }
+
+    return sql.str();
+}
+
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
+{
+    ostringstream sql;
+
+    auto kind = get_update_kind(update_specification);
+
+    update_specification_to_set_value(kind, update_specification, sql);
+
+    return sql.str();
 }
 
 bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
