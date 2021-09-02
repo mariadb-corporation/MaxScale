@@ -98,6 +98,8 @@ public:
 
     bool copy_from_node(const std::string& src, const std::string& dest);
 
+    void delete_from_node(const std::string& filepath);
+
     const char* ip4() const;
     const char* priv_ip() const;
     const char* hostname() const;
@@ -105,12 +107,16 @@ public:
     const char* access_homedir() const;
     const char* access_sudo() const;
     const char* sshkey() const;
+    const char* name() const;
 
     const std::string& ip4s() const;
     const std::string& ip6s() const;
 
     TestLogger& log();
     bool        is_remote() const;
+
+    void add_linux_user(const std::string& name, const std::string& pw);
+    void remove_linux_user(const std::string& name);
 
     const std::string m_name;       /**< E.g. "node_001" */
 

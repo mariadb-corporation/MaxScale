@@ -1,13 +1,19 @@
-#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <maxbase/format.hh>
 #include <maxtest/execute_cmd.hh>
 #include <maxtest/test_dir.hh>
+#include <maxtest/nodes.hh>
 
-using namespace std;
+using std::string;
 
+namespace
+{
+const char lib_temp[] = "/tmp/pam_user_map.so";
+const char pam_map_config_name[] = "pam_config_user_map";
+const char pam_user_map_conf_dst[] = "/etc/security/user_map.conf";
+}
 
 int execute_cmd(char* cmd, char** res)
 {
@@ -123,5 +129,63 @@ std::string to_string(ConnectorVersion vrs)
         break;
     }
     return rval;
+}
+}
+
+namespace pam
+{
+void copy_user_map_lib(mxt::VMNode& source, mxt::VMNode& dst)
+{
+    // Copy the pam_user_map.so-file from one VM to another. This file is installed with the server,
+    // but not with MaxScale. Depending on distro, the file may be in different places. Check both.
+    string lib_source1 = "/usr/lib64/security/pam_user_map.so";
+    string lib_source2 = "/usr/lib/security/pam_user_map.so";
+
+    if (source.copy_from_node(lib_source1, lib_temp) || source.copy_from_node(lib_source2, lib_temp))
+    {
+        if (dst.copy_to_node(lib_temp, lib_temp))
+        {
+            dst.log().log_msg("pam_user_map.so copied to MaxScale VM.");
+        }
+        else
+        {
+            dst.log().add_failure("Failed to copy library '%s' to %s.",
+                                  lib_temp, dst.name());
+        }
+    }
+    else
+    {
+        source.log().add_failure("Failed to copy library '%s' or '%s' from %s to host machine.",
+                                 lib_source1.c_str(), lib_source2.c_str(), source.name());
+    }
+}
+
+void delete_user_map_lib(mxt::VMNode& dst)
+{
+    // Delete the library file from both the tester VM and destination VM (likely MaxScale).
+    string del_lib_cmd = mxb::string_printf("rm -f %s", lib_temp);
+    int rc = system(del_lib_cmd.c_str());
+    dst.log().expect(rc == 0, "Command '%s' failed, error %i.", del_lib_cmd.c_str(), rc);
+    auto res = dst.run_cmd_output_sudo(del_lib_cmd);
+    dst.log().expect(res.rc == 0, "Command '%s' failed on %s: %s",
+                     del_lib_cmd.c_str(), dst.name(), res.output.c_str());
+}
+
+void copy_map_config(mxt::VMNode& vm)
+{
+    auto test_dir = mxt::SOURCE_DIR;
+    string pam_map_config_path_src = mxb::string_printf("%s/authentication/%s",
+                                                        test_dir, pam_map_config_name);
+    string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
+    string pam_user_map_conf_src = mxb::string_printf("%s/authentication/user_map.conf", test_dir);
+    vm.copy_to_node_sudo(pam_map_config_path_src, pam_map_config_path_dst);
+    vm.copy_to_node_sudo(pam_user_map_conf_src, pam_user_map_conf_dst);
+}
+
+void delete_map_config(mxt::VMNode& vm)
+{
+    string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
+    vm.delete_from_node(pam_map_config_path_dst);
+    vm.delete_from_node(pam_user_map_conf_dst);
 }
 }

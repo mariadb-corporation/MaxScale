@@ -55,6 +55,11 @@ public:
     ScopedUser create_user(const std::string& user, const std::string& host,
                            const std::string& pw);
 
+    /**
+     * Same as above for Xpand. Will create some extra error messages.
+     */
+    ScopedUser create_user_xpand(const std::string& user, const std::string& host,
+                                 const std::string& pw);
 private:
     TestLogger& m_log;
 };

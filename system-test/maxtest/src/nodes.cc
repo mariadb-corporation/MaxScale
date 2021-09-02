@@ -385,6 +385,11 @@ void VMNode::write_node_env_vars()
     write_env_var("_keyfile", m_sshkey);
 }
 
+const char* VMNode::name() const
+{
+    return m_name.c_str();
+}
+
 const char* VMNode::ip4() const
 {
     return m_ip4.c_str();
@@ -492,6 +497,41 @@ bool VMNode::copy_to_node_sudo(const string& src, const string& dest)
         }
     }
     return rval;
+}
+
+void VMNode::add_linux_user(const string& uname, const string& pw)
+{
+    auto unamec = uname.c_str();
+    string add_user_cmd = mxb::string_printf("useradd %s", unamec);
+    string add_pw_cmd = mxb::string_printf("echo %s | passwd --stdin %s", pw.c_str(), unamec);
+
+    auto ret1 = run_cmd_output_sudo(add_user_cmd);
+    if (ret1.rc == 0)
+    {
+        int ret2 = run_cmd_sudo(add_pw_cmd);
+        log().expect(ret2 == 0, "Failed to change password of user '%s' on %s: %d",
+                     unamec, name(), ret2);
+    }
+    else
+    {
+        log().add_failure("Failed to add user '%s' to %s: %s", uname.c_str(), name(), ret1.output.c_str());
+    }
+}
+
+void VMNode::remove_linux_user(const string& uname)
+{
+    string remove_cmd = mxb::string_printf("userdel --remove %s", uname.c_str());
+    auto res = run_cmd_output_sudo(remove_cmd);
+    log().expect(res.rc == 0, "Failed to remove user '%s' from %s: %s",
+                 uname.c_str(), name(), res.output.c_str());
+}
+
+void VMNode::delete_from_node(const string& filepath)
+{
+    string rm_cmd = mxb::string_printf("rm -f %s", filepath.c_str());
+    auto res = run_cmd_output_sudo(rm_cmd);
+    log().expect(res.rc == 0, "Failed to delete file '%s' on %s: %s",
+                 filepath.c_str(), name(), res.output.c_str());
 }
 }
 
