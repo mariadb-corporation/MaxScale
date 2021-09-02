@@ -27,7 +27,6 @@ static struct ThisUnit
 {
     maxbase::WatchdogNotifier* pNotifier = nullptr;
 } this_unit;
-
 }
 
 namespace maxbase
@@ -58,30 +57,33 @@ public:
     {
         mxb_assert(m_nClients == 0);
         m_terminate.store(true, std::memory_order_release);
-        m_sem_start.post();
+        m_cond.notify_one();
         m_thread.join();
     }
 
     void start()
     {
         Guard guard(m_lock);
-        ++m_nClients;
+        int clients = ++m_nClients;
+        guard.unlock();
 
-        if (m_nClients == 1)
+        if (clients == 1)
         {
-            m_sem_start.post();
+            m_cond.notify_one();
         }
     }
 
     void stop()
     {
         Guard guard(m_lock);
-        --m_nClients;
-        mxb_assert(m_nClients >= 0);
+        int clients = --m_nClients;
+        guard.unlock();
 
-        if (m_nClients == 0)
+        mxb_assert(clients >= 0);
+
+        if (clients == 0)
         {
-            m_sem_stop.post();
+            m_cond.notify_one();
         }
     }
 
@@ -89,39 +91,29 @@ private:
     // Run in thread created in constructor.
     void run()
     {
-        uint32_t interval = m_owner.notifier().interval().count();
-        timespec timeout = {interval, 0};
+        auto interval = m_owner.notifier().interval();
 
         while (!m_terminate.load(std::memory_order_acquire))
         {
-            // We will wakeup when someone wants the notifier to run,
-            // or when the process is going down.
-            m_sem_start.wait();
+            Guard guard(m_lock);
 
-            if (!m_terminate.load(std::memory_order_acquire))
+            if (m_nClients > 0)
             {
-                // If the process is not going down...
-                do
-                {
-                    // we ensure the worker appears to be ticking
-                    m_owner.mark_ticking_if_currently_not();
-                }
-                while (!m_sem_stop.timedwait(timeout));
-                // until the semaphore is actually posted, which it will be
-                // once the notification should stop.
+                m_owner.mark_ticking_if_currently_not();
             }
+
+            m_cond.wait_for(guard, interval);
         }
     }
 
-    using Guard = std::lock_guard<std::mutex>;
+    using Guard = std::unique_lock<std::mutex>;
 
-    Dependent&        m_owner;
-    int               m_nClients;
-    std::atomic<bool> m_terminate;
-    std::thread       m_thread;
-    std::mutex        m_lock;
-    mxb::Semaphore    m_sem_start;
-    mxb::Semaphore    m_sem_stop;
+    Dependent&             m_owner;
+    int                    m_nClients;
+    std::atomic<bool>      m_terminate;
+    std::thread            m_thread;
+    std::mutex             m_lock;
+    mxb::ConditionVariable m_cond;
 };
 
 WatchdogNotifier::Dependent::Dependent(WatchdogNotifier* pNotifier)
@@ -160,8 +152,8 @@ void WatchdogNotifier::Dependent::stop_watchdog_workaround()
 }
 
 WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
-    // The internal timeout is 1/2 of the systemd configured interval. Note that
-    // the argument is in usecs, but the interval is stored in secs.
+// The internal timeout is 1/2 of the systemd configured interval. Note that
+// the argument is in usecs, but the interval is stored in secs.
     : m_interval(usecs / 2000000)
 {
     mxb_assert(this_unit.pNotifier == nullptr);
@@ -197,7 +189,8 @@ void WatchdogNotifier::stop()
     {
         mxb_assert(m_thread.get_id() != std::thread::id());
 
-        m_sem.post();
+        m_running.store(false, std::memory_order_relaxed);
+        m_cond.notify_one();
         m_thread.join();
     }
 }
@@ -225,31 +218,27 @@ void WatchdogNotifier::run()
 {
     mxb_assert(m_interval.count() != 0);
 
-    time_t secs = m_interval.count();
-    long nsecs = 0;
-
-    // When started, we immediately make one notification.
-    notify_systemd_watchdog();
-
-    while (m_sem.timedwait(secs, nsecs, mxb::Semaphore::IGNORE_SIGNALS) == false)
+    while (m_running.load(std::memory_order_relaxed))
     {
         notify_systemd_watchdog();
+        unique_lock<mutex> guard(m_cond_lock);
+        m_cond.wait_for(guard, m_interval);
     }
-
-    // If the waiting succeeded, it's because someone has called stop().
 }
 
 void WatchdogNotifier::notify_systemd_watchdog()
 {
     unique_lock<mutex> guard(m_dependents_lock);
 
-    bool all_ticking = std::all_of(m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
+    bool all_ticking = std::all_of(
+        m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
             return pDependent->is_ticking();
         });
 
     if (all_ticking)
     {
-        std::for_each(m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
+        std::for_each(
+            m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
                 pDependent->mark_not_ticking();
             });
     }
@@ -264,5 +253,4 @@ void WatchdogNotifier::notify_systemd_watchdog()
 #endif
     }
 }
-
 }
