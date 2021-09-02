@@ -41,7 +41,7 @@ export default {
         pushQueryLog({ commit }, { startTime, connection_name, query, res }) {
             commit('UPDATE_QUERY_HISTORY', {
                 payload: {
-                    date: startTime,
+                    date: startTime, // Unix time
                     connection_name,
                     time: this.vue.$help.dateFormat({
                         value: startTime,
@@ -55,7 +55,11 @@ export default {
         pushQueryFavorite({ commit }, { date, name, sql }) {
             commit('UPDATE_QUERY_FAVORITE', {
                 payload: {
-                    date,
+                    date, // Unix time
+                    time: this.vue.$help.dateFormat({
+                        value: date,
+                        formatType: 'HH:mm:ss',
+                    }),
                     name,
                     sql,
                 },

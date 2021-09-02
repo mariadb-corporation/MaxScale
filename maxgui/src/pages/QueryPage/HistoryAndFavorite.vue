@@ -38,10 +38,7 @@
                         :text="
                             `${$help.dateFormat({
                                 value: cell,
-                                formatType:
-                                    activeView === SQL_QUERY_MODES.HISTORY
-                                        ? 'ddd, DD MMM YYYY'
-                                        : 'DATE_RFC2822',
+                                formatType: 'ddd, DD MMM YYYY',
                             })}`
                         "
                         :maxWidth="maxWidth"
