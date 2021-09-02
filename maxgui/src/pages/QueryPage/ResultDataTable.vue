@@ -63,6 +63,7 @@
                 :height="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
+                v-on="$listeners"
             >
                 <template
                     v-for="h in visibleHeaders"

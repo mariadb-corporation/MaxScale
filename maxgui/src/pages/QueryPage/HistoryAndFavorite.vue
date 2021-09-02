@@ -31,6 +31,7 @@
                 :width="dynDim.width"
                 :headers="headers"
                 :rows="rows"
+                @custom-group="customGroup"
             >
                 <template v-slot:date="{ data: { cell, maxWidth } }">
                     <truncate-string
@@ -121,11 +122,11 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        //TODO: uncomment this when customGroup is added
-                        /*header.groupable = true */
+                        header.groupable = true
+                        header.hasCustomGroup = true
                         break
                     case 'connection_name':
-                        header.width = 180
+                        header.width = 215
                         header.groupable = true
                         break
                     case 'time':
@@ -163,6 +164,30 @@ export default {
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
+        },
+        /** Custom groups 2d array with same value at provided index to a Map
+         * @param {Array} data.rows - 2d array to be grouped into a Map
+         * @param {Number} data.idx - col index of the inner array
+         * @param {Object} data.header - header object
+         * @param {Function} callback - Callback function to pass the result
+         */
+        customGroup(data, callback) {
+            const { rows, idx, header } = data
+            switch (header.text) {
+                case 'date': {
+                    let map = new Map()
+                    rows.forEach(row => {
+                        const key = this.$help.dateFormat({
+                            value: row[idx],
+                            formatType: 'ddd, DD MMM YYYY',
+                        })
+                        let matrix = map.get(key) || [] // assign an empty arr if not found
+                        matrix.push(row)
+                        map.set(key, matrix)
+                    })
+                    callback(map)
+                }
+            }
         },
     },
 }

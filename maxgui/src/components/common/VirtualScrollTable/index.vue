@@ -275,11 +275,11 @@ export default {
             })
         },
         /** This groups 2d array with same value at provided index to a Map
-         * @param {Array} rows - 2d array to be grouped into a Map
+         * @param {Array} payload.rows - 2d array to be grouped into a Map
+         * @param {Number} payload.idx - col index of the inner array
          * @returns {Map} - returns map with value as key and value is a matrix (2d array)
          */
         groupValues({ rows, idx }) {
-            //TODO: Provide customGroup which is useful for grouping timestamp value by date
             let map = new Map()
             rows.forEach(row => {
                 const key = row[idx]
@@ -290,7 +290,16 @@ export default {
             return map
         },
         handleGroupRows(rows) {
-            const rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
+            let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
+            if (this.headers[this.idxOfGroupCol].hasCustomGroup) {
+                const data = {
+                    rows,
+                    idx: this.idxOfGroupCol,
+                    header: this.headers[this.idxOfGroupCol],
+                }
+                // emit custom-group and provide callback to assign return value of custom-group
+                this.$emit('custom-group', data, map => (rowMap = map))
+            }
             this.assignTotalGroupsLength(rowMap.size)
             let groupRows = []
             for (const [key, value] of rowMap) {

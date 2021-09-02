@@ -77,6 +77,7 @@
   width?: string | number, default width when header is rendered
   maxWidth?: string | number,
   groupable?: boolean
+  hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
 }
  */
 export default {
