@@ -24,6 +24,7 @@
                 :label="$t('columns')"
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
+                :disabled="isGrouping"
             />
             <v-tooltip
                 top
@@ -37,6 +38,7 @@
                         outlined
                         depressed
                         color="accent-dark"
+                        :disabled="isGrouping"
                         v-on="on"
                         @click="isVertTable = !isVertTable"
                     >
@@ -63,6 +65,7 @@
                 :height="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
+                @is-grouping="isGrouping = $event"
                 v-on="$listeners"
             >
                 <template
@@ -117,6 +120,7 @@ export default {
             filterKeyword: '',
             tableToolsHeight: 0,
             isVertTable: false,
+            isGrouping: false,
         }
     },
     computed: {

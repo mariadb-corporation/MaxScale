@@ -11,7 +11,7 @@
             @get-header-width-map="cellWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
-            @on-group="onGroup"
+            @on-group="onGrouping"
         />
         <v-virtual-scroll
             v-if="tableRows.length && visHeaders.length"
@@ -319,10 +319,11 @@ export default {
          * @param {Object} payload.activeGroupBy - header name
          * @param {Number} payload.i - header index
          */
-        onGroup({ header, activeGroupBy }) {
+        onGrouping({ header, activeGroupBy }) {
             this.activeGroupBy = activeGroupBy
             this.activeGroupByHeader = header
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
+            this.$emit('is-grouping', Boolean(activeGroupBy))
         },
         /**
          * @param {Array} groupRows - rows that have been grouped
