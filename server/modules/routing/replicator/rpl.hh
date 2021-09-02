@@ -96,6 +96,14 @@ struct gtid_pos_t
     static gtid_pos_t from_string(std::string str);
     std::string       to_string() const;
     bool              empty() const;
+
+    /**
+     * Comparison. Only compares domain, server id and sequence.
+     *
+     * @param rhs The gtid to compare to
+     * @return True if compared fields match
+     */
+    bool is_equal(const gtid_pos_t& rhs);
 };
 
 /** A single column in a CREATE TABLE statement */

@@ -1370,6 +1370,11 @@ bool gtid_pos_t::empty() const
     return timestamp == 0 && domain == 0 && server_id == 0 && seq == 0 && event_num == 0;
 }
 
+bool gtid_pos_t::is_equal(const gtid_pos_t& rhs)
+{
+    return domain == rhs.domain && server_id == rhs.server_id && seq == rhs.seq;
+}
+
 /**
  * Extract the field type and metadata information from the table map event
  *

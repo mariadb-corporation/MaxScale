@@ -945,6 +945,9 @@ add_test_executable(mxs2106_avro_null.cpp mxs2106_avro_null avro LABELS avrorout
 # MXS-1687: Avrorouter HA test (tests the same mechanism that kafkacdc uses)
 add_test_executable(mxs1687_avro_ha.cc mxs1687_avro_ha mxs1687_avro_ha LABELS avrorouter REPL_BACKEND)
 
+# MXS-3580: Avrorouter multidomain gtid support.
+add_test_executable(avro_gtid.cc avro_gtid avro_gtid LABELS avrorouter REPL_BACKEND)
+
 ############################################
 # END: avrorouter tests                    #
 ############################################
