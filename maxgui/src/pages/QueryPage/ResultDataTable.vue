@@ -18,6 +18,28 @@
                 :maxHeight="tableHeight - 20"
             />
             <v-spacer />
+
+            <v-tooltip
+                v-if="selectedItems.length"
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        x-small
+                        class="mr-2 pa-1 text-capitalize"
+                        outlined
+                        depressed
+                        color="error"
+                        v-on="on"
+                        @click="$emit('on-delete-selected', selectedItems)"
+                    >
+                        {{ $t('delete') }}
+                    </v-btn>
+                </template>
+                <span>{{ $t('deleteSelectedRows') }}</span>
+            </v-tooltip>
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
             <column-list
                 v-model="visHeaderIdxs"
@@ -65,6 +87,8 @@
                 :height="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
+                :showSelect="showSelect"
+                @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 v-on="$listeners"
             >
@@ -112,6 +136,7 @@ export default {
         rows: { type: Array, required: true },
         height: { type: Number, required: true },
         width: { type: Number, required: true },
+        showSelect: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -121,6 +146,7 @@ export default {
             tableToolsHeight: 0,
             isVertTable: false,
             isGrouping: false,
+            selectedItems: [],
         }
     },
     computed: {

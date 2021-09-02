@@ -31,7 +31,10 @@
                 :width="dynDim.width"
                 :headers="headers"
                 :rows="rows"
+                showSelect
+                @on-delete-selected="handleDeleteSelectedRows"
                 @custom-group="customGroup"
+                @current-rows-length="currentRowsLength = $event"
             >
                 <template v-slot:date="{ data: { cell, maxWidth } }">
                     <truncate-string
@@ -46,6 +49,37 @@
                 </template>
             </table-list>
         </keep-alive>
+        <confirm-dialog
+            ref="confirmDelDialog"
+            :title="
+                $t('clearSelectedQueries', {
+                    targetType: $t(
+                        activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'favoriteQueries'
+                    ),
+                })
+            "
+            type="delete"
+            :onSave="deleteSelectedRows"
+            minBodyWidth="624px"
+        >
+            <template v-slot:body-prepend>
+                <p>
+                    {{
+                        $t('info.clearSelectedQueries', {
+                            quantity:
+                                itemsToBeDeleted.length === currentRowsLength
+                                    ? $t('theEntire')
+                                    : $t('selected'),
+                            targetType: $t(
+                                activeView === SQL_QUERY_MODES.HISTORY
+                                    ? 'queryHistory'
+                                    : 'favoriteQueries'
+                            ),
+                        })
+                    }}
+                </p>
+            </template>
+        </confirm-dialog>
     </div>
 </template>
 
@@ -81,6 +115,8 @@ export default {
     data() {
         return {
             headerHeight: 0,
+            itemsToBeDeleted: [],
+            currentRowsLength: 0,
         }
     },
     computed: {
@@ -157,6 +193,8 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
+            SET_QUERY_FAVORITE: 'persisted/SET_QUERY_FAVORITE',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
@@ -185,6 +223,32 @@ export default {
                     callback(map)
                 }
             }
+        },
+        handleDeleteSelectedRows(itemsToBeDeleted) {
+            this.itemsToBeDeleted = itemsToBeDeleted
+            this.$refs.confirmDelDialog.open()
+        },
+        deleteSelectedRows() {
+            const { cloneDeep, xorWith, isEqual } = this.$help.lodash
+            /**
+             * TODO: With current implementation, Virtual-scroll-table uses 2d array to
+             * render table rows so when toggling the visibility of columns,
+             * it's not possible to detect which rows to be deleted or selected.
+             * So there is no other way but to deep compare original history/favorite
+             * rows with selected rows. As a result, columns toggle needs to be
+             * disabled and reset when selecting rows.
+             */
+            let targetMatrices = cloneDeep(this.itemsToBeDeleted).map(
+                row => row.filter((_, i) => i !== 0) // Remove # col
+            )
+            const newMaxtrices = xorWith(this.rows, targetMatrices, isEqual)
+            // Convert to array of objects
+            const newData = this.$help.getObjectRows({
+                columns: this.headers.map(h => h.text),
+                rows: newMaxtrices,
+            })
+
+            this[`SET_QUERY_${this.activeView}`](newData)
         },
     },
 }

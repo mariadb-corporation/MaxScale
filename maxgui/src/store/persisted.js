@@ -28,6 +28,12 @@ export default {
         SET_QUERY_CONFIRM_FLAG(state, payload) {
             state.query_confirm_flag = payload // payload is either 0 or 1
         },
+        SET_QUERY_HISTORY(state, payload) {
+            state.query_history = payload
+        },
+        SET_QUERY_FAVORITE(state, payload) {
+            state.query_favorite = payload
+        },
         UPDATE_QUERY_HISTORY(state, { idx, payload }) {
             if (idx) state.query_history.splice(idx, 1)
             else state.query_history.unshift(payload)

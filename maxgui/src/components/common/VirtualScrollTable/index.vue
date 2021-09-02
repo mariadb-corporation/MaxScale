@@ -6,12 +6,15 @@
             :headers="visHeaders"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
-            :rowsLength="tableRows.length"
-            :totalGroupsLength="totalGroupsLength"
+            :currRowsLen="currRowsLen"
+            :showSelect="showSelect"
+            :isAllselected="isAllselected"
+            :indeterminate="indeterminate"
             @get-header-width-map="cellWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
+            @toggle-select-all="handleSelectAll"
         />
         <v-virtual-scroll
             v-if="tableRows.length && visHeaders.length"
@@ -112,6 +115,29 @@
                     </div>
                 </div>
                 <div v-else class="tr" :style="{ lineHeight }">
+                    <div
+                        v-if="showSelect"
+                        class="td px-3"
+                        :style="{
+                            height: lineHeight,
+                            maxWidth: '50px',
+                            minWidth: '50px',
+                        }"
+                    >
+                        <v-checkbox
+                            :input-value="isRowSelected(row)"
+                            dense
+                            class="checkbox--scale-reduce ma-0"
+                            primary
+                            hide-details
+                            @change="
+                                val =>
+                                    val
+                                        ? selectedItems.push(row)
+                                        : selectedItems.splice(getSelectedRowIdx(row), 1)
+                            "
+                        />
+                    </div>
                     <!-- dependency keys to force a rerender -->
                     <div
                         v-for="(cell, i) in row"
@@ -179,6 +205,7 @@ export default {
         boundingWidth: { type: Number, required: true },
         benched: { type: Number, required: true },
         isVertTable: { type: Boolean, default: false },
+        showSelect: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -194,6 +221,7 @@ export default {
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
             totalGroupsLength: 0,
+            selectedItems: [],
         }
     },
     computed: {
@@ -226,6 +254,37 @@ export default {
         visHeaders() {
             if (this.idxOfGroupCol === -1) return this.headers
             return this.headers.filter(h => this.activeGroupBy !== h.text)
+        },
+        currRowsLen() {
+            return this.tableRows.length - this.totalGroupsLength
+        },
+        isAllselected() {
+            if (!this.selectedItems.length) return false
+            return this.selectedItems.length === this.currRowsLen
+        },
+        indeterminate() {
+            if (!this.selectedItems.length) return false
+            return !this.isAllselected && this.selectedItems.length < this.currRowsLen
+        },
+    },
+    watch: {
+        selectedItems: {
+            deep: true,
+            handler(v) {
+                this.$emit('item-selected', v)
+                this.$emit('current-rows-length', this.currRowsLen)
+            },
+        },
+        rows: {
+            deep: true,
+            handler(v, oV) {
+                // Clear selectedItems once rows value changes
+                if (!this.$help.lodash.isEqual(v, oV)) this.selectedItems = []
+            },
+        },
+        isVertTable(v) {
+            // clear selected items
+            if (v) this.selectedItems = []
         },
     },
     activated() {
@@ -378,6 +437,17 @@ export default {
         handleUngroup() {
             this.collapsedRowGroups = []
             this.$refs.tableHeader.handleToggleGroup(this.activeGroupByHeader)
+        },
+        getSelectedRowIdx(row) {
+            return this.selectedItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
+        },
+        isRowSelected(row) {
+            return this.getSelectedRowIdx(row) === -1 ? false : true
+        },
+        handleSelectAll(v) {
+            // don't select group row
+            if (v) this.selectedItems = this.tableRows.filter(row => Array.isArray(row))
+            else this.selectedItems = []
         },
     },
 }
