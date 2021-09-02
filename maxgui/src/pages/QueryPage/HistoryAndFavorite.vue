@@ -31,7 +31,22 @@
                 :width="dynDim.width"
                 :headers="headers"
                 :rows="rows"
-            />
+            >
+                <template v-slot:date="{ data: { cell, maxWidth } }">
+                    <truncate-string
+                        :text="
+                            `${$help.dateFormat({
+                                value: cell,
+                                formatType:
+                                    activeView === SQL_QUERY_MODES.HISTORY
+                                        ? 'ddd, DD MMM YYYY'
+                                        : 'DATE_RFC2822',
+                            })}`
+                        "
+                        :maxWidth="maxWidth"
+                    />
+                </template>
+            </table-list>
         </keep-alive>
     </div>
 </template>
@@ -98,9 +113,33 @@ export default {
                 case this.SQL_QUERY_MODES.FAVORITE:
                     data = this.query_favorite
             }
-            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => ({
-                text: field,
-            }))
+            return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => {
+                let header = {
+                    text: field,
+                }
+                // assign default width to each column to have better view
+                switch (field) {
+                    case 'date':
+                        header.width = 150
+                        //TODO: uncomment this when customGroup is added
+                        /*header.groupable = true */
+                        break
+                    case 'connection_name':
+                        header.width = 180
+                        header.groupable = true
+                        break
+                    case 'time':
+                        header.width = 90
+                        break
+                    case 'execution_time':
+                        header.width = 150
+                        break
+                    case 'sql':
+                        header.groupable = true
+                        break
+                }
+                return header
+            })
         },
         rows() {
             let data = []

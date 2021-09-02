@@ -562,6 +562,15 @@ export function pxToPct({ px, containerPx }) {
 
 export const immutableUpdate = update
 
+/**
+ * @param {String|Number} value value to be handled
+ * @returns {String} Returns px unit string
+ */
+export function handleAddPxUnit(value) {
+    if (typeof value === 'number') return `${value}px`
+    return value
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -604,6 +613,7 @@ Object.defineProperties(Vue.prototype, {
                 escapeIdentifiers,
                 getObjectRows,
                 pxToPct,
+                handleAddPxUnit,
             }
         },
     },

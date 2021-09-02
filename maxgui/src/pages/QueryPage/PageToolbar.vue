@@ -77,7 +77,7 @@
         <confirm-dialog
             ref="favoriteConfirmDialog"
             :title="$t('confirmations.addToFavorite')"
-            type="run"
+            type="add"
             :onSave="addToFavorite"
             minBodyWidth="768px"
         >
@@ -168,11 +168,12 @@ export default {
         },
         openFavoriteDialog() {
             if (this.query_txt) {
-                this.favorite.date = this.$help.dateFormat({
-                    value: new Date(),
+                this.favorite.date = new Date().valueOf()
+                this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
+                    value: this.favorite.date,
                     formatType: 'DATE_RFC2822',
-                })
-                this.favorite.name = `Favorite statements - ${this.favorite.date}`
+                })}
+                           `
                 this.$refs.favoriteConfirmDialog.open()
             }
         },

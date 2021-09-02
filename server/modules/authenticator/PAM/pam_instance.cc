@@ -14,8 +14,10 @@
 #include "pam_instance.hh"
 
 #include <string>
+#include <maxbase/json.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/secrets.hh>
 #include "pam_client_session.hh"
 #include "pam_backend_session.hh"
 #include "../MariaDBAuth/mysql_auth.hh"
@@ -33,6 +35,54 @@ const string pam_mode_pw_2fa = "password_2FA";
 const string opt_be_map = "pam_backend_mapping";
 const string be_map_none = "none";
 const string be_map_mariadb = "mariadb";
+
+const string opt_pam_user_map = "pam_mapped_pw_file";
+
+bool load_backend_passwords(const string& filepath, PasswordMap* output_map)
+{
+    bool rval = false;
+    mxb::Json js;
+    if (!js.load(filepath))
+    {
+        MXB_ERROR("Failed to load backend user passwords: %s", js.error_msg().c_str());
+    }
+    else
+    {
+        const char errmsg_fmt[] = "Malformed entry in backend passwords file: %s";
+        bool all_elems_ok = false;
+        auto obj = js.get_object("users_and_passwords");
+        if (obj)
+        {
+            all_elems_ok = true;
+            auto arr = obj.get_array_elems();
+
+            for (const auto& elem : arr)
+            {
+                string user = elem.get_string("user");
+                string pw_encr = elem.get_string("password");
+                if (elem.ok())
+                {
+                    // Store the password in the expected SHA1 form.
+                    string pw_clear = mxs::decrypt_password(pw_encr);
+                    PasswordHash password;
+                    gw_sha1_str((const uint8_t*)pw_clear.c_str(), pw_clear.length(), password.pw_hash);
+                    (*output_map)[user] = password;
+                }
+                else
+                {
+                    MXB_ERROR(errmsg_fmt, elem.error_msg().c_str());
+                    all_elems_ok = false;
+                }
+            }
+        }
+        else
+        {
+            MXB_ERROR(errmsg_fmt, js.error_msg().c_str());
+        }
+        rval = all_elems_ok;
+    }
+    return rval;
+}
 }
 
 /**
@@ -90,10 +140,26 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
         }
     }
 
+
+    PasswordMap backend_pwds;
+    if (options->contains(opt_pam_user_map))
+    {
+        string passwords_file = options->get_string(opt_pam_user_map);
+        options->remove(opt_pam_user_map);
+        if (load_backend_passwords(passwords_file, &backend_pwds))
+        {
+            MXB_INFO("Read %zu backend passwords from '%s'.", backend_pwds.size(), passwords_file.c_str());
+        }
+        else
+        {
+            error = true;
+        }
+    }
+
     PamAuthenticatorModule* rval = nullptr;
     if (!error)
     {
-        rval = new PamAuthenticatorModule(cleartext_plugin, pam_mode, be_mapping);
+        rval = new PamAuthenticatorModule(cleartext_plugin, pam_mode, be_mapping, move(backend_pwds));
     }
     return rval;
 }
@@ -110,7 +176,7 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    return std::make_unique<PamClientAuthenticator>(m_cleartext_plugin, m_mode, m_be_mapping);
+    return std::make_unique<PamClientAuthenticator>(m_cleartext_plugin, m_mode, m_be_mapping, m_backend_pwds);
 }
 
 mariadb::SBackendAuth
@@ -142,10 +208,11 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
 }
 
 PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode,
-                                               BackendMapping be_mapping)
+                                               BackendMapping be_mapping, PasswordMap&& backend_pwds)
     : m_cleartext_plugin(cleartext_plugin)
     , m_mode(auth_mode)
     , m_be_mapping(be_mapping)
+    , m_backend_pwds(move(backend_pwds))
 {
 }
 

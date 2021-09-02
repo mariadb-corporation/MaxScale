@@ -431,3 +431,13 @@ h6 {
     line-height: map-deep-get($headings, 'h6', 'line-height');
     color: $deep-ocean;
 }
+
+// https://github.com/vuetifyjs/vuetify/issues/12848
+.row {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.row + .row {
+    margin-top: 0;
+}

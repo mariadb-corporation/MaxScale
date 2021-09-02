@@ -1,17 +1,20 @@
 <template>
     <div class="virtual-table" :class="{ 'no-userSelect': isResizing }">
         <table-header
+            ref="tableHeader"
             :isVertTable="isVertTable"
-            :headers="headers"
+            :headers="visHeaders"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
             :rowsLength="tableRows.length"
+            :totalGroupsLength="totalGroupsLength"
             @get-header-width-map="cellWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
+            @on-group="onGroup"
         />
         <v-virtual-scroll
-            v-if="tableRows.length && headers.length"
+            v-if="tableRows.length && visHeaders.length"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
             :items="tableRows"
@@ -32,28 +35,66 @@
                                 :key="`${cell}_${cellWidthMap[0]}_0`"
                                 class="td fill-height d-flex align-center border-bottom-none px-3"
                                 :style="{
-                                    minWidth: `${cellWidthMap[0]}px`,
+                                    minWidth: $help.handleAddPxUnit(cellWidthMap[0]),
                                 }"
                             >
                                 <truncate-string
-                                    :text="`${headers[i].text}`.toUpperCase()"
-                                    :maxWidth="cellWidthMap[0] - 24"
+                                    :text="`${visHeaders[i].text}`.toUpperCase()"
+                                    :maxWidth="$typy(cellWidthMap[0]).safeNumber - 24"
                                 />
                             </div>
                             <div
                                 :key="`${cell}_${cellWidthMap[1]}_1`"
                                 class="td fill-height d-flex align-center no-border px-3"
                                 :style="{
-                                    minWidth: `${cellWidthMap[1]}px`,
+                                    minWidth: $help.handleAddPxUnit(cellWidthMap[1]),
                                 }"
                             >
-                                <truncate-string
-                                    :text="`${cell}`"
-                                    :maxWidth="cellWidthMap[1] - 24"
-                                />
+                                <slot
+                                    :name="visHeaders[1].text"
+                                    :data="{
+                                        cell,
+                                        header: visHeaders[1],
+                                        maxWidth: cellMaxWidth(1),
+                                    }"
+                                >
+                                    <truncate-string
+                                        :text="`${cell}`"
+                                        :maxWidth="cellMaxWidth(1)"
+                                    />
+                                </slot>
                             </div>
                         </div>
                     </template>
+                </div>
+                <div v-else-if="isGroupRow(row)" class="tr tr--group" :style="{ lineHeight }">
+                    <div
+                        class="td px-3 td-col-span"
+                        :style="{
+                            height: lineHeight,
+                            width: '100%',
+                        }"
+                    >
+                        <v-btn
+                            width="24"
+                            height="24"
+                            class="arrow-toggle mr-1"
+                            icon
+                            @click="() => toggleRowGroup(row)"
+                        >
+                            <v-icon
+                                :class="[isRowCollapsed(row) ? 'arrow-right' : 'arrow-down']"
+                                size="24"
+                                color="deep-ocean"
+                            >
+                                $expand
+                            </v-icon>
+                        </v-btn>
+                        {{ row.groupBy }} : {{ row.value }}
+                        <v-btn class="ml-2" width="24" height="24" icon @click="handleUngroup">
+                            <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
+                        </v-btn>
+                    </div>
                 </div>
                 <div v-else class="tr" :style="{ lineHeight }">
                     <!-- dependency keys to force a rerender -->
@@ -63,10 +104,15 @@
                         class="td px-3"
                         :style="{
                             height: lineHeight,
-                            minWidth: `${cellWidthMap[i]}px`,
+                            minWidth: $help.handleAddPxUnit(cellWidthMap[i]),
                         }"
                     >
-                        <truncate-string :text="`${cell}`" :maxWidth="cellWidthMap[i] - 24" />
+                        <slot
+                            :name="visHeaders[i].text"
+                            :data="{ cell, header: visHeaders[i], maxWidth: cellMaxWidth(i) }"
+                        >
+                            <truncate-string :text="`${cell}`" :maxWidth="cellMaxWidth(i)" />
+                        </slot>
                     </div>
                 </div>
             </template>
@@ -125,8 +171,14 @@ export default {
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
-            idxOfSortingCol: null,
+            idxOfSortingCol: -1,
             isDesc: false,
+            //GroupBy feat states
+            activeGroupBy: '',
+            activeGroupByHeader: null,
+            idxOfGroupCol: -1,
+            collapsedRowGroups: [],
+            totalGroupsLength: 0,
         }
     },
     computed: {
@@ -140,19 +192,61 @@ export default {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
         tableRows() {
-            if (this.idxOfSortingCol === null) return this.rows
+            //TODO: Break down to smaller functions
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
              * Though it comes with pitfalls and should be used for ajax data
              */
             let rows = JSON.parse(JSON.stringify(this.rows))
-            rows.sort((a, b) => {
-                if (this.isDesc) return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
-                else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
-            })
+            if (this.idxOfSortingCol !== -1) {
+                rows.sort((a, b) => {
+                    if (this.isDesc)
+                        return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
+                    else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
+                })
+            }
+            if (this.idxOfGroupCol !== -1 && !this.isVertTable) {
+                //TODO: Provide customGroup which is useful for grouping timestamp value by date
+                let groupRows = []
+                let hash = {}
+                rows.forEach(row =>
+                    (hash[row[this.idxOfGroupCol]] || (hash[row[this.idxOfGroupCol]] = [])).push(
+                        row
+                    )
+                )
+                this.assignTotalGroupsLength(Object.keys(hash).length)
+                Object.keys(hash).forEach(v => {
+                    groupRows.push({
+                        groupBy: this.activeGroupBy,
+                        value: v,
+                        groupLength: hash[v].length,
+                    })
+                    groupRows = [
+                        ...groupRows,
+                        ...hash[v].map(r => r.filter((_, idx) => idx !== this.idxOfGroupCol)),
+                    ]
+                })
+                let hiddenRowIdxs = []
+                if (this.collapsedRowGroups.length) {
+                    for (const [i, r] of groupRows.entries()) {
+                        if (this.isRowCollapsed(r)) {
+                            hiddenRowIdxs = [
+                                ...hiddenRowIdxs,
+                                ...Array(r.groupLength)
+                                    .fill()
+                                    .map((_, n) => n + i + 1),
+                            ]
+                        }
+                    }
+                }
+                return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
+            }
             return rows
         },
+        visHeaders() {
+            if (this.idxOfGroupCol === -1) return this.headers
+            return this.headers.filter(h => this.activeGroupBy !== h.text)
+        },
     },
-
     activated() {
         /**
          * activated hook is triggered when this component is placed
@@ -184,8 +278,54 @@ export default {
          * @param {Boolean} payload.isDesc  isDesc
          */
         onSorting({ sortBy, isDesc }) {
-            this.idxOfSortingCol = this.headers.findIndex(h => h.text === sortBy)
+            this.idxOfSortingCol = this.visHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
+        },
+        cellMaxWidth(i) {
+            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+        },
+        /**
+         * @param {Object} payload.activeGroupBy - header name
+         * @param {Number} payload.i - header index
+         */
+        onGroup({ header, activeGroupBy }) {
+            this.activeGroupBy = activeGroupBy
+            this.activeGroupByHeader = header
+            this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
+        },
+        /**
+         * totalGroupsLength is used mainly to calculate total number of rows (row groups are not counted)
+         * @param {Number} l - Group length
+         */
+        assignTotalGroupsLength(l) {
+            this.totalGroupsLength = l
+        },
+        /**
+         * @param {Object|Array} row - row to check
+         * @returns {Boolean} - return whether this is a group row or not
+         */
+        isGroupRow(row) {
+            return this.$typy(row).isObject
+        },
+        isRowCollapsed(row) {
+            const targetIdx = this.collapsedRowGroups.findIndex(r =>
+                this.$help.lodash.isEqual(row, r)
+            )
+            return targetIdx === -1 ? false : true
+        },
+        /**
+         * @param {Number} rowIdx - row group index
+         */
+        toggleRowGroup(row) {
+            const targetIdx = this.collapsedRowGroups.findIndex(r =>
+                this.$help.lodash.isEqual(row, r)
+            )
+            if (targetIdx >= 0) this.collapsedRowGroups.splice(targetIdx, 1)
+            else this.collapsedRowGroups.push(row)
+        },
+        handleUngroup() {
+            this.collapsedRowGroups = []
+            this.$refs.tableHeader.handleToggleGroup(this.activeGroupByHeader)
         },
     },
 }
@@ -220,6 +360,11 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
+                }
+            }
+            &--group {
+                .td {
+                    background-color: #f2fcff !important;
                 }
             }
         }

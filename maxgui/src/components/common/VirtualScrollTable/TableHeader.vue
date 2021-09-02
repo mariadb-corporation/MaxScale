@@ -9,7 +9,10 @@
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
-                        maxWidth: `${headerWidthMap[i]}px`,
+                        maxWidth: header.width
+                            ? $help.handleAddPxUnit(header.width)
+                            : $help.handleAddPxUnit(headerWidthMap[i]),
+                        minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                     }"
                     class="th d-flex align-center px-3"
                     :class="{
@@ -21,14 +24,26 @@
                     <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
                         :text="`${header.text}`.toUpperCase()"
-                        :maxWidth="headerWidthMap[i] - 46"
+                        :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
                     />
                     <span v-if="header.text === '#'" class="ml-1 color text-field-text">
-                        ({{ rowsLength }})
+                        ({{ rowsLength - totalGroupsLength }})
                     </span>
                     <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
                         $vuetify.icons.arrowDown
                     </v-icon>
+                    <span
+                        v-if="$typy(header, 'groupable').safeBoolean"
+                        class="ml-2 text-none"
+                        :class="[
+                            activeGroupBy === header.text && !isVertTable
+                                ? 'group--active'
+                                : 'group--inactive',
+                        ]"
+                        @click.stop="() => handleToggleGroup(header)"
+                    >
+                        group
+                    </span>
                     <div
                         v-if="i !== tableHeaders.length - 1"
                         class="header__resizer d-inline-block fill-height"
@@ -56,6 +71,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+ *
+ headers: {
+  width?: string | number, default width when header is rendered
+  maxWidth?: string | number,
+  groupable?: boolean
+}
+ */
 export default {
     name: 'table-header',
     props: {
@@ -64,6 +87,7 @@ export default {
         headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
         rowsLength: { type: Number, required: true },
+        totalGroupsLength: { type: Number, required: true },
     },
     data() {
         return {
@@ -75,9 +99,9 @@ export default {
             nxtColWidth: 0,
             currColWidth: 0,
             currColIndex: 0,
-            minHeaderWidth: 67, //threshold, user cannot resize header smaller than this
             sortOrder: 'asc',
-            activeSort: null,
+            activeSort: '',
+            activeGroupBy: '',
         }
     },
     computed: {
@@ -85,7 +109,12 @@ export default {
             return `calc(100% - ${this.getScrollbarWidth()}px)`
         },
         tableHeaders() {
-            return this.isVertTable ? [{ text: 'COLUMN' }, { text: 'VALUE' }] : this.headers
+            return this.isVertTable
+                ? [
+                      { text: 'COLUMN', width: '20%' },
+                      { text: 'VALUE', width: '80%' },
+                  ]
+                : this.headers
         },
         enableSorting() {
             return this.rowsLength <= 10000 && !this.isVertTable
@@ -93,13 +122,10 @@ export default {
     },
     watch: {
         tableHeaders() {
-            // reset width to unset then get width and assign
-            this.$nextTick(() => this.resetHeaderWidth())
-            this.$nextTick(() => this.assignHeaderWidthMap())
+            this.recalculateWidth()
         },
         boundingWidth() {
-            this.resetHeaderWidth()
-            this.$nextTick(() => this.assignHeaderWidthMap())
+            this.recalculateWidth()
         },
         headerWidthMap: {
             deep: true,
@@ -119,22 +145,42 @@ export default {
         window.removeEventListener('mousemove', this.resizerMouseMove)
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
-    // When virtual-scroll-table is wrapped in keep-alive, table col width needs to be recalculated
-    activated() {
-        this.$nextTick(() => this.resetHeaderWidth())
-        this.$nextTick(() => this.assignHeaderWidthMap())
-    },
     methods: {
+        //threshold, user cannot resize header smaller than this
+        getMinHeaderWidth(header) {
+            return this.$typy(header, 'groupable').safeBoolean ? 117 : 67
+        },
         resetHeaderWidth() {
-            if (this.$refs[`header__${0}`])
-                // set all header maxWidth to unset to get auto width
-                for (let i = 0; i < this.tableHeaders.length; i++) {
+            let headerWidthMap = {}
+            for (const [i, header] of this.tableHeaders.entries()) {
+                headerWidthMap = {
+                    ...headerWidthMap,
+                    [i]: header.maxWidth ? header.maxWidth : 'unset',
+                }
+            }
+            this.headerWidthMap = headerWidthMap
+        },
+        assignHeaderWidthMap() {
+            if (this.$refs[`header__${0}`]) {
+                let headerWidthMap = {}
+                // get width of each header then use it to set same width of corresponding cells
+                for (const [i, header] of this.tableHeaders.entries()) {
                     if (this.$refs[`header__${i}`].length) {
-                        let headerStyle = this.$refs[`header__${i}`][0].style
-                        headerStyle.maxWidth = 'unset'
-                        headerStyle.minWidth = 'unset'
+                        let headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                        const minHeaderWidth = this.getMinHeaderWidth(header)
+                        if (headerWidth < minHeaderWidth) headerWidth = minHeaderWidth
+                        headerWidthMap = {
+                            ...headerWidthMap,
+                            [i]: headerWidth,
+                        }
                     }
                 }
+                this.headerWidthMap = headerWidthMap
+            }
+        },
+        recalculateWidth() {
+            this.resetHeaderWidth()
+            this.$nextTick(() => this.$nextTick(() => this.assignHeaderWidthMap()))
         },
         resizerMouseDown(e, i) {
             this.currColIndex = i
@@ -148,16 +194,23 @@ export default {
         resizerMouseMove(e) {
             if (this.isResizing) {
                 const diffX = e.pageX - this.currPageX
-                if (this.currColWidth + diffX >= this.minHeaderWidth) {
+                if (
+                    this.currColWidth + diffX >=
+                    this.getMinHeaderWidth(this.headers[this.currColIndex])
+                ) {
                     const newCurrColW = `${this.currColWidth + diffX}px`
                     this.currCol.style.maxWidth = newCurrColW
                     this.currCol.style.minWidth = newCurrColW
-                    if (this.nxtCol && this.nxtColWidth - diffX >= this.minHeaderWidth) {
+                    if (
+                        this.nxtCol &&
+                        this.nxtColWidth - diffX >=
+                            this.getMinHeaderWidth(this.headers[this.currColIndex])
+                    ) {
                         const newNxtColW = `${this.nxtColWidth - diffX}px`
                         this.nxtCol.style.maxWidth == newNxtColW
                         this.nxtCol.style.minWidth = newNxtColW
                     }
-                    this.$help.doubleRAF(() => this.assignHeaderWidthMap())
+                    this.$nextTick(() => this.assignHeaderWidthMap())
                 }
             }
         },
@@ -170,23 +223,6 @@ export default {
                 this.nxtColWidth = 0
                 this.currColWidth = 0
                 this.currColIndex = 0
-            }
-        },
-        assignHeaderWidthMap() {
-            if (this.$refs[`header__${0}`]) {
-                let headerWidthMap = {}
-                // get width of each header then use it to set same width of corresponding cells
-                for (let i = 0; i < this.tableHeaders.length; i++) {
-                    if (this.$refs[`header__${i}`].length) {
-                        let headerWidth = this.$refs[`header__${i}`][0].clientWidth
-                        if (headerWidth < this.minHeaderWidth) headerWidth = this.minHeaderWidth
-                        headerWidthMap = {
-                            ...headerWidthMap,
-                            [i]: headerWidth,
-                        }
-                    }
-                }
-                this.headerWidthMap = headerWidthMap
             }
         },
         /**
@@ -215,6 +251,9 @@ export default {
 
             return scrollbarWidth
         },
+        /**
+         * @param {String} h - header name
+         */
         handleSort(h) {
             if (this.activeSort === h)
                 switch (this.sortOrder) {
@@ -233,6 +272,14 @@ export default {
                 sortBy: this.activeSort,
                 isDesc: this.sortOrder !== 'asc',
             })
+        },
+        /**
+         * @param {Object} header - header object
+         */
+        handleToggleGroup(header) {
+            if (this.activeGroupBy === header.text) this.activeGroupBy = ''
+            else this.activeGroupBy = header.text
+            this.$emit('on-group', { header, activeGroupBy: this.activeGroupBy })
         },
     },
 }
@@ -258,6 +305,7 @@ export default {
             background-color: $table-border;
             text-transform: uppercase;
             border-bottom: none;
+            user-select: none;
             &:first-child {
                 border-radius: 5px 0 0 0;
             }
@@ -268,8 +316,8 @@ export default {
                 transform: none;
                 visibility: hidden;
             }
-            &.sort--active * {
-                color: $black !important;
+            &.sort--active {
+                color: $black;
             }
             &.sort--active .sort-icon {
                 color: inherit;
@@ -284,6 +332,17 @@ export default {
                 .sort-icon {
                     visibility: visible;
                 }
+            }
+            .group--inactive {
+                color: $small-text !important;
+                opacity: 0.6;
+                &:hover {
+                    opacity: 1;
+                }
+            }
+            .group--active {
+                color: $black;
+                opacity: 1;
             }
             .header__resizer {
                 position: absolute;
