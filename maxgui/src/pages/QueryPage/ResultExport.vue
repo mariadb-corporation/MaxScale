@@ -1,169 +1,168 @@
 <template>
-    <div>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    x-small
-                    class="mr-2"
-                    outlined
-                    depressed
-                    color="accent-dark"
-                    v-on="on"
-                    @click="openConfigDialog"
-                >
-                    <v-icon size="14" color="accent-dark">
-                        file_download
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span>{{ $t('exportResults') }}</span>
-        </v-tooltip>
-
-        <base-dialog
-            v-model="isConfigDialogOpened"
-            :onSave="onExport"
-            :title="$t('exportResults')"
-            saveText="export"
-            minBodyWidth="512px"
-            :lazyValidation="false"
-            @is-form-valid="isFormValid = $event"
-        >
-            <template v-slot:form-body>
-                <v-container class="pa-1">
-                    <v-row class="my-0 mx-n1">
-                        <v-col cols="12" md="12" class="pa-1">
-                            <label class="field__label color text-small-text label-required">
-                                {{ $t('fileName') }}
-                            </label>
-                            <v-text-field
-                                v-model="fileName"
-                                class="std error--text__bottom"
-                                name="file-name"
-                                dense
-                                outlined
-                                :height="36"
-                                :rules="[
-                                    val =>
-                                        !!val ||
-                                        $t('errors.requiredInput', { inputName: 'File name' }),
-                                ]"
-                                required
-                                hide-details="auto"
-                            />
-                        </v-col>
-
-                        <v-col cols="12" md="12" class="pa-1">
-                            <label class="field__label color text-small-text label-required">
-                                {{ $t('fileFormat') }}
-                            </label>
-                            <v-select
-                                v-model="selectedFormat"
-                                :items="fileFormats"
-                                outlined
-                                dense
-                                class="std mariadb-select-input error--text__bottom"
-                                :menu-props="{
-                                    contentClass: 'mariadb-select-v-menu',
-                                    bottom: true,
-                                    offsetY: true,
-                                }"
-                                return-object
-                                item-text="extension"
-                                item-value="contentType"
-                                :rules="[
-                                    v =>
-                                        !!v ||
-                                        $t('errors.requiredInput', { inputName: 'File format' }),
-                                ]"
-                                hide-details="auto"
-                                required
-                            />
-                        </v-col>
-                    </v-row>
-                    <v-row
-                        v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
-                        class="mx-n1"
-                    >
-                        <v-col cols="12" md="12" class="pa-1 mt-1">
-                            <v-radio-group
-                                v-model="hasHeaders"
-                                hide-details="auto"
-                                row
-                                dense
-                                class="ma-0 pt-0"
-                            >
-                                <v-radio
-                                    :label="$t('withHeaders')"
-                                    :value="true"
-                                    class="field__label"
+    <v-tooltip
+        top
+        transition="slide-y-transition"
+        content-class="shadow-drop color text-navigation py-1 px-4"
+    >
+        <template v-slot:activator="{ on }">
+            <v-btn
+                x-small
+                class="mr-2"
+                outlined
+                depressed
+                color="accent-dark"
+                v-on="on"
+                @click="openConfigDialog"
+            >
+                <v-icon size="14" color="accent-dark">
+                    file_download
+                </v-icon>
+            </v-btn>
+            <base-dialog
+                v-model="isConfigDialogOpened"
+                :onSave="onExport"
+                :title="$t('exportResults')"
+                saveText="export"
+                minBodyWidth="512px"
+                :lazyValidation="false"
+                @is-form-valid="isFormValid = $event"
+            >
+                <template v-slot:form-body>
+                    <v-container class="pa-1">
+                        <v-row class="my-0 mx-n1">
+                            <v-col cols="12" md="12" class="pa-1">
+                                <label class="field__label color text-small-text label-required">
+                                    {{ $t('fileName') }}
+                                </label>
+                                <v-text-field
+                                    v-model="fileName"
+                                    class="std error--text__bottom"
+                                    name="file-name"
+                                    dense
+                                    outlined
+                                    :height="36"
+                                    :rules="[
+                                        val =>
+                                            !!val ||
+                                            $t('errors.requiredInput', { inputName: 'File name' }),
+                                    ]"
+                                    required
+                                    hide-details="auto"
                                 />
-                                <v-radio
-                                    :label="$t('withoutHeaders')"
-                                    :value="false"
-                                    class="field__label"
-                                />
-                            </v-radio-group>
-                        </v-col>
+                            </v-col>
 
-                        <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
-                            <label class="field__label color text-small-text">
-                                {{ $t('delimiter') }}
-                            </label>
-                            <v-select
-                                v-model="chosenDelimiter"
-                                return-object
-                                :items="delimiters"
-                                item-text="txt"
-                                item-value="val"
-                                outlined
-                                dense
-                                class="std mariadb-select-input error--text__bottom"
-                                :menu-props="{
-                                    contentClass: 'mariadb-select-v-menu',
-                                    bottom: true,
-                                    offsetY: true,
-                                }"
-                                :rules="[
-                                    v =>
-                                        !!v ||
-                                        $t('errors.requiredInput', {
-                                            inputName: 'Delimiter',
-                                        }),
-                                ]"
-                                hide-details="auto"
-                                required
-                            />
-                        </v-col>
-                        <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
-                            <label class="field__label color text-small-text">
-                                {{ $t('custdelimiter') }}
-                            </label>
-                            <v-text-field
-                                v-model="custDelimiter"
-                                class="std error--text__bottom"
-                                dense
-                                outlined
-                                :height="36"
-                                :rules="[
-                                    v =>
-                                        !!v ||
-                                        $t('errors.requiredInput', {
-                                            inputName: $t('custdelimiter'),
-                                        }),
-                                ]"
-                                hide-details="auto"
-                                required
-                            />
-                        </v-col>
-                    </v-row>
-                </v-container>
-            </template>
-        </base-dialog>
-    </div>
+                            <v-col cols="12" md="12" class="pa-1">
+                                <label class="field__label color text-small-text label-required">
+                                    {{ $t('fileFormat') }}
+                                </label>
+                                <v-select
+                                    v-model="selectedFormat"
+                                    :items="fileFormats"
+                                    outlined
+                                    dense
+                                    class="std mariadb-select-input error--text__bottom"
+                                    :menu-props="{
+                                        contentClass: 'mariadb-select-v-menu',
+                                        bottom: true,
+                                        offsetY: true,
+                                    }"
+                                    return-object
+                                    item-text="extension"
+                                    item-value="contentType"
+                                    :rules="[
+                                        v =>
+                                            !!v ||
+                                            $t('errors.requiredInput', {
+                                                inputName: 'File format',
+                                            }),
+                                    ]"
+                                    hide-details="auto"
+                                    required
+                                />
+                            </v-col>
+                        </v-row>
+                        <v-row
+                            v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'"
+                            class="mx-n1"
+                        >
+                            <v-col cols="12" md="12" class="pa-1 mt-1">
+                                <v-radio-group
+                                    v-model="hasHeaders"
+                                    hide-details="auto"
+                                    row
+                                    dense
+                                    class="ma-0 pt-0"
+                                >
+                                    <v-radio
+                                        :label="$t('withHeaders')"
+                                        :value="true"
+                                        class="field__label"
+                                    />
+                                    <v-radio
+                                        :label="$t('withoutHeaders')"
+                                        :value="false"
+                                        class="field__label"
+                                    />
+                                </v-radio-group>
+                            </v-col>
+
+                            <v-col cols="12" :md="chosenDelimiter.val ? 12 : 6" class="pa-1">
+                                <label class="field__label color text-small-text">
+                                    {{ $t('delimiter') }}
+                                </label>
+                                <v-select
+                                    v-model="chosenDelimiter"
+                                    return-object
+                                    :items="delimiters"
+                                    item-text="txt"
+                                    item-value="val"
+                                    outlined
+                                    dense
+                                    class="std mariadb-select-input error--text__bottom"
+                                    :menu-props="{
+                                        contentClass: 'mariadb-select-v-menu',
+                                        bottom: true,
+                                        offsetY: true,
+                                    }"
+                                    :rules="[
+                                        v =>
+                                            !!v ||
+                                            $t('errors.requiredInput', {
+                                                inputName: 'Delimiter',
+                                            }),
+                                    ]"
+                                    hide-details="auto"
+                                    required
+                                />
+                            </v-col>
+                            <v-col v-if="!chosenDelimiter.val" cols="12" md="6" class="pa-1">
+                                <label class="field__label color text-small-text">
+                                    {{ $t('custdelimiter') }}
+                                </label>
+                                <v-text-field
+                                    v-model="custDelimiter"
+                                    class="std error--text__bottom"
+                                    dense
+                                    outlined
+                                    :height="36"
+                                    :rules="[
+                                        v =>
+                                            !!v ||
+                                            $t('errors.requiredInput', {
+                                                inputName: $t('custdelimiter'),
+                                            }),
+                                    ]"
+                                    hide-details="auto"
+                                    required
+                                />
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </template>
+            </base-dialog>
+        </template>
+        <span>{{ $t('exportResults') }}</span>
+    </v-tooltip>
 </template>
 
 <script>
