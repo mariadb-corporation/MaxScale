@@ -1626,8 +1626,14 @@ string array_op_to_condition(const string& field,
                         add_or = true;
                     }
 
+                    // JSON_EXTRACT has to be used here, because, given a
+                    // document like '{"a" : [ { "x" : 1.0 }, { "x" : 2.0 } ] }'}
+                    // and a query like 'c.find({ "a.x" : { "$all" : [ 1, 2 ] } }',
+                    // the JSON_EXTRACT below will with the path '$.a[*].x' return
+                    // for that document the array '[1.0, 2.0]', which will match
+                    // the array, which is what we want.
                     ss << "(JSON_CONTAINS(";
-                    ss << "JSON_QUERY(doc, '$." << p << "'), JSON_ARRAY(";
+                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY(";
                     if (add_element_array(ss, all_elements))
                     {
                         is_null = true;
