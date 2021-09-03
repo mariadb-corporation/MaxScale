@@ -69,7 +69,7 @@
                         $t('info.clearSelectedQueries', {
                             quantity:
                                 itemsToBeDeleted.length === currentRowsLength
-                                    ? $t('theEntire')
+                                    ? $t('entire')
                                     : $t('selected'),
                             targetType: $t(
                                 activeView === SQL_QUERY_MODES.HISTORY

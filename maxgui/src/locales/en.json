@@ -172,7 +172,7 @@
     "queryHistory": "query history",
     "favoriteQueries": "favorite queries",
     "clearSelectedQueries": "Clear {targetType}",
-    "theEntire": "the entire",
+    "entire": "entire",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -212,7 +212,7 @@
         "notFoundConn": "Connection is not found, please reconnect",
         "connSuccessful": "Connection successful",
         "disconnectSuccessful": "Disconnect successful",
-        "clearSelectedQueries": "You’re about to delete {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs."
+        "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs."
     },
 
     "$vuetify": {
