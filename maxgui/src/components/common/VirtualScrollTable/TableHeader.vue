@@ -3,7 +3,7 @@
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div
-                    v-if="showSelect && !isVertTable"
+                    v-if="!areHeadersHidden && showSelect && !isVertTable"
                     class="th d-flex align-center px-3"
                     :style="{
                         ...headerStyle,
@@ -60,7 +60,7 @@
                             $vuetify.icons.arrowDown
                         </v-icon>
                         <span
-                            v-if="$typy(header, 'groupable').safeBoolean"
+                            v-if="enableGrouping && $typy(header, 'groupable').safeBoolean"
                             class="ml-2 text-none"
                             :class="[
                                 activeGroupBy === header.text && !isVertTable
@@ -120,6 +120,7 @@ export default {
         showSelect: { type: Boolean, required: true },
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
+        areHeadersHidden: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -150,6 +151,9 @@ export default {
         },
         enableSorting() {
             return this.currRowsLen <= 10000 && !this.isVertTable
+        },
+        enableGrouping() {
+            return this.tableHeaders.filter(h => !h.hidden).length > 1
         },
     },
     watch: {

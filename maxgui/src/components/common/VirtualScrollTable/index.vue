@@ -10,6 +10,7 @@
             :showSelect="showSelect"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
+            :areHeadersHidden="areHeadersHidden"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
@@ -116,7 +117,7 @@
                 </div>
                 <div v-else class="tr" :style="{ lineHeight }">
                     <div
-                        v-if="showSelect"
+                        v-if="!areHeadersHidden && showSelect"
                         class="td px-3"
                         :style="{
                             height: lineHeight,
@@ -273,6 +274,9 @@ export default {
         indeterminate() {
             if (!this.selectedItems.length) return false
             return !this.isAllselected && this.selectedItems.length < this.currRowsLen
+        },
+        areHeadersHidden() {
+            return this.visHeaders.filter(h => !h.hidden).length === 0
         },
     },
     watch: {
