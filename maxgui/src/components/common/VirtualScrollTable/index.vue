@@ -3,7 +3,7 @@
         <table-header
             ref="tableHeader"
             :isVertTable="isVertTable"
-            :headers="visHeaders"
+            :headers="tableHeaders"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
             :currRowsLen="currRowsLen"
@@ -18,7 +18,7 @@
             @toggle-select-all="handleSelectAll"
         />
         <v-virtual-scroll
-            v-if="tableRows.length && visHeaders.length"
+            v-if="tableRows.length && tableHeaders.length"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
             :items="tableRows"
@@ -29,8 +29,9 @@
         >
             <template v-slot:default="{ item: row }">
                 <div v-if="isVertTable" class="tr-vertical-group d-flex flex-column">
-                    <template v-for="(h, i) in visHeaders">
+                    <template v-for="(h, i) in tableHeaders">
                         <div
+                            v-if="!h.hidden"
                             :key="`${h.text}_${i}`"
                             class="tr align-center"
                             :style="{ height: lineHeight }"
@@ -139,7 +140,7 @@
                             "
                         />
                     </div>
-                    <template v-for="(h, i) in visHeaders">
+                    <template v-for="(h, i) in tableHeaders">
                         <!-- dependency keys to force a rerender -->
                         <div
                             v-if="!h.hidden"
@@ -238,8 +239,13 @@ export default {
         tbodyHeight() {
             return this.height - this.itemHeight
         },
+        visHeaders() {
+            return this.tableHeaders.filter(h => !h.hidden)
+        },
         rowHeight() {
-            return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
+            return this.isVertTable
+                ? `${this.itemHeight * this.visHeaders.length}px`
+                : this.itemHeight
         },
         maxRowGroupWidth() {
             /** A workaround to get maximum width of row group header
@@ -258,7 +264,7 @@ export default {
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
         },
-        visHeaders() {
+        tableHeaders() {
             if (this.idxOfGroupCol === -1) return this.headers
             return this.headers.map(h =>
                 this.activeGroupBy === h.text ? { ...h, hidden: true } : h
@@ -276,7 +282,7 @@ export default {
             return !this.isAllselected && this.selectedItems.length < this.currRowsLen
         },
         areHeadersHidden() {
-            return this.visHeaders.filter(h => !h.hidden).length === 0
+            return this.visHeaders.length === 0
         },
     },
     watch: {
@@ -333,7 +339,7 @@ export default {
          * @param {Boolean} payload.isDesc  isDesc
          */
         onSorting({ sortBy, isDesc }) {
-            this.idxOfSortingCol = this.visHeaders.findIndex(h => h.text === sortBy)
+            this.idxOfSortingCol = this.tableHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
         /**
