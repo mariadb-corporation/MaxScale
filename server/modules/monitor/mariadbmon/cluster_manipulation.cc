@@ -644,8 +644,20 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
                            "redirecting it to '%s'.",
                            name, master_name, master_name);
-                // Multisource replication does not get to this point.
-                mxb_assert(joinable->m_slave_status.size() == 1);
+                // Multisource replication does not get to this point unless enforce_simple_topology is
+                // enabled. If multisource replication is used, we must remove the excess connections.
+                mxb_assert(joinable->m_slave_status.size() == 1 || m_settings.enforce_simple_topology);
+
+                if (joinable->m_slave_status.size() > 1)
+                {
+                    SlaveStatusArray extra_conns(std::next(joinable->m_slave_status.begin()),
+                                                 joinable->m_slave_status.end());
+
+                    MXS_NOTICE("Erasing %lu replication connections(s) from server '%s'.",
+                               extra_conns.size(), name);
+                    joinable->remove_slave_conns(general, extra_conns);
+                }
+
                 op_success = joinable->redirect_existing_slave_conn(general,
                                                                     joinable->m_slave_status[0].settings,
                                                                     m_master);
@@ -783,6 +795,12 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t
                     is_suspect = true;
                 }
             }
+        }
+        else if (m_settings.enforce_simple_topology)
+        {
+            // If enforce_simple_topology is enabled, the presence of multiple slave connections always
+            // triggers a rejoin as only one must be configured.
+            is_suspect = true;
         }
 
         if (output != NULL && !is_suspect)
