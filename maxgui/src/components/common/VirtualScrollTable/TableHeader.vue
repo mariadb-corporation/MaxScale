@@ -67,7 +67,7 @@
                                     ? 'group--active'
                                     : 'group--inactive',
                             ]"
-                            @click.stop="() => handleToggleGroup(header)"
+                            @click.stop="() => handleToggleGroup(header.text)"
                         >
                             group
                         </span>
@@ -201,7 +201,7 @@ export default {
                 let headerWidthMap = {}
                 // get width of each header then use it to set same width of corresponding cells
                 for (const [i, header] of this.tableHeaders.entries()) {
-                    if (this.$refs[`header__${i}`].length) {
+                    if (this.$typy(this.$refs, `header__${i}`).safeArray.length) {
                         let headerWidth = this.$refs[`header__${i}`][0].clientWidth
                         const minHeaderWidth = this.getMinHeaderWidth(header)
                         if (headerWidth < minHeaderWidth) headerWidth = minHeaderWidth
@@ -284,12 +284,12 @@ export default {
             })
         },
         /**
-         * @param {Object} header - header object
+         * @param {String} header - header name
          */
-        handleToggleGroup(header) {
-            if (this.activeGroupBy === header.text) this.activeGroupBy = ''
-            else this.activeGroupBy = header.text
-            this.$emit('on-group', { header, activeGroupBy: this.activeGroupBy })
+        handleToggleGroup(headerName) {
+            if (this.activeGroupBy === headerName) this.activeGroupBy = ''
+            else this.activeGroupBy = headerName
+            this.$emit('on-group', this.activeGroupBy)
         },
     },
 }

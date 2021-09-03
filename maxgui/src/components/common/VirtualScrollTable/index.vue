@@ -214,6 +214,7 @@ export default {
         benched: { type: Number, required: true },
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
+        groupBy: { type: String, default: '' },
     },
     data() {
         return {
@@ -225,7 +226,6 @@ export default {
             isDesc: false,
             //GroupBy feat states
             activeGroupBy: '',
-            activeGroupByHeader: null,
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
             totalGroupsLength: 0,
@@ -304,6 +304,9 @@ export default {
             // clear selected items
             if (v) this.selectedItems = []
         },
+    },
+    mounted() {
+        if (this.groupBy) this.$refs.tableHeader.handleToggleGroup(this.groupBy)
     },
     activated() {
         /**
@@ -390,12 +393,10 @@ export default {
             return this.handleFilterGroupRows(groupRows)
         },
         /**
-         * @param {Object} payload.activeGroupBy - header name
-         * @param {Number} payload.i - header index
+         * @param {String} activeGroupBy - header name
          */
-        onGrouping({ header, activeGroupBy }) {
+        onGrouping(activeGroupBy) {
             this.activeGroupBy = activeGroupBy
-            this.activeGroupByHeader = header
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
             this.$emit('is-grouping', Boolean(activeGroupBy))
         },
@@ -451,7 +452,7 @@ export default {
         },
         handleUngroup() {
             this.collapsedRowGroups = []
-            this.$refs.tableHeader.handleToggleGroup(this.activeGroupByHeader)
+            this.$refs.tableHeader.handleToggleGroup(this.activeGroupBy)
         },
         getSelectedRowIdx(row) {
             return this.selectedItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))

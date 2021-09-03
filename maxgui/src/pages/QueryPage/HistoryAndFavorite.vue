@@ -32,6 +32,7 @@
                 :headers="headers"
                 :rows="rows"
                 showSelect
+                groupBy="date"
                 @on-delete-selected="handleDeleteSelectedRows"
                 @custom-group="customGroup"
                 @current-rows-length="currentRowsLength = $event"

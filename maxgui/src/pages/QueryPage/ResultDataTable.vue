@@ -87,6 +87,7 @@
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
                 :showSelect="showSelect"
+                :groupBy="groupBy"
                 @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 v-on="$listeners"
@@ -136,6 +137,7 @@ export default {
         height: { type: Number, required: true },
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
+        groupBy: { type: String, default: '' },
     },
     data() {
         return {
