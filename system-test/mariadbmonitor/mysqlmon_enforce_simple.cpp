@@ -43,6 +43,87 @@ int main(int argc, char** argv)
     return test.run_test(argc, argv, test_main);
 }
 
+void run_failover_test(TestConnections& test, int old_master, int new_master)
+{
+    std::vector<const char*> srv = {"server1", "server2"};
+
+    auto master = test.maxscale->get_servers().get_master();
+    test.expect(master.name == srv[old_master],
+                "'%s' should be Master, not '%s'", srv[old_master], master.name.c_str());
+
+    // Block the node, it should fail over to server2. Wait more than the failcount to make sure the master
+    // switch happens.
+    test.repl->block_node(old_master);
+    test.maxscale->wait_for_monitor(4);
+
+    master = test.maxscale->get_servers().get_master();
+    test.expect(master.name == srv[new_master],
+                "'%s' should be Master, not '%s'", srv[new_master], master.name.c_str());
+
+    // Unblock the node
+    test.repl->unblock_node(old_master);
+    test.maxscale->wait_for_monitor(4);
+
+
+    // The old slave should now be the new master
+    auto servers = test.maxscale->get_servers();
+    master = servers.get_master();
+    test.expect(master.name == srv[new_master],
+                "'%s' should still be Master, not '%s'", srv[new_master], master.name.c_str());
+    test.expect(servers.get(old_master).status & mxt::ServerInfo::SLAVE,
+                "Expected '%s' to be Slave but it is not.", srv[old_master]);
+
+    // The new master should have two replication streams configured
+    auto conn_new = test.repl->get_connection(new_master);
+    conn_new.connect();
+    auto streams = conn_new.rows("SHOW ALL SLAVES STATUS");
+    test.expect(streams.size() == 2,
+                "Expected 2 replication streams on '%s', found %lu", srv[new_master], streams.size());
+
+    // The old one should only have one
+    auto conn_old = test.repl->get_connection(old_master);
+    conn_old.connect();
+    streams = conn_old.rows("SHOW ALL SLAVES STATUS");
+
+    test.expect(streams.size() == 1,
+                "Expected 1 replication streams on '%s', found %lu", srv[old_master], streams.size());
+}
+
+void test_multisource_replication(TestConnections& test)
+{
+    test.tprintf("Test failover with external multi-source replication");
+
+    // Stop the monitor to prevent it from undoing the changes
+    test.check_maxctrl("unlink monitor MariaDB-Monitor server3 server4");
+    test.check_maxctrl("stop monitor MariaDB-Monitor");
+
+    const char* sql =
+        R"(
+CHANGE MASTER 'first' TO MASTER_HOST='%s', MASTER_PORT=3306, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=CURRENT_POS;
+CHANGE MASTER 'second' TO MASTER_HOST='%s', MASTER_PORT=3306, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=CURRENT_POS;
+START SLAVE 'first';
+START SLAVE 'second';
+)";
+
+    auto conn = test.repl->get_connection(0);
+    conn.connect();
+    bool ok = conn.query(mxb::string_printf(sql, test.repl->ip(2), test.repl->ip(3)));
+    test.expect(ok, "Failed to configure replication: %s", conn.error());
+
+    test.check_maxctrl("start monitor MariaDB-Monitor");
+    test.maxscale->wait_for_monitor(2);
+
+    if (test.ok())
+    {
+        run_failover_test(test, 0, 1);
+        run_failover_test(test, 1, 0);
+    }
+
+    // Fix replication
+    test.check_maxctrl("link monitor MariaDB-Monitor server3 server4");
+    test.check_maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
+}
+
 void test_main(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
@@ -144,6 +225,11 @@ void test_main(TestConnections& test)
             test.maxctrl(switchover);
             test.maxscale->wait_for_monitor(2);
             mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
+        }
+
+        if (test.ok())
+        {
+            test_multisource_replication(test);
         }
 
         test.repl->connect();
