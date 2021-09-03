@@ -1379,6 +1379,11 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
         {
             rv = "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + (string)key + "\", "
                 + element_to_value(elemMatch, "$elemMatch") + "), '$." + field + "') = 1)";
+
+            if (elemMatch.type() == bsoncxx::type::k_null)
+            {
+                rv += " OR (JSON_EXTRACT(doc, '$." + field + "." + (string)key + "') IS NULL)";
+            }
         }
     }
 
