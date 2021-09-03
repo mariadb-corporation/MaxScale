@@ -1545,6 +1545,110 @@ inline const char* to_logical_operator(ArrayOp op)
     return nullptr;
 }
 
+
+bool add_element_array(ostream& ss,
+                       bool is_scoped,
+                       const string& field,
+                       const char* zDescription,
+                       const bsoncxx::array::view& all_elements)
+{
+    ss << "(JSON_CONTAINS(";
+
+    if (is_scoped)
+    {
+        // JSON_EXTRACT has to be used here, because, given a
+        // document like '{"a" : [ { "x" : 1.0 }, { "x" : 2.0 } ] }'}
+        // and a query like 'c.find({ "a.x" : { "$all" : [ 1, 2 ] } }',
+        // the JSON_EXTRACT below will with the path '$.a[*].x' return
+        // for that document the array '[1.0, 2.0]', which will match
+        // the array, which is what we want.
+        ss << "JSON_EXTRACT(doc, '$." << field << "'), JSON_ARRAY(";
+    }
+    else
+    {
+        ss << "doc, JSON_ARRAY(";
+    }
+
+    bool is_null = false;
+    bool first_element = true;
+    for (const auto& one_element : all_elements)
+    {
+        string value;
+
+        switch (one_element.type())
+        {
+        case bsoncxx::type::k_null:
+            is_null = true;
+            break;
+
+        case bsoncxx::type::k_regex:
+            // Regexes cannot be added, as they are not values to be compared.
+            break;
+
+        case bsoncxx::type::k_document:
+            {
+                auto doc = static_cast<bsoncxx::document::view>(one_element.get_document());
+
+                auto it = doc.begin();
+                auto end = doc.end();
+
+                if (it != end)
+                {
+                    auto element = *it;
+
+                    if (element.key().compare("$elemMatch") == 0)
+                    {
+                        if (element.type() != bsoncxx::type::k_null)
+                        {
+                            value = element_to_value(element, zDescription);
+                        }
+                        else
+                        {
+                            is_null = true;
+                        }
+                    }
+                    else
+                    {
+                        value = element_to_value(one_element, zDescription);
+                    }
+                }
+            }
+            break;
+
+        default:
+            value = element_to_value(one_element, zDescription);
+        }
+
+        if (!value.empty())
+        {
+            if (first_element)
+            {
+                first_element = false;
+            }
+            else
+            {
+                ss << ", ";
+            }
+
+            ss << value;
+        }
+    }
+
+    if (is_scoped)
+    {
+        ss << ")) = 1";
+    }
+    else
+    {
+        ss << "), '$." << field << "') = 1";
+    }
+
+    // With [*][*] we e.g. exclude [[2]] when looking for [2].
+    ss << " AND JSON_EXTRACT(doc, '$." << field << "[*][*]') IS NULL)";
+
+    return is_null;
+}
+
 string array_op_to_condition(const string& field,
                              const bsoncxx::document::element& element,
                              ArrayOp array_op)
@@ -1578,38 +1682,6 @@ string array_op_to_condition(const string& field,
 
         if (array_op == ArrayOp::AND)
         {
-            auto add_element_array = [zDescription](ostream& ss, const bsoncxx::array::view& all_elements)
-            {
-                bool is_null = false;
-                bool first_element = true;
-                for (const auto& one_element : all_elements)
-                {
-                    if (one_element.type() == bsoncxx::type::k_null)
-                    {
-                        is_null = true;
-                    }
-                    else
-                    {
-                        // Regexes cannot be added, as they are not values to be compared.
-                        if (one_element.type() != bsoncxx::type::k_regex)
-                        {
-                            if (first_element)
-                            {
-                                first_element = false;
-                            }
-                            else
-                            {
-                                ss << ", ";
-                            }
-
-                            ss << element_to_value(one_element, zDescription);
-                        }
-                    }
-                }
-
-                return is_null;
-            };
-
             if (is_scoped)
             {
                 bool is_null = false;
@@ -1631,27 +1703,17 @@ string array_op_to_condition(const string& field,
                         add_or = true;
                     }
 
-                    // JSON_EXTRACT has to be used here, because, given a
-                    // document like '{"a" : [ { "x" : 1.0 }, { "x" : 2.0 } ] }'}
-                    // and a query like 'c.find({ "a.x" : { "$all" : [ 1, 2 ] } }',
-                    // the JSON_EXTRACT below will with the path '$.a[*].x' return
-                    // for that document the array '[1.0, 2.0]', which will match
-                    // the array, which is what we want.
-                    ss << "(JSON_CONTAINS(";
-                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY(";
-                    if (add_element_array(ss, all_elements))
-                    {
-                        is_null = true;
-                    }
-                    ss << ")) = 1 AND JSON_EXTRACT(doc, '$." << p << "[*][*]') IS NULL)";
-
-                    // With the [*][*] above we e.g. exclude [[2]] when looking for [2].
+                    is_null = add_element_array(ss, is_scoped, p, zDescription, all_elements);
 
                     if (is_single)
                     {
-                        ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                           << element_to_value(*all_elements.begin(), zDescription)
-                           << ")";
+                        auto element = *all_elements.begin();
+                        if (element.type() != bsoncxx::type::k_document)
+                        {
+                            ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                               << element_to_value(*all_elements.begin(), zDescription)
+                               << ")";
+                        }
                     }
 
                     if (is_null)
@@ -1663,16 +1725,17 @@ string array_op_to_condition(const string& field,
             }
             else
             {
-                ss << "(JSON_CONTAINS(doc, JSON_ARRAY(";
-                bool is_null = add_element_array(ss, all_elements);
-                ss << "), '$." << field << "') = 1"
-                   <<  " AND JSON_EXTRACT(doc, '$." << field << "[*][*]') IS NULL)";
+                bool is_null = add_element_array(ss, is_scoped, field, zDescription, all_elements);
 
                 if (is_single)
                 {
-                    ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                       << element_to_value(*all_elements.begin(), zDescription)
-                       << ")";
+                    auto element = *all_elements.begin();
+                    if (element.type() != bsoncxx::type::k_document)
+                    {
+                        ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                           << element_to_value(*all_elements.begin(), zDescription)
+                           << ")";
+                    }
                 }
 
                 if (is_null)
@@ -1739,9 +1802,12 @@ string array_op_to_condition(const string& field,
                                 ss << "false";
                             }
 
-                            ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                               << element_to_value(one_element, zDescription)
-                               << ")";
+                            if (one_element.type() != bsoncxx::type::k_document)
+                            {
+                                ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                                   << element_to_value(one_element, zDescription)
+                                   << ")";
+                            }
                         }
                         ss << ")";
                     }
@@ -1751,9 +1817,12 @@ string array_op_to_condition(const string& field,
                            << element_to_value(one_element, zDescription)
                            << "), '$." << field << "') = 1)";
 
-                        ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                           << element_to_value(one_element, zDescription)
-                           << ")";
+                        if (one_element.type() != bsoncxx::type::k_document)
+                        {
+                            ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                               << element_to_value(one_element, zDescription)
+                               << ")";
+                        }
                     }
                 }
             }
