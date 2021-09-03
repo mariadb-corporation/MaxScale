@@ -10,7 +10,7 @@
             :showSelect="showSelect"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
-            @get-header-width-map="cellWidthMap = $event"
+            @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
@@ -28,41 +28,41 @@
         >
             <template v-slot:default="{ item: row }">
                 <div v-if="isVertTable" class="tr-vertical-group d-flex flex-column">
-                    <template v-for="(cell, i) in row">
+                    <template v-for="(h, i) in visHeaders">
                         <div
-                            :key="`${cell}_${i}`"
+                            :key="`${h.text}_${i}`"
                             class="tr align-center"
                             :style="{ height: lineHeight }"
                         >
                             <div
-                                :key="`${cell}_${cellWidthMap[0]}_0`"
+                                :key="`${h.text}_${headerWidthMap[0]}_0`"
                                 class="td fill-height d-flex align-center border-bottom-none px-3"
                                 :style="{
-                                    minWidth: $help.handleAddPxUnit(cellWidthMap[0]),
+                                    minWidth: $help.handleAddPxUnit(headerWidthMap[0]),
                                 }"
                             >
                                 <truncate-string
-                                    :text="`${visHeaders[i].text}`.toUpperCase()"
-                                    :maxWidth="$typy(cellWidthMap[0]).safeNumber - 24"
+                                    :text="`${h.text}`.toUpperCase()"
+                                    :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
                                 />
                             </div>
                             <div
-                                :key="`${cell}_${cellWidthMap[1]}_1`"
+                                :key="`${h.text}_${headerWidthMap[1]}_1`"
                                 class="td fill-height d-flex align-center no-border px-3"
                                 :style="{
-                                    minWidth: $help.handleAddPxUnit(cellWidthMap[1]),
+                                    minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
                                 }"
                             >
                                 <slot
-                                    :name="visHeaders[i].text"
+                                    :name="h.text"
                                     :data="{
-                                        cell,
-                                        header: visHeaders[i],
+                                        cell: row[i],
+                                        header: h,
                                         maxWidth: cellMaxWidth(1),
                                     }"
                                 >
                                     <truncate-string
-                                        :text="`${cell}`"
+                                        :text="`${row[i]}`"
                                         :maxWidth="cellMaxWidth(1)"
                                     />
                                 </slot>
@@ -100,12 +100,12 @@
                             <truncate-string
                                 class="font-weight-bold"
                                 :text="`${row.groupBy}`"
-                                :maxWidth="maxRowGroupWidth * 0.1"
+                                :maxWidth="maxRowGroupWidth * 0.15"
                             />
                             <span class="d-inline-block val-separator mr-4">:</span>
                             <truncate-string
                                 :text="`${row.value}`"
-                                :maxWidth="maxRowGroupWidth * 0.9"
+                                :maxWidth="maxRowGroupWidth * 0.85"
                             />
                         </div>
 
@@ -138,23 +138,29 @@
                             "
                         />
                     </div>
-                    <!-- dependency keys to force a rerender -->
-                    <div
-                        v-for="(cell, i) in row"
-                        :key="`${cell}_${cellWidthMap[i]}_${i}`"
-                        class="td px-3"
-                        :style="{
-                            height: lineHeight,
-                            minWidth: $help.handleAddPxUnit(cellWidthMap[i]),
-                        }"
-                    >
-                        <slot
-                            :name="visHeaders[i].text"
-                            :data="{ cell, header: visHeaders[i], maxWidth: cellMaxWidth(i) }"
+                    <template v-for="(h, i) in visHeaders">
+                        <!-- dependency keys to force a rerender -->
+                        <div
+                            v-if="!h.hidden"
+                            :key="`${h.text}_${headerWidthMap[i]}_${i}`"
+                            class="td px-3"
+                            :style="{
+                                height: lineHeight,
+                                minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
+                            }"
                         >
-                            <truncate-string :text="`${cell}`" :maxWidth="cellMaxWidth(i)" />
-                        </slot>
-                    </div>
+                            <slot
+                                :name="h.text"
+                                :data="{
+                                    cell: row[i],
+                                    header: h,
+                                    maxWidth: cellMaxWidth(i),
+                                }"
+                            >
+                                <truncate-string :text="`${row[i]}`" :maxWidth="cellMaxWidth(i)" />
+                            </slot>
+                        </div>
+                    </template>
                 </div>
             </template>
         </v-virtual-scroll>
@@ -209,7 +215,7 @@ export default {
     },
     data() {
         return {
-            cellWidthMap: {},
+            headerWidthMap: {},
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
@@ -253,7 +259,9 @@ export default {
         },
         visHeaders() {
             if (this.idxOfGroupCol === -1) return this.headers
-            return this.headers.filter(h => this.activeGroupBy !== h.text)
+            return this.headers.map(h =>
+                this.activeGroupBy === h.text ? { ...h, hidden: true } : h
+            )
         },
         currRowsLen() {
             return this.tableRows.length - this.totalGroupsLength
@@ -314,7 +322,7 @@ export default {
                 this.$emit('scroll-end')
         },
         cellMaxWidth(i) {
-            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+            return this.$typy(this.headerWidthMap[i]).safeNumber - 24
         },
         /**
          * @param {String} payload.sortBy  sort by header name
@@ -367,10 +375,7 @@ export default {
                     value: key,
                     groupLength: value.length,
                 })
-                groupRows = [
-                    ...groupRows,
-                    ...value.map(row => row.filter((_, idx) => idx !== this.idxOfGroupCol)),
-                ]
+                groupRows = [...groupRows, ...value]
             }
             return this.handleFilterGroupRows(groupRows)
         },

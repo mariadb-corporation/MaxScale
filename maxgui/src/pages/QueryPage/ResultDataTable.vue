@@ -41,6 +41,7 @@
                 <span>{{ $t('deleteSelectedRows') }}</span>
             </v-tooltip>
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
+            <!-- TODO: when toggling column, don't filter out the header but assigning `hidden` key as true -->
             <column-list
                 v-model="visHeaderIdxs"
                 :label="$t('columns')"

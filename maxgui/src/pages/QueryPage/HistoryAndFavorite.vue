@@ -230,14 +230,6 @@ export default {
         },
         deleteSelectedRows() {
             const { cloneDeep, xorWith, isEqual } = this.$help.lodash
-            /**
-             * TODO: With current implementation, Virtual-scroll-table uses 2d array to
-             * render table rows so when toggling the visibility of columns,
-             * it's not possible to detect which rows to be deleted or selected.
-             * So there is no other way but to deep compare original history/favorite
-             * rows with selected rows. As a result, columns toggle needs to be
-             * disabled and reset when selecting rows.
-             */
             let targetMatrices = cloneDeep(this.itemsToBeDeleted).map(
                 row => row.filter((_, i) => i !== 0) // Remove # col
             )
