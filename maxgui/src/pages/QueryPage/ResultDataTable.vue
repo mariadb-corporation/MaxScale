@@ -41,13 +41,11 @@
                 <span>{{ $t('deleteSelectedRows') }}</span>
             </v-tooltip>
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
-            <!-- TODO: when toggling column, don't filter out the header but assigning `hidden` key as true -->
             <column-list
                 v-model="visHeaderIdxs"
                 :label="$t('columns')"
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
-                :disabled="isGrouping"
             />
             <v-tooltip
                 top
@@ -171,10 +169,7 @@ export default {
             return this.visibleHeaders.filter(header => header.text !== '#')
         },
         filteredRows() {
-            const rows = this.rowsWithIndex.map(row =>
-                row.filter((cell, i) => this.visHeaderIdxs.includes(i))
-            )
-            return rows.filter(row => {
+            return this.rowsWithIndex.filter(row => {
                 let match = false
                 for (const [i, cell] of row.entries()) {
                     if (
@@ -189,7 +184,9 @@ export default {
             })
         },
         visibleHeaders() {
-            return this.tableHeaders.filter((h, i) => this.visHeaderIdxs.includes(i))
+            return this.tableHeaders.map((h, i) =>
+                this.visHeaderIdxs.includes(i) ? h : { ...h, hidden: true }
+            )
         },
     },
     activated() {
