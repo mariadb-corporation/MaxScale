@@ -169,6 +169,10 @@ void delete_user_map_lib(mxt::VMNode& dst)
     auto res = dst.run_cmd_output_sudo(del_lib_cmd);
     dst.log().expect(res.rc == 0, "Command '%s' failed on %s: %s",
                      del_lib_cmd.c_str(), dst.name(), res.output.c_str());
+    if (rc == 0 && res.rc == 0)
+    {
+        dst.log().log_msg("pam_user_map.so deleted on local machine and remote VM.");
+    }
 }
 
 void copy_map_config(mxt::VMNode& vm)
@@ -180,6 +184,7 @@ void copy_map_config(mxt::VMNode& vm)
     string pam_user_map_conf_src = mxb::string_printf("%s/authentication/user_map.conf", test_dir);
     vm.copy_to_node_sudo(pam_map_config_path_src, pam_map_config_path_dst);
     vm.copy_to_node_sudo(pam_user_map_conf_src, pam_user_map_conf_dst);
+    vm.log().log_msg("PAM user mapping config files copied.");
 }
 
 void delete_map_config(mxt::VMNode& vm)
@@ -187,5 +192,6 @@ void delete_map_config(mxt::VMNode& vm)
     string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
     vm.delete_from_node(pam_map_config_path_dst);
     vm.delete_from_node(pam_user_map_conf_dst);
+    vm.log().log_msg("PAM user mapping config files deleted.");
 }
 }

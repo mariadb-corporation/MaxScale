@@ -533,6 +533,15 @@ void VMNode::delete_from_node(const string& filepath)
     log().expect(res.rc == 0, "Failed to delete file '%s' on %s: %s",
                  filepath.c_str(), name(), res.output.c_str());
 }
+
+mxt::CmdResult VMNode::run_cmd_output_sudof(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    string cmd = mxb::string_vprintf(format, args);
+    va_end(args);
+    return run_cmd_output_sudo(cmd);
+}
 }
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)

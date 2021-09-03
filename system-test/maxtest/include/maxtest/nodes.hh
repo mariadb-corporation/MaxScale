@@ -58,6 +58,7 @@ public:
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
     mxt::CmdResult run_cmd_output_sudo(const std::string& cmd);
+    mxt::CmdResult run_cmd_output_sudof(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));;
 
     /**
      * Run an sql-query on the node through ssh and mysql-client.

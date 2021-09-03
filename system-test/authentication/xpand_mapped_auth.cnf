@@ -32,5 +32,5 @@ type=listener
 service=RWSplit-Router
 port=4006
 authenticator=PAMAuth,mysqlauth
-authenticator_options=pam_backend_mapping=mariadb
+authenticator_options=pam_backend_mapping=mariadb,pam_mapped_pw_file=/tmp/xpand_mapped_auth_pwds.json
 
