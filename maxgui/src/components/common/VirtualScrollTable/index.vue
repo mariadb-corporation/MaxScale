@@ -51,10 +51,10 @@
                                 }"
                             >
                                 <slot
-                                    :name="visHeaders[1].text"
+                                    :name="visHeaders[i].text"
                                     :data="{
                                         cell,
-                                        header: visHeaders[1],
+                                        header: visHeaders[i],
                                         maxWidth: cellMaxWidth(1),
                                     }"
                                 >
@@ -69,7 +69,7 @@
                 </div>
                 <div v-else-if="isGroupRow(row)" class="tr tr--group" :style="{ lineHeight }">
                     <div
-                        class="td px-3 td-col-span"
+                        class="d-flex align-center td pl-1 pr-3 td-col-span"
                         :style="{
                             height: lineHeight,
                             width: '100%',
@@ -90,7 +90,22 @@
                                 $expand
                             </v-icon>
                         </v-btn>
-                        {{ row.groupBy }} : {{ row.value }}
+                        <div
+                            class="tr--group__content d-inline-flex align-center"
+                            :style="{ maxWidth: `${maxRowGroupWidth}px` }"
+                        >
+                            <truncate-string
+                                class="font-weight-bold"
+                                :text="`${row.groupBy}`"
+                                :maxWidth="maxRowGroupWidth * 0.1"
+                            />
+                            <span class="d-inline-block val-separator mr-4">:</span>
+                            <truncate-string
+                                :text="`${row.value}`"
+                                :maxWidth="maxRowGroupWidth * 0.9"
+                            />
+                        </div>
+
                         <v-btn class="ml-2" width="24" height="24" icon @click="handleUngroup">
                             <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
                         </v-btn>
@@ -191,55 +206,21 @@ export default {
         rowHeight() {
             return this.isVertTable ? `${this.itemHeight * this.headers.length}px` : this.itemHeight
         },
+        maxRowGroupWidth() {
+            /** A workaround to get maximum width of row group header
+             * 17 is the total width of padding and border of table
+             * 28 is the width of toggle button
+             * 32 is the width of ungroup button
+             */
+            return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
+        },
         tableRows() {
-            //TODO: Break down to smaller functions
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
              * Though it comes with pitfalls and should be used for ajax data
              */
             let rows = JSON.parse(JSON.stringify(this.rows))
-            if (this.idxOfSortingCol !== -1) {
-                rows.sort((a, b) => {
-                    if (this.isDesc)
-                        return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
-                    else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
-                })
-            }
-            if (this.idxOfGroupCol !== -1 && !this.isVertTable) {
-                //TODO: Provide customGroup which is useful for grouping timestamp value by date
-                let groupRows = []
-                let hash = {}
-                rows.forEach(row =>
-                    (hash[row[this.idxOfGroupCol]] || (hash[row[this.idxOfGroupCol]] = [])).push(
-                        row
-                    )
-                )
-                this.assignTotalGroupsLength(Object.keys(hash).length)
-                Object.keys(hash).forEach(v => {
-                    groupRows.push({
-                        groupBy: this.activeGroupBy,
-                        value: v,
-                        groupLength: hash[v].length,
-                    })
-                    groupRows = [
-                        ...groupRows,
-                        ...hash[v].map(r => r.filter((_, idx) => idx !== this.idxOfGroupCol)),
-                    ]
-                })
-                let hiddenRowIdxs = []
-                if (this.collapsedRowGroups.length) {
-                    for (const [i, r] of groupRows.entries()) {
-                        if (this.isRowCollapsed(r)) {
-                            hiddenRowIdxs = [
-                                ...hiddenRowIdxs,
-                                ...Array(r.groupLength)
-                                    .fill()
-                                    .map((_, n) => n + i + 1),
-                            ]
-                        }
-                    }
-                }
-                return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
-            }
+            if (this.idxOfSortingCol !== -1) this.handleSort(rows)
+            if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
         },
         visHeaders() {
@@ -273,6 +254,9 @@ export default {
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
+        cellMaxWidth(i) {
+            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+        },
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc
@@ -281,8 +265,46 @@ export default {
             this.idxOfSortingCol = this.visHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
-        cellMaxWidth(i) {
-            return this.$typy(this.cellWidthMap[i]).safeNumber - 24
+        /**
+         * @param {Array} rows - 2d array to be sorted
+         */
+        handleSort(rows) {
+            rows.sort((a, b) => {
+                if (this.isDesc) return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
+                else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
+            })
+        },
+        /** This groups 2d array with same value at provided index to a Map
+         * @param {Array} rows - 2d array to be grouped into a Map
+         * @returns {Map} - returns map with value as key and value is a matrix (2d array)
+         */
+        groupValues({ rows, idx }) {
+            //TODO: Provide customGroup which is useful for grouping timestamp value by date
+            let map = new Map()
+            rows.forEach(row => {
+                const key = row[idx]
+                let matrix = map.get(key) || [] // assign an empty arr if not found
+                matrix.push(row)
+                map.set(key, matrix)
+            })
+            return map
+        },
+        handleGroupRows(rows) {
+            const rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
+            this.assignTotalGroupsLength(rowMap.size)
+            let groupRows = []
+            for (const [key, value] of rowMap) {
+                groupRows.push({
+                    groupBy: this.activeGroupBy,
+                    value: key,
+                    groupLength: value.length,
+                })
+                groupRows = [
+                    ...groupRows,
+                    ...value.map(row => row.filter((_, idx) => idx !== this.idxOfGroupCol)),
+                ]
+            }
+            return this.handleFilterGroupRows(groupRows)
         },
         /**
          * @param {Object} payload.activeGroupBy - header name
@@ -292,6 +314,26 @@ export default {
             this.activeGroupBy = activeGroupBy
             this.activeGroupByHeader = header
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
+        },
+        /**
+         * @param {Array} groupRows - rows that have been grouped
+         * @returns {Array} - filtered rows by collapsedRowGroups values
+         */
+        handleFilterGroupRows(groupRows) {
+            let hiddenRowIdxs = []
+            if (this.collapsedRowGroups.length) {
+                for (const [i, r] of groupRows.entries()) {
+                    if (this.isRowCollapsed(r)) {
+                        hiddenRowIdxs = [
+                            ...hiddenRowIdxs,
+                            ...Array(r.groupLength)
+                                .fill()
+                                .map((_, n) => n + i + 1),
+                        ]
+                    }
+                }
+            }
+            return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
         },
         /**
          * totalGroupsLength is used mainly to calculate total number of rows (row groups are not counted)

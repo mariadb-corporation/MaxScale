@@ -53,7 +53,7 @@
             </div>
         </div>
         <div
-            :style="{ minWidth: `${getScrollbarWidth()}px` }"
+            :style="{ minWidth: `${$help.getScrollbarWidth()}px` }"
             class="d-inline-block dummy-header"
         />
     </div>
@@ -106,7 +106,7 @@ export default {
     },
     computed: {
         headerWidth() {
-            return `calc(100% - ${this.getScrollbarWidth()}px)`
+            return `calc(100% - ${this.$help.getScrollbarWidth()}px)`
         },
         tableHeaders() {
             return this.isVertTable
@@ -224,32 +224,6 @@ export default {
                 this.currColWidth = 0
                 this.currColIndex = 0
             }
-        },
-        /**
-         * This function is not working on macOs as the scrollbar is only showed when scrolling.
-         * However, on Macos, scrollbar is placed above the content (overlay) instead of taking up space
-         * of the content. So in macOs, this returns 0.
-         * @returns {Number} scrollbar width
-         */
-        getScrollbarWidth() {
-            // Creating invisible container
-            const outer = document.createElement('div')
-            outer.style.visibility = 'hidden'
-            outer.style.overflow = 'scroll' // forcing scrollbar to appear
-            outer.style.msOverflowStyle = 'scrollbar' // needed for WinJS apps
-            document.body.appendChild(outer)
-
-            // Creating inner element and placing it in the container
-            const inner = document.createElement('div')
-            outer.appendChild(inner)
-
-            // Calculating difference between container's full width and the child width
-            const scrollbarWidth = outer.offsetWidth - inner.offsetWidth
-
-            // Removing temporary elements from the DOM
-            outer.parentNode.removeChild(outer)
-
-            return scrollbarWidth
         },
         /**
          * @param {String} h - header name
