@@ -41,7 +41,10 @@ void query_thread(TestConnections& test)
         conn.set_timeout(30);
         test.expect(conn.connect(), "Failed to connect to MaxScale: %s", conn.error());
 
-        for (int i = 0; i < 100 && test.ok(); i++)
+        int i = 0;
+        auto loop_start = Clock::now();
+
+        while (Clock::now() - loop_start < std::chrono::seconds(5) && test.ok())
         {
             auto start = Clock::now();
 
@@ -51,6 +54,8 @@ void query_thread(TestConnections& test)
                     "Query failed (iteration %d, query %d) for %s, waited for %lums, thread ID %u: %s",
                     i, counter, type, diff_to_ms(start), conn.thread_id(), conn.error());
             }
+
+            ++i;
         }
 
         ++counter;
