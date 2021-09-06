@@ -1,5 +1,5 @@
 <template>
-    <div class="virtual-table__header" :style="{ cursor: isResizing ? 'col-resize' : '' }">
+    <div class="virtual-table__header">
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div

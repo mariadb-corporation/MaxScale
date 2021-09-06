@@ -1,5 +1,9 @@
 <template>
-    <div class="virtual-table" :class="{ 'no-userSelect': isResizing }">
+    <div
+        class="virtual-table"
+        :class="{ 'no-userSelect': isResizing }"
+        :style="{ cursor: isResizing ? 'col-resize' : '' }"
+    >
         <table-header
             ref="tableHeader"
             :isVertTable="isVertTable"
