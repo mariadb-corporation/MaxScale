@@ -32,6 +32,7 @@
                 :headers="headers"
                 :rows="rows"
                 showSelect
+                showGroupBy
                 groupBy="date"
                 @on-delete-selected="handleDeleteSelectedRows"
                 @custom-group="customGroup"
@@ -156,21 +157,18 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        header.groupable = true
                         header.hasCustomGroup = true
                         break
                     case 'connection_name':
                         header.width = 215
-                        header.groupable = true
                         break
                     case 'time':
                         header.width = 90
+                        header.groupable = false
                         break
                     case 'execution_time':
                         header.width = 150
-                        break
-                    case 'sql':
-                        header.groupable = true
+                        header.groupable = false
                         break
                 }
                 return header

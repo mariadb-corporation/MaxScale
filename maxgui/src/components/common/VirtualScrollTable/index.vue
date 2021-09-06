@@ -452,6 +452,7 @@ export default {
         },
         handleUngroup() {
             this.collapsedRowGroups = []
+            this.assignTotalGroupsLength(0)
             this.$refs.tableHeader.handleToggleGroup(this.activeGroupBy)
         },
         getSelectedRowIdx(row) {

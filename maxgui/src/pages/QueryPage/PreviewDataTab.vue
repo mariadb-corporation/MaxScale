@@ -89,6 +89,7 @@
                             }))
                         "
                         :rows="$typy(getPrvwDataRes(activeView), 'data').safeArray"
+                        showGroupBy
                     />
                 </keep-alive>
             </template>

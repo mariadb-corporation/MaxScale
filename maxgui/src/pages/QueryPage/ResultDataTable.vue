@@ -138,6 +138,7 @@ export default {
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
+        showGroupBy: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -156,9 +157,17 @@ export default {
             return res
         },
         tableHeaders() {
-            const headers = this.headers.length
-                ? [{ text: '#', maxWidth: 'max-content' }, ...this.headers]
-                : []
+            let headers = []
+            if (this.headers.length)
+                headers = [
+                    { text: '#', maxWidth: 'max-content' },
+                    ...this.headers.map(h =>
+                        this.showGroupBy && !this.$typy(h, 'groupable').isDefined
+                            ? { ...h, groupable: true }
+                            : h
+                    ),
+                ]
+
             return headers
         },
         rowsWithIndex() {
