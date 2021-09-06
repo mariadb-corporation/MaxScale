@@ -76,7 +76,11 @@
                         </div>
                     </template>
                 </div>
-                <div v-else-if="isGroupRow(row)" class="tr tr--group" :style="{ lineHeight }">
+                <div
+                    v-else-if="isGroupRow(row) && !areHeadersHidden"
+                    class="tr tr--group"
+                    :style="{ lineHeight }"
+                >
                     <div
                         class="d-flex align-center td pl-1 pr-3 td-col-span"
                         :style="{
@@ -87,7 +91,7 @@
                         <v-btn
                             width="24"
                             height="24"
-                            class="arrow-toggle mr-1"
+                            class="arrow-toggle"
                             icon
                             @click="() => toggleRowGroup(row)"
                         >
@@ -99,6 +103,17 @@
                                 $expand
                             </v-icon>
                         </v-btn>
+
+                        <v-checkbox
+                            v-if="showSelect"
+                            :input-value="isRowGroupSelected(row)"
+                            dense
+                            class="checkbox--scale-reduce ma-0 pa-0"
+                            primary
+                            hide-details
+                            @change="v => handleSelectGroup({ v, row })"
+                        />
+
                         <div
                             class="tr--group__content d-inline-flex align-center"
                             :style="{ maxWidth: `${maxRowGroupWidth}px` }"
@@ -123,11 +138,13 @@
                 <div v-else class="tr" :style="{ lineHeight }">
                     <div
                         v-if="!areHeadersHidden && showSelect"
-                        class="td px-3"
+                        class="td"
                         :style="{
                             height: lineHeight,
-                            maxWidth: '50px',
-                            minWidth: '50px',
+                            maxWidth: activeGroupBy ? '90px' : '50px',
+                            minWidth: activeGroupBy ? '90px' : '50px',
+                            paddingLeft: activeGroupBy ? '25px' : '12px',
+                            paddingRight: '12px',
                         }"
                     >
                         <v-checkbox
@@ -233,6 +250,7 @@ export default {
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
             selectedItems: [],
+            selectedGroupItems: [],
         }
     },
     computed: {
@@ -451,16 +469,82 @@ export default {
             this.collapsedRowGroups = []
             this.$refs.tableHeader.handleToggleGroup(this.activeGroupBy)
         },
+        /**
+         * @param {Array} row - row array
+         * @returns {Number} - returns index of row array in selectedItems
+         */
         getSelectedRowIdx(row) {
             return this.selectedItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
         },
+        /**
+         * @param {Array} row - row array
+         * @returns {Boolean} - returns true if row is found in selectedItems
+         */
         isRowSelected(row) {
             return this.getSelectedRowIdx(row) === -1 ? false : true
         },
+        /**
+         * @param {Object} row - row group object
+         * @returns {Number} - returns index of row group object in selectedGroupItems
+         */
+        getSelectedRowGroupIdx(row) {
+            return this.selectedGroupItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
+        },
+        /**
+         * @param {Object} row - row group object
+         * @returns {Boolean} - returns true if row is found in selectedGroupItems
+         */
+        isRowGroupSelected(row) {
+            return this.getSelectedRowGroupIdx(row) === -1 ? false : true
+        },
+        /**
+         * @param {Object} row - row group object
+         * @returns {Array} - returns 2d array
+         */
+        getGroupItems(row) {
+            const { isEqual } = this.$help.lodash
+            const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, row))
+            let items = []
+            let i = targetIdx + 1
+            while (i !== -1) {
+                if (Array.isArray(this.tableRows[i])) {
+                    items.push(this.tableRows[i])
+                    i++
+                } else i = -1
+            }
+            return items
+        },
+        /**
+         * @param {Boolean} payload.v - is row selected
+         * @param {Object} payload.row - row group object
+         */
+        handleSelectGroupItems({ v, row }) {
+            const { isEqual, xorWith, differenceWith } = this.$help.lodash
+            let groupItems = this.getGroupItems(row)
+            if (v) this.selectedItems = xorWith(this.selectedItems, groupItems, isEqual)
+            else this.selectedItems = differenceWith(this.selectedItems, groupItems, isEqual)
+        },
+        /**
+         * @param {Boolean} payload.v - is row selected
+         * @param {Object} payload.row - row group object
+         */
+        handleSelectGroup({ v, row }) {
+            if (v) this.selectedGroupItems.push(row)
+            else this.selectedGroupItems.splice(this.getSelectedRowGroupIdx(row), 1)
+            this.handleSelectGroupItems({ v, row })
+        },
+        /**
+         * @param {Boolean} v - is row selected
+         */
         handleSelectAll(v) {
             // don't select group row
-            if (v) this.selectedItems = this.tableRows.filter(row => Array.isArray(row))
-            else this.selectedItems = []
+            if (v) {
+                this.selectedItems = this.tableRows.filter(row => Array.isArray(row))
+                this.selectedGroupItems = this.tableRows.filter(row => !Array.isArray(row))
+            } else {
+                this.selectedItems = []
+                this.selectedGroupItems = []
+            }
         },
     },
 }

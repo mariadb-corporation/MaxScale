@@ -86,4 +86,7 @@
 .checkbox--scale-reduce {
     transform: scale(0.75);
     transform-origin: 50% 50%;
+    .v-input--selection-controls__input {
+        margin-right: 0;
+    }
 }

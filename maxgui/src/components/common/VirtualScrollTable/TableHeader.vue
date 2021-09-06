@@ -4,12 +4,14 @@
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div
                     v-if="!areHeadersHidden && showSelect && !isVertTable"
-                    class="th d-flex align-center px-3"
+                    class="th d-flex align-center"
                     :style="{
                         ...headerStyle,
                         height: $parent.lineHeight,
-                        maxWidth: '50px',
-                        minWidth: '50px',
+                        maxWidth: activeGroupBy ? '90px' : '50px',
+                        minWidth: activeGroupBy ? '90px' : '50px',
+                        paddingLeft: activeGroupBy ? '29px' : '12px',
+                        paddingRight: '12px',
                     }"
                 >
                     <v-checkbox
