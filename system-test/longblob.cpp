@@ -12,14 +12,7 @@ int main(int argc, char* argv[])
     Test->reset_timeout();
 
     MYSQL*& rc_master = Test->maxscale->conn_master;
-    Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=10000000");
-
-    /*Test->maxscales->connect_maxscale(0);
-     *  Test->repl->connect();
-     *  Test->tprintf("LONGBLOB: Trying send data directly to Master\n");
-     *  test_longblob(Test, Test->repl->nodes[0], (char *) "LONGBLOB", 1000000, 20, 1);
-     *  Test->repl->close_connections();
-     *  Test->maxscales->close_maxscale_connections(0);*/
+    Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=67108864");
 
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
@@ -35,15 +28,6 @@ int main(int argc, char* argv[])
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 
-
-
-    /*Test->maxscales->connect_maxscale(0);
-     *  Test->repl->connect();
-     *  Test->tprintf("BLOB: Trying send data directly to Master\n");
-     *  test_longblob(Test, Test->repl->nodes[0], (char *) "BLOB", 1000, 8, 1);
-     *  Test->repl->close_connections();
-     *  Test->maxscales->close_maxscale_connections(0);*/
-
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("BLOB: Trying send data via RWSplit\n");
@@ -57,14 +41,6 @@ int main(int argc, char* argv[])
     test_longblob(Test, rc_master, (char*) "BLOB", 1000, 8, 1);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
-
-
-    /*Test->maxscales->connect_maxscale(0);
-     *  Test->repl->connect();
-     *  Test->tprintf("MEDIUMBLOB: Trying send data directly to Master\n");
-     *  test_longblob(Test, Test->repl->nodes[0], (char *) "MEDIUMBLOB", 1000000, 2, 1);
-     *  Test->repl->close_connections();
-     *  Test->maxscales->close_maxscale_connections(0);*/
 
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
