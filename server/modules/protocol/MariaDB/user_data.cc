@@ -415,7 +415,7 @@ bool MariaDBUserManager::update_users()
     {
         if (use_file_on_ok)
         {
-            read_users_from_file(user_accounts_file, &temp_userdata);
+            load_users_from_file(user_accounts_file, &temp_userdata);
         }
 
         // Got some data. Update the master database if the contents differ. Usually they don't.
@@ -951,12 +951,11 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
-bool MariaDBUserManager::read_users_from_file(const string& filepath, UserDatabase* output)
+bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* output)
 {
     using mxb::Json;
     int rval = false;
-    auto filepathc = filepath.c_str();
-    Json all;
+    auto filepathc = source.c_str();
 
     auto read_str_if_exists = [filepathc](const Json& source, const char* key,
                                           const string& user, const string& host, string* out) {
@@ -988,77 +987,131 @@ bool MariaDBUserManager::read_users_from_file(const string& filepath, UserDataba
             return rval;
         };
 
-    if (all.load(filepath))
+    using EntryHandler = std::function<void (Json& elem, int ind)>;
+    auto process_array = [filepathc](Json& all, const char* arr_obj_name, const EntryHandler& handler) {
+            auto arr = all.get_array_elems(arr_obj_name);
+            if (all.ok())
+            {
+                int ind = 0;
+                for (auto& elem : arr)
+                {
+                    handler(elem, ind);
+                    ind++;
+                }
+            }
+            else
+            {
+                MXB_ERROR("Wrong object type in '%s': %s", filepathc, all.error_msg().c_str());
+            }
+        };
+
+    Json all;
+    if (all.load(source))
     {
         rval = true;
-        int users_ok = 0;
-
         const char grp_user[] = "user";
         if (all.contains(grp_user))
         {
-            auto users_arr = all.get_array_elems(grp_user);
-            int ind = 0;
-            for (const auto& user_data : users_arr)
-            {
-                // The user definition must contain at least 'user' and 'host' fields.
-                string uname = user_data.get_string("user");
-                string host = user_data.get_string("host");
+            int users_ok = 0;
+            EntryHandler user_handler = [&](Json& user_data, int ind) {
+                    // The user definition must contain at least 'user' and 'host' fields.
+                    string uname = user_data.get_string("user");
+                    string host = user_data.get_string("host");
 
-                if (user_data.ok())
-                {
-                    auto read_str = [&user_data, &uname, &host, &read_str_if_exists]
-                        (const char* key, string* out) {
-                            return read_str_if_exists(user_data, key, uname, host, out);
-                        };
-                    auto read_bool = [&user_data, &uname, &host, &read_bool_if_exists]
-                        (const char* key, bool* out) {
-                            return read_bool_if_exists(user_data, key, uname, host, out);
-                        };
-
-                    mariadb::UserEntry new_entry;
-                    new_entry.username = uname;
-                    new_entry.host_pattern = host;
-
-                    bool strings_ok = (read_str("password", &new_entry.password)
-                                       && read_str("plugin", &new_entry.plugin)
-                                       && read_str("authentication_string", &new_entry.auth_string)
-                                       && read_str("default_role", &new_entry.default_role));
-                    // TODO: add "ssl"-field read once it is actually used for something.
-                    bool booleans_ok = (read_bool("super_priv", &new_entry.super_priv)
-                                        && read_bool("global_db_priv", &new_entry.global_db_priv)
-                                        && read_bool("proxy_priv", &new_entry.proxy_priv)
-                                        && read_bool("is_role", &new_entry.is_role));
-
-                    if (strings_ok && booleans_ok)
+                    if (user_data.ok())
                     {
-                        // Erase * from password if found. This is similar to mysql.user.
-                        remove_star(new_entry.password);
-                        output->add_entry(move(new_entry));
-                        users_ok++;
-                    }
-                }
-                else
-                {
-                    MXB_ERROR("User entry %i in '%s'-array in file '%s' is missing a required field: %s",
-                              ind + 1, grp_user, filepathc, user_data.error_msg().c_str());
-                }
-                ind++;
-            }
+                        auto read_str = [&user_data, &uname, &host, &read_str_if_exists]
+                            (const char* key, string* out) {
+                                return read_str_if_exists(user_data, key, uname, host, out);
+                            };
+                        auto read_bool = [&user_data, &uname, &host, &read_bool_if_exists]
+                            (const char* key, bool* out) {
+                                return read_bool_if_exists(user_data, key, uname, host, out);
+                            };
 
+                        mariadb::UserEntry new_entry;
+                        new_entry.username = uname;
+                        new_entry.host_pattern = host;
+
+                        bool strings_ok = (read_str("password", &new_entry.password)
+                                           && read_str("plugin", &new_entry.plugin)
+                                           && read_str("authentication_string", &new_entry.auth_string)
+                                           && read_str("default_role", &new_entry.default_role));
+                        // TODO: add "ssl"-field read once it is actually used for something.
+                        bool booleans_ok = (read_bool("super_priv", &new_entry.super_priv)
+                                            && read_bool("global_db_priv", &new_entry.global_db_priv)
+                                            && read_bool("proxy_priv", &new_entry.proxy_priv)
+                                            && read_bool("is_role", &new_entry.is_role));
+
+                        if (strings_ok && booleans_ok)
+                        {
+                            // Erase * from password if found. This is similar to mysql.user.
+                            remove_star(new_entry.password);
+                            output->add_entry(move(new_entry));
+                            users_ok++;
+                        }
+                    }
+                    else
+                    {
+                        MXB_ERROR("User entry %i in '%s'-array in file '%s' is missing a required field: %s",
+                                  ind + 1, grp_user, filepathc, user_data.error_msg().c_str());
+                    }
+                };
+            process_array(all, grp_user, user_handler);
             MXB_NOTICE("Read %i user@host entries from '%s' for service '%s'.",
                        users_ok, filepathc, m_service->name());
         }
 
+        // Db grants and roles are handled similarly.
+        auto handler_helper = [filepathc](Json& elem, int ind, const char* array_name,
+                                          const char* data_field_name, UserDatabase::StringSetMap& out,
+                                          int& n_success) {
+                // The grant or role definition must contain 'user', 'host' and data-fields.
+                string uname = elem.get_string("user");
+                string host = elem.get_string("host");
+                string data = elem.get_string(data_field_name);
+
+                if (elem.ok())
+                {
+                    string key = UserDatabase::form_db_mapping_key(uname, host);
+                    out[key].insert(data);
+                    n_success++;
+                }
+                else
+                {
+                    MXB_ERROR("Entry %i in '%s'-array in file '%s' is missing a required field: %s",
+                              ind + 1, array_name, filepathc, elem.error_msg().c_str());
+                }
+            };
+
         const char grp_db[] = "db";
         if (all.contains(grp_db))
         {
-            // TODO
+            UserDatabase::StringSetMap db_grants_temp;
+            int total_grants = 0;
+            EntryHandler grant_handler = [&](Json& grant_data, int ind) {
+                    handler_helper(grant_data, ind, grp_db, "db", db_grants_temp, total_grants);
+                };
+            process_array(all, grp_db, grant_handler);
+            // Add all the db grants as wildcard grants, as we cannot know which type it is.
+            UserDatabase::StringSetMap dummy;
+            output->add_db_grants(move(db_grants_temp), move(dummy));
+            MXB_NOTICE("Read %i database grant entries from '%s' for service '%s'.",
+                       total_grants, filepathc, m_service->name());
         }
 
         const char grp_roles_mapping[] = "roles_mapping";
         if (all.contains(grp_roles_mapping))
         {
-            // TODO
+            UserDatabase::StringSetMap role_map_tmp;
+            int total_roles = 0;
+            EntryHandler role_handler = [&](Json& role_data, int ind) {
+                    handler_helper(role_data, ind, grp_roles_mapping, "role", role_map_tmp, total_roles);
+                };
+            process_array(all, grp_roles_mapping, role_handler);
+            output->add_role_mapping(move(role_map_tmp));
+            MXB_NOTICE("Read %i role entries from '%s' for service '%s'.",
+                       total_roles, filepathc, m_service->name());
         }
     }
     else
@@ -1224,7 +1277,7 @@ void UserDatabase::update_mapping(StringSetMap& target, StringSetMap&& source)
             const string& userhost = source_elem.first;
             if (target.count(userhost) == 0)
             {
-                // If the username does not yet exists, simply assign the set contents.
+                // If the username does not yet exist, simply assign the set contents.
                 target[userhost] = move(source_elem.second);
             }
             else
