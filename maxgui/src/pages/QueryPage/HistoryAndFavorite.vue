@@ -37,7 +37,6 @@
                     groupBy="date"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
-                    @current-rows-length="currentRowsLength = $event"
                 >
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
@@ -79,7 +78,7 @@
                     {{
                         $t('info.clearSelectedQueries', {
                             quantity:
-                                itemsToBeDeleted.length === currentRowsLength
+                                itemsToBeDeleted.length === rows.length
                                     ? $t('entire')
                                     : $t('selected'),
                             targetType: $t(
@@ -128,7 +127,6 @@ export default {
         return {
             headerHeight: 0,
             itemsToBeDeleted: [],
-            currentRowsLength: 0,
         }
     },
     computed: {

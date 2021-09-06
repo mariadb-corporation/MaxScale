@@ -10,7 +10,7 @@
             :headers="tableHeaders"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
-            :currRowsLen="currRowsLen"
+            :rowsLength="rowsLength"
             :showSelect="showSelect"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
@@ -22,10 +22,10 @@
             @toggle-select-all="handleSelectAll"
         />
         <v-virtual-scroll
-            v-if="tableRows.length && tableHeaders.length"
+            v-if="rowsLength && tableHeaders.length"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
-            :items="tableRows"
+            :items="currRows"
             :height="tbodyHeight"
             :item-height="rowHeight"
             class="tbody"
@@ -171,7 +171,7 @@
             </template>
         </v-virtual-scroll>
         <div
-            v-else-if="!tableRows.length"
+            v-else-if="!rowsLength"
             class="tr"
             :style="{ lineHeight, height: `${height - itemHeight}px` }"
         >
@@ -232,7 +232,6 @@ export default {
             activeGroupBy: '',
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
-            totalGroupsLength: 0,
             selectedItems: [],
         }
     },
@@ -259,6 +258,9 @@ export default {
              */
             return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
         },
+        rowsLength() {
+            return this.rows.length
+        },
         tableRows() {
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
              * Though it comes with pitfalls and should be used for ajax data
@@ -268,22 +270,22 @@ export default {
             if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
             return rows
         },
+        currRows() {
+            return this.handleFilterGroupRows(this.tableRows)
+        },
         tableHeaders() {
             if (this.idxOfGroupCol === -1) return this.headers
             return this.headers.map(h =>
                 this.activeGroupBy === h.text ? { ...h, hidden: true } : h
             )
         },
-        currRowsLen() {
-            return this.tableRows.length - this.totalGroupsLength
-        },
         isAllselected() {
             if (!this.selectedItems.length) return false
-            return this.selectedItems.length === this.currRowsLen
+            return this.selectedItems.length === this.rowsLength
         },
         indeterminate() {
             if (!this.selectedItems.length) return false
-            return !this.isAllselected && this.selectedItems.length < this.currRowsLen
+            return !this.isAllselected && this.selectedItems.length < this.rowsLength
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0
@@ -294,7 +296,6 @@ export default {
             deep: true,
             handler(v) {
                 this.$emit('item-selected', v)
-                this.$emit('current-rows-length', this.currRowsLen)
             },
         },
         rows: {
@@ -384,7 +385,6 @@ export default {
                 // emit custom-group and provide callback to assign return value of custom-group
                 this.$emit('custom-group', data, map => (rowMap = map))
             }
-            this.assignTotalGroupsLength(rowMap.size)
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({
@@ -394,7 +394,7 @@ export default {
                 })
                 groupRows = [...groupRows, ...value]
             }
-            return this.handleFilterGroupRows(groupRows)
+            return groupRows
         },
         /**
          * @param {String} activeGroupBy - header name
@@ -425,13 +425,6 @@ export default {
             return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
         },
         /**
-         * totalGroupsLength is used mainly to calculate total number of rows (row groups are not counted)
-         * @param {Number} l - Group length
-         */
-        assignTotalGroupsLength(l) {
-            this.totalGroupsLength = l
-        },
-        /**
          * @param {Object|Array} row - row to check
          * @returns {Boolean} - return whether this is a group row or not
          */
@@ -456,7 +449,6 @@ export default {
         },
         handleUngroup() {
             this.collapsedRowGroups = []
-            this.assignTotalGroupsLength(0)
             this.$refs.tableHeader.handleToggleGroup(this.activeGroupBy)
         },
         getSelectedRowIdx(row) {

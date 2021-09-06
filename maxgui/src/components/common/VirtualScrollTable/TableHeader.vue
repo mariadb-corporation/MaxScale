@@ -13,7 +13,7 @@
                     }"
                 >
                     <v-checkbox
-                        :disabled="!currRowsLen"
+                        :disabled="!rowsLength"
                         :input-value="isAllselected"
                         :indeterminate="indeterminate"
                         dense
@@ -54,7 +54,7 @@
                             :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
                         />
                         <span v-if="header.text === '#'" class="ml-1 color text-field-text">
-                            ({{ currRowsLen }})
+                            ({{ rowsLength }})
                         </span>
                         <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
                             $vuetify.icons.arrowDown
@@ -116,7 +116,7 @@ export default {
         boundingWidth: { type: Number, required: true },
         headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        currRowsLen: { type: Number, required: true },
+        rowsLength: { type: Number, required: true },
         showSelect: { type: Boolean, required: true },
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
@@ -150,7 +150,7 @@ export default {
                 : this.headers
         },
         enableSorting() {
-            return this.currRowsLen <= 10000 && !this.isVertTable
+            return this.rowsLength <= 10000 && !this.isVertTable
         },
         enableGrouping() {
             return this.tableHeaders.filter(h => !h.hidden).length > 1
