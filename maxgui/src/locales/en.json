@@ -173,6 +173,8 @@
     "favoriteQueries": "favorite queries",
     "clearSelectedQueries": "Clear {targetType}",
     "entire": "entire",
+    "historyTabGuide": "Query history is empty",
+    "favoriteTabGuide": "Favorite queries are empty. Press <b>CMD/Ctrl + S</b> or click on <i class='v-icon accent-dark--text material-icons' style='font-size: 20px;'>bookmark</i> icon to save query to favorite",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

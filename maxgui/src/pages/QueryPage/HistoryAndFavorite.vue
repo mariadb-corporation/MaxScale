@@ -21,35 +21,45 @@
             </v-tabs>
         </div>
         <keep-alive>
-            <table-list
-                v-if="
-                    activeView === SQL_QUERY_MODES.HISTORY ||
-                        activeView === SQL_QUERY_MODES.FAVORITE
+            <template v-if="rows.length">
+                <table-list
+                    v-if="
+                        activeView === SQL_QUERY_MODES.HISTORY ||
+                            activeView === SQL_QUERY_MODES.FAVORITE
+                    "
+                    :key="activeView"
+                    :height="dynDim.height - headerHeight"
+                    :width="dynDim.width"
+                    :headers="headers"
+                    :rows="rows"
+                    showSelect
+                    showGroupBy
+                    groupBy="date"
+                    @on-delete-selected="handleDeleteSelectedRows"
+                    @custom-group="customGroup"
+                    @current-rows-length="currentRowsLength = $event"
+                >
+                    <template v-slot:date="{ data: { cell, maxWidth } }">
+                        <truncate-string
+                            :text="
+                                `${$help.dateFormat({
+                                    value: cell,
+                                    formatType: 'ddd, DD MMM YYYY',
+                                })}`
+                            "
+                            :maxWidth="maxWidth"
+                        />
+                    </template>
+                </table-list>
+            </template>
+            <span
+                v-else
+                v-html="
+                    activeView === SQL_QUERY_MODES.HISTORY
+                        ? $t('historyTabGuide')
+                        : $t('favoriteTabGuide')
                 "
-                :key="activeView"
-                :height="dynDim.height - headerHeight"
-                :width="dynDim.width"
-                :headers="headers"
-                :rows="rows"
-                showSelect
-                showGroupBy
-                groupBy="date"
-                @on-delete-selected="handleDeleteSelectedRows"
-                @custom-group="customGroup"
-                @current-rows-length="currentRowsLength = $event"
-            >
-                <template v-slot:date="{ data: { cell, maxWidth } }">
-                    <truncate-string
-                        :text="
-                            `${$help.dateFormat({
-                                value: cell,
-                                formatType: 'ddd, DD MMM YYYY',
-                            })}`
-                        "
-                        :maxWidth="maxWidth"
-                    />
-                </template>
-            </table-list>
+            />
         </keep-alive>
         <confirm-dialog
             ref="confirmDelDialog"

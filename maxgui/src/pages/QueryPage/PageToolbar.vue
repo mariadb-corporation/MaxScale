@@ -38,7 +38,7 @@
                           })}\nCmd/Ctrl + S`
                         : `${$t('saveStatementsToFavorite', {
                               quantity: $t('all'),
-                          })}\nCmd/Ctrl + Shift + S`
+                          })}\nCmd/Ctrl + S`
                 }}
             </span>
         </v-tooltip>
