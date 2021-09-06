@@ -775,6 +775,12 @@ This setting tells the monitor to assume that the servers should be arranged in 
 `auto_failover` and `auto_rejoin` are also activated regardless of their individual
 settings.
 
+By default, mariadbmon will not rejoin servers with more than one replication
+stream configured into the cluster. Starting with MaxScale 6.2.0, when
+`enforce_simple_topology` is enabled, all servers will be rejoined into the
+cluster and any extra replication sources will be removed. This is done to make
+automated failover with multi-source external replication possible.
+
 This setting also allows the monitor to perform a failover to a cluster where the master
 server has not been seen [Running]. This is usually the case when the master goes down
 before MaxScale is started. When using this feature, the monitor will guess the GTID
