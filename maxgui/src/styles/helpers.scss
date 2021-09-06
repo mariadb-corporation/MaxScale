@@ -82,3 +82,8 @@
     top: 0;
     left: 0;
 }
+
+.checkbox--scale-reduce {
+    transform: scale(0.75);
+    transform-origin: 50% 50%;
+}

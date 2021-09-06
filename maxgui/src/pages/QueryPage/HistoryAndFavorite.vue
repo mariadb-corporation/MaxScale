@@ -31,16 +31,17 @@
                 :width="dynDim.width"
                 :headers="headers"
                 :rows="rows"
+                showSelect
+                @on-delete-selected="handleDeleteSelectedRows"
+                @custom-group="customGroup"
+                @current-rows-length="currentRowsLength = $event"
             >
                 <template v-slot:date="{ data: { cell, maxWidth } }">
                     <truncate-string
                         :text="
                             `${$help.dateFormat({
                                 value: cell,
-                                formatType:
-                                    activeView === SQL_QUERY_MODES.HISTORY
-                                        ? 'ddd, DD MMM YYYY'
-                                        : 'DATE_RFC2822',
+                                formatType: 'ddd, DD MMM YYYY',
                             })}`
                         "
                         :maxWidth="maxWidth"
@@ -48,6 +49,37 @@
                 </template>
             </table-list>
         </keep-alive>
+        <confirm-dialog
+            ref="confirmDelDialog"
+            :title="
+                $t('clearSelectedQueries', {
+                    targetType: $t(
+                        activeView === SQL_QUERY_MODES.HISTORY ? 'queryHistory' : 'favoriteQueries'
+                    ),
+                })
+            "
+            type="delete"
+            :onSave="deleteSelectedRows"
+            minBodyWidth="624px"
+        >
+            <template v-slot:body-prepend>
+                <p>
+                    {{
+                        $t('info.clearSelectedQueries', {
+                            quantity:
+                                itemsToBeDeleted.length === currentRowsLength
+                                    ? $t('theEntire')
+                                    : $t('selected'),
+                            targetType: $t(
+                                activeView === SQL_QUERY_MODES.HISTORY
+                                    ? 'queryHistory'
+                                    : 'favoriteQueries'
+                            ),
+                        })
+                    }}
+                </p>
+            </template>
+        </confirm-dialog>
     </div>
 </template>
 
@@ -83,6 +115,8 @@ export default {
     data() {
         return {
             headerHeight: 0,
+            itemsToBeDeleted: [],
+            currentRowsLength: 0,
         }
     },
     computed: {
@@ -121,11 +155,11 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        //TODO: uncomment this when customGroup is added
-                        /*header.groupable = true */
+                        header.groupable = true
+                        header.hasCustomGroup = true
                         break
                     case 'connection_name':
-                        header.width = 180
+                        header.width = 215
                         header.groupable = true
                         break
                     case 'time':
@@ -159,10 +193,62 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
+            SET_QUERY_FAVORITE: 'persisted/SET_QUERY_FAVORITE',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
             this.headerHeight = this.$refs.header.clientHeight
+        },
+        /** Custom groups 2d array with same value at provided index to a Map
+         * @param {Array} data.rows - 2d array to be grouped into a Map
+         * @param {Number} data.idx - col index of the inner array
+         * @param {Object} data.header - header object
+         * @param {Function} callback - Callback function to pass the result
+         */
+        customGroup(data, callback) {
+            const { rows, idx, header } = data
+            switch (header.text) {
+                case 'date': {
+                    let map = new Map()
+                    rows.forEach(row => {
+                        const key = this.$help.dateFormat({
+                            value: row[idx],
+                            formatType: 'ddd, DD MMM YYYY',
+                        })
+                        let matrix = map.get(key) || [] // assign an empty arr if not found
+                        matrix.push(row)
+                        map.set(key, matrix)
+                    })
+                    callback(map)
+                }
+            }
+        },
+        handleDeleteSelectedRows(itemsToBeDeleted) {
+            this.itemsToBeDeleted = itemsToBeDeleted
+            this.$refs.confirmDelDialog.open()
+        },
+        deleteSelectedRows() {
+            const { cloneDeep, xorWith, isEqual } = this.$help.lodash
+            /**
+             * TODO: With current implementation, Virtual-scroll-table uses 2d array to
+             * render table rows so when toggling the visibility of columns,
+             * it's not possible to detect which rows to be deleted or selected.
+             * So there is no other way but to deep compare original history/favorite
+             * rows with selected rows. As a result, columns toggle needs to be
+             * disabled and reset when selecting rows.
+             */
+            let targetMatrices = cloneDeep(this.itemsToBeDeleted).map(
+                row => row.filter((_, i) => i !== 0) // Remove # col
+            )
+            const newMaxtrices = xorWith(this.rows, targetMatrices, isEqual)
+            // Convert to array of objects
+            const newData = this.$help.getObjectRows({
+                columns: this.headers.map(h => h.text),
+                rows: newMaxtrices,
+            })
+
+            this[`SET_QUERY_${this.activeView}`](newData)
         },
     },
 }

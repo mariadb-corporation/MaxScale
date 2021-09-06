@@ -3,6 +3,28 @@
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
             <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
                 <div
+                    v-if="showSelect && !isVertTable"
+                    class="th d-flex align-center px-3"
+                    :style="{
+                        ...headerStyle,
+                        height: $parent.lineHeight,
+                        maxWidth: '50px',
+                        minWidth: '50px',
+                    }"
+                >
+                    <v-checkbox
+                        :disabled="!currRowsLen"
+                        :input-value="isAllselected"
+                        :indeterminate="indeterminate"
+                        dense
+                        class="checkbox--scale-reduce ma-0"
+                        primary
+                        hide-details
+                        @change="val => $emit('toggle-select-all', val)"
+                    />
+                    <div class="header__resizer no-pointerEvent d-inline-block fill-height"></div>
+                </div>
+                <div
                     v-for="(header, i) in tableHeaders"
                     :key="`${header.text}_${i}`"
                     :ref="`header__${i}`"
@@ -21,13 +43,17 @@
                     }"
                     @click="() => (enableSorting ? handleSort(header.text) : null)"
                 >
+                    <span v-if="header.text === '#'">
+                        {{ header.text }}
+                    </span>
                     <!-- maxWidth: minus padding and sort-icon -->
                     <truncate-string
+                        v-else
                         :text="`${header.text}`.toUpperCase()"
                         :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
                     />
                     <span v-if="header.text === '#'" class="ml-1 color text-field-text">
-                        ({{ rowsLength - totalGroupsLength }})
+                        ({{ currRowsLen }})
                     </span>
                     <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
                         $vuetify.icons.arrowDown
@@ -77,6 +103,7 @@
   width?: string | number, default width when header is rendered
   maxWidth?: string | number,
   groupable?: boolean
+  hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
 }
  */
 export default {
@@ -86,8 +113,10 @@ export default {
         boundingWidth: { type: Number, required: true },
         headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        rowsLength: { type: Number, required: true },
-        totalGroupsLength: { type: Number, required: true },
+        currRowsLen: { type: Number, required: true },
+        showSelect: { type: Boolean, required: true },
+        isAllselected: { type: Boolean, required: true },
+        indeterminate: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -117,7 +146,7 @@ export default {
                 : this.headers
         },
         enableSorting() {
-            return this.rowsLength <= 10000 && !this.isVertTable
+            return this.currRowsLen <= 10000 && !this.isVertTable
         },
     },
     watch: {
