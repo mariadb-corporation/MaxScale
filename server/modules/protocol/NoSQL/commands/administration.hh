@@ -87,10 +87,7 @@ protected:
     {
         if (err.code() == ER_NO_SUCH_TABLE)
         {
-            ostringstream ss;
-            ss << "ns does not exist: " << table(Quoted::NO);
-
-            throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
+            throw SoftError(error_message(), error::NAMESPACE_NOT_FOUND);
         }
         else
         {
@@ -103,6 +100,11 @@ protected:
     virtual GWBUF* collection_exists(bool created) = 0;
 
 private:
+    virtual string error_message() const
+    {
+        return "ns does not exist: " + table(Quoted::NO);
+    }
+
     State translate_normal_action(mxs::Buffer&& mariadb_response, GWBUF **ppResponse)
     {
         State state = READY;
@@ -813,6 +815,11 @@ public:
     using ManipulateIndexes::ManipulateIndexes;
 
 private:
+    string error_message() const override
+    {
+        return "ns not found " + table(Quoted::NO);
+    }
+
     GWBUF* collection_exists(bool created) override
     {
         int32_t nIndexes_was = 1;
@@ -1228,10 +1235,13 @@ private:
         DocumentBuilder key;
         key.append(kvp(key::_ID, (int32_t)1));
 
-        DocumentBuilder first_batch;
-        first_batch.append(kvp(key::V, (int32_t)2)); // TODO: What is this?
-        first_batch.append(kvp(key::KEY, key.extract()));
-        first_batch.append(kvp(key::NAME, key::_ID_));
+        DocumentBuilder index;
+        index.append(kvp(key::V, (int32_t)2)); // TODO: What is this?
+        index.append(kvp(key::KEY, key.extract()));
+        index.append(kvp(key::NAME, key::_ID_));
+
+        ArrayBuilder first_batch;
+        first_batch.append(index.extract());
 
         DocumentBuilder cursor;
         cursor.append(kvp(key::ID, (int64_t)0));
