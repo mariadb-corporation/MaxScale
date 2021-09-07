@@ -1,18 +1,17 @@
 #include <maxtest/blob_test.hh>
+#include <numeric>
 
 int test_longblob(TestConnections* Test,
                   MYSQL* conn,
-                  char*  blob_name,
+                  char* blob_name,
                   unsigned long chunk_size,
                   int chunks,
                   int rows)
 {
     int size = chunk_size;
-    int i, j;
     MYSQL_BIND param[1];
     char sql[256];
     int global_res = Test->global_result;
-    // Test->tprintf("chunk size %lu chunks %d inserts %d\n", chunk_size, chunks, rows);
 
     char* insert_stmt = (char*) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
 
@@ -45,45 +44,30 @@ int test_longblob(TestConnections* Test,
                          mysql_stmt_error(stmt));
 
         Test->tprintf("Filling buffer\n");
-        unsigned long* data = (unsigned long*) malloc(size * sizeof(long int));
 
-        if (data == NULL)
-        {
-            Test->add_result(1, "Memory allocation error\n");
-        }
+        std::vector<uint8_t> data(size, 0);
+        std::iota(data.begin(), data.end(), 0);
 
         Test->tprintf("Sending data in %lu bytes chunks, total size is %lu\n",
-                      size * sizeof(unsigned long),
-                      (size * sizeof(unsigned long)) * chunks);
-        for (i = 0; i < chunks; i++)
+                      data.size(), data.size() * chunks);
+
+        for (int i = 0; i < chunks; i++)
         {
-            for (j = 0; j < size; j++)
-            {
-                data[j] = j + i * size;
-            }
             Test->tprintf("Chunk #%d\n", i);
-            if (mysql_stmt_send_long_data(stmt, 0, (char*) data, size * sizeof(unsigned long)) != 0)
+
+            if (mysql_stmt_send_long_data(stmt, 0, (const char*)data.data(), data.size()) != 0)
             {
-                Test->add_result(1,
-                                 "Error inserting data, iteration %d, error %s\n",
-                                 i,
-                                 mysql_stmt_error(stmt));
-                free(data);
+                Test->add_result(1, "Error inserting data, iteration %d, error %s\n",
+                                 i, mysql_stmt_error(stmt));
                 return 1;
             }
         }
 
-        // for (int k = 0; k < rows; k++)
-        // {
         Test->tprintf("Executing statement: %02d\n", k);
         Test->add_result(mysql_stmt_execute(stmt),
                          "INSERT Statement with %s failed, error is %s\n",
-                         blob_name,
-                         mysql_stmt_error(stmt));
-        // }
+                         blob_name, mysql_stmt_error(stmt));
         Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
-
-        free(data);
     }
 
     if (global_res == Test->global_result)
@@ -100,8 +84,8 @@ int test_longblob(TestConnections* Test,
 
 int check_longblob_data(TestConnections* Test,
                         MYSQL* conn,
-                        unsigned long chunk_size,
-                        int chunks,
+                        size_t chunk_size,
+                        size_t chunks,
                         int rows)
 {
     // char *select_stmt = (char *) "SELECT id, x, b FROM long_blob_table WHERE id = ?";
@@ -125,7 +109,7 @@ int check_longblob_data(TestConnections* Test,
     param[0].buffer_type = MYSQL_TYPE_LONG;
     param[0].buffer = &id;
 
-    unsigned long* data = (unsigned long*) malloc(chunk_size * chunks * sizeof(long int));
+    uint8_t* data = (uint8_t*) malloc(chunk_size * chunks);
 
 
     int r_id;
@@ -153,7 +137,7 @@ int check_longblob_data(TestConnections* Test,
 
     result[2].buffer_type = MYSQL_TYPE_LONG_BLOB;
     result[2].buffer = data;
-    result[2].buffer_length = chunk_size * chunks * sizeof(long int);
+    result[2].buffer_length = chunk_size * chunks;
 
     /*
      *   if (mysql_stmt_bind_param(stmt, param) != 0)
@@ -187,14 +171,25 @@ int check_longblob_data(TestConnections* Test,
         {
             Test->add_result(1, "id field is wrong! Expected %d, but it is %d\n", row + 1, r_id);
         }
-        for (int y = 0; y < (int)chunk_size * chunks; y++)
+
+        for (size_t i = 0; i < chunks; i++)
         {
-            if ((int)data[y] != y)
+            uint8_t check = 0;
+
+            for (size_t y = 0; y < chunk_size; y++)
             {
-                Test->add_result(1, "expected %lu, got %d", data[y], y);
-                break;
+                size_t idx = i * chunk_size + y;
+
+                if (data[idx] != check)
+                {
+                    Test->add_result(1, "byte %lu: expected %hhu, got %hhu", idx, check, data[idx]);
+                    break;
+                }
+
+                ++check;
             }
         }
+
         row++;
     }
     if (row != rows)
