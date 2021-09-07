@@ -78,12 +78,17 @@ __m256i make_ascii_bitmap(const std::string& chars);
  *  There are 4 copies of the table in the __m256i, again for
  *  architectural reasons. This table also works for 8-bit chars.
  */
-static const __m256i bitmask_lookup_const = _mm256_setr_epi8(
-    1, 2, 4, 8, 16, 32, 64, 128,
-    1, 2, 4, 8, 16, 32, 64, 128,
-    1, 2, 4, 8, 16, 32, 64, 128,
-    1, 2, 4, 8, 16, 32, 64, 128
-    );
+inline __m256i bitmask_lookup_const()
+{
+    static const __m256i bitmask = _mm256_setr_epi8(
+        1, 2, 4, 8, 16, 32, 64, 128,
+        1, 2, 4, 8, 16, 32, 64, 128,
+        1, 2, 4, 8, 16, 32, 64, 128,
+        1, 2, 4, 8, 16, 32, 64, 128
+        );
+
+    return bitmask;
+}
 
 /**
  * @brief  classify_ascii Identify classified characters in an __m256i. General
@@ -106,7 +111,7 @@ inline __m256i classify_ascii(__m256i ascii_bitmap, __m256i input)
     const __m256i high_nibbles = _mm256_and_si256(_mm256_srli_epi16(input, 4), _mm256_set1_epi8(0x0f));
 
     // bits[i] = bitmask_lookup256[input[i]>>4],
-    const __m256i bits = _mm256_shuffle_epi8(bitmask_lookup_const, high_nibbles);
+    const __m256i bits = _mm256_shuffle_epi8(bitmask_lookup_const(), high_nibbles);
 
     // classified[i] = ascii_classification[i] & bits[i],
     const __m256i classified = _mm256_and_si256(ascii_classification, bits);

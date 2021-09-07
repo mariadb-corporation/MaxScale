@@ -14,7 +14,7 @@
  */
 int test_longblob(TestConnections* Test,
                   MYSQL* conn,
-                  char*  blob_name,
+                  char* blob_name,
                   unsigned long chunk_size,
                   int chunks,
                   int rows);
@@ -32,6 +32,6 @@ int test_longblob(TestConnections* Test,
  */
 int check_longblob_data(TestConnections* Test,
                         MYSQL* conn,
-                        unsigned long chunk_size,
-                        int chunks,
+                        size_t chunk_size,
+                        size_t chunks,
                         int rows);

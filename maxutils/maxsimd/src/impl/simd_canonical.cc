@@ -33,14 +33,32 @@ namespace
 
 // The characters that need to be classified. Digits are handled
 // separately.
-static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
+inline __m256i sql_ascii_bit_map()
+{
+    static const __m256i sql_ascii_bit_map = make_ascii_bitmap(R"("'`/#-\)");
+    return sql_ascii_bit_map;
+}
 
 // Characters that can start (and continue) an identifier.
-static const __m256i ident_begin_bit_map =
-    make_ascii_bitmap(R"(_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
 
-const __m256i small_zeros = _mm256_set1_epi8('0' - 1);
-const __m256i large_nines = _mm256_set1_epi8('9' + 1);
+inline __m256i ident_begin_bit_map()
+{
+    static const __m256i ident_begin_bit_map =
+            make_ascii_bitmap(R"(_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)");
+
+    return ident_begin_bit_map;
+}
+
+inline __m256i small_zeros()
+{
+    const __m256i small_zeros = _mm256_set1_epi8('0' - 1);
+    return small_zeros;
+}
+inline __m256i large_nines()
+{
+    const __m256i large_nines = _mm256_set1_epi8('9' + 1);
+    return large_nines;
+}
 
 /** This is a copy of make_markers(), but that does extra work to
  *  speed up get_canonical_impl().
@@ -77,13 +95,13 @@ inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMar
             chunk = _mm256_loadu_si256 ((const __m256i*)(pSource));
         }
 
-        auto ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map, chunk));
-        auto ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map, chunk));
+        auto ascii_bitmask = _mm256_movemask_epi8(classify_ascii(sql_ascii_bit_map(), chunk));
+        auto ident_bitmask = _mm256_movemask_epi8(classify_ascii(ident_begin_bit_map(), chunk));
 
         // Make a bitmap where a sequence of digits is replaced with only
         // the first, leading digit.
-        const __m256i greater_eq_0 = _mm256_cmpgt_epi8(chunk, small_zeros);
-        const __m256i less_eq_9 = _mm256_cmpgt_epi8(large_nines, chunk);
+        const __m256i greater_eq_0 = _mm256_cmpgt_epi8(chunk, small_zeros());
+        const __m256i less_eq_9 = _mm256_cmpgt_epi8(large_nines(), chunk);
         const __m256i all_digits = _mm256_and_si256(greater_eq_0, less_eq_9);
 
         auto pDigs = reinterpret_cast<const unsigned char*>(&all_digits);
