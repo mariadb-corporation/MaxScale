@@ -88,6 +88,7 @@
                 :isVertTable="isVertTable"
                 :showSelect="showSelect"
                 :groupBy="groupBy"
+                :activeRow="activeRow"
                 @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 v-on="$listeners"
@@ -139,6 +140,7 @@ export default {
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
         showGroupBy: { type: Boolean, default: false },
+        activeRow: { type: Array, default: () => [] },
     },
     data() {
         return {

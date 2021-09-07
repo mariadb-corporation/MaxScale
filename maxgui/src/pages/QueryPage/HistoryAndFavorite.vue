@@ -35,6 +35,7 @@
                     showSelect
                     showGroupBy
                     groupBy="date"
+                    :activeRow="activeCtxItem"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
                     @on-row-right-click="openCtxMenu"

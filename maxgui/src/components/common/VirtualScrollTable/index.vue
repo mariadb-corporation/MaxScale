@@ -64,7 +64,10 @@
                 <div
                     v-else
                     class="tr"
-                    :class="{ 'tr--selected': isRowSelected(row) }"
+                    :class="{
+                        'tr--selected': isRowSelected(row),
+                        'tr--active': $help.lodash.isEqual(activeRow, row),
+                    }"
                     :style="{ lineHeight }"
                     @contextmenu.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
@@ -174,6 +177,8 @@ export default {
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
+        // row being highlighted. e.g. opening ctx menu of a row
+        activeRow: { type: Array, default: () => [] },
     },
     data() {
         return {
@@ -462,6 +467,11 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
+                }
+            }
+            &--active {
+                .td {
+                    background: #f2fcff !important;
                 }
             }
             &--selected {
