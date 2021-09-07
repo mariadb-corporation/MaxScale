@@ -666,6 +666,7 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 listCollections | any | Ignored.
+filter | document | The field `name` is honored, other fields are not but cause warnings to be logged.
 nameOnly | boolean | Optional. A flag to indicate whether the command should return just the collection names and type or return both the name and other information.
 
 Note that the command lists all collections (that is, tables) that are found

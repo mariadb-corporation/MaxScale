@@ -980,14 +980,30 @@ public:
     {
         optional(key::NAME_ONLY, &m_name_only, Conversion::RELAXED);
 
+        string suffix;
+
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            MXS_WARNING("listCollections.filter is ignored: '%s'", bsoncxx::to_json(filter).c_str());
+            for (const auto& element : filter)
+            {
+                if (element.key().compare(key::NAME) == 0)
+                {
+                    string command(KEY);
+                    command += ".filter";
+
+                    suffix = " LIKE \"" + element_as<string>(command, key::NAME, element) + "\"";
+                }
+                else
+                {
+                    string name(element.key().data(), element.key().length());
+                    MXS_WARNING("listCollections.filter.%s is not supported.", name.c_str());
+                }
+            }
         }
 
         ostringstream sql;
-        sql << "SHOW TABLES FROM `" << m_database.name() << "`";
+        sql << "SHOW TABLES FROM `" << m_database.name() << "`" << suffix;
 
         return sql.str();
     }
