@@ -413,44 +413,14 @@ bool MariaDBUserManager::update_users()
 
     if (got_data)
     {
+        // Got some data. Update the master database if the contents differ. Usually they don't.
+        string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
+        string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
+                                        temp_userdata.n_entries(), datasource.c_str(), m_service->name());
+
         if (use_file_on_ok)
         {
             load_users_from_file(user_accounts_file, &temp_userdata);
-        }
-
-        // Got some data. Update the master database if the contents differ. Usually they don't.
-        string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
-        string msg;
-
-        if (custom_entries.empty())
-        {
-            msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
-                                     temp_userdata.n_entries(), datasource.c_str(), m_service->name());
-        }
-        else
-        {
-            // If users loading succeeded, add any custom entries here. This way, the thread-specific caches
-            // will not update when a user load from backend fails.
-            int added = 0;
-            for (const auto& custom_entry : custom_entries)
-            {
-                auto temp_custom_entry = custom_entry;
-                if (temp_userdata.add_entry(std::move(temp_custom_entry)))
-                {
-                    added++;
-                }
-                else
-                {
-                    MXB_WARNING("Cannot add custom user account '%s'@'%s' for service '%s', as a similar "
-                                "user account was read from %s.",
-                                custom_entry.username.c_str(), custom_entry.host_pattern.c_str(),
-                                m_service->name(), datasource.c_str());
-                }
-            }
-
-            msg = mxb::string_printf(
-                "Read %lu user@host entries from %s and added %i custom entr(y/ies) for service '%s'",
-                temp_userdata.n_entries(), datasource.c_str(), added, m_service->name());
         }
 
         // The comparison is not trivially cheap if there are many user entries,
@@ -1009,10 +979,14 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
     if (all.load(source))
     {
         rval = true;
+        int n_users = -1;
+        int n_grants = -1;
+        int n_roles = -1;
+
         const char grp_user[] = "user";
         if (all.contains(grp_user))
         {
-            int users_ok = 0;
+            n_users = 0;
             EntryHandler user_handler = [&](Json& user_data, int ind) {
                     // The user definition must contain at least 'user' and 'host' fields.
                     string uname = user_data.get_string("user");
@@ -1048,7 +1022,7 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
                             // Erase * from password if found. This is similar to mysql.user.
                             remove_star(new_entry.password);
                             output->add_entry(move(new_entry));
-                            users_ok++;
+                            n_users++;
                         }
                     }
                     else
@@ -1058,8 +1032,6 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
                     }
                 };
             process_array(all, grp_user, user_handler);
-            MXB_NOTICE("Read %i user@host entries from '%s' for service '%s'.",
-                       users_ok, filepathc, m_service->name());
         }
 
         // Db grants and roles are handled similarly.
@@ -1088,31 +1060,45 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
         if (all.contains(grp_db))
         {
             UserDatabase::StringSetMap db_grants_temp;
-            int total_grants = 0;
+            n_grants = 0;
             EntryHandler grant_handler = [&](Json& grant_data, int ind) {
-                    handler_helper(grant_data, ind, grp_db, "db", db_grants_temp, total_grants);
+                    handler_helper(grant_data, ind, grp_db, "db", db_grants_temp, n_grants);
                 };
             process_array(all, grp_db, grant_handler);
             // Add all the db grants as wildcard grants, as we cannot know which type it is.
             UserDatabase::StringSetMap dummy;
             output->add_db_grants(move(db_grants_temp), move(dummy));
-            MXB_NOTICE("Read %i database grant entries from '%s' for service '%s'.",
-                       total_grants, filepathc, m_service->name());
         }
 
         const char grp_roles_mapping[] = "roles_mapping";
         if (all.contains(grp_roles_mapping))
         {
             UserDatabase::StringSetMap role_map_tmp;
-            int total_roles = 0;
+            n_roles = 0;
             EntryHandler role_handler = [&](Json& role_data, int ind) {
-                    handler_helper(role_data, ind, grp_roles_mapping, "role", role_map_tmp, total_roles);
+                    handler_helper(role_data, ind, grp_roles_mapping, "role", role_map_tmp, n_roles);
                 };
             process_array(all, grp_roles_mapping, role_handler);
             output->add_role_mapping(move(role_map_tmp));
-            MXB_NOTICE("Read %i role entries from '%s' for service '%s'.",
-                       total_roles, filepathc, m_service->name());
         }
+
+        // Print a log message explaining how many of each item type was read.
+        std::vector<string> list_items;
+        auto message_helper = [&list_items](int n_items, const char* desc) {
+                if (n_items == 1)
+                {
+                    list_items.push_back(mxb::string_printf("1 %s entry", desc));
+                }
+                else if (n_items >= 0)
+                {
+                    list_items.push_back(mxb::string_printf("%i %s entries", n_items, desc));
+                }
+            };
+        message_helper(n_users, "user");
+        message_helper(n_grants, "database grant");
+        message_helper(n_roles, "role mapping");
+        string total_list = mxb::create_list_string(list_items, ", ", " and ");
+        MXB_NOTICE("Read %s from '%s' for service '%s'.", total_list.c_str(), filepathc, m_service->name());
     }
     else
     {
