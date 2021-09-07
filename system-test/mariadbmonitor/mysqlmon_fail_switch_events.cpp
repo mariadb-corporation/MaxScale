@@ -27,6 +27,9 @@ const char EV_STATE_ENABLED[] = "ENABLED";
 const char EV_STATE_DISABLED[] = "DISABLED";
 const char EV_STATE_SLAVE_DISABLED[] = "SLAVESIDE_DISABLED";
 
+const char def_charset[] = "latin1";
+const char def_collation[] = "latin1_swedish_ci";
+
 void expect_event_charset_collation(TestConnections& test, const string& event_name,
                                     const string& client_charset, const string& collation_connection,
                                     const string& database_collation);
@@ -70,6 +73,7 @@ void create_event(TestConnections& test)
         && conn->cmd_f("CREATE OR REPLACE TABLE test.t1(c1 INT);")
         && conn->cmd(USE_TEST)
         && conn->cmd("INSERT INTO t1 VALUES (1);")
+        && conn->cmd_f("SET NAMES %s COLLATE %s", def_charset, def_collation)
         && conn->cmd_f(create_event_query, EVENT_NAME))
     {
         test.maxscale->wait_for_monitor();
@@ -255,9 +259,6 @@ void test_main(TestConnections& test)
     {
         // MXS-3158 Check that monitor preserves the character set and collation of an even when altering it.
         test.tprintf("Checking event handling with non-default charset and collation.");
-
-        const char def_charset[] = "latin1";
-        const char def_collation[] = "latin1_swedish_ci";
 
         expect_event_charset_collation(test, EVENT_NAME, def_charset, def_collation, def_collation);
         if (test.ok())
