@@ -2058,6 +2058,42 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     return rv;
 }
 
+string get_comparison_condition(const string& field,
+                                bsoncxx::type type,
+                                const bsoncxx::document::element& element)
+{
+    string condition;
+
+    switch (type)
+    {
+    case bsoncxx::type::k_document:
+        condition = get_comparison_condition(field, element.get_document());
+        break;
+
+    case bsoncxx::type::k_regex:
+        condition = "(JSON_VALUE(doc, '$." + field + "') " +
+            element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
+    case bsoncxx::type::k_array:
+        // TODO: This probably needs to be dealt with explicitly.
+    default:
+        {
+            condition
+                // Without the explicit check for NULL, this does not work when NOT due to $nor
+                // is stashed in front of the whole thing.
+                = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
+                + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
+                + element_to_value(element, ValueFor::JSON) + ") = 1)"
+                + " OR "
+                + "(JSON_VALUE(doc, '$." + field + "') = "
+                + element_to_value(element, ValueFor::SQL) + "))";
+        }
+    }
+
+    return condition;
+}
+
 // https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string get_comparison_condition(const bsoncxx::document::element& element)
 {
@@ -2098,38 +2134,31 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
             if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
             {
-                // Indeed it is. So, we change e.g. "var.3" => "var[3]". Former is MongoDB,
+                // Indeed it is. So we need to cater both for the case that
+                // it refers to a field whose name is that number and for the
+                // case that it refers to the n'th item in an array.
+
+                condition = "(";
+                condition += get_comparison_condition(field, type, element);
+                condition += " OR ";
+
+
+                // So, we change e.g. "var.3" => "var[3]". Former is MongoDB,
                 // latter is MariaDB JSON.
                 field = field.substr(0, i);
                 field += "[" + tail + "]";
+
+                condition += get_comparison_condition(field, type, element);
+                condition += ")";
+            }
+            else
+            {
+                condition = get_comparison_condition(field, type, element);
             }
         }
-
-        switch (type)
+        else
         {
-        case bsoncxx::type::k_document:
-            condition = get_comparison_condition(field, element.get_document());
-            break;
-
-        case bsoncxx::type::k_regex:
-            condition = "(JSON_VALUE(doc, '$." + field + "') " +
-                element_to_value(element, ValueFor::SQL) + ")";
-            break;
-
-        case bsoncxx::type::k_array:
-            // TODO: This probably needs to be dealt with explicitly.
-        default:
-            {
-                condition
-                    // Without the explicit check for NULL, this does not work when NOT due to $nor
-                    // is stashed in front of the whole thing.
-                    = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
-                    + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
-                    + element_to_value(element, ValueFor::JSON) + ") = 1)"
-                    + " OR "
-                    + "(JSON_VALUE(doc, '$." + field + "') = "
-                    + element_to_value(element, ValueFor::SQL) + "))";
-            }
+            condition = get_comparison_condition(field, type, element);
         }
     }
 
