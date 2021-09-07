@@ -1099,7 +1099,16 @@ string get_logical_condition(const bsoncxx::document::element& element)
     return condition;
 }
 
-using ElementValueToString = string (*)(const bsoncxx::document::element& element, const string& op);
+enum class ValueFor
+{
+    JSON,
+    JSON_NESTED,
+    SQL
+};
+
+using ElementValueToString = string (*)(const bsoncxx::document::element& element,
+                                        ValueFor,
+                                        const string& op);
 using FieldAndElementValueToComparison = string (*) (const std::string& field,
                                                      const bsoncxx::document::element& element,
                                                      const string& mariadb_op,
@@ -1114,7 +1123,7 @@ struct ElementValueInfo
 };
 
 template<class document_element_or_array_item>
-string element_to_value(const document_element_or_array_item& x, const string& op = "")
+string element_to_value(const document_element_or_array_item& x, ValueFor value_for, const string& op = "")
 {
     ostringstream ss;
 
@@ -1142,7 +1151,18 @@ string element_to_value(const document_element_or_array_item& x, const string& o
     case bsoncxx::type::k_utf8:
         {
             const auto& utf8 = x.get_utf8();
-            ss << "'" << string(utf8.value.data(), utf8.value.size()) << "'";
+            string_view s(utf8.value.data(), utf8.value.size());
+
+            switch (value_for)
+            {
+            case ValueFor::JSON:
+                ss << "'\"" << s << "\"'";
+                break;
+
+            case ValueFor::JSON_NESTED:
+            case ValueFor::SQL:
+                ss << "\"" << s << "\"";
+            }
         }
         break;
 
@@ -1180,7 +1200,7 @@ string element_to_value(const document_element_or_array_item& x, const string& o
                     ss << ", ";
                 }
 
-                ss << element_to_value(element, op);
+                ss << element_to_value(element, ValueFor::JSON_NESTED, op);
             }
 
             ss << ")";
@@ -1205,7 +1225,7 @@ string element_to_value(const document_element_or_array_item& x, const string& o
                     ss << ", ";
                 }
 
-                ss << "\"" << element.key() << "\", " << element_to_value(element, op);
+                ss << "\"" << element.key() << "\", " << element_to_value(element, ValueFor::JSON, op);
             }
 
             ss << ")";
@@ -1213,7 +1233,16 @@ string element_to_value(const document_element_or_array_item& x, const string& o
         break;
 
     case bsoncxx::type::k_null:
-        ss << "'null'";
+        switch (value_for)
+        {
+        case ValueFor::JSON:
+        case ValueFor::JSON_NESTED:
+            ss << "null";
+            break;
+
+        case ValueFor::SQL:
+            ss << "'null'";
+        }
         break;
 
     case bsoncxx::type::k_regex:
@@ -1243,7 +1272,9 @@ string element_to_value(const document_element_or_array_item& x, const string& o
     return ss.str();
 }
 
-string element_to_array(const bsoncxx::document::element& element, const string& op = "")
+string element_to_array(const bsoncxx::document::element& element,
+                        ValueFor,
+                        const string& op = "")
 {
     vector<string> values;
 
@@ -1255,7 +1286,7 @@ string element_to_array(const bsoncxx::document::element& element, const string&
         {
             const auto& item = *it;
 
-            string value = element_to_value(item, op);
+            string value = element_to_value(item, ValueFor::JSON, op);
             mxb_assert(!value.empty());
 
             values.push_back(value);
@@ -1279,7 +1310,7 @@ string element_to_array(const bsoncxx::document::element& element, const string&
     return rv;
 }
 
-string element_to_null(const bsoncxx::document::element& element, const string& = "")
+string element_to_null(const bsoncxx::document::element& element, ValueFor, const string& = "")
 {
     bool b = nosql::element_as<bool>("maxscale", "internal", element, nosql::Conversion::RELAXED);
 
@@ -1315,8 +1346,8 @@ string elemMatch_to_json_contain(const string& subfield,
     }
 
     return "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + subfield + "\", "
-        + element_to_value(elemMatch, "$elemMatch") + "), '$." + field + "') = " + value
-        + ")";
+        + element_to_value(elemMatch, ValueFor::JSON_NESTED, "$elemMatch") + "), '$."
+        + field + "') = " + value + ")";
 }
 
 string elemMatch_to_json_contain(const string& subfield,
@@ -1365,7 +1396,7 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
         }
 
         rv = "(JSON_CONTAINS(doc, "
-            + element_to_value(elemMatch, "$elemMatch") + ", '$." + field + "') = " + value
+            + element_to_value(elemMatch, ValueFor::JSON, "$elemMatch") + ", '$." + field + "') = " + value
             + ")";
     }
     else
@@ -1378,7 +1409,8 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
         else
         {
             rv = "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + (string)key + "\", "
-                + element_to_value(elemMatch, "$elemMatch") + "), '$." + field + "') = 1)";
+                + element_to_value(elemMatch, ValueFor::JSON_NESTED, "$elemMatch") + "), '$."
+                + field + "') = 1)";
 
             if (elemMatch.type() == bsoncxx::type::k_null)
             {
@@ -1443,7 +1475,7 @@ string default_field_and_value_to_comparison(const std::string& field,
 {
     return "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
         + "AND (JSON_EXTRACT(doc, '$." + field + "') "
-        + mariadb_op + " " + value_to_string(element, nosql_op) + "))";
+        + mariadb_op + " " + value_to_string(element, ValueFor::JSON, nosql_op) + "))";
 }
 
 string field_and_value_to_nin_comparison(const std::string& field,
@@ -1453,7 +1485,7 @@ string field_and_value_to_nin_comparison(const std::string& field,
                                          ElementValueToString value_to_string)
 {
     string rv;
-    string s = value_to_string(element, nosql_op);
+    string s = value_to_string(element, ValueFor::JSON, nosql_op);
 
     if (!s.empty())
     {
@@ -1478,36 +1510,6 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
     { "$exists", { "IS",     &element_to_null,  default_field_and_value_to_comparison } }
 };
-
-string get_op_and_value(const bsoncxx::document::view& doc)
-{
-    string rv;
-
-    // We will ignore all but the last field. That's what MongoDB does
-    // but as it is unlikely that there will be more fields than one,
-    // explicitly ignoring fields at the beginning would just make
-    // things messier without adding much benefit.
-    for (auto it = doc.begin(); it != doc.end(); ++it)
-    {
-        const auto& element = *it;
-        const auto nosql_op = static_cast<string>(element.key());
-
-        auto jt = converters.find(nosql_op);
-
-        if (jt != converters.end())
-        {
-            rv = jt->second.mariadb_op + " " + jt->second.value_to_string(element, nosql_op);
-        }
-        else
-        {
-            ostringstream ss;
-            ss << "unknown operator: " << nosql_op;
-            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
-        }
-    }
-
-    return rv;
-}
 
 enum class ArrayOp
 {
@@ -1546,12 +1548,14 @@ inline const char* to_logical_operator(ArrayOp op)
 }
 
 
-bool add_element_array(ostream& ss,
+void add_element_array(ostream& ss,
                        bool is_scoped,
                        const string& field,
                        const char* zDescription,
                        const bsoncxx::array::view& all_elements)
 {
+    vector<bsoncxx::document::view> elem_matches;
+
     ss << "(JSON_CONTAINS(";
 
     if (is_scoped)
@@ -1569,6 +1573,9 @@ bool add_element_array(ostream& ss,
         ss << "doc, JSON_ARRAY(";
     }
 
+    bool is_single =
+        all_elements.begin() != all_elements.end() &&
+        ++all_elements.begin() == all_elements.end();
     bool is_null = false;
     bool first_element = true;
     for (const auto& one_element : all_elements)
@@ -1592,31 +1599,26 @@ bool add_element_array(ostream& ss,
                 auto it = doc.begin();
                 auto end = doc.end();
 
-                if (it != end)
+                if (it != end && it->key().compare("$elemMatch") == 0)
                 {
                     auto element = *it;
 
-                    if (element.key().compare("$elemMatch") == 0)
+                    if (element.type() != bsoncxx::type::k_document)
                     {
-                        if (element.type() != bsoncxx::type::k_null)
-                        {
-                            value = element_to_value(element, zDescription);
-                        }
-                        else
-                        {
-                            is_null = true;
-                        }
+                        throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
                     }
-                    else
-                    {
-                        value = element_to_value(one_element, zDescription);
-                    }
+
+                    elem_matches.push_back(element.get_document());
+                }
+                else
+                {
+                    value = element_to_value(one_element, ValueFor::JSON_NESTED, zDescription);
                 }
             }
             break;
 
         default:
-            value = element_to_value(one_element, zDescription);
+            value = element_to_value(one_element, ValueFor::JSON_NESTED, zDescription);
         }
 
         if (!value.empty())
@@ -1644,9 +1646,44 @@ bool add_element_array(ostream& ss,
     }
 
     // With [*][*] we e.g. exclude [[2]] when looking for [2].
-    ss << " AND JSON_EXTRACT(doc, '$." << field << "[*][*]') IS NULL)";
+    ss << " AND JSON_EXTRACT(doc, '$." << field << "[*][*]') IS NULL";
 
-    return is_null;
+
+    for(const auto& elem_match : elem_matches)
+    {
+        for (auto it = elem_match.begin(); it != elem_match.end(); ++it)
+        {
+            ss << " AND ";
+
+            auto element = *it;
+
+            ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'ARRAY' AND "
+               << "((JSON_CONTAINS(JSON_EXTRACT(doc, '$." << field << "[*]'), "
+               << "JSON_OBJECT(\"" << element.key() << "\", "
+               << element_to_value(*it, ValueFor::JSON_NESTED, zDescription)
+               << ")) = 1) OR "
+               << "(JSON_QUERY(doc, '$." << field << "[*]') IS NOT NULL AND "
+               << "JSON_EXTRACT(doc, '$." << field << "[*]." << element.key() << "') IS NULL)))";
+        }
+    }
+
+    ss << ")";
+
+    if (is_single)
+    {
+        auto element = *all_elements.begin();
+        if (element.type() != bsoncxx::type::k_document)
+        {
+            ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+               << element_to_value(element, ValueFor::SQL, zDescription)
+               << ")";
+        }
+    }
+
+    if (is_null)
+    {
+        ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+    }
 }
 
 string array_op_to_condition(const string& field,
@@ -1673,8 +1710,6 @@ string array_op_to_condition(const string& field,
     }
     else
     {
-        bool is_single = (++all_elements.begin() == all_elements.end());
-
         auto i = field.find_last_of('.');
         bool is_scoped = (i != string::npos);
 
@@ -1684,7 +1719,6 @@ string array_op_to_condition(const string& field,
         {
             if (is_scoped)
             {
-                bool is_null = false;
                 string path;
                 path = field.substr(0, i);
                 path += "[*].";
@@ -1703,45 +1737,13 @@ string array_op_to_condition(const string& field,
                         add_or = true;
                     }
 
-                    is_null = add_element_array(ss, is_scoped, p, zDescription, all_elements);
-
-                    if (is_single)
-                    {
-                        auto element = *all_elements.begin();
-                        if (element.type() != bsoncxx::type::k_document)
-                        {
-                            ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                               << element_to_value(*all_elements.begin(), zDescription)
-                               << ")";
-                        }
-                    }
-
-                    if (is_null)
-                    {
-                        ss << " OR (JSON_EXTRACT(doc, '$." << p << "') IS NULL)";
-                    }
+                    add_element_array(ss, is_scoped, p, zDescription, all_elements);
                 };
                 ss << ")";
             }
             else
             {
-                bool is_null = add_element_array(ss, is_scoped, field, zDescription, all_elements);
-
-                if (is_single)
-                {
-                    auto element = *all_elements.begin();
-                    if (element.type() != bsoncxx::type::k_document)
-                    {
-                        ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                           << element_to_value(*all_elements.begin(), zDescription)
-                           << ")";
-                    }
-                }
-
-                if (is_null)
-                {
-                    ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
-                }
+                add_element_array(ss, is_scoped, field, zDescription, all_elements);
             }
         }
         else
@@ -1794,7 +1796,7 @@ string array_op_to_condition(const string& field,
                             {
                                 ss << "(JSON_CONTAINS(";
                                 ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                   << element_to_value(one_element, zDescription)
+                                   << element_to_value(one_element, ValueFor::JSON, zDescription)
                                    << ")) = 1)";
                             }
                             else
@@ -1805,7 +1807,7 @@ string array_op_to_condition(const string& field,
                             if (one_element.type() != bsoncxx::type::k_document)
                             {
                                 ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                                   << element_to_value(one_element, zDescription)
+                                   << element_to_value(one_element, ValueFor::SQL, zDescription)
                                    << ")";
                             }
                         }
@@ -1814,13 +1816,13 @@ string array_op_to_condition(const string& field,
                     else
                     {
                         ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                           << element_to_value(one_element, zDescription)
+                           << element_to_value(one_element, ValueFor::JSON, zDescription)
                            << "), '$." << field << "') = 1)";
 
                         if (one_element.type() != bsoncxx::type::k_document)
                         {
                             ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                               << element_to_value(one_element, zDescription)
+                               << element_to_value(one_element, ValueFor::SQL, zDescription)
                                << ")";
                         }
                     }
@@ -2030,7 +2032,8 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
         else if (nosql_op == "$size")
         {
-            rv = "(JSON_LENGTH(doc, '$." + field + "') = " + element_to_value(element, nosql_op) + ")";
+            rv = "(JSON_LENGTH(doc, '$." + field + "') = " +
+                element_to_value(element, ValueFor::SQL, nosql_op) + ")";
         }
         else if (nosql_op == "$all")
         {
@@ -2109,21 +2112,23 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             break;
 
         case bsoncxx::type::k_regex:
-            condition = "(JSON_VALUE(doc, '$." + field + "') " + element_to_value(element) + ")";
+            condition = "(JSON_VALUE(doc, '$." + field + "') " +
+                element_to_value(element, ValueFor::SQL) + ")";
             break;
 
         case bsoncxx::type::k_array:
             // TODO: This probably needs to be dealt with explicitly.
         default:
             {
-                auto value = element_to_value(element);
                 condition
                     // Without the explicit check for NULL, this does not work when NOT due to $nor
                     // is stashed in front of the whole thing.
                     = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
-                    + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), " + value + ") = 1)"
+                    + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
+                    + element_to_value(element, ValueFor::JSON) + ") = 1)"
                     + " OR "
-                    + "(JSON_VALUE(doc, '$." + field + "') = " + value + "))";
+                    + "(JSON_VALUE(doc, '$." + field + "') = "
+                    + element_to_value(element, ValueFor::SQL) + "))";
             }
         }
     }
@@ -2183,11 +2188,6 @@ string get_condition(const bsoncxx::document::view& doc)
     return where;
 }
 
-}
-
-string nosql::to_value(const bsoncxx::document::element& element)
-{
-    return element_to_value(element);
 }
 
 template<class document_element_or_array_item>
@@ -2518,7 +2518,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             if (add_value)
             {
                 s += ", ";
-                s += nosql::to_value(field);
+                s += element_to_value(field, ValueFor::JSON_NESTED);
             }
         }
 

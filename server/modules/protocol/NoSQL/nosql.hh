@@ -472,8 +472,6 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
  *
  * @throws SoftError(BAD_VALUE) if the element cannot be converted to a value.
  */
-std::string to_value(const bsoncxx::document::element& element);
-
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
