@@ -286,7 +286,7 @@ add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit
 add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwritesplit HEAVY REPL_BACKEND)
 
 # Test with extremely big blob inserting
-add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
+add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute HEAVY REPL_BACKEND)
 
 # Retry reads with persistent connections
 add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -294,9 +294,6 @@ add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesp
 
 # A set of MariaDB server tests executed against Maxscale RWSplit
 add_test_script(mariadb_tests_hartmut.sh mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
-
-# Creates a number of connections > max_connections setting
-add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
 
 # Checks tha Maxscale processis running as 'maxscale' user
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
@@ -336,12 +333,6 @@ add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_ch
 # Playing with blocking and unblocking Master under load
 add_test_executable(mxs559_block_master.cpp mxs559_block_master mxs559 LABELS readwritesplit REPL_BACKEND)
 
-# Executes simple queries from python script in the loop
-add_test_script(mxs585.py mxs585.py replication LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
-
-# Simple transactions in the loop from python script with client SSL on
-add_test_script(mxs598.py mxs598.py ssl LABELS MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
-
 # Regression case for the bug "MaxScale fails to start silently if config file is not readable"
 add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication LABELS maxscale REPL_BACKEND)
 
@@ -354,9 +345,6 @@ add_test_executable(mxs716.cpp mxs716 replication LABELS MySQLAuth LIGHT REPL_BA
 
 # MaxScale configuration check functionality test (maxscale -c)
 add_test_executable(mxs722.cpp mxs722 mxs722 LABELS maxscale LIGHT REPL_BACKEND)
-
-# Simple connect test in bash, checks that defined in cmd line DB is selected
-add_test_script(mxs791.sh mxs791.sh replication LABELS UNSTABLE HEAVY REPL_BACKEND)
 
 # Checks "Current no. of conns" output after long blob inserting
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
@@ -653,9 +641,6 @@ add_test_derived(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND
 
 # Testing slaves who have lost their master and how MaxScale works with them
 add_test_executable(stale_slaves.cpp stale_slaves stale_slaves LABELS mysqlmon REPL_BACKEND)
-
-# Run sysbech test and block one slave during test execution
-add_test_executable(sysbench_kill_slave.cpp sysbench_kill_slave replication LABELS UNSTABLE HEAVY REPL_BACKEND)
 
 # Check temporal tables commands functionality
 add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readwritesplit REPL_BACKEND)
@@ -972,9 +957,6 @@ add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_
 # Crash with Galera and backend restart when persistant cfonnections are in use
 add_test_derived(mxs361 pers_02 mxs361 mxs361 LABELS maxscale REPL_BACKEND GALERA_BACKEND)
 
-# Simple connect test in bash, checks that defined in cmd line DB is selected (Galera backend)
-add_test_script(mxs791_galera.sh mxs791.sh galera LABELS UNSTABLE HEAVY GALERA_BACKEND)
-
  # MXS-1585: Crash in MaxScale 2.1.12
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS GALERA_BACKEND)
@@ -1018,75 +1000,6 @@ add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution
 
 ############################################
 # END: tests for Xpand monitor          #
-############################################
-
-############################################
-# BEGIN: tests with 15 machines backend    #
-############################################
-
-# temporarily added UNSTABLE HEAVY labels to prevent execution of these tests in daily rounds
-
-
-# own long test
-# 'long_test_time' variable defines time of execution (in seconds)
-#add_test_executable_notest(long_test.cpp long_test_big replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Tries INSERTs with size close to 0x0ffffff * N
-#add_test_derived(different_size_rwsplit_big different_size_rwsplit replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY )
-
-# Check how Maxscale works in case of one slave failure, only one slave is configured
-#add_test_derived(slave_failover_big slave_failover replication.one_slave LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend
-#add_test_derived(sql_queries_big sql_queries replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Check temporal tables commands functionality
-#add_test_derived(temporal_tables_big temporal_tables replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Check if prepared statement works via Maxscale (via RWSplit)
-#add_test_derived(prepared_statement_big prepared_statement replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Connect to ReadConn in master mode and check if there is only one backend connection to master
-#add_test_derived(readconnrouter_master_big readconnrouter_master replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Creates 100 connections to ReadConn in slave mode and check if connections are distributed among all slaves
-#add_test_derived(readconnrouter_slave_big readconnrouter_slave replication LABELS readconnroute REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
-#add_test_derived(rw_select_insert_big rw_select_insert replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Checks connections are distributed equaly among backends
-#add_test_derived(rwsplit_conn_num_big rwsplit_conn_num repl_lgc LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Check that there is one connection to Master and one connection to one of slaves
-#add_test_derived(rwsplit_connect_big rwsplit_connect replication LABELS readwritesplit REPL_BACKEND BIG_REPL_BACKEND UNSTABLE HEAVY)
-
-# Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
-# (different filter sequence and configuration, but the same test, see .cnf for details)
-#add_test_derived(bug585_big bug587 bug585 LABELS regexfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-#add_test_derived(bug587_big bug587 bug587 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-#add_test_derived(bug587_1_big bug587 bug587_1 LABELS regexfilter hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-# Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-#add_test_derived(bug471_big rhint_basic bug471_big LABELS readwritesplit hintfilter BIG_REPL_BACKEND REPL_BACKEND UNSTABLE HEAVY)
-
-#set_tests_properties(different_size_rwsplit_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
-#set_tests_properties(slave_failover_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(sql_queries_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(temporal_tables_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(prepared_statement_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(readconnrouter_master_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(readconnrouter_slave_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(rw_select_insert_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(rwsplit_conn_num_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(rwsplit_connect_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(bug585_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(bug587_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(bug587_1_big PROPERTIES TIMEOUT 3600)
-#set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
-
-############################################
-# END: tests with 15 machines backend      #
 ############################################
 
 ############################################
