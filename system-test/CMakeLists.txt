@@ -1008,10 +1008,6 @@ add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND
 # BEGIN: tests for Xpand monitor        #
 ############################################
 
-# creates Xpand cluster and connect Maxscale to it
-add_test_executable(xpand_mon.cpp xpand_mon xpand_mon LABELS XPAND_BACKEND UNSTABLE)
-set_tests_properties(xpand_mon PROPERTIES TIMEOUT 7200)
-
 add_test_executable(xpand_basics.cpp xpand_basics xpand_basics LABELS XPAND_BACKEND)
 set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
 
