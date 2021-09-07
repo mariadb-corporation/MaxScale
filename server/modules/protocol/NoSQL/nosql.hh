@@ -420,6 +420,7 @@ const char SIZE_ON_DISK[]                    = "sizeOnDisk";
 const char SKIP[]                            = "skip";
 const char SORT[]                            = "sort";
 const char SQL[]                             = "sql";
+const char STORAGE_ENGINE[]                  = "storageEngine";
 const char STATE[]                           = "state";
 const char STORAGE_ENGINES[]                 = "storageEngines";
 const char SYNC_MILLIS[]                     = "syncMillis";

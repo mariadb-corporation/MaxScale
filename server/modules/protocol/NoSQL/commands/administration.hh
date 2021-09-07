@@ -347,6 +347,12 @@ public:
 
     string generate_sql() override
     {
+        bsoncxx::document::view storage_engine;
+        if (optional(key::STORAGE_ENGINE, &storage_engine))
+        {
+            // TODO: Not checked.
+        }
+
         m_statement = nosql::table_create_statement(table(), m_database.config().id_length);
 
         return m_statement;
