@@ -21,34 +21,44 @@
             </v-tabs>
         </div>
         <keep-alive>
-            <table-list
-                v-if="
-                    activeView === SQL_QUERY_MODES.HISTORY ||
-                        activeView === SQL_QUERY_MODES.FAVORITE
+            <template v-if="rows.length">
+                <table-list
+                    v-if="
+                        activeView === SQL_QUERY_MODES.HISTORY ||
+                            activeView === SQL_QUERY_MODES.FAVORITE
+                    "
+                    :key="activeView"
+                    :height="dynDim.height - headerHeight"
+                    :width="dynDim.width"
+                    :headers="headers"
+                    :rows="rows"
+                    showSelect
+                    showGroupBy
+                    groupBy="date"
+                    @on-delete-selected="handleDeleteSelectedRows"
+                    @custom-group="customGroup"
+                >
+                    <template v-slot:date="{ data: { cell, maxWidth } }">
+                        <truncate-string
+                            :text="
+                                `${$help.dateFormat({
+                                    value: cell,
+                                    formatType: 'ddd, DD MMM YYYY',
+                                })}`
+                            "
+                            :maxWidth="maxWidth"
+                        />
+                    </template>
+                </table-list>
+            </template>
+            <span
+                v-else
+                v-html="
+                    activeView === SQL_QUERY_MODES.HISTORY
+                        ? $t('historyTabGuide')
+                        : $t('favoriteTabGuide')
                 "
-                :key="activeView"
-                :height="dynDim.height - headerHeight"
-                :width="dynDim.width"
-                :headers="headers"
-                :rows="rows"
-                showSelect
-                groupBy="date"
-                @on-delete-selected="handleDeleteSelectedRows"
-                @custom-group="customGroup"
-                @current-rows-length="currentRowsLength = $event"
-            >
-                <template v-slot:date="{ data: { cell, maxWidth } }">
-                    <truncate-string
-                        :text="
-                            `${$help.dateFormat({
-                                value: cell,
-                                formatType: 'ddd, DD MMM YYYY',
-                            })}`
-                        "
-                        :maxWidth="maxWidth"
-                    />
-                </template>
-            </table-list>
+            />
         </keep-alive>
         <confirm-dialog
             ref="confirmDelDialog"
@@ -68,7 +78,7 @@
                     {{
                         $t('info.clearSelectedQueries', {
                             quantity:
-                                itemsToBeDeleted.length === currentRowsLength
+                                itemsToBeDeleted.length === rows.length
                                     ? $t('entire')
                                     : $t('selected'),
                             targetType: $t(
@@ -117,7 +127,6 @@ export default {
         return {
             headerHeight: 0,
             itemsToBeDeleted: [],
-            currentRowsLength: 0,
         }
     },
     computed: {
@@ -156,21 +165,18 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        header.groupable = true
                         header.hasCustomGroup = true
                         break
                     case 'connection_name':
                         header.width = 215
-                        header.groupable = true
                         break
                     case 'time':
                         header.width = 90
+                        header.groupable = false
                         break
                     case 'execution_time':
                         header.width = 150
-                        break
-                    case 'sql':
-                        header.groupable = true
+                        header.groupable = false
                         break
                 }
                 return header

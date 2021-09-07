@@ -129,15 +129,6 @@ public:
         return nullptr;
     }
 
-    /**
-     * Listener calls this during its creation right after the user account manager has been created.
-     *
-     * @param manager The generated user account manager
-     */
-    virtual void user_account_manager_created(mxs::UserAccountManager& manager)
-    {
-    }
-
     virtual uint64_t capabilities() const
     {
         return 0;
@@ -368,10 +359,17 @@ public:
     virtual void set_credentials(const std::string& user, const std::string& pw) = 0;
 
     virtual void set_backends(const std::vector<SERVER*>& backends) = 0;
-
     virtual void set_union_over_backends(bool union_over_backends) = 0;
-
     virtual void set_strip_db_esc(bool strip_db_esc) = 0;
+
+    /**
+     * Set an additional file to read users from and when the file is read.
+     * The format of the file is protocol-specific. Json is recommended.
+     *
+     * @param filepath Path of file. Empty string disables the feature.
+     * @param file_usage When/how the file is used. Bitfield of UserAccountsFileUsage values.
+     */
+    virtual void set_user_accounts_file(const std::string& filepath, uint32_t file_usage) = 0;
 
     /**
      * Which protocol this manager can be used with. Currently, it's assumed that the user data managers
@@ -430,4 +428,11 @@ MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api =
 {
     &ProtocolApiGenerator<ProtocolImplementation>::create_protocol_module,
 };
+
+namespace UserAccountsFileUsage
+{
+constexpr uint32_t WHEN_SERVER_OK = (1 << 0);   /* Default. Use file when normal fetch succeeded. */
+constexpr uint32_t WHEN_SERVER_FAIL = (1 << 1); /* Use file when normal fetch failed. */
+constexpr uint32_t FILE_ONLY = (1 << 2);        /* Use file only. Overrides other settings. */
+}
 }

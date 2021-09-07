@@ -140,6 +140,13 @@ void MariaDBUserManager::set_backends(const std::vector<SERVER*>& backends)
     m_backends = backends;
 }
 
+void MariaDBUserManager::set_user_accounts_file(const string& filepath, uint32_t file_usage)
+{
+    Guard guard(m_settings_lock);
+    m_user_accounts_file = filepath;
+    m_user_file_usage = file_usage;
+}
+
 void MariaDBUserManager::set_union_over_backends(bool union_over_backends)
 {
     m_union_over_backends.store(union_over_backends, relaxed);
@@ -282,6 +289,7 @@ bool MariaDBUserManager::update_users()
     mxq::MariaDB con;
     std::vector<SERVER*> backends;
     std::vector<mariadb::UserEntry> custom_entries;
+    string user_accounts_file;
     auto& sett = con.connection_settings();
 
     // Copy all arraylike settings under a lock.
@@ -289,13 +297,21 @@ bool MariaDBUserManager::update_users()
     sett.user = m_username;
     sett.password = m_password;
     backends = m_backends;
-    custom_entries = m_custom_entries;
+    user_accounts_file = m_user_accounts_file;
     lock.unlock();
 
     sett.password = mxs::decrypt_password(sett.password);
     sett.clear_sql_mode = true;
     sett.charset = "latin1";
     sett.plugin_dir = mxs::connector_plugindir();
+
+    bool use_file_on_ok = false;
+    if (!user_accounts_file.empty())
+    {
+        // TODO: add support for the other options
+        auto users_file_usage = m_user_file_usage.load(relaxed);
+        use_file_on_ok = users_file_usage & mxs::UserAccountsFileUsage::WHEN_SERVER_OK;
+    }
 
     mxs::Config& glob_config = mxs::Config::get();
     sett.timeout = glob_config.auth_conn_timeout.get().count();
@@ -397,6 +413,11 @@ bool MariaDBUserManager::update_users()
 
     if (got_data)
     {
+        if (use_file_on_ok)
+        {
+            read_users_from_file(user_accounts_file, &temp_userdata);
+        }
+
         // Got some data. Update the master database if the contents differ. Usually they don't.
         string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
         string msg;
@@ -937,27 +958,119 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
-void MariaDBUserManager::add_custom_user(const mariadb::UserEntry& entry)
+bool MariaDBUserManager::read_users_from_file(const string& filepath, UserDatabase* output)
 {
-    bool duplicate_found = false;
-    Guard guard(m_settings_lock);
-    for (const auto& custom_entry : m_custom_entries)
-    {
-        if (entry.username == custom_entry.username && entry.host_pattern == custom_entry.host_pattern)
-        {
-            duplicate_found = true;
-        }
-    }
+    using mxb::Json;
+    int rval = false;
+    auto filepathc = filepath.c_str();
+    Json all;
 
-    if (duplicate_found)
+    auto read_str_if_exists = [filepathc](const Json& source, const char* key,
+                                          const string& user, const string& host, string* out) {
+            bool rval = true;
+            if (source.contains(key))
+            {
+                if (!source.try_get_string(key, out))
+                {
+                    MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a string.",
+                              filepathc, key, user.c_str(), host.c_str());
+                    rval = false;
+                }
+            }
+            return rval;
+        };
+
+    auto read_bool_if_exists = [filepathc](const Json& source, const char* key,
+                                           const string& user, const string& host, bool* out) {
+            bool rval = true;
+            if (source.contains(key))
+            {
+                if (!source.try_get_bool(key, out))
+                {
+                    MXB_ERROR("File '%s' contains field '%s' for user '%s'@'%s', but it is not a boolean.",
+                              filepathc, key, user.c_str(), host.c_str());
+                    rval = false;
+                }
+            }
+            return rval;
+        };
+
+    if (all.load(filepath))
     {
-        MXB_ERROR("Cannot add custom user entry '%s'@'%s', as it already exists for service '%s'.",
-                  entry.username.c_str(), entry.host_pattern.c_str(), m_service->name());
+        rval = true;
+        int users_ok = 0;
+
+        const char grp_user[] = "user";
+        if (all.contains(grp_user))
+        {
+            auto users_arr = all.get_array_elems(grp_user);
+            int ind = 0;
+            for (const auto& user_data : users_arr)
+            {
+                // The user definition must contain at least 'user' and 'host' fields.
+                string uname = user_data.get_string("user");
+                string host = user_data.get_string("host");
+
+                if (user_data.ok())
+                {
+                    auto read_str = [&user_data, &uname, &host, &read_str_if_exists]
+                        (const char* key, string* out) {
+                            return read_str_if_exists(user_data, key, uname, host, out);
+                        };
+                    auto read_bool = [&user_data, &uname, &host, &read_bool_if_exists]
+                        (const char* key, bool* out) {
+                            return read_bool_if_exists(user_data, key, uname, host, out);
+                        };
+
+                    mariadb::UserEntry new_entry;
+                    new_entry.username = uname;
+                    new_entry.host_pattern = host;
+
+                    bool strings_ok = (read_str("password", &new_entry.password)
+                                       && read_str("plugin", &new_entry.plugin)
+                                       && read_str("authentication_string", &new_entry.auth_string)
+                                       && read_str("default_role", &new_entry.default_role));
+                    // TODO: add "ssl"-field read once it is actually used for something.
+                    bool booleans_ok = (read_bool("super_priv", &new_entry.super_priv)
+                                        && read_bool("global_db_priv", &new_entry.global_db_priv)
+                                        && read_bool("proxy_priv", &new_entry.proxy_priv)
+                                        && read_bool("is_role", &new_entry.is_role));
+
+                    if (strings_ok && booleans_ok)
+                    {
+                        output->add_entry(move(new_entry));
+                        users_ok++;
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("User entry %i in '%s'-array in file '%s' is missing a required field: %s",
+                              ind + 1, grp_user, filepathc, user_data.error_msg().c_str());
+                }
+                ind++;
+            }
+
+            MXB_NOTICE("Read %i user@host entries from '%s' for service '%s'.",
+                       users_ok, filepathc, m_service->name());
+        }
+
+        const char grp_db[] = "db";
+        if (all.contains(grp_db))
+        {
+            // TODO
+        }
+
+        const char grp_roles_mapping[] = "roles_mapping";
+        if (all.contains(grp_roles_mapping))
+        {
+            // TODO
+        }
     }
     else
     {
-        m_custom_entries.push_back(entry);
+        MXB_ERROR("Failed to load users from file. %s", all.error_msg().c_str());
     }
+    return rval;
 }
 
 /**

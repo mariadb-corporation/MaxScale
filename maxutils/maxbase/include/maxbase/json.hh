@@ -144,6 +144,7 @@ public:
      *
      * @return True if the object has the field
      */
+    bool contains(const char* key) const;
     bool contains(const std::string& key) const;
 
     /**
@@ -217,7 +218,19 @@ public:
      *
      * @return True if the field was found and it was a string
      */
+    bool try_get_string(const char* key, std::string* out) const;
     bool try_get_string(const std::string& key, std::string* out) const;
+
+    /**
+     * Try to read a JSON boolean from a field.
+     *
+     * @param key The name of the field
+     * @param out The value where the result is stored
+     *
+     * @return True if the field was found and it was a boolean
+     */
+    bool try_get_bool(const char* key, bool* out) const;
+    bool try_get_bool(const std::string& key, bool* out) const;
 
     /**
      * Get JSON array elements

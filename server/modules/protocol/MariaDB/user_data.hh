@@ -207,8 +207,9 @@ public:
     void set_backends(const std::vector<SERVER*>& backends) override;
     void set_union_over_backends(bool union_over_backends) override;
     void set_strip_db_esc(bool strip_db_esc) override;
+    void set_user_accounts_file(const std::string& filepath, uint32_t file_usage) override;
     void set_service(SERVICE* service) override;
-    void add_custom_user(const mariadb::UserEntry& entry);
+
     bool can_update_immediately() const;
 
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
@@ -252,6 +253,7 @@ private:
     bool read_users_xpand(QResult users, UserDatabase* output);
     void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
+    bool read_users_from_file(const std::string& source, UserDatabase* output);
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
 
@@ -274,11 +276,9 @@ private:
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
 
-    /**
-     * Additional entries which need to be added to the user database even when they do not exist on
-     * backends. */
-    std::vector<mariadb::UserEntry> m_custom_entries;
-
+    /** User accounts file related settings. */
+    std::string           m_user_accounts_file;
+    std::atomic<uint32_t> m_user_file_usage {0};
 
     /** Fetch users from all backends and store the union. */
     std::atomic_bool m_union_over_backends {false};
