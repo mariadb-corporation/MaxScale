@@ -32,50 +32,14 @@
             @scroll.native="scrolling"
         >
             <template v-slot:default="{ item: row }">
-                <div v-if="isVertTable" class="tr-vertical-group d-flex flex-column">
-                    <template v-for="(h, i) in tableHeaders">
-                        <div
-                            v-if="!h.hidden"
-                            :key="`${h.text}_${i}`"
-                            class="tr align-center"
-                            :style="{ height: lineHeight }"
-                        >
-                            <div
-                                :key="`${h.text}_${headerWidthMap[0]}_0`"
-                                class="td fill-height d-flex align-center border-bottom-none px-3"
-                                :style="{
-                                    minWidth: $help.handleAddPxUnit(headerWidthMap[0]),
-                                }"
-                            >
-                                <truncate-string
-                                    :text="`${h.text}`.toUpperCase()"
-                                    :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
-                                />
-                            </div>
-                            <div
-                                :key="`${h.text}_${headerWidthMap[1]}_1`"
-                                class="td fill-height d-flex align-center no-border px-3"
-                                :style="{
-                                    minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
-                                }"
-                            >
-                                <slot
-                                    :name="h.text"
-                                    :data="{
-                                        cell: row[i],
-                                        header: h,
-                                        maxWidth: cellMaxWidth(1),
-                                    }"
-                                >
-                                    <truncate-string
-                                        :text="`${row[i]}`"
-                                        :maxWidth="cellMaxWidth(1)"
-                                    />
-                                </slot>
-                            </div>
-                        </div>
-                    </template>
-                </div>
+                <vertical-row
+                    v-if="isVertTable"
+                    :row="row"
+                    :tableHeaders="tableHeaders"
+                    :lineHeight="lineHeight"
+                    :headerWidthMap="headerWidthMap"
+                    :cellMaxWidth="cellMaxWidth"
+                />
                 <div
                     v-else-if="isGroupRow(row) && !areHeadersHidden"
                     class="tr tr--group"
@@ -232,10 +196,12 @@
  * Public License.
  */
 import TableHeader from './TableHeader'
+import VerticalRow from './VerticalRow.vue'
 export default {
     name: 'virtual-scroll-table',
     components: {
         'table-header': TableHeader,
+        'vertical-row': VerticalRow,
     },
     props: {
         headers: {
@@ -602,13 +568,6 @@ export default {
             &--group {
                 .td {
                     background-color: #f2fcff !important;
-                }
-            }
-        }
-        .tr-vertical-group {
-            .tr {
-                &:last-of-type {
-                    border-bottom: thin solid $table-border;
                 }
             }
         }
