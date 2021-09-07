@@ -39,6 +39,7 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :cellMaxWidth="cellMaxWidth"
+                    @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 />
                 <row-group
                     v-else-if="isRowGroup(row) && !areHeadersHidden"
@@ -65,6 +66,7 @@
                     class="tr"
                     :class="{ 'tr--selected': isRowSelected(row) }"
                     :style="{ lineHeight }"
+                    @contextmenu.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <div
                         v-if="!areHeadersHidden && showSelect"

@@ -69,6 +69,7 @@
                                 ref="queryResultPane"
                                 :dynDim="resultPaneDim"
                                 class="query-result"
+                                @place-sql-in-editor="placeToEditor"
                             />
                         </template>
                     </split-pane>
@@ -264,8 +265,8 @@ export default {
             } else this.mainPanePct = 100
         },
         // editor related functions
-        placeToEditor(schemaId) {
-            this.$refs.queryEditor.insertAtCursor({ text: schemaId })
+        placeToEditor(text) {
+            this.$refs.queryEditor.insertAtCursor({ text })
         },
         draggingSchema(e) {
             const { editor, monaco } = this.$refs.queryEditor

@@ -601,6 +601,30 @@ export function getScrollbarWidth() {
     return scrollbarWidth
 }
 
+/**
+ * @private
+ * @param {String} text
+ */
+function fallbackCopyTextToClipboard(text) {
+    let txtArea = document.createElement('textarea')
+    txtArea.value = text
+    txtArea.style = { ...txtArea.style, top: 0, left: 0, position: 'fixed' }
+    document.body.appendChild(txtArea)
+    txtArea.focus()
+    txtArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(txtArea)
+}
+
+/**
+ * @param {String} text
+ */
+export function copyTextToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text)
+    } else fallbackCopyTextToClipboard(text)
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -645,6 +669,7 @@ Object.defineProperties(Vue.prototype, {
                 pxToPct,
                 handleAddPxUnit,
                 getScrollbarWidth,
+                copyTextToClipboard,
             }
         },
     },

@@ -61,7 +61,7 @@
                                     <div
                                         style="width:65%;"
                                         class="pointer d-inline-block text-truncate"
-                                        @dblclick="copyToClipboard()"
+                                        @dblclick="copyToClipboard(value)"
                                         v-on="on"
                                     >
                                         {{ value }}
@@ -167,8 +167,8 @@ export default {
 
     methods: {
         //---------------------- MaxScale overview info
-        copyToClipboard() {
-            document.execCommand('copy')
+        copyToClipboard(txt) {
+            this.$help.copyTextToClipboard(txt)
             this.isCopied = true
         },
         updateUpTime() {

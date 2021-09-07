@@ -37,6 +37,7 @@
                     groupBy="date"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
+                    @on-row-right-click="openCtxMenu"
                 >
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
@@ -91,6 +92,21 @@
                 </p>
             </template>
         </confirm-dialog>
+        <v-menu
+            v-if="activeCtxItem"
+            v-model="showCtxMenu"
+            transition="slide-y-transition"
+            left
+            :position-x="ctxClientPos.x"
+            :position-y="ctxClientPos.y"
+            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+        >
+            <v-list v-for="option in ctxOptions" :key="option">
+                <v-list-item dense link @click="() => optHandler(option)">
+                    <v-list-item-title class="color text-text" v-text="option" />
+                </v-list-item>
+            </v-list>
+        </v-menu>
     </div>
 </template>
 
@@ -127,6 +143,11 @@ export default {
         return {
             headerHeight: 0,
             itemsToBeDeleted: [],
+            // states for ctx menu
+            showCtxMenu: false,
+            activeCtxItem: null,
+            ctxClientPos: { x: 0, y: 0 },
+            ctxOptions: [this.$t('copySqlToClipboard'), this.$t('placeSqlInEditor')],
         }
     },
     computed: {
@@ -194,6 +215,11 @@ export default {
             return data.map(item => Object.values(item))
         },
     },
+    watch: {
+        showCtxMenu(v) {
+            if (!v) this.activeCtxItem = null
+        },
+    },
     activated() {
         this.setHeaderHeight()
     },
@@ -248,6 +274,33 @@ export default {
             })
 
             this[`SET_QUERY_${this.activeView}`](newData)
+        },
+        openCtxMenu({ e, row }) {
+            if (this.$help.lodash.isEqual(this.activeCtxItem, row)) {
+                this.showCtxMenu = false
+                this.activeCtxItem = null
+            } else {
+                if (!this.showCtxMenu) this.showCtxMenu = true
+                this.activeCtxItem = row
+                this.ctxClientPos = { x: e.clientX, y: e.clientY }
+            }
+        },
+        optHandler(opt) {
+            let data = this.$help.getObjectRows({
+                columns: this.headers.map(h => h.text),
+                rows: [this.activeCtxItem.filter((_, i) => i !== 0)], // Remove # col
+            })
+            const sql = data[0].sql
+            switch (opt) {
+                case this.$t('copySqlToClipboard'): {
+                    this.$help.copyTextToClipboard(sql)
+                    break
+                }
+                case this.$t('placeSqlInEditor'):
+                    //TODO: add handler for this event on the parent component
+                    this.$emit('place-sql-in-editor', sql)
+                    break
+            }
         },
     },
 }
