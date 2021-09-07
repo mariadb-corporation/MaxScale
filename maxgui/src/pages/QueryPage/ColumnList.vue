@@ -14,7 +14,6 @@
                 outlined
                 depressed
                 color="accent-dark"
-                :disabled="disabled"
                 v-bind="attrs"
                 v-on="on"
             >
@@ -105,7 +104,6 @@ export default {
             required: true,
         },
         maxHeight: { type: Number, required: true },
-        disabled: { type: Boolean, default: false },
     },
     data() {
         return {

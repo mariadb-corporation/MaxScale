@@ -46,7 +46,6 @@
                 :label="$t('columns')"
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
-                :disabled="isGrouping"
             />
             <v-tooltip
                 top
@@ -88,6 +87,7 @@
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
                 :showSelect="showSelect"
+                :groupBy="groupBy"
                 @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
                 v-on="$listeners"
@@ -137,6 +137,7 @@ export default {
         height: { type: Number, required: true },
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
+        groupBy: { type: String, default: '' },
     },
     data() {
         return {
@@ -170,10 +171,7 @@ export default {
             return this.visibleHeaders.filter(header => header.text !== '#')
         },
         filteredRows() {
-            const rows = this.rowsWithIndex.map(row =>
-                row.filter((cell, i) => this.visHeaderIdxs.includes(i))
-            )
-            return rows.filter(row => {
+            return this.rowsWithIndex.filter(row => {
                 let match = false
                 for (const [i, cell] of row.entries()) {
                     if (
@@ -188,7 +186,9 @@ export default {
             })
         },
         visibleHeaders() {
-            return this.tableHeaders.filter((h, i) => this.visHeaderIdxs.includes(i))
+            return this.tableHeaders.map((h, i) =>
+                this.visHeaderIdxs.includes(i) ? h : { ...h, hidden: true }
+            )
         },
     },
     activated() {
