@@ -130,9 +130,27 @@
                             />
                         </div>
 
-                        <v-btn class="ml-2" width="24" height="24" icon @click="handleUngroup">
-                            <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
-                        </v-btn>
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn
+                                    class="ml-2"
+                                    width="24"
+                                    height="24"
+                                    icon
+                                    v-on="on"
+                                    @click="handleUngroup"
+                                >
+                                    <v-icon size="10" color="deep-ocean">
+                                        $vuetify.icons.close</v-icon
+                                    >
+                                </v-btn>
+                            </template>
+                            <span>{{ $t('ungroup') }}</span>
+                        </v-tooltip>
                     </div>
                 </div>
                 <div v-else class="tr" :style="{ lineHeight }">

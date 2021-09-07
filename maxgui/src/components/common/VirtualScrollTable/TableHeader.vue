@@ -71,7 +71,7 @@
                             ]"
                             @click.stop="() => handleToggleGroup(header.text)"
                         >
-                            group
+                            {{ $t('group') }}
                         </span>
                         <div
                             v-if="i !== tableHeaders.length - 1"
