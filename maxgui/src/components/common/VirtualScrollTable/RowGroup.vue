@@ -16,17 +16,7 @@
                     $expand
                 </v-icon>
             </v-btn>
-
-            <v-checkbox
-                v-if="showSelect"
-                :input-value="isRowGroupSelected"
-                dense
-                class="checkbox--scale-reduce ma-0 pa-0"
-                primary
-                hide-details
-                @change="handleSelectRowGroup"
-            />
-
+            <slot name="row-content-prepend"></slot>
             <div
                 class="tr--group__content d-inline-flex align-center"
                 :style="{ maxWidth: `${maxRowGroupWidth}px` }"
@@ -79,25 +69,13 @@
 export default {
     name: 'row-group',
     props: {
-        value: { type: Array, required: true },
         row: { type: Object, required: true },
-        tableRows: { type: Array, required: true },
         collapsedRowGroups: { type: Array, required: true },
         isCollapsed: { type: Boolean, required: true },
-        selectedItems: { type: Array, required: true },
-        showSelect: { type: Boolean, required: true },
         boundingWidth: { type: Number, required: true },
         lineHeight: { type: String, required: true },
     },
     computed: {
-        selectedGroupItems: {
-            get() {
-                return this.value
-            },
-            set(value) {
-                this.$emit('input', value)
-            },
-        },
         maxRowGroupWidth() {
             /** A workaround to get maximum width of row group header
              * 17 is the total width of padding and border of table
@@ -105,14 +83,6 @@ export default {
              * 32 is the width of ungroup button
              */
             return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
-        },
-        getSelectedRowGroupIdx() {
-            return this.selectedGroupItems.findIndex(ele =>
-                this.$help.lodash.isEqual(ele, this.row)
-            )
-        },
-        isRowGroupSelected() {
-            return this.getSelectedRowGroupIdx === -1 ? false : true
         },
     },
     methods: {
@@ -129,44 +99,6 @@ export default {
                     ...this.collapsedRowGroups.slice(targetIdx + 1),
                 ])
             else this.$emit('update-collapsed-row-groups', [...this.collapsedRowGroups, this.row])
-        },
-
-        /**
-         * This method returns rows belonged to row group
-         * @param {Object} row - row group object
-         * @returns {Array} - returns 2d array
-         */
-        getGroupItems(row) {
-            const { isEqual } = this.$help.lodash
-            const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, row))
-            let items = []
-            let i = targetIdx + 1
-            while (i !== -1) {
-                if (Array.isArray(this.tableRows[i])) {
-                    items.push(this.tableRows[i])
-                    i++
-                } else i = -1
-            }
-            return items
-        },
-
-        /**
-         * @param {Boolean} v - is row group selected
-         * @emits update-selected-items - Emits event with new data for selectedItems
-         */
-        handleSelectGroupItems(v) {
-            const { isEqual, xorWith, differenceWith } = this.$help.lodash
-            let groupItems = this.getGroupItems(this.row)
-            let newSelectedItems = []
-            if (v) newSelectedItems = xorWith(this.selectedItems, groupItems, isEqual)
-            else newSelectedItems = differenceWith(this.selectedItems, groupItems, isEqual)
-            this.$emit('update-selected-items', newSelectedItems)
-        },
-
-        handleSelectRowGroup(v) {
-            if (v) this.selectedGroupItems.push(this.row)
-            else this.selectedGroupItems.splice(this.getSelectedRowGroupIdx, 1)
-            this.handleSelectGroupItems(v)
         },
 
         handleUngroup() {

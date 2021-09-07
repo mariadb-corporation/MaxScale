@@ -42,19 +42,24 @@
                 />
                 <row-group
                     v-else-if="isRowGroup(row) && !areHeadersHidden"
-                    v-model="selectedGroupItems"
                     :row="row"
-                    :tableRows="tableRows"
                     :collapsedRowGroups="collapsedRowGroups"
                     :isCollapsed="isRowGroupCollapsed(row)"
-                    :selectedItems="selectedItems"
-                    :showSelect="showSelect"
                     :boundingWidth="boundingWidth"
                     :lineHeight="lineHeight"
-                    @update-selected-items="selectedItems = $event"
                     @update-collapsed-row-groups="collapsedRowGroups = $event"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
-                />
+                >
+                    <template v-if="showSelect" v-slot:row-content-prepend>
+                        <row-group-checkbox
+                            v-model="selectedGroupItems"
+                            :row="row"
+                            :tableRows="tableRows"
+                            :selectedItems="selectedItems"
+                            @update-selected-items="selectedItems = $event"
+                        />
+                    </template>
+                </row-group>
                 <div v-else class="tr" :style="{ lineHeight }">
                     <div
                         v-if="!areHeadersHidden && showSelect"
@@ -136,12 +141,14 @@
 import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
 import RowGroup from './RowGroup.vue'
+import RowGroupCheckbox from './RowGroupCheckbox.vue'
 export default {
     name: 'virtual-scroll-table',
     components: {
         'table-header': TableHeader,
         'vertical-row': VerticalRow,
         'row-group': RowGroup,
+        'row-group-checkbox': RowGroupCheckbox,
     },
     props: {
         headers: {
