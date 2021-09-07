@@ -60,7 +60,12 @@
                         />
                     </template>
                 </row-group>
-                <div v-else class="tr" :style="{ lineHeight }">
+                <div
+                    v-else
+                    class="tr"
+                    :class="{ 'tr--selected': isRowSelected(row) }"
+                    :style="{ lineHeight }"
+                >
                     <div
                         v-if="!areHeadersHidden && showSelect"
                         class="td"
@@ -455,6 +460,11 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
+                }
+            }
+            &--selected {
+                .td {
+                    background: $selected-row !important;
                 }
             }
         }
