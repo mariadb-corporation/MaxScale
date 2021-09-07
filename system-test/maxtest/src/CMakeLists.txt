@@ -17,7 +17,6 @@ add_library(maxtest SHARED
         maxrest.cc
         maxscales.cc
         nodes.cc
-        rds_vpc.cc
         replication_cluster.cc
         sql_t1.cc
         tcp_connection.cc

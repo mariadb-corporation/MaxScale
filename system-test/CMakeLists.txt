@@ -651,12 +651,6 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 # Run MaxCtrl test suite
 # add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
 
-# a tool to delete RDS Aurora cluster
-add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
-
-# a tool to create RDS Aurora cluster
-add_test_executable_notest(create_rds.cpp create_rds replication LABELS EXTERN_BACKEND)
-
 # start sysbench against RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
 
