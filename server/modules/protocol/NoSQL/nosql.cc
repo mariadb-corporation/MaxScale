@@ -2029,6 +2029,15 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     auto end = doc.end();
     for (; it != end; ++it)
     {
+        if (rv.empty())
+        {
+            rv += "(";
+        }
+        else
+        {
+            rv += " AND ";
+        }
+
         const auto& element = *it;
         const auto nosql_op = static_cast<string>(element.key());
 
@@ -2039,7 +2048,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
             const auto& mariadb_op = jt->second.mariadb_op;
             const auto& value_to_string = jt->second.value_to_string;
 
-            rv = jt->second.field_and_value_to_comparison(field, element, mariadb_op,
+            rv += jt->second.field_and_value_to_comparison(field, element, mariadb_op,
                                                           nosql_op, value_to_string);
         }
         else if (nosql_op == "$not")
@@ -2054,28 +2063,28 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 
             auto doc = element.get_document();
 
-            rv = "(NOT " + get_comparison_condition(field, doc) + ")";
+            rv += "(NOT " + get_comparison_condition(field, doc) + ")";
         }
         else if (nosql_op == "$elemMatch")
         {
-            rv = elemMatch_to_condition(field, element);
+            rv += elemMatch_to_condition(field, element);
         }
         else if (nosql_op == "$size")
         {
-            rv = "(JSON_LENGTH(doc, '$." + field + "') = " +
+            rv += "(JSON_LENGTH(doc, '$." + field + "') = " +
                 element_to_value(element, ValueFor::SQL, nosql_op) + ")";
         }
         else if (nosql_op == "$all")
         {
-            rv = array_op_to_condition(field, element, ArrayOp::AND);
+            rv += array_op_to_condition(field, element, ArrayOp::AND);
         }
         else if (nosql_op == "$in")
         {
-            rv = array_op_to_condition(field, element, ArrayOp::OR);
+            rv += array_op_to_condition(field, element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
-            rv = type_to_condition(field, element);
+            rv += type_to_condition(field, element);
         }
         else
         {
@@ -2083,7 +2092,11 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
     }
 
-    if (it != end)
+    if (it == end)
+    {
+        rv += ")";
+    }
+    else
     {
         // We are simply looking for an object.
         // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
