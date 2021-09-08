@@ -1261,6 +1261,14 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
         }
         break;
 
+    case bsoncxx::type::k_minkey:
+        ss << std::numeric_limits<int64_t>::min();
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        ss << std::numeric_limits<int64_t>::max();
+        break;
+
     default:
         {
             ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
