@@ -207,7 +207,7 @@ public:
     void set_backends(const std::vector<SERVER*>& backends) override;
     void set_union_over_backends(bool union_over_backends) override;
     void set_strip_db_esc(bool strip_db_esc) override;
-    void set_user_accounts_file(const std::string& filepath, uint32_t file_usage) override;
+    void set_user_accounts_file(const std::string& filepath, UsersFileUsage file_usage) override;
     void set_service(SERVICE* service) override;
 
     bool can_update_immediately() const;
@@ -237,10 +237,19 @@ private:
         INVALID_DATA,
     };
 
-    bool       update_users();
+    bool update_users();
+
+    struct UserLoadRes
+    {
+        bool        success {false};
+        std::string msg;
+    };
+    UserLoadRes load_users_from_backends(std::string&& conn_user, std::string&& conn_pw,
+                                         std::vector<SERVER*>&& backends, UserDatabase& temp_userdata);
+    UserLoadRes load_users_from_file(const std::string& source, UserDatabase* output);
+
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
     LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
-    bool       load_users_from_file(const std::string& role_data, UserDatabase* output);
 
     void updater_thread_function();
 
@@ -279,8 +288,8 @@ private:
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
 
     /** User accounts file related settings. */
-    std::string           m_user_accounts_file;
-    std::atomic<uint32_t> m_user_file_usage {0};
+    std::string    m_users_file_path;
+    UsersFileUsage m_users_file_usage {UsersFileUsage::ADD_WHEN_LOAD_OK};
 
     /** Fetch users from all backends and store the union. */
     std::atomic_bool m_union_over_backends {false};

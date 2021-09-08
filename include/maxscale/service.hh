@@ -130,8 +130,9 @@ public:
              * session must be idle before backend connections can be pooled. */
             std::chrono::seconds idle_session_pooling_time;
 
-            std::string user_accounts_file_path;        /**< Additional users file **/
-            uint32_t    user_accounts_file_usage {0};   /**< Bitfield defining when to read users **/
+            /** User accounts file settings. Given to user account manager. **/
+            std::string                             user_accounts_file_path;
+            mxs::UserAccountManager::UsersFileUsage user_accounts_file_usage;
         };
 
         const mxs::WorkerGlobal<Values>& values() const

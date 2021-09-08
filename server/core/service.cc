@@ -227,14 +227,12 @@ cfg::ParamPath s_user_accounts_file(
     &s_spec, "user_accounts_file", "Load additional users from a file",
     cfg::ParamPath::Options::R | cfg::ParamPath::Options::F, "", cfg::Param::AT_STARTUP);
 
-cfg::ParamEnumMask<uint32_t> s_user_accounts_file_usage(
-    &s_spec, "user_accounts_file_usage",
-    "When the user accounts file can be read",
+cfg::ParamEnum<UserAccountManager::UsersFileUsage> s_user_accounts_file_usage(
+    &s_spec, "user_accounts_file_usage", "When and how the user accounts file is used",
     {
-        {UserAccountsFileUsage::WHEN_SERVER_OK, "when_server_ok"},
-        {UserAccountsFileUsage::WHEN_SERVER_FAIL, "when_server_fail"},
-        {UserAccountsFileUsage::FILE_ONLY, "file_only"},
-    }, UserAccountsFileUsage::WHEN_SERVER_OK, cfg::Param::AT_STARTUP);
+        {UserAccountManager::UsersFileUsage::ADD_WHEN_LOAD_OK, "add_when_load_ok"},
+        {UserAccountManager::UsersFileUsage::FILE_ONLY_ALWAYS, "file_only_always"},
+    }, UserAccountManager::UsersFileUsage::ADD_WHEN_LOAD_OK, cfg::Param::AT_STARTUP);
 
 template<class Params>
 bool ServiceSpec::do_post_validate(Params params) const
