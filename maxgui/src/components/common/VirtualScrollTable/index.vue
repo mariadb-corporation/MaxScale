@@ -102,10 +102,21 @@
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td px-3"
+                            :class="{ 'pointer no-userSelect': h.draggable }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
+                            :draggable="h.draggable"
+                            v-on="
+                                h.draggable
+                                    ? {
+                                          dragstart: () => (isDragging = true),
+                                          drag: e => onCellDragging({ e, cellValue: row[i] }),
+                                          dragend: e => onCellDragEnd({ e, cellValue: row[i] }),
+                                      }
+                                    : null
+                            "
                         >
                             <slot
                                 :name="h.text"
@@ -115,7 +126,11 @@
                                     maxWidth: cellMaxWidth(i),
                                 }"
                             >
-                                <truncate-string :text="`${row[i]}`" :maxWidth="cellMaxWidth(i)" />
+                                <truncate-string
+                                    :text="`${row[i]}`"
+                                    :maxWidth="cellMaxWidth(i)"
+                                    :disabled="isDragging"
+                                />
                             </slot>
                         </div>
                     </template>
@@ -195,6 +210,9 @@ export default {
             // Select feat states
             selectedItems: [],
             selectedGroupItems: [],
+            //cell dragging states
+            isDragging: false,
+            draggingEvt: null,
         }
     },
     computed: {
@@ -433,6 +451,20 @@ export default {
                 this.selectedItems = []
                 this.selectedGroupItems = []
             }
+        },
+        onCellDragging({ e, cellValue }) {
+            if (
+                this.$typy(this.draggingEvt).isNull ||
+                this.draggingEvt.clientX !== e.clientX ||
+                this.draggingEvt.clientY !== e.clientY
+            ) {
+                this.draggingEvt = e
+                this.$emit('on-cell-dragging', { e, name: cellValue })
+            }
+        },
+        onCellDragEnd({ e, cellValue }) {
+            this.$emit('on-cell-dragend', { e, name: cellValue })
+            this.isDragging = false
         },
     },
 }

@@ -70,6 +70,8 @@
                                 :dynDim="resultPaneDim"
                                 class="query-result"
                                 @place-sql-in-editor="placeToEditor"
+                                @on-cell-dragging="draggingTxt"
+                                @on-cell-dragend="dropTxtToEditor"
                             />
                         </template>
                     </split-pane>

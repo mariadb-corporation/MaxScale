@@ -39,6 +39,7 @@
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
                     @on-row-right-click="openCtxMenu"
+                    v-on="$listeners"
                 >
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
@@ -200,6 +201,8 @@ export default {
                         header.width = 150
                         header.groupable = false
                         break
+                    case 'sql':
+                        header.draggable = true
                 }
                 return header
             })
