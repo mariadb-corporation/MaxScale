@@ -32,109 +32,34 @@
             @scroll.native="scrolling"
         >
             <template v-slot:default="{ item: row }">
-                <div v-if="isVertTable" class="tr-vertical-group d-flex flex-column">
-                    <template v-for="(h, i) in tableHeaders">
-                        <div
-                            v-if="!h.hidden"
-                            :key="`${h.text}_${i}`"
-                            class="tr align-center"
-                            :style="{ height: lineHeight }"
-                        >
-                            <div
-                                :key="`${h.text}_${headerWidthMap[0]}_0`"
-                                class="td fill-height d-flex align-center border-bottom-none px-3"
-                                :style="{
-                                    minWidth: $help.handleAddPxUnit(headerWidthMap[0]),
-                                }"
-                            >
-                                <truncate-string
-                                    :text="`${h.text}`.toUpperCase()"
-                                    :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
-                                />
-                            </div>
-                            <div
-                                :key="`${h.text}_${headerWidthMap[1]}_1`"
-                                class="td fill-height d-flex align-center no-border px-3"
-                                :style="{
-                                    minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
-                                }"
-                            >
-                                <slot
-                                    :name="h.text"
-                                    :data="{
-                                        cell: row[i],
-                                        header: h,
-                                        maxWidth: cellMaxWidth(1),
-                                    }"
-                                >
-                                    <truncate-string
-                                        :text="`${row[i]}`"
-                                        :maxWidth="cellMaxWidth(1)"
-                                    />
-                                </slot>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-                <div
-                    v-else-if="isGroupRow(row) && !areHeadersHidden"
-                    class="tr tr--group"
-                    :style="{ lineHeight }"
+                <vertical-row
+                    v-if="isVertTable"
+                    :row="row"
+                    :tableHeaders="tableHeaders"
+                    :lineHeight="lineHeight"
+                    :headerWidthMap="headerWidthMap"
+                    :cellMaxWidth="cellMaxWidth"
+                />
+                <row-group
+                    v-else-if="isRowGroup(row) && !areHeadersHidden"
+                    :row="row"
+                    :collapsedRowGroups="collapsedRowGroups"
+                    :isCollapsed="isRowGroupCollapsed(row)"
+                    :boundingWidth="boundingWidth"
+                    :lineHeight="lineHeight"
+                    @update-collapsed-row-groups="collapsedRowGroups = $event"
+                    @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 >
-                    <div
-                        class="d-flex align-center td pl-1 pr-3 td-col-span"
-                        :style="{
-                            height: lineHeight,
-                            width: '100%',
-                        }"
-                    >
-                        <v-btn
-                            width="24"
-                            height="24"
-                            class="arrow-toggle"
-                            icon
-                            @click="() => toggleRowGroup(row)"
-                        >
-                            <v-icon
-                                :class="[isRowCollapsed(row) ? 'arrow-right' : 'arrow-down']"
-                                size="24"
-                                color="deep-ocean"
-                            >
-                                $expand
-                            </v-icon>
-                        </v-btn>
-
-                        <v-checkbox
-                            v-if="showSelect"
-                            :input-value="isRowGroupSelected(row)"
-                            dense
-                            class="checkbox--scale-reduce ma-0 pa-0"
-                            primary
-                            hide-details
-                            @change="v => handleSelectGroup({ v, row })"
+                    <template v-if="showSelect" v-slot:row-content-prepend>
+                        <row-group-checkbox
+                            v-model="selectedGroupItems"
+                            :row="row"
+                            :tableRows="tableRows"
+                            :selectedItems="selectedItems"
+                            @update-selected-items="selectedItems = $event"
                         />
-
-                        <div
-                            class="tr--group__content d-inline-flex align-center"
-                            :style="{ maxWidth: `${maxRowGroupWidth}px` }"
-                        >
-                            <truncate-string
-                                class="font-weight-bold"
-                                :text="`${row.groupBy}`"
-                                :maxWidth="maxRowGroupWidth * 0.15"
-                            />
-                            <span class="d-inline-block val-separator mr-4">:</span>
-                            <truncate-string
-                                :text="`${row.value}`"
-                                :maxWidth="maxRowGroupWidth * 0.85"
-                            />
-                        </div>
-
-                        <v-btn class="ml-2" width="24" height="24" icon @click="handleUngroup">
-                            <v-icon size="10" color="deep-ocean"> $vuetify.icons.close</v-icon>
-                        </v-btn>
-                    </div>
-                </div>
+                    </template>
+                </row-group>
                 <div v-else class="tr" :style="{ lineHeight }">
                     <div
                         v-if="!areHeadersHidden && showSelect"
@@ -214,10 +139,16 @@
  * Public License.
  */
 import TableHeader from './TableHeader'
+import VerticalRow from './VerticalRow.vue'
+import RowGroup from './RowGroup.vue'
+import RowGroupCheckbox from './RowGroupCheckbox.vue'
 export default {
     name: 'virtual-scroll-table',
     components: {
         'table-header': TableHeader,
+        'vertical-row': VerticalRow,
+        'row-group': RowGroup,
+        'row-group-checkbox': RowGroupCheckbox,
     },
     props: {
         headers: {
@@ -249,6 +180,7 @@ export default {
             activeGroupBy: '',
             idxOfGroupCol: -1,
             collapsedRowGroups: [],
+            // Select feat states
             selectedItems: [],
             selectedGroupItems: [],
         }
@@ -267,14 +199,6 @@ export default {
             return this.isVertTable
                 ? `${this.itemHeight * this.visHeaders.length}px`
                 : this.itemHeight
-        },
-        maxRowGroupWidth() {
-            /** A workaround to get maximum width of row group header
-             * 17 is the total width of padding and border of table
-             * 28 is the width of toggle button
-             * 32 is the width of ungroup button
-             */
-            return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
         },
         rowsLength() {
             return this.rows.length
@@ -357,9 +281,11 @@ export default {
             if (ele && ele.scrollHeight - ele.scrollTop === ele.clientHeight)
                 this.$emit('scroll-end')
         },
+
         cellMaxWidth(i) {
             return this.$typy(this.headerWidthMap[i]).safeNumber - 24
         },
+
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc
@@ -368,6 +294,7 @@ export default {
             this.idxOfSortingCol = this.tableHeaders.findIndex(h => h.text === sortBy)
             this.isDesc = isDesc
         },
+
         /**
          * @param {Array} rows - 2d array to be sorted
          */
@@ -377,6 +304,7 @@ export default {
                 else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
             })
         },
+
         /** This groups 2d array with same value at provided index to a Map
          * @param {Array} payload.rows - 2d array to be grouped into a Map
          * @param {Number} payload.idx - col index of the inner array
@@ -392,6 +320,7 @@ export default {
             })
             return map
         },
+
         handleGroupRows(rows) {
             let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
             if (this.headers[this.idxOfGroupCol].hasCustomGroup) {
@@ -414,6 +343,7 @@ export default {
             }
             return groupRows
         },
+
         /**
          * @param {String} activeGroupBy - header name
          */
@@ -422,6 +352,26 @@ export default {
             this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
             this.$emit('is-grouping', Boolean(activeGroupBy))
         },
+
+        /**
+         * @param {Object|Array} row - row to check
+         * @returns {Boolean} - return whether this is a group row or not
+         */
+        isRowGroup(row) {
+            return this.$typy(row).isObject
+        },
+
+        /**
+         * @param {Object} row - row group object
+         * @returns {Boolean} - return true if it is found in collapsedRowGroups data
+         */
+        isRowGroupCollapsed(row) {
+            const targetIdx = this.collapsedRowGroups.findIndex(r =>
+                this.$help.lodash.isEqual(row, r)
+            )
+            return targetIdx === -1 ? false : true
+        },
+
         /**
          * @param {Array} groupRows - rows that have been grouped
          * @returns {Array} - filtered rows by collapsedRowGroups values
@@ -430,7 +380,7 @@ export default {
             let hiddenRowIdxs = []
             if (this.collapsedRowGroups.length) {
                 for (const [i, r] of groupRows.entries()) {
-                    if (this.isRowCollapsed(r)) {
+                    if (this.isRowGroupCollapsed(r)) {
                         hiddenRowIdxs = [
                             ...hiddenRowIdxs,
                             ...Array(r.groupLength)
@@ -442,33 +392,7 @@ export default {
             }
             return groupRows.filter((_, i) => !hiddenRowIdxs.includes(i))
         },
-        /**
-         * @param {Object|Array} row - row to check
-         * @returns {Boolean} - return whether this is a group row or not
-         */
-        isGroupRow(row) {
-            return this.$typy(row).isObject
-        },
-        isRowCollapsed(row) {
-            const targetIdx = this.collapsedRowGroups.findIndex(r =>
-                this.$help.lodash.isEqual(row, r)
-            )
-            return targetIdx === -1 ? false : true
-        },
-        /**
-         * @param {Number} rowIdx - row group index
-         */
-        toggleRowGroup(row) {
-            const targetIdx = this.collapsedRowGroups.findIndex(r =>
-                this.$help.lodash.isEqual(row, r)
-            )
-            if (targetIdx >= 0) this.collapsedRowGroups.splice(targetIdx, 1)
-            else this.collapsedRowGroups.push(row)
-        },
-        handleUngroup() {
-            this.collapsedRowGroups = []
-            this.$refs.tableHeader.handleToggleGroup(this.activeGroupBy)
-        },
+
         /**
          * @param {Array} row - row array
          * @returns {Number} - returns index of row array in selectedItems
@@ -476,6 +400,7 @@ export default {
         getSelectedRowIdx(row) {
             return this.selectedItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
         },
+
         /**
          * @param {Array} row - row array
          * @returns {Boolean} - returns true if row is found in selectedItems
@@ -483,56 +408,7 @@ export default {
         isRowSelected(row) {
             return this.getSelectedRowIdx(row) === -1 ? false : true
         },
-        /**
-         * @param {Object} row - row group object
-         * @returns {Number} - returns index of row group object in selectedGroupItems
-         */
-        getSelectedRowGroupIdx(row) {
-            return this.selectedGroupItems.findIndex(ele => this.$help.lodash.isEqual(ele, row))
-        },
-        /**
-         * @param {Object} row - row group object
-         * @returns {Boolean} - returns true if row is found in selectedGroupItems
-         */
-        isRowGroupSelected(row) {
-            return this.getSelectedRowGroupIdx(row) === -1 ? false : true
-        },
-        /**
-         * @param {Object} row - row group object
-         * @returns {Array} - returns 2d array
-         */
-        getGroupItems(row) {
-            const { isEqual } = this.$help.lodash
-            const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, row))
-            let items = []
-            let i = targetIdx + 1
-            while (i !== -1) {
-                if (Array.isArray(this.tableRows[i])) {
-                    items.push(this.tableRows[i])
-                    i++
-                } else i = -1
-            }
-            return items
-        },
-        /**
-         * @param {Boolean} payload.v - is row selected
-         * @param {Object} payload.row - row group object
-         */
-        handleSelectGroupItems({ v, row }) {
-            const { isEqual, xorWith, differenceWith } = this.$help.lodash
-            let groupItems = this.getGroupItems(row)
-            if (v) this.selectedItems = xorWith(this.selectedItems, groupItems, isEqual)
-            else this.selectedItems = differenceWith(this.selectedItems, groupItems, isEqual)
-        },
-        /**
-         * @param {Boolean} payload.v - is row selected
-         * @param {Object} payload.row - row group object
-         */
-        handleSelectGroup({ v, row }) {
-            if (v) this.selectedGroupItems.push(row)
-            else this.selectedGroupItems.splice(this.getSelectedRowGroupIdx(row), 1)
-            this.handleSelectGroupItems({ v, row })
-        },
+
         /**
          * @param {Boolean} v - is row selected
          */
@@ -579,18 +455,6 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
-                }
-            }
-            &--group {
-                .td {
-                    background-color: #f2fcff !important;
-                }
-            }
-        }
-        .tr-vertical-group {
-            .tr {
-                &:last-of-type {
-                    border-bottom: thin solid $table-border;
                 }
             }
         }
