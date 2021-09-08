@@ -257,6 +257,8 @@ private:
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
 
+    static void remove_star(std::string& pw);
+
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */
 

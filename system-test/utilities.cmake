@@ -159,7 +159,9 @@ function(add_test_executable_ex)
     message(FATAL_ERROR "VMS is not set.")
   else()
     # Check that the vms setup is recognized.
-    set(known_vms_setups none repl_backend galera_backend big_repl_backend columnstore_backend second_maxscale backend_ssl)
+    set(known_vms_setups none repl_backend galera_backend xpand_backend big_repl_backend
+        columnstore_backend second_maxscale backend_ssl)
+
     foreach(elem ${vms_setup})
       list(FIND known_vms_setups ${elem} vms_ind)
       if (vms_ind GREATER -1)

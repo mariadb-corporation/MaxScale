@@ -58,6 +58,7 @@ public:
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
     mxt::CmdResult run_cmd_output_sudo(const std::string& cmd);
+    mxt::CmdResult run_cmd_output_sudof(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));;
 
     /**
      * Run an sql-query on the node through ssh and mysql-client.
@@ -98,6 +99,8 @@ public:
 
     bool copy_from_node(const std::string& src, const std::string& dest);
 
+    void delete_from_node(const std::string& filepath);
+
     const char* ip4() const;
     const char* priv_ip() const;
     const char* hostname() const;
@@ -105,12 +108,16 @@ public:
     const char* access_homedir() const;
     const char* access_sudo() const;
     const char* sshkey() const;
+    const char* name() const;
 
     const std::string& ip4s() const;
     const std::string& ip6s() const;
 
     TestLogger& log();
     bool        is_remote() const;
+
+    void add_linux_user(const std::string& name, const std::string& pw);
+    void remove_linux_user(const std::string& name);
 
     const std::string m_name;       /**< E.g. "node_001" */
 

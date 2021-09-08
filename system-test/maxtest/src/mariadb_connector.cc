@@ -141,6 +141,22 @@ maxtest::MariaDB::create_user(const std::string& user, const std::string& host, 
     return rval;
 }
 
+maxtest::ScopedUser
+maxtest::MariaDB::create_user_xpand(const string& user, const string& host, const string& pw)
+{
+    mxt::ScopedUser rval;
+    if (is_open())
+    {
+        auto user_host = mxb::string_printf("'%s'@'%s'", user.c_str(), host.c_str());
+        try_cmd_f("drop user %s;", user_host.c_str());
+        if (cmd_f("create user %s identified by '%s';", user_host.c_str(), pw.c_str()))
+        {
+            rval = ScopedUser(user_host, this);
+        }
+    }
+    return rval;
+}
+
 maxtest::ScopedUser::ScopedUser(std::string user_host, maxtest::MariaDB* conn)
     : m_user_host(std::move(user_host))
     , m_conn(conn)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <maxtest/ccdefs.hh>
+
 /**
  * @brief execute_cmd Execute shell command
  * @param cmd Command line
@@ -7,6 +9,10 @@
  * @return Process exit code
  */
 int execute_cmd(char * cmd, char ** res);
+namespace maxtest
+{
+class VMNode;
+}
 
 namespace jdbc
 {
@@ -29,4 +35,12 @@ Result test_connection(ConnectorVersion vrs, const std::string& host, int port,
 Result test_connection(ConnectorVersion vrs, const std::string& host, int port,
                        const std::string& user, const std::string& passwd,
                        const std::string& query);
+}
+
+namespace pam
+{
+void copy_user_map_lib(mxt::VMNode& source, mxt::VMNode& dst);
+void delete_user_map_lib(mxt::VMNode& dst);
+void copy_map_config(mxt::VMNode& vm);
+void delete_map_config(mxt::VMNode& vm);
 }

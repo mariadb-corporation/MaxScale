@@ -15,6 +15,10 @@ add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cpp
 add_test_executable_ex(NAME pam_authentication_2fa SOURCE pam_authentication_2fa.cpp
         CONFIG pam_authentication_2fa.cnf VMS repl_backend LABELS HEAVY)
 
+# User accounts file + xpand + pam. MXS-3751.
+add_test_executable_ex(NAME xpand_mapped_auth SOURCE xpand_mapped_auth.cc
+        CONFIG xpand_mapped_auth.cnf VMS repl_backend xpand_backend)
+
 # GSSAPI/Kerberos authentication. MXS-3733.
 add_test_executable_ex(NAME gss_authentication SOURCE gss_authentication.cc
         CONFIG gss_authentication.cnf VMS repl_backend)

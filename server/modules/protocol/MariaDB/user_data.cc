@@ -624,11 +624,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
             new_entry.password = have_pw_column ? users->get_string(ind_pw) : users->get_string(ind_auth_str);
 
             // Hex-form passwords have a '*' at the beginning, remove it.
-            auto& pwd = new_entry.password;
-            if (!pwd.empty() && pwd[0] == '*')
-            {
-                pwd.erase(0, 1);
-            }
+            remove_star(new_entry.password);
 
             new_entry.auth_string = users->get_string(ind_auth_str);
 
@@ -746,10 +742,7 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
             auto pw = users->get_string(ind_pw);
 
             // Hex-form passwords may have a '*' at the beginning, remove it.
-            if (!pw.empty() && pw[0] == '*')
-            {
-                pw.erase(0, 1);
-            }
+            remove_star(pw);
 
             auto existing_entry = output->find_mutable_entry_equal(username, host);
             if (existing_entry)
@@ -1038,6 +1031,8 @@ bool MariaDBUserManager::read_users_from_file(const string& filepath, UserDataba
 
                     if (strings_ok && booleans_ok)
                     {
+                        // Erase * from password if found. This is similar to mysql.user.
+                        remove_star(new_entry.password);
                         output->add_entry(move(new_entry));
                         users_ok++;
                     }
@@ -1071,6 +1066,14 @@ bool MariaDBUserManager::read_users_from_file(const string& filepath, UserDataba
         MXB_ERROR("Failed to load users from file. %s", all.error_msg().c_str());
     }
     return rval;
+}
+
+void MariaDBUserManager::remove_star(string& pw)
+{
+    if (!pw.empty() && pw[0] == '*')
+    {
+        pw.erase(0, 1);
+    }
 }
 
 /**

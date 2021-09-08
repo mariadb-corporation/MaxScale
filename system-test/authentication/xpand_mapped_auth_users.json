@@ -1,0 +1,19 @@
+{
+    "user": [
+        {
+            "user": "",
+            "host": "%",
+            "global_db_priv": true,
+            "proxy_priv": true,
+            "plugin": "pam",
+            "authentication_string": "pam_config_user_map"
+        },
+        {
+            "user": "batman",
+            "host": "%",
+            "password": "*7260406B38A4DBB2DBB4D58F3371928C2365359B",
+            "plugin": "mysql_native_password"
+        }
+    ]
+}
+
