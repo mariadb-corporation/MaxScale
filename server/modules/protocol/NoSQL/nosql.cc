@@ -2005,7 +2005,9 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     // but as it is unlikely that there will be more fields than one,
     // explicitly ignoring fields at the beginning would just make
     // things messier without adding much benefit.
-    for (auto it = doc.begin(); it != doc.end(); ++it)
+    auto it = doc.begin();
+    auto end = doc.end();
+    for (; it != end; ++it)
     {
         const auto& element = *it;
         const auto nosql_op = static_cast<string>(element.key());
@@ -2057,10 +2059,36 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         }
         else
         {
-            ostringstream ss;
-            ss << "unknown operator: " << nosql_op;
-            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
+            break;
         }
+    }
+
+    if (it != end)
+    {
+        // We are simply looking for an object.
+        // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
+        // TODO: a query like '{"a": {x: 1}}' will return them both, although MongoDB
+        // TODO: returns just the former.
+
+        ostringstream ss;
+        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << field << "'), JSON_OBJECT(";
+
+        while (it != end)
+        {
+            auto element = *it;
+
+            ss << "\"" << element.key() << "\", ";
+            ss << element_to_value(element, ValueFor::JSON_NESTED);
+
+            if (++it != end)
+            {
+                ss << ", ";
+            }
+        }
+
+        ss << "))";
+
+        rv = ss.str();
     }
 
     return rv;
