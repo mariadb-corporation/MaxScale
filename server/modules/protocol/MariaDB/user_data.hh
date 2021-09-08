@@ -32,6 +32,9 @@
 class UserDatabase
 {
 public:
+    // The object can be copied but should not be.
+    UserDatabase& operator=(const UserDatabase&) = delete;
+
     // Using normal maps/sets so that entries can be printed in order.
     using StringSet = std::set<std::string>;
     using StringSetMap = std::map<std::string, StringSet>;
@@ -190,6 +193,8 @@ private:
 class MariaDBUserManager : public mxs::UserAccountManager
 {
 public:
+    using SUserDB = std::shared_ptr<const UserDatabase>;
+    MariaDBUserManager();
     ~MariaDBUserManager() override = default;
 
     /**
@@ -217,13 +222,18 @@ public:
     std::string protocol_name() const override;
     json_t*     users_to_json() const override;
 
+    struct UserDBInfo
+    {
+        SUserDB user_db;
+        int     version {0};
+    };
+
     /**
-     * Get both the user database and its version.
+     * Get database info.
      *
-     * @param userdb_out Output for user database
-     * @param version_out Output for version
+     * @return Database pointer and version
      */
-    void get_user_database(UserDatabase* userdb_out, int* version_out) const;
+    UserDBInfo get_user_database() const;
 
     int      userdb_version() const;
     SERVICE* service() const;
@@ -268,8 +278,9 @@ private:
 
     static void remove_star(std::string& pw);
 
-    mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
-    UserDatabase       m_userdb;        /**< Contains user account info */
+    mutable std::mutex m_userdb_lock;       /**< Protects UserDatabase from concurrent access */
+    SUserDB            m_userdb;            /**< Contains user account info */
+    std::atomic_int    m_userdb_version {0};/**< How many times the user database has changed */
 
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;
@@ -298,7 +309,6 @@ private:
 
     std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
     int              m_successful_loads {0};    /**< Successful refreshes */
-    std::atomic_int  m_userdb_version {0};      /**< How many times the user database has changed */
 
     /** How many times user loading has continuously failed. User for suppressing error messages. */
     int m_consecutive_failed_loads {0};
@@ -344,6 +354,6 @@ private:
 
     const MariaDBUserManager& m_master;     /**< User database master copy */
 
-    UserDatabase m_userdb;              /**< Local copy of user database */
-    int          m_userdb_version {0};  /**< Version of local copy */
+    MariaDBUserManager::SUserDB m_userdb;               /**< Local pointer to user database */
+    int                         m_userdb_version {0};   /**< Version of local copy */
 };
