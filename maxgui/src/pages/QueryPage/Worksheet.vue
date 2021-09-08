@@ -9,8 +9,8 @@
         <template slot="pane-left">
             <sidebar-container
                 @place-to-editor="placeToEditor"
-                @dragging-schema="draggingSchema"
-                @drop-schema-to-editor="dropSchemaToEditor"
+                @dragging-schema="draggingTxt"
+                @drop-schema-to-editor="dropTxtToEditor"
             />
         </template>
         <template slot="pane-right">
@@ -268,7 +268,7 @@ export default {
         placeToEditor(text) {
             this.$refs.queryEditor.insertAtCursor({ text })
         },
-        draggingSchema(e) {
+        draggingTxt({ e }) {
             const { editor, monaco } = this.$refs.queryEditor
             // build mouseDropWidget
             const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
@@ -292,7 +292,7 @@ export default {
                 editor.addContentWidget(this.mouseDropWidget)
             } else if (this.mouseDropDOM) editor.removeContentWidget(this.mouseDropWidget)
         },
-        dropSchemaToEditor({ e, name }) {
+        dropTxtToEditor({ e, name }) {
             if (name) {
                 const { editor, monaco, insertAtCursor } = this.$refs.queryEditor
                 const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)

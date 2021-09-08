@@ -28,6 +28,7 @@
                     <span
                         :draggable="item.draggable"
                         class="text-truncate d-inline-block"
+                        @dragstart="() => (isDragging = true)"
                         @drag="e => onNodeDragging(e)"
                         @dragend="e => onNodeDragEnd({ e, name: item.name })"
                     >
@@ -292,24 +293,21 @@ export default {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
         onNodeDragging(e) {
-            if (!this.isDragging) this.isDragging = true
             if (
                 this.$typy(this.draggingEvt).isNull ||
                 this.draggingEvt.clientX !== e.clientX ||
                 this.draggingEvt.clientY !== e.clientY
             ) {
                 this.draggingEvt = e
-                this.$emit('dragging-schema', this.draggingEvt)
+                this.$emit('dragging-schema', { e: this.draggingEvt })
             }
         },
         onNodeDragEnd({ e, name }) {
-            if (this.isDragging) {
-                this.$emit('drop-schema-to-editor', {
-                    e,
-                    name: this.$help.escapeIdentifiers(name),
-                })
-                this.isDragging = false
-            }
+            this.$emit('drop-schema-to-editor', {
+                e,
+                name: this.$help.escapeIdentifiers(name),
+            })
+            this.isDragging = false
         },
     },
 }
