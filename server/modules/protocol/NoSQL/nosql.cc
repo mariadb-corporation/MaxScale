@@ -1481,9 +1481,29 @@ string default_field_and_value_to_comparison(const std::string& field,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    return "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
+    // TODO: When this is called, we already know whether we are looking for
+    // TODO: something, or for something in an array.
+    auto expects_array = field.find("[*]") != string::npos;
+
+    string rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
         + "AND (JSON_EXTRACT(doc, '$." + field + "') "
-        + mariadb_op + " " + value_to_string(element, ValueFor::JSON, nosql_op) + "))";
+        + mariadb_op + " ";
+
+    if (expects_array)
+    {
+        rv += "JSON_ARRAY(";
+    }
+
+    rv += value_to_string(element, expects_array ? ValueFor::JSON_NESTED : ValueFor::JSON, nosql_op);
+
+    if (expects_array)
+    {
+        rv += ")";
+    }
+
+    rv += "))";
+
+    return rv;
 }
 
 string field_and_value_to_nin_comparison(const std::string& field,
