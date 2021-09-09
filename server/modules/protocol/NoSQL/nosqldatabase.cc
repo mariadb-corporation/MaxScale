@@ -77,6 +77,15 @@ GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
     return execute_command(std::move(sCommand));
 }
 
+GWBUF* nosql::Database::handle_get_more(GWBUF* pRequest, nosql::GetMore&& packet)
+{
+    mxb_assert(is_ready());
+
+    unique_ptr<Command> sCommand(new nosql::OpGetMoreCommand(this, pRequest, std::move(packet)));
+
+    return execute_command(std::move(sCommand));
+}
+
 GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
 {
     mxb_assert(is_ready());

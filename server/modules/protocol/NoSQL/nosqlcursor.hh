@@ -69,10 +69,10 @@ public:
     static void create_first_batch(bsoncxx::builder::basic::document& doc,
                                    const std::string& ns);
 
-    void create_first_batch(int32_t nBatch,
-                            bool single_batch,
-                            size_t* pnSize_of_documents,
-                            std::vector<bsoncxx::document::value>* pDocuments);
+    void create_batch(int32_t nBatch,
+                      bool single_batch,
+                      size_t* pnSize_of_documents,
+                      std::vector<bsoncxx::document::value>* pDocuments);
 
     const mxb::TimePoint& last_use() const
     {

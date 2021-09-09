@@ -191,6 +191,8 @@ const char* const NOSQL_ZVERSION = "4.4.1";
 const int MIN_WIRE_VERSION = 6;
 const int MAX_WIRE_VERSION = 6;
 
+const int DEFAULT_CURSOR_RETURN = 101;  // Documented to be that.
+
 bsoncxx::document::value& topology_version();
 
 const char* opcode_to_string(int code);
@@ -796,6 +798,39 @@ protected:
     std::vector<bsoncxx::document::view> m_documents;
 };
 
+class GetMore final : public Packet
+{
+public:
+    GetMore(const Packet& packet);
+    GetMore(const GetMore& that) = default;
+    GetMore(GetMore&& that) = default;
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    int32_t nReturn() const
+    {
+        return m_nReturn;
+    }
+
+    int64_t cursor_id() const
+    {
+        return m_cursor_id;
+    }
+
+private:
+    const char* m_zCollection;
+    int32_t     m_nReturn;
+    int64_t     m_cursor_id;
+};
+
 class Msg final : public Packet
 {
 public:
@@ -981,6 +1016,7 @@ private:
     GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
     GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
+    GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
     GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
     State              m_state { READY };

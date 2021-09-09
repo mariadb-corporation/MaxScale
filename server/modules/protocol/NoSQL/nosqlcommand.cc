@@ -983,7 +983,7 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
             size_t size_of_documents = 0;
             vector<bsoncxx::document::value> documents;
 
-            sCursor->create_first_batch(m_nReturn, m_single_batch, &size_of_documents, &documents);
+            sCursor->create_batch(m_nReturn, m_single_batch, &size_of_documents, &documents);
 
             int64_t cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
 
@@ -1048,6 +1048,45 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query)
     sql << nLimit;
 
     send_downstream(sql.str());
+}
+
+//
+// OpGetMoreCommand
+//
+string OpGetMoreCommand::description() const
+{
+    return "OP_GET_MORE";
+}
+
+GWBUF* OpGetMoreCommand::execute()
+{
+    auto cursor_id = m_req.cursor_id();
+
+    unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::get(m_req.collection(), m_req.cursor_id());
+
+    int32_t position = sCursor->position();
+    size_t size_of_documents;
+    vector<bsoncxx::document::value> documents;
+
+    sCursor->create_batch(m_req.nReturn(), false, &size_of_documents, &documents);
+
+    cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
+
+    GWBUF* pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+
+    if (!sCursor->exhausted())
+    {
+        NoSQLCursor::put(std::move(sCursor));
+    }
+
+    return pResponse;
+}
+
+Command::State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    mxb_assert(!true);
+    *ppNoSQL_response = nullptr;
+    return READY;
 }
 
 //

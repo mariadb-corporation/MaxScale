@@ -330,10 +330,10 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
     doc.append(kvp(key::OK, 1));
 }
 
-void NoSQLCursor::create_first_batch(int32_t nBatch,
-                                     bool single_batch,
-                                     size_t* pSize_of_documents,
-                                     std::vector<bsoncxx::document::value>* pDocuments)
+void NoSQLCursor::create_batch(int32_t nBatch,
+                               bool single_batch,
+                               size_t* pSize_of_documents,
+                               std::vector<bsoncxx::document::value>* pDocuments)
 {
     mxb_assert(!m_exhausted);
 

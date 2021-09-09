@@ -305,10 +305,30 @@ private:
     void send_query(const bsoncxx::document::view& query);
 
 private:
-    int32_t m_nReturn      { 101 };
+    int32_t m_nReturn      { DEFAULT_CURSOR_RETURN };
     bool    m_single_batch { false };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
+};
+
+//
+// OpGetMoreCommand
+//
+class OpGetMoreCommand : public PacketCommand<nosql::GetMore>
+{
+public:
+    OpGetMoreCommand(Database* pDatabase,
+                     GWBUF* pRequest,
+                     nosql::GetMore&& req)
+        : PacketCommand<nosql::GetMore>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //

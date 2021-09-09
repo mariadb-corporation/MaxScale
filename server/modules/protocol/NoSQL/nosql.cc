@@ -508,6 +508,25 @@ nosql::Query::Query(const Packet& packet)
     }
 }
 
+nosql::GetMore::GetMore(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_GET_MORE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    int32_t zero;
+    pData += protocol::get_byte4(pData, &zero);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_nReturn);
+    pData += protocol::get_byte8(pData, &m_cursor_id);
+
+    if (m_nReturn == 0)
+    {
+        m_nReturn = DEFAULT_CURSOR_RETURN;
+    }
+}
+
 nosql::Msg::Msg(const Packet& packet)
     : Packet(packet)
 {
@@ -2863,7 +2882,6 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             switch (req.opcode())
             {
             case MONGOC_OPCODE_COMPRESSED:
-            case MONGOC_OPCODE_GET_MORE:
             case MONGOC_OPCODE_KILL_CURSORS:
             case MONGOC_OPCODE_REPLY:
                 {
@@ -2871,6 +2889,10 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
                     ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
                     throw std::runtime_error(ss.str());
                 }
+                break;
+
+            case MONGOC_OPCODE_GET_MORE:
+                pResponse = handle_get_more(pRequest, nosql::GetMore(req));
                 break;
 
             case MONGOC_OPCODE_DELETE:
@@ -3038,6 +3060,23 @@ GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req)
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
     GWBUF* pResponse = m_sDatabase->handle_query(pRequest, std::move(req));
+
+    if (pResponse)
+    {
+        m_sDatabase.reset();
+    }
+
+    return pResponse;
+}
+
+GWBUF* nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req)
+{
+    MXB_INFO("Request(GetMore): %ld", req.cursor_id());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    GWBUF* pResponse = m_sDatabase->handle_get_more(pRequest, std::move(req));
 
     if (pResponse)
     {
