@@ -1318,20 +1318,6 @@ string element_to_array(const bsoncxx::document::element& element,
     return rv;
 }
 
-string element_to_null(const bsoncxx::document::element& element, ValueFor, const string& = "")
-{
-    bool b = nosql::element_as<bool>("maxscale", "internal", element, nosql::Conversion::RELAXED);
-
-    if (b)
-    {
-        return "NOT NULL";
-    }
-    else
-    {
-        return "NULL";
-    }
-}
-
 string elemMatch_to_json_contain(const string& subfield,
                                  const string& field,
                                  const bsoncxx::document::element& elemMatch)
@@ -1475,6 +1461,26 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
     return condition;
 }
 
+string exists_to_condition(const string& field, const bsoncxx::document::element& element)
+{
+    string rv = "(JSON_EXTRACT(doc, '$." + field + "') IS ";
+
+    bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
+
+    if (b)
+    {
+        rv += "NOT NULL";
+    }
+    else
+    {
+        rv += "NULL";
+    }
+
+    rv += ")";
+
+    return rv;
+}
+
 string default_field_and_value_to_comparison(const std::string& field,
                                              const bsoncxx::document::element& element,
                                              const string& mariadb_op,
@@ -1527,21 +1533,6 @@ string field_and_value_to_nin_comparison(const std::string& field,
     return rv;
 }
 
-string field_and_value_to_exists_comparison(const std::string& field,
-                                            const bsoncxx::document::element& element,
-                                            const string& mariadb_op,
-                                            const string& nosql_op,
-                                            ElementValueToString value_to_string)
-{
-    string rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " ";
-
-    rv += value_to_string(element, ValueFor::JSON, nosql_op);
-
-    rv += ")";
-
-    return rv;
-}
-
 const unordered_map<string, ElementValueInfo> converters =
 {
     { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
@@ -1551,7 +1542,6 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
-    { "$exists", { "IS",     &element_to_null,  field_and_value_to_exists_comparison } }
 };
 
 enum class ArrayOp
@@ -2083,6 +2073,10 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         else if (nosql_op == "$elemMatch")
         {
             rv += elemMatch_to_condition(field, element);
+        }
+        else if (nosql_op == "$exists")
+        {
+            rv += exists_to_condition(field, element);
         }
         else if (nosql_op == "$size")
         {
