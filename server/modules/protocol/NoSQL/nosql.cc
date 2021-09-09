@@ -1527,6 +1527,21 @@ string field_and_value_to_nin_comparison(const std::string& field,
     return rv;
 }
 
+string field_and_value_to_exists_comparison(const std::string& field,
+                                            const bsoncxx::document::element& element,
+                                            const string& mariadb_op,
+                                            const string& nosql_op,
+                                            ElementValueToString value_to_string)
+{
+    string rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " ";
+
+    rv += value_to_string(element, ValueFor::JSON, nosql_op);
+
+    rv += ")";
+
+    return rv;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
     { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
@@ -1536,7 +1551,7 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
-    { "$exists", { "IS",     &element_to_null,  default_field_and_value_to_comparison } }
+    { "$exists", { "IS",     &element_to_null,  field_and_value_to_exists_comparison } }
 };
 
 enum class ArrayOp
