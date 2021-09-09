@@ -240,6 +240,7 @@ private:
     bool       update_users();
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
     LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
+    bool       load_users_from_file(const std::string& role_data, UserDatabase* output);
 
     void updater_thread_function();
 
@@ -253,7 +254,6 @@ private:
     bool read_users_xpand(QResult users, UserDatabase* output);
     void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
-    bool read_users_from_file(const std::string& source, UserDatabase* output);
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);
 
