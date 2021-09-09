@@ -251,11 +251,31 @@ public:
     {
     }
 
+    ~OpUpdateCommand();
+
     std::string description() const override;
 
     GWBUF* execute() override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    enum class Action
+    {
+        UPDATING_DOCUMENT,
+        INSERTING_DOCUMENT,
+        CREATING_TABLE
+    };
+
+    State translate_updating_document(ComResponse& response);
+    State translate_inserting_document(ComResponse& response);
+    State translate_creating_table(ComResponse& response);
+
+    State create_table();
+    State insert_document();
+
+    Action   m_action { Action::UPDATING_DOCUMENT };
+    uint32_t m_dcid { 0 };
 };
 
 //

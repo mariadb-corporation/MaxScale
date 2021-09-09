@@ -680,6 +680,14 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 //
 // OpUpdateCommand
 //
+OpUpdateCommand::~OpUpdateCommand()
+{
+    if (m_dcid)
+    {
+        Worker::get_current()->cancel_delayed_call(m_dcid);
+    }
+}
+
 string OpUpdateCommand::description() const
 {
     return "OP_UPDATE";
@@ -718,31 +726,156 @@ GWBUF* OpUpdateCommand::execute()
 
 Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
+    State state = READY;
+
     ComResponse response(mariadb_response.data());
 
-    switch (response.type())
+    auto type = response.type();
+    if (type == ComResponse::OK_PACKET || type == ComResponse::ERR_PACKET)
     {
-    case ComResponse::OK_PACKET:
-        break;
-
-    case ComResponse::ERR_PACKET:
+        switch (m_action)
         {
-            ComERR err(response);
+        case Action::UPDATING_DOCUMENT:
+            state = translate_updating_document(response);
+            break;
 
-            if (err.code() != ER_NO_SUCH_TABLE)
-            {
-                m_database.context().set_last_error(MariaDBError(err).create_last_error());
-            }
+        case Action::INSERTING_DOCUMENT:
+            state = translate_inserting_document(response);
+            break;
+
+        case Action::CREATING_TABLE:
+            state = translate_creating_table(response);
+            break;
         }
-        break;
-
-    default:
+    }
+    else
+    {
         // We do not throw, as that would generate a response.
         log_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
+
+    return state;
+}
+
+Command::State OpUpdateCommand::translate_updating_document(ComResponse& response)
+{
+    State state = READY;
+
+    if (response.type() == ComResponse::OK_PACKET)
+    {
+        if (m_req.is_upsert() || !m_req.is_multi())
+        {
+            ComOK ok(response);
+
+            if (ok.affected_rows() == 0)
+            {
+                // Ok, so the update fails, let's try an insert.
+                state = insert_document();
+            }
+        }
+    }
+    else
+    {
+        mxb_assert(response.type() == ComResponse::ERR_PACKET);
+
+        ComERR err(response);
+
+        if (err.code() == ER_NO_SUCH_TABLE)
+        {
+            if (m_database.config().auto_create_tables)
+            {
+                state = create_table();
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
+                   << "is false.";
+
+                MXB_WARNING("%s", ss.str().c_str());
+            }
+        }
+        else
+        {
+            m_database.context().set_last_error(MariaDBError(err).create_last_error());
+        }
+    }
+
+    return state;
+}
+
+Command::State OpUpdateCommand::translate_inserting_document(ComResponse& response)
+{
+    if (response.type() == ComResponse::ERR_PACKET)
+    {
+        ComERR err(response);
+        m_database.context().set_last_error(MariaDBError(err).create_last_error());
+    }
+
     return READY;
+}
+
+Command::State OpUpdateCommand::translate_creating_table(ComResponse& response)
+{
+    State state = READY;
+
+    if (response.type() == ComResponse::OK_PACKET)
+    {
+        state = insert_document();
+    }
+    else
+    {
+        ComERR err(response);
+        m_database.context().set_last_error(MariaDBError(err).create_last_error());
+    }
+
+    return state;
+}
+
+Command::State OpUpdateCommand::create_table()
+{
+    m_action = Action::CREATING_TABLE;
+
+    mxb_assert(m_dcid == 0);
+    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+            m_dcid = 0;
+
+            if (action == Worker::Call::EXECUTE)
+            {
+                auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
+
+                send_downstream(sql);
+            }
+
+            return false;
+        });
+
+    return BUSY;
+}
+
+Command::State OpUpdateCommand::insert_document()
+{
+    m_action = Action::CREATING_TABLE;
+
+    mxb_assert(m_dcid == 0);
+    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+            m_dcid = 0;
+
+            if (action == Worker::Call::EXECUTE)
+            {
+                ostringstream sql;
+                sql << "INSERT INTO " << table() << " (doc) VALUES ('"
+                    << bsoncxx::to_json(m_req.update()) << "');";
+
+                send_downstream(sql.str());
+            }
+
+            return false;
+        });
+
+    return BUSY;
 }
 
 //
