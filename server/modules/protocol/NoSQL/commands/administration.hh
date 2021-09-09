@@ -598,6 +598,47 @@ private:
 
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
+            else
+            {
+                auto doc = static_cast<bsoncxx::document::view>(key.get_document());
+
+                for (const auto& element : static_cast<bsoncxx::document::view>(key.get_document()))
+                {
+                    int64_t number;
+                    if (nosql::get_number_as_integer(element, &number))
+                    {
+                        if (number == 0)
+                        {
+                            ostringstream ss;
+                            ss << "Error in specification " << bsoncxx::to_json(doc)
+                               << " :: caused by :: Values in the index key pattern cannot be 0.";
+
+                            throw (ss.str(), error::CANNOT_CREATE_INDEX);
+                        }
+                    }
+                    else if (element.type() != bsoncxx::type::k_utf8)
+                    {
+                        ostringstream ss;
+                        ss << "Error in specification " << bsoncxx::to_json(doc)
+                           << " :: caused by :: Values in v:2 index key pattern cannot be of type "
+                           << bsoncxx::to_string(element.type())
+                           << ". Only numbers > 0, numbers < 0, and strings are allowed.";
+
+                        throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
+                    }
+                    else
+                    {
+                        // We know of no plugins.
+                        ostringstream ss;
+                        ss << "Error in specification " << bsoncxx::to_json(doc)
+                           << " :: caused by :: Unknown index plugin '"
+                           << static_cast<string_view>(element.get_utf8())
+                           << "'";
+
+                        throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
+                    }
+                }
+            }
 
             auto name = index[key::NAME];
             if (!name)
