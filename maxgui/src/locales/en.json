@@ -177,6 +177,8 @@
     "favoriteTabGuide": "Favorite queries are empty. Press <b>CMD/Ctrl + S</b> or click on <i class='v-icon accent-dark--text material-icons' style='font-size: 20px;'>bookmark</i> icon to save query to favorite",
     "group": "group",
     "ungroup": "Ungroup",
+    "placeSqlInEditor": "Place SQL in editor",
+    "copySqlToClipboard": "Copy SQL to clipboard",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

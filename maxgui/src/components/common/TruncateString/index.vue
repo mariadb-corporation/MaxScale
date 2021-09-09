@@ -11,6 +11,7 @@
         :nudge-left="nudgeLeft"
         :max-width="menuMaxWidth"
         :max-height="menuMaxHeight"
+        :disabled="disabled"
     >
         <!-- TODO: nudge menu list to center -->
         <template v-slot:activator="{ on }">
@@ -63,6 +64,7 @@ export default {
         menuMaxHeight: { type: Number, default: 600 },
         menuMaxWidth: { type: Number, default: 600 },
         nudgeLeft: { type: Number, default: 0 },
+        disabled: { type: Boolean, default: false },
     },
     data() {
         return {

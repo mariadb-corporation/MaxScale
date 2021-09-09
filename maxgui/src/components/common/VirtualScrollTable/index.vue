@@ -39,6 +39,7 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :cellMaxWidth="cellMaxWidth"
+                    @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 />
                 <row-group
                     v-else-if="isRowGroup(row) && !areHeadersHidden"
@@ -60,7 +61,16 @@
                         />
                     </template>
                 </row-group>
-                <div v-else class="tr" :style="{ lineHeight }">
+                <div
+                    v-else
+                    class="tr"
+                    :class="{
+                        'tr--selected': isRowSelected(row),
+                        'tr--active': $help.lodash.isEqual(activeRow, row),
+                    }"
+                    :style="{ lineHeight }"
+                    @contextmenu.prevent="e => $emit('on-row-right-click', { e, row })"
+                >
                     <div
                         v-if="!areHeadersHidden && showSelect"
                         class="td"
@@ -92,10 +102,21 @@
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td px-3"
+                            :class="{ 'pointer no-userSelect': h.draggable }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
+                            :draggable="h.draggable"
+                            v-on="
+                                h.draggable
+                                    ? {
+                                          dragstart: () => (isDragging = true),
+                                          drag: e => onCellDragging({ e, cellValue: row[i] }),
+                                          dragend: e => onCellDragEnd({ e, cellValue: row[i] }),
+                                      }
+                                    : null
+                            "
                         >
                             <slot
                                 :name="h.text"
@@ -105,7 +126,11 @@
                                     maxWidth: cellMaxWidth(i),
                                 }"
                             >
-                                <truncate-string :text="`${row[i]}`" :maxWidth="cellMaxWidth(i)" />
+                                <truncate-string
+                                    :text="`${row[i]}`"
+                                    :maxWidth="cellMaxWidth(i)"
+                                    :disabled="isDragging"
+                                />
                             </slot>
                         </div>
                     </template>
@@ -167,6 +192,8 @@ export default {
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
+        // row being highlighted. e.g. opening ctx menu of a row
+        activeRow: { type: Array, default: () => [] },
     },
     data() {
         return {
@@ -183,6 +210,9 @@ export default {
             // Select feat states
             selectedItems: [],
             selectedGroupItems: [],
+            //cell dragging states
+            isDragging: false,
+            draggingEvt: null,
         }
     },
     computed: {
@@ -422,6 +452,20 @@ export default {
                 this.selectedGroupItems = []
             }
         },
+        onCellDragging({ e, cellValue }) {
+            if (
+                this.$typy(this.draggingEvt).isNull ||
+                this.draggingEvt.clientX !== e.clientX ||
+                this.draggingEvt.clientY !== e.clientY
+            ) {
+                this.draggingEvt = e
+                this.$emit('on-cell-dragging', { e, name: cellValue })
+            }
+        },
+        onCellDragEnd({ e, cellValue }) {
+            this.$emit('on-cell-dragend', { e, name: cellValue })
+            this.isDragging = false
+        },
     },
 }
 </script>
@@ -455,6 +499,16 @@ export default {
             &:active {
                 .td {
                     background: #f2fcff;
+                }
+            }
+            &--active {
+                .td {
+                    background: #f2fcff !important;
+                }
+            }
+            &--selected {
+                .td {
+                    background: $selected-row !important;
                 }
             }
         }

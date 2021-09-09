@@ -52,6 +52,7 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    v-on="$listeners"
                 />
             </keep-alive>
         </v-slide-x-transition>

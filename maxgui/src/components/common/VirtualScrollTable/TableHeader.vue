@@ -109,6 +109,7 @@
   groupable?: boolean
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
   hidden?: boolean, hidden the column
+  draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
 }
  */
 export default {

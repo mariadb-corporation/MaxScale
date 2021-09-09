@@ -108,13 +108,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.tr {
-    &--group {
-        .td {
-            background-color: #f2fcff !important;
-        }
-    }
-}
-</style>
