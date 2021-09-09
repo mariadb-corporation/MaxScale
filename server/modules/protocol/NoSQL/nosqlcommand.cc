@@ -189,6 +189,7 @@ struct ThisUnit
         { tolower(command::Count::KEY),                   create_info<command::Count>() },
         { tolower(command::Create::KEY),                  create_info<command::Create>() },
         { tolower(command::CreateIndexes::KEY),           create_info<command::CreateIndexes>() },
+        { tolower(command::CurrentOp::KEY),               create_info<command::CurrentOp>() },
         { tolower(command::Delete::KEY),                  create_info<command::Delete>() },
         { tolower(command::Distinct::KEY),                create_info<command::Distinct>() },
         { tolower(command::Drop::KEY),                    create_info<command::Drop>() },

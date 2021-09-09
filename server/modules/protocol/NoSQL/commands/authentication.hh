@@ -38,8 +38,6 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        DocumentBuilder storage_engine;
-
         doc.append(kvp(key::OK, 1));
     }
 };

@@ -371,6 +371,7 @@ const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
 const char INDEXES[]                         = "indexes";
 const char INFO[]                            = "info";
+const char INPROG[]                          = "inprog";
 const char ISMASTER[]                        = "ismaster";
 const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
 const char KEY_PATTERN[]                     = "keyPattern";

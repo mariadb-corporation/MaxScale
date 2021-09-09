@@ -726,6 +726,36 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/currentOp/
+class CurrentOp;
+
+template<>
+struct IsAdmin<command::CurrentOp>
+{
+    static const bool is_admin { true };
+};
+
+class CurrentOp : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "currentOp";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<CurrentOp>::is_admin;
+    }
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        ArrayBuilder inprog;
+        // TODO: Add something.
+
+        doc.append(kvp(key::INPROG, inprog.extract()));
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/drop/
 class Drop final : public SingleCommand
