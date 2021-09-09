@@ -58,11 +58,21 @@ public:
         return m_exhausted;
     }
 
+    int32_t position() const
+    {
+        return m_position;
+    }
+
     void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch, bool single_batch);
     void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
 
     static void create_first_batch(bsoncxx::builder::basic::document& doc,
                                    const std::string& ns);
+
+    void create_first_batch(int32_t nBatch,
+                            bool single_batch,
+                            size_t* pnSize_of_documents,
+                            std::vector<bsoncxx::document::value>* pDocuments);
 
     const mxb::TimePoint& last_use() const
     {
@@ -91,11 +101,16 @@ private:
                       int32_t nBatch,
                       bool single_batch);
 
+    void create_batch(int32_t nBatch,
+                      bool single_batch);
+
+
     Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
     std::string                   m_ns;
     int64_t                       m_id;
-    bool                          m_exhausted;
+    int32_t                       m_position { 0 };
+    bool                          m_exhausted { false };
     std::vector<std::string>      m_extractions;
     mxs::Buffer                   m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };

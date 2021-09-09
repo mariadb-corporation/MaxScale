@@ -705,7 +705,7 @@ public:
         return m_nSkip;
     }
 
-    uint32_t nReturn() const
+    int32_t nReturn() const
     {
         return m_nReturn;
     }

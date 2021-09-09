@@ -215,7 +215,6 @@ namespace nosql
 NoSQLCursor::NoSQLCursor(const std::string& ns)
     : m_ns(ns)
     , m_id(0)
-    , m_exhausted(false)
 {
     touch();
 }
@@ -225,7 +224,6 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
                          mxs::Buffer&& mariadb_response)
     : m_ns(ns)
     , m_id(this_unit.next_id() | BSON_LONG_BIT)
-    , m_exhausted(false)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
@@ -330,6 +328,51 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
 
     doc.append(kvp(key::CURSOR, cursor.extract()));
     doc.append(kvp(key::OK, 1));
+}
+
+void NoSQLCursor::create_first_batch(int32_t nBatch,
+                                     bool single_batch,
+                                     size_t* pSize_of_documents,
+                                     std::vector<bsoncxx::document::value>* pDocuments)
+{
+    mxb_assert(!m_exhausted);
+
+    size_t size_of_documents = 0;
+    vector<bsoncxx::document::value> documents;
+
+    if (m_pBuffer)
+    {
+        create_batch([&size_of_documents, &documents](bsoncxx::document::value&& doc)
+                     {
+                         size_t size = doc.view().length();
+
+                         if (size_of_documents + size > protocol::MAX_MSG_SIZE)
+                         {
+                             return false;
+                         }
+                         else
+                         {
+                             size_of_documents += size;
+                             documents.emplace_back(std::move(doc));
+                             return true;
+                         }
+                     },
+                     nBatch);
+    }
+    else
+    {
+        m_exhausted = true;
+    }
+
+    if (single_batch)
+    {
+        m_exhausted = true;
+    }
+
+    *pSize_of_documents = size_of_documents;
+    pDocuments->swap(documents);
+
+    touch();
 }
 
 void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
@@ -460,6 +503,8 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
         ComResponse response(&m_pBuffer);
         m_exhausted = true;
     }
+
+    m_position += n;
 
     return at_end ? Result::COMPLETE : Result::PARTIAL;
 }

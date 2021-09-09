@@ -322,7 +322,9 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
     return pResponse;
 }
 
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents,
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int64_t cursor_id,
+                                                             int32_t starting_from,
+                                                             size_t size_of_documents,
                                                              size_t nDocuments,
                                                              IsError is_error) const
 {
@@ -334,8 +336,6 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     {
         response_flags |= MONGOC_REPLY_QUERY_FAILURE;
     }
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
     int32_t number_returned = nDocuments;
 
     size_t response_size = protocol::HEADER_LEN
@@ -360,13 +360,19 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     return make_pair(pResponse, pData);
 }
 
-GWBUF* Command::create_reply_response(size_t size_of_documents,
+GWBUF* Command::create_reply_response(int64_t cursor_id,
+                                      int32_t position,
+                                      size_t size_of_documents,
                                       const vector<bsoncxx::document::value>& documents) const
 {
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size(), IsError::NO);
+    tie(pResponse, pData) = create_reply_response_buffer(cursor_id,
+                                                         position,
+                                                         size_of_documents,
+                                                         documents.size(),
+                                                         IsError::NO);
 
     for (const auto& doc : documents)
     {
@@ -390,7 +396,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsErr
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1, is_error);
+    tie(pResponse, pData) = create_reply_response_buffer(0, 0, doc_len, 1, is_error);
 
     memcpy(pData, doc_view.data(), doc_view.length());
 
@@ -953,7 +959,7 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
                 size_t size_of_documents = 0;
                 vector<bsoncxx::document::value> documents;
 
-                pResponse = create_reply_response(size_of_documents, documents);
+                pResponse = create_reply_response(0, 0, size_of_documents, documents);
             }
             else
             {
@@ -969,59 +975,24 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
 
     default:
         {
-            uint8_t* pBuffer = mariadb_response.data();
+            unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
+                                                                  vector<string>(),
+                                                                  std::move(mariadb_response));
 
-            ComQueryResponse cqr(&pBuffer);
-
-            auto nFields = cqr.nFields();
-            mxb_assert(nFields == 1); // Currently the whole document is selected.
-
-            for (size_t i = 0; i < nFields; ++i)
-            {
-                ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-                m_names.push_back(column_def.name().to_string());
-                m_types.push_back(column_def.type());
-            }
-
-            // The there should be an EOF packet, which should be bypassed.
-            ComResponse eof(&pBuffer);
-            mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
+            int32_t position = sCursor->position();
             size_t size_of_documents = 0;
             vector<bsoncxx::document::value> documents;
-            while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET) // pBuffer not advanced
+
+            sCursor->create_first_batch(m_nReturn, m_single_batch, &size_of_documents, &documents);
+
+            int64_t cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
+
+            pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+
+            if (!sCursor->exhausted())
             {
-                CQRTextResultsetRow row(&pBuffer, m_types); // Advances pBuffer
-
-                auto it = row.begin();
-
-                string json;
-                // TODO: If we honour the 'fields' in OP_QUERY that needs to be
-                // TODO: dealt with here.
-
-                const auto& value = *it++;
-                mxb_assert(it == row.end());
-                // The value is now a JSON object.
-                json = value.as_string().to_string();
-
-                try
-                {
-                    auto doc = bsoncxx::from_json(json);
-
-                    size_of_documents += doc.view().length();
-                    documents.emplace_back(doc);
-                }
-                catch (const std::exception& x)
-                {
-                    ostringstream ss;
-                    ss << "Could not convert assumed JSON data to BSON: " << x.what();
-                    MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
-                    throw SoftError(ss.str(), error::COMMAND_FAILED);
-                }
+                NoSQLCursor::put(std::move(sCursor));
             }
-
-            pResponse = create_reply_response(size_of_documents, documents);
         }
     }
 
@@ -1045,6 +1016,36 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query)
             sql << " " << where;
         }
     }
+
+    sql << " LIMIT ";
+
+    auto nSkip = m_req.nSkip();
+
+    if (m_req.nSkip() != 0)
+    {
+        sql << nSkip << ", ";
+    }
+
+    int64_t nLimit = std::numeric_limits<int64_t>::max();
+
+    if (m_req.nReturn() < 0)
+    {
+        m_nReturn = -m_req.nReturn();
+        nLimit = m_nReturn;
+        m_single_batch = true;
+    }
+    else if (m_req.nReturn() == 1)
+    {
+        m_nReturn = 1;
+        nLimit = m_nReturn;
+        m_single_batch = true;
+    }
+    else
+    {
+        m_nReturn = m_req.nReturn();
+    }
+
+    sql << nLimit;
 
     send_downstream(sql.str());
 }

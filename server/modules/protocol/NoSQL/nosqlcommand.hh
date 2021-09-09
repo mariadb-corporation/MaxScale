@@ -83,7 +83,9 @@ public:
 
     GWBUF* create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
 
-    GWBUF* create_reply_response(size_t size_of_documents,
+    GWBUF* create_reply_response(int64_t cursor_id,
+                                 int32_t position,
+                                 size_t size_of_documents,
                                  const std::vector<bsoncxx::document::value>& documents) const;
 
     static void check_maximum_sql_length(int length);
@@ -129,7 +131,9 @@ protected:
     std::string   m_last_statement;
 
 private:
-    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
+    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int64_t cursor_id,
+                                                             int32_t position,
+                                                             size_t size_of_documents,
                                                              size_t nDocuments,
                                                              IsError is_error) const;
 
@@ -301,6 +305,8 @@ private:
     void send_query(const bsoncxx::document::view& query);
 
 private:
+    int32_t m_nReturn      { 101 };
+    bool    m_single_batch { false };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
 };
