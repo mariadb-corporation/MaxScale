@@ -90,7 +90,8 @@ private:
                       const std::string& which_batch,
                       int32_t nBatch,
                       bool single_batch);
-    Result create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch);
+
+    Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
     std::string                   m_ns;
     int64_t                       m_id;

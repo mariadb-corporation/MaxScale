@@ -345,7 +345,19 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
 
     if (m_pBuffer)
     {
-        if (create_batch(batch, nBatch) == Result::PARTIAL)
+        if (create_batch([&batch](bsoncxx::document::value&& doc)
+                         {
+                             if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+                             {
+                                 return false;
+                             }
+                             else
+                             {
+                                 batch.append(doc);
+                                 return true;
+                             }
+                         },
+                         nBatch) == Result::PARTIAL)
         {
             id = m_id;
         }
@@ -372,7 +384,8 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
     touch();
 }
 
-NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
+NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::document::value&& doc)> append,
+                                              int32_t nBatch)
 {
     int n = 0;
     while (n < nBatch && ComResponse(m_pBuffer).type() != ComResponse::EOF_PACKET) // m_pBuffer not advanced
@@ -422,14 +435,13 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
         {
             auto doc = bsoncxx::from_json(json);
 
-            if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+            if (!append(std::move(doc)))
             {
                 // TODO: Don't discard the converted doc, but store it somewhere for
                 // TODO: the next batch.
                 break;
             }
 
-            batch.append(doc);
             m_pBuffer = pBuffer;
         }
         catch (const std::exception& x)
