@@ -573,6 +573,24 @@ document id will remain non-changed while the document otherwise is replaced. Th
 different from MongoDB® where the presence of the `_id` field in the replacement document
 causes an error, if the value is not the same as it is in the document being replaced.
 
+## Authentication Commands
+
+### Logout
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+logout | any | Ignored.
+
+Always returns
+```
+{ ok: 1 }
+```
+
+Since authentication and logging in is currently not supported,
+the command has no effect.
+
 ## Replication Commands
 
 ### isMaster

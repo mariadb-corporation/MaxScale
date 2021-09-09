@@ -32,7 +32,7 @@ using mxb::Worker;
 //#include "commands/geospatial.hh"
 #include "commands/query_and_write_operation.hh"
 //#include "commands/query_plan_cache.hh"
-//#include "commands/authentication.hh"
+#include "commands/authentication.hh"
 //#include "commands/user_management.hh"
 //#include "commands/role_management.hh"
 #include "commands/replication.hh"
@@ -208,6 +208,7 @@ struct ThisUnit
         { tolower(command::ListCollections::KEY),         create_info<command::ListCollections>() },
         { tolower(command::ListDatabases::KEY),           create_info<command::ListDatabases>() },
         { tolower(command::ListIndexes::KEY),             create_info<command::ListIndexes>() },
+        { tolower(command::Logout::KEY),                  create_info<command::Logout>() },
         { tolower(command::Ping::KEY),                    create_info<command::Ping>() },
         { tolower(command::ReplSetGetStatus::KEY),        create_info<command::ReplSetGetStatus>() },
         { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
