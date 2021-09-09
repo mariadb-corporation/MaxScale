@@ -21,17 +21,15 @@
                 <div
                     :id="`item-label-${activatorIdTransform(item.id)}`"
                     class="d-flex align-center node-label"
+                    :class="{ 'cursor--grab': item.draggable }"
+                    @mousedown="
+                        item.draggable ? onNodeDragStart({ e: $event, txt: item.name }) : null
+                    "
                 >
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span
-                        :draggable="item.draggable"
-                        class="text-truncate d-inline-block"
-                        @dragstart="() => (isDragging = true)"
-                        @drag="e => onNodeDragging(e)"
-                        @dragend="e => onNodeDragEnd({ e, name: item.name })"
-                    >
+                    <span class="text-truncate d-inline-block">
                         {{ item.name }}
                     </span>
                 </div>
@@ -126,7 +124,9 @@ export default {
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             isDragging: false,
-            draggingEvt: null,
+            targetTxt: '',
+            dragTarget: null,
+            dragTargetId: 'target-drag',
             expandedNodes: [],
         }
     },
@@ -165,6 +165,15 @@ export default {
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
+        },
+        isDragging(v) {
+            if (v) {
+                document.addEventListener('mousemove', e => this.onNodeDragging(e))
+                document.addEventListener('mouseup', e => this.onNodeDragEnd(e))
+            } else {
+                document.removeEventListener('mousemove', e => self.onNodeDragging(e))
+                document.removeEventListener('mouseup', e => self.onNodeDragEnd(e))
+            }
         },
     },
     activated() {
@@ -292,22 +301,31 @@ export default {
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
+        onNodeDragStart({ e, txt }) {
+            this.isDragging = true
+            this.dragTarget = e.target
+            this.targetTxt = this.$help.escapeIdentifiers(txt)
+        },
         onNodeDragging(e) {
-            if (
-                this.$typy(this.draggingEvt).isNull ||
-                this.draggingEvt.clientX !== e.clientX ||
-                this.draggingEvt.clientY !== e.clientY
-            ) {
-                this.draggingEvt = e
-                this.$emit('dragging-schema', { e: this.draggingEvt })
+            if (this.isDragging) {
+                this.$help.removeTargetDragEle(this.dragTargetId)
+                this.$help.addDragTargetEle({
+                    e,
+                    dragTarget: this.dragTarget,
+                    dragTargetId: this.dragTargetId,
+                })
+                this.$emit('dragging-schema', {
+                    e,
+                    dragTargetId: this.dragTargetId,
+                })
             }
         },
-        onNodeDragEnd({ e, name }) {
-            this.$emit('drop-schema-to-editor', {
-                e,
-                name: this.$help.escapeIdentifiers(name),
-            })
-            this.isDragging = false
+        onNodeDragEnd(e) {
+            if (this.isDragging) {
+                this.$help.removeTargetDragEle(this.dragTargetId)
+                this.$emit('drop-schema-to-editor', { e, name: this.targetTxt })
+                this.isDragging = false
+            }
         },
     },
 }

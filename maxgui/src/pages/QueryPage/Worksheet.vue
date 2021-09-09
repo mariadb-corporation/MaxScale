@@ -270,29 +270,46 @@ export default {
         placeToEditor(text) {
             this.$refs.queryEditor.insertAtCursor({ text })
         },
+        handleGenMouseDropWidget(dropTarget) {
+            /**
+             *  Setting text cusor to dragTarget element as a fallback method for firefox
+             *  as monaco editor will fail to get dropTarget position in firefox
+             *  So only add mouseDropWidget when user agent is not firefox
+             */
+            if (navigator.userAgent.includes('Firefox')) {
+                if (dropTarget) document.body.className = 'cursor--all-text'
+                else document.body.className = 'cursor--all-grabbing'
+            } else {
+                const { editor, monaco } = this.$refs.queryEditor
+                document.body.className = 'cursor--all-grabbing'
+                if (dropTarget) {
+                    const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
+                    if (!this.mouseDropDOM) {
+                        this.mouseDropDOM = document.createElement('div')
+                        this.mouseDropDOM.style.pointerEvents = 'none'
+                        this.mouseDropDOM.style.borderLeft = '2px solid #424f62'
+                        this.mouseDropDOM.innerHTML = '&nbsp;'
+                    }
+                    this.mouseDropWidget = {
+                        mouseDropDOM: null,
+                        getId: () => 'drag',
+                        getDomNode: () => this.mouseDropDOM,
+                        getPosition: () => ({
+                            position: dropTarget.position,
+                            preference: [preference, preference],
+                        }),
+                    }
+                    //remove the prev cusor widget first then add
+                    editor.removeContentWidget(this.mouseDropWidget)
+                    editor.addContentWidget(this.mouseDropWidget)
+                } else if (this.mouseDropWidget) editor.removeContentWidget(this.mouseDropWidget)
+            }
+        },
         draggingTxt({ e }) {
-            const { editor, monaco } = this.$refs.queryEditor
+            const { editor } = this.$refs.queryEditor
             // build mouseDropWidget
-            const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
             const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-            if (dropTarget) {
-                if (!this.mouseDropDOM) {
-                    this.mouseDropDOM = document.createElement('div')
-                    this.mouseDropDOM.style.pointerEvents = 'none'
-                    this.mouseDropDOM.style.borderLeft = '2px solid #424f62'
-                    this.mouseDropDOM.innerHTML = '&nbsp;'
-                }
-                this.mouseDropWidget = {
-                    mouseDropDOM: null,
-                    getId: () => 'drag',
-                    getDomNode: () => this.mouseDropDOM,
-                    getPosition: () => ({
-                        position: dropTarget.position,
-                        preference: [preference, preference],
-                    }),
-                }
-                editor.addContentWidget(this.mouseDropWidget)
-            } else if (this.mouseDropDOM) editor.removeContentWidget(this.mouseDropWidget)
+            this.handleGenMouseDropWidget(dropTarget)
         },
         dropTxtToEditor({ e, name }) {
             if (name) {
@@ -311,8 +328,9 @@ export default {
                         text: name,
                         range,
                     })
-                    editor.removeContentWidget(this.mouseDropWidget)
+                    if (this.mouseDropWidget) editor.removeContentWidget(this.mouseDropWidget)
                 }
+                document.body.className = ''
             }
         },
     },

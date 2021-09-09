@@ -625,6 +625,37 @@ export function copyTextToClipboard(text) {
     } else fallbackCopyTextToClipboard(text)
 }
 
+/**
+ * @private
+ * This copies inherit styles from srcNode to dstNode
+ * @param {Object} payload.srcNode - html node to be copied
+ * @param {Object} payload.dstNode - target html node to pasted
+ */
+function copyNodeStyle({ srcNode, dstNode }) {
+    const computedStyle = window.getComputedStyle(srcNode)
+    Array.from(computedStyle).forEach(key =>
+        dstNode.style.setProperty(
+            key,
+            computedStyle.getPropertyValue(key),
+            computedStyle.getPropertyPriority(key)
+        )
+    )
+}
+export function removeTargetDragEle(dragTargetId) {
+    let elem = document.getElementById(dragTargetId)
+    if (elem) elem.parentNode.removeChild(elem)
+}
+export function addDragTargetEle({ e, dragTarget, dragTargetId }) {
+    let cloneNode = dragTarget.cloneNode(true)
+    cloneNode.setAttribute('id', dragTargetId)
+    cloneNode.textContent = dragTarget.textContent
+    copyNodeStyle({ srcNode: dragTarget, dstNode: cloneNode })
+    cloneNode.style.position = 'absolute'
+    cloneNode.style.top = e.clientY + 'px'
+    cloneNode.style.left = e.clientX + 'px'
+    cloneNode.style.zIndex = 9999
+    document.getElementById('app').appendChild(cloneNode)
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -670,6 +701,8 @@ Object.defineProperties(Vue.prototype, {
                 handleAddPxUnit,
                 getScrollbarWidth,
                 copyTextToClipboard,
+                removeTargetDragEle,
+                addDragTargetEle,
             }
         },
     },

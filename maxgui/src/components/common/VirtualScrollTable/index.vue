@@ -102,18 +102,15 @@
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td px-3"
-                            :class="{ 'pointer no-userSelect': h.draggable }"
+                            :class="{ 'cursor--grab no-userSelect': h.draggable }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
-                            :draggable="h.draggable"
                             v-on="
                                 h.draggable
                                     ? {
-                                          dragstart: () => (isDragging = true),
-                                          drag: e => onCellDragging({ e, cellValue: row[i] }),
-                                          dragend: e => onCellDragEnd({ e, cellValue: row[i] }),
+                                          mousedown: e => onCellDragStart({ e, cellValue: row[i] }),
                                       }
                                     : null
                             "
@@ -212,7 +209,9 @@ export default {
             selectedGroupItems: [],
             //cell dragging states
             isDragging: false,
-            draggingEvt: null,
+            targetTxt: '',
+            dragTarget: null,
+            dragTargetId: 'target-drag',
         }
     },
     computed: {
@@ -280,6 +279,15 @@ export default {
         isVertTable(v) {
             // clear selected items
             if (v) this.selectedItems = []
+        },
+        isDragging(v) {
+            if (v) {
+                document.addEventListener('mousemove', e => this.onCellDragging(e))
+                document.addEventListener('mouseup', e => this.onCellDragEnd(e))
+            } else {
+                document.removeEventListener('mousemove', e => self.onCellDragging(e))
+                document.removeEventListener('mouseup', e => self.onCellDragEnd(e))
+            }
         },
     },
     mounted() {
@@ -452,19 +460,35 @@ export default {
                 this.selectedGroupItems = []
             }
         },
-        onCellDragging({ e, cellValue }) {
-            if (
-                this.$typy(this.draggingEvt).isNull ||
-                this.draggingEvt.clientX !== e.clientX ||
-                this.draggingEvt.clientY !== e.clientY
-            ) {
-                this.draggingEvt = e
-                this.$emit('on-cell-dragging', { e, name: cellValue })
+
+        onCellDragStart({ e, cellValue }) {
+            this.isDragging = true
+
+            this.dragTarget = e.target
+            this.targetTxt = cellValue
+        },
+        onCellDragging(e) {
+            if (this.isDragging) {
+                //TODO: DRY
+                this.$help.removeTargetDragEle(this.dragTargetId)
+                this.$help.addDragTargetEle({
+                    e,
+                    dragTarget: this.dragTarget,
+                    dragTargetId: this.dragTargetId,
+                })
+                this.$emit('on-cell-dragging', {
+                    e,
+                    name: this.targetTxt,
+                    dragTargetId: this.dragTargetId,
+                })
             }
         },
-        onCellDragEnd({ e, cellValue }) {
-            this.$emit('on-cell-dragend', { e, name: cellValue })
-            this.isDragging = false
+        onCellDragEnd(e) {
+            if (this.isDragging) {
+                this.$help.removeTargetDragEle(this.dragTargetId)
+                this.$emit('on-cell-dragend', { e, name: this.targetTxt })
+                this.isDragging = false
+            }
         },
     },
 }

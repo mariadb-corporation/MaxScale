@@ -25,6 +25,22 @@
         pointer-events: none !important;
     }
 }
+.cursor--grab {
+    //TODO: fallback icon
+    cursor: grab;
+}
+.cursor--all-grabbing {
+    cursor: grabbing !important;
+    * {
+        cursor: grabbing !important;
+    }
+}
+.cursor--all-text {
+    cursor: text !important;
+    * {
+        cursor: text !important;
+    }
+}
 
 .hide {
     display: none !important;
