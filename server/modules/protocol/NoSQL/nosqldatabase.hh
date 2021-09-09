@@ -139,6 +139,16 @@ public:
     GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
 
     /**
+     * Handle an OP_KILL_CURSORS
+     *
+     * @pRequest    The GWBUF holding data of @c req.
+     * @req         The kill cursor request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
+
+    /**
      * Handle an OP_MSG
      *
      * @param pRequest  The GWBUF holding data of @c req.

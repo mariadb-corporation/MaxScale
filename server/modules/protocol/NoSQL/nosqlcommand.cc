@@ -1040,6 +1040,10 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query)
         nLimit = m_nReturn;
         m_single_batch = true;
     }
+    else if (m_req.nReturn() == 0)
+    {
+        m_nReturn = DEFAULT_CURSOR_RETURN;
+    }
     else
     {
         m_nReturn = m_req.nReturn();
@@ -1083,6 +1087,27 @@ GWBUF* OpGetMoreCommand::execute()
 }
 
 Command::State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    mxb_assert(!true);
+    *ppNoSQL_response = nullptr;
+    return READY;
+}
+
+//
+// OpKillCursorsCommand
+//
+string OpKillCursorsCommand::description() const
+{
+    return "OP_KILL_CURSORS";
+}
+
+GWBUF* OpKillCursorsCommand::execute()
+{
+    NoSQLCursor::kill(m_req.cursor_ids());
+    return nullptr;
+}
+
+Command::State OpKillCursorsCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     mxb_assert(!true);
     *ppNoSQL_response = nullptr;

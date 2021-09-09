@@ -113,6 +113,32 @@ public:
         return removed;
     }
 
+    std::set<int64_t> kill_cursors(const std::vector<int64_t>& ids)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        set<int64_t> removed;
+
+        for (auto id : ids)
+        {
+            for (auto& kv : m_collection_cursors)
+            {
+                CursorsById& cursors = kv.second;
+
+                auto it = cursors.find(id);
+
+                if (it != cursors.end())
+                {
+                    cursors.erase(it);
+                    removed.insert(id);
+                    break;
+                }
+            }
+        }
+
+        return removed;
+    }
+
     void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
     {
         std::lock_guard<std::mutex> guard(m_mutex);
@@ -263,6 +289,12 @@ void NoSQLCursor::put(std::unique_ptr<NoSQLCursor> sCursor)
 std::set<int64_t> NoSQLCursor::kill(const std::string& collection, const std::vector<int64_t>& ids)
 {
     return this_unit.kill_cursors(collection, ids);
+}
+
+//static
+std::set<int64_t> NoSQLCursor::kill(const std::vector<int64_t>& ids)
+{
+    return this_unit.kill_cursors(ids);
 }
 
 //static

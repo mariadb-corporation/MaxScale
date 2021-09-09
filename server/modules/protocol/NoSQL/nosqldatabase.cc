@@ -86,6 +86,15 @@ GWBUF* nosql::Database::handle_get_more(GWBUF* pRequest, nosql::GetMore&& packet
     return execute_command(std::move(sCommand));
 }
 
+GWBUF* nosql::Database::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req)
+{
+    mxb_assert(is_ready());
+
+    unique_ptr<Command> sCommand(new nosql::OpKillCursorsCommand(this, pRequest, std::move(req)));
+
+    return execute_command(std::move(sCommand));
+}
+
 GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
 {
     mxb_assert(is_ready());

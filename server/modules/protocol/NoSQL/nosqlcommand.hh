@@ -332,6 +332,26 @@ public:
 };
 
 //
+// OpKillCursorsCommand
+//
+class OpKillCursorsCommand : public PacketCommand<nosql::KillCursors>
+{
+public:
+    OpKillCursorsCommand(Database* pDatabase,
+                         GWBUF* pRequest,
+                         nosql::KillCursors&& req)
+        : PacketCommand<nosql::KillCursors>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+};
+
+//
 // OpMsgCommand
 //
 class OpMsgCommand : public Command

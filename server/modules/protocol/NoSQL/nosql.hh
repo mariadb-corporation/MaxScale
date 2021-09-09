@@ -831,6 +831,22 @@ private:
     int64_t     m_cursor_id;
 };
 
+class KillCursors final : public Packet
+{
+public:
+    KillCursors(const Packet& packet);
+    KillCursors(const KillCursors& that) = default;
+    KillCursors(KillCursors&& that) = default;
+
+    const std::vector<int64_t> cursor_ids() const
+    {
+        return m_cursor_ids;
+    };
+
+private:
+    std::vector<int64_t> m_cursor_ids;
+};
+
 class Msg final : public Packet
 {
 public:
@@ -1017,6 +1033,7 @@ private:
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
     GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
     GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
+    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
     GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
     State              m_state { READY };

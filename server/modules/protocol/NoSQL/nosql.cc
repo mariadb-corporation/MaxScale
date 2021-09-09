@@ -527,6 +527,26 @@ nosql::GetMore::GetMore(const Packet& packet)
     }
 }
 
+nosql::KillCursors::KillCursors(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_KILL_CURSORS);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    int32_t zero;
+    pData += protocol::get_byte4(pData, &zero);
+    int32_t nCursors;
+    pData += protocol::get_byte4(pData, &nCursors);
+
+    for (int32_t i = 0; i < nCursors; ++i)
+    {
+        int64_t cursor_id;
+        pData += protocol::get_byte8(pData, &cursor_id);
+        m_cursor_ids.push_back(cursor_id);
+    }
+}
+
 nosql::Msg::Msg(const Packet& packet)
     : Packet(packet)
 {
@@ -2882,7 +2902,6 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
             switch (req.opcode())
             {
             case MONGOC_OPCODE_COMPRESSED:
-            case MONGOC_OPCODE_KILL_CURSORS:
             case MONGOC_OPCODE_REPLY:
                 {
                     ostringstream ss;
@@ -2893,6 +2912,10 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
 
             case MONGOC_OPCODE_GET_MORE:
                 pResponse = handle_get_more(pRequest, nosql::GetMore(req));
+                break;
+
+            case MONGOC_OPCODE_KILL_CURSORS:
+                pResponse = handle_kill_cursors(pRequest, nosql::KillCursors(req));
                 break;
 
             case MONGOC_OPCODE_DELETE:
@@ -3082,6 +3105,21 @@ GWBUF* nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req)
     {
         m_sDatabase.reset();
     }
+
+    return pResponse;
+}
+
+GWBUF* nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req)
+{
+    MXB_INFO("Request(KillCursors)");
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
+
+    GWBUF* pResponse = m_sDatabase->handle_kill_cursors(pRequest, std::move(req));
+
+    // TODO: Change prototypes so that a non-null return is not required for readiness.
+    m_sDatabase.reset();
 
     return pResponse;
 }
