@@ -110,7 +110,7 @@
                             v-on="
                                 h.draggable
                                     ? {
-                                          mousedown: e => onCellDragStart({ e, cellValue: row[i] }),
+                                          mousedown: e => onCellDragStart(e),
                                       }
                                     : null
                             "
@@ -164,6 +164,7 @@ import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
 import RowGroup from './RowGroup.vue'
 import RowGroupCheckbox from './RowGroupCheckbox.vue'
+import customDragEvt from 'mixins/customDragEvt'
 export default {
     name: 'virtual-scroll-table',
     components: {
@@ -172,6 +173,7 @@ export default {
         'row-group': RowGroup,
         'row-group-checkbox': RowGroupCheckbox,
     },
+    mixins: [customDragEvt],
     props: {
         headers: {
             type: Array,
@@ -207,11 +209,6 @@ export default {
             // Select feat states
             selectedItems: [],
             selectedGroupItems: [],
-            //cell dragging states
-            isDragging: false,
-            targetTxt: '',
-            dragTarget: null,
-            dragTargetId: 'target-drag',
         }
     },
     computed: {
@@ -279,15 +276,6 @@ export default {
         isVertTable(v) {
             // clear selected items
             if (v) this.selectedItems = []
-        },
-        isDragging(v) {
-            if (v) {
-                document.addEventListener('mousemove', e => this.onCellDragging(e))
-                document.addEventListener('mouseup', e => this.onCellDragEnd(e))
-            } else {
-                document.removeEventListener('mousemove', e => self.onCellDragging(e))
-                document.removeEventListener('mouseup', e => self.onCellDragEnd(e))
-            }
         },
     },
     mounted() {
@@ -461,34 +449,11 @@ export default {
             }
         },
 
-        onCellDragStart({ e, cellValue }) {
+        onCellDragStart(e) {
+            e.preventDefault()
+            // Assign value to data in customDragEvt mixin
             this.isDragging = true
-
             this.dragTarget = e.target
-            this.targetTxt = cellValue
-        },
-        onCellDragging(e) {
-            if (this.isDragging) {
-                //TODO: DRY
-                this.$help.removeTargetDragEle(this.dragTargetId)
-                this.$help.addDragTargetEle({
-                    e,
-                    dragTarget: this.dragTarget,
-                    dragTargetId: this.dragTargetId,
-                })
-                this.$emit('on-cell-dragging', {
-                    e,
-                    name: this.targetTxt,
-                    dragTargetId: this.dragTargetId,
-                })
-            }
-        },
-        onCellDragEnd(e) {
-            if (this.isDragging) {
-                this.$help.removeTargetDragEle(this.dragTargetId)
-                this.$emit('on-cell-dragend', { e, name: this.targetTxt })
-                this.isDragging = false
-            }
         },
     },
 }

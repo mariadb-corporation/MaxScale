@@ -22,9 +22,7 @@
                     :id="`item-label-${activatorIdTransform(item.id)}`"
                     class="d-flex align-center node-label"
                     :class="{ 'cursor--grab': item.draggable }"
-                    @mousedown="
-                        item.draggable ? onNodeDragStart({ e: $event, txt: item.name }) : null
-                    "
+                    @mousedown="item.draggable ? onNodeDragStart($event) : null"
                 >
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
@@ -102,8 +100,10 @@
  * Public License.
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
+import customDragEvt from 'mixins/customDragEvt'
 export default {
     name: 'db-list-tree',
+    mixins: [customDragEvt],
     data() {
         return {
             /**
@@ -123,10 +123,6 @@ export default {
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
-            isDragging: false,
-            targetTxt: '',
-            dragTarget: null,
-            dragTargetId: 'target-drag',
             expandedNodes: [],
         }
     },
@@ -165,15 +161,6 @@ export default {
     watch: {
         showCtxMenu(v) {
             if (!v) this.activeCtxItem = null
-        },
-        isDragging(v) {
-            if (v) {
-                document.addEventListener('mousemove', e => this.onNodeDragging(e))
-                document.addEventListener('mouseup', e => this.onNodeDragEnd(e))
-            } else {
-                document.removeEventListener('mousemove', e => self.onNodeDragging(e))
-                document.removeEventListener('mouseup', e => self.onNodeDragEnd(e))
-            }
         },
     },
     activated() {
@@ -301,31 +288,11 @@ export default {
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
-        onNodeDragStart({ e, txt }) {
+        onNodeDragStart(e) {
+            e.preventDefault()
+            // Assign value to data in customDragEvt mixin
             this.isDragging = true
             this.dragTarget = e.target
-            this.targetTxt = this.$help.escapeIdentifiers(txt)
-        },
-        onNodeDragging(e) {
-            if (this.isDragging) {
-                this.$help.removeTargetDragEle(this.dragTargetId)
-                this.$help.addDragTargetEle({
-                    e,
-                    dragTarget: this.dragTarget,
-                    dragTargetId: this.dragTargetId,
-                })
-                this.$emit('dragging-schema', {
-                    e,
-                    dragTargetId: this.dragTargetId,
-                })
-            }
-        },
-        onNodeDragEnd(e) {
-            if (this.isDragging) {
-                this.$help.removeTargetDragEle(this.dragTargetId)
-                this.$emit('drop-schema-to-editor', { e, name: this.targetTxt })
-                this.isDragging = false
-            }
         },
     },
 }
