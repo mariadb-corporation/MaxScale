@@ -2391,7 +2391,7 @@ string element_to_string(const document_element_or_array_item& x)
         break;
 
     case bsoncxx::type::k_double:
-        ss << x.get_double();
+        ss << element_to_value(x, ValueFor::JSON);
         break;
 
     case bsoncxx::type::k_int32:
