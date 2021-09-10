@@ -94,6 +94,11 @@ transaction or change the autocommit mode using a prepared statement.
 
 * Compression is not included in the server handshake.
 
+* If a `KILL [CONNECTION] <ID>` statement is executed, MaxScale will intercept
+  it. If the ID matches a MaxScale session ID, it will be closed, similarly to
+  how MariaDB does it. If the `KILL CONNECTION USER <user>` form is given, all
+  connections with a matching username will be closed.
+
 * MariaDB MaxScale does not support `KILL QUERY ID <query_id>` type
   statements. If a query by a query ID is to be killed, it needs to be done
   directly on the backend databases.
