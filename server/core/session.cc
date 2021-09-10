@@ -527,13 +527,6 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void session_append_log(MXS_SESSION* pSession, std::string log)
-{
-    {
-        static_cast<Session*>(pSession)->append_session_log(log);
-    }
-}
-
 void session_dump_log(MXS_SESSION* pSession)
 {
     static_cast<Session*>(pSession)->dump_session_log();
@@ -1191,7 +1184,7 @@ void Session::close()
     m_down->close();
 }
 
-void Session::append_session_log(std::string log)
+void Session::append_session_log(const std::string& log)
 {
     m_log.push_front(log);
 

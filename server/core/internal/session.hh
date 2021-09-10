@@ -132,7 +132,7 @@ public:
     void book_server_response(SERVER* pServer, bool final_response);
     void book_last_as_complete();
     void reset_server_bookkeeping();
-    void append_session_log(std::string);
+    void append_session_log(const std::string& msg) override;
     void dump_session_log();
 
     json_t* as_json_resource(const char* host, bool rdns) const;

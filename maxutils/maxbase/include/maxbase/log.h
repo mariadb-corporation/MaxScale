@@ -51,13 +51,6 @@ MXB_BEGIN_DECLS
 
 extern int mxb_log_enabled_priorities;
 
-typedef enum mxb_log_target_t
-{
-    MXB_LOG_TARGET_DEFAULT,
-    MXB_LOG_TARGET_FS,      // File system
-    MXB_LOG_TARGET_STDOUT,  // Standard output
-} mxb_log_target_t;
-
 typedef enum mxb_log_augmentation_t
 {
     MXB_LOG_AUGMENT_WITH_FUNCTION = 1,      // Each logged line is suffixed with [function-name]
@@ -70,63 +63,6 @@ typedef struct MXB_LOG_THROTTLING
     size_t window_ms;   // ...during this many milliseconds.
     size_t suppress_ms; // If exceeded, suppress such messages for this many ms.
 } MXB_LOG_THROTTLING;
-
-/**
- * Prototype for function providing additional information.
- *
- * If the function returns a non-zero value, that amount of characters
- * will be enclosed between '(' and ')', and written first to a logged
- * message.
- *
- * @param buffer  Buffer where additional context may be written.
- * @param len     Length of @c buffer.
- *
- * @return Length of data written to buffer.
- */
-typedef size_t (* mxb_log_context_provider_t)(char* buffer, size_t len);
-
-typedef void (* mxb_in_memory_log_t)(const char* buffer, size_t len);
-
-/**
- * Typedef for conditional logging callback
- *
- * @param priority The syslog priority under which the message is logged.
- *
- * @return True if the message should be logged, false if it should be suppressed.
- */
-typedef bool (* mxb_should_log_t)(int priority);
-
-/**
- * @brief Initialize the log
- *
- * This function must be called before any of the log function should be
- * used.
- *
- * @param ident             The syslog ident. If NULL, then the program name is used.
- * @param logdir            The directory for the log file. If NULL, file output is discarded.
- * @param filename          The name of the log-file. If NULL, the program name will be used
- *                          if it can be deduced, otherwise the name will be "messages.log".
- * @param target            Logging target
- * @param context_provider  Optional function for providing contextual information
- *                          at logging time.
- *
- * @return true if succeed, otherwise false
- */
-bool mxb_log_init(const char* ident,
-                  const char* logdir,
-                  const char* filename,
-                  mxb_log_target_t target,
-                  mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log,
-                  mxb_should_log_t should_log);
-
-/**
- * @brief Finalize the log
- *
- * A successfull call to @c max_log_init() should be followed by a call
- * to this function before the process exits.
- */
-void mxb_log_finish(void);
 
 /**
  * @brief Has the log been initialized.

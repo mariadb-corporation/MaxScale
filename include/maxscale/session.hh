@@ -290,6 +290,8 @@ public:
         return m_log_level & (1 << level);
     }
 
+    virtual void append_session_log(const std::string& msg) = 0;
+
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
@@ -519,10 +521,6 @@ void session_set_dump_statements(session_dump_statements_t value);
 void session_set_session_trace(uint32_t value);
 
 uint32_t session_get_session_trace();
-
-std::string session_get_session_log(MXS_SESSION* pSession);
-
-void session_append_log(MXS_SESSION* pSession, std::string log);
 
 void session_dump_log(MXS_SESSION* pSession);
 
