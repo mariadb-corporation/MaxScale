@@ -119,8 +119,8 @@
         autocomplete="off"
         @keypress="
             targetItem.type === 'int' || targetItem.type === 'duration'
-                ? preventNonInteger($event)
-                : preventNonNumericalVal($event)
+                ? $help.preventNonInteger($event)
+                : $help.preventNonNumericalVal($event)
         "
         @input="handleChange"
     >
@@ -511,12 +511,6 @@ export default {
             }
             return true
         },
-
-        // ---------------------------------------------------- helpers ---------------------------------------
-        // allow to enter minus or hyphen minus and numbers
-        preventNonInteger: e => !e.key.match(/^[-]?\d*$/g) && e.preventDefault(),
-        // allow to enter only number
-        preventNonNumericalVal: e => !e.key.match(/^\d*$/g) && e.preventDefault(),
 
         isEmpty: val => val === '' || val === null,
     },

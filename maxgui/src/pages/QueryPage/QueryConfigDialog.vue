@@ -25,13 +25,13 @@
                             hide-details="auto"
                             outlined
                             required
+                            @keypress="$help.preventNonNumericalVal($event)"
                         />
                         <v-icon size="16" color="warning" class="mr-2">
                             $vuetify.icons.alertWarning
                         </v-icon>
                         <small v-html="$t('info.maxRows')" />
                     </v-col>
-
                     <v-col cols="12" class="pa-1 mt-3">
                         <v-switch
                             v-model="config.showQueryConfirm"
@@ -73,16 +73,7 @@ export default {
     data() {
         return {
             rules: {
-                maxRows: [
-                    val => {
-                        if (this.$typy(val).isString || val < 0)
-                            return this.$t('errors.negativeNum')
-                        if (val === 0)
-                            return this.$t('errors.largerThanZero', { inputName: 'Max rows' })
-                        if (val > 0) return true
-                        return this.$t('errors.requiredInput', { inputName: 'Max rows' })
-                    },
-                ],
+                maxRows: [v => this.validatePositiveNumber({ v, inputName: this.$t('maxRows') })],
             },
             defConfig: {},
             config: {
@@ -123,9 +114,16 @@ export default {
             SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
         }),
+        validatePositiveNumber({ v, inputName }) {
+            if (this.$typy(v).isEmptyString) return this.$t('errors.requiredInput', { inputName })
+            if (v <= 0) return this.$t('errors.largerThanZero', { inputName })
+            if (v > 0) return true
+        },
         handleSetDefConfig() {
-            this.defConfig.maxRows = this.query_max_rows
-            this.defConfig.showQueryConfirm = Boolean(this.query_confirm_flag)
+            this.defConfig = {
+                maxRows: this.query_max_rows,
+                showQueryConfirm: Boolean(this.query_confirm_flag),
+            }
         },
         onSave() {
             this.SET_QUERY_MAX_ROW(this.config.maxRows)

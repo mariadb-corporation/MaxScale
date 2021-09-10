@@ -656,6 +656,21 @@ export function addDragTargetEle({ e, dragTarget, dragTargetId }) {
     cloneNode.style.zIndex = 9999
     document.getElementById('app').appendChild(cloneNode)
 }
+
+/**
+ * This allows to enter minus or hyphen minus and numbers
+ * @param {Event} e - input evt
+ */
+export function preventNonInteger(e) {
+    if (!e.key.match(/^[-]?\d*$/g)) e.preventDefault()
+}
+/**
+ * This allows user to enter only number
+ * @param {Event} e - input evt
+ */
+export function preventNonNumericalVal(e) {
+    if (!e.key.match(/^\d*$/g)) e.preventDefault()
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -703,6 +718,8 @@ Object.defineProperties(Vue.prototype, {
                 copyTextToClipboard,
                 removeTargetDragEle,
                 addDragTargetEle,
+                preventNonNumericalVal,
+                preventNonInteger,
             }
         },
     },
