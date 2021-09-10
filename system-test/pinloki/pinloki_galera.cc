@@ -43,8 +43,23 @@ void block_galera_ip(TestConnections& test, const std::string& galera_ip)
 
 void check_table(TestConnections& test, Connection& conn, int n)
 {
-    auto result = conn.field("SELECT COUNT(*) FROM test.t1");
-    int m = atoi(result.c_str());
+    int m = 0;
+
+    for (int i = 0; i < 30; i++)
+    {
+        auto result = conn.field("SELECT COUNT(*) FROM test.t1");
+        m = atoi(result.c_str());
+
+        if (n == m)
+        {
+            break;
+        }
+        else
+        {
+            sleep(1);
+        }
+    }
+
     test.expect(n == m, "test.t1 should have %d rows, but has %d rows.", n, m);
 }
 
@@ -79,8 +94,6 @@ int main(int argc, char** argv)
     test.expect(rws.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", rws.error());
     test.expect(rws.query("INSERT INTO test.t1 values(1)"), "INSERT 1 failed: %s", rws.error());
 
-    sleep(5);
-
     // Check that things are as they should be.
     // The pinloki_replica should replicate from pinloki
     auto reg_repl_from = replicating_from(pinloki_replica);
@@ -114,12 +127,9 @@ int main(int argc, char** argv)
     test.expect(previous_ip != pinloki_repl_from,
                 "pinloki should have started to replicate from another node");
 
-    /** Insert and check */
-    auto conn = test.maxscale->rwsplit();      // for some reason rws is no longer valid?
-    test.expect(conn.connect(), "2nd RWS connection should work: %s", conn.error());
-    test.expect(conn.query("INSERT INTO test.t1 values(2)"), "INSERT 2 failed: %s", conn.error());
-
-    sleep(5);
+    /** Reconnect, insert and check */
+    test.expect(rws.connect(), "2nd RWS connection should work: %s", rws.error());
+    test.expect(rws.query("INSERT INTO test.t1 values(2)"), "INSERT 2 failed: %s", rws.error());
 
     check_table(test, pinloki_replica, 2);
 
