@@ -2,7 +2,7 @@
 expire_logs_days=7
 user=mysql
 server_id=102
-gtid_domain_id=102
+gtid_domain_id=0
 log_bin=mar-bin
 binlog_format=ROW
 log_slave_updates=ON

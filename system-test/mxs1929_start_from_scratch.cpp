@@ -26,6 +26,7 @@ int main(int argc, char** argv)
                                  while (running)
                                  {
                                      Connection c = i % 2 == 0 ? test.maxscale->rwsplit() : test.maxscale->readconn_master();
+                                     c.set_timeout(30);
                                      if (c.connect())
                                      {
                                          c.query("CREATE TABLE IF NOT EXITS test.t1 (id INT)");
@@ -123,6 +124,10 @@ int main(int argc, char** argv)
     test.tprintf("A total of %d connections were created over %ld seconds",
                  conns.load(),
                  std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
+
+    auto conn = test.repl->get_connection(0);
+    conn.connect();
+    conn.query("DROP TABLE test.t1");
 
     return test.global_result;
 }
