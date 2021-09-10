@@ -571,7 +571,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 
         case AuthState::START_SESSION:
             // Authentication success, initialize session.
-            if (session_start(m_session))
+            if (m_session->start())
             {
                 mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
                 m_auth_state = AuthState::COMPLETE;

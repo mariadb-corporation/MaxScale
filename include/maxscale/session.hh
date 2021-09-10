@@ -239,10 +239,46 @@ public:
     virtual mxs::ListenerSessionData*    listener_data() = 0;
 
     /**
+     * Start the session. Called after the session is initialized and authentication is complete.
+     * This creates the router and filter sessions.
+     *
+     * @return True on success
+     */
+    virtual bool start() = 0;
+
+    /**
+     * Calling this function will start the session shutdown process. The shutdown
+     * closes all related backend DCBs by calling the closeSession entry point
+     * of the router session.
+     */
+    virtual void close() = 0;
+
+    /**
      *  Notify the session that client data has changed. This is supposed to be called by the protocol
      *  when deemed necessary. The exact call conditions are left unspecified.
      */
     virtual void notify_userdata_change() = 0;
+
+    /**
+     * @brief Add new MaxScale specific user variable to the session.
+     *
+     * The name of the variable must be of the following format:
+     *
+     *     "@maxscale\.[a-zA-Z_]+(\.[a-zA-Z_])*"
+     *
+     * e.g. "@maxscale.cache.enabled". A strong suggestion is that the first
+     * sub-scope is the same as the module name of the component registering the
+     * variable. The sub-scope "core" is reserved by MaxScale.
+     *
+     * The variable name will be converted to all lowercase when added.
+     *
+     * @param name      The name of the variable, must start with "@MAXSCALE.".
+     * @param handler   The handler function for the variable.
+     * @param context   Context that will be passed to the handler function.
+     *
+     * @return True, if the variable could be added, false otherwise.
+     */
+    virtual bool add_variable(const char* name, session_variable_handler_t handler, void* context) = 0;
 
     /**
      * Check if log level has been explicitly enabled for this session
@@ -317,43 +353,7 @@ private:
  */
 void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer);
 
-/**
- * Function to be used by protocol module for routing incoming data
- * to the first component in the pipeline of filters and a router.
- *
- * @param session  The session.
- * @param buffer   A buffer.
- *
- * @return True, if the routing should continue, false otherwise.
- */
-bool mxs_route_query(MXS_SESSION* session, GWBUF* buffer);
 
-/**
- * Function to be used by the router module to route the replies to
- * the first element in the pipeline of filters and a protocol.
- *
- * @param session  The upstream component
- * @param buffer   A buffer.
- * @param dcb      The DCB where the response came from
- *
- * @return True, if the routing should continue, false otherwise.
- */
-bool mxs_route_reply(mxs::Routable* up, GWBUF* buffer, DCB* dcb);
-
-/**
- * Start the session
- *
- * Called after the session is initialized and authentication is complete. This creates the router and filter
- * sessions.
- *
- * @param session Session to start
- *
- * @return True if session was started successfully
- */
-bool session_start(MXS_SESSION* session);
-
-const char* session_get_remote(const MXS_SESSION*);
-const char* session_get_user(const MXS_SESSION*);
 const char* session_state_to_string(MXS_SESSION::State);
 
 /**
@@ -362,17 +362,6 @@ const char* session_state_to_string(MXS_SESSION::State);
  * @return An unused session id.
  */
 uint64_t session_get_next_id();
-
-/**
- * @brief Close a session
- *
- * Calling this function will start the session shutdown process. The shutdown
- * closes all related backend DCBs by calling the closeSession entry point
- * of the router session.
- *
- * @param session The session to close
- */
-void session_close(MXS_SESSION* session);
 
 /**
  * @brief Get a session reference
@@ -432,30 +421,6 @@ MXS_SESSION* session_get_current();
  **/
 uint64_t session_get_current_id();
 
-/**
- * @brief Add new MaxScale specific user variable to the session.
- *
- * The name of the variable must be of the following format:
- *
- *     "@maxscale\.[a-zA-Z_]+(\.[a-zA-Z_])*"
- *
- * e.g. "@maxscale.cache.enabled". A strong suggestion is that the first
- * sub-scope is the same as the module name of the component registering the
- * variable. The sub-scope "core" is reserved by MaxScale.
- *
- * The variable name will be converted to all lowercase when added.
- *
- * @param session   The session in question.
- * @param name      The name of the variable, must start with "@MAXSCALE.".
- * @param handler   The handler function for the variable.
- * @param context   Context that will be passed to the handler function.
- *
- * @return True, if the variable could be added, false otherwise.
- */
-bool session_add_variable(MXS_SESSION* session,
-                          const char* name,
-                          session_variable_handler_t handler,
-                          void* context);
 
 /**
  * @brief Remove MaxScale specific user variable from the session.

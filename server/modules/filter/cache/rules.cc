@@ -364,18 +364,8 @@ bool cache_rules_should_use(CACHE_RULES* self, int thread_id, const MXS_SESSION*
     bool should_use = false;
 
     CACHE_RULE* rule = self->use_rules;
-    const char* user = session_get_user((MXS_SESSION*)session);
-    const char* host = session_get_remote((MXS_SESSION*)session);
-
-    if (!user)
-    {
-        user = "";
-    }
-
-    if (!host)
-    {
-        host = "";
-    }
+    const char* user = session->user().c_str();
+    const char* host = session->client_remote().c_str();
 
     if (rule)
     {

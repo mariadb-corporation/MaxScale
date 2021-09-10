@@ -74,7 +74,7 @@ private:
 class CDCClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    CDCClientConnection(CDCAuthenticatorModule& auth_module);
+    CDCClientConnection(CDCAuthenticatorModule& auth_module, mxs::Component* downstream);
     ~CDCClientConnection() = default;
 
     void ready_for_reading(DCB* dcb) override;
@@ -101,6 +101,7 @@ private:
     int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
 
     CDCClientAuthenticator m_authenticator;     /**< Client authentication data */
+    mxs::Component*        m_downstream {nullptr}; /**< Downstream component, the session */
 
     void write_auth_ack();
     void write_auth_err();

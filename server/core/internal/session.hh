@@ -110,8 +110,8 @@ public:
             const std::string& host);
     ~Session();
 
-    bool start();
-    void close();
+    bool start() override;
+    void close() override;
 
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
@@ -121,7 +121,7 @@ public:
         return m_filters;
     }
 
-    bool  add_variable(const char* name, session_variable_handler_t handler, void* context);
+    bool  add_variable(const char* name, session_variable_handler_t handler, void* context) override;
     char* set_variable_value(const char* name_begin,
                              const char* name_end,
                              const char* value_begin,
