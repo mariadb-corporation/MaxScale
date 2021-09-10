@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import { addDaysToNow } from 'utils/helpers'
 // Place here any states need to be persisted without being cleared when logging out
 export default {
     namespaced: true,
@@ -20,6 +20,7 @@ export default {
         query_confirm_flag: 1,
         query_history: [],
         query_favorite: [],
+        query_history_expired_time: addDaysToNow(30),
     },
     mutations: {
         SET_QUERY_MAX_ROW(state, payload) {
@@ -31,16 +32,19 @@ export default {
         SET_QUERY_HISTORY(state, payload) {
             state.query_history = payload
         },
-        SET_QUERY_FAVORITE(state, payload) {
-            state.query_favorite = payload
-        },
         UPDATE_QUERY_HISTORY(state, { idx, payload }) {
             if (idx) state.query_history.splice(idx, 1)
             else state.query_history.unshift(payload)
         },
+        SET_QUERY_HISTORY_EXPIRED_TIME(state, timestamp) {
+            state.query_history_expired_time = timestamp // Unix time
+        },
         UPDATE_QUERY_FAVORITE(state, { idx, payload }) {
             if (idx) state.query_favorite.splice(idx, 1)
             else state.query_favorite.unshift(payload)
+        },
+        SET_QUERY_FAVORITE(state, payload) {
+            state.query_favorite = payload
         },
     },
     actions: {
@@ -96,6 +100,10 @@ export default {
                     { root: true }
                 )
             }
+        },
+        handleAutoClearQueryHistory({ state, commit }) {
+            if (this.vue.$help.daysDiff(state.query_history_expired_time) === 0)
+                commit('SET_QUERY_HISTORY', [])
         },
     },
 }

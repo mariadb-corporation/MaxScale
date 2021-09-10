@@ -671,6 +671,25 @@ export function preventNonInteger(e) {
 export function preventNonNumericalVal(e) {
     if (!e.key.match(/^\d*$/g)) e.preventDefault()
 }
+/**
+ * This adds number of days to current date
+ * @param {Number} days - Number of days
+ * @returns {String} - returns date
+ */
+export function addDaysToNow(days) {
+    let curr = new Date()
+    return curr.setDate(curr.getDate() + days)
+}
+/**
+ * This returns number of days between target timestamp and current date
+ * @param {String} timestamp - target unix timestamp
+ * @returns {Number} - days diff
+ */
+export function daysDiff(timestamp) {
+    const now = Vue.moment().startOf('day')
+    const end = Vue.moment(timestamp).startOf('day')
+    return Vue.moment.duration(end.diff(now)).asDays()
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -720,6 +739,8 @@ Object.defineProperties(Vue.prototype, {
                 addDragTargetEle,
                 preventNonNumericalVal,
                 preventNonInteger,
+                addDaysToNow,
+                daysDiff,
             }
         },
     },

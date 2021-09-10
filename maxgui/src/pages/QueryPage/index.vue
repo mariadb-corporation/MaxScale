@@ -90,6 +90,7 @@ export default {
         },
     },
     async created() {
+        this.handleAutoClearQueryHistory()
         this.$help.doubleRAF(() => this.setCtrDim())
         await this.validatingConn()
     },
@@ -130,6 +131,7 @@ export default {
             validatingConn: 'query/validatingConn',
             disconnectAll: 'query/disconnectAll',
             clearConn: 'query/clearConn',
+            handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',
         }),
         setCtrDim() {
             const { width, height } = this.$refs.paneContainer.getBoundingClientRect()

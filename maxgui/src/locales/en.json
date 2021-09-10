@@ -179,6 +179,8 @@
     "ungroup": "Ungroup",
     "placeSqlInEditor": "Place SQL in editor",
     "copySqlToClipboard": "Copy SQL to clipboard",
+    "queryHistoryRetentionPeriod": "Query history retention period",
+    "inDays": "in days",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
