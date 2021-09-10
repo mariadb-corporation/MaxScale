@@ -552,7 +552,7 @@ int main(int argc, char* argv[])
     Test->maxscale->close_rwsplit();
 
     Test->maxscale->ssh_node(
-        "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf",
+        "sed -i \"s/max_resultset_size=900000000/max_resultset_size=90000/\" /etc/maxscale.cnf",
         true);
     Test->reset_timeout();
     Test->maxscale->restart_maxscale();
