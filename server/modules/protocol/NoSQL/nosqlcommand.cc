@@ -909,9 +909,9 @@ GWBUF* OpQueryCommand::execute()
         for (; it != end; ++it)
         {
             auto element = *it;
-            auto command = element.key();
+            auto key = element.key();
 
-            if (command.compare(command::IsMaster::KEY) == 0 || command.compare(key::ISMASTER) == 0)
+            if (key.compare(command::IsMaster::KEY) == 0 || key.compare(key::ISMASTER) == 0)
             {
                 DocumentBuilder doc;
                 command::IsMaster::populate_response(m_database, doc);
@@ -919,9 +919,9 @@ GWBUF* OpQueryCommand::execute()
                 pResponse = create_response(doc.extract());
                 break;
             }
-            else if (command.compare(key::QUERY) == 0)
+            else if (key.compare(key::QUERY) == 0)
             {
-                send_query(element.get_document());
+                send_query(element.get_document(), m_req.query()[key::ORDERBY]);
                 break;
             }
             else
@@ -976,7 +976,7 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
     default:
         {
             unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
-                                                                  vector<string>(),
+                                                                  m_extractions,
                                                                   std::move(mariadb_response));
 
             int32_t position = sCursor->position();
@@ -1000,12 +1000,35 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
     return READY;
 }
 
-void OpQueryCommand::send_query(const bsoncxx::document::view& query)
+void OpQueryCommand::send_query(const bsoncxx::document::view& query,
+                                const bsoncxx::document::element& orderby)
 {
-    // TODO: Honour m_req.fields().
-
     ostringstream sql;
-    sql << "SELECT doc FROM " << table();
+    sql << "SELECT ";
+
+    m_extractions = projection_to_extractions(m_req.fields());
+
+    if (!m_extractions.empty())
+    {
+        string s;
+        for (auto extraction : m_extractions)
+        {
+            if (!s.empty())
+            {
+                s += ", ";
+            }
+
+            s += "JSON_EXTRACT(doc, '$." + extraction + "')";
+        }
+
+        sql << s;
+    }
+    else
+    {
+        sql << "doc";
+    }
+
+    sql << " FROM " << table();
 
     if (!query.empty())
     {
@@ -1014,6 +1037,16 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query)
         if (!where.empty())
         {
             sql << " " << where;
+        }
+    }
+
+    if (orderby)
+    {
+        string s = sort_to_order_by(orderby.get_document());
+
+        if (!s.empty())
+        {
+            sql << " ORDER BY " << s;
         }
     }
 

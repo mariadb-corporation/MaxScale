@@ -302,13 +302,13 @@ public:
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
 private:
-    void send_query(const bsoncxx::document::view& query);
+    void send_query(const bsoncxx::document::view& query,
+                    const bsoncxx::document::element& orderby = bsoncxx::document::element());
 
 private:
-    int32_t m_nReturn      { DEFAULT_CURSOR_RETURN };
-    bool    m_single_batch { false };
-    std::vector<std::string>      m_names;
-    std::vector<enum_field_types> m_types;
+    int32_t                  m_nReturn      { DEFAULT_CURSOR_RETURN };
+    bool                     m_single_batch { false };
+    std::vector<std::string> m_extractions;
 };
 
 //
