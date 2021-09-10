@@ -573,6 +573,24 @@ document id will remain non-changed while the document otherwise is replaced. Th
 different from MongoDB® where the presence of the `_id` field in the replacement document
 causes an error, if the value is not the same as it is in the document being replaced.
 
+## Authentication Commands
+
+### Logout
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+logout | any | Ignored.
+
+Always returns
+```
+{ ok: 1 }
+```
+
+Since authentication and logging in is currently not supported,
+the command has no effect.
+
 ## Replication Commands
 
 ### isMaster
@@ -621,6 +639,17 @@ will nonetheless return success, provide the index specification passes
 some rudimentary sanity checks. Note also that the collection will be
 created if it does not exist.
 
+### currentOp
+
+Field | Type | Description
+------|------|------------
+currentOp| any | Ignored.
+
+Currently the response will always be
+```
+{ "inprog" : [ ], "ok" : 1 }
+```
+
 ### drop
 
 The following fields are relevant.
@@ -666,6 +695,7 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 listCollections | any | Ignored.
+filter | document | The field `name` is honored, other fields are not but cause warnings to be logged.
 nameOnly | boolean | Optional. A flag to indicate whether the command should return just the collection names and type or return both the name and other information.
 
 Note that the command lists all collections (that is, tables) that are found

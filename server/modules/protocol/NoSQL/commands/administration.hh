@@ -87,10 +87,7 @@ protected:
     {
         if (err.code() == ER_NO_SUCH_TABLE)
         {
-            ostringstream ss;
-            ss << "ns does not exist: " << table(Quoted::NO);
-
-            throw SoftError(ss.str(), error::NAMESPACE_NOT_FOUND);
+            throw SoftError(error_message(), error::NAMESPACE_NOT_FOUND);
         }
         else
         {
@@ -103,6 +100,11 @@ protected:
     virtual GWBUF* collection_exists(bool created) = 0;
 
 private:
+    virtual string error_message() const
+    {
+        return "ns does not exist: " + table(Quoted::NO);
+    }
+
     State translate_normal_action(mxs::Buffer&& mariadb_response, GWBUF **ppResponse)
     {
         State state = READY;
@@ -345,6 +347,12 @@ public:
 
     string generate_sql() override
     {
+        bsoncxx::document::view storage_engine;
+        if (optional(key::STORAGE_ENGINE, &storage_engine))
+        {
+            // TODO: Not checked.
+        }
+
         m_statement = nosql::table_create_statement(table(), m_database.config().id_length);
 
         return m_statement;
@@ -590,6 +598,47 @@ private:
 
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
+            else
+            {
+                auto doc = static_cast<bsoncxx::document::view>(key.get_document());
+
+                for (const auto& element : static_cast<bsoncxx::document::view>(key.get_document()))
+                {
+                    int64_t number;
+                    if (nosql::get_number_as_integer(element, &number))
+                    {
+                        if (number == 0)
+                        {
+                            ostringstream ss;
+                            ss << "Error in specification " << bsoncxx::to_json(doc)
+                               << " :: caused by :: Values in the index key pattern cannot be 0.";
+
+                            throw (ss.str(), error::CANNOT_CREATE_INDEX);
+                        }
+                    }
+                    else if (element.type() != bsoncxx::type::k_utf8)
+                    {
+                        ostringstream ss;
+                        ss << "Error in specification " << bsoncxx::to_json(doc)
+                           << " :: caused by :: Values in v:2 index key pattern cannot be of type "
+                           << bsoncxx::to_string(element.type())
+                           << ". Only numbers > 0, numbers < 0, and strings are allowed.";
+
+                        throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
+                    }
+                    else
+                    {
+                        // We know of no plugins.
+                        ostringstream ss;
+                        ss << "Error in specification " << bsoncxx::to_json(doc)
+                           << " :: caused by :: Unknown index plugin '"
+                           << static_cast<string_view>(element.get_utf8())
+                           << "'";
+
+                        throw SoftError(ss.str(), error::CANNOT_CREATE_INDEX);
+                    }
+                }
+            }
 
             auto name = index[key::NAME];
             if (!name)
@@ -677,6 +726,36 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/currentOp/
+class CurrentOp;
+
+template<>
+struct IsAdmin<command::CurrentOp>
+{
+    static const bool is_admin { true };
+};
+
+class CurrentOp : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "currentOp";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<CurrentOp>::is_admin;
+    }
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        ArrayBuilder inprog;
+        // TODO: Add something.
+
+        doc.append(kvp(key::INPROG, inprog.extract()));
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/drop/
 class Drop final : public SingleCommand
@@ -813,6 +892,11 @@ public:
     using ManipulateIndexes::ManipulateIndexes;
 
 private:
+    string error_message() const override
+    {
+        return "ns not found " + table(Quoted::NO);
+    }
+
     GWBUF* collection_exists(bool created) override
     {
         int32_t nIndexes_was = 1;
@@ -967,14 +1051,30 @@ public:
     {
         optional(key::NAME_ONLY, &m_name_only, Conversion::RELAXED);
 
+        string suffix;
+
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            MXS_WARNING("listCollections.filter is ignored: '%s'", bsoncxx::to_json(filter).c_str());
+            for (const auto& element : filter)
+            {
+                if (element.key().compare(key::NAME) == 0)
+                {
+                    string command(KEY);
+                    command += ".filter";
+
+                    suffix = " LIKE \"" + element_as<string>(command, key::NAME, element) + "\"";
+                }
+                else
+                {
+                    string name(element.key().data(), element.key().length());
+                    MXS_WARNING("listCollections.filter.%s is not supported.", name.c_str());
+                }
+            }
         }
 
         ostringstream sql;
-        sql << "SHOW TABLES FROM `" << m_database.name() << "`";
+        sql << "SHOW TABLES FROM `" << m_database.name() << "`" << suffix;
 
         return sql.str();
     }
@@ -1228,10 +1328,13 @@ private:
         DocumentBuilder key;
         key.append(kvp(key::_ID, (int32_t)1));
 
-        DocumentBuilder first_batch;
-        first_batch.append(kvp(key::V, (int32_t)2)); // TODO: What is this?
-        first_batch.append(kvp(key::KEY, key.extract()));
-        first_batch.append(kvp(key::NAME, key::_ID_));
+        DocumentBuilder index;
+        index.append(kvp(key::V, (int32_t)2)); // TODO: What is this?
+        index.append(kvp(key::KEY, key.extract()));
+        index.append(kvp(key::NAME, key::_ID_));
+
+        ArrayBuilder first_batch;
+        first_batch.append(index.extract());
 
         DocumentBuilder cursor;
         cursor.append(kvp(key::ID, (int64_t)0));

@@ -523,7 +523,7 @@ public:
     }
 
 private:
-    int32_t        m_batch_size { 101 }; // Documented to be that.
+    int32_t        m_batch_size { DEFAULT_CURSOR_RETURN };
     bool           m_single_batch { false };
     vector<string> m_extractions;
 };

@@ -32,7 +32,7 @@ using mxb::Worker;
 //#include "commands/geospatial.hh"
 #include "commands/query_and_write_operation.hh"
 //#include "commands/query_plan_cache.hh"
-//#include "commands/authentication.hh"
+#include "commands/authentication.hh"
 //#include "commands/user_management.hh"
 //#include "commands/role_management.hh"
 #include "commands/replication.hh"
@@ -189,6 +189,7 @@ struct ThisUnit
         { tolower(command::Count::KEY),                   create_info<command::Count>() },
         { tolower(command::Create::KEY),                  create_info<command::Create>() },
         { tolower(command::CreateIndexes::KEY),           create_info<command::CreateIndexes>() },
+        { tolower(command::CurrentOp::KEY),               create_info<command::CurrentOp>() },
         { tolower(command::Delete::KEY),                  create_info<command::Delete>() },
         { tolower(command::Distinct::KEY),                create_info<command::Distinct>() },
         { tolower(command::Drop::KEY),                    create_info<command::Drop>() },
@@ -208,10 +209,12 @@ struct ThisUnit
         { tolower(command::ListCollections::KEY),         create_info<command::ListCollections>() },
         { tolower(command::ListDatabases::KEY),           create_info<command::ListDatabases>() },
         { tolower(command::ListIndexes::KEY),             create_info<command::ListIndexes>() },
+        { tolower(command::Logout::KEY),                  create_info<command::Logout>() },
         { tolower(command::Ping::KEY),                    create_info<command::Ping>() },
         { tolower(command::ReplSetGetStatus::KEY),        create_info<command::ReplSetGetStatus>() },
         { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
         { tolower(command::ResetError::KEY),              create_info<command::ResetError>() },
+        { tolower(command::ServerStatus::KEY),            create_info<command::ServerStatus>() },
         { tolower(command::Update::KEY),                  create_info<command::Update>() },
         { tolower(command::Validate::KEY),                create_info<command::Validate>() },
         { tolower(command::WhatsMyUri::KEY),              create_info<command::WhatsMyUri>() },
@@ -319,7 +322,9 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
     return pResponse;
 }
 
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_documents,
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int64_t cursor_id,
+                                                             int32_t starting_from,
+                                                             size_t size_of_documents,
                                                              size_t nDocuments,
                                                              IsError is_error) const
 {
@@ -331,8 +336,6 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     {
         response_flags |= MONGOC_REPLY_QUERY_FAILURE;
     }
-    int64_t cursor_id = 0;
-    int32_t starting_from = 0;
     int32_t number_returned = nDocuments;
 
     size_t response_size = protocol::HEADER_LEN
@@ -357,13 +360,19 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(size_t size_of_docu
     return make_pair(pResponse, pData);
 }
 
-GWBUF* Command::create_reply_response(size_t size_of_documents,
+GWBUF* Command::create_reply_response(int64_t cursor_id,
+                                      int32_t position,
+                                      size_t size_of_documents,
                                       const vector<bsoncxx::document::value>& documents) const
 {
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(size_of_documents, documents.size(), IsError::NO);
+    tie(pResponse, pData) = create_reply_response_buffer(cursor_id,
+                                                         position,
+                                                         size_of_documents,
+                                                         documents.size(),
+                                                         IsError::NO);
 
     for (const auto& doc : documents)
     {
@@ -387,7 +396,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsErr
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(doc_len, 1, is_error);
+    tie(pResponse, pData) = create_reply_response_buffer(0, 0, doc_len, 1, is_error);
 
     memcpy(pData, doc_view.data(), doc_view.length());
 
@@ -677,6 +686,14 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 //
 // OpUpdateCommand
 //
+OpUpdateCommand::~OpUpdateCommand()
+{
+    if (m_dcid)
+    {
+        Worker::get_current()->cancel_delayed_call(m_dcid);
+    }
+}
+
 string OpUpdateCommand::description() const
 {
     return "OP_UPDATE";
@@ -715,31 +732,156 @@ GWBUF* OpUpdateCommand::execute()
 
 Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
+    State state = READY;
+
     ComResponse response(mariadb_response.data());
 
-    switch (response.type())
+    auto type = response.type();
+    if (type == ComResponse::OK_PACKET || type == ComResponse::ERR_PACKET)
     {
-    case ComResponse::OK_PACKET:
-        break;
-
-    case ComResponse::ERR_PACKET:
+        switch (m_action)
         {
-            ComERR err(response);
+        case Action::UPDATING_DOCUMENT:
+            state = translate_updating_document(response);
+            break;
 
-            if (err.code() != ER_NO_SUCH_TABLE)
-            {
-                m_database.context().set_last_error(MariaDBError(err).create_last_error());
-            }
+        case Action::INSERTING_DOCUMENT:
+            state = translate_inserting_document(response);
+            break;
+
+        case Action::CREATING_TABLE:
+            state = translate_creating_table(response);
+            break;
         }
-        break;
-
-    default:
+    }
+    else
+    {
         // We do not throw, as that would generate a response.
         log_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
+
+    return state;
+}
+
+Command::State OpUpdateCommand::translate_updating_document(ComResponse& response)
+{
+    State state = READY;
+
+    if (response.type() == ComResponse::OK_PACKET)
+    {
+        if (m_req.is_upsert() || !m_req.is_multi())
+        {
+            ComOK ok(response);
+
+            if (ok.affected_rows() == 0)
+            {
+                // Ok, so the update fails, let's try an insert.
+                state = insert_document();
+            }
+        }
+    }
+    else
+    {
+        mxb_assert(response.type() == ComResponse::ERR_PACKET);
+
+        ComERR err(response);
+
+        if (err.code() == ER_NO_SUCH_TABLE)
+        {
+            if (m_database.config().auto_create_tables)
+            {
+                state = create_table();
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
+                   << "is false.";
+
+                MXB_WARNING("%s", ss.str().c_str());
+            }
+        }
+        else
+        {
+            m_database.context().set_last_error(MariaDBError(err).create_last_error());
+        }
+    }
+
+    return state;
+}
+
+Command::State OpUpdateCommand::translate_inserting_document(ComResponse& response)
+{
+    if (response.type() == ComResponse::ERR_PACKET)
+    {
+        ComERR err(response);
+        m_database.context().set_last_error(MariaDBError(err).create_last_error());
+    }
+
     return READY;
+}
+
+Command::State OpUpdateCommand::translate_creating_table(ComResponse& response)
+{
+    State state = READY;
+
+    if (response.type() == ComResponse::OK_PACKET)
+    {
+        state = insert_document();
+    }
+    else
+    {
+        ComERR err(response);
+        m_database.context().set_last_error(MariaDBError(err).create_last_error());
+    }
+
+    return state;
+}
+
+Command::State OpUpdateCommand::create_table()
+{
+    m_action = Action::CREATING_TABLE;
+
+    mxb_assert(m_dcid == 0);
+    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+            m_dcid = 0;
+
+            if (action == Worker::Call::EXECUTE)
+            {
+                auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
+
+                send_downstream(sql);
+            }
+
+            return false;
+        });
+
+    return BUSY;
+}
+
+Command::State OpUpdateCommand::insert_document()
+{
+    m_action = Action::CREATING_TABLE;
+
+    mxb_assert(m_dcid == 0);
+    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+            m_dcid = 0;
+
+            if (action == Worker::Call::EXECUTE)
+            {
+                ostringstream sql;
+                sql << "INSERT INTO " << table() << " (doc) VALUES ('"
+                    << bsoncxx::to_json(m_req.update()) << "');";
+
+                send_downstream(sql.str());
+            }
+
+            return false;
+        });
+
+    return BUSY;
 }
 
 //
@@ -767,9 +909,9 @@ GWBUF* OpQueryCommand::execute()
         for (; it != end; ++it)
         {
             auto element = *it;
-            auto command = element.key();
+            auto key = element.key();
 
-            if (command.compare(command::IsMaster::KEY) == 0 || command.compare(key::ISMASTER) == 0)
+            if (key.compare(command::IsMaster::KEY) == 0 || key.compare(key::ISMASTER) == 0)
             {
                 DocumentBuilder doc;
                 command::IsMaster::populate_response(m_database, doc);
@@ -777,9 +919,9 @@ GWBUF* OpQueryCommand::execute()
                 pResponse = create_response(doc.extract());
                 break;
             }
-            else if (command.compare(key::QUERY) == 0)
+            else if (key.compare(key::QUERY) == 0)
             {
-                send_query(element.get_document());
+                send_query(element.get_document(), m_req.query()[key::ORDERBY]);
                 break;
             }
             else
@@ -817,7 +959,7 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
                 size_t size_of_documents = 0;
                 vector<bsoncxx::document::value> documents;
 
-                pResponse = create_reply_response(size_of_documents, documents);
+                pResponse = create_reply_response(0, 0, size_of_documents, documents);
             }
             else
             {
@@ -833,59 +975,24 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
 
     default:
         {
-            uint8_t* pBuffer = mariadb_response.data();
+            unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
+                                                                  m_extractions,
+                                                                  std::move(mariadb_response));
 
-            ComQueryResponse cqr(&pBuffer);
-
-            auto nFields = cqr.nFields();
-            mxb_assert(nFields == 1); // Currently the whole document is selected.
-
-            for (size_t i = 0; i < nFields; ++i)
-            {
-                ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-                m_names.push_back(column_def.name().to_string());
-                m_types.push_back(column_def.type());
-            }
-
-            // The there should be an EOF packet, which should be bypassed.
-            ComResponse eof(&pBuffer);
-            mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
+            int32_t position = sCursor->position();
             size_t size_of_documents = 0;
             vector<bsoncxx::document::value> documents;
-            while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET) // pBuffer not advanced
+
+            sCursor->create_batch(m_nReturn, m_single_batch, &size_of_documents, &documents);
+
+            int64_t cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
+
+            pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+
+            if (!sCursor->exhausted())
             {
-                CQRTextResultsetRow row(&pBuffer, m_types); // Advances pBuffer
-
-                auto it = row.begin();
-
-                string json;
-                // TODO: If we honour the 'fields' in OP_QUERY that needs to be
-                // TODO: dealt with here.
-
-                const auto& value = *it++;
-                mxb_assert(it == row.end());
-                // The value is now a JSON object.
-                json = value.as_string().to_string();
-
-                try
-                {
-                    auto doc = bsoncxx::from_json(json);
-
-                    size_of_documents += doc.view().length();
-                    documents.emplace_back(doc);
-                }
-                catch (const std::exception& x)
-                {
-                    ostringstream ss;
-                    ss << "Could not convert assumed JSON data to BSON: " << x.what();
-                    MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
-                    throw SoftError(ss.str(), error::COMMAND_FAILED);
-                }
+                NoSQLCursor::put(std::move(sCursor));
             }
-
-            pResponse = create_reply_response(size_of_documents, documents);
         }
     }
 
@@ -893,12 +1000,35 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
     return READY;
 }
 
-void OpQueryCommand::send_query(const bsoncxx::document::view& query)
+void OpQueryCommand::send_query(const bsoncxx::document::view& query,
+                                const bsoncxx::document::element& orderby)
 {
-    // TODO: Honour m_req.fields().
-
     ostringstream sql;
-    sql << "SELECT doc FROM " << table();
+    sql << "SELECT ";
+
+    m_extractions = projection_to_extractions(m_req.fields());
+
+    if (!m_extractions.empty())
+    {
+        string s;
+        for (auto extraction : m_extractions)
+        {
+            if (!s.empty())
+            {
+                s += ", ";
+            }
+
+            s += "JSON_EXTRACT(doc, '$." + extraction + "')";
+        }
+
+        sql << s;
+    }
+    else
+    {
+        sql << "doc";
+    }
+
+    sql << " FROM " << table();
 
     if (!query.empty())
     {
@@ -910,7 +1040,111 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query)
         }
     }
 
+    if (orderby)
+    {
+        string s = sort_to_order_by(orderby.get_document());
+
+        if (!s.empty())
+        {
+            sql << " ORDER BY " << s;
+        }
+    }
+
+    sql << " LIMIT ";
+
+    auto nSkip = m_req.nSkip();
+
+    if (m_req.nSkip() != 0)
+    {
+        sql << nSkip << ", ";
+    }
+
+    int64_t nLimit = std::numeric_limits<int64_t>::max();
+
+    if (m_req.nReturn() < 0)
+    {
+        m_nReturn = -m_req.nReturn();
+        nLimit = m_nReturn;
+        m_single_batch = true;
+    }
+    else if (m_req.nReturn() == 1)
+    {
+        m_nReturn = 1;
+        nLimit = m_nReturn;
+        m_single_batch = true;
+    }
+    else if (m_req.nReturn() == 0)
+    {
+        m_nReturn = DEFAULT_CURSOR_RETURN;
+    }
+    else
+    {
+        m_nReturn = m_req.nReturn();
+    }
+
+    sql << nLimit;
+
     send_downstream(sql.str());
+}
+
+//
+// OpGetMoreCommand
+//
+string OpGetMoreCommand::description() const
+{
+    return "OP_GET_MORE";
+}
+
+GWBUF* OpGetMoreCommand::execute()
+{
+    auto cursor_id = m_req.cursor_id();
+
+    unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::get(m_req.collection(), m_req.cursor_id());
+
+    int32_t position = sCursor->position();
+    size_t size_of_documents;
+    vector<bsoncxx::document::value> documents;
+
+    sCursor->create_batch(m_req.nReturn(), false, &size_of_documents, &documents);
+
+    cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
+
+    GWBUF* pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+
+    if (!sCursor->exhausted())
+    {
+        NoSQLCursor::put(std::move(sCursor));
+    }
+
+    return pResponse;
+}
+
+Command::State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    mxb_assert(!true);
+    *ppNoSQL_response = nullptr;
+    return READY;
+}
+
+//
+// OpKillCursorsCommand
+//
+string OpKillCursorsCommand::description() const
+{
+    return "OP_KILL_CURSORS";
+}
+
+GWBUF* OpKillCursorsCommand::execute()
+{
+    NoSQLCursor::kill(m_req.cursor_ids());
+    return nullptr;
+}
+
+Command::State OpKillCursorsCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+{
+    mxb_assert(!true);
+    *ppNoSQL_response = nullptr;
+    return READY;
 }
 
 //

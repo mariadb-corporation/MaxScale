@@ -140,11 +140,11 @@ void MariaDBUserManager::set_backends(const std::vector<SERVER*>& backends)
     m_backends = backends;
 }
 
-void MariaDBUserManager::set_user_accounts_file(const string& filepath, uint32_t file_usage)
+void MariaDBUserManager::set_user_accounts_file(const string& filepath, UsersFileUsage file_usage)
 {
     Guard guard(m_settings_lock);
-    m_user_accounts_file = filepath;
-    m_user_file_usage = file_usage;
+    m_users_file_path = filepath;
+    m_users_file_usage = file_usage;
 }
 
 void MariaDBUserManager::set_union_over_backends(bool union_over_backends)
@@ -286,32 +286,90 @@ void MariaDBUserManager::updater_thread_function()
 
 bool MariaDBUserManager::update_users()
 {
-    mxq::MariaDB con;
+    string conn_user;
+    string conn_pw;
     std::vector<SERVER*> backends;
-    std::vector<mariadb::UserEntry> custom_entries;
-    string user_accounts_file;
-    auto& sett = con.connection_settings();
+    string users_file_path;
+    UsersFileUsage users_file_usage;
 
     // Copy all arraylike settings under a lock.
     MutexLock lock(m_settings_lock);
-    sett.user = m_username;
-    sett.password = m_password;
+    conn_user = m_username;
+    conn_pw = m_password;
     backends = m_backends;
-    user_accounts_file = m_user_accounts_file;
+    users_file_path = m_users_file_path;
+    users_file_usage = m_users_file_usage;
     lock.unlock();
 
-    sett.password = mxs::decrypt_password(sett.password);
+    UserDatabase temp_userdata;
+    UserLoadRes res1;
+    UserLoadRes res2;
+    bool file_enabled = !users_file_path.empty();
+
+    if (file_enabled && users_file_usage == UsersFileUsage::FILE_ONLY_ALWAYS)
+    {
+        res1 = load_users_from_file(users_file_path, &temp_userdata);
+    }
+    else
+    {
+        res1 = load_users_from_backends(move(conn_user), move(conn_pw), move(backends), temp_userdata);
+        if (file_enabled && users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
+        {
+            res2 = load_users_from_file(users_file_path, &temp_userdata);
+        }
+    }
+
+    if (res1.success)
+    {
+        auto build_msg = [this, &res1, &res2]() {
+                string rval;
+                if (res2.success)
+                {
+                    rval = mxb::string_printf("Read %s for service '%s'. In addition, read %s.",
+                                              res1.msg.c_str(), m_service->name(), res2.msg.c_str());
+                }
+                else
+                {
+                    rval = mxb::string_printf("Read %s for service '%s'.",
+                                              res1.msg.c_str(), m_service->name());
+                }
+                return rval;
+            };
+
+        // Got some data. Update the master database if the contents differ. Usually they don't.
+
+        // This comparison is not trivially cheap if there are many user entries,
+        // but it avoids unnecessary user cache updates which would involve copying all
+        // the data multiple times.
+        if (temp_userdata.equal_contents(m_userdb))
+        {
+            MXB_INFO("%s The data was identical to existing user data.", build_msg().c_str());
+        }
+        else
+        {
+            // Data changed, update main user db. Cache update message is sent by the caller.
+            {
+                Guard guard(m_userdb_lock);
+                m_userdb = std::move(temp_userdata);
+                m_userdb_version++;
+            }
+            MXB_NOTICE("%s", build_msg().c_str());
+        }
+    }
+    return res1.success;
+}
+
+MariaDBUserManager::UserLoadRes
+MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_pw,
+                                             std::vector<SERVER*>&& backends, UserDatabase& temp_userdata)
+{
+    mxq::MariaDB con;
+    auto& sett = con.connection_settings();
+    sett.user = move(conn_user);
+    sett.password = mxs::decrypt_password(conn_pw);
     sett.clear_sql_mode = true;
     sett.charset = "latin1";
     sett.plugin_dir = mxs::connector_plugindir();
-
-    bool use_file_on_ok = false;
-    if (!user_accounts_file.empty())
-    {
-        // TODO: add support for the other options
-        auto users_file_usage = m_user_file_usage.load(relaxed);
-        use_file_on_ok = users_file_usage & mxs::UserAccountsFileUsage::WHEN_SERVER_OK;
-    }
 
     mxs::Config& glob_config = mxs::Config::get();
     sett.timeout = glob_config.auth_conn_timeout.get().count();
@@ -342,7 +400,6 @@ bool MariaDBUserManager::update_users()
 
     bool got_data = false;
     std::vector<string> source_servernames;
-    UserDatabase temp_userdata;
     const char users_query_failed[] = "Failed to query server '%s' for user account info. %s";
 
     for (auto srv : backends)
@@ -411,44 +468,20 @@ bool MariaDBUserManager::update_users()
         }
     }
 
+    UserLoadRes rval;
     if (got_data)
     {
-        // Got some data. Update the master database if the contents differ. Usually they don't.
+        rval.success = true;
         string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
-        string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
-                                        temp_userdata.n_entries(), datasource.c_str(), m_service->name());
-
-        if (use_file_on_ok)
-        {
-            load_users_from_file(user_accounts_file, &temp_userdata);
-        }
-
-        // The comparison is not trivially cheap if there are many user entries,
-        // but it avoids unnecessary user cache updates which would involve copying all
-        // the data multiple times.
-        if (temp_userdata.equal_contents(m_userdb))
-        {
-            MXB_INFO("%s The data was identical to existing user data.", msg.c_str());
-        }
-        else
-        {
-            // Data changed, update main user db. Cache update message is sent by the caller.
-            {
-                Guard guard(m_userdb_lock);
-                m_userdb = std::move(temp_userdata);
-                m_userdb_version++;
-            }
-            MXB_NOTICE("%s", msg.c_str());
-        }
+        rval.msg = mxb::string_printf("%lu user@host entries from %s",
+                                      temp_userdata.n_entries(), datasource.c_str());
     }
-    return got_data;
+    return rval;
 }
 
 MariaDBUserManager::LoadResult
 MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
-    using std::move;
-
     // Roles were added in server 10.0.5, default roles in server 10.1.1. Strictly speaking, reading the
     // roles_mapping table for 10.0.5 is not required as they won't be used. Read anyway in case
     // diagnostics prints it.
@@ -618,7 +651,7 @@ void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_wc_grants, QResul
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
-    auto map_builder = [this](const string& grant_col_name, QResult source, bool strip_escape) {
+    auto map_builder = [](const string& grant_col_name, QResult source, bool strip_escape) {
             StringSetMap result;
             auto ind_user = source->get_col_index("user");
             auto ind_host = source->get_col_index("host");
@@ -921,10 +954,10 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
-bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* output)
+MariaDBUserManager::UserLoadRes
+MariaDBUserManager::load_users_from_file(const string& source, UserDatabase* output)
 {
     using mxb::Json;
-    int rval = false;
     auto filepathc = source.c_str();
 
     auto read_str_if_exists = [filepathc](const Json& source, const char* key,
@@ -975,10 +1008,11 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
             }
         };
 
+    UserLoadRes rval;
     Json all;
     if (all.load(source))
     {
-        rval = true;
+        rval.success = true;
         int n_users = -1;
         int n_grants = -1;
         int n_roles = -1;
@@ -1097,8 +1131,18 @@ bool MariaDBUserManager::load_users_from_file(const string& source, UserDatabase
         message_helper(n_users, "user");
         message_helper(n_grants, "database grant");
         message_helper(n_roles, "role mapping");
-        string total_list = mxb::create_list_string(list_items, ", ", " and ");
-        MXB_NOTICE("Read %s from '%s' for service '%s'.", total_list.c_str(), filepathc, m_service->name());
+
+        // Ensure that the returned message is never empty.
+        string total_list;
+        if (list_items.empty())
+        {
+            total_list = "0 user entries";
+        }
+        else
+        {
+            total_list = mxb::create_list_string(list_items, ", ", " and ");
+        }
+        rval.msg = mxb::string_printf("%s from '%s'", total_list.c_str(), filepathc);
     }
     else
     {

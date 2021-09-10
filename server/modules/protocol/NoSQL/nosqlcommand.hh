@@ -83,7 +83,9 @@ public:
 
     GWBUF* create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
 
-    GWBUF* create_reply_response(size_t size_of_documents,
+    GWBUF* create_reply_response(int64_t cursor_id,
+                                 int32_t position,
+                                 size_t size_of_documents,
                                  const std::vector<bsoncxx::document::value>& documents) const;
 
     static void check_maximum_sql_length(int length);
@@ -129,7 +131,9 @@ protected:
     std::string   m_last_statement;
 
 private:
-    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(size_t size_of_documents,
+    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int64_t cursor_id,
+                                                             int32_t position,
+                                                             size_t size_of_documents,
                                                              size_t nDocuments,
                                                              IsError is_error) const;
 
@@ -251,11 +255,31 @@ public:
     {
     }
 
+    ~OpUpdateCommand();
+
     std::string description() const override;
 
     GWBUF* execute() override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+private:
+    enum class Action
+    {
+        UPDATING_DOCUMENT,
+        INSERTING_DOCUMENT,
+        CREATING_TABLE
+    };
+
+    State translate_updating_document(ComResponse& response);
+    State translate_inserting_document(ComResponse& response);
+    State translate_creating_table(ComResponse& response);
+
+    State create_table();
+    State insert_document();
+
+    Action   m_action { Action::UPDATING_DOCUMENT };
+    uint32_t m_dcid { 0 };
 };
 
 //
@@ -278,11 +302,53 @@ public:
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
 private:
-    void send_query(const bsoncxx::document::view& query);
+    void send_query(const bsoncxx::document::view& query,
+                    const bsoncxx::document::element& orderby = bsoncxx::document::element());
 
 private:
-    std::vector<std::string>      m_names;
-    std::vector<enum_field_types> m_types;
+    int32_t                  m_nReturn      { DEFAULT_CURSOR_RETURN };
+    bool                     m_single_batch { false };
+    std::vector<std::string> m_extractions;
+};
+
+//
+// OpGetMoreCommand
+//
+class OpGetMoreCommand : public PacketCommand<nosql::GetMore>
+{
+public:
+    OpGetMoreCommand(Database* pDatabase,
+                     GWBUF* pRequest,
+                     nosql::GetMore&& req)
+        : PacketCommand<nosql::GetMore>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+};
+
+//
+// OpKillCursorsCommand
+//
+class OpKillCursorsCommand : public PacketCommand<nosql::KillCursors>
+{
+public:
+    OpKillCursorsCommand(Database* pDatabase,
+                         GWBUF* pRequest,
+                         nosql::KillCursors&& req)
+        : PacketCommand<nosql::KillCursors>(pDatabase, pRequest, std::move(req))
+    {
+    }
+
+    std::string description() const override;
+
+    GWBUF* execute() override final;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
 
 //

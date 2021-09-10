@@ -113,6 +113,32 @@ public:
         return removed;
     }
 
+    std::set<int64_t> kill_cursors(const std::vector<int64_t>& ids)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        set<int64_t> removed;
+
+        for (auto id : ids)
+        {
+            for (auto& kv : m_collection_cursors)
+            {
+                CursorsById& cursors = kv.second;
+
+                auto it = cursors.find(id);
+
+                if (it != cursors.end())
+                {
+                    cursors.erase(it);
+                    removed.insert(id);
+                    break;
+                }
+            }
+        }
+
+        return removed;
+    }
+
     void kill_idle_cursors(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
     {
         std::lock_guard<std::mutex> guard(m_mutex);
@@ -215,7 +241,6 @@ namespace nosql
 NoSQLCursor::NoSQLCursor(const std::string& ns)
     : m_ns(ns)
     , m_id(0)
-    , m_exhausted(false)
 {
     touch();
 }
@@ -225,7 +250,6 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
                          mxs::Buffer&& mariadb_response)
     : m_ns(ns)
     , m_id(this_unit.next_id() | BSON_LONG_BIT)
-    , m_exhausted(false)
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
@@ -265,6 +289,12 @@ void NoSQLCursor::put(std::unique_ptr<NoSQLCursor> sCursor)
 std::set<int64_t> NoSQLCursor::kill(const std::string& collection, const std::vector<int64_t>& ids)
 {
     return this_unit.kill_cursors(collection, ids);
+}
+
+//static
+std::set<int64_t> NoSQLCursor::kill(const std::vector<int64_t>& ids)
+{
+    return this_unit.kill_cursors(ids);
 }
 
 //static
@@ -332,6 +362,51 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
     doc.append(kvp(key::OK, 1));
 }
 
+void NoSQLCursor::create_batch(int32_t nBatch,
+                               bool single_batch,
+                               size_t* pSize_of_documents,
+                               std::vector<bsoncxx::document::value>* pDocuments)
+{
+    mxb_assert(!m_exhausted);
+
+    size_t size_of_documents = 0;
+    vector<bsoncxx::document::value> documents;
+
+    if (m_pBuffer)
+    {
+        create_batch([&size_of_documents, &documents](bsoncxx::document::value&& doc)
+                     {
+                         size_t size = doc.view().length();
+
+                         if (size_of_documents + size > protocol::MAX_MSG_SIZE)
+                         {
+                             return false;
+                         }
+                         else
+                         {
+                             size_of_documents += size;
+                             documents.emplace_back(std::move(doc));
+                             return true;
+                         }
+                     },
+                     nBatch);
+    }
+    else
+    {
+        m_exhausted = true;
+    }
+
+    if (single_batch)
+    {
+        m_exhausted = true;
+    }
+
+    *pSize_of_documents = size_of_documents;
+    pDocuments->swap(documents);
+
+    touch();
+}
+
 void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
                                const string& which_batch,
                                int32_t nBatch,
@@ -345,7 +420,19 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
 
     if (m_pBuffer)
     {
-        if (create_batch(batch, nBatch) == Result::PARTIAL)
+        if (create_batch([&batch](bsoncxx::document::value&& doc)
+                         {
+                             if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+                             {
+                                 return false;
+                             }
+                             else
+                             {
+                                 batch.append(doc);
+                                 return true;
+                             }
+                         },
+                         nBatch) == Result::PARTIAL)
         {
             id = m_id;
         }
@@ -372,7 +459,8 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
     touch();
 }
 
-NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch)
+NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::document::value&& doc)> append,
+                                              int32_t nBatch)
 {
     int n = 0;
     while (n < nBatch && ComResponse(m_pBuffer).type() != ComResponse::EOF_PACKET) // m_pBuffer not advanced
@@ -422,14 +510,13 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
         {
             auto doc = bsoncxx::from_json(json);
 
-            if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+            if (!append(std::move(doc)))
             {
                 // TODO: Don't discard the converted doc, but store it somewhere for
                 // TODO: the next batch.
                 break;
             }
 
-            batch.append(doc);
             m_pBuffer = pBuffer;
         }
         catch (const std::exception& x)
@@ -448,6 +535,8 @@ NoSQLCursor::Result NoSQLCursor::create_batch(bsoncxx::builder::basic::array& ba
         ComResponse response(&m_pBuffer);
         m_exhausted = true;
     }
+
+    m_position += n;
 
     return at_end ? Result::COMPLETE : Result::PARTIAL;
 }

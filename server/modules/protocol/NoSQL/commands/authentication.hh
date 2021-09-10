@@ -28,7 +28,19 @@ namespace command
 // https://docs.mongodb.com/v4.4/reference/command/getnonce/
 
 // https://docs.mongodb.com/v4.4/reference/command/logout/
+class Logout final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "logout";
+    static constexpr const char* const HELP = "";
 
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 }
 

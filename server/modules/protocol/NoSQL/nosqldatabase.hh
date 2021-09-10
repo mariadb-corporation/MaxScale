@@ -88,8 +88,8 @@ public:
     /**
      * Handle an OP_DELETE
      *
-     * @pRequest    The GWBUF holding data of @c req.
-     * @packet      The delete request.
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param packet    The delete request.
      *
      * @return nullptr
      */
@@ -98,8 +98,8 @@ public:
     /**
      * Handle an OP_INSERT
      *
-     * @pRequest    The GWBUF holding data of @c req.
-     * @req         The insert request.
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param req       The insert request.
      *
      * @return nullptr
      */
@@ -108,9 +108,9 @@ public:
     /**
      * Handle an OP_QUERY.
      *
-     * @pRequest    The GWBUF holding data of @c req.
-     * @req         The query request; *must* be intended for the database this
-     *              instance represents.
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param req       The query request; *must* be intended for the database this
+     *                  instance represents.
      *
      * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply
@@ -121,18 +121,38 @@ public:
     /**
      * Handle an OP_UPDATE
      *
-     * @pRequest    The GWBUF holding data of @c req.
-     * @req         The update request.
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param req       The update request.
      *
      * @return nullptr
      */
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
 
     /**
-     * Handle an OP_MSG
+     * Handle an OP_GET_MORE
+     *
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param req       The get more request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
+
+    /**
+     * Handle an OP_KILL_CURSORS
      *
      * @pRequest    The GWBUF holding data of @c req.
-     * @req         The message request.
+     * @req         The kill cursor request.
+     *
+     * @return nullptr
+     */
+    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
+
+    /**
+     * Handle an OP_MSG
+     *
+     * @param pRequest  The GWBUF holding data of @c req.
+     * @param req       The message request.
      *
      * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
      *         it will be returned to the client, in the latter case @c clientReply

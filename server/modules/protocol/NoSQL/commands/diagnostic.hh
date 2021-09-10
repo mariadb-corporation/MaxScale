@@ -223,6 +223,23 @@ public:
 // https://docs.mongodb.com/v4.4/reference/command/profile/
 
 // https://docs.mongodb.com/v4.4/reference/command/serverStatus/
+class ServerStatus final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "serverStatus";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        DocumentBuilder storage_engine;
+        storage_engine.append(kvp(key::NAME, key::MARIADB));
+
+        doc.append(kvp(key::STORAGE_ENGINE, storage_engine.extract()));
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/shardConnPoolStats/
 

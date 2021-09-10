@@ -191,6 +191,8 @@ const char* const NOSQL_ZVERSION = "4.4.1";
 const int MIN_WIRE_VERSION = 6;
 const int MAX_WIRE_VERSION = 6;
 
+const int DEFAULT_CURSOR_RETURN = 101;  // Documented to be that.
+
 bsoncxx::document::value& topology_version();
 
 const char* opcode_to_string(int code);
@@ -371,6 +373,7 @@ const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
 const char INDEXES[]                         = "indexes";
 const char INFO[]                            = "info";
+const char INPROG[]                          = "inprog";
 const char ISMASTER[]                        = "ismaster";
 const char JAVASCRIPT_ENGINE[]               = "javascriptEngine";
 const char KEY_PATTERN[]                     = "keyPattern";
@@ -407,6 +410,7 @@ const char N[]                               = "n";
 const char OK[]                              = "ok";
 const char OPENSSL[]                         = "openssl";
 const char OPTIONS[]                         = "options";
+const char ORDERBY[]                         = "orderby";
 const char ORDERED[]                         = "ordered";
 const char PARSED[]                          = "parsed";
 const char PROJECTION[]                      = "projection";
@@ -420,6 +424,7 @@ const char SIZE_ON_DISK[]                    = "sizeOnDisk";
 const char SKIP[]                            = "skip";
 const char SORT[]                            = "sort";
 const char SQL[]                             = "sql";
+const char STORAGE_ENGINE[]                  = "storageEngine";
 const char STATE[]                           = "state";
 const char STORAGE_ENGINES[]                 = "storageEngines";
 const char SYNC_MILLIS[]                     = "syncMillis";
@@ -472,8 +477,6 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
  *
  * @throws SoftError(BAD_VALUE) if the element cannot be converted to a value.
  */
-std::string to_value(const bsoncxx::document::element& element);
-
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
@@ -705,7 +708,7 @@ public:
         return m_nSkip;
     }
 
-    uint32_t nReturn() const
+    int32_t nReturn() const
     {
         return m_nReturn;
     }
@@ -794,6 +797,55 @@ protected:
     int32_t                              m_start_from;
     int32_t                              m_nReturned;
     std::vector<bsoncxx::document::view> m_documents;
+};
+
+class GetMore final : public Packet
+{
+public:
+    GetMore(const Packet& packet);
+    GetMore(const GetMore& that) = default;
+    GetMore(GetMore&& that) = default;
+
+    const char* zCollection() const
+    {
+        return m_zCollection;
+    }
+
+    std::string collection() const
+    {
+        return m_zCollection;
+    }
+
+    int32_t nReturn() const
+    {
+        return m_nReturn;
+    }
+
+    int64_t cursor_id() const
+    {
+        return m_cursor_id;
+    }
+
+private:
+    const char* m_zCollection;
+    int32_t     m_nReturn;
+    int64_t     m_cursor_id;
+};
+
+class KillCursors final : public Packet
+{
+public:
+    KillCursors(const Packet& packet);
+    KillCursors(const KillCursors& that) = default;
+    KillCursors(KillCursors&& that) = default;
+
+    const std::vector<int64_t> cursor_ids() const
+    {
+        return m_cursor_ids;
+    };
+
+private:
+    std::vector<int64_t> m_cursor_ids;
 };
 
 class Msg final : public Packet
@@ -981,6 +1033,8 @@ private:
     GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
     GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
     GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
+    GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
+    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
     GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
     State              m_state { READY };

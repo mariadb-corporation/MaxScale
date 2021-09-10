@@ -39,6 +39,7 @@ public:
     static std::unique_ptr<NoSQLCursor> get(const std::string& collection, int64_t id);
     static void put(std::unique_ptr<NoSQLCursor> sCursor);
     static std::set<int64_t> kill(const std::string& collection, const std::vector<int64_t>& ids);
+    static std::set<int64_t> kill(const std::vector<int64_t>& ids);
     static void kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout);
 
     static void start_purging_idle_cursors(const std::chrono::seconds& cursor_timeout);
@@ -58,11 +59,21 @@ public:
         return m_exhausted;
     }
 
+    int32_t position() const
+    {
+        return m_position;
+    }
+
     void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch, bool single_batch);
     void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
 
     static void create_first_batch(bsoncxx::builder::basic::document& doc,
                                    const std::string& ns);
+
+    void create_batch(int32_t nBatch,
+                      bool single_batch,
+                      size_t* pnSize_of_documents,
+                      std::vector<bsoncxx::document::value>* pDocuments);
 
     const mxb::TimePoint& last_use() const
     {
@@ -90,11 +101,17 @@ private:
                       const std::string& which_batch,
                       int32_t nBatch,
                       bool single_batch);
-    Result create_batch(bsoncxx::builder::basic::array& batch, int32_t nBatch);
+
+    void create_batch(int32_t nBatch,
+                      bool single_batch);
+
+
+    Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
     std::string                   m_ns;
     int64_t                       m_id;
-    bool                          m_exhausted;
+    int32_t                       m_position { 0 };
+    bool                          m_exhausted { false };
     std::vector<std::string>      m_extractions;
     mxs::Buffer                   m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
