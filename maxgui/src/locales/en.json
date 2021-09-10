@@ -191,7 +191,8 @@
         "serviceUnavailable": "MaxScale is temporarily unavailable",
         "refreshLater": "Please refresh in a few moments",
         "largerThanZero": "{inputName} must be larger than zero",
-        "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones"
+        "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones",
+        "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Favorite tab and delete some to create more space."
     },
     "confirmations": {
         "maintain": "Are you sure you want to set {targetId} into maintenance mode?",

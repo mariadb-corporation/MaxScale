@@ -45,31 +45,57 @@ export default {
     },
     actions: {
         pushQueryLog({ commit }, { startTime, connection_name, query, res }) {
-            commit('UPDATE_QUERY_HISTORY', {
-                payload: {
-                    date: startTime, // Unix time
-                    connection_name,
-                    time: this.vue.$help.dateFormat({
-                        value: startTime,
-                        formatType: 'HH:mm:ss',
-                    }),
-                    execution_time: res.data.data.attributes.execution_time.toFixed(4),
-                    sql: query,
-                },
-            })
+            try {
+                commit('UPDATE_QUERY_HISTORY', {
+                    payload: {
+                        date: startTime, // Unix time
+                        connection_name,
+                        time: this.vue.$help.dateFormat({
+                            value: startTime,
+                            formatType: 'HH:mm:ss',
+                        }),
+                        execution_time: res.data.data.attributes.execution_time.toFixed(4),
+                        sql: query,
+                    },
+                })
+            } catch (e) {
+                const logger = this.vue.$logger('store-persisted-pushQueryLog')
+                logger.error(e)
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [this.i18n.t('errors.persistentStorage')],
+                        type: 'error',
+                    },
+                    { root: true }
+                )
+            }
         },
         pushQueryFavorite({ commit }, { date, name, sql }) {
-            commit('UPDATE_QUERY_FAVORITE', {
-                payload: {
-                    date, // Unix time
-                    time: this.vue.$help.dateFormat({
-                        value: date,
-                        formatType: 'HH:mm:ss',
-                    }),
-                    name,
-                    sql,
-                },
-            })
+            try {
+                commit('UPDATE_QUERY_FAVORITE', {
+                    payload: {
+                        date, // Unix time
+                        time: this.vue.$help.dateFormat({
+                            value: date,
+                            formatType: 'HH:mm:ss',
+                        }),
+                        name,
+                        sql,
+                    },
+                })
+            } catch (e) {
+                const logger = this.vue.$logger('store-persisted-pushQueryFavorite')
+                logger.error(e)
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [this.i18n.t('errors.persistentStorage')],
+                        type: 'error',
+                    },
+                    { root: true }
+                )
+            }
         },
     },
 }
