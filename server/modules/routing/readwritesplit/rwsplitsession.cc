@@ -362,40 +362,6 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
     }
 }
 
-namespace
-{
-
-bool server_is_shutting_down(GWBUF* writebuf)
-{
-    uint64_t err = mxs_mysql_get_mysql_errno(writebuf);
-    return err == ER_SERVER_SHUTDOWN || err == ER_NORMAL_SHUTDOWN || err == ER_SHUTDOWN_COMPLETE;
-}
-
-mxs::Buffer::iterator skip_packet(mxs::Buffer::iterator it)
-{
-    uint32_t len = *it++;
-    len |= (*it++) << 8;
-    len |= (*it++) << 16;
-    it.advance(len + 1);    // Payload length plus the fourth header byte (packet sequence)
-    return it;
-}
-
-GWBUF* erase_last_packet(GWBUF* input)
-{
-    mxs::Buffer buf(input);
-    auto it = buf.begin();
-    auto end = it;
-
-    while ((end = skip_packet(it)) != buf.end())
-    {
-        it = end;
-    }
-
-    buf.erase(it, end);
-    return buf.release();
-}
-}
-
 void RWSplitSession::close_stale_connections()
 {
     auto current_rank = get_current_rank();
@@ -525,24 +491,18 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (error.is_unexpected_error())
     {
-        if (error.code() == ER_CONNECTION_KILLED)
-        {
-            // The connection was killed, we can safely ignore it. When the TCP connection is
-            // closed, the router's error handling will sort it out.
-            backend->set_close_reason("Connection was killed");
-        }
-        else
-        {
-            // All other unexpected errors are related to server shutdown.
-            backend->set_close_reason(std::string("Server '") + backend->name() + "' is shutting down");
-        }
+        // All unexpected errors are related to server shutdown.
+        backend->set_close_reason(std::string("Server '") + backend->name() + "' is shutting down");
 
-        // The server sent an error that we didn't expect: treat it as if the connection was closed. The
-        // client shouldn't see this error as we can replace the closed connection.
-
-        if (!(writebuf = erase_last_packet(writebuf)))
+        // The server sent an error that we either didn't expect or we don't want. If retrying is going to
+        // take place, it'll be done in handleError.
+        if (!backend->is_waiting_result() || !reply.has_started())
         {
-            // Nothing to route to the client
+            // The buffer contains either an ERR packet, in which case the resultset hasn't started yet, or a
+            // resultset with a trailing ERR packet. The full resultset can be discarded as the client hasn't
+            // received it yet. In theory we could return this to the client but we don't know if it was
+            // interrupted or not so the safer option is to retry it.
+            gwbuf_free(writebuf);
             return 1;
         }
     }
