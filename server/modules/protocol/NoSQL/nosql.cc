@@ -890,60 +890,66 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
 {
     vector<string> extractions;
 
-    bool id_seen = false;
+    auto it = projection.begin();
+    auto end = projection.end();
 
-    for (auto it = projection.begin(); it != projection.end(); ++it)
+    if (it != end)
     {
-        const auto& element = *it;
-        const auto& key = element.key();
+        bool id_seen = false;
 
-        if (key.size() == 0)
+        for (; it != end; ++it)
         {
-            continue;
-        }
+            const auto& element = *it;
+            const auto& key = element.key();
 
-        if (key.compare("_id") == 0)
-        {
-            id_seen = true;
-
-            bool include_id = false;
-
-            switch (element.type())
-            {
-            case bsoncxx::type::k_int32:
-                include_id = static_cast<int32_t>(element.get_int32());
-                break;
-
-            case bsoncxx::type::k_int64:
-                include_id = static_cast<int64_t>(element.get_int64());
-                break;
-
-            case bsoncxx::type::k_bool:
-                include_id = static_cast<bool>(element.get_bool());
-                break;
-
-            case bsoncxx::type::k_double:
-                include_id = static_cast<double>(element.get_double());
-                break;
-
-            default:
-                ;
-            }
-
-            if (!include_id)
+            if (key.size() == 0)
             {
                 continue;
             }
+
+            if (key.compare("_id") == 0)
+            {
+                id_seen = true;
+
+                bool include_id = false;
+
+                switch (element.type())
+                {
+                case bsoncxx::type::k_int32:
+                    include_id = static_cast<int32_t>(element.get_int32());
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    include_id = static_cast<int64_t>(element.get_int64());
+                    break;
+
+                case bsoncxx::type::k_bool:
+                    include_id = static_cast<bool>(element.get_bool());
+                    break;
+
+                case bsoncxx::type::k_double:
+                    include_id = static_cast<double>(element.get_double());
+                    break;
+
+                default:
+                    ;
+                }
+
+                if (!include_id)
+                {
+                    continue;
+                }
+            }
+
+            auto extraction = escape_essential_chars(static_cast<string>(key));
+
+            extractions.push_back(static_cast<string>(key));
         }
 
-        auto extraction = escape_essential_chars(static_cast<string>(key));
-
-        extractions.push_back(static_cast<string>(key));
-    }
-
-    if (!id_seen)
-    {
-        extractions.push_back("_id");
+        if (!id_seen)
+        {
+            extractions.push_back("_id");
+        }
     }
 
     return extractions;
