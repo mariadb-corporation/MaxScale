@@ -15,6 +15,7 @@
                 :noDataText="noDataText === '' ? $t('$vuetify.noDataText') : noDataText"
                 :tdBorderLeft="tdBorderLeft"
                 showAll
+                :expandAll="expandAll"
                 :isTree="isTree"
             >
                 <template v-for="header in tableHeaders" v-slot:[header.value]="cellProps">
@@ -57,6 +58,7 @@ export default {
         titleInfo: { type: [String, Number], default: '' },
         noDataText: { type: String, default: '' },
         tableData: { type: [Object, Array], required: true },
+        expandAll: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
         customTableHeaders: { type: Array },
     },
@@ -65,8 +67,8 @@ export default {
         return {
             showTable: true,
             defaultTableHeaders: [
-                { text: 'Variable', value: 'id', width: '65%' },
-                { text: 'Value', value: 'value', width: '35%' },
+                { text: 'Variable', value: 'id', width: '65%', cellTruncated: true },
+                { text: 'Value', value: 'value', width: '35%', cellTruncated: true },
             ],
             tableRows: [],
             isMounting: true,

@@ -247,9 +247,10 @@ describe('ServerDetail index', () => {
     it(`Should pass necessary props value to 'STATISTICS' table`, async () => {
         const statsTable = wrapper.findComponent({ ref: 'statistics-table' })
         expect(statsTable.exists()).to.be.true
-        const { title, tableData } = statsTable.vm.$props
+        const { title, tableData, isTree } = statsTable.vm.$props
         expect(title).to.be.equals('statistics')
         expect(tableData).to.be.deep.equals(dummy_server_stats)
+        expect(isTree).to.be.true
     })
 
     it(`Should pass necessary props value to 'CURRENT SESSIONS' table`, async () => {
@@ -286,10 +287,11 @@ describe('ServerDetail index', () => {
     it(`Should pass necessary props value to 'MONITOR DIAGNOSTICS' table`, async () => {
         const diagnosticsTable = wrapper.findComponent({ ref: 'diagnostics-table' })
         expect(diagnosticsTable.exists()).to.be.true
-        const { title, tableData, isTree } = diagnosticsTable.vm.$props
+        const { title, tableData, isTree, expandAll } = diagnosticsTable.vm.$props
 
         expect(title).to.be.equals('Monitor Diagnostics')
         expect(isTree).to.be.true
+        expect(expandAll).to.be.true
         expect(tableData).to.be.deep.equals(wrapper.vm.monitorDiagnostics)
     })
 

@@ -20,6 +20,7 @@
                     :loading="isLoading"
                     :keepPrimitiveValue="keepPrimitiveValue"
                     :isTree="isTree"
+                    :expandAll="expandAll"
                     @cell-hover="showCellTooltip"
                 >
                     <template v-slot:header-append-id>
@@ -127,6 +128,7 @@ export default {
         // specical props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
+        expandAll: { type: Boolean, default: false },
         editable: { type: Boolean, default: true },
     },
 

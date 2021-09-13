@@ -131,6 +131,7 @@ describe('Settings index', () => {
             onEditSucceeded,
             loading,
             isTree,
+            expandAll,
         } = detailsParametersTable.vm.$props
         // wrapper vm
         const {
@@ -149,6 +150,7 @@ describe('Settings index', () => {
         expect(onEditSucceeded).to.be.equals(fetchMaxScaleParameters)
         expect(loading).to.be.equals(isLoading)
         expect(isTree).to.be.true
+        expect(expandAll).to.be.true
     })
 
     it(`Should set shouldFetchLogs to true to trigger sending

@@ -18,6 +18,7 @@
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
                                 isTree
+                                expandAll
                             />
                         </v-col>
                     </v-tab-item>

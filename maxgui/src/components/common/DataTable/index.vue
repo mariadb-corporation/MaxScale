@@ -203,8 +203,9 @@ export default {
         showActionsOnHover: { type: Boolean, default: false },
         // rowspan feature, data array must contains objects having groupId property.
         colsHasRowSpan: { type: Number, default: 0 },
-        // if data has child object or array, enable this props in adanvce
+        // if data has child object or array, enable this props in advance
         isTree: { type: Boolean, default: false },
+        expandAll: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -252,11 +253,11 @@ export default {
             deep: true,
         },
         hasValidChild: function(val) {
-            if (val) this.expandAllNodes(this.tableRows)
+            if (val && this.expandAll) this.expandAllNodes(this.tableRows)
         },
         data: {
             handler(newV, oV) {
-                if (this.isTree && this.hasValidChild) {
+                if (this.isTree && this.hasValidChild && this.expandAll) {
                     // keep all nodes expanding when data props changes
                     if (!this.$help.lodash.isEqual(newV, oV)) this.expandAllNodes(this.tableRows)
                 }

@@ -15,13 +15,14 @@
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5">
                         <v-row class="my-0">
-                            <v-col class="py-0 my-0" cols="4">
+                            <v-col class="py-0 my-0" cols="5">
                                 <v-row class="my-0 pa-0 ma-0">
                                     <v-col cols="12" class="pa-0 ma-0">
                                         <details-readonly-table
                                             ref="statistics-table"
                                             :title="`${$tc('statistics', 2)}`"
                                             :tableData="current_server_stats"
+                                            isTree
                                         />
                                     </v-col>
                                     <v-col cols="12" class="pa-0 mt-4">
@@ -34,7 +35,7 @@
                                     </v-col>
                                 </v-row>
                             </v-col>
-                            <v-col class="py-0 ma-0" cols="8">
+                            <v-col class="py-0 ma-0" cols="7">
                                 <details-readonly-table
                                     ref="sessions-table"
                                     :tdBorderLeft="false"
@@ -64,6 +65,7 @@
                                     ref="diagnostics-table"
                                     :title="`${$t('monitorDiagnostics')}`"
                                     :tableData="monitorDiagnostics"
+                                    expandAll
                                     isTree
                                 />
                             </v-col>
