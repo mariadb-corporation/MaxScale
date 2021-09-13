@@ -141,7 +141,10 @@ GWBUF* Database::translate(mxs::Buffer&& mariadb_response)
     {
         m_context.set_last_error(x.create_last_error());
 
-        pResponse = x.create_response(*m_sCommand.get());
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = x.create_response(*m_sCommand.get());
+        }
     }
     catch (const std::exception& x)
     {
@@ -150,7 +153,10 @@ GWBUF* Database::translate(mxs::Buffer&& mariadb_response)
         HardError error(x.what(), error::COMMAND_FAILED);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
 
     if (state == State::READY)
@@ -178,7 +184,10 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
     {
         m_context.set_last_error(x.create_last_error());
 
-        pResponse = x.create_response(*m_sCommand.get());
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = x.create_response(*m_sCommand.get());
+        }
     }
     catch (const bsoncxx::exception& x)
     {
@@ -187,7 +196,10 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         HardError error(x.what(), error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
     catch (const std::exception& x)
     {
@@ -196,7 +208,10 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         HardError error(x.what(), error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
 
     if (state == State::READY)
