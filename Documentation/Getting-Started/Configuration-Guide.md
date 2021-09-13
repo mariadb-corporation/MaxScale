@@ -1742,6 +1742,111 @@ This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
+### `user_accounts_file`
+
+Defines path to a file with additional user accounts for incoming clients.
+Default value is empty, which disables the feature.
+```
+user_accounts_file=/home/root/users.json
+```
+
+In addition to querying the backends, MaxScale can read users from a file. This
+feature is useful when backends have limitations on the type of users that can
+be created (e.g. XPand), or if MaxScale needs to allow users to log in even
+when backends are down (e.g. binlog router). The users read from the file are
+only present on MaxScale, so logging into backends can still fail. The format of
+the file is protocol-specific. The following only applies to MariaDB-protocol,
+which is also the only protocol supporting this feature.
+
+The file contains json text. Three objects are read from it: *user*, *db* and
+*roles_mapping*, none of which are mandatory. These objects must be arrays which
+contain user information similar to the *mysql.user*, *mysql.db* and
+*mysql.roles_mapping* tables on the server. Each array element must define at
+least the string fields "user" and "host", which define the user account to add
+or modify.
+
+The elements in the *user*-array may contain the following additional fields. If
+a field is not defined, it is assumed either empty (string) or false (boolean).
+- "password": String. Password hash, similar to the equivalent column on server.
+- "plugin": String. Authentication plugin used by client, similar to server.
+- "authentication_string": String. Additional authentication info, similar to server.
+- "default_role": String. Default role of user, similar to server.
+- "super_priv": Boolean. True if user has SUPER grant.
+- "global_db_priv": Boolean. True if user can access any database on login.
+- "proxy_priv": Boolean. True if user has a PROXY grant.
+- "is_role": Boolean. True if user is a role.
+
+The elements in the *db*-array must contain the following additional field:
+- "db": String. Database which the user can access. Can contain % and _ wildcards.
+
+The elements in the *roles_mapping*-array must contain the following additional
+field:
+- "role": String. Role the user can access.
+
+When users are read from both servers and the file, the server takes priority.
+That is, if user `'joe'@'%'` is defined on both, the file-version is discarded.
+The file can still affect the database grants and roles of `'joe'@'%'`, as the
+*db* and *roles_mapping*-arrays are read separately and added to existing grant
+and role lists.
+
+An example users file is below.
+```
+{
+    "user": [
+        {
+            "user": "test1",
+            "host": "%",
+            "global_db_priv": true
+        },
+        {
+            "user": "test2",
+            "host": "127.0.0.1",
+            "password": "*032169CDF0B90AF8C00992D43D354E29A2EACB42",
+            "plugin": "mysql_native_password",
+            "default_role": "role2"
+        },
+        {
+            "user": "",
+            "host": "%",
+            "plugin": "pam",
+            "proxy_priv": true
+        }
+    ],
+    "db": [
+        {
+            "user": "test2",
+            "host": "127.0.0.1",
+            "db": "test"
+        }
+    ],
+    "roles_mapping": [
+        {
+            "user": "test2",
+            "host": "127.0.0.1",
+            "role": "role2"
+        }
+    ]
+}
+```
+
+### `user_accounts_file_usage`
+
+Defines when *user_accounts_file* is read. The value an enum, either
+"add_when_load_ok" (default) or "file_only_always".
+
+"add_when_load_ok" means that the file is only read when users are successfully
+read from a server. The file contents are then added to the server-based data.
+If reading from server fails (e.g. servers are down), the file is ignored.
+
+"file_only_always" means that users are not read from the servers at all and the
+file contents is all that matters. The state of the servers is ignored. This
+mode can be useful with the binlog router, as it allows clients to log in and
+fetch binary logs from MaxScale even when backend servers are down.
+
+```
+user_accounts_file_usage=file_only_always
+```
+
 ### `idle_session_pool_time`
 
 Normally, MaxScale only pools backend connections when a session is closed
