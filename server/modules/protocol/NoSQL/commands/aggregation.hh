@@ -106,7 +106,7 @@ public:
         doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 
 private:
@@ -263,7 +263,7 @@ public:
         auto doc = bsoncxx::from_json(json.str());
 
         *ppResponse = create_response(doc);
-        return READY;
+        return State::READY;
     }
 };
 

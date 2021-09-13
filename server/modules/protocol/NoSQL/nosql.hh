@@ -180,6 +180,12 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 
 }
 
+enum class State
+{
+    BUSY,
+    READY
+};
+
 // The MongoDB version we claim to be.
 const int NOSQL_VERSION_MAJOR = 4;
 const int NOSQL_VERSION_MINOR = 4;
@@ -986,12 +992,6 @@ public:
         static std::atomic<int64_t> s_connection_id;
     };
 
-    enum State
-    {
-        READY,  // Ready for a command.
-        PENDING // A command is being executed.
-    };
-
     NoSQL(mxs::ClientConnection* pClient_connection,
           mxs::Component* pDownstream,
           Config* pConfig);
@@ -1002,12 +1002,12 @@ public:
 
     State state() const
     {
-        return m_sDatabase ?  PENDING : READY;
+        return m_sDatabase ?  State::BUSY : State::READY;
     }
 
-    bool is_pending() const
+    bool is_busy() const
     {
-        return state() == PENDING;
+        return state() == State::BUSY;
     }
 
     Context& context()
@@ -1037,7 +1037,7 @@ private:
     GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
     GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
 
-    State              m_state { READY };
+    State              m_state { State::READY };
     Context            m_context;
     Config&            m_config;
     std::deque<GWBUF*> m_requests;

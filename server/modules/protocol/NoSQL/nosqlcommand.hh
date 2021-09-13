@@ -67,12 +67,6 @@ public:
 
     virtual GWBUF* execute() = 0;
 
-    enum State
-    {
-        BUSY,
-        READY
-    };
-
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
     enum class IsError

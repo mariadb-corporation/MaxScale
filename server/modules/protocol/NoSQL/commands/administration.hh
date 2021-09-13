@@ -46,7 +46,7 @@ public:
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        State state = READY;
+        State state = State::READY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -107,7 +107,7 @@ private:
 
     State translate_normal_action(mxs::Buffer&& mariadb_response, GWBUF **ppResponse)
     {
-        State state = READY;
+        State state = State::READY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -128,7 +128,7 @@ private:
                     if (m_database.config().auto_create_tables)
                     {
                         create_table();
-                        state = BUSY;
+                        state = State::BUSY;
                     }
                     else
                     {
@@ -158,7 +158,7 @@ private:
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -167,7 +167,7 @@ private:
         {
         case ComResponse::OK_PACKET:
             pResponse = collection_exists(true);
-            state = READY;
+            state = State::READY;
             break;
 
         case ComResponse::ERR_PACKET:
@@ -203,7 +203,7 @@ private:
                 case ER_TABLE_EXISTS_ERROR:
                     // Someone created it before we did.
                     pResponse = collection_exists(false);
-                    state = READY;
+                    state = State::READY;
                     break;
 
                 default:
@@ -225,7 +225,7 @@ private:
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -360,7 +360,7 @@ public:
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         switch (m_action)
@@ -382,7 +382,7 @@ public:
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -395,7 +395,7 @@ public:
                 doc.append(kvp(key::OK, (int32_t)1));
 
                 pResponse = create_response(doc.extract());
-                state = READY;
+                state = State::READY;
             }
             break;
 
@@ -456,7 +456,7 @@ public:
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -814,7 +814,7 @@ public:
         doc.append(kvp(key::N_INDEXES_WAS, 1)); // TODO: Report real value.
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 };
 
@@ -875,7 +875,7 @@ public:
         doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 };
 
@@ -1165,7 +1165,7 @@ public:
         }
 
         *ppResponse = pResponse;
-        return READY;
+        return State::READY;
     }
 
 private:
@@ -1306,7 +1306,7 @@ public:
         }
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 
 private:
@@ -1461,7 +1461,7 @@ public:
         doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 
 private:

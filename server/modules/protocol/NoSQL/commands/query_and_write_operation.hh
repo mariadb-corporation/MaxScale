@@ -107,7 +107,7 @@ public:
 
         ++m_it;
 
-        State rv = BUSY;
+        State rv = State::BUSY;
 
         if (m_it == m_query.statements().end() || abort)
         {
@@ -126,7 +126,7 @@ public:
             }
 
             pResponse = create_response(doc.extract());
-            rv = READY;
+            rv = State::READY;
         }
         else
         {
@@ -519,7 +519,7 @@ public:
         }
 
         *ppResponse = pResponse;
-        return READY;
+        return State::READY;
     }
 
 private:
@@ -618,7 +618,7 @@ public:
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
     {
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -638,7 +638,8 @@ public:
             break;
         }
 
-        mxb_assert((state == BUSY && pResponse == nullptr) || (state == READY && pResponse != nullptr));
+        mxb_assert((state == State::BUSY && pResponse == nullptr)
+                   || (state == State::READY && pResponse != nullptr));
         *ppResponse = pResponse;
         return state;
     }
@@ -745,7 +746,7 @@ protected:
     {
         mxb_assert(m_action == Action::INSERTING_DATA);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -778,7 +779,7 @@ protected:
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());
@@ -838,7 +839,7 @@ protected:
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
-        State state = BUSY;
+        State state = State::BUSY;
         GWBUF* pResponse = nullptr;
 
         ComResponse response(mariadb_response.data());

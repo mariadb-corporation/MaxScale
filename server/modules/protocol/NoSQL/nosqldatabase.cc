@@ -126,12 +126,12 @@ GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
 
 GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
 {
-    mxb_assert(is_pending());
+    mxb_assert(is_busy());
     mxb_assert(m_sCommand.get());
 
     GWBUF* pResponse = nullptr;
 
-    Command::State state = Command::READY;
+    State state = State::READY;
 
     try
     {
@@ -153,9 +153,9 @@ GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
         pResponse = error.create_response(*m_sCommand);
     }
 
-    if (state == Command::READY)
+    if (state == State::READY)
     {
-        mxb_assert(state == Command::READY);
+        mxb_assert(state == State::READY);
 
         m_sCommand.reset();
 
@@ -172,7 +172,7 @@ GWBUF* nosql::Database::execute_command(std::unique_ptr<Command> sCommand)
     try
     {
         m_sCommand = std::move(sCommand);
-        set_pending();
+        set_busy();
 
         pResponse = m_sCommand->execute();
     }

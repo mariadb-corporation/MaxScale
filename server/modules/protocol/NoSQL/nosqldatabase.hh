@@ -27,12 +27,6 @@ namespace nosql
 class Database
 {
 public:
-    enum State
-    {
-        READY,  // Ready for a command.
-        PENDING // A command is being executed.
-    };
-
     ~Database();
 
     Database(const Database&) = delete;
@@ -176,7 +170,7 @@ public:
      */
     bool is_ready() const
     {
-        return m_state == READY;
+        return m_state == State::READY;
     }
 
 private:
@@ -184,26 +178,26 @@ private:
              NoSQL::Context* pContext,
              Config* pConfig);
 
-    bool is_pending() const
+    bool is_busy() const
     {
-        return m_state == PENDING;
+        return m_state == State::BUSY;
     }
 
-    void set_pending()
+    void set_busy()
     {
-        m_state = PENDING;
+        m_state = State::BUSY;
     }
 
     void set_ready()
     {
-        m_state = READY;
+        m_state = State::READY;
     }
 
     GWBUF* execute_command(std::unique_ptr<Command> sCommand);
 
     using SCommand = std::unique_ptr<Command>;
 
-    State             m_state { READY };
+    State             m_state { State::READY };
     const std::string m_name;
     NoSQL::Context&   m_context;
     Config&           m_config;

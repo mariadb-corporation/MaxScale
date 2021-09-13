@@ -169,7 +169,7 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 {
     int32_t rv = 1;
 
-    if (m_nosql.is_pending())
+    if (m_nosql.is_busy())
     {
         rv = m_nosql.clientReply(pMariaDB_response, m_pDcb);
     }
@@ -304,7 +304,7 @@ bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const 
 {
     int32_t rv = 0;
 
-    if (m_nosql.is_pending())
+    if (m_nosql.is_busy())
     {
         rv = write(pBuffer);
     }
