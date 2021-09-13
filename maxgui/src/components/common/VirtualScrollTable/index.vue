@@ -102,18 +102,15 @@
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td px-3"
-                            :class="{ 'pointer no-userSelect': h.draggable }"
+                            :class="{ 'cursor--grab no-userSelect': h.draggable }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
-                            :draggable="h.draggable"
                             v-on="
                                 h.draggable
                                     ? {
-                                          dragstart: () => (isDragging = true),
-                                          drag: e => onCellDragging({ e, cellValue: row[i] }),
-                                          dragend: e => onCellDragEnd({ e, cellValue: row[i] }),
+                                          mousedown: e => onCellDragStart(e),
                                       }
                                     : null
                             "
@@ -167,6 +164,7 @@ import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
 import RowGroup from './RowGroup.vue'
 import RowGroupCheckbox from './RowGroupCheckbox.vue'
+import customDragEvt from 'mixins/customDragEvt'
 export default {
     name: 'virtual-scroll-table',
     components: {
@@ -175,6 +173,7 @@ export default {
         'row-group': RowGroup,
         'row-group-checkbox': RowGroupCheckbox,
     },
+    mixins: [customDragEvt],
     props: {
         headers: {
             type: Array,
@@ -210,9 +209,6 @@ export default {
             // Select feat states
             selectedItems: [],
             selectedGroupItems: [],
-            //cell dragging states
-            isDragging: false,
-            draggingEvt: null,
         }
     },
     computed: {
@@ -452,19 +448,12 @@ export default {
                 this.selectedGroupItems = []
             }
         },
-        onCellDragging({ e, cellValue }) {
-            if (
-                this.$typy(this.draggingEvt).isNull ||
-                this.draggingEvt.clientX !== e.clientX ||
-                this.draggingEvt.clientY !== e.clientY
-            ) {
-                this.draggingEvt = e
-                this.$emit('on-cell-dragging', { e, name: cellValue })
-            }
-        },
-        onCellDragEnd({ e, cellValue }) {
-            this.$emit('on-cell-dragend', { e, name: cellValue })
-            this.isDragging = false
+
+        onCellDragStart(e) {
+            e.preventDefault()
+            // Assign value to data in customDragEvt mixin
+            this.isDragging = true
+            this.dragTarget = e.target
         },
     },
 }

@@ -21,17 +21,13 @@
                 <div
                     :id="`item-label-${activatorIdTransform(item.id)}`"
                     class="d-flex align-center node-label"
+                    :class="{ 'cursor--grab': item.draggable }"
+                    @mousedown="item.draggable ? onNodeDragStart($event) : null"
                 >
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span
-                        :draggable="item.draggable"
-                        class="text-truncate d-inline-block"
-                        @dragstart="() => (isDragging = true)"
-                        @drag="e => onNodeDragging(e)"
-                        @dragend="e => onNodeDragEnd({ e, name: item.name })"
-                    >
+                    <span class="text-truncate d-inline-block">
                         {{ item.name }}
                     </span>
                 </div>
@@ -104,8 +100,10 @@
  * Public License.
  */
 import { mapGetters, mapMutations, mapState } from 'vuex'
+import customDragEvt from 'mixins/customDragEvt'
 export default {
     name: 'db-list-tree',
+    mixins: [customDragEvt],
     data() {
         return {
             /**
@@ -125,8 +123,6 @@ export default {
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
             nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
-            isDragging: false,
-            draggingEvt: null,
             expandedNodes: [],
         }
     },
@@ -292,22 +288,11 @@ export default {
         onContextMenu({ e, item }) {
             if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
-        onNodeDragging(e) {
-            if (
-                this.$typy(this.draggingEvt).isNull ||
-                this.draggingEvt.clientX !== e.clientX ||
-                this.draggingEvt.clientY !== e.clientY
-            ) {
-                this.draggingEvt = e
-                this.$emit('dragging-schema', { e: this.draggingEvt })
-            }
-        },
-        onNodeDragEnd({ e, name }) {
-            this.$emit('drop-schema-to-editor', {
-                e,
-                name: this.$help.escapeIdentifiers(name),
-            })
-            this.isDragging = false
+        onNodeDragStart(e) {
+            e.preventDefault()
+            // Assign value to data in customDragEvt mixin
+            this.isDragging = true
+            this.dragTarget = e.target
         },
     },
 }

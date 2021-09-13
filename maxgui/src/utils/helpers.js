@@ -625,6 +625,71 @@ export function copyTextToClipboard(text) {
     } else fallbackCopyTextToClipboard(text)
 }
 
+/**
+ * @private
+ * This copies inherit styles from srcNode to dstNode
+ * @param {Object} payload.srcNode - html node to be copied
+ * @param {Object} payload.dstNode - target html node to pasted
+ */
+function copyNodeStyle({ srcNode, dstNode }) {
+    const computedStyle = window.getComputedStyle(srcNode)
+    Array.from(computedStyle).forEach(key =>
+        dstNode.style.setProperty(
+            key,
+            computedStyle.getPropertyValue(key),
+            computedStyle.getPropertyPriority(key)
+        )
+    )
+}
+export function removeTargetDragEle(dragTargetId) {
+    let elem = document.getElementById(dragTargetId)
+    if (elem) elem.parentNode.removeChild(elem)
+}
+export function addDragTargetEle({ e, dragTarget, dragTargetId }) {
+    let cloneNode = dragTarget.cloneNode(true)
+    cloneNode.setAttribute('id', dragTargetId)
+    cloneNode.textContent = dragTarget.textContent
+    copyNodeStyle({ srcNode: dragTarget, dstNode: cloneNode })
+    cloneNode.style.position = 'absolute'
+    cloneNode.style.top = e.clientY + 'px'
+    cloneNode.style.left = e.clientX + 'px'
+    cloneNode.style.zIndex = 9999
+    document.getElementById('app').appendChild(cloneNode)
+}
+
+/**
+ * This allows to enter minus or hyphen minus and numbers
+ * @param {Event} e - input evt
+ */
+export function preventNonInteger(e) {
+    if (!e.key.match(/^[-]?\d*$/g)) e.preventDefault()
+}
+/**
+ * This allows user to enter only number
+ * @param {Event} e - input evt
+ */
+export function preventNonNumericalVal(e) {
+    if (!e.key.match(/^\d*$/g)) e.preventDefault()
+}
+/**
+ * This adds number of days to current date
+ * @param {Number} days - Number of days
+ * @returns {String} - returns date
+ */
+export function addDaysToNow(days) {
+    let curr = new Date()
+    return curr.setDate(curr.getDate() + days)
+}
+/**
+ * This returns number of days between target timestamp and current date
+ * @param {String} timestamp - target unix timestamp
+ * @returns {Number} - days diff
+ */
+export function daysDiff(timestamp) {
+    const now = Vue.moment().startOf('day')
+    const end = Vue.moment(timestamp).startOf('day')
+    return Vue.moment.duration(end.diff(now)).asDays()
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -670,6 +735,12 @@ Object.defineProperties(Vue.prototype, {
                 handleAddPxUnit,
                 getScrollbarWidth,
                 copyTextToClipboard,
+                removeTargetDragEle,
+                addDragTargetEle,
+                preventNonNumericalVal,
+                preventNonInteger,
+                addDaysToNow,
+                daysDiff,
             }
         },
     },

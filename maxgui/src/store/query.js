@@ -441,6 +441,22 @@ export default {
             await dispatch('updateActiveDb')
             dispatch('changeWkeName', chosenConn.name)
         },
+        handleAddNewWke({ commit }) {
+            try {
+                commit('ADD_NEW_WKE')
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-handleAddNewWke')
+                logger.error(e)
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    {
+                        text: [this.i18n.t('errors.persistentStorage')],
+                        type: 'error',
+                    },
+                    { root: true }
+                )
+            }
+        },
         handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
             const targetWke = state.worksheets_arr[wkeIdx]
             dispatch('releaseMemory', targetWke.id)

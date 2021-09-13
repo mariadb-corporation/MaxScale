@@ -155,15 +155,15 @@ export default {
     methods: {
         ...mapMutations({
             SET_FULLSCREEN: 'query/SET_FULLSCREEN',
-            ADD_NEW_WKE: 'query/ADD_NEW_WKE',
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
         }),
         ...mapActions({
             handleDeleteWke: 'query/handleDeleteWke',
+            handleAddNewWke: 'query/handleAddNewWke',
             pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
         addNewWs() {
-            this.ADD_NEW_WKE()
+            this.handleAddNewWke()
             this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
         },
         openFavoriteDialog() {
