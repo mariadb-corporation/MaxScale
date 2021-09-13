@@ -4,8 +4,7 @@
             <th
                 v-for="(header, i) in headers"
                 :key="i"
-                :width="header.width"
-                :style="{ padding: header.padding }"
+                :style="{ padding: header.padding, width: header.width }"
                 :class="thClasses(header)"
                 @click="header.sortable !== false ? $emit('change-sort', header.value) : null"
             >

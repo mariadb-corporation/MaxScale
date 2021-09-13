@@ -23,7 +23,7 @@
         >
             <!-- Display toggle button at the first column-->
             <v-btn
-                v-if="cellIndex === 0 && item.children && item.children.length"
+                v-if="shouldShowToggleBtn"
                 width="32"
                 height="32"
                 class="arrow-toggle mr-1"
@@ -112,6 +112,11 @@ export default {
             //For truncated cell
             truncatedMenu: { index: null, x: 0, y: 16.5 },
         }
+    },
+    computed: {
+        shouldShowToggleBtn() {
+            return Boolean(this.cellIndex === 0 && this.item.children && this.item.children.length)
+        },
     },
     methods: {
         tdClasses(header, item, cellIndex) {
@@ -207,9 +212,11 @@ export default {
             // auto truncated text feature
             const wrapper = this.$refs.itemWrapperCell
             const text = this.$refs.truncatedTextAtRow
-
-            if (wrapper && text && wrapper.offsetWidth < text.offsetWidth) {
-                // const wrapperClientRect = wrapper.getBoundingClientRect()
+            let wrapperOffsetWidth = this.$typy(wrapper, 'offsetWidth').safeNumber
+            // Subtracting toggle button's width from wrapper's width
+            if (this.shouldShowToggleBtn) wrapperOffsetWidth = wrapperOffsetWidth - 36
+            const txtOffsetWidth = this.$typy(text, 'offsetWidth').safeNumber
+            if (wrapperOffsetWidth < txtOffsetWidth) {
                 this.truncatedMenu.index = cellIndex
                 this.truncatedMenu.x = text.offsetWidth - wrapper.offsetWidth
                 this.truncatedMenu.rowIndex = rowIndex
