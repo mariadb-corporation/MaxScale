@@ -22,6 +22,7 @@ const char EVENT_NAME[] = "test_event";
 const char EVENT_SHCEDULER[] = "SET GLOBAL event_scheduler = %s;";
 const char USE_TEST[] = "USE test;";
 const char DELETE_EVENT[] = "DROP EVENT %s;";
+const char SET_NAMES[] = "SET NAMES %s COLLATE %s";
 
 const char EV_STATE_ENABLED[] = "ENABLED";
 const char EV_STATE_DISABLED[] = "DISABLED";
@@ -31,8 +32,7 @@ const char def_charset[] = "latin1";
 const char def_collation[] = "latin1_swedish_ci";
 
 void expect_event_charset_collation(TestConnections& test, const string& event_name,
-                                    const string& client_charset, const string& collation_connection,
-                                    const string& database_collation);
+                                    const string& client_charset, const string& collation_connection);
 
 int read_incremented_field(TestConnections& test)
 {
@@ -73,7 +73,7 @@ void create_event(TestConnections& test)
         && conn->cmd_f("CREATE OR REPLACE TABLE test.t1(c1 INT);")
         && conn->cmd(USE_TEST)
         && conn->cmd("INSERT INTO t1 VALUES (1);")
-        && conn->cmd_f("SET NAMES %s COLLATE %s", def_charset, def_collation)
+        && conn->cmd_f(SET_NAMES, def_charset, def_collation)
         && conn->cmd_f(create_event_query, EVENT_NAME))
     {
         test.maxscale->wait_for_monitor();
@@ -131,6 +131,7 @@ void set_event_state(TestConnections& test, const string& event_name, const stri
     const char query_fmt[] = "ALTER EVENT %s %s;";
 
     if ((test.try_query(conn, USE_TEST) == 0)
+        && (test.try_query(conn, SET_NAMES, def_charset, def_collation) == 0)
         && (test.try_query(conn, query_fmt, event_name.c_str(), new_state.c_str()) == 0))
     {
         success = true;
@@ -260,7 +261,7 @@ void test_main(TestConnections& test)
         // MXS-3158 Check that monitor preserves the character set and collation of an even when altering it.
         test.tprintf("Checking event handling with non-default charset and collation.");
 
-        expect_event_charset_collation(test, EVENT_NAME, def_charset, def_collation, def_collation);
+        expect_event_charset_collation(test, EVENT_NAME, def_charset, def_collation);
         if (test.ok())
         {
             // Alter event charset to utf8.
@@ -271,7 +272,7 @@ void test_main(TestConnections& test)
             test.try_query(conn, "SET NAMES %s COLLATE %s; ALTER EVENT %s ENABLE;",
                            new_charset, new_collation, EVENT_NAME);
             check_event_status(test, server1_ind, EVENT_NAME, EV_STATE_ENABLED);
-            expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation, def_collation);
+            expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation);
 
             if (test.ok())
             {
@@ -279,8 +280,7 @@ void test_main(TestConnections& test)
                 if (test.ok())
                 {
                     check_event_status(test, server2_ind, EVENT_NAME, EV_STATE_ENABLED);
-                    expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation,
-                                                   def_collation);
+                    expect_event_charset_collation(test, EVENT_NAME, new_charset, new_collation);
                 }
 
                 // Switchover back.
@@ -293,8 +293,7 @@ void test_main(TestConnections& test)
 }
 
 void expect_event_charset_collation(TestConnections& test, const string& event_name,
-                                    const string& client_charset, const string& collation_connection,
-                                    const string& database_collation)
+                                    const string& client_charset, const string& collation_connection)
 {
     auto conn = test.maxscale->rwsplit();
     conn.connect();
@@ -306,18 +305,14 @@ void expect_event_charset_collation(TestConnections& test, const string& event_n
     {
         string& found_charset = row[0];
         string& found_collation = row[1];
-        string& found_dbcoll = row[2];
 
-        test.tprintf("Event '%s': CHARACTER_SET_CLIENT is '%s', COLLATION_CONNECTION is '%s', "
-                     "DATABASE_COLLATION is '%s'",
-                     EVENT_NAME, found_charset.c_str(), found_collation.c_str(), found_dbcoll.c_str());
+        test.tprintf("Event '%s': CHARACTER_SET_CLIENT is '%s', COLLATION_CONNECTION is '%s'",
+                     EVENT_NAME, found_charset.c_str(), found_collation.c_str());
         const char error_fmt[] = "Wrong %s. Found %s, expected %s.";
         test.expect(found_charset == client_charset, error_fmt, "CHARACTER_SET_CLIENT",
                     found_charset.c_str(), client_charset.c_str());
         test.expect(found_collation == collation_connection, error_fmt, "COLLATION_CONNECTION",
                     found_collation.c_str(), collation_connection.c_str());
-        test.expect(found_dbcoll == database_collation, error_fmt, "DATABASE_COLLATION",
-                    found_dbcoll.c_str(), database_collation.c_str());
     }
     else
     {
