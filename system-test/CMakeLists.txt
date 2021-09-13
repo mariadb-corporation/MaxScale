@@ -587,9 +587,6 @@ add_test_script(run_ctrl_c.sh run_ctrl_c.sh replication LABELS maxscale LIGHT RE
 # run a set of queries in the loop (see setmix.sql) using Perl client
 add_test_script(run_session_hang.sh run_session_hang.sh replication LABELS readwritesplit REPL_BACKEND)
 
-# Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
-add_test_executable(rw_select_insert.cpp rw_select_insert replication LABELS readwritesplit REPL_BACKEND)
-
 # Checks connections are distributed equaly among backends
 add_test_executable(rwsplit_conn_num.cpp rwsplit_conn_num repl_lgc LABELS readwritesplit LIGHT REPL_BACKEND)
 
