@@ -3049,8 +3049,13 @@ GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req)
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    // OP_DELETE does not return anything, ever.
-    GWBUF* pResponse = m_sDatabase->handle_delete(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_delete(pRequest, std::move(req), &pResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
 
     return pResponse;
 }
@@ -3062,8 +3067,13 @@ GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    // OP_INSERT does not return anything, ever.
-    GWBUF* pResponse = m_sDatabase->handle_insert(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_insert(pRequest, std::move(req), &pResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
 
     return pResponse;
 }
@@ -3075,8 +3085,13 @@ GWBUF* nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req)
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    // OP_UPDATE does not return anything, ever.
-    GWBUF* pResponse = m_sDatabase->handle_update(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_update(pRequest, std::move(req), &pResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
 
     return pResponse;
 }
@@ -3088,9 +3103,10 @@ GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req)
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = m_sDatabase->handle_query(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_query(pRequest, std::move(req), &pResponse);
 
-    if (pResponse)
+    if (state == State::READY)
     {
         m_sDatabase.reset();
     }
@@ -3105,9 +3121,10 @@ GWBUF* nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req)
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = m_sDatabase->handle_get_more(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), &pResponse);
 
-    if (pResponse)
+    if (state == State::READY)
     {
         m_sDatabase.reset();
     }
@@ -3122,10 +3139,13 @@ GWBUF* nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& r
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
 
-    GWBUF* pResponse = m_sDatabase->handle_kill_cursors(pRequest, std::move(req));
+    GWBUF* pResponse = nullptr;
+    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), &pResponse);
 
-    // TODO: Change prototypes so that a non-null return is not required for readiness.
-    m_sDatabase.reset();
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
 
     return pResponse;
 }
@@ -3151,9 +3171,9 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
             mxb_assert(!m_sDatabase.get());
             m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
 
-            pResponse = m_sDatabase->handle_msg(pRequest, std::move(req));
+            State state = m_sDatabase->handle_msg(pRequest, std::move(req), &pResponse);
 
-            if (pResponse)
+            if (state == State::READY)
             {
                 m_sDatabase.reset();
             }
