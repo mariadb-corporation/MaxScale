@@ -1020,7 +1020,15 @@ public:
         return m_config;
     }
 
-    GWBUF* handle_request(GWBUF* pRequest);
+    State handle_request(GWBUF* pRequest, GWBUF** ppResponse);
+
+    GWBUF* handle_request(GWBUF* pRequest)
+    {
+        GWBUF* pResponse = nullptr;
+        handle_request(pRequest, &pResponse);
+
+        return pResponse;
+    }
 
     int32_t clientReply(GWBUF* sMariaDB_response, DCB* pDcb);
 
@@ -1029,13 +1037,13 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
-    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
-    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
-    GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
-    GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
-    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
-    GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
+    State handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse);
+    State handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse);
+    State handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse);
+    State handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse);
+    State handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse);
+    State handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse);
+    State handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse);
 
     State              m_state { State::READY };
     Context            m_context;

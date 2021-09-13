@@ -2892,8 +2892,9 @@ nosql::NoSQL::~NoSQL()
 {
 }
 
-GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
+State nosql::NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
 {
+    State state = State::READY;
     GWBUF* pResponse = nullptr;
 
     if (!m_sDatabase)
@@ -2917,31 +2918,31 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
                 break;
 
             case MONGOC_OPCODE_GET_MORE:
-                pResponse = handle_get_more(pRequest, nosql::GetMore(req));
+                state = handle_get_more(pRequest, nosql::GetMore(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_KILL_CURSORS:
-                pResponse = handle_kill_cursors(pRequest, nosql::KillCursors(req));
+                state = handle_kill_cursors(pRequest, nosql::KillCursors(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_DELETE:
-                pResponse = handle_delete(pRequest, nosql::Delete(req));
+                state = handle_delete(pRequest, nosql::Delete(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_INSERT:
-                pResponse = handle_insert(pRequest, nosql::Insert(req));
+                state = handle_insert(pRequest, nosql::Insert(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_MSG:
-                pResponse = handle_msg(pRequest, nosql::Msg(req));
+                state = handle_msg(pRequest, nosql::Msg(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                pResponse = handle_query(pRequest, nosql::Query(req));
+                state = handle_query(pRequest, nosql::Query(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_UPDATE:
-                pResponse = handle_update(pRequest, nosql::Update(req));
+                state = handle_update(pRequest, nosql::Update(req), &pResponse);
                 break;
 
             default:
@@ -2967,7 +2968,8 @@ GWBUF* nosql::NoSQL::handle_request(GWBUF* pRequest)
         m_requests.push_back(pRequest);
     }
 
-    return pResponse;
+    *ppResponse = pResponse;
+    return state;
 }
 
 int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
@@ -2993,6 +2995,7 @@ int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
         {
             // Loop as long as responses to requests can be generated immediately.
             // If it can't then we'll continue once clientReply() is called anew.
+            State state = State::READY;
             do
             {
                 mxb_assert(!m_sDatabase.get());
@@ -3000,7 +3003,7 @@ int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
                 GWBUF* pRequest = m_requests.front();
                 m_requests.pop_front();
 
-                pProtocol_response = handle_request(pRequest);
+                state = handle_request(pRequest, &pProtocol_response);
 
                 if (pProtocol_response)
                 {
@@ -3008,7 +3011,7 @@ int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
                     pDcb->writeq_append(pProtocol_response);
                 }
             }
-            while (pProtocol_response && !m_requests.empty());
+            while (state == State::READY && !m_requests.empty());
         }
     }
     else
@@ -3042,119 +3045,113 @@ string extract_database(const string& collection)
 
 }
 
-GWBUF* nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req)
+State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(DELETE): %s", req.zCollection());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_delete(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_delete(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
+State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(INSERT): %s", req.zCollection());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_insert(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_insert(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req)
+State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(UPDATE): %s", req.zCollection());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_update(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_update(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req)
+State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_query(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_query(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req)
+State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(GetMore): %ld", req.cursor_id());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req)
+State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(KillCursors)");
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
 
-    GWBUF* pResponse = nullptr;
-    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), &pResponse);
+    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), ppResponse);
 
     if (state == State::READY)
     {
         m_sDatabase.reset();
     }
 
-    return pResponse;
+    return state;
 }
 
-GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
+State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
 
-    GWBUF* pResponse = nullptr;
+    State state = State::READY;
 
     const auto& doc = req.document();
 
@@ -3171,7 +3168,7 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
             mxb_assert(!m_sDatabase.get());
             m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
 
-            State state = m_sDatabase->handle_msg(pRequest, std::move(req), &pResponse);
+            state = m_sDatabase->handle_msg(pRequest, std::move(req), ppResponse);
 
             if (state == State::READY)
             {
@@ -3192,7 +3189,7 @@ GWBUF* nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
         kill_client();
     }
 
-    return pResponse;
+    return state;
 }
 
 string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
