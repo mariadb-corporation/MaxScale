@@ -51,7 +51,7 @@ public:
     }
 
 public:
-    GWBUF* execute() override final
+    State execute(GWBUF** ppNoSQL_response) override final
     {
         auto query = generate_sql();
 
@@ -66,7 +66,8 @@ public:
 
         execute_one_statement();
 
-        return nullptr;
+        *ppNoSQL_response = nullptr;
+        return State::BUSY;
     }
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override

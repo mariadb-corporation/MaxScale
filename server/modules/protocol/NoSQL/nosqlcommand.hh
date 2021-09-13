@@ -65,7 +65,7 @@ public:
         return m_last_statement;
     }
 
-    virtual GWBUF* execute() = 0;
+    virtual State execute(GWBUF** ppNoSQL_response) = 0;
 
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
@@ -194,7 +194,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -223,7 +223,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -253,7 +253,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -291,7 +291,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -320,7 +320,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -340,7 +340,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -537,7 +537,7 @@ class ImmediateCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -558,7 +558,7 @@ class SingleCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 
