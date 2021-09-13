@@ -143,19 +143,8 @@ MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession,
 
 bool MaskingFilterSession::check_query(GWBUF* pPacket)
 {
-    const char* zUser = session_get_user(m_pSession);
-    const char* zHost = session_get_remote(m_pSession);
-
-    if (!zUser)
-    {
-        zUser = "";
-    }
-
-    if (!zHost)
-    {
-        zHost = "";
-    }
-
+    const char* zUser = m_pSession->user().c_str();
+    const char* zHost = m_pSession->client_remote().c_str();
     bool acceptable = true;
 
     if (qc_query_is_type(qc_get_type_mask(pPacket), QUERY_TYPE_USERVAR_WRITE))
@@ -439,19 +428,8 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
     }
     else
     {
-        const char* zUser = session_get_user(m_pSession);
-        const char* zHost = session_get_remote(m_pSession);
-
-        if (!zUser)
-        {
-            zUser = "";
-        }
-
-        if (!zHost)
-        {
-            zHost = "";
-        }
-
+        const char* zUser = m_pSession->user().c_str();
+        const char* zHost = m_pSession->client_remote().c_str();
         const MaskingRules::Rule* pRule = m_res.rules()->get_rule_for(column_def, zUser, zHost);
 
         if (m_res.append_type_and_rule(column_def.type(), pRule))

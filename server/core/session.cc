@@ -137,12 +137,6 @@ void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
     m_protocol_data = std::move(new_data);
 }
 
-bool session_start(MXS_SESSION* ses)
-{
-    Session* session = static_cast<Session*>(ses);
-    return session->start();
-}
-
 void Session::link_backend_connection(mxs::BackendConnection* conn)
 {
     auto dcb = conn->dcb();
@@ -157,12 +151,6 @@ void Session::unlink_backend_connection(mxs::BackendConnection* conn)
 {
     remove_backend_conn(conn);
     session_put_ref(this);
-}
-
-void session_close(MXS_SESSION* ses)
-{
-    Session* session = static_cast<Session*>(ses);
-    session->close();
 }
 
 /**
@@ -208,16 +196,6 @@ const char* session_state_to_string(MXS_SESSION::State state)
     }
 }
 
-/**
- * Return the client connection address or name
- *
- * @param session       The session whose client address to return
- */
-const char* session_get_remote(const MXS_SESSION* session)
-{
-    return session ? session->client_remote().c_str() : nullptr;
-}
-
 void Session::deliver_response()
 {
     mxb_assert(response.buffer);
@@ -237,35 +215,6 @@ void Session::deliver_response()
 
     mxb_assert(!response.up);
     mxb_assert(!response.buffer);
-}
-
-bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
-{
-    Session* session = static_cast<Session*>(ses);
-    mxb_assert(session);
-
-    bool rv = session->routeQuery(buffer);
-
-    return rv;
-}
-
-bool mxs_route_reply(mxs::Routable* up, GWBUF* buffer, DCB* dcb)
-{
-    mxs::ReplyRoute route;
-    mxs::Reply reply;
-    return up->clientReply(buffer, route, reply);
-}
-
-/**
- * Return the username of the user connected to the client side of the
- * session.
- *
- * @param session               The session pointer.
- * @return      The user name or NULL if it can not be determined.
- */
-const char* session_get_user(const MXS_SESSION* session)
-{
-    return session ? session->user().c_str() : NULL;
 }
 
 static bool ses_find_id(DCB* dcb, void* data)
@@ -475,15 +424,6 @@ uint64_t session_get_current_id()
     MXS_SESSION* session = session_get_current();
 
     return session ? session->id() : 0;
-}
-
-bool session_add_variable(MXS_SESSION* session,
-                          const char* name,
-                          session_variable_handler_t handler,
-                          void* context)
-{
-    Session* pSession = static_cast<Session*>(session);
-    return pSession->add_variable(name, handler, context);
 }
 
 char* session_set_variable_value(MXS_SESSION* session,

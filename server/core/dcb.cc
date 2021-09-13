@@ -1612,7 +1612,7 @@ void ClientDCB::shutdown()
     if ((m_session->state() == MXS_SESSION::State::STARTED
          || m_session->state() == MXS_SESSION::State::STOPPING))
     {
-        session_close(m_session);
+        m_session->close();
     }
     m_protocol->finish_connection();
 }

@@ -269,10 +269,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
     reset_response_state();
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_POPULATE,
-                              &CacheFilterSession::set_cache_populate,
-                              this))
+    if (!pSession->add_variable(SV_MAXSCALE_CACHE_POPULATE, &CacheFilterSession::set_cache_populate, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -280,10 +277,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                   SV_MAXSCALE_CACHE_POPULATE);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_USE,
-                              &CacheFilterSession::set_cache_use,
-                              this))
+    if (!pSession->add_variable(SV_MAXSCALE_CACHE_USE, &CacheFilterSession::set_cache_use, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -291,10 +285,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                   SV_MAXSCALE_CACHE_USE);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_SOFT_TTL,
-                              &CacheFilterSession::set_cache_soft_ttl,
-                              this))
+    if (!pSession->add_variable(SV_MAXSCALE_CACHE_SOFT_TTL, &CacheFilterSession::set_cache_soft_ttl, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
@@ -302,10 +293,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                   SV_MAXSCALE_CACHE_SOFT_TTL);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_HARD_TTL,
-                              &CacheFilterSession::set_cache_hard_ttl,
-                              this))
+    if (!pSession->add_variable(SV_MAXSCALE_CACHE_HARD_TTL, &CacheFilterSession::set_cache_hard_ttl, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "

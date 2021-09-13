@@ -99,6 +99,11 @@ const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privilege
 }
 }
 
+MariaDBUserManager::MariaDBUserManager()
+{
+    m_userdb = std::make_shared<UserDatabase>();    // Must never be null
+}
+
 void MariaDBUserManager::start()
 {
     mxb_assert(!m_updater_thread.joinable());
@@ -301,21 +306,21 @@ bool MariaDBUserManager::update_users()
     users_file_usage = m_users_file_usage;
     lock.unlock();
 
-    UserDatabase temp_userdata;
+    auto temp_userdata = std::make_unique<UserDatabase>();
     UserLoadRes res1;
     UserLoadRes res2;
     bool file_enabled = !users_file_path.empty();
 
     if (file_enabled && users_file_usage == UsersFileUsage::FILE_ONLY_ALWAYS)
     {
-        res1 = load_users_from_file(users_file_path, &temp_userdata);
+        res1 = load_users_from_file(users_file_path, temp_userdata.get());
     }
     else
     {
-        res1 = load_users_from_backends(move(conn_user), move(conn_pw), move(backends), temp_userdata);
+        res1 = load_users_from_backends(move(conn_user), move(conn_pw), move(backends), *temp_userdata);
         if (file_enabled && users_file_usage == UsersFileUsage::ADD_WHEN_LOAD_OK && res1.success)
         {
-            res2 = load_users_from_file(users_file_path, &temp_userdata);
+            res2 = load_users_from_file(users_file_path, temp_userdata.get());
         }
     }
 
@@ -339,9 +344,10 @@ bool MariaDBUserManager::update_users()
         // Got some data. Update the master database if the contents differ. Usually they don't.
 
         // This comparison is not trivially cheap if there are many user entries,
-        // but it avoids unnecessary user cache updates which would involve copying all
-        // the data multiple times.
-        if (temp_userdata.equal_contents(m_userdb))
+        // but it avoids unnecessary user cache updates. The updates are now very cheap (copy of shared_ptr)
+        // so this comparison could be removed. With 10k users the comparison takes ~4ms.
+        // TODO: think if some kind of checksum could be used instead
+        if (temp_userdata->equal_contents(*m_userdb))
         {
             MXB_INFO("%s The data was identical to existing user data.", build_msg().c_str());
         }
@@ -350,7 +356,7 @@ bool MariaDBUserManager::update_users()
             // Data changed, update main user db. Cache update message is sent by the caller.
             {
                 Guard guard(m_userdb_lock);
-                m_userdb = std::move(temp_userdata);
+                m_userdb = move(temp_userdata);
                 m_userdb_version++;
             }
             MXB_NOTICE("%s", build_msg().c_str());
@@ -828,20 +834,16 @@ std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_c
     return std::unique_ptr<mxs::UserAccountCache>(cache);
 }
 
-void MariaDBUserManager::get_user_database(UserDatabase* userdb_out, int* version_out) const
+MariaDBUserManager::UserDBInfo MariaDBUserManager::get_user_database() const
 {
-    UserDatabase db;
-    int version;
+    UserDBInfo rval;
     {
         // A lock is needed to ensure both the db and version number are from the same update.
-        // TODO: think if read-write-lock would be good here, since many threads are likely doing this
-        // at the same time.
         Guard guard(m_userdb_lock);
-        db = m_userdb;
-        version = m_userdb_version.load(relaxed);
+        rval.user_db = m_userdb;
+        rval.version = m_userdb_version.load(relaxed);
     }
-    *userdb_out = std::move(db);
-    *version_out = version;
+    return rval;
 }
 
 void MariaDBUserManager::set_service(SERVICE* service)
@@ -862,8 +864,12 @@ int MariaDBUserManager::userdb_version() const
 
 json_t* MariaDBUserManager::users_to_json() const
 {
-    Guard guard(m_userdb_lock);
-    return m_userdb.users_to_json();
+    SUserDB ptr_copy;
+    {
+        Guard guard(m_userdb_lock);
+        ptr_copy = m_userdb;
+    }
+    return ptr_copy->users_to_json();
 }
 
 SERVICE* MariaDBUserManager::service() const
@@ -1842,6 +1848,7 @@ bool UserDatabase::check_database_exists(const std::string& db, bool case_sensit
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
     : m_master(master)
 {
+    m_userdb = std::make_shared<UserDatabase>();    // Must never be null
 }
 
 UserEntryResult
@@ -1880,8 +1887,8 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     // TODO: the user may be empty, is it ok to match normally in that case?
 
     // First try to find a normal user entry. If host pattern matching is disabled, match only username.
-    const UserEntry* found = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) :
-        m_userdb.find_entry(user);
+    const UserEntry* found = sett.listener.match_host_pattern ? m_userdb->find_entry(user, host) :
+        m_userdb->find_entry(user);
     if (found)
     {
         res.entry = *found;
@@ -1889,7 +1896,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         bool db_ok = true;
         if (!eff_requested_db.empty())
         {
-            if (!m_userdb.check_database_exists(eff_requested_db, case_sensitive_db))
+            if (!m_userdb->check_database_exists(eff_requested_db, case_sensitive_db))
             {
                 db_ok = false;
                 res.type = UserEntryType::BAD_DB;
@@ -1903,7 +1910,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             {
                 // Accessing "information_schema", allow it.
             }
-            else if (!m_userdb.check_database_access(*found, eff_requested_db, case_sensitive_db))
+            else if (!m_userdb->check_database_access(*found, eff_requested_db, case_sensitive_db))
             {
                 db_ok = false;
                 res.type = UserEntryType::DB_ACCESS_DENIED;
@@ -1926,15 +1933,15 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         // Try to find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
-        auto anon_found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) :
-            m_userdb.find_entry("");
+        auto anon_found = sett.listener.match_host_pattern ? m_userdb->find_entry("", host) :
+            m_userdb->find_entry("");
         if (anon_found)
         {
             res.entry = *anon_found;
             // For anonymous users, do not check database access as the final effective user is unknown.
             // Instead, check that the entry has a proxy grant.
             if (!eff_requested_db.empty()
-                && !m_userdb.check_database_exists(eff_requested_db, case_sensitive_db))
+                && !m_userdb->check_database_exists(eff_requested_db, case_sensitive_db))
             {
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
@@ -1978,8 +1985,10 @@ void MariaDBUserCache::update_from_master()
 {
     if (m_userdb_version < m_master.userdb_version())
     {
-        // Master db has updated data, copy it.
-        m_master.get_user_database(&m_userdb, &m_userdb_version);
+        // Master db has updated data, copy the shared pointer.
+        auto db_info = m_master.get_user_database();
+        m_userdb = move(db_info.user_db);
+        m_userdb_version = db_info.version;
     }
 }
 

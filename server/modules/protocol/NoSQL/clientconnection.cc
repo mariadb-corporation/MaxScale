@@ -265,7 +265,7 @@ bool ClientConnection::setup_session()
     m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
     m_session_data.client_info.m_charset = 33; // UTF8
 
-    return session_start(&m_session);
+    return m_session.start();
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)

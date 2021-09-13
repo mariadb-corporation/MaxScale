@@ -49,7 +49,7 @@ public:
 
     bool route_query(GWBUF* pBuffer)
     {
-        return mxs_route_query(this, pBuffer);
+        return Session::routeQuery(pBuffer);
     }
 
     void set_downstream(FilterModule::Session* pSession);

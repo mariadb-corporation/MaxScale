@@ -67,9 +67,7 @@ public:
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        std::unique_ptr<mxs::ClientConnection> new_client_proto(
-            new(std::nothrow) CDCClientConnection(m_auth_module));
-        return new_client_proto;
+        return std::make_unique<CDCClientConnection>(m_auth_module, component);
     }
 
     std::string auth_default() const override
@@ -174,7 +172,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
 
             if (auth_val == CDC_STATE_AUTH_OK)
             {
-                if (session_start(dcb->session()))
+                if (session->start())
                 {
                     protocol->m_state = CDC_STATE_HANDLE_REQUEST;
 
@@ -224,7 +222,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                          (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                mxs_route_query(session, head);
+                m_downstream->routeQuery(head);
             }
             break;
 
@@ -278,8 +276,9 @@ void CDCClientConnection::finish_connection()
 {
 }
 
-CDCClientConnection::CDCClientConnection(CDCAuthenticatorModule& auth_module)
+CDCClientConnection::CDCClientConnection(CDCAuthenticatorModule& auth_module, mxs::Component* downstream)
     : m_authenticator(auth_module)
+    , m_downstream(downstream)
 {
 }
 
