@@ -426,24 +426,6 @@ uint64_t session_get_current_id()
     return session ? session->id() : 0;
 }
 
-char* session_set_variable_value(MXS_SESSION* session,
-                                 const char* name_begin,
-                                 const char* name_end,
-                                 const char* value_begin,
-                                 const char* value_end)
-{
-    Session* pSession = static_cast<Session*>(session);
-    return pSession->set_variable_value(name_begin, name_end, value_begin, value_end);
-}
-
-bool session_remove_variable(MXS_SESSION* session,
-                             const char* name,
-                             void** context)
-{
-    Session* pSession = static_cast<Session*>(session);
-    return pSession->remove_variable(name, context);
-}
-
 void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer)
 {
     // Valid arguments.
@@ -496,27 +478,6 @@ const char* session_get_dump_statements_str()
     }
 }
 
-void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
-{
-    static_cast<Session*>(pSession)->retain_statement(pBuffer);
-}
-
-void session_book_server_response(MXS_SESSION* pSession, SERVER* pServer, bool final_response)
-{
-    static_cast<Session*>(pSession)->book_server_response(pServer, final_response);
-}
-
-void session_reset_server_bookkeeping(MXS_SESSION* pSession)
-{
-    static_cast<Session*>(pSession)->reset_server_bookkeeping();
-}
-
-void session_dump_statements(MXS_SESSION* session)
-{
-    Session* pSession = static_cast<Session*>(session);
-    pSession->dump_statements();
-}
-
 void session_set_session_trace(uint32_t value)
 {
     this_unit.session_trace = value;
@@ -525,11 +486,6 @@ void session_set_session_trace(uint32_t value)
 uint32_t session_get_session_trace()
 {
     return this_unit.session_trace;
-}
-
-void session_dump_log(MXS_SESSION* pSession)
-{
-    static_cast<Session*>(pSession)->dump_session_log();
 }
 
 class DelayedRoutingTask
@@ -702,7 +658,7 @@ Session::~Session()
 
     if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
     {
-        session_dump_statements(this);
+        dump_statements();
     }
 
     m_state = MXS_SESSION::State::FREE;

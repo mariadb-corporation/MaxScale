@@ -730,13 +730,8 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
             {
                 const SetParser::Result::Item& variable = *i;
                 const SetParser::Result::Item& value = *j;
-
-                message = session_set_variable_value(m_session,
-                                                     variable.first,
-                                                     variable.second,
-                                                     value.first,
-                                                     value.second);
-
+                message = m_session->set_variable_value(variable.first, variable.second,
+                                                        value.first, value.second);
                 ++i;
                 ++j;
             }
@@ -1123,8 +1118,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (expecting_response)
     {
         ++m_num_responses;
-
-        session_retain_statement(m_session, buffer.get());
+        m_session->retain_statement(buffer.get());
     }
 
     if (recording)
@@ -1472,12 +1466,12 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
     {
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
-            session_dump_statements(m_session);
+            m_session->dump_statements();
         }
 
         if (session_get_session_trace())
         {
-            session_dump_log(m_session);
+            m_session->dump_session_log();
         }
 
         // The client did not send a COM_QUIT packet
@@ -2642,7 +2636,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             mxb_assert(m_num_responses >= 0);
 
             // TODO: The SERVER parameter should be changed into a mxs::Target
-            session_book_server_response(m_session, (SERVER*)down.front()->target(), true);
+            m_session->book_server_response(static_cast<SERVER*>(down.front()->target()), true);
         }
 
         if (reply.is_ok() && m_session->service->config()->session_track_trx_state)
