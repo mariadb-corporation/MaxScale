@@ -2068,8 +2068,8 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             MXS_ERROR("Unexpected response to LOAD DATA LOCAL INFILE: cmd: 0x%02hhx, len: %u, server: %s",
                       cmd, len, m_server.name());
-            session_dump_statements(m_session);
-            session_dump_log(m_session);
+            m_session->dump_statements();
+            m_session->dump_session_log();
             mxb_assert(!true);
         }
         break;
@@ -2098,8 +2098,8 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             // This should never happen
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
                       cmd, len, m_server.name());
-            session_dump_statements(m_session);
-            session_dump_log(m_session);
+            m_session->dump_statements();
+            m_session->dump_session_log();
             mxb_assert(!true);
         }
         break;

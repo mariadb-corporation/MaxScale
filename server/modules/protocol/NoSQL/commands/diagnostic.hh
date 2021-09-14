@@ -329,7 +329,7 @@ public:
         doc.append(kvp(key::OK, ok));
 
         *ppResponse = create_response(doc.extract());
-        return READY;
+        return State::READY;
     }
 
 private:

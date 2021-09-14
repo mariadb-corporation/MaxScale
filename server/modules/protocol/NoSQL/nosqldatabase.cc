@@ -20,88 +20,88 @@
 
 using namespace std;
 
-nosql::Database::Database(const std::string& name,
-                          NoSQL::Context* pContext,
-                          Config* pConfig)
+namespace nosql
+{
+
+Database::Database(const std::string& name, NoSQL::Context* pContext, Config* pConfig)
     : m_name(name)
     , m_context(*pContext)
     , m_config(*pConfig)
 {
 }
 
-nosql::Database::~Database()
+Database::~Database()
 {
 }
 
 //static
-unique_ptr<nosql::Database> nosql::Database::create(const std::string& name,
-                                                    NoSQL::Context* pContext,
-                                                    Config* pConfig)
+unique_ptr<Database> Database::create(const std::string& name, NoSQL::Context* pContext, Config* pConfig)
 {
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
-GWBUF* nosql::Database::handle_delete(GWBUF* pRequest, nosql::Delete&& packet)
+State Database::handle_delete(GWBUF* pRequest, Delete&& packet, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpDeleteCommand(this, pRequest, std::move(packet)));
+    unique_ptr<Command> sCommand(new OpDeleteCommand(this, pRequest, std::move(packet)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_insert(GWBUF* pRequest, nosql::Insert&& req)
+State Database::handle_insert(GWBUF* pRequest, Insert&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpInsertCommand(this, pRequest, std::move(req)));
+    unique_ptr<Command> sCommand(new OpInsertCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_query(GWBUF* pRequest, nosql::Query&& req)
+State Database::handle_query(GWBUF* pRequest, Query&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpQueryCommand(this, pRequest, std::move(req)));
+    unique_ptr<Command> sCommand(new OpQueryCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_update(GWBUF* pRequest, nosql::Update&& req)
+State Database::handle_update(GWBUF* pRequest, Update&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpUpdateCommand(this, pRequest, std::move(req)));
+    unique_ptr<Command> sCommand(new OpUpdateCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_get_more(GWBUF* pRequest, nosql::GetMore&& packet)
+State Database::handle_get_more(GWBUF* pRequest, GetMore&& packet, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpGetMoreCommand(this, pRequest, std::move(packet)));
+    unique_ptr<Command> sCommand(new OpGetMoreCommand(this, pRequest, std::move(packet)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req)
+State Database::handle_kill_cursors(GWBUF* pRequest, KillCursors&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
-    unique_ptr<Command> sCommand(new nosql::OpKillCursorsCommand(this, pRequest, std::move(req)));
+    unique_ptr<Command> sCommand(new OpKillCursorsCommand(this, pRequest, std::move(req)));
 
-    return execute_command(std::move(sCommand));
+    return execute_command(std::move(sCommand), ppResponse);
 }
 
-GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
+State Database::handle_msg(GWBUF* pRequest, Msg&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
+    State state = State::READY;
     GWBUF* pResponse = nullptr;
 
-    auto sCommand = nosql::OpMsgCommand::get(this, pRequest, std::move(req));
+    auto sCommand = OpMsgCommand::get(this, pRequest, std::move(req));
 
     if (sCommand->is_admin() && m_name != "admin")
     {
@@ -118,93 +118,112 @@ GWBUF* nosql::Database::handle_msg(GWBUF* pRequest, nosql::Msg&& req)
 
     if (!pResponse)
     {
-        pResponse = execute_command(std::move(sCommand));
+        state = execute_command(std::move(sCommand), &pResponse);
     }
 
-    return pResponse;
+    *ppResponse = pResponse;
+    return state;
 }
 
-GWBUF* nosql::Database::translate(mxs::Buffer&& mariadb_response)
+GWBUF* Database::translate(mxs::Buffer&& mariadb_response)
 {
-    mxb_assert(is_pending());
+    mxb_assert(is_busy());
     mxb_assert(m_sCommand.get());
 
+    State state = State::READY;
     GWBUF* pResponse = nullptr;
-
-    Command::State state = Command::READY;
 
     try
     {
         state = m_sCommand->translate(std::move(mariadb_response), &pResponse);
     }
-    catch (const nosql::Exception& x)
+    catch (const Exception& x)
     {
         m_context.set_last_error(x.create_last_error());
 
-        pResponse = x.create_response(*m_sCommand.get());
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = x.create_response(*m_sCommand.get());
+        }
     }
     catch (const std::exception& x)
     {
         MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
 
-        HardError error(x.what(), nosql::error::COMMAND_FAILED);
+        HardError error(x.what(), error::COMMAND_FAILED);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
 
-    if (state == Command::READY)
+    if (state == State::READY)
     {
-        mxb_assert(state == Command::READY);
-
         m_sCommand.reset();
-
         set_ready();
     }
 
     return pResponse;
 }
 
-GWBUF* nosql::Database::execute_command(std::unique_ptr<Command> sCommand)
+State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppResponse)
 {
+    State state = State::READY;
     GWBUF* pResponse = nullptr;
 
     try
     {
         m_sCommand = std::move(sCommand);
-        set_pending();
+        set_busy();
 
-        pResponse = m_sCommand->execute();
+        state = m_sCommand->execute(&pResponse);
     }
-    catch (const nosql::Exception& x)
+    catch (const Exception& x)
     {
+        MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", x.what());
+
         m_context.set_last_error(x.create_last_error());
 
-        pResponse = x.create_response(*m_sCommand.get());
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = x.create_response(*m_sCommand.get());
+        }
     }
     catch (const bsoncxx::exception& x)
     {
         MXB_ERROR("bsoncxx exeception occurred when parsing NoSQL command: %s", x.what());
 
-        HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
+        HardError error(x.what(), error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
     catch (const std::exception& x)
     {
         MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
 
-        HardError error(x.what(), nosql::error::FAILED_TO_PARSE);
+        HardError error(x.what(), error::FAILED_TO_PARSE);
         m_context.set_last_error(error.create_last_error());
 
-        pResponse = error.create_response(*m_sCommand);
+        if (!m_sCommand->is_silent())
+        {
+            pResponse = error.create_response(*m_sCommand);
+        }
     }
 
-    if (pResponse)
+    if (state == State::READY)
     {
+        m_sCommand.reset();
         set_ready();
     }
 
-    return pResponse;
+    *ppResponse = pResponse;
+    return state;
+}
+
 }

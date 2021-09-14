@@ -403,7 +403,7 @@ struct this_unit
     std::unique_ptr<mxb::Logger>     sLogger;
     std::unique_ptr<MessageRegistry> sMessage_registry;
     size_t                           (* context_provider)(char* buffer, size_t len);
-    void                             (* in_memory_log)(const char* buffer, size_t len);
+    mxb_in_memory_log_t              in_memory_log;
     bool                             (* should_log)(int priority) = return_false;
 } this_unit =
 {
@@ -931,7 +931,7 @@ int mxb_log_message(int priority,
 
                 if (this_unit.session_trace)
                 {
-                    this_unit.in_memory_log(msg.c_str(), msg.length());
+                    this_unit.in_memory_log(msg);
                 }
 
                 auto func = mxb::LogRedirect::current_redirect();

@@ -272,7 +272,7 @@ public:
 
         *ppResponse = create_response(doc.extract());
 
-        return READY;
+        return State::READY;
     }
 
 private:

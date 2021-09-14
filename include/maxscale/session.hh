@@ -281,6 +281,38 @@ public:
     virtual bool add_variable(const char* name, session_variable_handler_t handler, void* context) = 0;
 
     /**
+     * @brief Set value of maxscale session variable.
+     *
+     * @param name_begin   Should point to the beginning of the variable name.
+     * @param name_end     Should point one past the end of the variable name.
+     * @param value_begin  Should point to the beginning of the value.
+     * @param value_end    Should point one past the end of the value.
+     *
+     * @return NULL if successful, otherwise a dynamically allocated string
+     *         containing an end-user friendly error message.
+     *
+     * @note Should only be called from the protocol module that scans
+     *       incoming statements.
+     */
+    virtual char* set_variable_value(const char* name_begin, const char* name_end,
+                                     const char* value_begin, const char* value_end) = 0;
+    /**
+     * @brief Remove MaxScale specific user variable from the session.
+     *
+     * With this function a particular MaxScale specific user variable
+     * can be removed. Note that it is *not* mandatory to remove a
+     * variable when a session is closed, but have to be done in case
+     * the context object must manually be deleted.
+     *
+     * @param name      The name of the variable.
+     * @param context   On successful return, if non-NULL, the context object
+     *                  that was provided when the variable was added.
+     *
+     * @return True, if the variable existed, false otherwise.
+     */
+    virtual bool remove_variable(const char* name, void** context) = 0;
+
+    /**
      * Check if log level has been explicitly enabled for this session
      *
      * @return True if the log is enabled
@@ -289,6 +321,39 @@ public:
     {
         return m_log_level & (1 << level);
     }
+
+    virtual void append_session_log(const std::string& msg) = 0;
+    virtual void dump_session_log() = 0;
+
+    /**
+     * @brief Retain provided statement, if configured to do so.
+     *
+     * @param buffer   Buffer assumed to contain a full statement.
+     */
+    virtual void retain_statement(GWBUF* pBuffer) = 0;
+
+    /**
+     * @brief Dump the last statements, if statements have been retained.
+     *
+     * @param session  The session.
+     */
+    virtual void dump_statements() const = 0;
+
+    /**
+     * @brief Book a server response for the statement currently being handled.
+     *
+     * @param server          The server having returned a response.
+     * @param final_response  True if this was the final server to respond, false otherwise.
+     */
+    virtual void book_server_response(SERVER* pServer, bool final_response) = 0;
+
+    /**
+     * @brief Reset the server bookkeeping for the current statement.
+     *
+     * To be called, e.g., after a transaction is rolled back (possibly with
+     * results having been reported) and before it is replayed.
+     */
+    virtual void reset_server_bookkeeping() = 0;
 
 protected:
     State                    m_state;   /**< Current descriptor state */
@@ -421,46 +486,6 @@ MXS_SESSION* session_get_current();
  **/
 uint64_t session_get_current_id();
 
-
-/**
- * @brief Remove MaxScale specific user variable from the session.
- *
- * With this function a particular MaxScale specific user variable
- * can be removed. Note that it is *not* mandatory to remove a
- * variable when a session is closed, but have to be done in case
- * the context object must manually be deleted.
- *
- * @param session   The session in question.
- * @param name      The name of the variable.
- * @param context   On successful return, if non-NULL, the context object
- *                  that was provided when the variable was added.
- *
- * @return True, if the variable existed, false otherwise.
- */
-bool session_remove_variable(MXS_SESSION* session,
-                             const char* name,
-                             void** context);
-/**
- * @brief Set value of maxscale session variable.
- *
- * @param session      The session.
- * @param name_begin   Should point to the beginning of the variable name.
- * @param name_end     Should point one past the end of the variable name.
- * @param value_begin  Should point to the beginning of the value.
- * @param value_end    Should point one past the end of the value.
- *
- * @return NULL if successful, otherwise a dynamically allocated string
- *         containing an end-user friendly error message.
- *
- * @note Should only be called from the protocol module that scans
- *       incoming statements.
- */
-char* session_set_variable_value(MXS_SESSION* session,
-                                 const char* name_begin,
-                                 const char* name_end,
-                                 const char* value_begin,
-                                 const char* value_end);
-
 /**
  * @brief Specify how many statements each session should retain for
  *        debugging purposes.
@@ -475,41 +500,6 @@ void session_set_retain_last_statements(uint32_t n);
 uint32_t session_get_retain_last_statements();
 
 /**
- * @brief Retain provided statement, if configured to do so.
- *
- * @param session  The session.
- * @param buffer   Buffer assumed to contain a full statement.
- */
-void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
-
-/**
- * @brief Book a server response for the statement currently being handled.
- *
- * @param session         The session.
- * @param server          The server having returned a response.
- * @param final_response  True if this was the final server to respond,
- *                        false otherwise.
- */
-void session_book_server_response(MXS_SESSION* session, struct SERVER* server, bool final_response);
-
-/**
- * @brief Reset the server bookkeeping for the current statement.
- *
- * To be called, e.g., after a transaction is rolled back (possibly with
- * results having been reported) and before it is replayed.
- *
- * @param session  The session.
- */
-void session_reset_server_bookkeeping(MXS_SESSION* session);
-
-/**
- * @brief Dump the last statements, if statements have been retained.
- *
- * @param session  The session.
- */
-void session_dump_statements(MXS_SESSION* pSession);
-
-/**
  * @brief Specify whether statements should be dumped or not.
  *
  * @param value    Whether and when to dump statements.
@@ -519,12 +509,6 @@ void session_set_dump_statements(session_dump_statements_t value);
 void session_set_session_trace(uint32_t value);
 
 uint32_t session_get_session_trace();
-
-std::string session_get_session_log(MXS_SESSION* pSession);
-
-void session_append_log(MXS_SESSION* pSession, std::string log);
-
-void session_dump_log(MXS_SESSION* pSession);
 
 /**
  * @brief Returns in what contexts statements should be dumped.

@@ -14,7 +14,7 @@
 
 #include <maxbase/ccdefs.hh>
 #include <stdexcept>
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 #include <maxbase/maxbase.h>
 
 namespace maxbase

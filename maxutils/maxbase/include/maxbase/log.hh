@@ -16,6 +16,65 @@
 #include <stdexcept>
 #include <maxbase/log.h>
 
+enum mxb_log_target_t
+{
+    MXB_LOG_TARGET_DEFAULT,
+    MXB_LOG_TARGET_FS,      // File system
+    MXB_LOG_TARGET_STDOUT,  // Standard output
+};
+
+/**
+ * Prototype for function providing additional information.
+ *
+ * If the function returns a non-zero value, that amount of characters
+ * will be enclosed between '(' and ')', and written first to a logged
+ * message.
+ *
+ * @param buffer  Buffer where additional context may be written.
+ * @param len     Length of @c buffer.
+ *
+ * @return Length of data written to buffer.
+ */
+using mxb_log_context_provider_t = size_t (*)(char* buffer, size_t len);
+
+using mxb_in_memory_log_t = void (*)(const std::string& buffer);
+
+/**
+ * Typedef for conditional logging callback.
+ *
+ * @param priority The syslog priority under which the message is logged.
+ * @return True if the message should be logged, false if it should be suppressed.
+ */
+using mxb_should_log_t = bool (*)(int priority);
+
+/**
+ * @brief Initialize the log
+ *
+ * This function must be called before any of the log function should be
+ * used.
+ *
+ * @param ident             The syslog ident. If NULL, then the program name is used.
+ * @param logdir            The directory for the log file. If NULL, file output is discarded.
+ * @param filename          The name of the log-file. If NULL, the program name will be used
+ *                          if it can be deduced, otherwise the name will be "messages.log".
+ * @param target            Logging target
+ * @param context_provider  Optional function for providing contextual information
+ *                          at logging time.
+ *
+ * @return true if succeed, otherwise false
+ */
+bool mxb_log_init(const char* ident, const char* logdir, const char* filename,
+                  mxb_log_target_t target, mxb_log_context_provider_t context_provider,
+                  mxb_in_memory_log_t in_memory_log, mxb_should_log_t should_log);
+
+/**
+ * @brief Finalize the log
+ *
+ * A successfull call to @c max_log_init() should be followed by a call
+ * to this function before the process exits.
+ */
+void mxb_log_finish();
+
 /**
  * @brief Initialize the log
  *

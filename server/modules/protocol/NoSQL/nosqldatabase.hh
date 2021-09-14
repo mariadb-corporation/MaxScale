@@ -27,12 +27,6 @@ namespace nosql
 class Database
 {
 public:
-    enum State
-    {
-        READY,  // Ready for a command.
-        PENDING // A command is being executed.
-    };
-
     ~Database();
 
     Database(const Database&) = delete;
@@ -85,80 +79,13 @@ public:
                                             NoSQL::Context* pContext,
                                             Config* pConfig);
 
-    /**
-     * Handle an OP_DELETE
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param packet    The delete request.
-     *
-     * @return nullptr
-     */
-    GWBUF* handle_delete(GWBUF* pRequest, nosql::Delete&& req);
-
-    /**
-     * Handle an OP_INSERT
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param req       The insert request.
-     *
-     * @return nullptr
-     */
-    GWBUF* handle_insert(GWBUF* pRequest, nosql::Insert&& req);
-
-    /**
-     * Handle an OP_QUERY.
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param req       The query request; *must* be intended for the database this
-     *                  instance represents.
-     *
-     * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
-     *         it will be returned to the client, in the latter case @c clientReply
-     *         of the client protocol will eventually be called.
-     */
-    GWBUF* handle_query(GWBUF* pRequest, nosql::Query&& req);
-
-    /**
-     * Handle an OP_UPDATE
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param req       The update request.
-     *
-     * @return nullptr
-     */
-    GWBUF* handle_update(GWBUF* pRequest, nosql::Update&& req);
-
-    /**
-     * Handle an OP_GET_MORE
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param req       The get more request.
-     *
-     * @return nullptr
-     */
-    GWBUF* handle_get_more(GWBUF* pRequest, nosql::GetMore&& req);
-
-    /**
-     * Handle an OP_KILL_CURSORS
-     *
-     * @pRequest    The GWBUF holding data of @c req.
-     * @req         The kill cursor request.
-     *
-     * @return nullptr
-     */
-    GWBUF* handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req);
-
-    /**
-     * Handle an OP_MSG
-     *
-     * @param pRequest  The GWBUF holding data of @c req.
-     * @param req       The message request.
-     *
-     * @return A GWBUF containing a NoSQL response, or nullptr. In the former case
-     *         it will be returned to the client, in the latter case @c clientReply
-     *         of the client protocol will eventually be called.
-     */
-    GWBUF* handle_msg(GWBUF* pRequest, nosql::Msg&& req);
+    State handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse);
+    State handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse);
+    State handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse);
+    State handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse);
+    State handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse);
+    State handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse);
+    State handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse);
 
     /**
      * Convert a MariaDB response to a NoSQL response. Must only be called
@@ -176,7 +103,7 @@ public:
      */
     bool is_ready() const
     {
-        return m_state == READY;
+        return m_state == State::READY;
     }
 
 private:
@@ -184,26 +111,26 @@ private:
              NoSQL::Context* pContext,
              Config* pConfig);
 
-    bool is_pending() const
+    bool is_busy() const
     {
-        return m_state == PENDING;
+        return m_state == State::BUSY;
     }
 
-    void set_pending()
+    void set_busy()
     {
-        m_state = PENDING;
+        m_state = State::BUSY;
     }
 
     void set_ready()
     {
-        m_state = READY;
+        m_state = State::READY;
     }
 
-    GWBUF* execute_command(std::unique_ptr<Command> sCommand);
+    State execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppResponse);
 
     using SCommand = std::unique_ptr<Command>;
 
-    State             m_state { READY };
+    State             m_state { State::READY };
     const std::string m_name;
     NoSQL::Context&   m_context;
     Config&           m_config;

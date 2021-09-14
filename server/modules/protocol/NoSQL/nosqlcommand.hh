@@ -56,6 +56,11 @@ public:
 
     virtual bool is_admin() const;
 
+    bool is_silent() const
+    {
+        return m_response_kind == ResponseKind::NONE;
+    }
+
     virtual std::string description() const = 0;
 
     virtual std::string to_json() const;
@@ -65,13 +70,7 @@ public:
         return m_last_statement;
     }
 
-    virtual GWBUF* execute() = 0;
-
-    enum State
-    {
-        BUSY,
-        READY
-    };
+    virtual State execute(GWBUF** ppNoSQL_response) = 0;
 
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
 
@@ -96,6 +95,7 @@ public:
 
     enum class ResponseKind
     {
+        NONE,
         REPLY,
         MSG,
         MSG_WITH_CHECKSUM
@@ -150,8 +150,9 @@ class PacketCommand : public Command
 protected:
     PacketCommand(Database* pDatabase,
                   GWBUF* pRequest,
-                  Packet&& req)
-        : Command(pDatabase, pRequest, req.request_id(), ResponseKind::REPLY)
+                  Packet&& req,
+                  ResponseKind response_kind)
+        : Command(pDatabase, pRequest, req.request_id(), response_kind)
         ,  m_req(std::move(req))
     {
     }
@@ -194,13 +195,13 @@ public:
     OpDeleteCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     nosql::Delete&& req)
-        : PacketCommand<nosql::Delete>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::Delete>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -221,7 +222,7 @@ public:
     OpInsertCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     nosql::Insert&& req)
-        : PacketCommand<nosql::Insert>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::Insert>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
         , m_action(INSERTING_DATA)
     {
         mxb_assert(m_req.documents().size() == 1);
@@ -229,7 +230,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -251,7 +252,7 @@ public:
     OpUpdateCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     nosql::Update&& req)
-        : PacketCommand<nosql::Update>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::Update>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -259,7 +260,7 @@ public:
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -291,13 +292,13 @@ public:
     OpQueryCommand(Database* pDatabase,
                    GWBUF* pRequest,
                    nosql::Query&& req)
-        : PacketCommand<nosql::Query>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
     {
     }
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -320,13 +321,13 @@ public:
     OpGetMoreCommand(Database* pDatabase,
                      GWBUF* pRequest,
                      nosql::GetMore&& req)
-        : PacketCommand<nosql::GetMore>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::GetMore>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
     {
     }
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -340,13 +341,13 @@ public:
     OpKillCursorsCommand(Database* pDatabase,
                          GWBUF* pRequest,
                          nosql::KillCursors&& req)
-        : PacketCommand<nosql::KillCursors>(pDatabase, pRequest, std::move(req))
+        : PacketCommand<nosql::KillCursors>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
     std::string description() const override;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 };
@@ -543,7 +544,7 @@ class ImmediateCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
 
@@ -564,7 +565,7 @@ class SingleCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    GWBUF* execute() override final;
+    State execute(GWBUF** ppNoSQL_response) override final;
 
     void diagnose(DocumentBuilder& doc) override;
 

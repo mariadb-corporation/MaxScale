@@ -122,18 +122,16 @@ public:
     }
 
     bool  add_variable(const char* name, session_variable_handler_t handler, void* context) override;
-    char* set_variable_value(const char* name_begin,
-                             const char* name_end,
-                             const char* value_begin,
-                             const char* value_end);
-    bool remove_variable(const char* name, void** context);
-    void retain_statement(GWBUF* pBuffer);
-    void dump_statements() const;
-    void book_server_response(SERVER* pServer, bool final_response);
+    char* set_variable_value(const char* name_begin, const char* name_end,
+                             const char* value_begin, const char* value_end) override;
+    bool remove_variable(const char* name, void** context) override;
+    void retain_statement(GWBUF* pBuffer) override;
+    void dump_statements() const override;
+    void book_server_response(SERVER* pServer, bool final_response) override;
     void book_last_as_complete();
-    void reset_server_bookkeeping();
-    void append_session_log(std::string);
-    void dump_session_log();
+    void reset_server_bookkeeping() override;
+    void append_session_log(const std::string& msg) override;
+    void dump_session_log() override;
 
     json_t* as_json_resource(const char* host, bool rdns) const;
     json_t* queries_as_json() const;

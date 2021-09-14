@@ -310,13 +310,19 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
 {
     GWBUF* pResponse = nullptr;
 
-    if (m_response_kind == ResponseKind::REPLY)
+    switch (m_response_kind)
     {
+    case ResponseKind::REPLY:
         pResponse = create_reply_response(doc, is_error);
-    }
-    else
-    {
+        break;
+
+    case ResponseKind::MSG:
+    case ResponseKind::MSG_WITH_CHECKSUM:
         pResponse = create_msg_response(doc);
+        break;
+
+    case ResponseKind::NONE:
+        mxb_assert(!true);
     }
 
     return pResponse;
@@ -454,7 +460,7 @@ std::string OpDeleteCommand::description() const
     return "OP_DELETE";
 }
 
-GWBUF* OpDeleteCommand::execute()
+State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
 {
     ostringstream ss;
     ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
@@ -470,10 +476,11 @@ GWBUF* OpDeleteCommand::execute()
 
     send_downstream(statement);
 
-    return nullptr;
+    *ppNoSQL_response = nullptr;
+    return State::BUSY;
 }
 
-Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     ComResponse response(mariadb_response.data());
 
@@ -499,7 +506,7 @@ Command::State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
     }
 
     *ppNoSQL_response = nullptr;
-    return READY;
+    return State::READY;
 };
 
 //
@@ -510,7 +517,7 @@ std::string OpInsertCommand::description() const
     return "OP_INSERT";
 }
 
-GWBUF* OpInsertCommand::execute()
+State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
 {
     auto doc = m_req.documents()[0];
 
@@ -523,12 +530,13 @@ GWBUF* OpInsertCommand::execute()
 
     send_downstream(m_statement);
 
-    return nullptr;
+    *ppNoSQL_response = nullptr;
+    return State::BUSY;
 }
 
-Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
-    State state = READY;
+    State state = State::READY;
     GWBUF* pResponse = nullptr;
 
     ComResponse response(mariadb_response.data());
@@ -547,11 +555,11 @@ Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 
                     return false;
                 });
-            state = BUSY;
+            state = State::BUSY;
         }
         else
         {
-            state = READY;
+            state = State::READY;
         }
         break;
 
@@ -577,7 +585,7 @@ Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 
                             return false;
                         });
-                    state = BUSY;
+                    state = State::BUSY;
                 }
                 break;
 
@@ -597,13 +605,13 @@ Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 
                                 return false;
                             });
-                        state = BUSY;
+                        state = State::BUSY;
                     }
                     else
                     {
                         MXS_ERROR("Inserting '%s' failed with: (%d) %s",
                                   m_statement.c_str(), err.code(), err.message().c_str());
-                        state = READY;
+                        state = State::READY;
                     }
                 }
                 break;
@@ -620,13 +628,13 @@ Command::State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
 
                         return false;
                     });
-                state = BUSY;
+                state = State::BUSY;
                 break;
 
             default:
                 MXS_ERROR("Inserting '%s' failed with: (%d) %s",
                           m_statement.c_str(), err.code(), err.message().c_str());
-                state = READY;
+                state = State::READY;
             }
         }
         break;
@@ -699,7 +707,7 @@ string OpUpdateCommand::description() const
     return "OP_UPDATE";
 }
 
-GWBUF* OpUpdateCommand::execute()
+State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 {
     if (m_req.is_upsert())
     {
@@ -727,12 +735,13 @@ GWBUF* OpUpdateCommand::execute()
 
     send_downstream(statement);
 
-    return nullptr;
+    *ppNoSQL_response = nullptr;
+    return State::BUSY;
 }
 
-Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
-    State state = READY;
+    State state = State::READY;
 
     ComResponse response(mariadb_response.data());
 
@@ -765,9 +774,9 @@ Command::State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF*
     return state;
 }
 
-Command::State OpUpdateCommand::translate_updating_document(ComResponse& response)
+State OpUpdateCommand::translate_updating_document(ComResponse& response)
 {
-    State state = READY;
+    State state = State::READY;
 
     if (response.type() == ComResponse::OK_PACKET)
     {
@@ -812,7 +821,7 @@ Command::State OpUpdateCommand::translate_updating_document(ComResponse& respons
     return state;
 }
 
-Command::State OpUpdateCommand::translate_inserting_document(ComResponse& response)
+State OpUpdateCommand::translate_inserting_document(ComResponse& response)
 {
     if (response.type() == ComResponse::ERR_PACKET)
     {
@@ -820,12 +829,12 @@ Command::State OpUpdateCommand::translate_inserting_document(ComResponse& respon
         m_database.context().set_last_error(MariaDBError(err).create_last_error());
     }
 
-    return READY;
+    return State::READY;
 }
 
-Command::State OpUpdateCommand::translate_creating_table(ComResponse& response)
+State OpUpdateCommand::translate_creating_table(ComResponse& response)
 {
-    State state = READY;
+    State state = State::READY;
 
     if (response.type() == ComResponse::OK_PACKET)
     {
@@ -840,7 +849,7 @@ Command::State OpUpdateCommand::translate_creating_table(ComResponse& response)
     return state;
 }
 
-Command::State OpUpdateCommand::create_table()
+State OpUpdateCommand::create_table()
 {
     m_action = Action::CREATING_TABLE;
 
@@ -858,10 +867,10 @@ Command::State OpUpdateCommand::create_table()
             return false;
         });
 
-    return BUSY;
+    return State::BUSY;
 }
 
-Command::State OpUpdateCommand::insert_document()
+State OpUpdateCommand::insert_document()
 {
     m_action = Action::CREATING_TABLE;
 
@@ -881,7 +890,7 @@ Command::State OpUpdateCommand::insert_document()
             return false;
         });
 
-    return BUSY;
+    return State::BUSY;
 }
 
 //
@@ -892,8 +901,9 @@ std::string OpQueryCommand::description() const
     return "OP_QUERY";
 }
 
-GWBUF* OpQueryCommand::execute()
+State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
 {
+    State state = State::BUSY;
     GWBUF* pResponse = nullptr;
 
     auto it = m_req.query().begin();
@@ -917,6 +927,7 @@ GWBUF* OpQueryCommand::execute()
                 command::IsMaster::populate_response(m_database, doc);
 
                 pResponse = create_response(doc.extract());
+                state = State::READY;
                 break;
             }
             else if (key.compare(key::QUERY) == 0)
@@ -937,10 +948,11 @@ GWBUF* OpQueryCommand::execute()
         }
     }
 
-    return pResponse;
+    *ppNoSQL_response = pResponse;
+    return state;
 }
 
-Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     GWBUF* pResponse = nullptr;
 
@@ -997,7 +1009,7 @@ Command::State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF**
     }
 
     *ppNoSQL_response = pResponse;
-    return READY;
+    return State::READY;
 }
 
 void OpQueryCommand::send_query(const bsoncxx::document::view& query,
@@ -1095,7 +1107,7 @@ string OpGetMoreCommand::description() const
     return "OP_GET_MORE";
 }
 
-GWBUF* OpGetMoreCommand::execute()
+State OpGetMoreCommand::execute(GWBUF** ppNoSQL_response)
 {
     auto cursor_id = m_req.cursor_id();
 
@@ -1116,14 +1128,15 @@ GWBUF* OpGetMoreCommand::execute()
         NoSQLCursor::put(std::move(sCursor));
     }
 
-    return pResponse;
+    *ppNoSQL_response = pResponse;
+    return State::READY;
 }
 
-Command::State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpGetMoreCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     mxb_assert(!true);
     *ppNoSQL_response = nullptr;
-    return READY;
+    return State::READY;
 }
 
 //
@@ -1134,17 +1147,19 @@ string OpKillCursorsCommand::description() const
     return "OP_KILL_CURSORS";
 }
 
-GWBUF* OpKillCursorsCommand::execute()
+State OpKillCursorsCommand::execute(GWBUF** ppNoSQL_response)
 {
     NoSQLCursor::kill(m_req.cursor_ids());
-    return nullptr;
+
+    *ppNoSQL_response = nullptr;
+    return State::READY;
 }
 
-Command::State OpKillCursorsCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpKillCursorsCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     mxb_assert(!true);
     *ppNoSQL_response = nullptr;
-    return READY;
+    return State::READY;
 }
 
 //
@@ -1394,19 +1409,21 @@ void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, con
     error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
 }
 
-GWBUF* ImmediateCommand::execute()
+State ImmediateCommand::execute(GWBUF** ppNoSQL_response)
 {
     DocumentBuilder doc;
     populate_response(doc);
-    return create_response(doc.extract());
+
+    *ppNoSQL_response = create_response(doc.extract());
+    return State::READY;
 }
 
-Command::State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppProtocol_response)
+State ImmediateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppProtocol_response)
 {
     // This will never be called.
     mxb_assert(!true);
     throw std::runtime_error("ImmediateCommand::translate(...) should not be called.");
-    return READY;
+    return State::READY;
 }
 
 void ImmediateCommand::diagnose(DocumentBuilder& doc)
@@ -1419,7 +1436,7 @@ void ImmediateCommand::diagnose(DocumentBuilder& doc)
     doc.append(kvp(key::RESPONSE, response.extract()));
 }
 
-GWBUF* SingleCommand::execute()
+State SingleCommand::execute(GWBUF** ppNoSQL_response)
 {
     prepare();
 
@@ -1430,7 +1447,9 @@ GWBUF* SingleCommand::execute()
     m_statement = std::move(statement);
 
     send_downstream(m_statement);
-    return nullptr;
+
+    *ppNoSQL_response = nullptr;
+    return State::BUSY;
 }
 
 void SingleCommand::prepare()

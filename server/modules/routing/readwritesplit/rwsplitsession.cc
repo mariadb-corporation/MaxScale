@@ -456,7 +456,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     {
         backend->ack_write();
         m_expected_responses--;
-        session_reset_server_bookkeeping(m_pSession);
+        m_pSession->reset_server_bookkeeping();
     }
 
     return ok;
@@ -572,7 +572,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 m_state = ROUTING;
                 start_trx_replay();
                 gwbuf_free(writebuf);
-                session_reset_server_bookkeeping(m_pSession);
+                m_pSession->reset_server_bookkeeping();
                 return 1;
             }
         }

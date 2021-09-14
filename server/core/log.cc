@@ -63,12 +63,12 @@ size_t mxs_get_context(char* buffer, size_t len)
     return len;
 }
 
-void mxs_log_in_memory(const char* msg, size_t len)
+void mxs_log_in_memory(const std::string& msg)
 {
     MXS_SESSION* session = session_get_current();
     if (session)
     {
-        session_append_log(session, msg);
+        session->append_session_log(msg);
     }
 }
 
