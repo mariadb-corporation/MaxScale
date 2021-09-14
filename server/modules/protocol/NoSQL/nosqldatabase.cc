@@ -182,6 +182,8 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
     }
     catch (const Exception& x)
     {
+        MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", x.what());
+
         m_context.set_last_error(x.create_last_error());
 
         if (!m_sCommand->is_silent())
