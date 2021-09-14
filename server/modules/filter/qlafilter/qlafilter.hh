@@ -187,9 +187,10 @@ private:
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
-    std::string    m_sql;               // Sql, in canonical form if asked for
-    mxb::TimePoint m_begin_time;        // Timer value at the moment of receiving query.
-    std::string    m_wall_time_str;     // Wall time as a string
+    std::string          m_sql;             // Sql, in canonical form if asked for
+    mxb::TimePoint       m_begin_time;      // Timer value at the moment of receiving query.
+    std::string          m_wall_time_str;   // Wall time as a string
+    std::chrono::seconds m_last_wall_second;
 
     maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
 

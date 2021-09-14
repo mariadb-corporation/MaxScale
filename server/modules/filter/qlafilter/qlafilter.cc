@@ -414,8 +414,14 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
+            using namespace std::chrono;
             auto now = wall_time::Clock::now();
-            m_wall_time_str = wall_time::to_string(now, "%F %T");
+            auto current_second = duration_cast<seconds>(now.time_since_epoch());
+            if (current_second != m_last_wall_second)
+            {
+                m_last_wall_second = current_second;
+                m_wall_time_str = wall_time::to_string(now, "%F %T");
+            }
         }
 
         if (!(data_flags & QlaInstance::LOG_DATA_REPLY_TIME))
