@@ -30,6 +30,8 @@ class ListenerManager;
 class Listener : public MXB_POLL_DATA
 {
 public:
+    using SData = std::shared_ptr<const mxs::ListenerData>;
+
     enum class Type
     {
         UNIX_SOCKET,    // UNIX domain socket shared between workers
@@ -220,7 +222,7 @@ public:
      *
      * @return New listener data object for test sessions
      */
-    static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const mxs::ConfigParameters& params);
+    static SData create_test_data(const mxs::ConfigParameters& params);
 
     static mxs::config::Specification* specification();
 
@@ -253,8 +255,6 @@ private:
 
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
-
-    using SData = std::shared_ptr<mxs::ListenerSessionData>;
 
     SData m_shared_data;    /**< Data shared with sessions */
 
@@ -328,7 +328,7 @@ private:
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 
     static bool read_connection_init_sql(const std::string& filepath,
-                                         mxs::ListenerSessionData::ConnectionInitSql* output);
+                                         mxs::ListenerData::ConnectionInitSql* output);
 
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config() const;

@@ -106,7 +106,7 @@ public:
     using FilterList = std::vector<SessionFilter>;
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
-    Session(std::shared_ptr<mxs::ListenerSessionData> listener_data,
+    Session(std::shared_ptr<const mxs::ListenerData> listener_data,
             const std::string& host);
     ~Session();
 
@@ -181,7 +181,8 @@ public:
 
     mxs::ClientConnection*       client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
-    mxs::ListenerSessionData*    listener_data() override;
+
+    const mxs::ListenerData* listener_data() override;
 
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 
@@ -339,7 +340,7 @@ private:
 
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
-    std::shared_ptr<mxs::ListenerSessionData> m_listener_data;
+    std::shared_ptr<const mxs::ListenerData> m_listener_data;
 
     static const int N_LOAD = 30;   // Last 30 seconds.
 

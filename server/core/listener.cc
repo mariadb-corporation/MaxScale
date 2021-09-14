@@ -47,7 +47,7 @@ using std::map;
 using std::move;
 using std::string;
 using std::unique_ptr;
-using ListenerSessionData = mxs::ListenerSessionData;
+using ListenerSessionData = mxs::ListenerData;
 using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
@@ -1221,11 +1221,11 @@ void mark_auth_as_failed(const std::string& remote)
     }
 }
 
-ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                                         std::unique_ptr<mxs::ProtocolModule> protocol_module,
-                                         const std::string& listener_name,
-                                         std::vector<SAuthenticator>&& authenticators,
-                                         ListenerSessionData::ConnectionInitSql&& init_sql)
+ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+                           std::unique_ptr<mxs::ProtocolModule> protocol_module,
+                           const std::string& listener_name,
+                           std::vector<SAuthenticator>&& authenticators,
+                           ListenerData::ConnectionInitSql&& init_sql)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
@@ -1237,8 +1237,7 @@ ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_s
 }
 }
 
-std::shared_ptr<mxs::ListenerSessionData>
-Listener::create_test_data(const mxs::ConfigParameters& params)
+Listener::SData Listener::create_test_data(const mxs::ConfigParameters& params)
 {
     SListener listener {new Listener("test_listener")};
     listener->m_config.configure(params);

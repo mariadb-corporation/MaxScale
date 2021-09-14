@@ -29,7 +29,7 @@ class SERVER;
 namespace maxscale
 {
 struct Routable;
-class ListenerSessionData;
+class ListenerData;
 }
 
 typedef enum
@@ -236,7 +236,8 @@ public:
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
-    virtual mxs::ListenerSessionData*    listener_data() = 0;
+
+    virtual const mxs::ListenerData* listener_data() = 0;
 
     /**
      * Start the session. Called after the session is initialized and authentication is complete.

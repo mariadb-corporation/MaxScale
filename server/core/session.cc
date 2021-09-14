@@ -626,7 +626,7 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
+Session::Session(std::shared_ptr<const ListenerData> listener_data,
                  const std::string& host)
     : MXS_SESSION(host, &listener_data->m_service)
     , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
@@ -1477,7 +1477,7 @@ void Session::kill_all(Listener* listener)
         });
 }
 
-ListenerSessionData* Session::listener_data()
+const ListenerData* Session::listener_data()
 {
     return m_listener_data.get();
 }
