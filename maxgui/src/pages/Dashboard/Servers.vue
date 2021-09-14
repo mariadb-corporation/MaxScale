@@ -1,111 +1,170 @@
 <template>
-    <data-table
-        :headers="tableHeaders"
-        :data="tableRows"
-        :colsHasRowSpan="2"
-        :search="search_keyword"
-        sortBy="groupId"
-    >
-        <template v-slot:header-append-groupId>
-            <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
-        </template>
-        <template v-slot:header-append-id>
-            <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
-        </template>
-        <template v-slot:header-append-serviceIds>
-            <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
-        </template>
-
-        <template v-slot:groupId="{ data: { item: { groupId } } }">
-            <router-link
-                v-if="groupId !== $t('not', { action: 'monitored' })"
-                :to="`/dashboard/monitors/${groupId}`"
-                class="no-underline"
-            >
-                <span class="font-weight-bold">{{ groupId }} </span>
-            </router-link>
-            <span v-else>{{ groupId }} </span>
-        </template>
-
-        <template v-slot:monitorState="{ data: { item: { monitorState } } }">
-            <div class="d-flex align-center">
-                <icon-sprite-sheet
-                    v-if="monitorState"
-                    size="13"
-                    class="status-icon mr-1"
-                    :frame="$help.monitorStateIcon(monitorState)"
-                >
-                    status
-                </icon-sprite-sheet>
-                <span>{{ monitorState }} </span>
-            </div>
-        </template>
-
-        <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :to="`/dashboard/servers/${id}`" class="no-underline">
-                <span>{{ id }} </span>
-            </router-link>
-        </template>
-
-        <template v-slot:serverState="{ data: { item: { serverState } } }">
-            <div v-if="serverState" class="d-flex align-center">
-                <icon-sprite-sheet
-                    size="13"
-                    class="mr-1 status-icon"
-                    :frame="$help.serverStateIcon(serverState)"
-                >
-                    status
-                </icon-sprite-sheet>
-                <span>{{ serverState }}</span>
-            </div>
-        </template>
-
-        <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-            <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
-
-            <template v-else-if="serviceIds.length < 2">
-                <template v-for="serviceId in serviceIds">
-                    <router-link
-                        :key="serviceId"
-                        :to="`/dashboard/services/${serviceId}`"
-                        class="no-underline"
-                    >
-                        <span>{{ serviceId }} </span>
-                    </router-link>
-                </template>
+    <div>
+        <data-table
+            :headers="tableHeaders"
+            :data="tableRows"
+            :colsHasRowSpan="2"
+            :search="search_keyword"
+            sortBy="groupId"
+        >
+            <template v-slot:header-append-groupId>
+                <span class="ml-1 color text-field-text"> ({{ monitorsLength }}) </span>
+            </template>
+            <template v-slot:header-append-id>
+                <span class="ml-1 color text-field-text"> ({{ all_servers.length }}) </span>
+            </template>
+            <template v-slot:header-append-serviceIds>
+                <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
             </template>
 
-            <v-menu
-                v-else
-                offset-x
-                transition="slide-x-transition"
-                :close-on-content-click="false"
-                open-on-hover
-                nudge-right="20"
-                nudge-top="12.5"
-                content-class="shadow-drop"
-            >
-                <template v-slot:activator="{ on }">
-                    <span class="pointer color text-links" v-on="on">
-                        {{ serviceIds.length }}
-                        {{ $tc('services', 2).toLowerCase() }}
-                    </span>
-                </template>
+            <template v-slot:groupId="{ data: { item: { groupId } } }">
+                <router-link
+                    v-if="groupId !== $t('not', { action: 'monitored' })"
+                    :to="`/dashboard/monitors/${groupId}`"
+                    class="no-underline"
+                >
+                    <span class="font-weight-bold">{{ groupId }} </span>
+                </router-link>
+                <span v-else>{{ groupId }} </span>
+            </template>
 
-                <v-sheet style="border-radius: 10px;" class="pa-4">
+            <template v-slot:monitorState="{ data: { item: { monitorState } } }">
+                <div class="d-flex align-center">
+                    <icon-sprite-sheet
+                        v-if="monitorState"
+                        size="13"
+                        class="status-icon mr-1"
+                        :frame="$help.monitorStateIcon(monitorState)"
+                    >
+                        status
+                    </icon-sprite-sheet>
+                    <span>{{ monitorState }} </span>
+                </div>
+            </template>
+
+            <template v-slot:id="{ data: { item: { id } } }">
+                <router-link :to="`/dashboard/servers/${id}`" class="no-underline">
+                    <span>{{ id }} </span>
+                </router-link>
+            </template>
+
+            <template
+                v-slot:serverState="{
+                    data: { item: { id, isMasterServer, serverState, monitorModule } },
+                }"
+            >
+                <div
+                    :id="`serverState-${id}`"
+                    class="d-flex align-center"
+                    :class="{
+                        pointer: monitorModule === monitorSupportsReplica && !isMasterServer,
+                    }"
+                    @mouseover="hoveredItem = { id, isMasterServer, serverState, monitorModule }"
+                >
+                    <icon-sprite-sheet
+                        size="13"
+                        class="mr-1 status-icon"
+                        :frame="$help.serverStateIcon(serverState)"
+                    >
+                        status
+                    </icon-sprite-sheet>
+                    <span>
+                        {{ serverState }}
+                    </span>
+                </div>
+            </template>
+
+            <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
+                <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
+
+                <template v-else-if="serviceIds.length < 2">
                     <template v-for="serviceId in serviceIds">
                         <router-link
                             :key="serviceId"
                             :to="`/dashboard/services/${serviceId}`"
-                            class="text-body-2 d-block no-underline"
+                            class="no-underline"
                         >
                             <span>{{ serviceId }} </span>
                         </router-link>
                     </template>
-                </v-sheet>
-            </v-menu>
-        </template>
-    </data-table>
+                </template>
+
+                <v-menu
+                    v-else
+                    top
+                    transition="slide-y-transition"
+                    :close-on-content-click="false"
+                    open-on-hover
+                    nudge-left="50"
+                    nudge-top="40"
+                    allow-overflow
+                    content-class="shadow-drop"
+                >
+                    <template v-slot:activator="{ on }">
+                        <div class="pointer color text-links" v-on="on">
+                            {{ serviceIds.length }}
+                            {{ $tc('services', 2).toLowerCase() }}
+                        </div>
+                    </template>
+
+                    <v-sheet style="border-radius: 10px;" class="pa-4">
+                        <template v-for="serviceId in serviceIds">
+                            <router-link
+                                :key="serviceId"
+                                :to="`/dashboard/services/${serviceId}`"
+                                class="text-body-2 d-block no-underline"
+                            >
+                                <span>{{ serviceId }} </span>
+                            </router-link>
+                        </template>
+                    </v-sheet>
+                </v-menu>
+            </template>
+        </data-table>
+        <v-menu
+            top
+            transition="slide-y-transition"
+            :close-on-content-click="false"
+            open-on-hover
+            content-class="shadow-drop color text-navigation"
+            allow-overflow
+            :nudge-left="50"
+            :nudge-top="40"
+            :disabled="
+                hoveredItem.monitorModule !== monitorSupportsReplica || hoveredItem.isMasterServer
+            "
+            :activator="`#serverState-${hoveredItem.id}`"
+        >
+            <v-sheet style="border-radius: 10px;" class="py-4 px-3 text-body-2">
+                <div class="px-1 py-1 font-weight-bold ">
+                    {{ $t('replicationStatus') }}
+                    <!-- TODO: show icon for replicationStatus -->
+                </div>
+                <v-divider class="color border-separator" />
+                <table class="px-1">
+                    <template v-for="(srcReplication, i) in getSlaveStatus(hoveredItem.id)">
+                        <tbody :key="`${i}`" class="tbody-src-replication">
+                            <tr v-for="(value, key) in srcReplication" :key="`${key}`">
+                                <template>
+                                    <td class="pr-5">
+                                        {{ key }}
+                                    </td>
+                                    <td>
+                                        <truncate-string
+                                            wrap
+                                            :text="`${value}`"
+                                            :maxWidth="300"
+                                            :nudgeTop="10"
+                                        />
+                                    </td>
+                                </template>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </v-sheet>
+        </v-menu>
+    </div>
 </template>
 
 <script>
@@ -139,6 +198,8 @@ export default {
             ],
             servicesLength: 0,
             monitorsLength: 0,
+            monitorSupportsReplica: 'mariadbmon',
+            hoveredItem: '',
         }
     },
     computed: {
@@ -148,6 +209,7 @@ export default {
         }),
         ...mapGetters({
             getAllMonitorsMap: 'monitor/getAllMonitorsMap',
+            getAllServersMap: 'server/getAllServersMap',
         }),
         tableRows: function() {
             let rows = []
@@ -193,13 +255,19 @@ export default {
                         // The monitorsData is always an array with one element -> get monitor at index 0
                         const {
                             id: monitorId = null,
-                            attributes: { state: monitorState },
+                            attributes: {
+                                state: monitorState,
+                                module: monitorModule,
+                                monitor_diagnostics: { master },
+                            },
                         } = this.getAllMonitorsMap.get(monitorsData[0].id) || {}
 
                         if (monitorId) {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
                             row.monitorState = monitorState
+                            row.monitorModule = monitorModule
+                            row.isMasterServer = master === row.id
                             // delete monitor that already grouped from allMonitorsMapClone
                             allMonitorsMapClone.delete(monitorId)
                         }
@@ -223,6 +291,7 @@ export default {
                         gtid: '',
                         groupId: monitor.id,
                         monitorState: monitor.attributes.state,
+                        monitorModule: monitor.attributes.module,
                     })
                 })
 
@@ -231,11 +300,22 @@ export default {
                 const uniqueMonitorId = new Set(allMonitorIds) // get unique monitor ids
                 this.setMonitorsLength([...uniqueMonitorId].length)
             }
-
             return rows
         },
+        slaveConnectionsMap() {
+            let map = new Map()
+            this.tableRows
+                .filter(row => row.monitorModule === this.monitorSupportsReplica)
+                .forEach(row => {
+                    const key = row.id
+                    const server = this.getAllServersMap.get(row.id)
+                    let slave_connections =
+                        map.get(key) || this.$typy(server, 'attributes.slave_connections').safeArray
+                    map.set(key, slave_connections)
+                })
+            return map
+        },
     },
-
     methods: {
         setServicesLength(total) {
             this.servicesLength = total
@@ -243,6 +323,65 @@ export default {
         setMonitorsLength(total) {
             this.monitorsLength = total
         },
+        getSlaveStatus(serverId) {
+            const slave_connections = this.slaveConnectionsMap.get(serverId) || []
+            if (!slave_connections.length) return null
+
+            const slaveStats = []
+            slave_connections.forEach(slave_conn => {
+                const {
+                    seconds_behind_master,
+                    slave_io_running,
+                    slave_sql_running,
+                    last_io_error,
+                    last_sql_error,
+                    connection_name,
+                } = slave_conn
+                let slaveStatus = {}
+                // show connection_name only when multi-source replication is in use
+                if (slave_connections.length > 1) slaveStatus.connection_name = connection_name
+
+                // Determine replication_state (Stopped||Running||Lagging)
+                if (slave_io_running === 'No' || slave_sql_running === 'No')
+                    slaveStatus.replication_state = 'Stopped'
+                else if (seconds_behind_master === 0) {
+                    if (slave_sql_running === 'Yes' && slave_io_running === 'Yes')
+                        slaveStatus.replication_state = 'Running'
+                    else {
+                        // use value of either slave_io_running or slave_sql_running
+                        slaveStatus.replication_state =
+                            slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
+                    }
+                } else slaveStatus.replication_state = 'Lagging'
+
+                // only show last_io_error and last_sql_error when replication_state === 'Stopped'
+                if (slaveStatus.replication_state === 'Stopped')
+                    slaveStatus = {
+                        ...slaveStatus,
+                        last_io_error,
+                        last_sql_error,
+                    }
+                slaveStatus = {
+                    ...slaveStatus,
+                    seconds_behind_master,
+                    slave_io_running,
+                    slave_sql_running,
+                }
+                slaveStats.push(slaveStatus)
+            })
+
+            return slaveStats
+        },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.tbody-src-replication:not(:last-child) {
+    &::after {
+        content: '';
+        display: block;
+        height: 10px;
+    }
+}
+</style>

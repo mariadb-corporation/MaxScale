@@ -181,6 +181,7 @@
     "copySqlToClipboard": "Copy SQL to clipboard",
     "queryHistoryRetentionPeriod": "Query history retention period",
     "inDays": "in days",
+    "replicationStatus": "Replication status",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
