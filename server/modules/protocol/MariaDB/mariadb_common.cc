@@ -395,7 +395,7 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     , client_token_2fa(rhs.client_token_2fa)
     , backend_token(rhs.backend_token)
     , backend_token_2fa(rhs.backend_token_2fa)
-    , m_current_authenticator(rhs.m_current_authenticator)
+    , m_current_client_auth(rhs.m_current_client_auth)
     , user_search_settings(rhs.user_search_settings)
     , user_entry(rhs.user_entry)
 {
@@ -430,6 +430,12 @@ bool MYSQL_session::is_trx_active() const
 uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;
+}
+
+mariadb::AuthByteVec mariadb::AuthenticatorModule::generate_token(const std::string& password)
+{
+    // Simply write the password as is. This works for PAM and GSSApi (in theory).
+    return mariadb::AuthByteVec(password.begin(), password.end());
 }
 
 bool UserEntry::operator==(const UserEntry& rhs) const

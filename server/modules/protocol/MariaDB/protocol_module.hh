@@ -54,6 +54,4 @@ private:
 
     // This is needed for the getConfiguration entry point
     mxs::config::Configuration m_config;
-
-    std::unique_ptr<mariadb::UserEntry> m_custom_entry;
 };

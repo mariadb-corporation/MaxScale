@@ -167,11 +167,13 @@ private:
     void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
-
     bool require_ssl() const;
-    void update_user_account_entry();
 
-    const MariaDBUserCache* user_account_cache();
+    void update_user_account_entry();
+    void assign_backend_authenticator();
+
+    mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
+    const MariaDBUserCache*       user_account_cache();
 
     enum class AuthErrorType
     {

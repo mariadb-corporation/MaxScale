@@ -138,13 +138,16 @@ public:
      * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
      */
 
-    mariadb::ClientAuthenticator::ByteVec client_token;     /**< First client token */
-    mariadb::ClientAuthenticator::ByteVec client_token_2fa; /**< Second client token */
-    mariadb::ClientAuthenticator::ByteVec backend_token;    /**< First backend token */
-    mariadb::ClientAuthenticator::ByteVec backend_token_2fa;/**< Second backend token */
+    mariadb::AuthByteVec client_token;      /**< First client token */
+    mariadb::AuthByteVec client_token_2fa;  /**< Second client token */
+    mariadb::AuthByteVec backend_token;     /**< First backend token */
+    mariadb::AuthByteVec backend_token_2fa; /**< Second backend token */
 
-    // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
-    mariadb::AuthenticatorModule* m_current_authenticator {nullptr};
+    // Client authenticator module currently in use by the session. May change on COM_CHANGE_USER.
+    mariadb::AuthenticatorModule* m_current_client_auth {nullptr};
+
+    // Backend authenticator module in use by the session. Usually same as client authenticator.
+    mariadb::AuthenticatorModule* m_current_be_auth {nullptr};
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;

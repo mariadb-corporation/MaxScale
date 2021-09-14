@@ -35,6 +35,7 @@ struct BackendAuthData;
 
 using SClientAuth = std::unique_ptr<ClientAuthenticator>;
 using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
+using AuthByteVec = std::vector<uint8_t>;
 
 struct UserEntry
 {
@@ -120,6 +121,16 @@ public:
      * @return Capabilities as a bitfield
      */
     virtual uint64_t capabilities() const;
+
+    /**
+     * Generate a backend token from a cleartext password. This function is called when reading a backend
+     * password from a mapping file. The form of the password depends on the authenticator. The default
+     * implementation returns the password as is.
+     *
+     * @param password Password read from file
+     * @return Authentication token
+     */
+    virtual AuthByteVec generate_token(const std::string& password);
 };
 
 using SAuthModule = std::unique_ptr<AuthenticatorModule>;
@@ -130,8 +141,6 @@ using SAuthModule = std::unique_ptr<AuthenticatorModule>;
 class ClientAuthenticator
 {
 public:
-    using ByteVec = std::vector<uint8_t>;
-
     enum class ExchRes
     {
         FAIL,           /**< Packet processing failed */

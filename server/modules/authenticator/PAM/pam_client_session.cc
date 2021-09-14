@@ -34,7 +34,7 @@ namespace
  * @param output Password output
  * @return True on success, false if packet didn't have a valid header
  */
-bool store_client_password(GWBUF* buffer, mariadb::ClientAuthenticator::ByteVec* output)
+bool store_client_password(GWBUF* buffer, mariadb::AuthByteVec* output)
 {
     bool rval = false;
     uint8_t header[MYSQL_HEADER_LEN];

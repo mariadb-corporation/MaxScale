@@ -249,7 +249,8 @@ bool ClientConnection::setup_session()
     mxb_assert(authenticators.size() == 1);
     auto* pAuthenticator = static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
 
-    m_session_data.m_current_authenticator = pAuthenticator;
+    m_session_data.m_current_client_auth = pAuthenticator;
+    m_session_data.m_current_be_auth = pAuthenticator;
     m_session_data.client_info.m_client_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41
@@ -263,7 +264,7 @@ bool ClientConnection::setup_session()
         | CLIENT_SESSION_TRACKING
         | CLIENT_PROGRESS;
     m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
-    m_session_data.client_info.m_charset = 33; // UTF8
+    m_session_data.client_info.m_charset = 33;      // UTF8
 
     return m_session.start();
 }

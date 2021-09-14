@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <unordered_map>
 #include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/ssl.hh>
@@ -54,6 +55,19 @@ public:
         std::vector<uint8_t>     buffer_contents;
     };
 
+    struct MappingDest
+    {
+        std::string username;
+        std::string password;
+        std::string plugin;
+    };
+
+    struct MappingInfo
+    {
+        std::unordered_map<std::string, MappingDest> user_mapping;      /**< user -> user */
+        std::unordered_map<std::string, MappingDest> group_mapping;     /**< Linux group -> user */
+    };
+
     ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                  SProtocol protocol_module, const std::string& listener_name,
                  std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
@@ -75,5 +89,7 @@ public:
 
     /** Connection init sql queries. Only used by MariaDB-protocol module .*/
     const ConnectionInitSql m_conn_init_sql;
+
+    const std::unique_ptr<const MappingInfo> m_mapping_info;    /**< Backend user mapping and passwords */
 };
 }

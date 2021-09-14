@@ -29,7 +29,7 @@ namespace
 {
 // Support the empty plugin as well, as that means default.
 const std::unordered_set<std::string> plugins = {"mysql_native_password", "caching_sha2_password",
-                                                 "mysql_clear_password", ""};
+                                                 "mysql_clear_password",  ""};
 }
 
 /**
@@ -84,6 +84,17 @@ mariadb::SBackendAuth
 MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
     return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
+}
+
+mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(const std::string& password)
+{
+    mariadb::AuthByteVec rval;
+    if (!password.empty())
+    {
+        rval.resize(SHA_DIGEST_LENGTH);
+        gw_sha1_str((const uint8_t*)password.c_str(), password.length(), rval.data());
+    }
+    return rval;
 }
 
 // Helper function for generating an AuthSwitchRequest packet.
