@@ -87,8 +87,8 @@
             </template>
         </v-data-table>
         <v-menu
-            offset-x
-            transition="slide-x-transition"
+            top
+            transition="slide-y-transition"
             :close-on-content-click="false"
             open-on-hover
             :nudge-left="truncatedMenu.x"
@@ -213,7 +213,7 @@ export default {
             pagination: {},
 
             //For truncated cell
-            truncatedMenu: { index: null, x: 0, y: 16.5 },
+            truncatedMenu: { index: null, x: 0, y: 25 },
             //For nested data, display dropdown table row
             hasValidChild: false,
             nodeActiveIds: [],
