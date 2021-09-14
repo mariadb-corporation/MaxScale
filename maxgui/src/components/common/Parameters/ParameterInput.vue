@@ -48,7 +48,7 @@
         :rules="rules.requiredFieldEither"
         :disabled="targetItem.disabled"
         autocomplete="off"
-        @keypress="preventNonNumericalVal($event)"
+        @keypress="$help.preventNonNumericalVal($event)"
         @input="handleChange"
     />
 
