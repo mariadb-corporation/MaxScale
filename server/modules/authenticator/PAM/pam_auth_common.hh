@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <openssl/sha.h>
+#include <maxbase/pam_utils.hh>
 
 extern const std::string DIALOG;    /* PAM client helper plugin name */
 extern const int DIALOG_SIZE;       /* The total storage required */
@@ -50,3 +51,10 @@ struct PasswordHash
 };
 // Map from username to MariaDB password hash.
 using PasswordMap = std::unordered_map<std::string, PasswordHash>;
+
+struct AuthSettings
+{
+    bool               cleartext_plugin {false};            /**< Is "pam_use_cleartext_plugin" enabled? */
+    mxb::pam::AuthMode mode {mxb::pam::AuthMode::PW};       /**< Authentication mode */
+    BackendMapping     be_mapping {BackendMapping::NONE};   /**< Backend authenticator mapping */
+};

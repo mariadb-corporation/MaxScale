@@ -64,7 +64,7 @@ bool store_client_password(GWBUF* buffer, mariadb::ClientAuthenticator::ByteVec*
  */
 Buffer PamClientAuthenticator::create_auth_change_packet() const
 {
-    bool dialog = !m_cleartext_plugin;
+    bool dialog = !m_settings.cleartext_plugin;
     /**
      * The AuthSwitchRequest packet:
      * 4 bytes     - Header
@@ -124,7 +124,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
         // Client should have responded with password.
         if (store_client_password(buffer, &session->client_token))
         {
-            if (m_mode == AuthMode::PW)
+            if (m_settings.mode == AuthMode::PW)
             {
                 m_state = State::PW_RECEIVED;
                 rval = ExchRes::READY;
@@ -161,8 +161,8 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     using mxb::pam::AuthResult;
     AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
-    bool twofa = (m_mode == AuthMode::PW_2FA);
-    bool map_to_mariadbauth = (m_be_mapping == BackendMapping::MARIADB);
+    bool twofa = (m_settings.mode == AuthMode::PW_2FA);
+    bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
 
     /** We sent the authentication change packet + plugin name and the client
      * responded with the password. Try to continue authentication without more
@@ -187,7 +187,7 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     sett.service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
     sett.mapping_on = map_to_mariadbauth;
 
-    AuthResult res = mxb::pam::authenticate(m_mode, user, pwds, sett, expected_msgs);
+    AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, sett, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;
@@ -236,11 +236,8 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     return rval;
 }
 
-PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin, AuthMode mode,
-                                               BackendMapping be_mapping, const PasswordMap& backend_pwds)
-    : m_cleartext_plugin(cleartext_plugin)
-    , m_mode(mode)
-    , m_be_mapping(be_mapping)
+PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds)
+    : m_settings(settings)
     , m_backend_pwds(backend_pwds)
 {
 }

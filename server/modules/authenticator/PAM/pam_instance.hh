@@ -40,12 +40,8 @@ public:
 private:
     using AuthMode = mxb::pam::AuthMode;
 
-    PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode, BackendMapping be_mapping,
-                           PasswordMap&& backend_pwds);
+    PamAuthenticatorModule(AuthSettings& settings, PasswordMap&& backend_pwds);
 
-    bool           m_cleartext_plugin {false};          /**< Is "pam_use_cleartext_plugin" enabled? */
-    AuthMode       m_mode {AuthMode::PW};               /**< Authentication mode */
-    BackendMapping m_be_mapping {BackendMapping::NONE}; /**< Backend authenticator mapping */
-
-    const PasswordMap m_backend_pwds;
+    const AuthSettings m_settings;
+    const PasswordMap  m_backend_pwds;
 };
