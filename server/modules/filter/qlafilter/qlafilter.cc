@@ -207,10 +207,6 @@ QlaFilterSession::~QlaFilterSession()
         fclose(m_logfile);
         m_logfile = nullptr;
     }
-    m_event_data.clear();
-
-    // File should be closed and event data freed by now
-    mxb_assert(m_logfile == NULL && m_event_data.has_message == false);
 }
 
 bool QlaInstance::post_configure()
@@ -407,40 +403,25 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         && m_instance.match_exclude(query, query_len))
     {
         const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
-        LogEventData& event = m_event_data;
 
-        event.sql.assign(query, query_len);
+        m_sql.assign(query, query_len);
         if (m_instance.m_settings.use_canonical_form)
         {
-            maxsimd::get_canonical(&event.sql, &m_markers);
+            maxsimd::get_canonical(&m_sql, &m_markers);
         }
+
+        m_begin_time = m_pSession->worker()->epoll_tick_now();
 
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
-            // Print current date to a buffer. Use the buffer in the event data struct even if execution time
-            // is not needed.
-            const time_t utc_seconds = time(NULL);
-            tm local_time;
-            localtime_r(&utc_seconds, &local_time);
-            strftime(event.query_date, LogEventData::DATE_BUF_SIZE, "%F %T", &local_time);
+            auto now = wall_time::Clock::now();
+            m_wall_time_str = wall_time::to_string(now, "%F %T");
         }
 
-        if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
-        {
-            // Have to measure reply time from server. Save query data for printing during clientReply.
-            // If old event data exists, it is erased. This only happens if client sends a query before
-            // receiving reply to previous query.
-            if (event.has_message)
-            {
-                event.clear();
-            }
-            clock_gettime(CLOCK_MONOTONIC, &event.begin_time);
-            event.has_message = true;
-        }
-        else
+        if (!(data_flags & QlaInstance::LOG_DATA_REPLY_TIME))
         {
             // If execution times are not logged, write the log entry now.
-            LogEventElems elems(event.query_date, event.sql);
+            LogEventElems elems(m_begin_time, m_sql, m_begin_time);
             write_log_entries(elems);
         }
     }
@@ -450,22 +431,12 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
 bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    LogEventData& event = m_event_data;
-    if (event.has_message)
+    if (m_instance.m_settings.log_file_data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
-        const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
-        mxb_assert(data_flags & QlaInstance::LOG_DATA_REPLY_TIME);
-
-        // Calculate elapsed time in milliseconds.
-        timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);   // Gives time in seconds + nanoseconds
-        double elapsed_ms = 1E3 * (now.tv_sec - event.begin_time.tv_sec)
-            + (now.tv_nsec - event.begin_time.tv_nsec) / (double)1E6;
-
-        LogEventElems elems(event.query_date, event.sql, std::floor(elapsed_ms + 0.5));
+        LogEventElems elems(m_begin_time, m_sql, m_pSession->worker()->epoll_tick_now());
         write_log_entries(elems);
-        event.clear();
     }
+
     return mxs::FilterSession::clientReply(queue, down, reply);
 }
 
@@ -604,7 +575,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_DATE)
     {
-        output << curr_sep << elems.date_string;
+        output << curr_sep << m_wall_time_str;
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_USER)
@@ -614,7 +585,8 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
-        output << curr_sep << elems.elapsed_ms;
+        auto secs = mxb::to_secs(elems.end_time - elems.begin_time);
+        output << curr_sep << int(1000 * secs + 0.5);
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_QUERY)
