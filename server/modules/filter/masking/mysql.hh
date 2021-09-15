@@ -221,12 +221,13 @@ public:
      *
      * @param pData  Pointer to the beginning of a length encoded string
      */
-    LEncString(uint8_t* pData)
+    LEncString(uint8_t* pData, size_t length = std::numeric_limits<size_t>::max())
     {
         // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
-        if (*pData != 0xfb)
+        if (length != 0 && *pData != 0xfb)
         {
             m_pString = mxq::lestr_consume(&pData, &m_length);
+            mxb_assert(m_length <= length);
         }
         else
         {
@@ -242,18 +243,23 @@ public:
      *                encoded string. After the call, the pointer will point
      *                one past the end of the length encoded string.
      */
-    LEncString(uint8_t** ppData)
+    LEncString(uint8_t** ppData, size_t length = std::numeric_limits<size_t>::max())
     {
         // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
-        if (**ppData != 0xfb)
+        if (length != 0 && **ppData != 0xfb)
         {
             m_pString = mxq::lestr_consume(ppData, &m_length);
+            mxb_assert(m_length <= length);
         }
         else
         {
             m_pString = NULL;
             m_length = 0;
-            ++(*ppData);
+
+            if (length != 0)
+            {
+                ++(*ppData);
+            }
         }
     }
 
@@ -792,9 +798,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData)
+        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
+        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
     }
 
     ComOK(const ComResponse& response)
@@ -803,9 +810,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData)
+        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
+        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
     }
 
     uint64_t affected_rows() const
@@ -831,6 +839,32 @@ public:
     const LEncString& info() const
     {
         return m_info;
+    }
+
+    uint64_t rows_matched() const
+    {
+        uint64_t rv = 0;
+
+        std::string s = m_info.to_string();
+
+        // An OK from a DELETE will e.g. be empty.
+        if (!s.empty())
+        {
+            auto i = s.find("Rows matched: ");
+            mxb_assert(i == 0);
+
+            if (i != std::string::npos)
+            {
+                mxb_assert(s.find("  Changed:") != 0);
+
+                char* zEnd;
+                rv = strtoul(s.c_str() + 14, &zEnd, 10); // strlen("Rows matched: ") == 14
+
+                mxb_assert(zEnd - s.c_str() == (long)s.find("  Changed:"));
+            }
+        }
+
+        return rv;
     }
 
 private:
