@@ -96,7 +96,7 @@ cfg::ParamEnumMask<uint32_t> s_options(
     0,
     cfg::Param::AT_STARTUP);
 
-cfg::ParamEnum<int64_t> s_log_type(
+cfg::ParamEnumMask<uint32_t> s_log_type(
     &s_spec, "log_type", "The type of log file to use",
     {
         {QlaInstance::LOG_FILE_SESSION, "session"},

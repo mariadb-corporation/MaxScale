@@ -113,7 +113,7 @@ public:
         bool        write_session_log {false};
         bool        write_stdout_log {false};
         uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
-        int64_t     log_file_types {0};
+        uint32_t    log_file_types {0};
         uint64_t    session_data_flags {0};     /* What data is printed to session files */
         std::string filebase;                   /* The filename base */
         bool        flush_writes {false};       /* Flush log file after every write? */
