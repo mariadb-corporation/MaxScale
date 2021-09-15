@@ -39,10 +39,15 @@
  */
 
 /*
-This component accepts
-- headers props as array of objects, each object must has text:String, value:Any and
-  may has sortable: true || false, editableCol: true || false, align: "center || left || right",
-  cellTruncated: true || false, width: String, padding: String
+headers: {
+  text: string,
+  value: any,
+  width?: string,
+  sortable?: boolean
+  editableCol?: boolean, if true, apply editable style for that column
+  cellTruncated?: boolean, auto truncate cell value
+  align?: string, "center || left || right",
+}
 
 SLOTS available for this component:
 - slot :name="`header-append-${header.value}`"

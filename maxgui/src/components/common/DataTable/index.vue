@@ -91,8 +91,8 @@
             transition="slide-y-transition"
             :close-on-content-click="false"
             open-on-hover
+            offset-y
             :nudge-left="truncatedMenu.x"
-            :nudge-top="truncatedMenu.y"
             content-class="shadow-drop color text-navigation"
             :activator="
                 `#truncatedText_atRow${truncatedMenu.rowIndex}_atCell${truncatedMenu.cellIndex}_${componentId}`
@@ -126,10 +126,15 @@
  */
 
 /*
-This component accepts:
-- headers props as array of objects, each object must has text:String, value:Any and
-  may has sortable: true || false, editableCol: true || false, align: "center || left || right",
-  cellTruncated: true || false, width: String, padding: String
+headers: {
+  text: string,
+  value: any,
+  width?: string,
+  sortable?: boolean
+  editableCol?: boolean, if true, apply editable style for that column
+  cellTruncated?: boolean, auto truncate cell value
+  align?: string, "center || left || right",
+}
 
 - data props as array of objects, each object must has either item.nodeId:Number || item.id:Any,
   if both presents nodeId will be used
@@ -213,7 +218,7 @@ export default {
             pagination: {},
 
             //For truncated cell
-            truncatedMenu: { index: null, x: 0, y: 25 },
+            truncatedMenu: { index: null, x: 0 },
             //For nested data, display dropdown table row
             hasValidChild: false,
             nodeActiveIds: [],

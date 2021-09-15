@@ -42,9 +42,14 @@
 
             <!-- no content for the corresponding header, usually this is an error -->
             <span v-if="$help.isUndefined(item[header.value])"></span>
-            <div v-else ref="truncatedTextAtRow" class="d-inline">
+            <div
+                v-else-if="!editableCell || header.cellTruncated"
+                ref="truncatedTextAtRow"
+                class="d-inline"
+            >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
             </div>
+            <slot v-else :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
 
             <!-- Actions slot -->
             <div v-if="renderActionsSlot" class="action-slot-wrapper">
@@ -106,7 +111,7 @@ export default {
     data() {
         return {
             //For truncated cell
-            truncatedMenu: { index: null, x: 0, y: 16.5 },
+            truncatedMenu: { index: null, x: 0 },
         }
     },
     computed: {
@@ -116,7 +121,7 @@ export default {
         itemWrapperClasses() {
             return [
                 this.item.level > 0 || this.header.cellTruncated ? 'text-truncate' : '',
-                'relative fill-height',
+                'relative',
                 (this.item.level > 0 || this.header.cellTruncated) &&
                     this.truncatedMenu.index === this.cellIndex &&
                     'pointer',
@@ -215,8 +220,7 @@ export default {
             const txtOffsetWidth = this.$typy(text, 'offsetWidth').safeNumber
             if (wrapperOffsetWidth < txtOffsetWidth) {
                 this.truncatedMenu.index = cellIndex
-                this.truncatedMenu.x = text.offsetWidth - wrapper.offsetWidth
-                this.truncatedMenu.y = 40
+                this.truncatedMenu.x = (txtOffsetWidth - wrapperOffsetWidth + 16) / 2
                 this.truncatedMenu.rowIndex = rowIndex
                 this.truncatedMenu.cellIndex = cellIndex
                 this.truncatedMenu.item = item
