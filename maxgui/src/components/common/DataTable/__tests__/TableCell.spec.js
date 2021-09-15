@@ -60,6 +60,10 @@ describe('TableCell.vue', () => {
             },
             header: { text: 'Value', value: 'value', cellTruncated: true },
         })
+        await wrapper.setData({
+            isTruncated: true,
+        })
+
         let eventFired = 0
         wrapper.vm.$on('cell-hover', () => {
             eventFired++

@@ -66,9 +66,9 @@
                             :isTree="isTree"
                             :hasValidChild="hasValidChild"
                             :componentId="componentId"
-                            @cell-hover="cellHover($event)"
+                            @cell-hover="cellHover"
                             @get-truncated-info="truncatedMenu = $event"
-                            @toggle-node="toggleNode($event)"
+                            @toggle-node="toggleNode"
                         >
                             <template :slot="header.value">
                                 <slot
@@ -87,6 +87,9 @@
             </template>
         </v-data-table>
         <v-menu
+            v-if="truncatedMenu"
+            :key="`.row-${truncatedMenu.rowIndex}_cell-${truncatedMenu.cellIndex}_${componentId}`"
+            :value="Boolean(truncatedMenu.item)"
             top
             transition="slide-y-transition"
             :close-on-content-click="false"
@@ -95,11 +98,11 @@
             :nudge-left="truncatedMenu.x"
             content-class="shadow-drop color text-navigation"
             :activator="
-                `#truncatedText_atRow${truncatedMenu.rowIndex}_atCell${truncatedMenu.cellIndex}_${componentId}`
+                `.row-${truncatedMenu.rowIndex}_cell-${truncatedMenu.cellIndex}_${componentId}`
             "
         >
             <v-sheet
-                v-if="truncatedMenu.item && truncatedMenu.index === truncatedMenu.cellIndex"
+                v-if="truncatedMenu.item"
                 style="border-radius: 10px;overflow:auto"
                 class="pa-4"
             >
@@ -216,9 +219,8 @@ export default {
         return {
             //common
             pagination: {},
-
             //For truncated cell
-            truncatedMenu: { index: null, x: 0 },
+            truncatedMenu: null,
             //For nested data, display dropdown table row
             hasValidChild: false,
             nodeActiveIds: [],
@@ -280,6 +282,7 @@ export default {
                 rowIndex,
                 cellIndex,
                 header,
+                componentId: this.componentId,
             })
 
             if (this.colsHasRowSpan) {

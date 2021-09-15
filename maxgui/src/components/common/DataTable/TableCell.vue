@@ -3,8 +3,8 @@
         :rowspan="cellIndex < colsHasRowSpan ? item.rowspan : null"
         :class="tdClasses"
         :style="isTree && hasValidChild && cellLevelPadding"
-        @mouseenter="e => cellHover(e)"
-        @mouseleave="e => cellHover(e)"
+        @mouseenter="cellHover"
+        @mouseleave="cellHover"
     >
         <v-icon
             v-if="draggable"
@@ -16,12 +16,7 @@
             drag_handle
         </v-icon>
 
-        <div
-            :id="`truncatedText_atRow${rowIndex}_atCell${cellIndex}_${componentId}`"
-            ref="itemWrapperCell"
-            :style="{ ...itemWrapperAlign, lineHeight }"
-            :class="itemWrapperClasses"
-        >
+        <div :style="{ ...itemWrapperAlign }" class="d-flex align-center relative">
             <!-- Display toggle button at the first column-->
             <v-btn
                 v-if="shouldShowToggleBtn"
@@ -43,14 +38,14 @@
             <!-- no content for the corresponding header, usually this is an error -->
             <span v-if="$help.isUndefined(item[header.value])"></span>
             <div
-                v-else-if="!editableCell || header.cellTruncated"
-                ref="truncatedTextAtRow"
-                class="d-inline"
+                v-else
+                ref="truncateEle"
+                class="d-inline-block fill-height"
+                :class="[item.level > 0 || header.cellTruncated ? 'text-truncate' : '']"
+                style="width:100%; line-height:44px"
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
             </div>
-            <slot v-else :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
-
             <!-- Actions slot -->
             <div v-if="renderActionsSlot" class="action-slot-wrapper">
                 <slot :data="{ item }" name="actions" />
@@ -111,23 +106,13 @@ export default {
     data() {
         return {
             //For truncated cell
-            truncatedMenu: { index: null, x: 0 },
+            isTruncated: false,
         }
     },
     computed: {
         shouldShowToggleBtn() {
             return Boolean(this.cellIndex === 0 && this.item.children && this.item.children.length)
         },
-        itemWrapperClasses() {
-            return [
-                this.item.level > 0 || this.header.cellTruncated ? 'text-truncate' : '',
-                'relative',
-                (this.item.level > 0 || this.header.cellTruncated) &&
-                    this.truncatedMenu.index === this.cellIndex &&
-                    'pointer',
-            ]
-        },
-        lineHeight: () => '44px',
         tdClasses() {
             return [
                 'color border-bottom-table-border text-navigation',
@@ -153,8 +138,9 @@ export default {
                 this.tdBorderLeft || this.cellIndex === this.colsHasRowSpan
                     ? 'border-left-table-border'
                     : '',
-                this.item.level > 0 || this.header.cellTruncated
-                    ? 'text-truncate cell-truncate'
+                this.item.level > 0 || this.header.cellTruncated ? 'cell-truncate' : '',
+                this.isTruncated
+                    ? `row-${this.rowIndex}_cell-${this.cellIndex}_${this.componentId} pointer`
                     : '',
                 this.draggable && 'relative',
                 `cell-${this.cellIndex}-${this.item.id}`,
@@ -190,6 +176,15 @@ export default {
             )
         },
     },
+    watch: {
+        item() {
+            if (this.header.cellTruncated) this.$help.doubleRAF(() => this.checkTruncated())
+        },
+    },
+    mounted() {
+        // wait for DOM to render completely
+        if (this.header.cellTruncated) this.$help.doubleRAF(() => this.checkTruncated())
+    },
     methods: {
         //---------------------------------Cell events----------------------------------------------------------------
         cellHover(e) {
@@ -201,36 +196,30 @@ export default {
                 cellIndex,
                 header,
             })
-            if (item.level > 0 || header.cellTruncated) {
+            if (
+                e.type === 'mouseenter' &&
+                this.isTruncated &&
+                (item.level > 0 || header.cellTruncated)
+            )
                 this.showTruncatedMenu(item, rowIndex, cellIndex, header)
-            }
         },
-
+        checkTruncated() {
+            if (!this.$refs.truncateEle) return false
+            this.isTruncated =
+                this.$refs.truncateEle.scrollWidth > this.$refs.truncateEle.clientWidth
+        },
         /**
          * This function shows truncated text in v-menu
          * @param {Object} item object
          */
         showTruncatedMenu(item, rowIndex, cellIndex, header) {
-            // auto truncated text feature
-            const wrapper = this.$refs.itemWrapperCell
-            const text = this.$refs.truncatedTextAtRow
-            let wrapperOffsetWidth = this.$typy(wrapper, 'offsetWidth').safeNumber
-            // Subtracting toggle button's width from wrapper's width
-            if (this.shouldShowToggleBtn) wrapperOffsetWidth = wrapperOffsetWidth - 36
-            const txtOffsetWidth = this.$typy(text, 'offsetWidth').safeNumber
-            if (wrapperOffsetWidth < txtOffsetWidth) {
-                this.truncatedMenu.index = cellIndex
-                this.truncatedMenu.x = (txtOffsetWidth - wrapperOffsetWidth + 16) / 2
-                this.truncatedMenu.rowIndex = rowIndex
-                this.truncatedMenu.cellIndex = cellIndex
-                this.truncatedMenu.item = item
-                this.truncatedMenu.header = header
-
-                this.$emit('get-truncated-info', this.truncatedMenu)
-            } else {
-                this.truncatedMenu.index = null
-                this.$emit('get-truncated-info', this.truncatedMenu)
-            }
+            let truncatedMenu = { item }
+            truncatedMenu.header = header
+            truncatedMenu.rowIndex = rowIndex
+            truncatedMenu.cellIndex = cellIndex
+            const truncateEle = this.$refs.truncateEle
+            truncatedMenu.x = (truncateEle.scrollWidth + 16 - truncateEle.clientWidth) / 2
+            this.$emit('get-truncated-info', truncatedMenu)
         },
     },
 }
