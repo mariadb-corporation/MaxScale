@@ -17,6 +17,46 @@ void test_rwsplit(TestConnections& test)
     auto c = test.maxscale->rwsplit();
     test.expect(c.connect(), "Connection to readwritesplit should succeed");
 
+    // Test simple reads and writes outside of transactions
+    test.expect(c.query("CREATE OR REPLACE TABLE table_for_writes(id INT)"),
+                "Failed to create table: %s", c.error());
+
+    for (int i = 0; i < 100 && test.ok(); i++)
+    {
+        if (test.repl->check_backend_versions(100500))
+        {
+            auto id = c.field("INSERT INTO table_for_writes VALUES (@@server_id) RETURNING id");
+
+            if (test.expect(!id.empty(), "INSERT failed: %s", c.error()))
+            {
+                test.expect(id == master_id, "INSERT was not routed to master: %s", id.c_str());
+            }
+        }
+        else
+        {
+            test.expect(c.query("INSERT INTO table_for_writes VALUES (@@server_id)"),
+                        "INSERT failed: %s", c.error());
+        }
+    }
+
+
+    test.repl->sync_slaves();
+
+    for (int i = 0; i < 100 && test.ok(); i++)
+    {
+        auto row = c.row("SELECT id, @@server_id FROM table_for_writes");
+
+        if (test.expect(!row.empty(), "SELECT returned no data"))
+        {
+            test.expect(row[0] == master_id, "Expected %s to be stored in the table, not %s",
+                        master_id.c_str(), row[0].c_str());
+            test.expect(row[1] != master_id, "SELECT was not routed to a slave");
+        }
+    }
+
+    test.expect(c.query("DROP TABLE table_for_writes"),
+                "Failed to DROP TABLE: %s", c.error());
+
     // Transactions to master
     c.query("START TRANSACTION");
     test.expect(c.field("SELECT @@server_id") == master_id,
