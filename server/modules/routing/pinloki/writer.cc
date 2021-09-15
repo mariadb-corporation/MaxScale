@@ -112,6 +112,8 @@ bool Writer::has_master_changed(const mxq::Connection& conn)
 
 void Writer::run()
 {
+    bool log_host_warning = true;
+
     while (m_running)
     {
         Error error;
@@ -123,7 +125,12 @@ void Writer::run()
                 std::unique_lock<std::mutex> guard(m_lock);
                 if (!details.host.is_valid())
                 {
-                    MXB_SWARNING("No (replication) master found. Retrying...");
+                    if (log_host_warning)
+                    {
+                        MXB_SWARNING("No (replication) master found. Retrying silently until one is found.");
+                        log_host_warning = false;
+                    }
+
                     m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
                                         return !m_running;
                                     });
@@ -132,6 +139,8 @@ void Writer::run()
                 }
                 m_error = Error {};
             }
+
+            log_host_warning = true;
 
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
