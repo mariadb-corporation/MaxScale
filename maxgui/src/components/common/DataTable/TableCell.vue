@@ -40,8 +40,8 @@
             <div
                 v-else
                 ref="truncateEle"
-                class="d-inline-block fill-height"
-                :class="[item.level > 0 || header.cellTruncated ? 'text-truncate' : '']"
+                class="d-block fill-height"
+                :class="[item.level > 0 || header.autoTruncate ? 'text-truncate' : '']"
                 style="width:100%; line-height:44px"
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
@@ -138,7 +138,7 @@ export default {
                 this.tdBorderLeft || this.cellIndex === this.colsHasRowSpan
                     ? 'border-left-table-border'
                     : '',
-                this.item.level > 0 || this.header.cellTruncated ? 'cell-truncate' : '',
+                this.item.level > 0 || this.header.autoTruncate ? 'cell-truncate' : '',
                 this.isTruncated
                     ? `row-${this.rowIndex}_cell-${this.cellIndex}_${this.componentId} pointer`
                     : '',
@@ -178,12 +178,12 @@ export default {
     },
     watch: {
         item() {
-            if (this.header.cellTruncated) this.$help.doubleRAF(() => this.checkTruncated())
+            if (this.header.autoTruncate) this.$help.doubleRAF(() => this.checkTruncated())
         },
     },
     mounted() {
         // wait for DOM to render completely
-        if (this.header.cellTruncated) this.$help.doubleRAF(() => this.checkTruncated())
+        if (this.header.autoTruncate) this.$help.doubleRAF(() => this.checkTruncated())
     },
     methods: {
         //---------------------------------Cell events----------------------------------------------------------------
@@ -199,7 +199,7 @@ export default {
             if (
                 e.type === 'mouseenter' &&
                 this.isTruncated &&
-                (item.level > 0 || header.cellTruncated)
+                (item.level > 0 || header.autoTruncate)
             )
                 this.showTruncatedMenu(item, rowIndex, cellIndex, header)
         },

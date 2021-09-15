@@ -145,7 +145,7 @@ export default {
                     value: 'value',
                     width: '45%',
                     editableCol: true,
-                    cellTruncated: true,
+                    autoTruncate: true,
                 },
             ],
             loadingEditableParams: false,

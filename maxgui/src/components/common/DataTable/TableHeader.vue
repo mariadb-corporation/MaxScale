@@ -4,7 +4,10 @@
             <th
                 v-for="(header, i) in headers"
                 :key="i"
-                :style="{ padding: header.padding, width: header.width }"
+                :style="{
+                    padding: header.padding,
+                    width: header.width,
+                }"
                 :class="thClasses(header)"
                 @click="header.sortable !== false ? $emit('change-sort', header.value) : null"
             >
@@ -45,7 +48,7 @@ headers: {
   width?: string,
   sortable?: boolean
   editableCol?: boolean, if true, apply editable style for that column
-  cellTruncated?: boolean, auto truncate cell value
+  autoTruncate?: boolean, auto truncate cell value
   align?: string, "center || left || right",
 }
 

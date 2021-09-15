@@ -123,13 +123,12 @@
         </data-table>
         <v-menu
             top
+            offset-y
             transition="slide-y-transition"
             :close-on-content-click="false"
             open-on-hover
             content-class="shadow-drop color text-navigation"
             allow-overflow
-            :nudge-left="50"
-            :nudge-top="40"
             :disabled="
                 hoveredItem.monitorModule !== monitorSupportsReplica || hoveredItem.isMasterServer
             "
@@ -186,15 +185,15 @@ export default {
     data() {
         return {
             tableHeaders: [
-                { text: `Monitor`, value: 'groupId', cellTruncated: true },
+                { text: `Monitor`, value: 'groupId', autoTruncate: true },
                 { text: 'State', value: 'monitorState' },
-                { text: 'Servers', value: 'id', cellTruncated: true },
-                { text: 'Address', value: 'serverAddress', cellTruncated: true },
+                { text: 'Servers', value: 'id', autoTruncate: true },
+                { text: 'Address', value: 'serverAddress', autoTruncate: true },
                 { text: 'Port', value: 'serverPort' },
-                { text: 'Connections', value: 'serverConnections', cellTruncated: true },
+                { text: 'Connections', value: 'serverConnections', autoTruncate: true },
                 { text: 'State', value: 'serverState' },
                 { text: 'GTID', value: 'gtid' },
-                { text: 'Services', value: 'serviceIds', cellTruncated: true },
+                { text: 'Services', value: 'serviceIds', autoTruncate: true },
             ],
             servicesLength: 0,
             monitorsLength: 0,
@@ -353,7 +352,6 @@ export default {
                             slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
                     }
                 } else slaveStatus.replication_state = 'Lagging'
-
                 // only show last_io_error and last_sql_error when replication_state === 'Stopped'
                 if (slaveStatus.replication_state === 'Stopped')
                     slaveStatus = {
