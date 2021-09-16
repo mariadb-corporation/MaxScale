@@ -23,7 +23,6 @@
             ref="parametersTable"
             :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
-            :isTree="isTree"
             :parentForm="parentForm"
             :isListener="isListener"
         />
@@ -67,7 +66,6 @@ export default {
         usePortOrSocket: { type: Boolean, default: false },
         parentForm: { type: Object },
         isListener: { type: Boolean, default: false },
-        isTree: { type: Boolean, default: false },
     },
     data: function() {
         return {

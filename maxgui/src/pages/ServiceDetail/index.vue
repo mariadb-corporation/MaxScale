@@ -72,6 +72,7 @@
                                     ref="diagnostics-table"
                                     :title="`${$t('routerDiagnostics')}`"
                                     :tableData="routerDiagnostics"
+                                    expandAll
                                     isTree
                                 />
                             </v-col>

@@ -9,6 +9,7 @@
         open-on-hover
         allow-overflow
         :nudge-left="nudgeLeft"
+        :nudgeTop="nudgeTop"
         :max-width="menuMaxWidth"
         :max-height="menuMaxHeight"
         :disabled="disabled"
@@ -25,7 +26,8 @@
                 {{ text }}
             </div>
         </template>
-        <pre class="py-2 px-4">{{ text }}</pre>
+        <pre v-if="!wrap" class="py-2 px-4">{{ text }}</pre>
+        <div v-else class="py-2 px-4">{{ text }}</div>
     </v-menu>
     <div
         v-else
@@ -64,7 +66,9 @@ export default {
         menuMaxHeight: { type: Number, default: 600 },
         menuMaxWidth: { type: Number, default: 600 },
         nudgeLeft: { type: Number, default: 0 },
+        nudgeTop: { type: Number, default: 0 },
         disabled: { type: Boolean, default: false },
+        wrap: { type: Boolean, default: false },
     },
     data() {
         return {

@@ -281,12 +281,13 @@ describe('ServiceDetail index', () => {
                     ref: 'diagnostics-table',
                 })
                 expect(diagnosticsTable.exists()).to.be.true
-                const { title, tableData, isTree } = diagnosticsTable.vm.$props
+                const { title, tableData, isTree, expandAll } = diagnosticsTable.vm.$props
                 const { routerDiagnostics } = wrapper.vm
 
                 expect(title).to.be.equals('Router Diagnostics')
                 expect(tableData).to.be.equals(routerDiagnostics)
                 expect(isTree).to.be.true
+                expect(expandAll).to.be.true
             })
         })
 

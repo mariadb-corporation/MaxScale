@@ -21,8 +21,8 @@ chai.should()
 chai.use(sinonChai)
 
 const expectDefaultHeaders = [
-    { text: 'Variable', value: 'id', width: '65%' },
-    { text: 'Value', value: 'value', width: '35%' },
+    { text: 'Variable', value: 'id', width: '65%', cellTruncated: true },
+    { text: 'Value', value: 'value', width: '35%', cellTruncated: true },
 ]
 
 const dummy_data_obj = {
@@ -120,6 +120,7 @@ describe('DetailsReadonlyTable.vue', () => {
             tdBorderLeft,
             showAll,
             isTree,
+            expandAll,
         } = dataTable.vm.$props
 
         const {
@@ -127,7 +128,7 @@ describe('DetailsReadonlyTable.vue', () => {
             tableHeaders,
             isLoading,
             $data: { tableRows },
-            $props: { isTree: isTreeProps },
+            $props: { isTree: isTreeProps, expandAll: expandAllProps },
         } = wrapper.vm
 
         expect(search).to.be.equals(search_keyword)
@@ -137,5 +138,6 @@ describe('DetailsReadonlyTable.vue', () => {
         expect(tdBorderLeft).to.be.true
         expect(showAll).to.be.true
         expect(isTree).to.be.equals(isTreeProps)
+        expect(expandAll).to.be.equals(expandAllProps)
     })
 })

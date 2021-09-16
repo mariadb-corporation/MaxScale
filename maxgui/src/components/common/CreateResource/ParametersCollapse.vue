@@ -13,7 +13,6 @@
                 :showAll="showAll"
                 :editableCell="editableCell"
                 :keepPrimitiveValue="keepPrimitiveValue"
-                :isTree="isTree"
                 @cell-hover="showCellTooltip"
             >
                 <template v-slot:header-append-id>
@@ -81,7 +80,6 @@ export default {
         usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         parentForm: { type: Object }, // needed for server, listener
         isListener: { type: Boolean, default: false },
-        isTree: { type: Boolean, default: false },
     },
     data: function() {
         return {

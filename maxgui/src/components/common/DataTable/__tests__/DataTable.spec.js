@@ -213,6 +213,7 @@ describe('DataTable.vue - Tree data feature', () => {
     beforeEach(() => {
         wrapper = mountPropsFactory({
             isTree: true,
+            expandAll: true,
             headers: [
                 { text: 'Variable', value: 'id' },
                 { text: 'Value', value: 'value' },
@@ -225,7 +226,7 @@ describe('DataTable.vue - Tree data feature', () => {
         expect(wrapper.vm.$props.isTree).to.equal(true)
         expect(wrapper.vm.$data.hasValidChild).to.equal(true)
     })
-    it(`Should expand all nodes by default`, async () => {
+    it(`Should expand all nodes when expandAll props is true`, async () => {
         await wrapper.vm.$nextTick(() => {
             expect(wrapper.vm.tableRows.length).to.equal(5)
             wrapper.vm.tableRows.forEach(row => {
