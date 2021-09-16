@@ -465,7 +465,7 @@ State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
     ostringstream ss;
     ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
 
-    if ((m_req.flags() & 0x01) == 1)
+    if (m_req.is_single_remove())
     {
         ss << " LIMIT 1";
     }
@@ -487,6 +487,11 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
+        {
+            ComOK ok(response);
+
+            m_database.context().set_last_error(std::make_unique<NoError>(ok.affected_rows(), true));
+        }
         break;
 
     case ComResponse::ERR_PACKET:
@@ -496,6 +501,10 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
             if (err.code() != ER_NO_SUCH_TABLE)
             {
                 m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+            else
+            {
+                m_database.context().set_last_error(std::make_unique<NoError>(0));
             }
         }
         break;
@@ -519,6 +528,16 @@ std::string OpInsertCommand::description() const
 
 State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
 {
+    mxb_assert(m_req.documents().size() == 1);
+
+    if (m_req.documents().size() != 1)
+    {
+        const char* zMessage = "Currently only a single document can be insterted at a time with OP_INSERT.";
+        MXS_ERROR("%s", zMessage);
+
+        throw HardError(zMessage, error::INTERNAL_ERROR);
+    }
+
     auto doc = m_req.documents()[0];
 
     ostringstream ss;
@@ -559,6 +578,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         }
         else
         {
+            m_database.context().set_last_error(std::make_unique<NoError>(1));
             state = State::READY;
         }
         break;
