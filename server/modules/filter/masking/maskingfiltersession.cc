@@ -189,9 +189,21 @@ bool MaskingFilterSession::check_query(GWBUF* pPacket)
 
         if (acceptable && config.prevent_function_usage())
         {
-            if (is_function_used(pPacket, zUser, zHost))
+            // An insert like "INSERT INTO t (f) VALUES ...", where the column ("f")
+            // is mentioned explicitly, will be reported to be using the column "f" in
+            // conjunction with the function "=", which will cause it to be rejected if
+            // "f" is a column that should be masked.
+            // So, INSERTs need to be excluded from the check. That does not effectively
+            // change anything, as an INSERT without named columns will not ever be
+            // rejected, which would be nonsensical anyway.
+            // The check cannot be limited to just SELECTs, because that would
+            // allow you to probe a value e.g. using UPDATEs.
+            if (op != QUERY_OP_INSERT)
             {
-                acceptable = false;
+                if (is_function_used(pPacket, zUser, zHost))
+                {
+                    acceptable = false;
+                }
             }
         }
     }
