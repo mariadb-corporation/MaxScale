@@ -51,18 +51,24 @@
             <template
                 v-slot:serverState="{
                     data: {
-                        item: { id, serverState, showRepStats },
+                        item: { id, serverState, showRepStats, showSlaveStats },
                         cellIndex,
                         rowIndex,
                     },
                 }"
             >
                 <div
+                    v-if="serverState"
                     class="d-inline py-3"
                     :class="{
-                        [`pointer replicas-activator-row-${rowIndex}-cell-${cellIndex}`]: showRepStats,
+                        [`pointer replicas-activator-row-${rowIndex}-cell-${cellIndex}`]:
+                            showRepStats || showSlaveStats,
                     }"
-                    @mouseover="showRepStats ? onShowRepStatus({ id, cellIndex, rowIndex }) : null"
+                    @mouseover="
+                        showRepStats || showSlaveStats
+                            ? handleShowStats({ id, cellIndex, rowIndex, isMaster: showSlaveStats })
+                            : null
+                    "
                 >
                     <icon-sprite-sheet
                         size="13"
@@ -123,6 +129,7 @@
         </data-table>
         <v-menu
             v-if="hoveredItem"
+            :key="`.replicas-activator-row-${hoveredItem.rowIndex}-cell-${hoveredItem.cellIndex}`"
             top
             offset-y
             transition="slide-y-transition"
@@ -130,35 +137,78 @@
             open-on-hover
             content-class="shadow-drop color text-navigation"
             allow-overflow
-            eager
-            :max-height="400"
+            :max-height="350"
             :activator="
                 `.replicas-activator-row-${hoveredItem.rowIndex}-cell-${hoveredItem.cellIndex}`
             "
         >
             <v-sheet style="border-radius: 10px;" class="py-4 px-3 text-body-2">
                 <div class="px-1 py-1 font-weight-bold ">
-                    {{ $t('replicationStatus') }}
-                    <!-- TODO: show icon for replicationStatus -->
+                    {{ hoveredItem.isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
                 </div>
                 <v-divider class="color border-separator" />
-                <table class="px-1">
-                    <template v-for="(srcReplication, i) in repStats">
-                        <tbody :key="`${i}`" class="tbody-src-replication">
-                            <tr v-for="(value, key) in srcReplication" :key="`${key}`">
-                                <template>
-                                    <td class="pr-5">
-                                        {{ key }}
-                                    </td>
-                                    <td>
+
+                <template v-if="hoveredItem.isMaster">
+                    <table class="rep-table px-1">
+                        <tr
+                            v-for="(slaveStat, i) in getSlaveStatus(hoveredItem.id)"
+                            :key="`${i}`"
+                            class="mb-1"
+                        >
+                            <td>
+                                <icon-sprite-sheet
+                                    size="13"
+                                    class="mr-1 rep-icon"
+                                    :frame="$help.repStateIcon(slaveStat.overall_replication_state)"
+                                >
+                                    status
+                                </icon-sprite-sheet>
+                            </td>
+                            <td>
+                                <div class="d-flex align-center fill-height">
+                                    <truncate-string
+                                        wrap
+                                        :text="slaveStat.id"
+                                        :nudgeTop="10"
+                                        :maxWidth="300"
+                                    />
+                                    <span class="ml-1 color text-field-text">
+                                        (+{{ slaveStat.overall_seconds_behind_master }}s)
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </template>
+
+                <table v-else class="rep-table px-1">
+                    <template v-for="(stat, i) in getRepStats(hoveredItem.id)">
+                        <tbody
+                            :key="`${i}`"
+                            :class="{ 'tbody-src-replication': !hoveredItem.isMaster }"
+                        >
+                            <tr v-for="(value, key) in stat" :key="`${key}`">
+                                <td class="pr-5">
+                                    {{ key }}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-center fill-height">
+                                        <icon-sprite-sheet
+                                            v-if="key === 'replication_state'"
+                                            size="13"
+                                            class="mr-1 rep-icon"
+                                            :frame="$help.repStateIcon(value)"
+                                        >
+                                            status
+                                        </icon-sprite-sheet>
                                         <truncate-string
                                             wrap
                                             :text="`${value}`"
                                             :maxWidth="400"
                                             :nudgeTop="10"
                                         />
-                                    </td>
-                                </template>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </template>
@@ -267,6 +317,8 @@ export default {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
                             row.monitorState = monitorState
+                            row.showSlaveStats =
+                                master === row.id && monitorModule === this.monitorSupportsReplica
                             row.showRepStats =
                                 master !== row.id && monitorModule === this.monitorSupportsReplica
                             // delete monitor that already grouped from allMonitorsMapClone
@@ -315,8 +367,22 @@ export default {
                 })
             return map
         },
-        repStats() {
-            return this.getRepStats(this.hoveredItem.id)
+        slaveServersByMasterMap() {
+            let map = new Map()
+            let group = this.$help.hashMapByPath({
+                arr: this.tableRows.filter(row => row.groupId), // Group monitored servers
+                path: 'groupId', //monitorId
+            })
+            Object.keys(group).forEach(key => {
+                let master = null
+                let slaves = []
+                group[key].forEach(server => {
+                    if (server.showSlaveStats) master = server.id
+                    else slaves.push(server.id)
+                })
+                map.set(master, slaves)
+            })
+            return map
         },
     },
     methods: {
@@ -326,8 +392,8 @@ export default {
         setMonitorsLength(total) {
             this.monitorsLength = total
         },
-        onShowRepStatus(item) {
-            this.hoveredItem = item
+        handleShowStats({ id, cellIndex, rowIndex, isMaster }) {
+            this.hoveredItem = { id, cellIndex, rowIndex, isMaster }
         },
         getRepStats(serverId) {
             const slave_connections = this.slaveConnectionsMap.get(serverId) || []
@@ -359,6 +425,7 @@ export default {
                             slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
                     }
                 } else srcRep.replication_state = 'Lagging'
+                srcRep.server_id = serverId
                 // only show last_io_error and last_sql_error when replication_state === 'Stopped'
                 if (srcRep.replication_state === 'Stopped')
                     srcRep = {
@@ -377,16 +444,59 @@ export default {
 
             return repStats
         },
+        /**
+         * This returns maximum value or the most frequent value
+         * @param {Array} payload.repStats - replication status get from getRepStats method
+         * @param {String} payload.pickBy - property to count. e.g. replication_state or seconds_behind_master
+         * @param {Boolean} payload.isNumber - If it is true, returns maximum value instead of the most frequent value
+         * @returns {String|Number} - returns maximum value or the most frequent value
+         */
+        getOverallRepStat({ repStats, pickBy, isNumber }) {
+            if (isNumber) return Math.max(...repStats.map(item => item[pickBy]))
+            let countObj = this.$help.lodash.countBy(repStats, pickBy)
+            return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b))
+        },
+        getSlaveStatus(serverId) {
+            const slaveServerIds = this.slaveServersByMasterMap.get(serverId) || []
+            if (!slaveServerIds.length) return []
+            const slaveStats = []
+            slaveServerIds.forEach(id => {
+                const repStats = this.getRepStats(id)
+                slaveStats.push({
+                    id,
+                    overall_replication_state: this.getOverallRepStat({
+                        repStats,
+                        pickBy: 'replication_state',
+                    }),
+                    overall_seconds_behind_master: this.getOverallRepStat({
+                        repStats,
+                        pickBy: 'seconds_behind_master',
+                        isNumber: true,
+                    }),
+                })
+            })
+            return slaveStats
+        },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-.tbody-src-replication:not(:last-child) {
-    &::after {
-        content: '';
-        display: block;
-        height: 10px;
+.tbody-src-replication {
+    &:not(:last-of-type) {
+        &::after,
+        &:first-of-type::before {
+            content: '';
+            display: block;
+            height: 12px;
+        }
+    }
+}
+.rep-table {
+    td {
+        white-space: nowrap;
+        height: 24px;
+        line-height: 1.5;
     }
 }
 </style>

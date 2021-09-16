@@ -182,6 +182,7 @@
     "queryHistoryRetentionPeriod": "Query history retention period",
     "inDays": "in days",
     "replicationStatus": "Replication status",
+    "slaveRepStatus": "Slave replication status",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
