@@ -841,7 +841,7 @@ public:
         return m_info;
     }
 
-    uint64_t rows_matched() const
+    uint64_t matched_rows() const
     {
         uint64_t rv = 0;
 

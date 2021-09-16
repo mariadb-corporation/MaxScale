@@ -792,7 +792,7 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
     {
         ComOK ok(response);
 
-        if (ok.rows_matched() == 0)
+        if (ok.matched_rows() == 0)
         {
             if (m_req.is_upsert())
             {
