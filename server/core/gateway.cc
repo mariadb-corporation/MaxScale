@@ -1860,6 +1860,9 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    // Set the default location for plugins
+    mxq::MariaDB::set_default_plugin_dir(mxs::connector_plugindir());
+
     if (mxb_log_inited())
     {
         // If the log was inited due to some error logging *and* we did not exit,
