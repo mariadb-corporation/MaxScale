@@ -19,6 +19,8 @@
 #include <maxbase/worker.hh>
 #include "../nosqlcursor.hh"
 
+using mxb::Worker;
+
 namespace nosql
 {
 
@@ -163,18 +165,14 @@ protected:
 
         if (it != m_arguments.end())
         {
-            const auto& documents = it->second;
-            check_write_batch_size(documents.size());
-
-            query = generate_sql(documents);
+            m_documents = it->second;
+            check_write_batch_size(m_documents.size());
         }
         else
         {
             auto documents = required<bsoncxx::array::view>(m_key.c_str());
             auto nDocuments = std::distance(documents.begin(), documents.end());
             check_write_batch_size(nDocuments);
-
-            vector<bsoncxx::document::view> documents2;
 
             int i = 0;
             for (auto element : documents)
@@ -190,13 +188,11 @@ protected:
                     throw SoftError(ss.str(), error::TYPE_MISMATCH);
                 }
 
-                documents2.push_back(element.get_document());
+                m_documents.push_back(element.get_document());
             }
-
-            query = generate_sql(documents2);
         }
 
-        return query;
+        return generate_sql(m_documents);
     }
 
     virtual Query generate_sql(const vector<bsoncxx::document::view>& documents)
@@ -213,7 +209,7 @@ protected:
 
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
 
-    virtual Execution interpret(const ComOK& response) = 0;
+    virtual Execution interpret(const ComOK& response, int index) = 0;
 
     virtual Execution interpret_single(uint8_t* pBuffer)
     {
@@ -221,11 +217,20 @@ protected:
 
         ComResponse response(pBuffer);
 
+        auto index = m_it - m_query.statements().begin();
+
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            m_ok = 1;
-            rv = interpret(ComOK(response));
+            {
+                m_ok = 1;
+                rv = interpret(ComOK(response), index);
+
+                if (rv == Execution::ABORT && !m_ordered)
+                {
+                    rv = Execution::CONTINUE;
+                }
+            }
             break;
 
         case ComResponse::ERR_PACKET:
@@ -243,7 +248,7 @@ protected:
                         rv = Execution::ABORT;
                     }
 
-                    add_error(m_write_errors, err, m_it - m_query.statements().begin());
+                    add_error(m_write_errors, err, index);
                 }
             }
             break;
@@ -281,13 +286,14 @@ protected:
         send_downstream(*m_it);
     }
 
-    string                         m_key;
-    bool                           m_ordered { true };
-    Query                          m_query;
-    vector<string>::const_iterator m_it;
-    int32_t                        m_n { 0 };
-    int32_t                        m_ok { 0 };
-    bsoncxx::builder::basic::array m_write_errors;
+    string                          m_key;
+    bool                            m_ordered { true };
+    Query                           m_query;
+    vector<bsoncxx::document::view> m_documents;
+    vector<string>::const_iterator  m_it;
+    int32_t                         m_n { 0 };
+    int32_t                         m_ok { 0 };
+    bsoncxx::builder::basic::array  m_write_errors;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/delete/
@@ -380,7 +386,7 @@ private:
         return sql.str();
     }
 
-    Execution interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response, int) override
     {
         m_n += response.affected_rows();
         return Execution::CONTINUE;
@@ -1063,7 +1069,7 @@ protected:
         return sql.str();
     }
 
-    Execution interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response, int) override
     {
         m_n += response.affected_rows();
         return Execution::CONTINUE;
@@ -1244,7 +1250,21 @@ public:
     {
     }
 
+    ~Update()
+    {
+        if (m_dcid != 0)
+        {
+            Worker::get_current()->cancel_delayed_call(m_dcid);
+        }
+    }
+
 private:
+    enum class Action
+    {
+        UPDATING,
+        INSERTING
+    };
+
     bool is_acceptable_error(const ComERR& err) const override
     {
         // Updating documents in non-existent table should appear to succeed.
@@ -1256,13 +1276,7 @@ private:
         ostringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
-        auto upsert = false;
-        optional(update, key::UPSERT, &upsert);
-
-        if (upsert)
-        {
-            throw SoftError("'upsert' is not supported.", error::COMMAND_FAILED);
-        }
+        optional(update, key::UPSERT, &m_upsert);
 
         auto q = update[key::Q];
 
@@ -1302,30 +1316,169 @@ private:
         return sql.str();
     }
 
-    Execution interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response, int index) override
     {
-        m_nModified += response.affected_rows();
+        Execution rv;
 
-        string s = response.info().to_string();
-
-        if (s.find("Rows matched: ") == 0)
+        switch (m_action)
         {
-            m_n += atol(s.c_str() + 14);
+        case Action::UPDATING:
+            rv = interpret_update(response, index);
+            break;
+
+        case Action::INSERTING:
+            rv = interpret_insert(response, index);
+            break;
         }
 
+        return rv;
+    }
+
+    Execution interpret_update(const ComOK& response, int index)
+    {
+        Execution rv = Execution::CONTINUE;
+
+        auto n = response.matched_rows();
+
+        if (n == 0)
+        {
+            if (m_upsert)
+            {
+                if (m_insert.empty())
+                {
+                    // Ok, so the update did not match anything and we havn't attempted
+                    // an insert.
+                    rv = insert_document(index);
+                }
+                else
+                {
+                    // We attempted updating the document we just insterted, but it was
+                    // not found.
+                    bsoncxx::builder::basic::document error;
+                    error.append(kvp(key::INDEX, index));
+                    error.append(kvp(key::CODE, error::INTERNAL_ERROR));
+                    error.append(kvp(key::ERRMSG, "Inserted document not found when attempting to update."));
+
+                    rv = Execution::ABORT;
+                }
+            }
+        }
+        else
+        {
+            if (m_insert.empty())
+            {
+                // A regular update.
+                m_nModified += response.affected_rows();
+                m_n += n;
+            }
+            else
+            {
+                DocumentBuilder upsert;
+                upsert.append(kvp(key::INDEX, index));
+                upsert.append(kvp(key::_ID, m_id));
+
+                m_upserted.append(upsert.extract());
+            }
+
+            m_insert.clear();
+        }
+
+        return rv;
+    }
+
+    Execution interpret_insert(const ComOK& response, int index)
+    {
+        auto update = m_documents[index];
+        auto u = update[key::U];
+
+        ostringstream ss;
+        ss << "UPDATE " << table() << " SET DOC = "
+           << update_specification_to_set_value(update, u)
+           << "WHERE id = '{\"$oid\":\"" << m_id.to_string() << "\"}'";
+
+        string sql = ss.str();
+
+        check_maximum_sql_length(sql);
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this, sql](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    send_downstream(sql);
+                }
+
+            return false;
+        });
+
         return Execution::CONTINUE;
+    }
+
+    Execution insert_document(int index)
+    {
+        mxb_assert(m_action == Action::UPDATING && m_insert.empty());
+
+        // TODO: If we were here to apply the update operations, then an
+        // TODO: INSERT alone would suffice instead of the INSERT + UPDATE
+        // TODO: that currently is done.
+
+        ostringstream ss;
+        ss << "INSERT INTO " << table() << " (doc) VALUES ('";
+
+        auto update = m_documents[index];
+        bsoncxx::document::view q = update[key::Q].get_document();
+
+        m_id = bsoncxx::oid();
+
+        DocumentBuilder builder;
+        builder.append(kvp(key::_ID, m_id));
+
+        for (const auto& e : q)
+        {
+            append(builder, e.key(), e);
+        }
+
+        ss << bsoncxx::to_json(builder.extract());
+
+        ss << "')";
+
+        m_insert = ss.str();
+
+        check_maximum_sql_length(m_insert);
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    send_downstream(m_insert);
+                }
+
+            return false;
+        });
+
+        return Execution::BUSY;
     }
 
     void amend_response(DocumentBuilder& doc) override
     {
         doc.append(kvp(key::N_MODIFIED, m_nModified));
+        doc.append(kvp(key::UPSERTED, m_upserted.extract()));
 
         m_database.context().reset_error(m_n);
     }
 
 
 private:
-    int32_t m_nModified { 0 };
+    Action       m_action { Action::UPDATING };
+    bool         m_upsert;
+    uint32_t     m_dcid { 0 };
+    int32_t      m_nModified { 0 };
+    string       m_insert;
+    bsoncxx::oid m_id;
+    ArrayBuilder m_upserted;
 };
 
 
