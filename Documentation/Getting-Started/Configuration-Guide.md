@@ -747,10 +747,16 @@ used in MaxScale can use this directory to load authentication plugins. The
 versions of the plugins must be binary compatible with the connector version
 that MaxScale was built with.
 
-The default value is `/usr/lib/mysql/plugin/`.
+Starting with version 6.2.0, the plugins are bundled with MaxScale and the
+default value now points to the bundled plugins. The location where the plugins
+are stored depends on the operating system. For RHEL versions the value is
+`/usr/lib64/maxscale/plugin/`. For Debian and Ubuntu it is
+`/usr/lib/x86_64-linux-gnu/maxscale/plugin/`.
+
+Older versions of MaxScale used `/usr/lib/mysql/plugin/` as the default value.
 
 ```
-connector_plugindir=/usr/lib/mysql/plugin/
+connector_plugindir=/usr/lib64/maxscale/plugin/
 ```
 
 ### `persistdir`

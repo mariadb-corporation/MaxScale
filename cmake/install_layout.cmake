@@ -23,7 +23,7 @@ set(DEFAULT_EXEC_SUBPATH "${MAXSCALE_BINDIR}" CACHE PATH "Default executable sub
 set(DEFAULT_CONFIG_SUBPATH "etc" CACHE PATH "Default configuration subpath")
 set(DEFAULT_CONFIG_PERSIST_SUBPATH "maxscale.cnf.d" CACHE PATH "Default persisted configuration subpath")
 set(DEFAULT_MODULE_CONFIG_SUBPATH "${DEFAULT_CONFIG_SUBPATH}/maxscale.modules.d" CACHE PATH "Default configuration subpath")
-set(DEFAULT_CONNECTOR_PLUGIN_SUBPATH "${CMAKE_INSTALL_LIBDIR}/mysql/plugin" CACHE PATH "Default connector plugin subpath")
+set(DEFAULT_CONNECTOR_PLUGIN_SUBPATH "${MAXSCALE_LIBDIR}/plugin" CACHE PATH "Default connector plugin subpath")
 
 set(DEFAULT_PIDDIR ${MAXSCALE_VARDIR}/${DEFAULT_PID_SUBPATH} CACHE PATH "Default PID file directory")
 set(DEFAULT_LOGDIR ${MAXSCALE_VARDIR}/${DEFAULT_LOG_SUBPATH} CACHE PATH "Default log directory")

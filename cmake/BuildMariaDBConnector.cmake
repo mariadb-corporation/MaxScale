@@ -36,3 +36,5 @@ set(MARIADB_CONNECTOR_STATIC_LIBRARIES
 set(MARIADB_CONNECTOR_LIBRARIES
   ${CMAKE_BINARY_DIR}/connector-c/install/lib/mariadb/libmariadbclient.a
   CACHE INTERNAL "")
+
+install_directory(${CMAKE_BINARY_DIR}/connector-c/install/lib/mariadb/plugin ${MAXSCALE_LIBDIR} core)
