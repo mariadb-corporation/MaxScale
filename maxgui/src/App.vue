@@ -50,7 +50,12 @@ export default {
             return this.$logger('main')
         },
     },
-
+    watch: {
+        $route: function() {
+            // Clear global search state when route changes
+            this.SET_SEARCH_KEYWORD('')
+        },
+    },
     mounted() {
         let overlay = document.getElementById('global-overlay')
         if (overlay) {
@@ -64,7 +69,7 @@ export default {
     },
 
     methods: {
-        ...mapMutations(['SET_UPDATE_AVAILABILITY']),
+        ...mapMutations(['SET_UPDATE_AVAILABILITY', 'SET_SEARCH_KEYWORD']),
         confirmUpdate() {
             this.SET_UPDATE_AVAILABILITY(false)
             window.location.reload()
