@@ -51,6 +51,13 @@ public:
     }
 
 public:
+    enum class Execution
+    {
+        CONTINUE,
+        ABORT,
+        BUSY
+    };
+
     State execute(GWBUF** ppNoSQL_response) override final
     {
         auto query = generate_sql();
@@ -75,10 +82,10 @@ public:
         // TODO: Update will be needed when DEPRECATE_EOF it turned on.
         GWBUF* pResponse = nullptr;
 
-        bool abort = false;
-
         uint8_t* pBuffer = mariadb_response.data();
         uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+        Execution execution = Execution::CONTINUE;
 
         switch (m_query.kind())
         {
@@ -93,12 +100,11 @@ public:
             break;
 
         case Query::SINGLE:
-            if (!interpret_single(pBuffer))
             {
-                abort = true;
-            }
+                execution = interpret_single(pBuffer);
 
-            pBuffer += ComPacket::packet_len(pBuffer);
+                pBuffer += ComPacket::packet_len(pBuffer);
+            }
         }
 
         if (pBuffer != pEnd)
@@ -110,28 +116,31 @@ public:
 
         State rv = State::BUSY;
 
-        if (m_it == m_query.statements().end() || abort)
+        if (execution != Execution::BUSY)
         {
-            DocumentBuilder doc;
-
-            auto write_errors = m_write_errors.extract();
-
-            doc.append(kvp(key::N, m_n));
-            doc.append(kvp(key::OK, m_ok));
-
-            amend_response(doc);
-
-            if (!write_errors.view().empty())
+            if (m_it == m_query.statements().end() || execution == Execution::ABORT)
             {
-                doc.append(kvp(key::WRITE_ERRORS, write_errors));
-            }
+                DocumentBuilder doc;
 
-            pResponse = create_response(doc.extract());
-            rv = State::READY;
-        }
-        else
-        {
-            execute_one_statement();
+                auto write_errors = m_write_errors.extract();
+
+                doc.append(kvp(key::N, m_n));
+                doc.append(kvp(key::OK, m_ok));
+
+                amend_response(doc);
+
+                if (!write_errors.view().empty())
+                {
+                    doc.append(kvp(key::WRITE_ERRORS, write_errors));
+                }
+
+                pResponse = create_response(doc.extract());
+                rv = State::READY;
+            }
+            else
+            {
+                execute_one_statement();
+            }
         }
 
         *ppResponse = pResponse;
@@ -204,11 +213,11 @@ protected:
 
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
 
-    virtual void interpret(const ComOK& response) = 0;
+    virtual Execution interpret(const ComOK& response) = 0;
 
-    virtual bool interpret_single(uint8_t* pBuffer)
+    virtual Execution interpret_single(uint8_t* pBuffer)
     {
-        bool rv = true;
+        Execution rv = Execution::CONTINUE;
 
         ComResponse response(pBuffer);
 
@@ -216,7 +225,7 @@ protected:
         {
         case ComResponse::OK_PACKET:
             m_ok = 1;
-            interpret(ComOK(response));
+            rv = interpret(ComOK(response));
             break;
 
         case ComResponse::ERR_PACKET:
@@ -231,7 +240,7 @@ protected:
                 {
                     if (m_ordered)
                     {
-                        rv = false;
+                        rv = Execution::ABORT;
                     }
 
                     add_error(m_write_errors, err, m_it - m_query.statements().begin());
@@ -371,9 +380,10 @@ private:
         return sql.str();
     }
 
-    void interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response) override
     {
         m_n += response.affected_rows();
+        return Execution::CONTINUE;
     }
 
     void amend_response(DocumentBuilder&) override final
@@ -1053,9 +1063,10 @@ protected:
         return sql.str();
     }
 
-    void interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response) override
     {
         m_n += response.affected_rows();
+        return Execution::CONTINUE;
     }
 
     uint8_t* interpret_multi(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
@@ -1291,7 +1302,7 @@ private:
         return sql.str();
     }
 
-    void interpret(const ComOK& response) override
+    Execution interpret(const ComOK& response) override
     {
         m_nModified += response.affected_rows();
 
@@ -1301,6 +1312,8 @@ private:
         {
             m_n += atol(s.c_str() + 14);
         }
+
+        return Execution::CONTINUE;
     }
 
     void amend_response(DocumentBuilder& doc) override
