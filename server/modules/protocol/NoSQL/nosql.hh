@@ -550,21 +550,65 @@ public:
         return m_pHeader->opcode;
     }
 
-    virtual std::ostream& out(std::ostream& o) const
+    enum Details
     {
-        o << "msg_len    : " << msg_len() << "\n";
-        o << "request_id : " << request_id() << "\n";
-        o << "response_to: " << response_to() << "\n";
-        o << "opcode     : " << opcode_to_string(opcode()) << "\n";
+        LOW_LEVEL = 1,
+        HIGH_LEVEL = 2,
+        ALL = (LOW_LEVEL | HIGH_LEVEL)
+    };
 
-        return o;
+    std::string to_string(uint32_t details, const char* zSeparator) const
+    {
+        std::ostringstream ss;
+
+        if (details & LOW_LEVEL)
+        {
+            ss << low_level_to_string(zSeparator);
+        }
+
+        if (details & HIGH_LEVEL)
+        {
+            if (details & LOW_LEVEL)
+            {
+                ss << zSeparator;
+            }
+
+            ss << high_level_to_string(zSeparator);
+        }
+
+        return ss.str();
+    }
+
+    std::string to_string(uint32_t details) const
+    {
+        return to_string(details, ", ");
+    }
+
+    std::string to_string(const char* zSeparator) const
+    {
+        return to_string(HIGH_LEVEL, zSeparator);
     }
 
     std::string to_string() const
     {
+        return to_string(HIGH_LEVEL, ", ");
+    }
+
+    std::string low_level_to_string(const char* zSeparator) const
+    {
         std::ostringstream ss;
-        out(ss);
+
+        ss << "msg_len: " << msg_len() << zSeparator
+           << "request_id: " << request_id() << zSeparator
+           << "response_to: " << response_to() << zSeparator
+           << "opcode: " << opcode_to_string(opcode());
+
         return ss.str();
+    }
+
+    virtual std::string high_level_to_string(const char* zSeparator) const
+    {
+        return std::string();
     }
 
 protected:
@@ -578,9 +622,19 @@ public:
     Insert(const Packet& packet);
     Insert(Insert&& rhs) = default;
 
+    enum Flags
+    {
+        CONTINUE_ON_ERROR = 0x01
+    };
+
     uint32_t flags() const
     {
         return m_flags;
+    }
+
+    bool is_continue_on_error() const
+    {
+        return m_flags & CONTINUE_ON_ERROR;
     }
 
     const char* zCollection() const
@@ -598,6 +652,29 @@ public:
         return m_documents;
     }
 
+    std::string high_level_to_string(const char* zSeparator) const override
+    {
+        std::ostringstream ss;
+
+        ss << "collection: " << m_zCollection << zSeparator
+           << "continue_on_error: " << (is_continue_on_error() ? "true" : "false") << zSeparator
+           << "documents: ";
+
+        auto it = m_documents.begin();
+
+        while (it != m_documents.end())
+        {
+            ss << bsoncxx::to_json(*it);
+
+            if (++it != m_documents.end())
+            {
+                ss << ", ";
+            }
+        }
+
+        return ss.str();
+    }
+
 private:
     uint32_t                             m_flags;
     const char*                          m_zCollection;
@@ -609,6 +686,11 @@ class Delete final : public Packet
 public:
     Delete(const Packet& packet);
     Delete(Delete&& rhs) = default;
+
+    enum Flags
+    {
+        SINGLE_REMOVE = 1
+    };
 
     const char* zCollection() const
     {
@@ -625,9 +707,25 @@ public:
         return m_flags;
     }
 
+    bool is_single_remove() const
+    {
+        return m_flags & SINGLE_REMOVE;
+    }
+
     const bsoncxx::document::view& selector() const
     {
         return m_selector;
+    }
+
+    std::string high_level_to_string(const char* zSeparator) const override
+    {
+        std::ostringstream ss;
+
+        ss << "collection: " << m_zCollection << zSeparator
+           << "single_remove: " << (is_single_remove() ? "true" : "false") << zSeparator
+           << "selector: " << bsoncxx::to_json(m_selector);
+
+        return ss.str();
     }
 
 private:
@@ -683,6 +781,19 @@ public:
         return m_update;
     }
 
+    std::string high_level_to_string(const char* zSeparator) const override
+    {
+        std::ostringstream ss;
+
+        ss << "collection: " << m_zCollection << zSeparator
+           << "upsert: " << (is_upsert() ? "true" : "false") << zSeparator
+           << "multi: " << (is_multi() ? "true" : "false") << zSeparator
+           << "selector: " << bsoncxx::to_json(m_selector) << zSeparator
+           << "update: " << bsoncxx::to_json(m_update);
+
+        return ss.str();
+    }
+
 private:
     const char*             m_zCollection;
     uint32_t                m_flags;
@@ -731,16 +842,18 @@ public:
         return m_fields;
     }
 
-    std::ostream& out(std::ostream& o) const override
+    std::string high_level_to_string(const char* zSeparator) const override
     {
-        Packet::out(o);
-        o << "flags      : " << m_flags << "\n";
-        o << "collection : " << m_zCollection << "\n";
-        o << "nSkip      : " << m_nSkip << "\n";
-        o << "nReturn    : " << m_nReturn << "\n";
-        o << "query      : " << bsoncxx::to_json(m_query) << "\n";
-        o << "fields     : " << bsoncxx::to_json(m_fields);
-        return o;
+        std::ostringstream ss;
+
+        ss << "collection: " << m_zCollection << zSeparator
+           << "flags: " << m_flags << zSeparator // TODO: Perhaps should be decoded,
+           << "nSkip: " << m_nSkip << zSeparator
+           << "nReturn: " << m_nReturn << zSeparator
+           << "query: " << bsoncxx::to_json(m_query) << zSeparator
+           << "fields: " << bsoncxx::to_json(m_fields);
+
+        return ss.str();
     }
 
 protected:
@@ -782,21 +895,29 @@ public:
     Reply(const Reply&) = default;
     Reply& operator = (const Reply&) = default;
 
-    std::ostream& out(std::ostream& o) const override
+    std::string high_level_to_string(const char* zSeparator) const override
     {
-        Packet::out(o);
-        o << "flags      : " << m_flags << "\n";
-        o << "cursorId   : " << m_cursor_id << "\n";
-        o << "start_from : " << m_start_from << "\n";
-        o << "nReturned  : " << m_nReturned << "\n";
-        o << "documents  : \n";
+        std::ostringstream ss;
 
-        for (const auto& doc : m_documents)
+        ss << "flags: " << m_flags << zSeparator
+           << "cursorId: " << m_cursor_id << zSeparator
+           << "start_from: " << m_start_from << zSeparator
+           << "nReturned: " << m_nReturned << zSeparator
+           << "documents: ";
+
+        auto it = m_documents.begin();
+
+        while (it != m_documents.end())
         {
-            o << bsoncxx::to_json(doc) << "\n";
+            ss << bsoncxx::to_json(*it);
+
+            if (++it != m_documents.end())
+            {
+                ss << ", ";
+            }
         }
 
-        return o;
+        return ss.str();
     }
 
 protected:
@@ -834,6 +955,17 @@ public:
         return m_cursor_id;
     }
 
+    std::string high_level_to_string(const char* zSeparator) const override
+    {
+        std::ostringstream ss;
+
+        ss << "collection: " << m_zCollection << zSeparator
+           << "nReturn: " << m_nReturn << zSeparator
+           << "cursor_id: " << m_cursor_id;
+
+        return ss.str();
+    }
+
 private:
     const char* m_zCollection;
     int32_t     m_nReturn;
@@ -851,6 +983,25 @@ public:
     {
         return m_cursor_ids;
     };
+
+    std::string high_level_to_string(const char* zSeparator) const override
+    {
+        std::ostringstream ss;
+
+        auto it = m_cursor_ids.begin();
+
+        while (it != m_cursor_ids.end())
+        {
+            ss << *it;
+
+            if (++it != m_cursor_ids.end())
+            {
+                ss << ", ";
+            }
+        }
+
+        return ss.str();
+    }
 
 private:
     std::vector<int64_t> m_cursor_ids;
@@ -899,36 +1050,41 @@ public:
         return m_arguments;
     }
 
-    std::ostream& out(std::ostream& o) const override
+    std::string high_level_to_string(const char* zSeparator) const override
     {
-        Packet::out(o);
-        o << "flags      : " << m_flags << "\n";
-        o << "document   : " << bsoncxx::to_json(m_document) << "\n";
-        o << "arguments  : " << "\n";
+        std::ostringstream ss;
 
-        for (const auto& rv : m_arguments)
+        ss << "flags: " << m_flags << zSeparator
+           << "document: " << bsoncxx::to_json(m_document) << zSeparator
+           << "arguments: ";
+
+        auto it = m_arguments.begin();
+
+        while (it != m_arguments.end())
         {
-            o << rv.first << " ";
+            ss << "(" << it->first << ": ";
 
-            bool first = true;
-            for (const auto& doc  : rv.second)
+            auto jt = it->second.begin();
+
+            while (jt != it->second.end())
             {
-                if (!first)
-                {
-                    o << ", ";
-                }
-                else
-                {
-                    first = false;
-                }
+                ss << bsoncxx::to_json(*jt);
 
-                o << bsoncxx::to_json(doc);
+                if (++jt != it->second.end())
+                {
+                    ss << ", ";
+                }
             }
 
-            o << "\n";
+            ss << ")";
+
+            if (++it != m_arguments.end())
+            {
+                ss << ", ";
+            }
         }
 
-        return o;
+        return ss.str();
     }
 
 private:
@@ -1076,10 +1232,4 @@ std::string table_create_statement(const std::string& table_name,
  */
 std::string escape_essential_chars(std::string&& from);
 
-}
-
-inline std::ostream& operator << (std::ostream& out, const nosql::Packet& x)
-{
-    x.out(out);
-    return out;
 }

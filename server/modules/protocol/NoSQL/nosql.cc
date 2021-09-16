@@ -3047,7 +3047,7 @@ string extract_database(const string& collection)
 
 State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(DELETE): %s", req.zCollection());
+    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3064,7 +3064,7 @@ State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** 
 
 State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(INSERT): %s", req.zCollection());
+    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3081,7 +3081,7 @@ State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** 
 
 State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(UPDATE): %s", req.zCollection());
+    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3098,7 +3098,7 @@ State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** 
 
 State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
+    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3115,7 +3115,7 @@ State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** pp
 
 State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(GetMore): %ld", req.cursor_id());
+    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3132,7 +3132,7 @@ State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF
 
 State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(KillCursors)");
+    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
@@ -3149,7 +3149,7 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
 
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
+    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
 
     State state = State::READY;
 
