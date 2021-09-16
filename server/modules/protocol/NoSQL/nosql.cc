@@ -769,6 +769,7 @@ void nosql::SoftError::create_response(const Command& command, DocumentBuilder& 
 
 namespace
 {
+
 class ConcreteLastError: public nosql::LastError
 {
 public:
@@ -2827,34 +2828,53 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
 
 std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
-namespace
+const bsoncxx::oid nosql::NoError::null_oid;
+
+nosql::NoError::NoError(int32_t n)
+    : m_n(n)
+    , m_upserted(NoError::null_oid)
 {
+}
 
-class NoError : public nosql::LastError
+nosql::NoError::NoError(int32_t n, bool updated_existing)
+    : m_n(n)
+    , m_updated_existing(updated_existing)
+    , m_upserted(NoError::null_oid)
 {
-public:
-    NoError(int32_t n = 0)
-        : m_n(n)
-    {
-    }
+}
 
-    void populate(nosql::DocumentBuilder& doc) override
-    {
-        nosql::DocumentBuilder writeConcern;
-        writeConcern.append(kvp(key::W, 1));
-        writeConcern.append(kvp(key::WTIMEOUT, 0));
+nosql::NoError::NoError(const bsoncxx::oid& upserted)
+    : m_n(1)
+    , m_updated_existing(false)
+    , m_upserted(upserted)
+{
+}
 
+void nosql::NoError::populate(nosql::DocumentBuilder& doc)
+{
+    nosql::DocumentBuilder writeConcern;
+    writeConcern.append(kvp(key::W, 1));
+    writeConcern.append(kvp(key::WTIMEOUT, 0));
+
+    if (m_n != -1)
+    {
         doc.append(kvp(key::N, m_n));
-        doc.append(kvp(key::SYNC_MILLIS, 0));
-        doc.append(kvp(key::WRITTEN_TO, bsoncxx::types::b_null()));
-        doc.append(kvp(key::WRITE_CONCERN, writeConcern.extract()));
-        doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
     }
 
-private:
-    int32_t m_n;
-};
+    if (m_updated_existing)
+    {
+        doc.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
+    }
 
+    if (m_upserted != NoError::null_oid)
+    {
+        doc.append(kvp(key::UPSERTED, m_upserted));
+    }
+
+    doc.append(kvp(key::SYNC_MILLIS, 0));
+    doc.append(kvp(key::WRITTEN_TO, bsoncxx::types::b_null()));
+    doc.append(kvp(key::WRITE_CONCERN, writeConcern.extract()));
+    doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
 nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,

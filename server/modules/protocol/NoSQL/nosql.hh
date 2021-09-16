@@ -285,6 +285,25 @@ public:
     virtual void populate(DocumentBuilder& doc) = 0;
 };
 
+class NoError : public LastError
+{
+public:
+    const static bsoncxx::oid null_oid;
+
+    NoError(int32_t n = 0);
+    NoError(int32_t n, bool updated_existing);
+    NoError(const bsoncxx::oid& upserted);
+
+    void populate(DocumentBuilder& doc) override;
+
+private:
+    int32_t      m_n { -1 };
+    bool         m_updated_existing { false };
+    bsoncxx::oid m_upserted;
+
+    static bsoncxx::oid s_null_id;
+};
+
 class Exception : public std::runtime_error
 {
 public:
@@ -329,6 +348,16 @@ class MariaDBError : public Exception
 {
 public:
     MariaDBError(const ComERR& err);
+
+    int code() const
+    {
+        return m_mariadb_code;
+    }
+
+    const std::string& message() const
+    {
+        return m_mariadb_message;
+    }
 
     GWBUF* create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
@@ -440,8 +469,10 @@ const char TOPOLOGY_VERSION[]                = "topologyVersion";
 const char TOTAL_LINES_WRITTEN[]             = "totalLinesWritten";
 const char TOTAL_SIZE[]                      = "totalSize";
 const char TYPE[]                            = "type";
+const char UPDATED_EXISTING[]                = "updatedExisting";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
+const char UPSERTED[]                        = "upserted";
 const char U[]                               = "u";
 const char V[]                               = "v";
 const char VALID[]                           = "valid";
