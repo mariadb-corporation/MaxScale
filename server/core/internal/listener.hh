@@ -53,6 +53,7 @@ public:
         SERVICE*          service;
         qc_sql_mode_t     sql_mode;
         std::string       connection_init_sql_file;
+        std::string       user_mapping_file;
 
         // TLS configuration parameters
         bool        ssl;
@@ -329,7 +330,7 @@ private:
 
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerData::ConnectionInitSql* output);
-
+    bool           read_user_mapping(mxs::ListenerData::SMappingInfo& output);
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config() const;
     void           set_type();

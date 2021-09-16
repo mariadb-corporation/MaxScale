@@ -61,8 +61,8 @@ using TrxState = MYSQL_session::TrxState;
 using std::move;
 using std::string;
 
-const char WORD_KILL[] = "KILL";
 const string base_plugin = DEFAULT_MYSQL_AUTH_PLUGIN;
+const mxs::ListenerData::UserCreds default_mapped_creds = {"", base_plugin};
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
@@ -2833,45 +2833,47 @@ void MariaDBClientConnection::assign_backend_authenticator()
     {
         // Mapping is enabled for the listener. First, search based on username, then based on Linux user
         // group. Mapping does not depend on incoming user IP (can be added later if there is demand).
-        const mxs::ListenerData::MappingDest* mapped_user_info = nullptr;
+        const string* mapped_user = nullptr;
         const auto& user = ses->user;
-        const auto& user_map = mapping_info->user_mapping;
+        const auto& user_map = mapping_info->user_map;
         auto it = user_map.find(user);
         if (it != user_map.end())
         {
-            mapped_user_info = &it->second;
+            mapped_user = &it->second;
         }
         else
         {
             // Perhaps the mapping is defined through the user's group. Assume that no user can be part of
             // more than 100 groups.
-            const auto& group_map = mapping_info->group_mapping;
+            const auto& group_map = mapping_info->group_map;
             if (!group_map.empty())
             {
                 // TODO: check linux user group membership
             }
         }
 
-        if (mapped_user_info)
+        if (mapped_user)
         {
-            // Found a mapped user. Check that the plugin defined for the user is enabled.
-            auto* auth_module = find_auth_module(mapped_user_info->plugin);
+            // Found a mapped user. Search for credentials. If none found, use defaults.
+            const auto& creds = mapping_info->credentials;
+            const mxs::ListenerData::UserCreds* found_creds = &default_mapped_creds;
+            auto it2 = creds.find(*mapped_user);
+            if (it2 != creds.end())
+            {
+                found_creds = &it2->second;
+            }
+
+            // Check that the plugin defined for the user is enabled.
+            auto* auth_module = find_auth_module(found_creds->plugin);
             if (auth_module)
             {
                 // Found authentication module. Apply mapping.
                 ses->m_current_be_auth = auth_module;
-                const auto& mapped_pw = mapped_user_info->password;
-                if (mapped_pw.empty())
-                {
-                    MXB_INFO("Incoming user '%s' mapped to '%s' with no password.",
-                             ses->user.c_str(), mapped_user_info->username.c_str());
-                }
-                else
-                {
-                    MXB_INFO("Incoming user '%s' mapped to '%s' with password.",
-                             ses->user.c_str(), mapped_user_info->username.c_str());
-                }
-                ses->user = mapped_user_info->username;
+                const auto& mapped_pw = found_creds->password;
+                MXB_INFO("Incoming user '%s' mapped to '%s' using '%s' with %s.",
+                         ses->user.c_str(), mapped_user->c_str(), found_creds->plugin.c_str(),
+                         mapped_pw.empty() ? "no password" : "password");
+                ses->user = *mapped_user;   // TODO: save to separate field
                 ses->backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
                 user_is_mapped = true;
             }
@@ -2880,8 +2882,8 @@ void MariaDBClientConnection::assign_backend_authenticator()
                 MXB_ERROR("Client %s manually maps to '%s', who uses authenticator plugin '%s'. "
                           "The plugin is not enabled for listener '%s'. Falling back to normal "
                           "authentication.",
-                          ses->user_and_host().c_str(), mapped_user_info->username.c_str(),
-                          mapped_user_info->plugin.c_str(), listener_data->m_listener_name.c_str());
+                          ses->user_and_host().c_str(), mapped_user->c_str(),
+                          mapped_user->c_str(), listener_data->m_listener_name.c_str());
             }
         }
     }

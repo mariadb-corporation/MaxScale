@@ -568,6 +568,36 @@ Json Json::at(const char* ptr) const
     return Json(Type::UNDEFINED);
 }
 
+bool Json::unpack_arr(const char* arr_name, const ElemOkHandler& elem_ok, const ElemFailHandler& elem_fail,
+                      const char* fmt, ...)
+{
+    bool rval = false;
+    auto arr = get_array_elems(arr_name);
+    if (ok())
+    {
+        rval = true;
+        va_list args;
+        int ind = 0;
+        for (auto& elem : arr)
+        {
+            json_error_t err;
+            va_start(args, fmt);
+            int ret = json_vunpack_ex(elem.m_obj, &err, 0, fmt, args);
+            va_end(args);
+            if (ret == 0)
+            {
+                elem_ok(ind, arr_name);
+            }
+            else
+            {
+                elem_fail(ind, arr_name, err.text);
+            }
+            ind++;
+        }
+    }
+    return rval;
+}
+
 std::string json_dump(const json_t* json, int flags)
 {
     std::string rval;

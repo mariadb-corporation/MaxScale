@@ -23,31 +23,31 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 
-#include <maxbase/log.hh>
-#include <maxscale/ssl.hh>
-#include <maxscale/protocol2.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/service.hh>
-#include <maxscale/poll.hh>
-#include <maxscale/routingworker.hh>
+#include <maxbase/log.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/poll.hh>
+#include <maxscale/protocol2.hh>
+#include <maxscale/routingworker.hh>
+#include <maxscale/secrets.hh>
+#include <maxscale/service.hh>
+#include <maxscale/ssl.hh>
 
+#include "internal/config.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/session.hh"
-#include "internal/config.hh"
 
 using std::chrono::seconds;
 using std::map;
 using std::move;
 using std::string;
 using std::unique_ptr;
-using ListenerSessionData = mxs::ListenerData;
+using mxs::ListenerData;
 using SListener = std::shared_ptr<Listener>;
 
 constexpr int BLOCK_TIME = 60;
@@ -120,6 +120,10 @@ cfg::ParamEnum<qc_sql_mode_t> s_sql_mode(&s_spec, CN_SQL_MODE, "SQL parsing mode
 
 cfg::ParamPath s_connection_init_sql_file(
     &s_spec, CN_CONNECTION_INIT_SQL_FILE, "Path to connection initialization SQL", cfg::ParamPath::R, "",
+    RUNTIME);
+
+cfg::ParamPath s_user_mapping_file(
+    &s_spec, "user_mapping_file", "Path to user and group mapping file", cfg::ParamPath::R, "",
     RUNTIME);
 
 template<class Params>
@@ -375,6 +379,7 @@ Listener::Config::Config(const std::string& name, Listener* listener)
     add_native(&Listener::Config::ssl_verify_peer_host, &s_ssl_verify_peer_host);
     add_native(&Listener::Config::sql_mode, &s_sql_mode);
     add_native(&Listener::Config::connection_init_sql_file, &s_connection_init_sql_file);
+    add_native(&Listener::Config::user_mapping_file, &s_user_mapping_file);
 }
 
 bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -1062,47 +1067,38 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     SData rval;
 
     auto protocol_api = reinterpret_cast<MXS_PROTOCOL_API*>(m_config.protocol->module_object);
-    std::unique_ptr<mxs::ProtocolModule> protocol_module {
-        protocol_api->create_protocol_module(m_name)
-    };
+    std::unique_ptr<mxs::ProtocolModule> protocol_module(protocol_api->create_protocol_module(m_name));
 
     if (protocol_module && protocol_module->getConfiguration().configure(protocol_params))
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
         mxs::SSLContext ssl;
+        ListenerData::ConnectionInitSql init_sql;
+        ListenerData::SMappingInfo mapping_info;
 
-        if (ssl.configure(create_ssl_config()))
+        if (ssl.configure(create_ssl_config())
+            && read_connection_init_sql(m_config.connection_init_sql_file, &init_sql)
+            && read_user_mapping(mapping_info))
         {
-            ListenerSessionData::ConnectionInitSql init_sql;
-            if (read_connection_init_sql(m_config.connection_init_sql_file, &init_sql))
+            bool auth_modules_ok = true;
+            std::vector<mxs::SAuthenticatorModule> authenticators;
+
+            if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
             {
-                std::vector<mxs::SAuthenticatorModule> authenticators;
-
-                if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
+                // If the protocol uses separate authenticator modules, assume that at least
+                // one must be created.
+                authenticators = protocol_module->create_authenticators(m_params);
+                if (authenticators.empty())
                 {
-                    // If the protocol uses separate authenticator modules, assume that at least
-                    // one must be created.
-                    authenticators = protocol_module->create_authenticators(m_params);
-
-                    if (authenticators.empty())
-                    {
-                        return {};
-                    }
+                    auth_modules_ok = false;
                 }
+            }
 
-                if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
-                {
-                    auto svc = static_cast<Service*>(m_config.service);
-
-                    if (!svc->check_update_user_account_manager(protocol_module.get(), m_name))
-                    {
-                        return {};
-                    }
-                }
-
-                rval = std::make_shared<ListenerSessionData>(
+            if (auth_modules_ok)
+            {
+                rval = std::make_shared<mxs::ListenerData>(
                     move(ssl), m_config.sql_mode, m_config.service, move(protocol_module),
-                    m_name, move(authenticators), move(init_sql));
+                    m_name, move(authenticators), move(init_sql), move(mapping_info));
             }
         }
     }
@@ -1139,19 +1135,33 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
 
     if (auto data = create_shared_data(protocol_params))
     {
-        auto start_state = m_state;
-
-        if (start_state == STARTED)
+        bool uam_ok = true;
+        auto* prot_module = data->m_proto_module.get();
+        if (prot_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
         {
-            stop();
+            auto svc = static_cast<Service*>(m_config.service);
+            if (!svc->check_update_user_account_manager(prot_module, m_name))
+            {
+                uam_ok = false;
+            }
         }
 
-        m_shared_data = data;
-        rval = true;
-
-        if (start_state == STARTED)
+        if (uam_ok)
         {
-            start();
+            auto start_state = m_state;
+
+            if (start_state == STARTED)
+            {
+                stop();
+            }
+
+            m_shared_data = data;
+            rval = true;
+
+            if (start_state == STARTED)
+            {
+                start();
+            }
         }
     }
 
@@ -1166,7 +1176,7 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
  * @return True on success, or if setting was not set.
  */
 bool
-Listener::read_connection_init_sql(const string& filepath, ListenerSessionData::ConnectionInitSql* output)
+Listener::read_connection_init_sql(const string& filepath, ListenerData::ConnectionInitSql* output)
 {
     bool file_ok = true;
     if (!filepath.empty())
@@ -1225,7 +1235,7 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
                            std::unique_ptr<mxs::ProtocolModule> protocol_module,
                            const std::string& listener_name,
                            std::vector<SAuthenticator>&& authenticators,
-                           ListenerData::ConnectionInitSql&& init_sql)
+                           ListenerData::ConnectionInitSql&& init_sql, SMappingInfo mapping)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
@@ -1233,6 +1243,7 @@ ListenerData::ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVI
     , m_listener_name(listener_name)
     , m_authenticators(move(authenticators))
     , m_conn_init_sql(init_sql)
+    , m_mapping_info(move(mapping))
 {
 }
 }
@@ -1243,4 +1254,114 @@ Listener::SData Listener::create_test_data(const mxs::ConfigParameters& params)
     listener->m_config.configure(params);
     mxs::ConfigParameters protocol_params;
     return listener->create_shared_data(protocol_params);
+}
+
+bool Listener::read_user_mapping(mxs::ListenerData::SMappingInfo& output)
+{
+    using mxb::Json;
+    auto& filepath = m_config.user_mapping_file;
+    auto filepathc = filepath.c_str();
+    bool rval = false;
+
+    if (!filepath.empty())
+    {
+        Json all;
+        if (all.load(filepath))
+        {
+            rval = true;
+            auto result = std::make_unique<mxs::ListenerData::MappingInfo>();
+            const char wrong_type[] = "Wrong object type in '%s'. %s";
+            const char malformed_entry[] = "Malformed entry %i in '%s'-array in file '%s': %s";
+            const char duplicate_key[] = "Read duplicate key '%s' from '%s'-array in file '%s'.";
+
+            // User and group mappings are very similar, define helper function.
+            using StringMap = std::unordered_map<std::string, std::string>;
+
+            Json::ElemFailHandler elem_fail = [&](int ind, const char* arr_name, const char* msg) {
+                    MXB_ERROR(malformed_entry, ind + 1, arr_name, filepathc, msg);
+                };
+
+            auto parse_struct_arr = [&](const char* arr_key, const char* key1, const char* key2,
+                                        StringMap& out) {
+                    bool success = true;
+                    if (all.contains(arr_key))
+                    {
+                        const char strings_fmt[] = "{s:s, s:s}";
+                        const char* val1 = nullptr;
+                        const char* val2 = nullptr;
+                        Json::ElemOkHandler elem_ok = [&](int ind, const char* arr_name) {
+                                auto ret = out.emplace(val1, val2);
+                                if (!ret.second)
+                                {
+                                    MXB_WARNING(duplicate_key, val1, arr_name, filepathc);
+                                }
+                            };
+
+                        if (!all.unpack_arr(arr_key, elem_ok, elem_fail, strings_fmt, key1, &val1, key2,
+                                            &val2))
+                        {
+                            MXB_ERROR(wrong_type, arr_key, all.error_msg().c_str());
+                            success = false;
+                        }
+                    }
+                    return success;
+                };
+
+            if (!parse_struct_arr("user_map", "original_user", "mapped_user", result->user_map)
+                || !parse_struct_arr("group_map", "original_group", "mapped_user", result->group_map))
+            {
+                rval = false;
+            }
+
+            // The credentials-array has three strings, with plugin being optional.
+            const char arr_creds[] = "server_credentials";
+            if (all.contains(arr_creds))
+            {
+                const char fmt[] = "{s:s, s:s, s?:s}";
+                const char* val_mapped = nullptr;
+                const char* val_pw = nullptr;
+                const char* val_plugin = nullptr;
+                Json::ElemOkHandler elem_ok = [&](int ind, const char* arr_name) {
+                        ListenerData::UserCreds dest;
+                        dest.password = mxs::decrypt_password(val_pw);
+                        // "plugin" is an optional field and is left null when not set.
+                        if (val_plugin)
+                        {
+                            dest.plugin = val_plugin;
+                            val_plugin = nullptr;
+                        }
+                        auto ret = result->credentials.emplace(val_mapped, move(dest));
+                        if (!ret.second)
+                        {
+                            MXB_WARNING(duplicate_key, val_mapped, arr_name, filepathc);
+                        }
+                    };
+
+                if (!all.unpack_arr(arr_creds, elem_ok, elem_fail, fmt, "mapped_user", &val_mapped,
+                                    "plugin", &val_plugin, "password", &val_pw))
+                {
+                    MXB_ERROR(wrong_type, arr_creds, all.error_msg().c_str());
+                    rval = false;
+                }
+            }
+
+            if (rval)
+            {
+                MXB_NOTICE("Read %lu user map, %lu group map and %lu credential entries from '%s' for "
+                           "listener '%s'.", result->user_map.size(), result->group_map.size(),
+                           result->credentials.size(), filepathc, m_name.c_str());
+                output = move(result);
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to load user mapping from file. %s", all.error_msg().c_str());
+        }
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
 }
