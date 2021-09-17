@@ -16,7 +16,7 @@
             drag_handle
         </v-icon>
 
-        <div :style="{ ...itemWrapperAlign }" class="d-flex align-center relative">
+        <div :style="{ ...itemWrapperAlign }" class="fill-height d-flex align-center relative">
             <!-- Display toggle button at the first column-->
             <v-btn
                 v-if="shouldShowToggleBtn"
@@ -40,9 +40,8 @@
             <div
                 v-else
                 ref="truncateEle"
-                class="d-block fill-height"
                 :class="[item.level > 0 || header.autoTruncate ? 'text-truncate' : '']"
-                style="width:100%; line-height:44px"
+                style="width:100%;line-height:43px"
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
             </div>
@@ -218,7 +217,7 @@ export default {
             truncatedMenu.rowIndex = rowIndex
             truncatedMenu.cellIndex = cellIndex
             const truncateEle = this.$refs.truncateEle
-            truncatedMenu.x = (truncateEle.scrollWidth + 16 - truncateEle.clientWidth) / 2
+            truncatedMenu.x = (truncateEle.scrollWidth - truncateEle.clientWidth) / 2
             this.$emit('get-truncated-info', truncatedMenu)
         },
     },
