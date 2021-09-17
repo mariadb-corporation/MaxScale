@@ -23,7 +23,7 @@ namespace maxscale
 
 namespace mock
 {
-using SListenerData = std::shared_ptr<mxs::ListenerSessionData>;
+using SListenerData = std::shared_ptr<const mxs::ListenerData>;
 
 /**
  * The class Session provides a mock MXS_SESSION that can be used when

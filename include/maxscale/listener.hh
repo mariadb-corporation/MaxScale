@@ -39,7 +39,7 @@ void mark_auth_as_failed(const std::string& remote);
  * shared data object and share that with new sessions. The old sessions will keep using the
  * previous settings.
  */
-class ListenerSessionData
+class ListenerData
 {
 public:
     using SProtocol = std::unique_ptr<mxs::ProtocolModule>;
@@ -54,12 +54,12 @@ public:
         std::vector<uint8_t>     buffer_contents;
     };
 
-    ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                        SProtocol protocol_module, const std::string& listener_name,
-                        std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
+    ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+                 SProtocol protocol_module, const std::string& listener_name,
+                 std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
 
-    ListenerSessionData(const ListenerSessionData&) = delete;
-    ListenerSessionData& operator=(const ListenerSessionData&) = delete;
+    ListenerData(const ListenerData&) = delete;
+    ListenerData& operator=(const ListenerData&) = delete;
 
     const SSLContext    m_ssl;                  /**< SSL settings */
     const qc_sql_mode_t m_default_sql_mode;     /**< Default sql mode for the listener */
