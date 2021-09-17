@@ -36,10 +36,18 @@ const char query_failed[] = "Query '%s' failed. Error %li: %s.";
 const char multiq_elem_failed[] = "Multiquery element '%s' failed. Error %li: %s.";
 const char no_data[] = "Query '%s' did not return any results.";
 const char multiq_elem_no_data[] = "Multiquery element '%s' did not return any results.";
+
+static std::string default_plugin_dir = "/usr/lib/mysql/plugin/";
 }
 
 namespace maxsql
 {
+
+// static
+void MariaDB::set_default_plugin_dir(const std::string& dir)
+{
+    default_plugin_dir = dir;
+}
 
 MariaDB::~MariaDB()
 {
@@ -70,10 +78,8 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     }
 
-    if (!m_settings.plugin_dir.empty())
-    {
-        mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, m_settings.plugin_dir.c_str());
-    }
+    const std::string& dir = m_settings.plugin_dir.empty() ? default_plugin_dir : m_settings.plugin_dir;
+    mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, dir.c_str());
 
     bool ssl_enabled = m_settings.ssl.enabled;
     if (ssl_enabled)
