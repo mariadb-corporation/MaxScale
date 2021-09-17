@@ -2,7 +2,7 @@
     <td
         :rowspan="cellIndex < colsHasRowSpan ? item.rowspan : null"
         :class="tdClasses"
-        :style="isTree && hasValidChild && cellLevelPadding"
+        :style="cellLevelPadding"
         @mouseenter="cellHover"
         @mouseleave="cellHover"
     >
@@ -154,10 +154,15 @@ export default {
         },
         // Tree view
         cellLevelPadding() {
-            const basePl = 8
-            let levelPl = 30 * this.item.level
-            !this.item.leaf ? (levelPl += 0) : (levelPl += 40)
-            return `padding: 0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`
+            if (this.isTree && this.hasValidChild) {
+                const basePl = 8
+                let levelPl = 30 * this.item.level
+                !this.item.leaf ? (levelPl += 0) : (levelPl += 40)
+                return {
+                    padding: `0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`,
+                }
+            }
+            return {}
         },
         // render actions slot at indexOfHoveredRow
         renderActionsSlot() {
@@ -200,25 +205,12 @@ export default {
                 this.isTruncated &&
                 (item.level > 0 || header.autoTruncate)
             )
-                this.showTruncatedMenu(item, rowIndex, cellIndex, header)
+                this.$emit('get-truncated-info', { item, rowIndex, cellIndex, header })
         },
         checkTruncated() {
             if (!this.$refs.truncateEle) return false
             this.isTruncated =
                 this.$refs.truncateEle.scrollWidth > this.$refs.truncateEle.clientWidth
-        },
-        /**
-         * This function shows truncated text in v-menu
-         * @param {Object} item object
-         */
-        showTruncatedMenu(item, rowIndex, cellIndex, header) {
-            let truncatedMenu = { item }
-            truncatedMenu.header = header
-            truncatedMenu.rowIndex = rowIndex
-            truncatedMenu.cellIndex = cellIndex
-            const truncateEle = this.$refs.truncateEle
-            truncatedMenu.x = (truncateEle.scrollWidth - truncateEle.clientWidth) / 2
-            this.$emit('get-truncated-info', truncatedMenu)
         },
     },
 }

@@ -117,3 +117,11 @@
     margin: 0px -48px;
     padding: 0px 48px;
 }
+/* When a table cell is configured to automatically truncate the text,
+however, with custom slot, if that slot needs to show its own tooltip, the truncate
+tooltip needs to be disabled.
+*/
+.disable-auto-truncate {
+    position: absolute;
+    transform: translateY(-50%);
+}

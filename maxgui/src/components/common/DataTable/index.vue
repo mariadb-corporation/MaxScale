@@ -95,17 +95,13 @@
             :close-on-content-click="false"
             open-on-hover
             offset-y
-            :nudge-left="truncatedMenu.x"
             content-class="shadow-drop color text-navigation"
+            :max-height="600"
             :activator="
                 `.row-${truncatedMenu.rowIndex}_cell-${truncatedMenu.cellIndex}_${componentId}`
             "
         >
-            <v-sheet
-                v-if="truncatedMenu.item"
-                style="border-radius: 10px;overflow:auto"
-                class="pa-4"
-            >
+            <v-sheet v-if="truncatedMenu.item" class="pa-4">
                 <span class="text-body-2">
                     {{ getValue(truncatedMenu.item, truncatedMenu.header) }}
                 </span>
