@@ -32,7 +32,7 @@ std::string grab_next_component(std::string* s)
         str.erase(str.begin());
     }
 
-    size_t pos = str.find("/");
+    size_t pos = str.find('/');
     std::string rval;
 
     if (pos != std::string::npos)
@@ -268,7 +268,7 @@ std::vector<Json> Json::get_array_elems() const
 {
     std::vector<Json> rval;
 
-    if (type() == JsonType::ARRAY)
+    if (type() == Type::ARRAY)
     {
         rval.reserve(json_array_size(m_obj));
 
@@ -318,40 +318,37 @@ bool Json::contains(const string& key) const
     return contains(key.c_str());
 }
 
-Json::JsonType Json::type() const
+Json::Type Json::type() const
 {
     if (m_obj)
     {
         switch (json_typeof(m_obj))
         {
         case JSON_OBJECT:
-            return JsonType::OBJECT;
+            return Type::OBJECT;
 
         case JSON_ARRAY:
-            return JsonType::ARRAY;
+            return Type::ARRAY;
 
         case JSON_STRING:
-            return JsonType::STRING;
+            return Type::STRING;
 
         case JSON_INTEGER:
-            return JsonType::INTEGER;
+            return Type::INTEGER;
 
         case JSON_REAL:
-            return JsonType::REAL;
+            return Type::REAL;
 
         case JSON_TRUE:
         case JSON_FALSE:
-            return JsonType::BOOL;
+            return Type::BOOL;
 
         case JSON_NULL:
-            return JsonType::JSON_NULL;
-
-        default:
-            break;
+            return Type::JSON_NULL;
         }
     }
 
-    return JsonType::UNDEFINED;
+    return Type::UNDEFINED;
 }
 
 bool Json::try_get_int(const std::string& key, int64_t* out) const
@@ -486,11 +483,19 @@ Json::Json(Type type)
         m_obj = json_array();
         break;
 
-    case Type::JS_NULL:
+    case Type::STRING:
+    case Type::INTEGER:
+    case Type::REAL:
+    case Type::BOOL:
+        // These are currently not useful (or required), as the contained value cannot be modified.
+        mxb_assert(!true);
+        break;
+
+    case Type::JSON_NULL:
         m_obj = json_null();
         break;
 
-    case Type::NONE:
+    case Type::UNDEFINED:
         break;
     }
 }
@@ -560,7 +565,7 @@ Json Json::at(const char* ptr) const
         }
     }
 
-    return Json(Type::NONE);
+    return Json(Type::UNDEFINED);
 }
 
 std::string json_dump(const json_t* json, int flags)

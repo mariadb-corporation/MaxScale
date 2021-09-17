@@ -1542,7 +1542,7 @@ void Monitor::read_journal()
     string journal_path = journal_filepath();
     if (access(journal_path.c_str(), F_OK) == 0)
     {
-        Json data(Json::Type::JS_NULL);
+        Json data(Json::Type::JSON_NULL);
         if (data.load(journal_path))
         {
             string fail_reason;

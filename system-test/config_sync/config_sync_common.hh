@@ -35,7 +35,7 @@ RestApi create_api2(TestConnections& test)
 
 static inline mxb::Json get(const RestApi& api, const std::string& endpoint, const std::string& js_ptr)
 {
-    mxb::Json rval(mxb::Json::Type::NONE);
+    mxb::Json rval(mxb::Json::Type::UNDEFINED);
 
     try
     {
