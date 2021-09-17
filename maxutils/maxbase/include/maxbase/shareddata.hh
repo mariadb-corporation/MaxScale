@@ -162,14 +162,15 @@ private:
     void reset_ptrs();
     void shutdown();
 
-    std::pair<const Data*, const Data*> get_ptrs() const;
+    std::pair<const Data*, const Data*> get_ptrs();
 
+    std::mutex                  m_ptr_exchange_mutex;
     std::atomic<const Data*>    m_pCurrent;
     std::atomic<const Data*>    m_pNew;
     std::vector<InternalUpdate> m_queue;
     size_t                      m_queue_max;
 
-    std::mutex               m_mutex;
+    std::mutex               m_update_mutex;
     std::condition_variable* m_pUpdater_wakeup;
     bool*                    m_pData_rdy;
 
@@ -271,12 +272,14 @@ SharedData<Data, Update>::SharedData(SharedData&& rhs)
 template<typename Data, typename Update>
 void SharedData<Data, Update>::set_new_data(const Data* pData)
 {
+    std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
     m_pNew.store(pData, std::memory_order_release);
 }
 
 template<typename Data, typename Update>
-std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs() const
+std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs()
 {
+    std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
     const Data* ptr1 = m_pCurrent.load(std::memory_order_acquire);
     const Data* ptr2 = m_pNew.load(std::memory_order_acquire);
 
@@ -287,7 +290,7 @@ template<typename Data, typename Update>
 bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
 {
     // The updater can call this on any instance of its SharedDatas
-    std::unique_lock<std::mutex> guard(m_mutex);
+    std::unique_lock<std::mutex> guard(m_update_mutex);
 
     bool ret_got_data = false;
     if (m_queue.empty())
@@ -320,7 +323,7 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
 template<typename Data, typename Update>
 bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me, bool block)
 {
-    std::unique_lock<std::mutex> guard(m_mutex, std::defer_lock);
+    std::unique_lock<std::mutex> guard(m_update_mutex, std::defer_lock);
 
     if (block)
     {
@@ -354,7 +357,7 @@ void SharedData<Data, Update>::send_update(const Update& update)
 {
     InternalUpdate iu {update, (*m_pTimestamp_generator).fetch_add(1, std::memory_order_release)};
 
-    std::unique_lock<std::mutex> guard(m_mutex);
+    std::unique_lock<std::mutex> guard(m_update_mutex);
 
     for (bool done = false; !done;)
     {
@@ -379,6 +382,7 @@ void SharedData<Data, Update>::send_update(const Update& update)
 template<typename Data, typename Update>
 const Data* SharedData<Data, Update>::reader_ready()
 {
+    std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
     const Data* new_ptr = m_pNew.load(std::memory_order_acquire);
     m_pCurrent.store(new_ptr, std::memory_order_release);
     return new_ptr;
@@ -389,7 +393,7 @@ void SharedData<Data, Update>::shutdown()
 {
     // The workers have already stopped and their threads joined. The gcupdater can get stuck
     // because of that, so GCUpdater<SD>::stop() calls this on one (any) SharedData instance.
-    std::unique_lock<std::mutex> guard(m_mutex);
+    std::unique_lock<std::mutex> guard(m_update_mutex);
 
     *m_pData_rdy = true;
     m_pUpdater_wakeup->notify_one();
