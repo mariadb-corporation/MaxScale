@@ -136,10 +136,17 @@ cfg::ParamBool s_append(
     &s_spec, "append", "Append new entries to log files instead of overwriting them", true,
     cfg::Param::AT_RUNTIME);
 
+auto FILEdeleter = [](FILE* fp) {
+        if (fp)
+        {
+            fclose(fp);
+        }
+    };
+
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
 
-bool check_replace_file(const string& filename, FILE** ppFile);
+bool check_replace_file(const string& filename, File* ppFile);
 }
 
 QlaInstance::QlaInstance(const string& name)
@@ -186,10 +193,6 @@ QlaInstance::~QlaInstance()
 
 QlaInstance::LogManager::~LogManager()
 {
-    if (m_unified_fp != NULL)
-    {
-        fclose(m_unified_fp);
-    }
 }
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
@@ -205,11 +208,6 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, 
 
 QlaFilterSession::~QlaFilterSession()
 {
-    if (m_logfile)
-    {
-        fclose(m_logfile);
-        m_logfile = nullptr;
-    }
 }
 
 bool QlaInstance::post_configure()
@@ -372,7 +370,7 @@ json_t* QlaFilterSession::diagnostics() const
 }
 
 void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t data_flags,
-                                                FILE** ppFile) const
+                                                File* ppFile) const
 {
     if (check_replace_file(filename, ppFile))
     {
@@ -382,15 +380,13 @@ void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t
         if (!write_to_logfile(fp, header))
         {
             MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
-            fclose(fp);
-            fp = nullptr;
-            *ppFile = fp;
+            *ppFile = nullptr;
         }
     }
     // Either the old file existed or file creation failed.
 }
 
-void QlaInstance::LogManager::check_reopen_session_file(const std::string& filename, FILE** ppFile) const
+void QlaInstance::LogManager::check_reopen_session_file(const std::string& filename, File* ppFile) const
 {
     check_reopen_file(filename, m_settings.session_data_flags, ppFile);
 }
@@ -493,7 +489,7 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
     return mxs::FilterSession::clientReply(queue, down, reply);
 }
 
-FILE* QlaInstance::LogManager::open_session_log_file(const string& filename) const
+File QlaInstance::LogManager::open_session_log_file(const string& filename) const
 {
     return open_log_file(m_settings.session_data_flags, filename);
 }
@@ -512,15 +508,15 @@ bool QlaInstance::LogManager::open_unified_logfile()
  * @param   filename    Target file path
  * @return  A valid file on success, null otherwise.
  */
-FILE* QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
+File QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
 {
     auto zfilename = filename.c_str();
     bool file_existed = false;
-    FILE* fp = NULL;
+    File fp = NULL;
     if (m_settings.append == false)
     {
         // Just open the file (possibly overwriting) and then print header.
-        fp = fopen(zfilename, "w");
+        fp = File(fopen(zfilename, "w"), FILEdeleter);
     }
     else
     {
@@ -528,11 +524,11 @@ FILE* QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
          *  Using fopen() with 'a+' means we will always write to the end but can read
          *  anywhere.
          */
-        if ((fp = fopen(zfilename, "a+")) != NULL)
+        if (fp = File(fopen(zfilename, "a+"), FILEdeleter))
         {
             // Check to see if file already has contents
-            fseek(fp, 0, SEEK_END);
-            if (ftell(fp) > 0)
+            fseek(fp.get(), 0, SEEK_END);
+            if (ftell(fp.get()) > 0)
             {
                 file_existed = true;
             }
@@ -549,7 +545,6 @@ FILE* QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
         if (!write_to_logfile(fp, header))
         {
             MXS_ERROR(HEADER_ERROR, zfilename, errno, mxs_strerror(errno));
-            fclose(fp);
             fp = nullptr;
         }
     }
@@ -670,15 +665,15 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     return output.str();
 }
 
-bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& contents) const
+bool QlaInstance::LogManager::write_to_logfile(File fp, const std::string& contents) const
 {
     bool error = false;
-    int written = fprintf(fp, "%s", contents.c_str());
+    int written = fprintf(fp.get(), "%s", contents.c_str());
     if (written < 0)
     {
         error = true;
     }
-    else if (m_settings.flush_writes && (fflush(fp) != 0))
+    else if (m_settings.flush_writes && (fflush(fp.get()) != 0))
     {
         error = true;
     }
@@ -812,7 +807,7 @@ void print_string_replace_newlines(const char* sql_string,
  * @return True if new file was opened successfully. False, if file already existed or if new file
  * could not be opened. If false is returned, the caller should check that the file object exists.
  */
-bool check_replace_file(const string& filename, FILE** ppFile)
+bool check_replace_file(const string& filename, File* ppFile)
 {
     auto zfilename = filename.c_str();
     const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
@@ -839,9 +834,9 @@ bool check_replace_file(const string& filename, FILE** ppFile)
         auto fp = *ppFile;
         if (fp)
         {
-            fclose(fp);
+            fp.reset();
         }
-        fp = fdopen(fd, "w");
+        fp = File(fdopen(fd, "w"), FILEdeleter);
         if (fp)
         {
             newfile = true;
