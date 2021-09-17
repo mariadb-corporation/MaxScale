@@ -113,7 +113,7 @@ public:
         bool        write_session_log {false};
         bool        write_stdout_log {false};
         uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
-        int64_t     log_file_types {0};
+        uint32_t    log_file_types {0};
         uint64_t    session_data_flags {0};     /* What data is printed to session files */
         std::string filebase;                   /* The filename base */
         bool        flush_writes {false};       /* Flush log file after every write? */
@@ -187,36 +187,10 @@ private:
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
-    /**
-     * Helper struct for holding data before it's written to file.
-     */
-    class LogEventData
-    {
-    public:
-        LogEventData(const LogEventData&) = delete;
-        LogEventData& operator=(const LogEventData&) = default;
-        LogEventData() = default;
-
-        /* Date string buffer size */
-        static const int DATE_BUF_SIZE = 20;
-
-        /**
-         * Resets event data.
-         *
-         * @param event Event to reset
-         */
-        void clear()
-        {
-            *this = LogEventData();
-        }
-
-        bool        has_message {false};               // Does message data exist?
-        std::string sql;                               // Sql, in canonical form if asked for
-        char        query_date[DATE_BUF_SIZE] {'\0'};  // Text representation of date.
-        timespec    begin_time {0, 0};                 // Timer value at the moment of receiving query.
-    };
-
-    LogEventData m_event_data;      /* Information about the latest event, used if logging execution time. */
+    std::string          m_sql;             // Sql, in canonical form if asked for
+    mxb::TimePoint       m_begin_time;      // Timer value at the moment of receiving query.
+    std::string          m_wall_time_str;   // Wall time as a string
+    std::chrono::seconds m_last_wall_second;
 
     maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
 
@@ -231,14 +205,14 @@ private:
  */
 struct LogEventElems
 {
-    const char* date_string {nullptr};  /**< Formatted date */
+    mxb::TimePoint     begin_time;
     const std::string& sql;
-    int         elapsed_ms {0};         /**< Processing time on backend */
+    mxb::TimePoint     end_time;
 
-    LogEventElems(const char* date_string, const std::string& sql, int elapsed_ms = -1)
-        : date_string(date_string)
+    LogEventElems(mxb::TimePoint begin_time, const std::string& sql, mxb::TimePoint end_time)
+        : begin_time(begin_time)
         , sql(sql)
-        , elapsed_ms(elapsed_ms)
+        , end_time(end_time)
     {
     }
 };
