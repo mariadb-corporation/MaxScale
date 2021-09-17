@@ -241,6 +241,11 @@ extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
 extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
 extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
 
+/**
+ * For tweaking and debug. This just formats the counters above into a string.
+ */
+std::string get_gc_stats();
+
 template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(Data* pData,
                                      int max_updates,
