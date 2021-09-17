@@ -640,17 +640,17 @@ public:
 
         ComResponse response(mariadb_response.data());
 
-        switch (m_action)
+        switch (m_insert_action)
         {
-        case Action::INSERTING_DATA:
+        case InsertAction::INSERTING_DATA:
             state = translate_inserting_data(std::move(mariadb_response), &pResponse);
             break;
 
-        case Action::CREATING_TABLE:
+        case InsertAction::CREATING_TABLE:
             state = translate_creating_table(std::move(mariadb_response), &pResponse);
             break;
 
-        case Action::CREATING_DATABASE:
+        case InsertAction::CREATING_DATABASE:
             state = translate_creating_database(std::move(mariadb_response), &pResponse);
             break;
         }
@@ -761,7 +761,7 @@ public:
 protected:
     State translate_inserting_data(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_action == Action::INSERTING_DATA);
+        mxb_assert(m_insert_action == InsertAction::INSERTING_DATA);
 
         State state = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -794,7 +794,7 @@ protected:
 
     State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_action == Action::CREATING_TABLE);
+        mxb_assert(m_insert_action == InsertAction::CREATING_TABLE);
 
         State state = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -805,7 +805,7 @@ protected:
         {
         case ComResponse::OK_PACKET:
             MXS_INFO("Table created, now executing statment.");
-            m_action = Action::INSERTING_DATA;
+            m_insert_action = InsertAction::INSERTING_DATA;
             execute_one_statement();
             break;
 
@@ -818,7 +818,7 @@ protected:
                 if (code == ER_TABLE_EXISTS_ERROR)
                 {
                     MXS_INFO("Table created by someone else, now executing statment.");
-                    m_action = Action::INSERTING_DATA;
+                    m_insert_action = InsertAction::INSERTING_DATA;
                     execute_one_statement();
                 }
                 else if (code == ER_BAD_DB_ERROR && err.message().find("Unknown database") == 0)
@@ -854,7 +854,7 @@ protected:
 
     State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
     {
-        mxb_assert(m_action == Action::CREATING_DATABASE);
+        mxb_assert(m_insert_action == InsertAction::CREATING_DATABASE);
 
         State state = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -897,7 +897,7 @@ protected:
 
     void create_table()
     {
-        m_action = Action::CREATING_TABLE;
+        m_insert_action = InsertAction::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
         m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
@@ -916,7 +916,7 @@ protected:
 
     void create_database()
     {
-        m_action = Action::CREATING_DATABASE;
+        m_insert_action = InsertAction::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
         m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
@@ -1194,14 +1194,14 @@ protected:
         return pBuffer;
     }
 
-    enum class Action
+    enum class InsertAction
     {
         INSERTING_DATA,
         CREATING_TABLE,
         CREATING_DATABASE
     };
 
-    Action                              m_action { Action::INSERTING_DATA };
+    InsertAction                        m_insert_action { InsertAction::INSERTING_DATA };
     uint32_t                            m_dcid { 0 };
     mutable int64_t                     m_nDocuments { 0 };
     vector<bsoncxx::document::element>  m_ids;
@@ -1259,7 +1259,7 @@ public:
     }
 
 private:
-    enum class Action
+    enum class UpdateAction
     {
         UPDATING,
         INSERTING
@@ -1320,13 +1320,13 @@ private:
     {
         Execution rv;
 
-        switch (m_action)
+        switch (m_update_action)
         {
-        case Action::UPDATING:
+        case UpdateAction::UPDATING:
             rv = interpret_update(response, index);
             break;
 
-        case Action::INSERTING:
+        case UpdateAction::INSERTING:
             rv = interpret_insert(response, index);
             break;
         }
@@ -1417,7 +1417,7 @@ private:
 
     Execution insert_document(int index)
     {
-        mxb_assert(m_action == Action::UPDATING && m_insert.empty());
+        mxb_assert(m_update_action == UpdateAction::UPDATING && m_insert.empty());
 
         // TODO: If we were here to apply the update operations, then an
         // TODO: INSERT alone would suffice instead of the INSERT + UPDATE
@@ -1472,7 +1472,7 @@ private:
 
 
 private:
-    Action       m_action { Action::UPDATING };
+    UpdateAction m_update_action { UpdateAction::UPDATING };
     bool         m_upsert;
     uint32_t     m_dcid { 0 };
     int32_t      m_nModified { 0 };
