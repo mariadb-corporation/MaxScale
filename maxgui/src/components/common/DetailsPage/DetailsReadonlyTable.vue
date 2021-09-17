@@ -67,8 +67,8 @@ export default {
         return {
             showTable: true,
             defaultTableHeaders: [
-                { text: 'Variable', value: 'id', width: '65%', cellTruncated: true },
-                { text: 'Value', value: 'value', width: '35%', cellTruncated: true },
+                { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },
+                { text: 'Value', value: 'value', width: '35%', autoTruncate: true },
             ],
             tableRows: [],
             isMounting: true,

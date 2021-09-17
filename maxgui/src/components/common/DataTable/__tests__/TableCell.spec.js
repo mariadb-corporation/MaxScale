@@ -58,13 +58,17 @@ describe('TableCell.vue', () => {
             item: {
                 value: 'Longggggggggggggggggggggggggggggg text',
             },
-            header: { text: 'Value', value: 'value', cellTruncated: true },
+            header: { text: 'Value', value: 'value', autoTruncate: true },
         })
+        await wrapper.setData({
+            isTruncated: true,
+        })
+
         let eventFired = 0
         wrapper.vm.$on('cell-hover', () => {
             eventFired++
         })
-        // item.level > 0 || header.cellTruncated will emit get-truncated-info
+        // item.level > 0 || header.autoTruncate will emit get-truncated-info
         wrapper.vm.$on('get-truncated-info', () => {
             eventFired++
         })

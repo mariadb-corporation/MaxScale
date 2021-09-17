@@ -50,16 +50,25 @@
 
             <template
                 v-slot:serverState="{
-                    data: { item: { id, isMasterServer, serverState, monitorModule } },
+                    data: {
+                        item: { id, serverState, showRepStats, showSlaveStats },
+                        cellIndex,
+                        rowIndex,
+                    },
                 }"
             >
                 <div
-                    :id="`serverState-${id}`"
-                    class="d-flex align-center"
+                    v-if="serverState"
+                    class="d-inline py-3"
                     :class="{
-                        pointer: monitorModule === monitorSupportsReplica && !isMasterServer,
+                        [`pointer replicas-activator-row-${rowIndex}-cell-${cellIndex}`]:
+                            showRepStats || showSlaveStats,
                     }"
-                    @mouseover="hoveredItem = { id, isMasterServer, serverState, monitorModule }"
+                    @mouseover="
+                        showRepStats || showSlaveStats
+                            ? handleShowStats({ id, cellIndex, rowIndex, isMaster: showSlaveStats })
+                            : null
+                    "
                 >
                     <icon-sprite-sheet
                         size="13"
@@ -68,9 +77,7 @@
                     >
                         status
                     </icon-sprite-sheet>
-                    <span>
-                        {{ serverState }}
-                    </span>
+                    {{ serverState }}
                 </div>
             </template>
 
@@ -92,11 +99,10 @@
                 <v-menu
                     v-else
                     top
+                    offset-y
                     transition="slide-y-transition"
                     :close-on-content-click="false"
                     open-on-hover
-                    nudge-left="50"
-                    nudge-top="40"
                     allow-overflow
                     content-class="shadow-drop"
                 >
@@ -122,42 +128,87 @@
             </template>
         </data-table>
         <v-menu
+            v-if="hoveredItem"
+            :key="`.replicas-activator-row-${hoveredItem.rowIndex}-cell-${hoveredItem.cellIndex}`"
             top
+            offset-y
             transition="slide-y-transition"
             :close-on-content-click="false"
             open-on-hover
             content-class="shadow-drop color text-navigation"
             allow-overflow
-            :nudge-left="50"
-            :nudge-top="40"
-            :disabled="
-                hoveredItem.monitorModule !== monitorSupportsReplica || hoveredItem.isMasterServer
+            :max-height="350"
+            :activator="
+                `.replicas-activator-row-${hoveredItem.rowIndex}-cell-${hoveredItem.cellIndex}`
             "
-            :activator="`#serverState-${hoveredItem.id}`"
         >
             <v-sheet style="border-radius: 10px;" class="py-4 px-3 text-body-2">
                 <div class="px-1 py-1 font-weight-bold ">
-                    {{ $t('replicationStatus') }}
-                    <!-- TODO: show icon for replicationStatus -->
+                    {{ hoveredItem.isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
                 </div>
                 <v-divider class="color border-separator" />
-                <table class="px-1">
-                    <template v-for="(srcReplication, i) in getSlaveStatus(hoveredItem.id)">
-                        <tbody :key="`${i}`" class="tbody-src-replication">
-                            <tr v-for="(value, key) in srcReplication" :key="`${key}`">
-                                <template>
-                                    <td class="pr-5">
-                                        {{ key }}
-                                    </td>
-                                    <td>
+
+                <template v-if="hoveredItem.isMaster">
+                    <table class="rep-table px-1">
+                        <tr
+                            v-for="(slaveStat, i) in getSlaveStatus(hoveredItem.id)"
+                            :key="`${i}`"
+                            class="mb-1"
+                        >
+                            <td>
+                                <icon-sprite-sheet
+                                    size="13"
+                                    class="mr-1 rep-icon"
+                                    :frame="$help.repStateIcon(slaveStat.overall_replication_state)"
+                                >
+                                    status
+                                </icon-sprite-sheet>
+                            </td>
+                            <td>
+                                <div class="d-flex align-center fill-height">
+                                    <truncate-string
+                                        wrap
+                                        :text="slaveStat.id"
+                                        :nudgeTop="10"
+                                        :maxWidth="300"
+                                    />
+                                    <span class="ml-1 color text-field-text">
+                                        (+{{ slaveStat.overall_seconds_behind_master }}s)
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </template>
+
+                <table v-else class="rep-table px-1">
+                    <template v-for="(stat, i) in getRepStats(hoveredItem.id)">
+                        <tbody
+                            :key="`${i}`"
+                            :class="{ 'tbody-src-replication': !hoveredItem.isMaster }"
+                        >
+                            <tr v-for="(value, key) in stat" :key="`${key}`">
+                                <td class="pr-5">
+                                    {{ key }}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-center fill-height">
+                                        <icon-sprite-sheet
+                                            v-if="key === 'replication_state'"
+                                            size="13"
+                                            class="mr-1 rep-icon"
+                                            :frame="$help.repStateIcon(value)"
+                                        >
+                                            status
+                                        </icon-sprite-sheet>
                                         <truncate-string
                                             wrap
                                             :text="`${value}`"
-                                            :maxWidth="300"
+                                            :maxWidth="400"
                                             :nudgeTop="10"
                                         />
-                                    </td>
-                                </template>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </template>
@@ -186,20 +237,20 @@ export default {
     data() {
         return {
             tableHeaders: [
-                { text: `Monitor`, value: 'groupId', cellTruncated: true },
+                { text: `Monitor`, value: 'groupId', autoTruncate: true },
                 { text: 'State', value: 'monitorState' },
-                { text: 'Servers', value: 'id', cellTruncated: true },
-                { text: 'Address', value: 'serverAddress', cellTruncated: true },
+                { text: 'Servers', value: 'id', autoTruncate: true },
+                { text: 'Address', value: 'serverAddress', autoTruncate: true },
                 { text: 'Port', value: 'serverPort' },
-                { text: 'Connections', value: 'serverConnections', cellTruncated: true },
+                { text: 'Connections', value: 'serverConnections', autoTruncate: true },
                 { text: 'State', value: 'serverState' },
                 { text: 'GTID', value: 'gtid' },
-                { text: 'Services', value: 'serviceIds', cellTruncated: true },
+                { text: 'Services', value: 'serviceIds', autoTruncate: true },
             ],
             servicesLength: 0,
             monitorsLength: 0,
             monitorSupportsReplica: 'mariadbmon',
-            hoveredItem: '',
+            hoveredItem: null,
         }
     },
     computed: {
@@ -266,8 +317,10 @@ export default {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
                             row.monitorState = monitorState
-                            row.monitorModule = monitorModule
-                            row.isMasterServer = master === row.id
+                            row.showSlaveStats =
+                                master === row.id && monitorModule === this.monitorSupportsReplica
+                            row.showRepStats =
+                                master !== row.id && monitorModule === this.monitorSupportsReplica
                             // delete monitor that already grouped from allMonitorsMapClone
                             allMonitorsMapClone.delete(monitorId)
                         }
@@ -291,7 +344,6 @@ export default {
                         gtid: '',
                         groupId: monitor.id,
                         monitorState: monitor.attributes.state,
-                        monitorModule: monitor.attributes.module,
                     })
                 })
 
@@ -305,7 +357,7 @@ export default {
         slaveConnectionsMap() {
             let map = new Map()
             this.tableRows
-                .filter(row => row.monitorModule === this.monitorSupportsReplica)
+                .filter(row => row.showRepStats)
                 .forEach(row => {
                     const key = row.id
                     const server = this.getAllServersMap.get(row.id)
@@ -313,6 +365,23 @@ export default {
                         map.get(key) || this.$typy(server, 'attributes.slave_connections').safeArray
                     map.set(key, slave_connections)
                 })
+            return map
+        },
+        slaveServersByMasterMap() {
+            let map = new Map()
+            let group = this.$help.hashMapByPath({
+                arr: this.tableRows.filter(row => row.groupId), // Group monitored servers
+                path: 'groupId', //monitorId
+            })
+            Object.keys(group).forEach(key => {
+                let master = null
+                let slaves = []
+                group[key].forEach(server => {
+                    if (server.showSlaveStats) master = server.id
+                    else slaves.push(server.id)
+                })
+                map.set(master, slaves)
+            })
             return map
         },
     },
@@ -323,11 +392,14 @@ export default {
         setMonitorsLength(total) {
             this.monitorsLength = total
         },
-        getSlaveStatus(serverId) {
+        handleShowStats({ id, cellIndex, rowIndex, isMaster }) {
+            this.hoveredItem = { id, cellIndex, rowIndex, isMaster }
+        },
+        getRepStats(serverId) {
             const slave_connections = this.slaveConnectionsMap.get(serverId) || []
-            if (!slave_connections.length) return null
+            if (!slave_connections.length) return []
 
-            const slaveStats = []
+            const repStats = []
             slave_connections.forEach(slave_conn => {
                 const {
                     seconds_behind_master,
@@ -337,39 +409,72 @@ export default {
                     last_sql_error,
                     connection_name,
                 } = slave_conn
-                let slaveStatus = {}
+                let srcRep = {}
                 // show connection_name only when multi-source replication is in use
-                if (slave_connections.length > 1) slaveStatus.connection_name = connection_name
+                if (slave_connections.length > 1) srcRep.connection_name = connection_name
 
                 // Determine replication_state (Stopped||Running||Lagging)
                 if (slave_io_running === 'No' || slave_sql_running === 'No')
-                    slaveStatus.replication_state = 'Stopped'
+                    srcRep.replication_state = 'Stopped'
                 else if (seconds_behind_master === 0) {
                     if (slave_sql_running === 'Yes' && slave_io_running === 'Yes')
-                        slaveStatus.replication_state = 'Running'
+                        srcRep.replication_state = 'Running'
                     else {
                         // use value of either slave_io_running or slave_sql_running
-                        slaveStatus.replication_state =
+                        srcRep.replication_state =
                             slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
                     }
-                } else slaveStatus.replication_state = 'Lagging'
-
+                } else srcRep.replication_state = 'Lagging'
+                srcRep.server_id = serverId
                 // only show last_io_error and last_sql_error when replication_state === 'Stopped'
-                if (slaveStatus.replication_state === 'Stopped')
-                    slaveStatus = {
-                        ...slaveStatus,
+                if (srcRep.replication_state === 'Stopped')
+                    srcRep = {
+                        ...srcRep,
                         last_io_error,
                         last_sql_error,
                     }
-                slaveStatus = {
-                    ...slaveStatus,
+                srcRep = {
+                    ...srcRep,
                     seconds_behind_master,
                     slave_io_running,
                     slave_sql_running,
                 }
-                slaveStats.push(slaveStatus)
+                repStats.push(srcRep)
             })
 
+            return repStats
+        },
+        /**
+         * This returns maximum value or the most frequent value
+         * @param {Array} payload.repStats - replication status get from getRepStats method
+         * @param {String} payload.pickBy - property to count. e.g. replication_state or seconds_behind_master
+         * @param {Boolean} payload.isNumber - If it is true, returns maximum value instead of the most frequent value
+         * @returns {String|Number} - returns maximum value or the most frequent value
+         */
+        getOverallRepStat({ repStats, pickBy, isNumber }) {
+            if (isNumber) return Math.max(...repStats.map(item => item[pickBy]))
+            let countObj = this.$help.lodash.countBy(repStats, pickBy)
+            return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b))
+        },
+        getSlaveStatus(serverId) {
+            const slaveServerIds = this.slaveServersByMasterMap.get(serverId) || []
+            if (!slaveServerIds.length) return []
+            const slaveStats = []
+            slaveServerIds.forEach(id => {
+                const repStats = this.getRepStats(id)
+                slaveStats.push({
+                    id,
+                    overall_replication_state: this.getOverallRepStat({
+                        repStats,
+                        pickBy: 'replication_state',
+                    }),
+                    overall_seconds_behind_master: this.getOverallRepStat({
+                        repStats,
+                        pickBy: 'seconds_behind_master',
+                        isNumber: true,
+                    }),
+                })
+            })
             return slaveStats
         },
     },
@@ -377,11 +482,21 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.tbody-src-replication:not(:last-child) {
-    &::after {
-        content: '';
-        display: block;
-        height: 10px;
+.tbody-src-replication {
+    &:not(:last-of-type) {
+        &::after,
+        &:first-of-type::before {
+            content: '';
+            display: block;
+            height: 12px;
+        }
+    }
+}
+.rep-table {
+    td {
+        white-space: nowrap;
+        height: 24px;
+        line-height: 1.5;
     }
 }
 </style>

@@ -85,11 +85,11 @@ const defaultProps = {
     /*
         object in headers may have these properties:
         sortable(true || false), editableCol (true || false), align ("center || left || right"),
-        cellTruncated (true || false), width (String), padding (String)
+        autoTruncate (true || false), width (String), padding (String)
 
         - editableCol, align is mainly used for styling purpose which is applied in table-cell.
         - sortable is used for disable sorting on table, by default it's always true.
-        - cellTruncated is a condition to emit 'get-truncated-info' event in table-cell
+        - autoTruncate is a condition to emit 'get-truncated-info' event in table-cell
     */
     headers: [
         { text: 'Variable', value: 'id' },

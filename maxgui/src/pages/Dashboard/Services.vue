@@ -95,12 +95,12 @@ export default {
     data() {
         return {
             tableHeaders: [
-                { text: 'Service', value: 'id', cellTruncated: true },
+                { text: 'Service', value: 'id', autoTruncate: true },
                 { text: 'State', value: 'state' },
                 { text: 'Router', value: 'router' },
-                { text: 'Current Sessions', value: 'connections', cellTruncated: true },
-                { text: 'Total Sessions', value: 'total_connections', cellTruncated: true },
-                { text: 'Servers', value: 'serverIds', cellTruncated: true },
+                { text: 'Current Sessions', value: 'connections', autoTruncate: true },
+                { text: 'Total Sessions', value: 'total_connections', autoTruncate: true },
+                { text: 'Servers', value: 'serverIds', autoTruncate: true },
             ],
             serversLength: 0,
         }

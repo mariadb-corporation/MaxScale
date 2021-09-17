@@ -24,7 +24,7 @@ export const pickBy = require('lodash/pickBy')
 export const uniqBy = require('lodash/uniqBy')
 export const merge = require('lodash/merge')
 export const differenceWith = require('lodash/differenceWith')
-
+export const countBy = require('lodash/countBy')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -37,6 +37,7 @@ export const lodash = {
     uniqBy,
     deepMerge: merge,
     differenceWith,
+    countBy,
 }
 
 export function isNull(v) {
@@ -103,6 +104,16 @@ export function serverStateIcon(serverState) {
         if (serverState.includes('Maintenance')) result = 2
     }
     return result
+}
+export function repStateIcon(state) {
+    if (state) {
+        // error icon
+        if (state === 'Stopped') return 0
+        // healthy icon
+        else if (state === 'Running') return 1
+        // warning icon
+        else return 2
+    }
 }
 export function monitorStateIcon(monitorState) {
     if (monitorState) {
@@ -700,6 +711,7 @@ Object.defineProperties(Vue.prototype, {
                 range,
                 serviceStateIcon,
                 serverStateIcon,
+                repStateIcon,
                 monitorStateIcon,
                 listenerStateIcon,
                 isNotEmptyObj,
