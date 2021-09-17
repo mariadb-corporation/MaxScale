@@ -31,27 +31,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations } from 'vuex'
+import { mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'global-search',
-    data() {
-        return {
-            search: '',
-        }
-    },
-    watch: {
-        search: function(newVal) {
-            this.SET_SEARCH_KEYWORD(newVal)
-        },
-
-        $route: function() {
-            // Clear local search and global search state when route changes
-            this.search = ''
-            this.SET_SEARCH_KEYWORD('')
+    computed: {
+        ...mapState({
+            search_keyword: 'search_keyword',
+        }),
+        search: {
+            get() {
+                return this.search_keyword
+            },
+            set(v) {
+                this.SET_SEARCH_KEYWORD(v)
+            },
         },
     },
-
     methods: {
         ...mapMutations(['SET_SEARCH_KEYWORD']),
     },

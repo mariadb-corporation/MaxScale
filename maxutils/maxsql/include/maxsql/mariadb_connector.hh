@@ -73,6 +73,16 @@ public:
     static constexpr unsigned int USER_ERROR = 2;
 
     /**
+     * Set the default plugin directory.
+     *
+     * This is the directory that is used if the configuration itself doesn't override it. The default value,
+     * if not set, is /usr/lib/mysql/plugin/.
+     *
+     * @param dir The default for the plugin directory
+     */
+    static void set_default_plugin_dir(const std::string& dir);
+
+    /**
      * Open a new database connection.
      *
      * @param host Server host/ip

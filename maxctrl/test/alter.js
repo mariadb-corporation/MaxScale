@@ -185,7 +185,7 @@ describe("Alter Commands", function () {
   it("alters filter", function () {
     return verifyCommand("alter filter QLA match match1", "filters/QLA").then(function (res) {
       res.data.attributes.parameters.match.should.equal("match1");
-    }).should.be.rejected; // TODO: Change this once qlafilter supports it
+    })
   });
 
   it("alters filter with multiple parameters", function () {
@@ -194,7 +194,7 @@ describe("Alter Commands", function () {
     ) {
       res.data.attributes.parameters.match.should.equal("match2");
       res.data.attributes.parameters.exclude.should.equal("exclude2");
-    }).should.be.rejected; // TODO: Change this once qlafilter supports it
+    })
   });
 
   it("will not alter non-existent filter parameter", function () {

@@ -64,27 +64,27 @@ cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamBool s_use_canonical_form(
     &s_spec, "use_canonical_form", "Write queries in canonical form", false,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamRegex s_match(
     &s_spec, "match", "Only log queries matching this pattern", "",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamRegex s_exclude(
     &s_spec, "exclude", "Exclude queries matching this pattern from the log", "",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_user(
     &s_spec, "user", "Log queries only from this user", "",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_source(
     &s_spec, "source", "Log queries only from this network address", "",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_filebase(
     &s_spec, "filebase", "The basename of the output file",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnumMask<uint32_t> s_options(
     &s_spec, "options", "Regular expression options",
@@ -94,7 +94,7 @@ cfg::ParamEnumMask<uint32_t> s_options(
         {PCRE2_EXTENDED, "extended"},
     },
     0,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnumMask<uint32_t> s_log_type(
     &s_spec, "log_type", "The type of log file to use",
@@ -104,7 +104,7 @@ cfg::ParamEnumMask<uint32_t> s_log_type(
         {QlaInstance::LOG_FILE_STDOUT, "stdout"},
     },
     QlaInstance::LOG_FILE_SESSION,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnumMask<int64_t> s_log_data(
     &s_spec, "log_data", "Type of data to log in the log files",
@@ -118,23 +118,23 @@ cfg::ParamEnumMask<int64_t> s_log_data(
         {QlaInstance::LOG_DATA_DEFAULT_DB, "default_db"},
     },
     QlaInstance::LOG_DATA_DATE | QlaInstance::LOG_DATA_USER | QlaInstance::LOG_DATA_QUERY,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_newline_replacement(
     &s_spec, "newline_replacement", "Value used to replace newlines", " ",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_separator(
     &s_spec, "separator", "Defines the separator between elements of a log entry", ",",
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_flush(
     &s_spec, "flush", "Flush log files after every write", false,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_append(
     &s_spec, "append", "Append new entries to log files instead of overwriting them", true,
-    cfg::Param::AT_STARTUP);
+    cfg::Param::AT_RUNTIME);
 
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
@@ -145,7 +145,6 @@ bool check_replace_file(const string& filename, FILE** ppFile);
 QlaInstance::QlaInstance(const string& name)
     : m_settings(name, this)
     , m_name(name)
-    , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
 
@@ -153,35 +152,39 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
     , m_instance(instance)
 {
-    add_native(&Settings::use_canonical_form, &s_use_canonical_form);
-    add_native(&Settings::filebase, &s_filebase);
-    add_native(&Settings::flush_writes, &s_flush);
-    add_native(&Settings::append, &s_append);
-    add_native(&Settings::query_newline, &s_newline_replacement);
-    add_native(&Settings::separator, &s_separator);
-    add_native(&Settings::user_name, &s_user);
-    add_native(&Settings::source, &s_source);
-    add_native(&Settings::match, &s_match);
-    add_native(&Settings::exclude, &s_exclude);
-    add_native(&Settings::options, &s_options);
-    add_native(&Settings::log_file_data_flags, &s_log_data);
-    add_native(&Settings::log_file_types, &s_log_type);
+    add_native(&Settings::m_v, &Values::use_canonical_form, &s_use_canonical_form);
+    add_native(&Settings::m_v, &Values::filebase, &s_filebase);
+    add_native(&Settings::m_v, &Values::flush_writes, &s_flush);
+    add_native(&Settings::m_v, &Values::append, &s_append);
+    add_native(&Settings::m_v, &Values::query_newline, &s_newline_replacement);
+    add_native(&Settings::m_v, &Values::separator, &s_separator);
+    add_native(&Settings::m_v, &Values::user_name, &s_user);
+    add_native(&Settings::m_v, &Values::source, &s_source);
+    add_native(&Settings::m_v, &Values::match, &s_match);
+    add_native(&Settings::m_v, &Values::exclude, &s_exclude);
+    add_native(&Settings::m_v, &Values::options, &s_options);
+    add_native(&Settings::m_v, &Values::log_file_data_flags, &s_log_data);
+    add_native(&Settings::m_v, &Values::log_file_types, &s_log_type);
 }
 
 bool QlaInstance::Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
     mxb_assert(nested_params.empty());
 
-    write_session_log = (log_file_types & LOG_FILE_SESSION);
-    write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
-    write_stdout_log = (log_file_types & LOG_FILE_STDOUT);
-    session_data_flags = log_file_data_flags & ~LOG_DATA_SESSION;
-    exclude = mxs::config::RegexValue(exclude.pattern(), options);
-    match = mxs::config::RegexValue(match.pattern(), options);
+    m_v.write_session_log = (m_v.log_file_types & LOG_FILE_SESSION);
+    m_v.write_unified_log = (m_v.log_file_types & LOG_FILE_UNIFIED);
+    m_v.write_stdout_log = (m_v.log_file_types & LOG_FILE_STDOUT);
+    m_v.session_data_flags = m_v.log_file_data_flags & ~LOG_DATA_SESSION;
+    m_v.exclude = mxs::config::RegexValue(m_v.exclude.pattern(), m_v.options);
+    m_v.match = mxs::config::RegexValue(m_v.match.pattern(), m_v.options);
     return m_instance->post_configure();
 }
 
 QlaInstance::~QlaInstance()
+{
+}
+
+QlaInstance::LogManager::~LogManager()
 {
     if (m_unified_fp != NULL)
     {
@@ -191,7 +194,7 @@ QlaInstance::~QlaInstance()
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
     : mxs::FilterSession(session, service)
-    , m_instance(instance)
+    , m_log(instance.log())
     , m_user(session->user())
     , m_remote(session->client_remote())
     , m_service(session->service->name())
@@ -210,6 +213,39 @@ QlaFilterSession::~QlaFilterSession()
 }
 
 bool QlaInstance::post_configure()
+{
+    bool ok = false;
+
+    if (auto log = LogManager::create(m_settings.values()))
+    {
+        m_log.assign(std::move(log));
+        ok = true;
+    }
+
+    return ok;
+}
+
+// static
+std::unique_ptr<QlaInstance::LogManager>
+QlaInstance::LogManager::create(const QlaInstance::Settings::Values& settings)
+{
+    std::unique_ptr<QlaInstance::LogManager> manager(new QlaInstance::LogManager(settings));
+
+    if (!manager->prepare())
+    {
+        manager.reset();
+    }
+
+    return manager;
+}
+
+QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& settings)
+    : m_settings(settings)
+    , m_rotation_count(mxs_get_log_rotation_count())
+{
+}
+
+bool QlaInstance::LogManager::prepare()
 {
     // Try to open the unified log file
     if (m_settings.write_unified_log)
@@ -248,7 +284,7 @@ mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* servi
 
 bool QlaFilterSession::prepare()
 {
-    const auto& settings = m_instance.m_settings;
+    const auto& settings = m_log->settings();
     bool hostname_ok = settings.source.empty() || (m_remote == settings.source);
     bool username_ok = settings.user_name.empty() || (m_user == settings.user_name);
     m_active = hostname_ok && username_ok;
@@ -259,7 +295,7 @@ bool QlaFilterSession::prepare()
     {
         // Only open the session file if the corresponding mode setting is used.
         m_filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
-        m_logfile = m_instance.open_session_log_file(m_filename);
+        m_logfile = m_log->open_session_log_file(m_filename);
         if (!m_logfile)
         {
             error = true;
@@ -271,40 +307,50 @@ bool QlaFilterSession::prepare()
 bool QlaInstance::read_to_json(int start, int end, json_t** output) const
 {
     bool rval = false;
-    if (m_settings.write_unified_log)
+
+    if (m_settings.values().write_unified_log)
     {
-        mxb_assert(m_unified_fp && !m_unified_filename.empty());
-        std::ifstream file(m_unified_filename);
-
-        if (file)
-        {
-            json_t* arr = json_array();
-            // TODO: Add integer type to modulecmd
-            int current = 0;
-
-            /** Skip lines we don't want */
-            for (std::string line; current < start && std::getline(file, line); current++)
-            {
-            }
-
-            /** Read lines until either EOF or line count is reached */
-            for (std::string line; std::getline(file, line) && (current < end || end == 0); current++)
-            {
-                json_array_append_new(arr, json_string(line.c_str()));
-            }
-
-            *output = arr;
-            rval = true;
-        }
-        else
-        {
-            *output = mxs_json_error("Failed to open file '%s'", m_unified_filename.c_str());
-        }
+        rval = (*m_log)->read_to_json(start, end, output);
     }
     else
     {
         *output = mxs_json_error("Filter '%s' does not have unified log file enabled", m_name.c_str());
     }
+
+    return rval;
+}
+
+bool QlaInstance::LogManager::read_to_json(int start, int end, json_t** output)
+{
+    bool rval = false;
+    mxb_assert(m_unified_fp && !m_unified_filename.empty());
+    std::ifstream file(m_unified_filename);
+
+    if (file)
+    {
+        json_t* arr = json_array();
+        // TODO: Add integer type to modulecmd
+        int current = 0;
+
+        /** Skip lines we don't want */
+        for (std::string line; current < start && std::getline(file, line); current++)
+        {
+        }
+
+        /** Read lines until either EOF or line count is reached */
+        for (std::string line; std::getline(file, line) && (current < end || end == 0); current++)
+        {
+            json_array_append_new(arr, json_string(line.c_str()));
+        }
+
+        *output = arr;
+        rval = true;
+    }
+    else
+    {
+        *output = mxs_json_error("Failed to open file '%s'", m_unified_filename.c_str());
+    }
+
     return rval;
 }
 
@@ -325,7 +371,8 @@ json_t* QlaFilterSession::diagnostics() const
     return rval;
 }
 
-void QlaInstance::check_reopen_file(const string& filename, uint64_t data_flags, FILE** ppFile) const
+void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t data_flags,
+                                                FILE** ppFile) const
 {
     if (check_replace_file(filename, ppFile))
     {
@@ -343,12 +390,12 @@ void QlaInstance::check_reopen_file(const string& filename, uint64_t data_flags,
     // Either the old file existed or file creation failed.
 }
 
-void QlaInstance::check_reopen_session_file(const std::string& filename, FILE** ppFile) const
+void QlaInstance::LogManager::check_reopen_session_file(const std::string& filename, FILE** ppFile) const
 {
     check_reopen_file(filename, m_settings.session_data_flags, ppFile);
 }
 
-bool QlaInstance::match_exclude(const char* sql, int len)
+bool QlaInstance::LogManager::match_exclude(const char* sql, int len)
 {
     return (!m_settings.match || m_settings.match.match(sql, (size_t)len))
            && (!m_settings.exclude || !m_settings.exclude.match(sql, (size_t)len));
@@ -361,35 +408,35 @@ bool QlaInstance::match_exclude(const char* sql, int len)
  */
 void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 {
-    if (m_instance.m_settings.write_session_log)
+    if (m_log->settings().write_session_log)
     {
         int global_rot_count = mxs_get_log_rotation_count();
         if (global_rot_count > m_rotation_count)
         {
             m_rotation_count = global_rot_count;
-            m_instance.check_reopen_session_file(m_filename, &m_logfile);
+            m_log->check_reopen_session_file(m_filename, &m_logfile);
         }
 
         if (m_logfile)
         {
-            string entry = generate_log_entry(m_instance.m_settings.session_data_flags, elems);
+            string entry = generate_log_entry(m_log->settings().session_data_flags, elems);
             write_session_log_entry(entry);
         }
     }
 
-    if (m_instance.m_settings.write_unified_log || m_instance.m_settings.write_stdout_log)
+    if (m_log->settings().write_unified_log || m_log->settings().write_stdout_log)
     {
         string unified_log_entry =
-            generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
+            generate_log_entry(m_log->settings().log_file_data_flags, elems);
 
-        if (m_instance.m_settings.write_unified_log)
+        if (m_log->settings().write_unified_log)
         {
-            m_instance.write_unified_log_entry(unified_log_entry);
+            m_log->write_unified_log_entry(unified_log_entry);
         }
 
-        if (m_instance.m_settings.write_stdout_log)
+        if (m_log->settings().write_stdout_log)
         {
-            m_instance.write_stdout_log_entry(unified_log_entry);
+            m_log->write_stdout_log_entry(unified_log_entry);
         }
     }
 }
@@ -400,12 +447,12 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
     int query_len = 0;
 
     if (m_active && modutil_extract_SQL(queue, &query, &query_len)
-        && m_instance.match_exclude(query, query_len))
+        && m_log->match_exclude(query, query_len))
     {
-        const uint32_t data_flags = m_instance.m_settings.log_file_data_flags;
+        const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
         m_sql.assign(query, query_len);
-        if (m_instance.m_settings.use_canonical_form)
+        if (m_log->settings().use_canonical_form)
         {
             maxsimd::get_canonical(&m_sql, &m_markers);
         }
@@ -437,7 +484,7 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
 bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (m_instance.m_settings.log_file_data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
+    if (m_log->settings().log_file_data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
         LogEventElems elems(m_begin_time, m_sql, m_pSession->worker()->epoll_tick_now());
         write_log_entries(elems);
@@ -446,12 +493,12 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
     return mxs::FilterSession::clientReply(queue, down, reply);
 }
 
-FILE* QlaInstance::open_session_log_file(const string& filename) const
+FILE* QlaInstance::LogManager::open_session_log_file(const string& filename) const
 {
     return open_log_file(m_settings.session_data_flags, filename);
 }
 
-bool QlaInstance::open_unified_logfile()
+bool QlaInstance::LogManager::open_unified_logfile()
 {
     mxb_assert(!m_unified_fp);
     m_unified_fp = open_log_file(m_settings.log_file_data_flags, m_unified_filename);
@@ -465,7 +512,7 @@ bool QlaInstance::open_unified_logfile()
  * @param   filename    Target file path
  * @return  A valid file on success, null otherwise.
  */
-FILE* QlaInstance::open_log_file(uint64_t data_flags, const string& filename) const
+FILE* QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
 {
     auto zfilename = filename.c_str();
     bool file_existed = false;
@@ -509,7 +556,7 @@ FILE* QlaInstance::open_log_file(uint64_t data_flags, const string& filename) co
     return fp;
 }
 
-string QlaInstance::generate_log_header(uint64_t data_flags) const
+string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
 {
     // Print a header.
     const char SERVICE[] = "Service";
@@ -567,7 +614,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
      * simultaneously, so we have to first print to a string. */
     std::stringstream output;
     string curr_sep;    // Use empty string as the first separator
-    const string& real_sep = m_instance.m_settings.separator;
+    const string& real_sep = m_log->settings().separator;
 
     if (data_flags & QlaInstance::LOG_DATA_SERVICE)
     {
@@ -598,10 +645,10 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_QUERY)
     {
         output << curr_sep;
-        if (!m_instance.m_settings.query_newline.empty())
+        if (!m_log->settings().query_newline.empty())
         {
             print_string_replace_newlines(elems.sql.data(), elems.sql.length(),
-                                          m_instance.m_settings.query_newline.c_str(),
+                                          m_log->settings().query_newline.c_str(),
                                           &output);
         }
         else
@@ -623,7 +670,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     return output.str();
 }
 
-bool QlaInstance::write_to_logfile(FILE* fp, const std::string& contents) const
+bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& contents) const
 {
     bool error = false;
     int written = fprintf(fp, "%s", contents.c_str());
@@ -647,7 +694,7 @@ bool QlaInstance::write_to_logfile(FILE* fp, const std::string& contents) const
 void QlaFilterSession::write_session_log_entry(const string& entry)
 {
     mxb_assert(m_logfile != NULL);
-    if (!m_instance.write_to_logfile(m_logfile, entry))
+    if (!m_log->write_to_logfile(m_logfile, entry))
     {
         if (!m_write_error_logged)
         {
@@ -663,7 +710,7 @@ void QlaFilterSession::write_session_log_entry(const string& entry)
  *
  * @param   entry  Log entry contents
  */
-void QlaInstance::write_unified_log_entry(const string& entry)
+void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
 {
     std::lock_guard<std::mutex> guard(m_file_lock);
     int global_rot_count = mxs_get_log_rotation_count();
@@ -692,7 +739,7 @@ void QlaInstance::write_unified_log_entry(const string& entry)
  *
  * @param entry Log entry contents
  */
-void QlaInstance::write_stdout_log_entry(const string& entry) const
+void QlaInstance::LogManager::write_stdout_log_entry(const string& entry) const
 {
     std::cout << entry;
 

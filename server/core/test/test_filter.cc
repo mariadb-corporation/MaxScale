@@ -26,10 +26,11 @@
 #include <maxscale/paths.hh>
 
 #include "../internal/filter.hh"
+#include "test_utils.hh"
 
 namespace
 {
-
+int result = 0;
 mxs::ConfigParameters params;
 }
 /**
@@ -134,19 +135,20 @@ static int test3()
     return 0;
 }
 
-int main(int argc, char** argv)
+void run_tests()
 {
-    int result = 0;
-    mxs::set_libdir("../../modules/filter/qlafilter/");
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
+
+    preload_module("qlafilter", "server/modules/filter/qlafilter/", mxs::ModuleType::FILTER);
 
     params.set("filebase", "/tmp/qlafilter");
 
     result += test1();
     result += test2();
     result += test3();
+}
 
-    mxs_log_finish();
-
-    exit(result);
+int main(int argc, char** argv)
+{
+    run_unit_test(run_tests);
+    return result;
 }

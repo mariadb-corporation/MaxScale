@@ -20,6 +20,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/pcre2.hh>
+#include <maxscale/workerlocal.hh>
 #include <maxsimd/canonical.hh>
 
 class QlaFilterSession;
@@ -92,15 +93,6 @@ public:
 
     uint64_t getCapabilities() const override;
 
-    std::string generate_log_header(uint64_t data_flags) const;
-
-    FILE* open_session_log_file(const std::string& filename) const;
-    void  check_reopen_session_file(const std::string& filename, FILE** ppFile) const;
-    void  write_unified_log_entry(const std::string& contents);
-    bool  write_to_logfile(FILE* fp, const std::string& contents) const;
-    void  write_stdout_log_entry(const std::string& contents) const;
-
-    bool match_exclude(const char* sql, int len);
     bool post_configure();
 
     class Settings : public mxs::config::Configuration
@@ -108,46 +100,86 @@ public:
     public:
         Settings(const std::string& name, QlaInstance* instance);
 
-        bool        use_canonical_form {false};
-        bool        write_unified_log {false};
-        bool        write_session_log {false};
-        bool        write_stdout_log {false};
-        uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
-        uint32_t    log_file_types {0};
-        uint64_t    session_data_flags {0};     /* What data is printed to session files */
-        std::string filebase;                   /* The filename base */
-        bool        flush_writes {false};       /* Flush log file after every write? */
-        bool        append {true};              /* Open files in append-mode? */
-        std::string query_newline;              /* Character(s) used to replace a newline within a query */
-        std::string separator;                  /*  Character(s) used to separate elements */
-        std::string user_name;                  /* The user name to filter on */
-        std::string source;                     /* The source of the client connection to filter on */
+        struct Values
+        {
+            bool        use_canonical_form {false};
+            bool        write_unified_log {false};
+            bool        write_session_log {false};
+            bool        write_stdout_log {false};
+            uint32_t    log_file_data_flags {0};/* What data is saved to the files */
+            uint32_t    log_file_types {0};
+            uint64_t    session_data_flags {0}; /* What data is printed to session files */
+            std::string filebase;               /* The filename base */
+            bool        flush_writes {false};   /* Flush log file after every write? */
+            bool        append {true};          /* Open files in append-mode? */
+            std::string query_newline;          /* Character(s) used to replace a newline within a query */
+            std::string separator;              /*  Character(s) used to separate elements */
+            std::string user_name;              /* The user name to filter on */
+            std::string source;                 /* The source of the client connection to filter on */
 
-        mxs::config::RegexValue match;  /* Optional text to match against */
-        mxs::config::RegexValue exclude;/* Optional text to match against for exclusion */
-        uint32_t                options;/* Regular expression options */
+            mxs::config::RegexValue match;  /* Optional text to match against */
+            mxs::config::RegexValue exclude;/* Optional text to match against for exclusion */
+            uint32_t                options;/* Regular expression options */
+        };
+
+        const Values& values() const
+        {
+            return m_v;
+        }
 
     protected:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
     private:
         QlaInstance* m_instance;
+        Values       m_v;
     };
 
-    Settings m_settings;
+    class LogManager
+    {
+    public:
+        static std::unique_ptr<LogManager> create(const Settings::Values& settings);
+        ~LogManager();
 
-    const std::string m_name;   /* Filter definition name */
+        bool        open_unified_logfile();
+        FILE*       open_session_log_file(const std::string& filename) const;
+        std::string generate_log_header(uint64_t data_flags) const;
+        void        check_reopen_session_file(const std::string& filename, FILE** ppFile) const;
+        void        write_unified_log_entry(const std::string& contents);
+        bool        write_to_logfile(FILE* fp, const std::string& contents) const;
+        void        write_stdout_log_entry(const std::string& contents) const;
+        bool        match_exclude(const char* sql, int len);
+        bool        read_to_json(int start, int end, json_t** output);
+
+        const Settings::Values& settings() const
+        {
+            return m_settings;
+        }
+
+    private:
+        LogManager(const Settings::Values& settings);
+        bool  prepare();
+        FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
+        void  check_reopen_file(const std::string& filename, uint64_t data_flags, FILE** ppFile) const;
+
+        Settings::Values m_settings;
+        std::mutex       m_file_lock;                   /* Protects access to the unified log file */
+        std::string      m_unified_filename;            /* Filename of the unified log file */
+        FILE*            m_unified_fp {nullptr};        /* Unified log file. */
+        int              m_rotation_count {0};          /* Log rotation counter */
+        bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
+    };
+
+    std::shared_ptr<LogManager> log() const
+    {
+        return *m_log;
+    }
 
 private:
-    bool  open_unified_logfile();
-    FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
-    void  check_reopen_file(const std::string& filename, uint64_t data_flags, FILE** ppFile) const;
+    Settings          m_settings;
+    const std::string m_name;   /* Filter definition name */
 
-    std::mutex  m_file_lock;                    /* Protects access to the unified log file */
-    std::string m_unified_filename;             /* Filename of the unified log file */
-    FILE*       m_unified_fp {nullptr};         /* Unified log file. */
-    int         m_rotation_count {0};           /* Log rotation counter */
-    bool        m_write_error_logged {false};   /* Avoid repeatedly printing some errors/warnings. */
+    mxs::WorkerGlobal<std::shared_ptr<LogManager>> m_log;
 };
 
 /* The session structure for this QLA filter. */
@@ -173,7 +205,7 @@ public:
     json_t* diagnostics() const;
 
 private:
-    QlaInstance& m_instance;
+    std::shared_ptr<QlaInstance::LogManager> m_log;
 
     std::string       m_filename;   /* The session-specific log file name */
     const std::string m_user;       /* Client username */
