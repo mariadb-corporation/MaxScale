@@ -162,9 +162,9 @@ private:
     void reset_ptrs();
     void shutdown();
 
-    std::pair<const Data*, const Data*> get_ptrs();
+    std::pair<const Data*, const Data*> get_ptrs() const;
 
-    std::mutex                  m_ptr_exchange_mutex;
+    mutable std::mutex          m_ptr_exchange_mutex;
     std::atomic<const Data*>    m_pCurrent;
     std::atomic<const Data*>    m_pNew;
     std::vector<InternalUpdate> m_queue;
@@ -277,7 +277,7 @@ void SharedData<Data, Update>::set_new_data(const Data* pData)
 }
 
 template<typename Data, typename Update>
-std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs()
+std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs() const
 {
     std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
     const Data* ptr1 = m_pCurrent.load(std::memory_order_acquire);

@@ -165,12 +165,24 @@ public:
      * @param cap_copies Maximum number of simultaneous copies of SharedDataType::DataType
      *                   if <= 0, the number of copies is unlimited
      * @param order_updates when true, process updates in order of creation
+     * @param updates_only means that the GCUpdater will only handle updates and not
+     *        provide the read-back interface.
+     *        This turns off pointer creation and garbage collection.
+     *        The clients do not need to call reader_ready() on their SharedData,
+     *        but reader_ready() will still be valid returning pInitialData, which
+     *        could be used for shared "const" data for the workers.
+     *        This mode is for GCUpdater subclasses implementing e.g. a logger or where
+     *        the updates are accumulated to be read by some other mechanism (for
+     *        example collecting statistics). In the latter case it is up to the
+     *        implementation to decide if that structure is accumulated into
+     *        pInitialData or something else.
      */
     GCUpdater(typename SD::DataType* initial_copy,
               int num_clients,
               int queue_max,
               int cap_copies,
-              bool order_updates);
+              bool order_updates,
+              bool updates_only = false);
 
 
     void run();
@@ -200,6 +212,7 @@ private:
     size_t m_queue_max;     // of a SharedData instance
     int    m_cap_copies;
     bool   m_order_updates;
+    bool   m_updates_only;
 
     std::vector<SharedDataType>                           m_shared_data;
     std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
@@ -211,7 +224,13 @@ private:
     std::atomic<int64_t>    m_timestamp_generator;
 
     virtual typename SharedDataType::DataType* create_new_copy(
-        const typename SharedDataType::DataType* pCurrent) = 0;
+        const typename SharedDataType::DataType* pCurrent)
+    {
+        /// Misconfigured updater. Either turn off the updates_only feature or
+        /// implement create_new_copy.
+        mxb_assert(!true);
+        return nullptr;
+    }
 
     virtual void make_updates(typename SharedDataType::DataType* pData,
                               std::vector<typename SharedDataType::InternalUpdate>& queue) = 0;
@@ -225,13 +244,15 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
                          int num_clients,
                          int queue_max,
                          int cap_copies,
-                         bool order_updates)
+                         bool order_updates,
+                         bool updates_only)
     : m_running(false)
     , m_pLatest_data(initial_copy)
     , m_num_clients(num_clients)
     , m_queue_max(queue_max)
     , m_cap_copies(cap_copies)
     , m_order_updates(order_updates)
+    , m_updates_only(updates_only)
 {
     mxb_assert(cap_copies != 1);
     m_all_ptrs.push_back(m_pLatest_data);
@@ -380,18 +401,24 @@ void GCUpdater<SD>::run()
             }
         }
 
-        m_pLatest_data = create_new_copy(m_pLatest_data);
-        num_updater_copies.fetch_add(1, std::memory_order_relaxed);
+        if (!m_updates_only)
+        {
+            m_pLatest_data = create_new_copy(m_pLatest_data);
+            num_updater_copies.fetch_add(1, std::memory_order_relaxed);
 
-        m_all_ptrs.push_back(m_pLatest_data);
+            m_all_ptrs.push_back(m_pLatest_data);
 
-        ++gc_ptr_count;
+            ++gc_ptr_count;
+        }
 
         make_updates(m_pLatest_data, m_local_queue);
 
-        for (auto& s : m_shared_data)
+        if (!m_updates_only)
         {
-            s.set_new_data(m_pLatest_data);
+            for (auto& s : m_shared_data)
+            {
+                s.set_new_data(m_pLatest_data);
+            }
         }
 
         // TODO, how many? Maybe just defer to the subclass, m_cap_copies also affects this.
