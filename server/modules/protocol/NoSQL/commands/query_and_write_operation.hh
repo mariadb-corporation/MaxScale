@@ -1247,7 +1247,7 @@ public:
 
     bool should_create_table() const override
     {
-        return m_upsert;
+        return m_should_upsert;
     }
 
 private:
@@ -1268,7 +1268,7 @@ private:
         ostringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
-        optional(update, key::UPSERT, &m_upsert);
+        optional(update, key::UPSERT, &m_should_upsert);
 
         auto q = update[key::Q];
 
@@ -1334,7 +1334,7 @@ private:
 
         if (n == 0)
         {
-            if (m_upsert)
+            if (m_should_upsert)
             {
                 if (m_insert.empty())
                 {
@@ -1365,11 +1365,7 @@ private:
             }
             else
             {
-                DocumentBuilder upsert;
-                upsert.append(kvp(key::INDEX, index));
-                upsert.append(kvp(key::_ID, m_id));
-
-                m_upserted.append(upsert.extract());
+                m_upserted.append(m_upsert.extract());
             }
 
             m_insert.clear();
@@ -1383,10 +1379,12 @@ private:
         auto update = m_documents[index];
         auto u = update[key::U];
 
+        m_update_action = UpdateAction::UPDATING;
+
         ostringstream ss;
         ss << "UPDATE " << table() << " SET DOC = "
            << update_specification_to_set_value(update, u)
-           << "WHERE id = '{\"$oid\":\"" << m_id.to_string() << "\"}'";
+           << "WHERE id = " << m_id;
 
         string sql = ss.str();
 
@@ -1404,7 +1402,7 @@ private:
             return false;
         });
 
-        return Execution::CONTINUE;
+        return Execution::BUSY;
     }
 
     Execution insert_document(int index)
@@ -1412,7 +1410,6 @@ private:
         mxb_assert(m_update_action == UpdateAction::UPDATING && m_insert.empty());
 
         m_update_action = UpdateAction::INSERTING;
-
 
         // TODO: If we were here to apply the update operations, then an
         // TODO: INSERT alone would suffice instead of the INSERT + UPDATE
@@ -1424,10 +1421,27 @@ private:
         auto update = m_documents[index];
         bsoncxx::document::view q = update[key::Q].get_document();
 
-        m_id = bsoncxx::oid();
+        m_upsert.clear();
+        m_upsert.append(kvp(key::INDEX, index));
 
         DocumentBuilder builder;
-        builder.append(kvp(key::_ID, m_id));
+
+        auto qid = q[key::_ID];
+
+        if (qid)
+        {
+            // Provided, use it
+            m_id = "'" + to_string(qid) + "'";
+            append(m_upsert, key::_ID, qid);
+        }
+        else
+        {
+            // Not provided, generate.
+            auto id = bsoncxx::oid();
+            m_id = "'{\"$oid\":\"" + id.to_string() + "\"}'";
+            builder.append(kvp(key::_ID, id));
+            m_upsert.append(kvp(key::_ID, id));
+        }
 
         for (const auto& e : q)
         {
@@ -1471,12 +1485,13 @@ private:
 
 
 private:
-    UpdateAction m_update_action { UpdateAction::UPDATING };
-    bool         m_upsert;
-    int32_t      m_nModified { 0 };
-    string       m_insert;
-    bsoncxx::oid m_id;
-    ArrayBuilder m_upserted;
+    UpdateAction    m_update_action { UpdateAction::UPDATING };
+    bool            m_should_upsert;
+    int32_t         m_nModified { 0 };
+    string          m_insert;
+    string          m_id;
+    DocumentBuilder m_upsert;
+    ArrayBuilder    m_upserted;
 };
 
 
