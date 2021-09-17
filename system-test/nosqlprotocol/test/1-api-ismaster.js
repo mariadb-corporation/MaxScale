@@ -39,7 +39,7 @@ describe(name, function () {
         assert.equal(rv2.minWireVersion >= rv1.minWireVersion, true);
         assert.equal(rv2.maxWireVersion <= rv1.maxWireVersion, true);
 
-        assert.equal(rv2.minWireVersion, 6);
+        assert.equal(rv2.minWireVersion, 0);
         assert.equal(rv2.maxWireVersion, 6);
     });
 
