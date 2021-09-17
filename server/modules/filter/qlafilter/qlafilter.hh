@@ -15,7 +15,9 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include "qlalog.hh"
 #include <string>
+#include <future>
 #include <maxbase/stopwatch.hh>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
@@ -25,8 +27,6 @@
 
 class QlaFilterSession;
 struct LogEventElems;
-
-using File = std::shared_ptr<FILE>;
 
 /**
  * A instance structure, the assumption is that the option passed
@@ -38,6 +38,7 @@ using File = std::shared_ptr<FILE>;
  */
 class QlaInstance : public mxs::Filter
 {
+
 public:
     QlaInstance(const QlaInstance&) = delete;
     QlaInstance& operator=(const QlaInstance&) = delete;
@@ -147,7 +148,7 @@ public:
         File        open_session_log_file(const std::string& filename) const;
         std::string generate_log_header(uint64_t data_flags) const;
         void        check_reopen_session_file(const std::string& filename, File* ppFile) const;
-        void        write_unified_log_entry(const std::string& contents);
+        void        write_unified_log_entry(const std::string& contents, int worker_id);
         bool        write_to_logfile(File fp, const std::string& contents) const;
         void        write_stdout_log_entry(const std::string& contents) const;
         bool        match_exclude(const char* sql, int len);
@@ -170,6 +171,9 @@ public:
         File             m_unified_fp {nullptr};        /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
         bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
+
+        QlaLog            m_qlalog;
+        std::future<void> m_log_future;
     };
 
     std::shared_ptr<LogManager> log() const
@@ -214,6 +218,7 @@ private:
     const std::string m_remote;     /* Client address */
     const std::string m_service;    /* The service name this filter is attached to. */
     const uint64_t    m_ses_id {0}; /* The session this filter session serves. */
+    const int         m_worker_id;
 
     bool m_active {false};      /* Is session active? */
 

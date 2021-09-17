@@ -193,6 +193,8 @@ QlaInstance::~QlaInstance()
 
 QlaInstance::LogManager::~LogManager()
 {
+    m_qlalog.stop();
+    m_log_future.get();
 }
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
@@ -202,6 +204,7 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, 
     , m_remote(session->client_remote())
     , m_service(session->service->name())
     , m_ses_id(session->id())
+    , m_worker_id(mxs_rworker_get_current_id())
     , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
@@ -241,6 +244,7 @@ QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& setting
     : m_settings(settings)
     , m_rotation_count(mxs_get_log_rotation_count())
 {
+    m_log_future = std::async(std::launch::async, &QlaLog::run, &m_qlalog);
 }
 
 bool QlaInstance::LogManager::prepare()
@@ -427,7 +431,7 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
         if (m_log->settings().write_unified_log)
         {
-            m_log->write_unified_log_entry(unified_log_entry);
+            m_log->write_unified_log_entry(unified_log_entry, m_worker_id);
         }
 
         if (m_log->settings().write_stdout_log)
@@ -705,27 +709,24 @@ void QlaFilterSession::write_session_log_entry(const string& entry)
  *
  * @param   entry  Log entry contents
  */
-void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
+void QlaInstance::LogManager::write_unified_log_entry(const string& entry, int worker_id)
 {
-    std::lock_guard<std::mutex> guard(m_file_lock);
     int global_rot_count = mxs_get_log_rotation_count();
     if (global_rot_count > m_rotation_count)
     {
         m_rotation_count = global_rot_count;
+        std::lock_guard<std::mutex> guard(m_file_lock);
         check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_unified_fp);
     }
 
-    if (m_unified_fp)
+    auto pShared_data = m_qlalog.get_shared_data_by_index(worker_id);
+    pShared_data->send_update({m_unified_fp, entry, m_settings.flush_writes});
+
+    if (!m_write_error_logged && m_qlalog.write_error())
     {
-        if (!write_to_logfile(m_unified_fp, entry))
-        {
-            if (!m_write_error_logged)
-            {
-                MXS_ERROR("Failed to write to unified log file '%s'. Suppressing further similar warnings.",
-                          m_unified_filename.c_str());
-                m_write_error_logged = true;
-            }
-        }
+        MXS_ERROR("Failed to write to unified log file '%s'. Suppressing further similar warnings.",
+                  m_unified_filename.c_str());
+        m_write_error_logged = true;
     }
 }
 
