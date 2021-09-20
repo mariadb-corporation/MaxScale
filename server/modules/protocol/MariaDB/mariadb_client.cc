@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <grp.h>
+#include <pwd.h>
 
 #include <maxbase/alloc.h>
 #include <maxsql/mariadb.hh>
@@ -147,6 +148,105 @@ uint32_t parse_packet_length(GWBUF* buffer)
         prot_packet_len = mariadb::get_byte3(header) + MYSQL_HEADER_LEN;
     }
     return prot_packet_len;
+}
+
+bool call_getpwnam_r(const char* user, gid_t& group_id_out)
+{
+    bool rval = false;
+    // getpwnam_r requires a buffer for result data. The size is not known beforehand. Guess the size and
+    // try again with a larger buffer if necessary.
+    int buf_size = 1024;
+    const int buf_size_limit = 1024000;
+    const char err_msg[] = "'getpwnam_r' on '%s' failed. Error %i: %s";
+    string buffer;
+    passwd output {};
+    passwd* output_ptr = nullptr;
+    bool keep_trying = true;
+
+    while (buf_size <= buf_size_limit && keep_trying)
+    {
+        keep_trying = false;
+        buffer.resize(buf_size);
+        int ret = getpwnam_r(user, &output, &buffer[0], buffer.size(), &output_ptr);
+
+        if (output_ptr)
+        {
+            group_id_out = output_ptr->pw_gid;
+            rval = true;
+        }
+        else if (ret == 0)
+        {
+            // No entry found, likely the user is not a Linux user.
+            MXB_INFO("Tried to check groups of user '%s', but it is not a Linux user.", user);
+        }
+        else if (ret == ERANGE)
+        {
+            // Buffer was too small. Try again with a larger one.
+            buf_size *= 10;
+            if (buf_size > buf_size_limit)
+            {
+                MXB_ERROR(err_msg, user, ret, mxb_strerror(ret));
+            }
+            else
+            {
+                keep_trying = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR(err_msg, user, ret, mxb_strerror(ret));
+        }
+    }
+    return rval;
+}
+
+bool call_getgrgid_r(gid_t group_id, string& name_out)
+{
+    bool rval = false;
+    // getgrgid_r requires a buffer for result data. The size is not known beforehand. Guess the size and
+    // try again with a larger buffer if necessary.
+    int buf_size = 1024;
+    const int buf_size_limit = 1024000;
+    const char err_msg[] = "'getgrgid_r' on %ui failed. Error %i: %s";
+    string buffer;
+    group output {};
+    group* output_ptr = nullptr;
+    bool keep_trying = true;
+
+    while (buf_size <= buf_size_limit && keep_trying)
+    {
+        keep_trying = false;
+        buffer.resize(buf_size);
+        int ret = getgrgid_r(group_id, &output, &buffer[0], buffer.size(), &output_ptr);
+
+        if (output_ptr)
+        {
+            name_out = output_ptr->gr_name;
+            rval = true;
+        }
+        else if (ret == 0)
+        {
+            MXB_ERROR("Group id %ui is not a valid Linux group.", group_id);
+        }
+        else if (ret == ERANGE)
+        {
+            // Buffer was too small. Try again with a larger one.
+            buf_size *= 10;
+            if (buf_size > buf_size_limit)
+            {
+                MXB_ERROR(err_msg, group_id, ret, mxb_strerror(ret));
+            }
+            else
+            {
+                keep_trying = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR(err_msg, group_id, ret, mxb_strerror(ret));
+        }
+    }
+    return rval;
 }
 }
 
@@ -2836,19 +2936,45 @@ void MariaDBClientConnection::assign_backend_authenticator()
         const string* mapped_user = nullptr;
         const auto& user = ses->user;
         const auto& user_map = mapping_info->user_map;
-        auto it = user_map.find(user);
-        if (it != user_map.end())
+        auto it_u = user_map.find(user);
+        if (it_u != user_map.end())
         {
-            mapped_user = &it->second;
+            mapped_user = &it_u->second;
         }
         else
         {
-            // Perhaps the mapping is defined through the user's group. Assume that no user can be part of
-            // more than 100 groups.
+            // Perhaps the mapping is defined through the user's Linux group.
             const auto& group_map = mapping_info->group_map;
             if (!group_map.empty())
             {
-                // TODO: check linux user group membership
+                auto userc = user.c_str();
+
+                // getgrouplist accepts a default group which the user is always a member of. Use user id
+                // from passwd-structure.
+                gid_t user_group = 0;
+                if (call_getpwnam_r(userc, user_group))
+                {
+                    const int N = 100;      // Check at most 100 groups.
+                    gid_t user_gids[N];
+                    int n_groups = N;   // Input-output param
+                    getgrouplist(userc, user_group, user_gids, &n_groups);
+                    int found_groups = std::min(n_groups, N);
+                    for (int i = 0; i < found_groups; i++)
+                    {
+                        // The group id:s of the user's groups are in the array. Go through each, get
+                        // text-form group name and compare to mapping. Use first match.
+                        string group_name;
+                        if (call_getgrgid_r(user_gids[i], group_name))
+                        {
+                            auto it_g = group_map.find(group_name);
+                            if (it_g != group_map.end())
+                            {
+                                mapped_user = &it_g->second;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
