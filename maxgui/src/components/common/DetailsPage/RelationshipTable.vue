@@ -111,7 +111,7 @@ export default {
         return {
             showTable: true,
             tableHeader: [
-                { text: this.$tc(this.relationshipType, 1), value: 'id' },
+                { text: this.$tc(this.relationshipType, 1), value: 'id', autoTruncate: true },
                 { text: 'Status', value: 'state', align: 'center' },
             ],
 
