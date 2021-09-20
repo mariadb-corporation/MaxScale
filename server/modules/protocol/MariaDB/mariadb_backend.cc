@@ -301,12 +301,13 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 
 void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
 {
-    size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((ps_info.n_params + 7) / 8);
-    uint8_t* ptr = gwbuf_link_data(*original) + types_offset;
-
-    if (*ptr == 0)
+    // Only prepared statements with input parameters send metadata with COM_STMT_EXECUTE
+    if (ps_info.n_params > 0 && !ps_info.exec_metadata_sent)
     {
-        if (!ps_info.exec_metadata_sent)
+        size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((ps_info.n_params + 7) / 8);
+        uint8_t* ptr = gwbuf_link_data(*original) + types_offset;
+
+        if (*ptr == 0)
         {
             MYSQL_session* data = static_cast<MYSQL_session*>(m_session->protocol_data());
             auto it = data->exec_metadata.find(id);
@@ -343,14 +344,15 @@ void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t i
             }
             else
             {
+                mxb_assert_message(ps_info.n_params > 0, "Only PS with params can be malformed");
                 MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
                             "execution with metadata and current execution doesn't contain it", id);
             }
         }
-    }
-    else
-    {
-        ps_info.exec_metadata_sent = true;
+        else
+        {
+            ps_info.exec_metadata_sent = true;
+        }
     }
 }
 
