@@ -2896,25 +2896,21 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
 
 std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
-const bsoncxx::oid nosql::NoError::null_oid;
-
 nosql::NoError::NoError(int32_t n)
     : m_n(n)
-    , m_upserted(NoError::null_oid)
 {
 }
 
 nosql::NoError::NoError(int32_t n, bool updated_existing)
     : m_n(n)
     , m_updated_existing(updated_existing)
-    , m_upserted(NoError::null_oid)
 {
 }
 
-nosql::NoError::NoError(const bsoncxx::oid& upserted)
+nosql::NoError::NoError(unique_ptr<Id>&& sUpserted)
     : m_n(1)
     , m_updated_existing(false)
-    , m_upserted(upserted)
+    , m_sUpserted(std::move(sUpserted))
 {
 }
 
@@ -2934,9 +2930,9 @@ void nosql::NoError::populate(nosql::DocumentBuilder& doc)
         doc.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
     }
 
-    if (m_upserted != NoError::null_oid)
+    if (m_sUpserted)
     {
-        doc.append(kvp(key::UPSERTED, m_upserted));
+        m_sUpserted->append(doc, key::UPSERTED);
     }
 
     doc.append(kvp(key::SYNC_MILLIS, 0));

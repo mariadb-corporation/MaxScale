@@ -280,11 +280,11 @@ private:
     State create_table();
     State insert_document();
 
-    Action       m_action { Action::UPDATING_DOCUMENT };
-    uint32_t     m_dcid { 0 };
-    std::string  m_update;
-    std::string  m_insert;
-    bsoncxx::oid m_id;
+    Action                       m_action { Action::UPDATING_DOCUMENT };
+    uint32_t                     m_dcid { 0 };
+    std::string                  m_update;
+    std::string                  m_insert;
+    std::unique_ptr<NoError::Id> m_sId;
 };
 
 //

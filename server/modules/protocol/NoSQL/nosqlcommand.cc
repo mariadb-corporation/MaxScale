@@ -835,7 +835,7 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
                 else
                 {
                     // Ok, so we updated an inserted document.
-                    m_database.context().set_last_error(std::make_unique<NoError>(m_id));
+                    m_database.context().set_last_error(std::make_unique<NoError>(std::move(m_sId)));
                 }
             }
         }
@@ -889,7 +889,7 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
         ss << "UPDATE " << table() << " SET DOC = "
            << update_specification_to_set_value(m_req.update())
            << " "
-           << "WHERE id = '{\"$oid\":\"" << m_id.to_string() << "\"}'";
+           << "WHERE id = '" << m_sId->to_string() << "'";
 
         auto sql = ss.str();
 
@@ -967,12 +967,70 @@ State OpUpdateCommand::insert_document()
     ostringstream ss;
     ss << "INSERT INTO " << table() << " (doc) VALUES ('";
 
-    auto query = m_req.selector();
+    auto q = m_req.selector();
 
     DocumentBuilder builder;
-    builder.append(kvp(key::_ID, m_id));
 
-    for (const auto& e : query)
+    auto qid = q[key::_ID];
+
+    if (qid)
+    {
+        class ElementId : public NoError::Id
+        {
+        public:
+            ElementId(const bsoncxx::document::element& id)
+                : m_id(id)
+            {
+            }
+
+            string to_string() const override
+            {
+                return nosql::to_string(m_id);
+            }
+
+            void append(DocumentBuilder& doc, const string& key) const override
+            {
+                nosql::append(doc, key, m_id);
+            }
+
+        private:
+            bsoncxx::document::element m_id;
+        };
+
+        m_sId = make_unique<ElementId>(qid);
+    }
+    else
+    {
+        auto id = bsoncxx::oid();
+
+        class ObjectId : public NoError::Id
+        {
+        public:
+            ObjectId(const bsoncxx::oid& id)
+                : m_id(id)
+            {
+            }
+
+            string to_string() const override
+            {
+                return "{\"$oid\":\"" + m_id.to_string() + "\"}'";
+            }
+
+            void append(DocumentBuilder& doc, const string& key) const override
+            {
+                doc.append(kvp(key, m_id));
+            }
+
+        private:
+            bsoncxx::oid m_id;
+        };
+
+        m_sId = make_unique<ObjectId>(id);
+
+        builder.append(kvp(key::_ID, id));
+    }
+
+    for (const auto& e : q)
     {
         append(builder, e.key(), e);
     }

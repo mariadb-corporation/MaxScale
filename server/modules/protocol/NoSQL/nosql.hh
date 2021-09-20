@@ -304,20 +304,28 @@ public:
 class NoError : public LastError
 {
 public:
+    class Id
+    {
+    public:
+        virtual ~Id() {};
+
+        virtual std::string to_string() const = 0;
+
+        virtual void append(DocumentBuilder& doc, const std::string& key) const = 0;
+    };
+
     const static bsoncxx::oid null_oid;
 
     NoError(int32_t n = 0);
     NoError(int32_t n, bool updated_existing);
-    NoError(const bsoncxx::oid& upserted);
+    NoError(std::unique_ptr<Id>&& sUpserted);
 
     void populate(DocumentBuilder& doc) override;
 
 private:
-    int32_t      m_n { -1 };
-    bool         m_updated_existing { false };
-    bsoncxx::oid m_upserted;
-
-    static bsoncxx::oid s_null_id;
+    int32_t             m_n { -1 };
+    bool                m_updated_existing { false };
+    std::unique_ptr<Id> m_sUpserted;
 };
 
 class Exception : public std::runtime_error
