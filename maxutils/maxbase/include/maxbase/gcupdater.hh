@@ -232,6 +232,7 @@ private:
         return nullptr;
     }
 
+    // The queue is never empty
     virtual void make_updates(typename SharedDataType::DataType* pData,
                               std::vector<typename SharedDataType::InternalUpdate>& queue) = 0;
 };
@@ -350,6 +351,14 @@ void GCUpdater<SD>::run()
             if (!have_data && m_running.load(std::memory_order_acquire))
             {
                 m_shared_data[0].wait_for_updates(maxbase::Duration {0});
+            }
+
+            read_clients(client_indices);
+
+            if (m_local_queue.empty())
+            {
+                mxb_assert(m_running.load(std::memory_order_acquire) == false);
+                continue;
             }
         }
 
