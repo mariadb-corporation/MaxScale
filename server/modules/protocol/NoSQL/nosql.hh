@@ -223,6 +223,22 @@ inline void append(DocumentBuilder& doc, const char* zKey, const bsoncxx::docume
 
 
 template<class T>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                T* pT);
+
+template<class T>
+inline bool element_as(const bsoncxx::document::element& element, T* pT)
+{
+    return element_as(element, Conversion::STRICT, pT);
+}
+
+template<>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                double* pT);
+
+template<class T>
 T element_as(const std::string& command,
              const char* zKey,
              const bsoncxx::document::element& element,

@@ -203,6 +203,43 @@ void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::d
 }
 
 template<>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                double* pT)
+{
+    bool rv = true;
+
+    auto type = element.type();
+
+    if (conversion == Conversion::STRICT && type != bsoncxx::type::k_double)
+    {
+        rv = false;
+    }
+    else
+    {
+        switch (type)
+        {
+        case bsoncxx::type::k_int32:
+            *pT = element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            *pT = element.get_int64();
+            break;
+
+        case bsoncxx::type::k_double:
+            *pT = element.get_double();
+            break;
+
+        default:
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
@@ -2557,7 +2594,10 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
             {
                 if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
                 {
-                    if (name.compare("$set") != 0 && name.compare("$unset") != 0)
+                    // TODO: Change this into operator->function map.
+                    if (name.compare("$set") != 0
+                        && name.compare("$unset") != 0
+                        && name.compare("$inc") != 0)
                     {
                         // TODO: This will now terminate the whole processing,
                         // TODO: but this should actually be returned as a write
@@ -2566,7 +2606,7 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
                         ss << "Unknown modifier: " << name
                            << ". Expected a valid update modifier or "
                            << "pipeline-style update specified as an array. "
-                           << "Currently the only supported update operators are $set and $unset.";
+                           << "Currently the only supported update operators are $set, $unset and $inc.";
 
                         throw SoftError(ss.str(), error::COMMAND_FAILED);
                     }
@@ -2639,6 +2679,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         }
 
         bool add_value = true;
+        bool inc_value = false;
 
         if (element.key().compare("$set") == 0)
         {
@@ -2648,6 +2689,11 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         {
             rv += "JSON_REMOVE(doc, ";
             add_value = false;
+        }
+        else if (element.key().compare("$inc") == 0)
+        {
+            rv += "JSON_SET(doc, ";
+            inc_value = true;
         }
         else
         {
@@ -2676,7 +2722,29 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             if (add_value)
             {
                 s += ", ";
-                s += element_to_value(field, ValueFor::JSON_NESTED);
+                if (inc_value)
+                {
+                    double inc;
+                    if (element_as(field, Conversion::RELAXED, &inc))
+                    {
+                        s += "JSON_VALUE(doc, '$." + key + "') + " + std::to_string(inc);
+                    }
+                    else
+                    {
+                        DocumentBuilder value;
+                        append(value, key, field);
+
+                        ostringstream ss;
+                        ss << "Cannot increment with non-numeric argument: "
+                           << bsoncxx::to_json(value.view());
+
+                        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                    }
+                }
+                else
+                {
+                    s += element_to_value(field, ValueFor::JSON_NESTED);
+                }
             }
         }
 
