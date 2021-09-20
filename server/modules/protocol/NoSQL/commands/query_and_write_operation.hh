@@ -1247,10 +1247,18 @@ public:
 
     bool should_create_table() const override
     {
-        return m_should_upsert;
+        return m_should_create_table;
     }
 
 private:
+    bool should_upsert(int index) const
+    {
+        auto doc = m_documents[index];
+        auto upsert = doc[key::UPSERT];
+
+        return upsert ? element_as<bool>("update", "updates.upsert", upsert) : false;
+    }
+
     enum class UpdateAction
     {
         UPDATING,
@@ -1268,7 +1276,13 @@ private:
         ostringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
-        optional(update, key::UPSERT, &m_should_upsert);
+        bool should_upsert = false;
+        optional(update, key::UPSERT, &should_upsert);
+
+        if (should_upsert)
+        {
+            m_should_create_table = true;
+        }
 
         auto q = update[key::Q];
 
@@ -1334,7 +1348,7 @@ private:
 
         if (n == 0)
         {
-            if (m_should_upsert)
+            if (should_upsert(index))
             {
                 if (m_insert.empty())
                 {
@@ -1487,7 +1501,7 @@ private:
 
 private:
     UpdateAction    m_update_action { UpdateAction::UPDATING };
-    bool            m_should_upsert;
+    bool            m_should_create_table { false };
     int32_t         m_nModified { 0 };
     string          m_insert;
     string          m_id;
