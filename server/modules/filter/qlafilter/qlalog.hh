@@ -15,7 +15,13 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/gcupdater.hh>
 
-using SFile = std::shared_ptr<FILE>;
+struct LogFile
+{
+    FILE*       pFile;
+    std::string filename;
+};
+
+using SFile = std::shared_ptr<LogFile>;
 
 struct LogUpdate
 {

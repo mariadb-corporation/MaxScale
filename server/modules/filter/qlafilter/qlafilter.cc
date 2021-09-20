@@ -136,16 +136,20 @@ cfg::ParamBool s_append(
     &s_spec, "append", "Append new entries to log files instead of overwriting them", true,
     cfg::Param::AT_RUNTIME);
 
-auto FILEdeleter = [](FILE* fp) {
-        if (fp)
+auto LogFileDeleter = [](LogFile* ptr) {
+        if (ptr)
         {
-            fclose(fp);
+            if (ptr->pFile)
+            {
+                fclose(ptr->pFile);
+            }
+            delete ptr;
         }
     };
 
 auto open_file(const char* filename, const char* modes)
 {
-    return SFile(fopen(filename, modes), FILEdeleter);
+    return SFile(new LogFile {fopen(filename, modes), filename}, LogFileDeleter);
 }
 
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
@@ -385,7 +389,7 @@ void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t
     {
         // New file created, print the log header.
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(psFile->get(), header))
+        if (!write_to_logfile((*psFile)->pFile, header))
         {
             MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
             (*psFile).reset();
@@ -535,8 +539,8 @@ SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
         if ((sFile = open_file(zfilename, "a+")))
         {
             // Check to see if file already has contents
-            fseek(sFile.get(), 0, SEEK_END);
-            if (ftell(sFile.get()) > 0)
+            fseek(sFile->pFile, 0, SEEK_END);
+            if (ftell(sFile->pFile) > 0)
             {
                 file_existed = true;
             }
@@ -550,7 +554,7 @@ SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
     else if (!file_existed && data_flags != 0)
     {
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(sFile.get(), header))
+        if (!write_to_logfile(sFile->pFile, header))
         {
             MXS_ERROR(HEADER_ERROR, zfilename, errno, mxs_strerror(errno));
             sFile.reset();
@@ -698,7 +702,7 @@ bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& cont
 void QlaFilterSession::write_session_log_entry(const string& entry)
 {
     mxb_assert(m_sSession_file);
-    if (!m_log->write_to_logfile(m_sSession_file.get(), entry))
+    if (!m_log->write_to_logfile(m_sSession_file->pFile, entry))
     {
         if (!m_write_error_logged)
         {
@@ -837,7 +841,7 @@ bool check_replace_file(const string& filename, SFile* psFile)
     {
         MXS_INFO("Log file '%s' recreated.", zfilename);
         // File was created. Close the original file stream since it's pointing to a moved file.
-        if ((*psFile = SFile(fdopen(fd, "w"), FILEdeleter)))
+        if ((*psFile = SFile(new LogFile {fdopen(fd, "w"), filename}, LogFileDeleter)))
         {
             newfile = true;
         }
