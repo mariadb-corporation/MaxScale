@@ -1439,7 +1439,7 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     if (res != 0)
     {
         int eno = errno;
-        MXS_ERROR("getpeername()' failed on connection to '%s' when forming proxy protocol header. "
+        MXS_ERROR("getpeername() failed on connection to '%s' when forming proxy protocol header. "
                   "Error %d: '%s'", m_server.name(), eno, mxb_strerror(eno));
         return false;
     }
