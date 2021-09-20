@@ -13,6 +13,17 @@
 #include "qlalog.hh"
 #include <maxscale/config.hh>
 
+namespace
+{
+void log_error(int errnum, const typename SharedLogLine::InternalUpdate& iu)
+{
+    MXS_SERROR("Failed to write to unified log file "
+               << iu.update.sFile->filename
+               << ". Error: (" << errnum << ") " << strerror(errnum)
+               << ". Suppressing further similar error messages.");
+}
+}
+
 QlaLog::QlaLog()
     : GCUpdater(new LogContext(),
                 config_threadcount(),
@@ -23,18 +34,34 @@ QlaLog::QlaLog()
 {
 }
 
+/// NOTE: There is a very small caveat with flusing only the last element in the queue.
+///       If within the queue the current file changes, then the explicit flush to the
+///       current file will happen before the flush of the previous file, which is
+///       flushed when the smart_ptr to it is destroyed after this call finishes.
+///       The distinction only matters if there is a crash, or qla is used for some
+///       sort of debugging.
+
 void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::InternalUpdate>& queue)
 {
-    bool error = m_write_error_happened.load(std::memory_order_acquire);
-
     for (const auto& e : queue)
     {
-        error = (fprintf(e.update.sFile->pFile, "%s", e.update.line.c_str()) < 0) | error;
-        if (e.update.flush)
+        if (fprintf(e.update.sFile->pFile, "%s", e.update.line.c_str()) < 0)
         {
-            error = (fflush(e.update.sFile->pFile) != 0) | error;
+            if (!m_error_logged)
+            {
+                log_error(errno, e);
+                m_error_logged = true;
+            }
         }
     }
 
-    m_write_error_happened.store(error, std::memory_order_release);
+    const auto& last = queue.back();
+    if (last.update.flush && fflush(last.update.sFile->pFile) != 0)
+    {
+        if (!m_error_logged)
+        {
+            log_error(errno, last);
+            m_error_logged = true;
+        }
+    }
 }

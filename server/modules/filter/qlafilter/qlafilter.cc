@@ -730,13 +730,6 @@ void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
 
     auto pShared_data = m_qlalog.get_shared_data_by_index(mxs_rworker_get_current_id());
     pShared_data->send_update({m_sUnified_file, entry, m_settings.flush_writes});
-
-    if (!m_write_error_logged && m_qlalog.write_error())
-    {
-        MXS_ERROR("Failed to write to unified log file '%s'. Suppressing further similar warnings.",
-                  m_unified_filename.c_str());
-        m_write_error_logged = true;
-    }
 }
 
 /**

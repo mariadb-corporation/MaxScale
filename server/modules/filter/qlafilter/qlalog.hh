@@ -44,12 +44,8 @@ class QlaLog : public maxbase::GCUpdater<SharedLogLine>
 {
 public:
     QlaLog();
-    bool write_error()
-    {
-        return m_write_error_happened.load(std::memory_order_acquire);
-    }
 private:
     void make_updates(LogContext*,
                       std::vector<typename SharedLogLine::InternalUpdate>& queue) override;
-    std::atomic<bool> m_write_error_happened{false};
+    bool m_error_logged{false};
 };
