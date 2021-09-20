@@ -10,77 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* eslint-disable no-unused-vars */
-import chai, { expect } from 'chai'
+import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Servers from '@/pages/Dashboard/Servers'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-import {
-    getAllMonitorsMapStub,
-    findAnchorLinkInTable,
-    getUniqueResourceNamesStub,
-} from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
-
-const all_servers_mockup = [
-    {
-        id: 'row_server_0',
-        attributes: {
-            state: 'Master, Running',
-            statistics: { connections: 100 },
-            parameters: {
-                address: '127.0.0.1',
-                port: 4000,
-            },
-            gtid_current_pos: '0-1000-9',
-        },
-        relationships: {
-            monitors: {
-                data: [
-                    {
-                        id: 'monitor_0',
-                        type: 'monitors',
-                    },
-                ],
-            },
-            services: {
-                data: [
-                    {
-                        id: 'service_0',
-                        type: 'services',
-                    },
-                ],
-            },
-        },
-        type: 'servers',
-    },
-    {
-        id: 'row_server_1',
-        attributes: {
-            state: 'Slave, Running',
-            statistics: { connections: 1000 },
-            parameters: {
-                address: '127.0.0.1',
-                port: 4001,
-            },
-            gtid_current_pos: '0-1000-9',
-        },
-        relationships: {
-            monitors: {
-                data: [
-                    {
-                        id: 'monitor_0',
-                        type: 'monitors',
-                    },
-                ],
-            },
-        },
-        type: 'servers',
-    },
-]
+import { findAnchorLinkInTable, getUniqueResourceNamesStub } from '@tests/unit/utils'
+import { makeServer } from '@tests/unit/mirage/api'
+import { initAllServers } from '@tests/unit/mirage/servers'
+import { initAllMonitors } from '@tests/unit/mirage/monitors'
 const expectedTableHeaders = [
     { text: `Monitor`, value: 'groupId', autoTruncate: true },
     { text: 'State', value: 'monitorState' },
@@ -92,68 +29,75 @@ const expectedTableHeaders = [
     { text: 'GTID', value: 'gtid' },
     { text: 'Services', value: 'serviceIds', autoTruncate: true },
 ]
-
 const expectedTableRows = [
     {
-        id: 'row_server_0',
+        id: 'server_0',
         serverAddress: '127.0.0.1',
         serverPort: 4000,
-        serverConnections: 100,
+        serverConnections: 0,
         serverState: 'Master, Running',
-        serviceIds: ['service_0'],
+        serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
         gtid: '0-1000-9',
-        groupId: 'monitor_0',
+        groupId: 'Monitor',
         monitorState: 'Running',
+        showSlaveStats: true,
+        showRepStats: false,
     },
     {
-        id: 'row_server_1',
+        id: 'server_1',
         serverAddress: '127.0.0.1',
         serverPort: 4001,
-        serverConnections: 1000,
+        serverConnections: 0,
         serverState: 'Slave, Running',
-        serviceIds: 'No services',
+        serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
         gtid: '0-1000-9',
-        groupId: 'monitor_0',
+        groupId: 'Monitor',
         monitorState: 'Running',
+        showSlaveStats: false,
+        showRepStats: true,
     },
     {
-        groupId: 'monitor_1',
-        gtid: '',
-        id: '',
-        monitorState: 'Stopped',
-        serverAddress: '',
-        serverPort: '',
-        serverConnections: '',
-        serverState: '',
-        serviceIds: '',
+        id: 'server_2',
+        serverAddress: '127.0.0.1',
+        serverPort: 4002,
+        serverConnections: 0,
+        serverState: 'Slave, Running',
+        serviceIds: ['Read-Write-Service'],
+        gtid: '0-1000-9',
+        groupId: 'Monitor',
+        monitorState: 'Running',
+        showSlaveStats: false,
+        showRepStats: true,
     },
 ]
 
+let api
+let originalXMLHttpRequest = XMLHttpRequest
 describe('Dashboard Servers tab', () => {
-    let wrapper, axiosStub
-
-    after(async () => {
-        await axiosStub.reset()
+    let wrapper
+    before(() => {
+        api = makeServer({ environment: 'test' })
+        initAllServers(api)
+        initAllMonitors(api)
+        // Force node to use the monkey patched window.XMLHttpRequest
+        // This needs to come after `makeServer()` is called.
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = window.XMLHttpRequest
     })
-
     beforeEach(async () => {
         wrapper = mount({
             shallow: false,
             component: Servers,
-            computed: {
-                all_servers: () => all_servers_mockup,
-                getAllMonitorsMap: () => getAllMonitorsMapStub,
-            },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        await wrapper.vm.$store.dispatch('server/fetchAllServers')
+        await wrapper.vm.$store.dispatch('monitor/fetchAllMonitors')
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
+    after(() => {
+        api.shutdown()
+        // Restore node's original window.XMLHttpRequest.
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = originalXMLHttpRequest
     })
 
     it(`Should process table rows accurately`, async () => {
@@ -167,7 +111,7 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to server detail page when a server is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
+        const serverId = wrapper.vm.all_servers[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -178,8 +122,8 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
-        const serviceId = all_servers_mockup[0].relationships.services.data[0].id
+        const serverId = wrapper.vm.all_servers[2].id // the last server has only one service
+        const serviceId = wrapper.vm.all_servers[2].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -190,8 +134,8 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to monitor detail page when a monitor is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
-        const monitorId = all_servers_mockup[0].relationships.monitors.data[0].id
+        const serverId = wrapper.vm.all_servers[0].id
+        const monitorId = wrapper.vm.all_servers[0].relationships.monitors.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
