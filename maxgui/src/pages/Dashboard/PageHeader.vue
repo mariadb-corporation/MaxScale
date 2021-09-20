@@ -27,12 +27,12 @@
                 open-on-hover
                 offset-y
                 nudge-left="20"
-                content-class="v-menu--with-arrow v-menu--with-arrow--top-left shadow-drop"
+                content-class="v-menu--with-arrow v-menu--with-arrow--top-left mt-n2 shadow-drop"
             >
                 <template v-slot:activator="{ on }">
                     <v-icon
-                        class="material-icons-outlined pointer"
-                        style="position:relative;top:-15px"
+                        class="material-icons-outlined pointer pb-4"
+                        style="position:relative;top:-8px"
                         size="16"
                         color="#9DB4BB"
                         v-on="on"
@@ -78,7 +78,12 @@
                                 style="width:65%;"
                                 class="d-inline-block "
                             >
-                                {{ $help.dateFormat({ value, formatType: 'MM.DD.YYYY HH:mm:ss' }) }}
+                                {{
+                                    $help.dateFormat({
+                                        value,
+                                        formatType: 'MM.DD.YYYY HH:mm:ss',
+                                    })
+                                }}
                             </div>
                             <div v-else style="width:65%;" class="d-inline-block ">
                                 {{ value }}
