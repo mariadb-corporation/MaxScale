@@ -1365,6 +1365,7 @@ private:
             }
             else
             {
+                m_n += 1;
                 m_upserted.append(m_upsert.extract());
             }
 
