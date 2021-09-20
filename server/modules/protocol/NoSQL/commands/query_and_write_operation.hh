@@ -141,21 +141,17 @@ public:
             switch (m_query.kind())
             {
             case Query::MULTI:
-                pBuffer = interpret_multi(pBuffer, pEnd, m_query.nStatements());
+                execution = interpret_multi(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
                 m_ok = 1;
                 break;
 
             case Query::COMPOUND:
-                pBuffer = interpret_compound(pBuffer, pEnd, m_query.nStatements());
+                execution = interpret_compound(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
                 m_ok = 1;
                 break;
 
             case Query::SINGLE:
-                {
-                    execution = interpret_single(pBuffer);
-
-                    pBuffer += ComPacket::packet_len(pBuffer);
-                }
+                execution = interpret_single(pBuffer, &pBuffer);
             }
 
             if (pBuffer != pEnd)
@@ -356,7 +352,7 @@ protected:
 
     virtual Execution interpret(const ComOK& response, int index) = 0;
 
-    virtual Execution interpret_single(uint8_t* pBuffer)
+    Execution interpret_single(uint8_t* pBuffer, uint8_t** ppBuffer)
     {
         Execution rv = Execution::CONTINUE;
 
@@ -403,17 +399,22 @@ protected:
             throw_unexpected_packet();
         }
 
+        *ppBuffer = pBuffer + ComPacket::packet_len(pBuffer);
+
         return rv;
     }
 
-    virtual uint8_t* interpret_multi(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    virtual Execution interpret_multi(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements, uint8_t** ppBuffer)
     {
         // This is not going to happen outside development.
         mxb_assert(!true);
         throw std::runtime_error("Multi query, but no multi handler.");
     }
 
-    virtual uint8_t* interpret_compound(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    virtual Execution interpret_compound(uint8_t* pBegin,
+                                         uint8_t* pEnd,
+                                         size_t nStatements,
+                                         uint8_t** ppBuffer)
     {
         // This is not going to happen outside development.
         mxb_assert(!true);
@@ -1079,9 +1080,14 @@ protected:
         return Execution::CONTINUE;
     }
 
-    uint8_t* interpret_multi(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    Execution interpret_multi(uint8_t* pBuffer,
+                              uint8_t* pEnd,
+                              size_t nStatements,
+                              uint8_t** ppBuffer) override
     {
         mxb_assert(nStatements > 2);
+
+        Execution rv = Execution::CONTINUE;
 
         ComResponse begin(pBuffer);
 
@@ -1089,69 +1095,83 @@ protected:
         {
             pBuffer += ComPacket::packet_len(pBuffer);
 
-            size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
+            ComResponse first(pBuffer);
 
-            for (size_t i = 0; i < nInserts; ++i)
+            if (first.is_err() && ComERR(first).code() == ER_NO_SUCH_TABLE && should_create_table())
             {
-                ComResponse response(pBuffer);
+                // If the first INSERT failed with ER_NO_SUCH_TABLE, then we know
+                // they all will.
 
-                switch (response.type())
+                create_table();
+                pBuffer = pEnd;
+                rv = Execution::BUSY;
+            }
+            else
+            {
+                size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
+
+                for (size_t i = 0; i < nInserts; ++i)
                 {
-                case ComResponse::OK_PACKET:
+                    ComResponse response(pBuffer);
+
+                    switch (response.type())
                     {
-                        ComOK ok(response);
-
-                        auto n = ok.affected_rows();
-
-                        if (n == 0)
+                    case ComResponse::OK_PACKET:
                         {
-                            ostringstream ss;
-                            ss << "E" << (int)error::COMMAND_FAILED << " error collection "
-                               << table(Quoted::NO)
-                               << ", possibly duplicate id.";
+                            ComOK ok(response);
 
-                            DocumentBuilder error;
-                            error.append(kvp(key::INDEX, (int)i));
-                            error.append(kvp(key::CODE, error::COMMAND_FAILED));
-                            error.append(kvp(key::ERRMSG, ss.str()));
+                            auto n = ok.affected_rows();
 
-                            m_write_errors.append(error.extract());
+                            if (n == 0)
+                            {
+                                ostringstream ss;
+                                ss << "E" << (int)error::COMMAND_FAILED << " error collection "
+                                   << table(Quoted::NO)
+                                   << ", possibly duplicate id.";
+
+                                DocumentBuilder error;
+                                error.append(kvp(key::INDEX, (int)i));
+                                error.append(kvp(key::CODE, error::COMMAND_FAILED));
+                                error.append(kvp(key::ERRMSG, ss.str()));
+
+                                m_write_errors.append(error.extract());
+                            }
+                            else
+                            {
+                                m_n += n;
+                            }
                         }
-                        else
-                        {
-                            m_n += n;
-                        }
+                        break;
+
+                    case ComResponse::ERR_PACKET:
+                        // An error packet in the middle of everything is a complete failure.
+                        throw MariaDBError(ComERR(response));
+
+                    default:
+                        mxb_assert(!true);
+                        throw_unexpected_packet();
                     }
-                    break;
 
-                case ComResponse::ERR_PACKET:
-                    // An error packet in the middle of everything is a complete failure.
-                    throw MariaDBError(ComERR(response));
+                    pBuffer += ComPacket::packet_len(pBuffer);
 
-                default:
-                    mxb_assert(!true);
-                    throw_unexpected_packet();
+                    if (pBuffer >= pEnd)
+                    {
+                        mxb_assert(!true);
+                        throw HardError("Too few packets in received data.", error::INTERNAL_ERROR);
+                    }
+                }
+
+                ComResponse commit(pBuffer);
+
+                if (!commit.is_ok())
+                {
+                    mxb_assert(commit.is_err());
+                    throw MariaDBError(ComERR(commit));
                 }
 
                 pBuffer += ComPacket::packet_len(pBuffer);
-
-                if (pBuffer >= pEnd)
-                {
-                    mxb_assert(!true);
-                    throw HardError("Too few packets in received data.", error::INTERNAL_ERROR);
-                }
+                mxb_assert(pBuffer == pEnd);
             }
-
-            ComResponse commit(pBuffer);
-
-            if (!commit.is_ok())
-            {
-                mxb_assert(commit.is_err());
-                throw MariaDBError(ComERR(commit));
-            }
-
-            pBuffer += ComPacket::packet_len(pBuffer);
-            mxb_assert(pBuffer == pEnd);
         }
         else
         {
@@ -1159,10 +1179,14 @@ protected:
             throw MariaDBError(ComERR(begin));
         }
 
-        return pBuffer;
+        *ppBuffer = pBuffer;
+        return rv;
     }
 
-    uint8_t* interpret_compound(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    Execution interpret_compound(uint8_t* pBuffer,
+                                 uint8_t* pEnd,
+                                 size_t nStatements,
+                                 uint8_t** ppBuffer) override
     {
         ComResponse response(pBuffer);
 
@@ -1195,7 +1219,8 @@ protected:
 
         pBuffer += ComPacket::packet_len(pBuffer);
 
-        return pBuffer;
+        *ppBuffer = pBuffer;
+        return Execution::CONTINUE;
     }
 
     mutable int64_t                     m_nDocuments { 0 };
