@@ -57,7 +57,7 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
 
 bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_target)
 {
-    mxb_assert(target->in_use() || (target->can_connect() && can_recover_servers()));
+    mxb_assert(target->in_use() || (!target->has_failed() && can_recover_servers()));
     return target->in_use() || prepare_connection(target);
 }
 
