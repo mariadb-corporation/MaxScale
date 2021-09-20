@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -26,6 +26,7 @@ public:
 
     mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
+    mariadb::AuthByteVec  generate_token(const std::string& password) override;
 
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -220,7 +220,7 @@ private:
 
     // The auth token used with the latest COM_CHANGE_USER, required in case a new COM_CHANGE_USER arrives
     // before the server responds to the previous one and the server sends an AuthSwitchRequest packet.
-    mariadb::ClientAuthenticator::ByteVec m_current_auth_token;
+    mariadb::AuthByteVec m_current_auth_token;
 
     std::queue<TrackedQuery> m_track_queue;
 

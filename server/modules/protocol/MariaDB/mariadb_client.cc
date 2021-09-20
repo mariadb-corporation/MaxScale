@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <grp.h>
 
 #include <maxbase/alloc.h>
 #include <maxsql/mariadb.hh>
@@ -570,7 +571,9 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             break;
 
         case AuthState::START_SESSION:
-            // Authentication success, initialize session.
+            // Authentication success, initialize session. Backend authenticator must be set before
+            // connecting to backends.
+            assign_backend_authenticator();
             if (m_session->start())
             {
                 mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
@@ -634,23 +637,11 @@ void MariaDBClientConnection::update_user_account_entry()
     auto search_res = users->find_user(mses->user, mses->remote, mses->db, mses->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
-    mariadb::AuthenticatorModule* selected_module = nullptr;
-    auto& auth_modules = m_session->listener_data()->m_authenticators;
-    for (const auto& auth_module : auth_modules)
-    {
-        auto protocol_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
-        if (protocol_auth->supported_plugins().count(search_res.entry.plugin))
-        {
-            // Found correct authenticator for the user entry.
-            selected_module = protocol_auth;
-            break;
-        }
-    }
-
+    mariadb::AuthenticatorModule* selected_module = find_auth_module(search_res.entry.plugin);
     if (selected_module)
     {
         // Correct plugin is loaded, generate session-specific data.
-        mses->m_current_authenticator = selected_module;
+        mses->m_current_client_auth = selected_module;
         // If changing user, this overrides the old client authenticator.
         m_authenticator = selected_module->create_client_authenticator();
     }
@@ -2020,6 +2011,7 @@ bool MariaDBClientConnection::complete_change_user()
     // saved pointers to it.
     *m_session_data = *m_change_user.session;
     m_change_user.session.reset();
+    assign_backend_authenticator();
     bool rval = route_statement(move(m_change_user.client_query));
     m_session->notify_userdata_change();
     return rval;
@@ -2300,7 +2292,7 @@ bool MariaDBClientConnection::perform_auth_exchange()
     {
         // Exchange failed. Usually a communication or memory error.
         auto msg = mxb::string_printf("Authentication plugin '%s' failed",
-                                      m_session_data->m_current_authenticator->name().c_str());
+                                      m_session_data->m_current_client_auth->name().c_str());
         send_misc_error(msg);
         m_auth_state = AuthState::FAIL;
     }
@@ -2823,6 +2815,96 @@ MariaDBClientConnection::parse_special_query(const char* sql, int len)
 
         default:
             mxb_assert(!true);
+        }
+    }
+    return rval;
+}
+
+void MariaDBClientConnection::assign_backend_authenticator()
+{
+    // If manual mapping is on, search for the current user or their group. If not found or if not in use,
+    // use same authenticator as client.
+    const auto* listener_data = m_session->listener_data();
+    const auto* mapping_info = listener_data->m_mapping_info.get();
+    MYSQL_session* ses = m_session_data;
+    bool user_is_mapped = false;
+
+    if (mapping_info)
+    {
+        // Mapping is enabled for the listener. First, search based on username, then based on Linux user
+        // group. Mapping does not depend on incoming user IP (can be added later if there is demand).
+        const mxs::ListenerData::MappingDest* mapped_user_info = nullptr;
+        const auto& user = ses->user;
+        const auto& user_map = mapping_info->user_mapping;
+        auto it = user_map.find(user);
+        if (it != user_map.end())
+        {
+            mapped_user_info = &it->second;
+        }
+        else
+        {
+            // Perhaps the mapping is defined through the user's group. Assume that no user can be part of
+            // more than 100 groups.
+            const auto& group_map = mapping_info->group_mapping;
+            if (!group_map.empty())
+            {
+                // TODO: check linux user group membership
+            }
+        }
+
+        if (mapped_user_info)
+        {
+            // Found a mapped user. Check that the plugin defined for the user is enabled.
+            auto* auth_module = find_auth_module(mapped_user_info->plugin);
+            if (auth_module)
+            {
+                // Found authentication module. Apply mapping.
+                ses->m_current_be_auth = auth_module;
+                const auto& mapped_pw = mapped_user_info->password;
+                if (mapped_pw.empty())
+                {
+                    MXB_INFO("Incoming user '%s' mapped to '%s' with no password.",
+                             ses->user.c_str(), mapped_user_info->username.c_str());
+                }
+                else
+                {
+                    MXB_INFO("Incoming user '%s' mapped to '%s' with password.",
+                             ses->user.c_str(), mapped_user_info->username.c_str());
+                }
+                ses->user = mapped_user_info->username;
+                ses->backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
+                user_is_mapped = true;
+            }
+            else
+            {
+                MXB_ERROR("Client %s manually maps to '%s', who uses authenticator plugin '%s'. "
+                          "The plugin is not enabled for listener '%s'. Falling back to normal "
+                          "authentication.",
+                          ses->user_and_host().c_str(), mapped_user_info->username.c_str(),
+                          mapped_user_info->plugin.c_str(), listener_data->m_listener_name.c_str());
+            }
+        }
+    }
+
+    if (!user_is_mapped)
+    {
+        // No mapping, use client authenticator.
+        ses->m_current_be_auth = ses->m_current_client_auth;
+    }
+}
+
+mariadb::AuthenticatorModule* MariaDBClientConnection::find_auth_module(const string& plugin_name)
+{
+    mariadb::AuthenticatorModule* rval = nullptr;
+    auto& auth_modules = m_session->listener_data()->m_authenticators;
+    for (const auto& auth_module : auth_modules)
+    {
+        auto protocol_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+        if (protocol_auth->supported_plugins().count(plugin_name))
+        {
+            // Found correct authenticator for the user entry.
+            rval = protocol_auth;
+            break;
         }
     }
     return rval;

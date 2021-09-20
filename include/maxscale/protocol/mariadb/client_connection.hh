@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -167,11 +167,13 @@ private:
     void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
-
     bool require_ssl() const;
-    void update_user_account_entry();
 
-    const MariaDBUserCache* user_account_cache();
+    void update_user_account_entry();
+    void assign_backend_authenticator();
+
+    mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
+    const MariaDBUserCache*       user_account_cache();
 
     enum class AuthErrorType
     {

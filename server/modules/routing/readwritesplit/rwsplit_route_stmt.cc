@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -57,7 +57,7 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
 
 bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_target)
 {
-    mxb_assert(target->in_use() || (target->can_connect() && can_recover_servers()));
+    mxb_assert(target->in_use() || (!target->has_failed() && can_recover_servers()));
     return target->in_use() || prepare_connection(target);
 }
 

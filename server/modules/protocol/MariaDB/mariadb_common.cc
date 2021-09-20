@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -395,7 +395,7 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     , client_token_2fa(rhs.client_token_2fa)
     , backend_token(rhs.backend_token)
     , backend_token_2fa(rhs.backend_token_2fa)
-    , m_current_authenticator(rhs.m_current_authenticator)
+    , m_current_client_auth(rhs.m_current_client_auth)
     , user_search_settings(rhs.user_search_settings)
     , user_entry(rhs.user_entry)
 {
@@ -430,6 +430,12 @@ bool MYSQL_session::is_trx_active() const
 uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;
+}
+
+mariadb::AuthByteVec mariadb::AuthenticatorModule::generate_token(const std::string& password)
+{
+    // Simply write the password as is. This works for PAM and GSSApi (in theory).
+    return mariadb::AuthByteVec(password.begin(), password.end());
 }
 
 bool UserEntry::operator==(const UserEntry& rhs) const

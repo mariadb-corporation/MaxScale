@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -249,7 +249,8 @@ bool ClientConnection::setup_session()
     mxb_assert(authenticators.size() == 1);
     auto* pAuthenticator = static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
 
-    m_session_data.m_current_authenticator = pAuthenticator;
+    m_session_data.m_current_client_auth = pAuthenticator;
+    m_session_data.m_current_be_auth = pAuthenticator;
     m_session_data.client_info.m_client_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41
@@ -263,7 +264,7 @@ bool ClientConnection::setup_session()
         | CLIENT_SESSION_TRACKING
         | CLIENT_PROGRESS;
     m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
-    m_session_data.client_info.m_charset = 33; // UTF8
+    m_session_data.client_info.m_charset = 33;      // UTF8
 
     return m_session.start();
 }

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1439,7 +1439,7 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     if (res != 0)
     {
         int eno = errno;
-        MXS_ERROR("getpeername()' failed on connection to '%s' when forming proxy protocol header. "
+        MXS_ERROR("getpeername() failed on connection to '%s' when forming proxy protocol header. "
                   "Error %d: '%s'", m_server.name(), eno, mxb_strerror(eno));
         return false;
     }
@@ -2432,7 +2432,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     m_upstream = upstream;
     MYSQL_session* client_data = mysql_session();
     m_auth_data.client_data = client_data;
-    m_authenticator = client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
+    m_authenticator = client_data->m_current_be_auth->create_backend_authenticator(m_auth_data);
 }
 
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)

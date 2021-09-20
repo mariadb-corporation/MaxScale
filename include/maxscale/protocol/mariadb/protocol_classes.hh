@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-09-20
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -138,13 +138,16 @@ public:
      * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
      */
 
-    mariadb::ClientAuthenticator::ByteVec client_token;     /**< First client token */
-    mariadb::ClientAuthenticator::ByteVec client_token_2fa; /**< Second client token */
-    mariadb::ClientAuthenticator::ByteVec backend_token;    /**< First backend token */
-    mariadb::ClientAuthenticator::ByteVec backend_token_2fa;/**< Second backend token */
+    mariadb::AuthByteVec client_token;      /**< First client token */
+    mariadb::AuthByteVec client_token_2fa;  /**< Second client token */
+    mariadb::AuthByteVec backend_token;     /**< First backend token */
+    mariadb::AuthByteVec backend_token_2fa; /**< Second backend token */
 
-    // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
-    mariadb::AuthenticatorModule* m_current_authenticator {nullptr};
+    // Client authenticator module currently in use by the session. May change on COM_CHANGE_USER.
+    mariadb::AuthenticatorModule* m_current_client_auth {nullptr};
+
+    // Backend authenticator module in use by the session. Usually same as client authenticator.
+    mariadb::AuthenticatorModule* m_current_be_auth {nullptr};
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
