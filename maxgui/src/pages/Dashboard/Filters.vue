@@ -7,7 +7,7 @@
         sortBy="id"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/filters/${id}`" class="no-underline">
+            <router-link :key="id" :to="`/dashboard/filters/${id}`" class="rsrc-link">
                 <span> {{ id }}</span>
             </router-link>
         </template>
@@ -24,7 +24,7 @@
                     <router-link
                         :key="serviceId"
                         :to="`/dashboard/services/${serviceId}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         <span>{{ serviceId }} </span>
                     </router-link>
@@ -53,7 +53,7 @@
                         <router-link
                             :key="serviceId"
                             :to="`/dashboard/services/${serviceId}`"
-                            class="text-body-2 d-block no-underline"
+                            class="text-body-2 d-block rsrc-link"
                         >
                             <span>{{ serviceId }} </span>
                         </router-link>

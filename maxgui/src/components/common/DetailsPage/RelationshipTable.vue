@@ -24,7 +24,7 @@
                     <router-link
                         :key="id"
                         :to="`/dashboard/${relationshipType}/${id}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         {{ id }}
                     </router-link>

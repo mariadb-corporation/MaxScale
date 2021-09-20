@@ -48,9 +48,13 @@
 .visibility--off {
     visibility: hidden;
 }
-.no-underline {
+.rsrc-link {
     text-decoration: none !important;
+    &:hover {
+        text-decoration: underline !important;
+    }
 }
+
 .overflow-helper {
     overflow: scroll;
     max-height: 500px;

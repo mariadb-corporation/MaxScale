@@ -7,7 +7,7 @@
         sortBy="id"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/services/${id}`" class="no-underline">
+            <router-link :key="id" :to="`/dashboard/services/${id}`" class="rsrc-link">
                 <span> {{ id }}</span>
             </router-link>
         </template>
@@ -33,7 +33,7 @@
                     <router-link
                         :key="serverId"
                         :to="`/dashboard/servers/${serverId}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         <span> {{ serverId }}{{ i !== serverIds.length - 1 ? ', ' : '' }} </span>
                     </router-link>
@@ -63,7 +63,7 @@
                         <router-link
                             :key="serverId"
                             :to="`/dashboard/servers/${serverId}`"
-                            class="text-body-2 d-block no-underline"
+                            class="text-body-2 d-block rsrc-link"
                         >
                             <span>{{ serverId }} </span>
                         </router-link>

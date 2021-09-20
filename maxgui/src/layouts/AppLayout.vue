@@ -21,7 +21,12 @@
                 MariaDB Corporation <span class="footer__separator" />
                 Copyright © 2020 MariaDB ab. All rights reserved.
                 <span class="footer__separator" />
-                <a target="_blank" rel="noopener" href="https://mariadb.com/privacy-policy/">
+                <a
+                    target="_blank"
+                    rel="noopener"
+                    href="https://mariadb.com/privacy-policy/"
+                    class="rsrc-link"
+                >
                     Privacy Policy</a
                 >
                 <span class="footer__separator" />
@@ -29,6 +34,7 @@
                     target="_blank"
                     rel="noopener"
                     href="https://mariadb.com/product-terms-condition/"
+                    class="rsrc-link"
                 >
                     Terms of Use
                 </a>

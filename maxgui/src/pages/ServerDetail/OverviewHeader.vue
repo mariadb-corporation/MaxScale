@@ -22,7 +22,7 @@
                         v-if="value !== 'undefined'"
                         :key="index"
                         :to="`/dashboard/monitors/${value}`"
-                        :class="[valueClass, 'no-underline']"
+                        :class="[valueClass, 'rsrc-link']"
                     >
                         <span>{{ value }} </span>
                     </router-link>

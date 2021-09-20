@@ -21,7 +21,7 @@
                 <router-link
                     v-if="groupId !== $t('not', { action: 'monitored' })"
                     :to="`/dashboard/monitors/${groupId}`"
-                    class="no-underline"
+                    class="rsrc-link"
                 >
                     <span class="font-weight-bold">{{ groupId }} </span>
                 </router-link>
@@ -67,7 +67,7 @@
                             v-on="on"
                         >
                             <div class="text-truncate">
-                                <router-link :to="`/dashboard/servers/${id}`" class="no-underline ">
+                                <router-link :to="`/dashboard/servers/${id}`" class="rsrc-link">
                                     {{ id }}
                                 </router-link>
                             </div>
@@ -75,7 +75,7 @@
                     </template>
                 </rep-tooltip>
 
-                <router-link v-else :to="`/dashboard/servers/${id}`" class="no-underline">
+                <router-link v-else :to="`/dashboard/servers/${id}`" class="rsrc-link">
                     {{ id }}
                 </router-link>
             </template>
@@ -124,7 +124,7 @@
                         <router-link
                             :key="serviceId"
                             :to="`/dashboard/services/${serviceId}`"
-                            class="no-underline"
+                            class="rsrc-link"
                         >
                             <span>{{ serviceId }} </span>
                         </router-link>
@@ -156,7 +156,7 @@
                             <router-link
                                 :key="serviceId"
                                 :to="`/dashboard/services/${serviceId}`"
-                                class="text-body-2 d-block no-underline"
+                                class="text-body-2 d-block rsrc-link"
                             >
                                 <span>{{ serviceId }} </span>
                             </router-link>

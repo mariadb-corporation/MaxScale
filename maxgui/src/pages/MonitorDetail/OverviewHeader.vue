@@ -17,7 +17,7 @@
                     <router-link
                         v-if="value !== 'undefined'"
                         :to="`/dashboard/servers/${value}`"
-                        class="text-no-wrap text-body-2 no-underline"
+                        class="text-no-wrap text-body-2 rsrc-link"
                     >
                         <span>{{ value }} </span>
                     </router-link>

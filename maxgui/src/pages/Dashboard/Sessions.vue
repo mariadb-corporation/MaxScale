@@ -16,7 +16,7 @@
                     <router-link
                         :key="serviceId"
                         :to="`/dashboard/services/${serviceId}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         <span>{{ serviceId }} </span>
                     </router-link>
