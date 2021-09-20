@@ -209,7 +209,6 @@ QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, 
     , m_remote(session->client_remote())
     , m_service(session->service->name())
     , m_ses_id(session->id())
-    , m_worker_id(mxs_rworker_get_current_id())
     , m_rotation_count(mxs_get_log_rotation_count())
 {
 }
@@ -436,7 +435,7 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
 
         if (m_log->settings().write_unified_log)
         {
-            m_log->write_unified_log_entry(unified_log_entry, m_worker_id);
+            m_log->write_unified_log_entry(unified_log_entry);
         }
 
         if (m_log->settings().write_stdout_log)
@@ -715,7 +714,7 @@ void QlaFilterSession::write_session_log_entry(const string& entry)
  *
  * @param   entry  Log entry contents
  */
-void QlaInstance::LogManager::write_unified_log_entry(const string& entry, int worker_id)
+void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
 {
     int global_rot_count = mxs_get_log_rotation_count();
     if (global_rot_count > m_rotation_count)
@@ -725,7 +724,7 @@ void QlaInstance::LogManager::write_unified_log_entry(const string& entry, int w
         check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_sUnified_file);
     }
 
-    auto pShared_data = m_qlalog.get_shared_data_by_index(worker_id);
+    auto pShared_data = m_qlalog.get_shared_data_by_index(mxs_rworker_get_current_id());
     pShared_data->send_update({m_sUnified_file, entry, m_settings.flush_writes});
 
     if (!m_write_error_logged && m_qlalog.write_error())
