@@ -145,11 +145,11 @@ public:
         ~LogManager();
 
         bool        open_unified_logfile();
-        File        open_session_log_file(const std::string& filename) const;
+        SFile       open_session_log_file(const std::string& filename) const;
         std::string generate_log_header(uint64_t data_flags) const;
-        void        check_reopen_session_file(const std::string& filename, File* ppFile) const;
+        void        check_reopen_session_file(const std::string& filename, SFile* psFile) const;
         void        write_unified_log_entry(const std::string& contents, int worker_id);
-        bool        write_to_logfile(File fp, const std::string& contents) const;
+        bool        write_to_logfile(FILE* fp, const std::string& contents) const;
         void        write_stdout_log_entry(const std::string& contents) const;
         bool        match_exclude(const char* sql, int len);
         bool        read_to_json(int start, int end, json_t** output);
@@ -161,14 +161,14 @@ public:
 
     private:
         LogManager(const Settings::Values& settings);
-        bool prepare();
-        File open_log_file(uint64_t data_flags, const std::string& filename) const;
-        void check_reopen_file(const std::string& filename, uint64_t data_flags, File* ppFile) const;
+        bool  prepare();
+        SFile open_log_file(uint64_t data_flags, const std::string& filename) const;
+        void  check_reopen_file(const std::string& filename, uint64_t data_flags, SFile* psFile) const;
 
         Settings::Values m_settings;
         std::mutex       m_file_lock;                   /* Protects access to the unified log file */
         std::string      m_unified_filename;            /* Filename of the unified log file */
-        File             m_unified_fp {nullptr};        /* Unified log file. */
+        SFile            m_sUnified_file;               /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
         bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
 
@@ -222,9 +222,9 @@ private:
 
     bool m_active {false};      /* Is session active? */
 
-    File m_logfile {nullptr};           /* The session-specific log file */
-    int  m_rotation_count {0};          /* Log rotation counter */
-    bool m_write_error_logged {false};  /* Has write error been logged */
+    SFile m_sSession_file;              /* The session-specific log file */
+    int   m_rotation_count {0};         /* Log rotation counter */
+    bool  m_write_error_logged {false}; /* Has write error been logged */
 
     std::string          m_sql;             // Sql, in canonical form if asked for
     mxb::TimePoint       m_begin_time;      // Timer value at the moment of receiving query.

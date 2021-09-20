@@ -29,10 +29,10 @@ void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::Inter
 
     for (const auto& e : queue)
     {
-        error = (fprintf(e.update.file.get(), "%s", e.update.line.c_str()) < 0) | error;
+        error = (fprintf(e.update.sFile.get(), "%s", e.update.line.c_str()) < 0) | error;
         if (e.update.flush)
         {
-            error = (fflush(e.update.file.get()) != 0) | error;
+            error = (fflush(e.update.sFile.get()) != 0) | error;
         }
     }
 

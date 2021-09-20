@@ -15,11 +15,11 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/gcupdater.hh>
 
-using File = std::shared_ptr<FILE>;
+using SFile = std::shared_ptr<FILE>;
 
 struct LogUpdate
 {
-    File        file;
+    SFile       sFile;
     std::string line;
     bool        flush;
 };

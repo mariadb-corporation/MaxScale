@@ -143,10 +143,15 @@ auto FILEdeleter = [](FILE* fp) {
         }
     };
 
+auto open_file(const char* filename, const char* modes)
+{
+    return SFile(fopen(filename, modes), FILEdeleter);
+}
+
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
                                    const char* rep_newline, std::stringstream* output);
 
-bool check_replace_file(const string& filename, File* ppFile);
+bool check_replace_file(const string& filename, SFile* psFile);
 }
 
 QlaInstance::QlaInstance(const string& name)
@@ -281,6 +286,7 @@ mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* servi
         delete my_session;
         my_session = nullptr;
     }
+
     return my_session;
 }
 
@@ -297,8 +303,8 @@ bool QlaFilterSession::prepare()
     {
         // Only open the session file if the corresponding mode setting is used.
         m_filename = mxb::string_printf("%s.%" PRIu64, settings.filebase.c_str(), m_ses_id);
-        m_logfile = m_log->open_session_log_file(m_filename);
-        if (!m_logfile)
+        m_sSession_file = m_log->open_session_log_file(m_filename);
+        if (!m_sSession_file)
         {
             error = true;
         }
@@ -325,7 +331,7 @@ bool QlaInstance::read_to_json(int start, int end, json_t** output) const
 bool QlaInstance::LogManager::read_to_json(int start, int end, json_t** output)
 {
     bool rval = false;
-    mxb_assert(m_unified_fp && !m_unified_filename.empty());
+    mxb_assert(m_sUnified_file && !m_unified_filename.empty());
     std::ifstream file(m_unified_filename);
 
     if (file)
@@ -374,25 +380,24 @@ json_t* QlaFilterSession::diagnostics() const
 }
 
 void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t data_flags,
-                                                File* ppFile) const
+                                                SFile* psFile) const
 {
-    if (check_replace_file(filename, ppFile))
+    if (check_replace_file(filename, psFile))
     {
-        auto fp = *ppFile;
         // New file created, print the log header.
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(fp, header))
+        if (!write_to_logfile(psFile->get(), header))
         {
             MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
-            *ppFile = nullptr;
+            (*psFile).reset();
         }
     }
     // Either the old file existed or file creation failed.
 }
 
-void QlaInstance::LogManager::check_reopen_session_file(const std::string& filename, File* ppFile) const
+void QlaInstance::LogManager::check_reopen_session_file(const std::string& filename, SFile* psFile) const
 {
-    check_reopen_file(filename, m_settings.session_data_flags, ppFile);
+    check_reopen_file(filename, m_settings.session_data_flags, psFile);
 }
 
 bool QlaInstance::LogManager::match_exclude(const char* sql, int len)
@@ -414,10 +419,10 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
         if (global_rot_count > m_rotation_count)
         {
             m_rotation_count = global_rot_count;
-            m_log->check_reopen_session_file(m_filename, &m_logfile);
+            m_log->check_reopen_session_file(m_filename, &m_sSession_file);
         }
 
-        if (m_logfile)
+        if (m_sSession_file)
         {
             string entry = generate_log_entry(m_log->settings().session_data_flags, elems);
             write_session_log_entry(entry);
@@ -493,16 +498,16 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
     return mxs::FilterSession::clientReply(queue, down, reply);
 }
 
-File QlaInstance::LogManager::open_session_log_file(const string& filename) const
+SFile QlaInstance::LogManager::open_session_log_file(const string& filename) const
 {
     return open_log_file(m_settings.session_data_flags, filename);
 }
 
 bool QlaInstance::LogManager::open_unified_logfile()
 {
-    mxb_assert(!m_unified_fp);
-    m_unified_fp = open_log_file(m_settings.log_file_data_flags, m_unified_filename);
-    return m_unified_fp != nullptr;
+    mxb_assert(!m_sUnified_file);
+    m_sUnified_file = open_log_file(m_settings.log_file_data_flags, m_unified_filename);
+    return m_sUnified_file.get();
 }
 
 /**
@@ -512,47 +517,48 @@ bool QlaInstance::LogManager::open_unified_logfile()
  * @param   filename    Target file path
  * @return  A valid file on success, null otherwise.
  */
-File QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
+SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
 {
     auto zfilename = filename.c_str();
     bool file_existed = false;
-    File fp = NULL;
+    SFile sFile;
     if (m_settings.append == false)
     {
         // Just open the file (possibly overwriting) and then print header.
-        fp = File(fopen(zfilename, "w"), FILEdeleter);
+        sFile = open_file(zfilename, "w");
     }
     else
     {
         /**
-         *  Using fopen() with 'a+' means we will always write to the end but can read
+         *  Using open_file() with 'a+' means we will always write to the end but can read
          *  anywhere.
          */
-        if (fp = File(fopen(zfilename, "a+"), FILEdeleter))
+        if ((sFile = open_file(zfilename, "a+")))
         {
             // Check to see if file already has contents
-            fseek(fp.get(), 0, SEEK_END);
-            if (ftell(fp.get()) > 0)
+            fseek(sFile.get(), 0, SEEK_END);
+            if (ftell(sFile.get()) > 0)
             {
                 file_existed = true;
             }
         }
     }
 
-    if (!fp)
+    if (!sFile)
     {
         MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", zfilename, errno, mxs_strerror(errno));
     }
     else if (!file_existed && data_flags != 0)
     {
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(fp, header))
+        if (!write_to_logfile(sFile.get(), header))
         {
             MXS_ERROR(HEADER_ERROR, zfilename, errno, mxs_strerror(errno));
-            fp = nullptr;
+            sFile.reset();
         }
     }
-    return fp;
+
+    return sFile;
 }
 
 string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
@@ -669,15 +675,15 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     return output.str();
 }
 
-bool QlaInstance::LogManager::write_to_logfile(File fp, const std::string& contents) const
+bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& contents) const
 {
     bool error = false;
-    int written = fprintf(fp.get(), "%s", contents.c_str());
+    int written = fprintf(fp, "%s", contents.c_str());
     if (written < 0)
     {
         error = true;
     }
-    else if (m_settings.flush_writes && (fflush(fp.get()) != 0))
+    else if (m_settings.flush_writes && (fflush(fp) != 0))
     {
         error = true;
     }
@@ -692,8 +698,8 @@ bool QlaInstance::LogManager::write_to_logfile(File fp, const std::string& conte
  */
 void QlaFilterSession::write_session_log_entry(const string& entry)
 {
-    mxb_assert(m_logfile != NULL);
-    if (!m_log->write_to_logfile(m_logfile, entry))
+    mxb_assert(m_sSession_file);
+    if (!m_log->write_to_logfile(m_sSession_file.get(), entry))
     {
         if (!m_write_error_logged)
         {
@@ -716,11 +722,11 @@ void QlaInstance::LogManager::write_unified_log_entry(const string& entry, int w
     {
         m_rotation_count = global_rot_count;
         std::lock_guard<std::mutex> guard(m_file_lock);
-        check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_unified_fp);
+        check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_sUnified_file);
     }
 
     auto pShared_data = m_qlalog.get_shared_data_by_index(worker_id);
-    pShared_data->send_update({m_unified_fp, entry, m_settings.flush_writes});
+    pShared_data->send_update({m_sUnified_file, entry, m_settings.flush_writes});
 
     if (!m_write_error_logged && m_qlalog.write_error())
     {
@@ -808,7 +814,7 @@ void print_string_replace_newlines(const char* sql_string,
  * @return True if new file was opened successfully. False, if file already existed or if new file
  * could not be opened. If false is returned, the caller should check that the file object exists.
  */
-bool check_replace_file(const string& filename, File* ppFile)
+bool check_replace_file(const string& filename, SFile* psFile)
 {
     auto zfilename = filename.c_str();
     const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
@@ -832,13 +838,7 @@ bool check_replace_file(const string& filename, File* ppFile)
     {
         MXS_INFO("Log file '%s' recreated.", zfilename);
         // File was created. Close the original file stream since it's pointing to a moved file.
-        auto fp = *ppFile;
-        if (fp)
-        {
-            fp.reset();
-        }
-        fp = File(fdopen(fd, "w"), FILEdeleter);
-        if (fp)
+        if ((*psFile = SFile(fdopen(fd, "w"), FILEdeleter)))
         {
             newfile = true;
         }
@@ -847,9 +847,7 @@ bool check_replace_file(const string& filename, File* ppFile)
             MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
                       "failed with error code %i: '%s'. %s",
                       filename.c_str(), errno, mxs_strerror(errno), retry_later);
-            ::close(fd);
         }
-        *ppFile = fp;
     }
     return newfile;
 }
