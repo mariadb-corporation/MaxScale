@@ -1474,20 +1474,33 @@ private:
         DocumentBuilder builder;
 
         auto qid = q[key::_ID];
-
         if (qid)
         {
-            // Provided, use it
+            // Id present in the query document, use it.
+            // Will be appended later when the fields of q are iterated.
             m_id = "'" + to_string(qid) + "'";
             append(m_upsert, key::_ID, qid);
         }
         else
         {
-            // Not provided, generate.
-            auto id = bsoncxx::oid();
-            m_id = "'{\"$oid\":\"" + id.to_string() + "\"}'";
-            builder.append(kvp(key::_ID, id));
-            m_upsert.append(kvp(key::_ID, id));
+            bsoncxx::document::view u = update[key::U].get_document();
+
+            auto uid = u[key::_ID];
+            if (uid)
+            {
+                // Id provided in the update document, use it.
+                m_id = "'" + to_string(uid) + "'";
+                append(builder, key::_ID, uid);
+                append(m_upsert, key::_ID, uid);
+            }
+            else
+            {
+                // Not provided, generate.
+                auto id = bsoncxx::oid();
+                m_id = "'{\"$oid\":\"" + id.to_string() + "\"}'";
+                builder.append(kvp(key::_ID, id));
+                m_upsert.append(kvp(key::_ID, id));
+            }
         }
 
         for (const auto& e : q)
