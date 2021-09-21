@@ -179,6 +179,8 @@ public:
                         doc.append(kvp(key::WRITE_ERRORS, write_errors));
                     }
 
+                    m_database.context().set_last_error(std::make_unique<NoError>(m_n));
+
                     pResponse = create_response(doc.extract());
                     rv = State::READY;
                 }
