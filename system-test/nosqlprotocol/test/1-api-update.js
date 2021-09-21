@@ -236,12 +236,6 @@ describe(name, function () {
 
         assert.equal(rv.code, error.COMMAND_FAILED);
     });
-    it('Errors on upsert.', async function () {
-        var command = {update: name, updates: [{q: {}, u: { }, upsert: true}]};
-        var rv = await mxs.ntRunCommand(command);
-
-        assert.equal(rv.code, error.COMMAND_FAILED);
-    });
 
     it('Can update multiple documents.', async function () {
         await deleteAll();

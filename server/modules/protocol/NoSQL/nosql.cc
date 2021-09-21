@@ -203,6 +203,43 @@ void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::d
 }
 
 template<>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                double* pT)
+{
+    bool rv = true;
+
+    auto type = element.type();
+
+    if (conversion == Conversion::STRICT && type != bsoncxx::type::k_double)
+    {
+        rv = false;
+    }
+    else
+    {
+        switch (type)
+        {
+        case bsoncxx::type::k_int32:
+            *pT = element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            *pT = element.get_int64();
+            break;
+
+        case bsoncxx::type::k_double:
+            *pT = element.get_double();
+            break;
+
+        default:
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
@@ -769,6 +806,7 @@ void nosql::SoftError::create_response(const Command& command, DocumentBuilder& 
 
 namespace
 {
+
 class ConcreteLastError: public nosql::LastError
 {
 public:
@@ -2556,7 +2594,10 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
             {
                 if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
                 {
-                    if (name.compare("$set") != 0 && name.compare("$unset") != 0)
+                    // TODO: Change this into operator->function map.
+                    if (name.compare("$set") != 0
+                        && name.compare("$unset") != 0
+                        && name.compare("$inc") != 0)
                     {
                         // TODO: This will now terminate the whole processing,
                         // TODO: but this should actually be returned as a write
@@ -2565,7 +2606,7 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
                         ss << "Unknown modifier: " << name
                            << ". Expected a valid update modifier or "
                            << "pipeline-style update specified as an array. "
-                           << "Currently the only supported update operators are $set and $unset.";
+                           << "Currently the only supported update operators are $set, $unset and $inc.";
 
                         throw SoftError(ss.str(), error::COMMAND_FAILED);
                     }
@@ -2638,6 +2679,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         }
 
         bool add_value = true;
+        bool inc_value = false;
 
         if (element.key().compare("$set") == 0)
         {
@@ -2647,6 +2689,11 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         {
             rv += "JSON_REMOVE(doc, ";
             add_value = false;
+        }
+        else if (element.key().compare("$inc") == 0)
+        {
+            rv += "JSON_SET(doc, ";
+            inc_value = true;
         }
         else
         {
@@ -2675,7 +2722,29 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             if (add_value)
             {
                 s += ", ";
-                s += element_to_value(field, ValueFor::JSON_NESTED);
+                if (inc_value)
+                {
+                    double inc;
+                    if (element_as(field, Conversion::RELAXED, &inc))
+                    {
+                        s += "JSON_VALUE(doc, '$." + key + "') + " + std::to_string(inc);
+                    }
+                    else
+                    {
+                        DocumentBuilder value;
+                        append(value, key, field);
+
+                        ostringstream ss;
+                        ss << "Cannot increment with non-numeric argument: "
+                           << bsoncxx::to_json(value.view());
+
+                        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                    }
+                }
+                else
+                {
+                    s += element_to_value(field, ValueFor::JSON_NESTED);
+                }
             }
         }
 
@@ -2827,34 +2896,49 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
 
 std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
-namespace
+nosql::NoError::NoError(int32_t n)
+    : m_n(n)
 {
+}
 
-class NoError : public nosql::LastError
+nosql::NoError::NoError(int32_t n, bool updated_existing)
+    : m_n(n)
+    , m_updated_existing(updated_existing)
 {
-public:
-    NoError(int32_t n = 0)
-        : m_n(n)
-    {
-    }
+}
 
-    void populate(nosql::DocumentBuilder& doc) override
-    {
-        nosql::DocumentBuilder writeConcern;
-        writeConcern.append(kvp(key::W, 1));
-        writeConcern.append(kvp(key::WTIMEOUT, 0));
+nosql::NoError::NoError(unique_ptr<Id>&& sUpserted)
+    : m_n(1)
+    , m_updated_existing(false)
+    , m_sUpserted(std::move(sUpserted))
+{
+}
 
+void nosql::NoError::populate(nosql::DocumentBuilder& doc)
+{
+    nosql::DocumentBuilder writeConcern;
+    writeConcern.append(kvp(key::W, 1));
+    writeConcern.append(kvp(key::WTIMEOUT, 0));
+
+    if (m_n != -1)
+    {
         doc.append(kvp(key::N, m_n));
-        doc.append(kvp(key::SYNC_MILLIS, 0));
-        doc.append(kvp(key::WRITTEN_TO, bsoncxx::types::b_null()));
-        doc.append(kvp(key::WRITE_CONCERN, writeConcern.extract()));
-        doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
     }
 
-private:
-    int32_t m_n;
-};
+    if (m_updated_existing)
+    {
+        doc.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
+    }
 
+    if (m_sUpserted)
+    {
+        m_sUpserted->append(doc, key::UPSERTED);
+    }
+
+    doc.append(kvp(key::SYNC_MILLIS, 0));
+    doc.append(kvp(key::WRITTEN_TO, bsoncxx::types::b_null()));
+    doc.append(kvp(key::WRITE_CONCERN, writeConcern.extract()));
+    doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
 nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
@@ -3047,7 +3131,7 @@ string extract_database(const string& collection)
 
 State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(DELETE): %s", req.zCollection());
+    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3064,7 +3148,7 @@ State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** 
 
 State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(INSERT): %s", req.zCollection());
+    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3081,7 +3165,7 @@ State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** 
 
 State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(UPDATE): %s", req.zCollection());
+    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3098,7 +3182,7 @@ State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** 
 
 State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(QUERY): %s, %s", req.zCollection(), bsoncxx::to_json(req.query()).c_str());
+    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3115,7 +3199,7 @@ State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** pp
 
 State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(GetMore): %ld", req.cursor_id());
+    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3132,7 +3216,7 @@ State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF
 
 State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(KillCursors)");
+    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
@@ -3149,7 +3233,7 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
 
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(MSG): %s", bsoncxx::to_json(req.document()).c_str());
+    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
 
     State state = State::READY;
 

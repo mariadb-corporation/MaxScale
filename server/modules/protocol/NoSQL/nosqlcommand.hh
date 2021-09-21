@@ -276,11 +276,15 @@ private:
     State translate_inserting_document(ComResponse& response);
     State translate_creating_table(ComResponse& response);
 
+    State update_document(const std::string& sql);
     State create_table();
     State insert_document();
 
-    Action   m_action { Action::UPDATING_DOCUMENT };
-    uint32_t m_dcid { 0 };
+    Action                       m_action { Action::UPDATING_DOCUMENT };
+    uint32_t                     m_dcid { 0 };
+    std::string                  m_update;
+    std::string                  m_insert;
+    std::unique_ptr<NoError::Id> m_sId;
 };
 
 //

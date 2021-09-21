@@ -1,11 +1,12 @@
 <template>
-    <span
+    <div
         v-if="'type' in item || 'description' in item || 'unit' in item || 'default_value' in item"
         :id="`param-${item.id}_${componentId}`"
         class="pointer"
+        :class="[isTree ? 'override-td--padding--tree' : 'override-td--padding']"
     >
         {{ item.id }}
-    </span>
+    </div>
     <span v-else>
         {{ item.id }}
     </span>
@@ -35,6 +36,7 @@ export default {
     props: {
         item: { type: Object, required: true }, // always require to have "id" attribute
         componentId: { type: String, required: true },
+        isTree: { type: Boolean, default: false },
     },
 }
 </script>

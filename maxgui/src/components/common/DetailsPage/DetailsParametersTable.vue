@@ -30,7 +30,11 @@
                     </template>
 
                     <template v-slot:id="{ data: { item } }">
-                        <parameter-tooltip-activator :item="item" :componentId="componentId" />
+                        <parameter-tooltip-activator
+                            :isTree="isTree"
+                            :item="item"
+                            :componentId="componentId"
+                        />
                     </template>
 
                     <template v-if="editableCell" v-slot:value="{ data: { item } }">

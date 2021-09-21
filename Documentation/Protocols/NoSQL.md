@@ -300,6 +300,7 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 
 ### Field Update Operators
 
+* $inc
 * $set
 * $unset
 

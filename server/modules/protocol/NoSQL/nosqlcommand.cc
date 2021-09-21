@@ -465,7 +465,7 @@ State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
     ostringstream ss;
     ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
 
-    if ((m_req.flags() & 0x01) == 1)
+    if (m_req.is_single_remove())
     {
         ss << " LIMIT 1";
     }
@@ -487,6 +487,11 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
+        {
+            ComOK ok(response);
+
+            m_database.context().set_last_error(std::make_unique<NoError>(ok.affected_rows(), true));
+        }
         break;
 
     case ComResponse::ERR_PACKET:
@@ -496,6 +501,10 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
             if (err.code() != ER_NO_SUCH_TABLE)
             {
                 m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            }
+            else
+            {
+                m_database.context().set_last_error(std::make_unique<NoError>(0));
             }
         }
         break;
@@ -519,6 +528,16 @@ std::string OpInsertCommand::description() const
 
 State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
 {
+    mxb_assert(m_req.documents().size() == 1);
+
+    if (m_req.documents().size() != 1)
+    {
+        const char* zMessage = "Currently only a single document can be insterted at a time with OP_INSERT.";
+        MXS_ERROR("%s", zMessage);
+
+        throw HardError(zMessage, error::INTERNAL_ERROR);
+    }
+
     auto doc = m_req.documents()[0];
 
     ostringstream ss;
@@ -559,6 +578,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         }
         else
         {
+            m_database.context().set_last_error(std::make_unique<NoError>(1));
             state = State::READY;
         }
         break;
@@ -709,34 +729,24 @@ string OpUpdateCommand::description() const
 
 State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 {
-    if (m_req.is_upsert())
-    {
-        MXS_WARNING("OP_UPDATE(%s): upsert not supported, "
-                    "selector: '%s', document: '%s'.",
-                    m_req.zCollection(),
-                    bsoncxx::to_json(m_req.selector()).c_str(),
-                    bsoncxx::to_json(m_req.update()).c_str());
-    }
+    *ppNoSQL_response = nullptr;
 
-    ostringstream sql;
-    sql << "UPDATE " << table() << " SET DOC = "
-        << update_specification_to_set_value(m_req.update())
-        << " "
-        << query_to_where_clause(m_req.selector());
+    ostringstream ss;
+    ss << "UPDATE " << table() << " SET DOC = "
+       << update_specification_to_set_value(m_req.update())
+       << " "
+       << query_to_where_clause(m_req.selector());
 
     if (!m_req.is_multi())
     {
-        sql << " LIMIT 1";
+        ss << " LIMIT 1";
     }
 
-    const auto& statement = sql.str();
+    auto sql = ss.str();
 
-    check_maximum_sql_length(statement);
+    check_maximum_sql_length(sql);
 
-    send_downstream(statement);
-
-    *ppNoSQL_response = nullptr;
-    return State::BUSY;
+    return update_document(sql);
 }
 
 State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
@@ -780,14 +790,53 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
     if (response.type() == ComResponse::OK_PACKET)
     {
-        if (m_req.is_upsert() || !m_req.is_multi())
-        {
-            ComOK ok(response);
+        ComOK ok(response);
 
-            if (ok.affected_rows() == 0)
+        if (ok.matched_rows() == 0)
+        {
+            if (m_req.is_upsert())
             {
-                // Ok, so the update fails, let's try an insert.
-                state = insert_document();
+                if (m_insert.empty())
+                {
+                    // We have not attempted an insert, so let's do that.
+                    state = insert_document();
+                }
+                else
+                {
+                    // An insert has been made, but now the update did not match?!
+
+                    SoftError error("The query did not match a document, and a document "
+                                    "was thus inserted, but yet there was no match.",
+                                    error::COMMAND_FAILED);
+
+                    m_database.context().set_last_error(error.create_last_error());
+                }
+            }
+            else
+            {
+                m_database.context().set_last_error(std::make_unique<NoError>(0, false));
+            }
+        }
+        else
+        {
+            auto n = ok.affected_rows();
+
+            if (n == 0)
+            {
+                m_database.context().set_last_error(std::make_unique<NoError>(0, false));
+            }
+            else
+            {
+                if (m_insert.empty())
+                {
+                    // We did not try inserting anything, which means something existing was updated.
+                    m_database.context().set_last_error(std::make_unique<NoError>(n, true));
+                }
+                else
+                {
+                    // Ok, so we updated an inserted document.
+                    m_database.context().set_last_error(std::make_unique<NoError>(std::move(m_sId)));
+                }
             }
         }
     }
@@ -814,7 +863,9 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
         }
         else
         {
-            m_database.context().set_last_error(MariaDBError(err).create_last_error());
+            MariaDBError mariadb_err(err);
+            MXB_ERROR("%s", mariadb_err.message().c_str());
+            m_database.context().set_last_error(mariadb_err.create_last_error());
         }
     }
 
@@ -823,13 +874,41 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
 State OpUpdateCommand::translate_inserting_document(ComResponse& response)
 {
+    State state = State::BUSY;
+
     if (response.type() == ComResponse::ERR_PACKET)
     {
         ComERR err(response);
         m_database.context().set_last_error(MariaDBError(err).create_last_error());
+
+        state = State::READY;
+    }
+    else
+    {
+        ostringstream ss;
+        ss << "UPDATE " << table() << " SET DOC = "
+           << update_specification_to_set_value(m_req.update())
+           << " "
+           << "WHERE id = '" << m_sId->to_string() << "'";
+
+        auto sql = ss.str();
+
+        check_maximum_sql_length(sql);
+
+        mxb_assert(m_dcid == 0);
+        m_dcid = Worker::get_current()->delayed_call(0, [this, sql](Worker::Call::action_t action) {
+                m_dcid = 0;
+
+                if (action == Worker::Call::EXECUTE)
+                {
+                    update_document(sql);
+                }
+
+            return false;
+        });
     }
 
-    return State::READY;
+    return state;
 }
 
 State OpUpdateCommand::translate_creating_table(ComResponse& response)
@@ -847,6 +926,17 @@ State OpUpdateCommand::translate_creating_table(ComResponse& response)
     }
 
     return state;
+}
+
+State OpUpdateCommand::update_document(const string& sql)
+{
+    m_action = Action::UPDATING_DOCUMENT;
+
+    m_update = sql;
+
+    send_downstream(m_update);
+
+    return State::BUSY;
 }
 
 State OpUpdateCommand::create_table()
@@ -872,7 +962,86 @@ State OpUpdateCommand::create_table()
 
 State OpUpdateCommand::insert_document()
 {
-    m_action = Action::CREATING_TABLE;
+    m_action = Action::INSERTING_DOCUMENT;
+
+    ostringstream ss;
+    ss << "INSERT INTO " << table() << " (doc) VALUES ('";
+
+    auto q = m_req.selector();
+
+    DocumentBuilder builder;
+
+    auto qid = q[key::_ID];
+
+    if (qid)
+    {
+        class ElementId : public NoError::Id
+        {
+        public:
+            ElementId(const bsoncxx::document::element& id)
+                : m_id(id)
+            {
+            }
+
+            string to_string() const override
+            {
+                return nosql::to_string(m_id);
+            }
+
+            void append(DocumentBuilder& doc, const string& key) const override
+            {
+                nosql::append(doc, key, m_id);
+            }
+
+        private:
+            bsoncxx::document::element m_id;
+        };
+
+        m_sId = make_unique<ElementId>(qid);
+    }
+    else
+    {
+        auto id = bsoncxx::oid();
+
+        class ObjectId : public NoError::Id
+        {
+        public:
+            ObjectId(const bsoncxx::oid& id)
+                : m_id(id)
+            {
+            }
+
+            string to_string() const override
+            {
+                return "{\"$oid\":\"" + m_id.to_string() + "\"}'";
+            }
+
+            void append(DocumentBuilder& doc, const string& key) const override
+            {
+                doc.append(kvp(key, m_id));
+            }
+
+        private:
+            bsoncxx::oid m_id;
+        };
+
+        m_sId = make_unique<ObjectId>(id);
+
+        builder.append(kvp(key::_ID, id));
+    }
+
+    for (const auto& e : q)
+    {
+        append(builder, e.key(), e);
+    }
+
+    ss << bsoncxx::to_json(builder.extract());
+
+    ss << "')";
+
+    m_insert = ss.str();
+
+    check_maximum_sql_length(m_insert);
 
     mxb_assert(m_dcid == 0);
     m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
@@ -880,11 +1049,7 @@ State OpUpdateCommand::insert_document()
 
             if (action == Worker::Call::EXECUTE)
             {
-                ostringstream sql;
-                sql << "INSERT INTO " << table() << " (doc) VALUES ('"
-                    << bsoncxx::to_json(m_req.update()) << "');";
-
-                send_downstream(sql.str());
+                send_downstream(m_insert);
             }
 
             return false;

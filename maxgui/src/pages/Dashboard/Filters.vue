@@ -7,7 +7,7 @@
         sortBy="id"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/filters/${id}`" class="no-underline">
+            <router-link :key="id" :to="`/dashboard/filters/${id}`" class="rsrc-link">
                 <span> {{ id }}</span>
             </router-link>
         </template>
@@ -24,7 +24,7 @@
                     <router-link
                         :key="serviceId"
                         :to="`/dashboard/services/${serviceId}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         <span>{{ serviceId }} </span>
                     </router-link>
@@ -33,27 +33,30 @@
 
             <v-menu
                 v-else
-                offset-x
-                transition="slide-x-transition"
+                top
+                offset-y
+                transition="slide-y-transition"
                 :close-on-content-click="false"
                 open-on-hover
-                nudge-right="20"
-                nudge-top="12.5"
                 content-class="shadow-drop"
+                :min-width="1"
             >
                 <template v-slot:activator="{ on }">
-                    <span class="pointer color text-links" v-on="on">
+                    <div
+                        class="pointer color text-links  override-td--padding disable-auto-truncate"
+                        v-on="on"
+                    >
                         {{ serviceIds.length }}
                         {{ $tc('services', 2).toLowerCase() }}
-                    </span>
+                    </div>
                 </template>
 
-                <v-sheet style="border-radius: 10px;" class="pa-4">
+                <v-sheet class="pa-4">
                     <template v-for="serviceId in serviceIds">
                         <router-link
                             :key="serviceId"
                             :to="`/dashboard/services/${serviceId}`"
-                            class="text-body-2 d-block no-underline"
+                            class="text-body-2 d-block rsrc-link"
                         >
                             <span>{{ serviceId }} </span>
                         </router-link>

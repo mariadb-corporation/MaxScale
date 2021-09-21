@@ -5,7 +5,7 @@
         top
         transition="slide-y-transition"
         :close-on-content-click="false"
-        content-class="shadow-drop color text-navigation truncate-text-menu"
+        content-class="shadow-drop"
         open-on-hover
         allow-overflow
         :nudge-left="nudgeLeft"
@@ -19,15 +19,17 @@
             <div
                 ref="string"
                 class="d-inline-block"
-                :class="{ 'text-truncate': isTruncated }"
+                :class="[isTruncated ? 'text-truncate pointer' : '', activatorClass]"
                 :style="{ maxWidth: `${getMaxWidth}px` }"
                 v-on="on"
             >
-                {{ text }}
+                <slot> {{ text }} </slot>
             </div>
         </template>
-        <pre v-if="!wrap" class="py-2 px-4">{{ text }}</pre>
-        <div v-else class="py-2 px-4">{{ text }}</div>
+        <v-sheet :class="contentClass">
+            <pre v-if="!wrap" class="truncated-text-pre color text-navigation">{{ text }}</pre>
+            <div v-else class="text-body-2 color text-navigation">{{ text }}</div>
+        </v-sheet>
     </v-menu>
     <div
         v-else
@@ -36,7 +38,7 @@
         :class="{ 'text-truncate': isTruncated }"
         :style="{ maxWidth: `${getMaxWidth}px` }"
     >
-        {{ text }}
+        <slot> {{ text }} </slot>
     </div>
 </template>
 
@@ -69,6 +71,8 @@ export default {
         nudgeTop: { type: Number, default: 0 },
         disabled: { type: Boolean, default: false },
         wrap: { type: Boolean, default: false },
+        activatorClass: { type: String, default: '' },
+        contentClass: { type: String, default: 'py-2 px-4' },
     },
     data() {
         return {
@@ -103,9 +107,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.truncate-text-menu {
-    background: $background;
+.truncated-text-pre {
     font-size: 14px;
-    overflow: auto;
 }
 </style>

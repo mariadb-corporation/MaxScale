@@ -7,7 +7,7 @@
         sortBy="id"
     >
         <template v-slot:id="{ data: { item: { id } } }">
-            <router-link :key="id" :to="`/dashboard/services/${id}`" class="no-underline">
+            <router-link :key="id" :to="`/dashboard/services/${id}`" class="rsrc-link">
                 <span> {{ id }}</span>
             </router-link>
         </template>
@@ -25,7 +25,7 @@
         <template v-slot:header-append-serverIds>
             <span class="ml-1 color text-field-text"> ({{ serversLength }}) </span>
         </template>
-        <template v-slot:serverIds="{ data: { item: { serverIds }, i } }">
+        <template v-slot:serverIds="{ data: { item: { serverIds } } }">
             <span v-if="typeof serverIds === 'string'">{{ serverIds }} </span>
 
             <template v-else-if="serverIds.length < 3">
@@ -33,7 +33,7 @@
                     <router-link
                         :key="serverId"
                         :to="`/dashboard/servers/${serverId}`"
-                        class="no-underline"
+                        class="rsrc-link"
                     >
                         <span> {{ serverId }}{{ i !== serverIds.length - 1 ? ', ' : '' }} </span>
                     </router-link>
@@ -42,28 +42,30 @@
 
             <v-menu
                 v-else
-                :key="i"
-                offset-x
-                transition="slide-x-transition"
+                top
+                offset-y
+                transition="slide-y-transition"
                 :close-on-content-click="false"
                 open-on-hover
-                nudge-right="20"
-                nudge-top="12.5"
                 content-class="shadow-drop"
+                :min-width="1"
             >
                 <template v-slot:activator="{ on }">
-                    <span class="pointer color text-links" v-on="on">
+                    <div
+                        class="pointer color text-links override-td--padding disable-auto-truncate"
+                        v-on="on"
+                    >
                         {{ serverIds.length }}
                         {{ $tc('servers', 2).toLowerCase() }}
-                    </span>
+                    </div>
                 </template>
 
-                <v-sheet style="border-radius: 10px;" class="pa-4">
+                <v-sheet class="pa-4">
                     <template v-for="serverId in serverIds">
                         <router-link
                             :key="serverId"
                             :to="`/dashboard/servers/${serverId}`"
-                            class="text-body-2 d-block no-underline"
+                            class="text-body-2 d-block rsrc-link"
                         >
                             <span>{{ serverId }} </span>
                         </router-link>
