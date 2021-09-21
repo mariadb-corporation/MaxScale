@@ -35,7 +35,7 @@ ClientConnection::ClientConnection(const GlobalConfig& config,
     : m_config(config)
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
-    , m_nosql(this, pDownstream, &m_config)
+    , m_nosql(pSession, this, pDownstream, &m_config)
 {
 }
 

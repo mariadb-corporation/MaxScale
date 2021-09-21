@@ -2941,9 +2941,11 @@ void nosql::NoError::populate(nosql::DocumentBuilder& doc)
     doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
-nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
+nosql::NoSQL::Context::Context(MXS_SESSION* pSession,
+                               mxs::ClientConnection* pClient_connection,
                                mxs::Component* pDownstream)
-    : m_client_connection(*pClient_connection)
+    : m_session(*pSession)
+    , m_client_connection(*pClient_connection)
     , m_downstream(*pDownstream)
     , m_connection_id(++s_connection_id)
     , m_sLast_error(std::make_unique<NoError>())
@@ -2964,10 +2966,11 @@ void nosql::NoSQL::Context::reset_error(int32_t n)
     m_sLast_error = std::make_unique<NoError>(n);
 }
 
-nosql::NoSQL::NoSQL(mxs::ClientConnection* pClient_connection,
+nosql::NoSQL::NoSQL(MXS_SESSION* pSession,
+                    mxs::ClientConnection* pClient_connection,
                     mxs::Component* pDownstream,
                     Config* pConfig)
-    : m_context(pClient_connection, pDownstream)
+    : m_context(pSession, pClient_connection, pDownstream)
     , m_config(*pConfig)
 {
 }

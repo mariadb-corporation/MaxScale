@@ -306,6 +306,11 @@ void Command::throw_unexpected_packet()
     throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
 }
 
+mxs::RoutingWorker& Command::worker() const
+{
+    return m_database.context().worker();
+}
+
 GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     GWBUF* pResponse = nullptr;

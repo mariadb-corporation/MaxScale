@@ -125,6 +125,8 @@ protected:
     void log_unexpected_packet();
     void throw_unexpected_packet();
 
+    mxs::RoutingWorker& worker() const;
+
     Database&     m_database;
     GWBUF*        m_pRequest;
     const int32_t m_request_id;
