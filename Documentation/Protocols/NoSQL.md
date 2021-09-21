@@ -592,6 +592,21 @@ Always returns
 Since authentication and logging in is currently not supported,
 the command has no effect.
 
+## User Management Commands
+
+### dropAllUsersFromDatabase
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+dropAllUsersFromDatabase | any | Ignored.
+
+As there are no users, the response will always be:
+```
+{ "n" : 0, "ok" : 1 }
+```
+
 ## Replication Commands
 
 ### isMaster
