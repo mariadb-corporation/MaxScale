@@ -20,6 +20,7 @@
 #include <bsoncxx/builder/basic/document.hpp>
 #include <mysql.h>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/worker.hh>
 #include <maxscale/buffer.hh>
 
 namespace nosql
@@ -64,13 +65,19 @@ public:
         return m_position;
     }
 
-    void create_first_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch, bool single_batch);
-    void create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch);
+    void create_first_batch(mxb::Worker& worker,
+                            bsoncxx::builder::basic::document& doc,
+                            int32_t nBatch,
+                            bool single_batch);
+    void create_next_batch(mxb::Worker& worker,
+                           bsoncxx::builder::basic::document& doc,
+                           int32_t nBatch);
 
     static void create_first_batch(bsoncxx::builder::basic::document& doc,
                                    const std::string& ns);
 
-    void create_batch(int32_t nBatch,
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
                       bool single_batch,
                       size_t* pnSize_of_documents,
                       std::vector<bsoncxx::document::value>* pDocuments);
@@ -89,7 +96,7 @@ private:
 
     void initialize();
 
-    void touch();
+    void touch(mxb::Worker& worker);
 
     enum class Result
     {
@@ -97,12 +104,14 @@ private:
         COMPLETE
     };
 
-    void create_batch(bsoncxx::builder::basic::document& doc,
+    void create_batch(mxb::Worker& worker,
+                      bsoncxx::builder::basic::document& doc,
                       const std::string& which_batch,
                       int32_t nBatch,
                       bool single_batch);
 
-    void create_batch(int32_t nBatch,
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
                       bool single_batch);
 
 

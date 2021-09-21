@@ -56,7 +56,7 @@ public:
     {
         if (m_dcid)
         {
-            Worker::get_current()->cancel_delayed_call(m_dcid);
+            worker().cancel_delayed_call(m_dcid);
         }
     }
 
@@ -448,7 +448,7 @@ protected:
         m_mode = Mode::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -480,7 +480,7 @@ protected:
         m_mode = Mode::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -737,7 +737,7 @@ public:
                                                                       std::move(mariadb_response));
 
                 DocumentBuilder doc;
-                sCursor->create_first_batch(doc, m_batch_size, m_single_batch);
+                sCursor->create_first_batch(worker(), doc, m_batch_size, m_single_batch);
 
                 pResponse = create_response(doc.extract());
 
@@ -802,7 +802,7 @@ public:
 
         unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::get(collection, id);
 
-        sCursor->create_next_batch(doc, batch_size);
+        sCursor->create_next_batch(worker(), doc, batch_size);
 
         if (!sCursor->exhausted())
         {
@@ -1431,7 +1431,7 @@ private:
         check_maximum_sql_length(sql);
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this, sql](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -1497,7 +1497,7 @@ private:
         check_maximum_sql_length(m_insert);
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
