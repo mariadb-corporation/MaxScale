@@ -15,7 +15,9 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include "qlalog.hh"
 #include <string>
+#include <future>
 #include <maxbase/stopwatch.hh>
 #include <maxscale/config.hh>
 #include <maxscale/filter.hh>
@@ -36,6 +38,7 @@ struct LogEventElems;
  */
 class QlaInstance : public mxs::Filter
 {
+
 public:
     QlaInstance(const QlaInstance&) = delete;
     QlaInstance& operator=(const QlaInstance&) = delete;
@@ -142,9 +145,9 @@ public:
         ~LogManager();
 
         bool        open_unified_logfile();
-        FILE*       open_session_log_file(const std::string& filename) const;
+        SFile       open_session_log_file(const std::string& filename) const;
         std::string generate_log_header(uint64_t data_flags) const;
-        void        check_reopen_session_file(const std::string& filename, FILE** ppFile) const;
+        void        check_reopen_session_file(const std::string& filename, SFile* psFile) const;
         void        write_unified_log_entry(const std::string& contents);
         bool        write_to_logfile(FILE* fp, const std::string& contents) const;
         void        write_stdout_log_entry(const std::string& contents) const;
@@ -159,15 +162,18 @@ public:
     private:
         LogManager(const Settings::Values& settings);
         bool  prepare();
-        FILE* open_log_file(uint64_t data_flags, const std::string& filename) const;
-        void  check_reopen_file(const std::string& filename, uint64_t data_flags, FILE** ppFile) const;
+        SFile open_log_file(uint64_t data_flags, const std::string& filename) const;
+        void  check_reopen_file(const std::string& filename, uint64_t data_flags, SFile* psFile) const;
 
         Settings::Values m_settings;
         std::mutex       m_file_lock;                   /* Protects access to the unified log file */
         std::string      m_unified_filename;            /* Filename of the unified log file */
-        FILE*            m_unified_fp {nullptr};        /* Unified log file. */
+        SFile            m_sUnified_file;               /* Unified log file. */
         int              m_rotation_count {0};          /* Log rotation counter */
         bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
+
+        QlaLog            m_qlalog;
+        std::future<void> m_log_future;
     };
 
     std::shared_ptr<LogManager> log() const
@@ -215,7 +221,7 @@ private:
 
     bool m_active {false};      /* Is session active? */
 
-    FILE* m_logfile {nullptr};          /* The session-specific log file */
+    SFile m_sSession_file;              /* The session-specific log file */
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
