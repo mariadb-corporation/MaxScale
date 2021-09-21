@@ -490,19 +490,24 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
             json += "{";
             for (; it != row.end(); ++it, ++jt)
             {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    json += ", ";
-                }
-
                 const auto& value = *it;
                 auto extraction = *jt;
 
-                json += create_entry(extraction, value.as_string().to_string());
+                auto s = value.as_string();
+
+                if (!s.is_null())
+                {
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        json += ", ";
+                    }
+
+                    json += create_entry(extraction, value.as_string().to_string());
+                }
             }
             json += "}";
         }
