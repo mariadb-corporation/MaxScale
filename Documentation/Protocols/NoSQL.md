@@ -655,17 +655,6 @@ will nonetheless return success, provide the index specification passes
 some rudimentary sanity checks. Note also that the collection will be
 created if it does not exist.
 
-### currentOp
-
-Field | Type | Description
-------|------|------------
-currentOp| any | Ignored.
-
-Currently the response will always be
-```
-{ "inprog" : [ ], "ok" : 1 }
-```
-
 ### drop
 
 The following fields are relevant.
