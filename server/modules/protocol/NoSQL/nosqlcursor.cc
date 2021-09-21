@@ -242,7 +242,6 @@ NoSQLCursor::NoSQLCursor(const std::string& ns)
     : m_ns(ns)
     , m_id(0)
 {
-    touch();
 }
 
 NoSQLCursor::NoSQLCursor(const std::string& ns,
@@ -253,10 +252,8 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
-    , m_used(mxb::Worker::get_current()->epoll_tick_now())
 {
     initialize();
-    touch();
 }
 
 //static
@@ -333,16 +330,18 @@ void NoSQLCursor::start_purging_idle_cursors(const std::chrono::seconds& cursor_
         });
 }
 
-void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
+void NoSQLCursor::create_first_batch(mxb::Worker& worker,
+                                     bsoncxx::builder::basic::document& doc,
                                      int32_t nBatch,
                                      bool single_batch)
 {
-    create_batch(doc, key::FIRST_BATCH, nBatch, single_batch);
+    create_batch(worker, doc, key::FIRST_BATCH, nBatch, single_batch);
 }
 
-void NoSQLCursor::create_next_batch(bsoncxx::builder::basic::document& doc, int32_t nBatch)
+void NoSQLCursor::create_next_batch(mxb::Worker& worker,
+                                    bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
-    create_batch(doc, key::NEXT_BATCH, nBatch, false);
+    create_batch(worker, doc, key::NEXT_BATCH, nBatch, false);
 }
 
 //static
@@ -362,7 +361,8 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
     doc.append(kvp(key::OK, 1));
 }
 
-void NoSQLCursor::create_batch(int32_t nBatch,
+void NoSQLCursor::create_batch(mxb::Worker& worker,
+                               int32_t nBatch,
                                bool single_batch,
                                size_t* pSize_of_documents,
                                std::vector<bsoncxx::document::value>* pDocuments)
@@ -404,10 +404,11 @@ void NoSQLCursor::create_batch(int32_t nBatch,
     *pSize_of_documents = size_of_documents;
     pDocuments->swap(documents);
 
-    touch();
+    touch(worker);
 }
 
-void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
+void NoSQLCursor::create_batch(mxb::Worker& worker,
+                               bsoncxx::builder::basic::document& doc,
                                const string& which_batch,
                                int32_t nBatch,
                                bool single_batch)
@@ -456,7 +457,7 @@ void NoSQLCursor::create_batch(bsoncxx::builder::basic::document& doc,
     doc.append(kvp(key::CURSOR, cursor.extract()));
     doc.append(kvp(key::OK, 1));
 
-    touch();
+    touch(worker);
 }
 
 NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::document::value&& doc)> append,
@@ -568,9 +569,9 @@ void NoSQLCursor::initialize()
     // Now m_pBuffer points at the beginning of rows.
 }
 
-void NoSQLCursor::touch()
+void NoSQLCursor::touch(mxb::Worker& worker)
 {
-    m_used = mxb::Worker::get_current()->epoll_tick_now();
+    m_used = worker.epoll_tick_now();
 }
 
 }

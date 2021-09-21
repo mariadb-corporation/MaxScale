@@ -27,6 +27,8 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/routingworker.hh>
+#include <maxscale/session.hh>
 #include <maxscale/target.hh>
 #include "nosqlcursor.hh"
 
@@ -299,6 +301,23 @@ public:
     virtual ~LastError() {}
 
     virtual void populate(DocumentBuilder& doc) = 0;
+};
+
+class ConcreteLastError: public LastError
+{
+public:
+    ConcreteLastError(const std::string& err, int32_t code)
+        : m_err(err)
+        , m_code(code)
+    {
+    }
+
+    void populate(DocumentBuilder& doc) override;
+
+private:
+    std::string m_err;
+    int32_t     m_code;
+    std::string m_code_name;
 };
 
 class NoError : public LastError
@@ -1159,7 +1178,8 @@ public:
         Context(const Context&) = delete;
         Context& operator = (const Context&) = delete;
 
-        Context(mxs::ClientConnection* pClient_connection,
+        Context(MXS_SESSION* pSession,
+                mxs::ClientConnection* pClient_connection,
                 mxs::Component* pDownstream);
 
         mxs::ClientConnection& client_connection()
@@ -1195,7 +1215,14 @@ public:
         void get_last_error(DocumentBuilder& doc);
         void reset_error(int32_t n = 0);
 
+        mxs::RoutingWorker& worker() const
+        {
+            mxb_assert(m_session.worker());
+            return *m_session.worker();
+        }
+
     private:
+        MXS_SESSION&               m_session;
         mxs::ClientConnection&     m_client_connection;
         mxs::Component&            m_downstream;
         int32_t                    m_request_id { 1 };
@@ -1205,7 +1232,8 @@ public:
         static std::atomic<int64_t> s_connection_id;
     };
 
-    NoSQL(mxs::ClientConnection* pClient_connection,
+    NoSQL(MXS_SESSION*           pSession,
+          mxs::ClientConnection* pClient_connection,
           mxs::Component* pDownstream,
           Config* pConfig);
     ~NoSQL();

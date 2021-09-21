@@ -61,6 +61,11 @@ public:
         return m_response_kind == ResponseKind::NONE;
     }
 
+    virtual bool is_get_last_error() const
+    {
+        return false;
+    }
+
     virtual std::string description() const = 0;
 
     virtual std::string to_json() const;
@@ -124,6 +129,8 @@ protected:
 
     void log_unexpected_packet();
     void throw_unexpected_packet();
+
+    mxs::RoutingWorker& worker() const;
 
     Database&     m_database;
     GWBUF*        m_pRequest;

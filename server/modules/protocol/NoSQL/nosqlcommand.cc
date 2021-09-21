@@ -306,6 +306,11 @@ void Command::throw_unexpected_packet()
     throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
 }
 
+mxs::RoutingWorker& Command::worker() const
+{
+    return m_database.context().worker();
+}
+
 GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     GWBUF* pResponse = nullptr;
@@ -565,7 +570,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     case ComResponse::OK_PACKET:
         if (m_action == CREATING_TABLE || m_action == CREATING_DATABASE)
         {
-            Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+            worker().delayed_call(0, [this](Worker::Call::action_t action) {
                     if (action == Worker::Call::EXECUTE)
                     {
                         m_action = INSERTING_DATA;
@@ -593,7 +598,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
             {
             case ER_NO_SUCH_TABLE:
                 {
-                    Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                    worker().delayed_call(0, [this](Worker::Call::action_t action) {
                             if (action == Worker::Call::EXECUTE)
                             {
                                 auto id_length = m_database.config().id_length;
@@ -613,7 +618,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
                 {
                     if (err.message().find("Unknown database") == 0)
                     {
-                        Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                        worker().delayed_call(0, [this](Worker::Call::action_t action) {
                                 if (action == Worker::Call::EXECUTE)
                                 {
                                     ostringstream ss;
@@ -639,7 +644,7 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
             case ER_DB_CREATE_EXISTS:
             case ER_TABLE_EXISTS_ERROR:
                 // Ok, someone else got there first.
-                Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+                worker().delayed_call(0, [this](Worker::Call::action_t action) {
                         if (action == Worker::Call::EXECUTE)
                         {
                             m_action = INSERTING_DATA;
@@ -718,7 +723,7 @@ OpUpdateCommand::~OpUpdateCommand()
 {
     if (m_dcid)
     {
-        Worker::get_current()->cancel_delayed_call(m_dcid);
+        worker().cancel_delayed_call(m_dcid);
     }
 }
 
@@ -896,7 +901,7 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
         check_maximum_sql_length(sql);
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this, sql](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -944,7 +949,7 @@ State OpUpdateCommand::create_table()
     m_action = Action::CREATING_TABLE;
 
     mxb_assert(m_dcid == 0);
-    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
             m_dcid = 0;
 
             if (action == Worker::Call::EXECUTE)
@@ -1044,7 +1049,7 @@ State OpUpdateCommand::insert_document()
     check_maximum_sql_length(m_insert);
 
     mxb_assert(m_dcid == 0);
-    m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
             m_dcid = 0;
 
             if (action == Worker::Call::EXECUTE)
@@ -1160,7 +1165,7 @@ State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_
             size_t size_of_documents = 0;
             vector<bsoncxx::document::value> documents;
 
-            sCursor->create_batch(m_nReturn, m_single_batch, &size_of_documents, &documents);
+            sCursor->create_batch(worker(), m_nReturn, m_single_batch, &size_of_documents, &documents);
 
             int64_t cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
 
@@ -1282,7 +1287,7 @@ State OpGetMoreCommand::execute(GWBUF** ppNoSQL_response)
     size_t size_of_documents;
     vector<bsoncxx::document::value> documents;
 
-    sCursor->create_batch(m_req.nReturn(), false, &size_of_documents, &documents);
+    sCursor->create_batch(worker(), m_req.nReturn(), false, &size_of_documents, &documents);
 
     cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
 
@@ -1569,9 +1574,14 @@ void OpMsgCommand::add_error(bsoncxx::builder::basic::document& response, const 
 
 void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
+    auto code = error::from_mariadb_code(err.code());
+    auto errmsg = err.message();
+
     error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
-    error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));
-    error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
+    error.append(bsoncxx::builder::basic::kvp(key::CODE, code));
+    error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, errmsg));
+
+    m_database.context().set_last_error(std::make_unique<ConcreteLastError>(errmsg, code));
 }
 
 State ImmediateCommand::execute(GWBUF** ppNoSQL_response)

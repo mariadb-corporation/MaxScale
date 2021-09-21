@@ -56,7 +56,7 @@ public:
     {
         if (m_dcid)
         {
-            Worker::get_current()->cancel_delayed_call(m_dcid);
+            worker().cancel_delayed_call(m_dcid);
         }
     }
 
@@ -141,21 +141,17 @@ public:
             switch (m_query.kind())
             {
             case Query::MULTI:
-                pBuffer = interpret_multi(pBuffer, pEnd, m_query.nStatements());
+                execution = interpret_multi(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
                 m_ok = 1;
                 break;
 
             case Query::COMPOUND:
-                pBuffer = interpret_compound(pBuffer, pEnd, m_query.nStatements());
+                execution = interpret_compound(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
                 m_ok = 1;
                 break;
 
             case Query::SINGLE:
-                {
-                    execution = interpret_single(pBuffer);
-
-                    pBuffer += ComPacket::packet_len(pBuffer);
-                }
+                execution = interpret_single(pBuffer, &pBuffer);
             }
 
             if (pBuffer != pEnd)
@@ -181,6 +177,12 @@ public:
                     if (!write_errors.view().empty())
                     {
                         doc.append(kvp(key::WRITE_ERRORS, write_errors));
+                        // In this case the last error is not set as the one who
+                        // added a write error, is expected to have done that.
+                    }
+                    else
+                    {
+                        m_database.context().set_last_error(std::make_unique<NoError>(m_n));
                     }
 
                     pResponse = create_response(doc.extract());
@@ -356,7 +358,7 @@ protected:
 
     virtual Execution interpret(const ComOK& response, int index) = 0;
 
-    virtual Execution interpret_single(uint8_t* pBuffer)
+    Execution interpret_single(uint8_t* pBuffer, uint8_t** ppBuffer)
     {
         Execution rv = Execution::CONTINUE;
 
@@ -403,17 +405,22 @@ protected:
             throw_unexpected_packet();
         }
 
+        *ppBuffer = pBuffer + ComPacket::packet_len(pBuffer);
+
         return rv;
     }
 
-    virtual uint8_t* interpret_multi(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    virtual Execution interpret_multi(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements, uint8_t** ppBuffer)
     {
         // This is not going to happen outside development.
         mxb_assert(!true);
         throw std::runtime_error("Multi query, but no multi handler.");
     }
 
-    virtual uint8_t* interpret_compound(uint8_t* pBegin, uint8_t* pEnd, size_t nStatements)
+    virtual Execution interpret_compound(uint8_t* pBegin,
+                                         uint8_t* pEnd,
+                                         size_t nStatements,
+                                         uint8_t** ppBuffer)
     {
         // This is not going to happen outside development.
         mxb_assert(!true);
@@ -447,7 +454,7 @@ protected:
         m_mode = Mode::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -479,7 +486,7 @@ protected:
         m_mode = Mode::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -603,12 +610,6 @@ private:
         m_n += response.affected_rows();
         return Execution::CONTINUE;
     }
-
-    void amend_response(DocumentBuilder&) override final
-    {
-        m_database.context().reset_error(m_n);
-    }
-
 };
 
 
@@ -736,7 +737,7 @@ public:
                                                                       std::move(mariadb_response));
 
                 DocumentBuilder doc;
-                sCursor->create_first_batch(doc, m_batch_size, m_single_batch);
+                sCursor->create_first_batch(worker(), doc, m_batch_size, m_single_batch);
 
                 pResponse = create_response(doc.extract());
 
@@ -768,6 +769,11 @@ public:
     static constexpr const char* const HELP = "";
 
     using ImmediateCommand::ImmediateCommand;
+
+    bool is_get_last_error() const override
+    {
+        return true;
+    }
 
     void populate_response(DocumentBuilder& doc) override
     {
@@ -801,7 +807,7 @@ public:
 
         unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::get(collection, id);
 
-        sCursor->create_next_batch(doc, batch_size);
+        sCursor->create_next_batch(worker(), doc, batch_size);
 
         if (!sCursor->exhausted())
         {
@@ -1079,9 +1085,14 @@ protected:
         return Execution::CONTINUE;
     }
 
-    uint8_t* interpret_multi(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    Execution interpret_multi(uint8_t* pBuffer,
+                              uint8_t* pEnd,
+                              size_t nStatements,
+                              uint8_t** ppBuffer) override
     {
         mxb_assert(nStatements > 2);
+
+        Execution rv = Execution::CONTINUE;
 
         ComResponse begin(pBuffer);
 
@@ -1089,69 +1100,89 @@ protected:
         {
             pBuffer += ComPacket::packet_len(pBuffer);
 
-            size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
+            ComResponse first(pBuffer);
 
-            for (size_t i = 0; i < nInserts; ++i)
+            if (first.is_err() && ComERR(first).code() == ER_NO_SUCH_TABLE && should_create_table())
             {
-                ComResponse response(pBuffer);
+                // If the first INSERT failed with ER_NO_SUCH_TABLE, then we know
+                // they all will.
 
-                switch (response.type())
+                create_table();
+                pBuffer = pEnd;
+                rv = Execution::BUSY;
+            }
+            else
+            {
+                size_t nInserts = nStatements - 2; // The starting BEGIN and the ending COMMIT
+
+                for (size_t i = 0; i < nInserts; ++i)
                 {
-                case ComResponse::OK_PACKET:
+                    ComResponse response(pBuffer);
+
+                    switch (response.type())
                     {
-                        ComOK ok(response);
-
-                        auto n = ok.affected_rows();
-
-                        if (n == 0)
+                    case ComResponse::OK_PACKET:
                         {
-                            ostringstream ss;
-                            ss << "E" << (int)error::COMMAND_FAILED << " error collection "
-                               << table(Quoted::NO)
-                               << ", possibly duplicate id.";
+                            ComOK ok(response);
 
-                            DocumentBuilder error;
-                            error.append(kvp(key::INDEX, (int)i));
-                            error.append(kvp(key::CODE, error::COMMAND_FAILED));
-                            error.append(kvp(key::ERRMSG, ss.str()));
+                            auto n = ok.affected_rows();
 
-                            m_write_errors.append(error.extract());
+                            if (n == 0)
+                            {
+                                ostringstream ss;
+                                ss << "E" << (int)error::COMMAND_FAILED << " error collection "
+                                   << table(Quoted::NO)
+                                   << ", possibly duplicate id.";
+
+                                auto errmsg = ss.str();
+
+                                DocumentBuilder error;
+                                error.append(kvp(key::INDEX, (int)i));
+                                error.append(kvp(key::CODE, error::COMMAND_FAILED));
+                                error.append(kvp(key::ERRMSG, errmsg));
+
+                                m_write_errors.append(error.extract());
+
+                                auto sError = std::make_unique<ConcreteLastError>(errmsg, error::
+                                                                                  COMMAND_FAILED);
+                                m_database.context().set_last_error(std::move(sError));
+                            }
+                            else
+                            {
+                                m_n += n;
+                            }
                         }
-                        else
-                        {
-                            m_n += n;
-                        }
+                        break;
+
+                    case ComResponse::ERR_PACKET:
+                        // An error packet in the middle of everything is a complete failure.
+                        throw MariaDBError(ComERR(response));
+
+                    default:
+                        mxb_assert(!true);
+                        throw_unexpected_packet();
                     }
-                    break;
 
-                case ComResponse::ERR_PACKET:
-                    // An error packet in the middle of everything is a complete failure.
-                    throw MariaDBError(ComERR(response));
+                    pBuffer += ComPacket::packet_len(pBuffer);
 
-                default:
-                    mxb_assert(!true);
-                    throw_unexpected_packet();
+                    if (pBuffer >= pEnd)
+                    {
+                        mxb_assert(!true);
+                        throw HardError("Too few packets in received data.", error::INTERNAL_ERROR);
+                    }
+                }
+
+                ComResponse commit(pBuffer);
+
+                if (!commit.is_ok())
+                {
+                    mxb_assert(commit.is_err());
+                    throw MariaDBError(ComERR(commit));
                 }
 
                 pBuffer += ComPacket::packet_len(pBuffer);
-
-                if (pBuffer >= pEnd)
-                {
-                    mxb_assert(!true);
-                    throw HardError("Too few packets in received data.", error::INTERNAL_ERROR);
-                }
+                mxb_assert(pBuffer == pEnd);
             }
-
-            ComResponse commit(pBuffer);
-
-            if (!commit.is_ok())
-            {
-                mxb_assert(commit.is_err());
-                throw MariaDBError(ComERR(commit));
-            }
-
-            pBuffer += ComPacket::packet_len(pBuffer);
-            mxb_assert(pBuffer == pEnd);
         }
         else
         {
@@ -1159,10 +1190,14 @@ protected:
             throw MariaDBError(ComERR(begin));
         }
 
-        return pBuffer;
+        *ppBuffer = pBuffer;
+        return rv;
     }
 
-    uint8_t* interpret_compound(uint8_t* pBuffer, uint8_t* pEnd, size_t nStatements) override
+    Execution interpret_compound(uint8_t* pBuffer,
+                                 uint8_t* pEnd,
+                                 size_t nStatements,
+                                 uint8_t** ppBuffer) override
     {
         ComResponse response(pBuffer);
 
@@ -1179,12 +1214,17 @@ protected:
                    << table(Quoted::NO)
                    << ", possibly duplicate id.";
 
+                auto errmsg = ss.str();
+
                 DocumentBuilder error;
                 error.append(kvp(key::INDEX, (int)m_n));
                 error.append(kvp(key::CODE, error::COMMAND_FAILED));
-                error.append(kvp(key::ERRMSG, ss.str()));
+                error.append(kvp(key::ERRMSG, errmsg));
 
                 m_write_errors.append(error.extract());
+
+                auto sError = std::make_unique<ConcreteLastError>(errmsg, error::COMMAND_FAILED);
+                m_database.context().set_last_error(std::move(sError));
             }
         }
         else
@@ -1195,7 +1235,8 @@ protected:
 
         pBuffer += ComPacket::packet_len(pBuffer);
 
-        return pBuffer;
+        *ppBuffer = pBuffer;
+        return Execution::CONTINUE;
     }
 
     mutable int64_t                     m_nDocuments { 0 };
@@ -1247,10 +1288,18 @@ public:
 
     bool should_create_table() const override
     {
-        return m_should_upsert;
+        return m_should_create_table;
     }
 
 private:
+    bool should_upsert(int index) const
+    {
+        auto doc = m_documents[index];
+        auto upsert = doc[key::UPSERT];
+
+        return upsert ? element_as<bool>("update", "updates.upsert", upsert) : false;
+    }
+
     enum class UpdateAction
     {
         UPDATING,
@@ -1268,7 +1317,13 @@ private:
         ostringstream sql;
         sql << "UPDATE " << table() << " SET DOC = ";
 
-        optional(update, key::UPSERT, &m_should_upsert);
+        bool should_upsert = false;
+        optional(update, key::UPSERT, &should_upsert);
+
+        if (should_upsert)
+        {
+            m_should_create_table = true;
+        }
 
         auto q = update[key::Q];
 
@@ -1334,7 +1389,7 @@ private:
 
         if (n == 0)
         {
-            if (m_should_upsert)
+            if (should_upsert(index))
             {
                 if (m_insert.empty())
                 {
@@ -1365,6 +1420,7 @@ private:
             }
             else
             {
+                m_n += 1;
                 m_upserted.append(m_upsert.extract());
             }
 
@@ -1391,7 +1447,7 @@ private:
         check_maximum_sql_length(sql);
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this, sql](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -1427,20 +1483,33 @@ private:
         DocumentBuilder builder;
 
         auto qid = q[key::_ID];
-
         if (qid)
         {
-            // Provided, use it
+            // Id present in the query document, use it.
+            // Will be appended later when the fields of q are iterated.
             m_id = "'" + to_string(qid) + "'";
             append(m_upsert, key::_ID, qid);
         }
         else
         {
-            // Not provided, generate.
-            auto id = bsoncxx::oid();
-            m_id = "'{\"$oid\":\"" + id.to_string() + "\"}'";
-            builder.append(kvp(key::_ID, id));
-            m_upsert.append(kvp(key::_ID, id));
+            bsoncxx::document::view u = update[key::U].get_document();
+
+            auto uid = u[key::_ID];
+            if (uid)
+            {
+                // Id provided in the update document, use it.
+                m_id = "'" + to_string(uid) + "'";
+                append(builder, key::_ID, uid);
+                append(m_upsert, key::_ID, uid);
+            }
+            else
+            {
+                // Not provided, generate.
+                auto id = bsoncxx::oid();
+                m_id = "'{\"$oid\":\"" + id.to_string() + "\"}'";
+                builder.append(kvp(key::_ID, id));
+                m_upsert.append(kvp(key::_ID, id));
+            }
         }
 
         for (const auto& e : q)
@@ -1457,7 +1526,7 @@ private:
         check_maximum_sql_length(m_insert);
 
         mxb_assert(m_dcid == 0);
-        m_dcid = Worker::get_current()->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -1479,14 +1548,11 @@ private:
         {
             doc.append(kvp(key::UPSERTED, m_upserted.extract()));
         }
-
-        m_database.context().reset_error(m_n);
     }
-
 
 private:
     UpdateAction    m_update_action { UpdateAction::UPDATING };
-    bool            m_should_upsert;
+    bool            m_should_create_table { false };
     int32_t         m_nModified { 0 };
     string          m_insert;
     string          m_id;

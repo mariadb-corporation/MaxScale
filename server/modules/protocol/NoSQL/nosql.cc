@@ -804,30 +804,11 @@ void nosql::SoftError::create_response(const Command& command, DocumentBuilder& 
     doc.append(kvp(key::CODE_NAME, nosql::error::name(m_code)));
 }
 
-namespace
+void nosql::ConcreteLastError::populate(DocumentBuilder& doc)
 {
-
-class ConcreteLastError: public nosql::LastError
-{
-public:
-    ConcreteLastError(const std::string& err, int32_t code)
-        : m_err(err)
-        , m_code(code)
-    {
-    }
-
-    void populate(nosql::DocumentBuilder& doc) override
-    {
-        doc.append(nosql::kvp(nosql::key::ERR, m_err));
-        doc.append(nosql::kvp(nosql::key::CODE, m_code));
-        doc.append(nosql::kvp(nosql::key::CODE_NAME, nosql::error::name(m_code)));
-    }
-
-private:
-    string  m_err;
-    int32_t m_code;
-    string  m_code_name;
-};
+    doc.append(nosql::kvp(nosql::key::ERR, m_err));
+    doc.append(nosql::kvp(nosql::key::CODE, m_code));
+    doc.append(nosql::kvp(nosql::key::CODE_NAME, nosql::error::name(m_code)));
 }
 
 unique_ptr<nosql::LastError> nosql::SoftError::create_last_error() const
@@ -2941,9 +2922,11 @@ void nosql::NoError::populate(nosql::DocumentBuilder& doc)
     doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
-nosql::NoSQL::Context::Context(mxs::ClientConnection* pClient_connection,
+nosql::NoSQL::Context::Context(MXS_SESSION* pSession,
+                               mxs::ClientConnection* pClient_connection,
                                mxs::Component* pDownstream)
-    : m_client_connection(*pClient_connection)
+    : m_session(*pSession)
+    , m_client_connection(*pClient_connection)
     , m_downstream(*pDownstream)
     , m_connection_id(++s_connection_id)
     , m_sLast_error(std::make_unique<NoError>())
@@ -2964,10 +2947,11 @@ void nosql::NoSQL::Context::reset_error(int32_t n)
     m_sLast_error = std::make_unique<NoError>(n);
 }
 
-nosql::NoSQL::NoSQL(mxs::ClientConnection* pClient_connection,
+nosql::NoSQL::NoSQL(MXS_SESSION* pSession,
+                    mxs::ClientConnection* pClient_connection,
                     mxs::Component* pDownstream,
                     Config* pConfig)
-    : m_context(pClient_connection, pDownstream)
+    : m_context(pSession, pClient_connection, pDownstream)
     , m_config(*pConfig)
 {
 }
