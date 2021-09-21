@@ -85,6 +85,40 @@ export default {
             }
         },
 
+        /**
+         * @param {Object} payload payload object
+         * @param {String} payload.id Name of the filter
+         * @param {Object} payload.parameters Parameters for the filter
+         * @param {Function} payload.callback callback function after successfully updated
+         */
+        async updateFilterParameters({ commit }, payload) {
+            try {
+                const body = {
+                    data: {
+                        id: payload.id,
+                        type: 'filters',
+                        attributes: { parameters: payload.parameters },
+                    },
+                }
+                let res = await this.vue.$axios.patch(`/filters/${payload.id}`, body)
+                // response ok
+                if (res.status === 204) {
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [`Parameters of ${payload.id} is updated`],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-filter-updateFilterParameters')
+                logger.error(e)
+            }
+        },
+
         async destroyFilter({ dispatch, commit }, id) {
             try {
                 let res = await this.vue.$axios.delete(`/filters/${id}?force=yes`)
