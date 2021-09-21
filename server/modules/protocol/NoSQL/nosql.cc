@@ -2159,6 +2159,13 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         {
             rv += type_to_condition(field, element);
         }
+        else if (nosql_op.front() == '$')
+        {
+            ostringstream ss;
+            ss << "unknown operator: " << nosql_op;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
         else
         {
             break;
