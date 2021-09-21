@@ -303,6 +303,23 @@ public:
     virtual void populate(DocumentBuilder& doc) = 0;
 };
 
+class ConcreteLastError: public LastError
+{
+public:
+    ConcreteLastError(const std::string& err, int32_t code)
+        : m_err(err)
+        , m_code(code)
+    {
+    }
+
+    void populate(DocumentBuilder& doc) override;
+
+private:
+    std::string m_err;
+    int32_t     m_code;
+    std::string m_code_name;
+};
+
 class NoError : public LastError
 {
 public:

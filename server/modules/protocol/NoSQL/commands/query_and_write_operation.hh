@@ -177,9 +177,13 @@ public:
                     if (!write_errors.view().empty())
                     {
                         doc.append(kvp(key::WRITE_ERRORS, write_errors));
+                        // In this case the last error is not set as the one who
+                        // added a write error, is expected to have done that.
                     }
-
-                    m_database.context().set_last_error(std::make_unique<NoError>(m_n));
+                    else
+                    {
+                        m_database.context().set_last_error(std::make_unique<NoError>(m_n));
+                    }
 
                     pResponse = create_response(doc.extract());
                     rv = State::READY;
@@ -606,12 +610,6 @@ private:
         m_n += response.affected_rows();
         return Execution::CONTINUE;
     }
-
-    void amend_response(DocumentBuilder&) override final
-    {
-        m_database.context().reset_error(m_n);
-    }
-
 };
 
 
@@ -1136,12 +1134,18 @@ protected:
                                    << table(Quoted::NO)
                                    << ", possibly duplicate id.";
 
+                                auto errmsg = ss.str();
+
                                 DocumentBuilder error;
                                 error.append(kvp(key::INDEX, (int)i));
                                 error.append(kvp(key::CODE, error::COMMAND_FAILED));
-                                error.append(kvp(key::ERRMSG, ss.str()));
+                                error.append(kvp(key::ERRMSG, errmsg));
 
                                 m_write_errors.append(error.extract());
+
+                                auto sError = std::make_unique<ConcreteLastError>(errmsg, error::
+                                                                                  COMMAND_FAILED);
+                                m_database.context().set_last_error(std::move(sError));
                             }
                             else
                             {
@@ -1210,12 +1214,17 @@ protected:
                    << table(Quoted::NO)
                    << ", possibly duplicate id.";
 
+                auto errmsg = ss.str();
+
                 DocumentBuilder error;
                 error.append(kvp(key::INDEX, (int)m_n));
                 error.append(kvp(key::CODE, error::COMMAND_FAILED));
-                error.append(kvp(key::ERRMSG, ss.str()));
+                error.append(kvp(key::ERRMSG, errmsg));
 
                 m_write_errors.append(error.extract());
+
+                auto sError = std::make_unique<ConcreteLastError>(errmsg, error::COMMAND_FAILED);
+                m_database.context().set_last_error(std::move(sError));
             }
         }
         else
@@ -1539,10 +1548,7 @@ private:
         {
             doc.append(kvp(key::UPSERTED, m_upserted.extract()));
         }
-
-        m_database.context().reset_error(m_n);
     }
-
 
 private:
     UpdateAction    m_update_action { UpdateAction::UPDATING };

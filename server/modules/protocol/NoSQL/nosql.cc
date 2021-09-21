@@ -804,30 +804,11 @@ void nosql::SoftError::create_response(const Command& command, DocumentBuilder& 
     doc.append(kvp(key::CODE_NAME, nosql::error::name(m_code)));
 }
 
-namespace
+void nosql::ConcreteLastError::populate(DocumentBuilder& doc)
 {
-
-class ConcreteLastError: public nosql::LastError
-{
-public:
-    ConcreteLastError(const std::string& err, int32_t code)
-        : m_err(err)
-        , m_code(code)
-    {
-    }
-
-    void populate(nosql::DocumentBuilder& doc) override
-    {
-        doc.append(nosql::kvp(nosql::key::ERR, m_err));
-        doc.append(nosql::kvp(nosql::key::CODE, m_code));
-        doc.append(nosql::kvp(nosql::key::CODE_NAME, nosql::error::name(m_code)));
-    }
-
-private:
-    string  m_err;
-    int32_t m_code;
-    string  m_code_name;
-};
+    doc.append(nosql::kvp(nosql::key::ERR, m_err));
+    doc.append(nosql::kvp(nosql::key::CODE, m_code));
+    doc.append(nosql::kvp(nosql::key::CODE_NAME, nosql::error::name(m_code)));
 }
 
 unique_ptr<nosql::LastError> nosql::SoftError::create_last_error() const

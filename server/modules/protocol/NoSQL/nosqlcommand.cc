@@ -1574,9 +1574,14 @@ void OpMsgCommand::add_error(bsoncxx::builder::basic::document& response, const 
 
 void OpMsgCommand::interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index)
 {
+    auto code = error::from_mariadb_code(err.code());
+    auto errmsg = err.message();
+
     error.append(bsoncxx::builder::basic::kvp(key::INDEX, index));
-    error.append(bsoncxx::builder::basic::kvp(key::CODE, error::from_mariadb_code(err.code())));
-    error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, err.message()));
+    error.append(bsoncxx::builder::basic::kvp(key::CODE, code));
+    error.append(bsoncxx::builder::basic::kvp(key::ERRMSG, errmsg));
+
+    m_database.context().set_last_error(std::make_unique<ConcreteLastError>(errmsg, code));
 }
 
 State ImmediateCommand::execute(GWBUF** ppNoSQL_response)
