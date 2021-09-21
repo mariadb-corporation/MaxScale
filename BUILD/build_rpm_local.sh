@@ -9,6 +9,11 @@ cd ./MaxScale
 
 NCPU=$(grep -c processor /proc/cpuinfo)
 
+if [ "$PARALLEL_BUILD" == "no" ]
+then
+    NCPU=1
+fi
+
 mkdir _build
 cd _build
 cmake ..  $cmake_flags
