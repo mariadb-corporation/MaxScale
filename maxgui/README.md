@@ -12,8 +12,9 @@ Check the [Configuration Guide](../Documentation/Getting-Started/Configuration-G
 By default, when compiles and hot-reloads for development,
 maxgui is configured to be hosted without using https.
 
-To use https for development or testing purpose,
-add these properties to `devServer` in `vue.config.js`:
+To use https in development for testing purpose, create `dev-certs` directory
+with local ssl certificates. The certificates can be created using [mkcert](https://github.com/FiloSottile/mkcert).
+Then add the following properties to `devServer` in `vue.config.js`:
 
 ```
 https: {
@@ -22,10 +23,6 @@ https: {
 },
 public: 'https://localhost:8000/',
 ```
-
-Local ssl certificate and key can be found in `dev-certs` directory.
-The certificates were created using [mkcert](https://github.com/FiloSottile/mkcert) for the following domain:
-`localhost 127.0.0.1`
 
 #### Disable CORS when sending request to MaxScale REST API
 
@@ -79,12 +76,6 @@ npm run lint
 ```
 npm run test:unit
 
-```
-
-#### Run your end-to-end tests
-
-```
-npm run test:e2e
 ```
 
 ## App translation
