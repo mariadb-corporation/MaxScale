@@ -38,7 +38,7 @@ public:
     {
         ostringstream sql;
 
-        string limit = convert_skip_and_limit();
+        string limit = convert_skip_and_limit(AcceptAsLimit::INTEGER);
 
         if (limit.empty())
         {

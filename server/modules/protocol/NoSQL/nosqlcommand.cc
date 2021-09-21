@@ -1457,7 +1457,7 @@ void OpMsgCommand::require_admin_db()
     }
 }
 
-string OpMsgCommand::convert_skip_and_limit() const
+string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
 {
     string rv;
 
@@ -1486,23 +1486,28 @@ string OpMsgCommand::convert_skip_and_limit() const
         }
 
         int64_t nLimit = std::numeric_limits<int64_t>::max();
-        if (limit && (!get_number_as_integer(limit, &nLimit) || nLimit < 0))
+        if (limit)
         {
-            ostringstream ss;
-            int code;
+            if (!get_number_as_integer(limit, &nLimit))
+            {
+                ostringstream ss;
+                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
 
             if (nLimit < 0)
             {
-                ss << "Limit value must be non-negative, but received: " << nLimit;
-                code = error::BAD_VALUE;
+                if (accept_as_limit == AcceptAsLimit::INTEGER)
+                {
+                    nLimit = -nLimit;
+                }
+                else
+                {
+                    ostringstream ss;
+                    ss << "Limit value must be non-negative, but received: " << nLimit;
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
             }
-            else
-            {
-                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
-                code = error::FAILED_TO_PARSE;
-            }
-
-            throw SoftError(ss.str(), code);
         }
 
         ostringstream ss;

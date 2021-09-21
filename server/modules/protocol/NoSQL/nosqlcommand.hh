@@ -514,7 +514,12 @@ protected:
      * @return A LIMIT clause, if 'skip' and/or 'limit' are present in the
      *         command object, otherwise an empty string.
      */
-    std::string convert_skip_and_limit() const;
+    enum class AcceptAsLimit
+    {
+        POSITIVE_INTEGER,
+        INTEGER           // The absolute value is used.
+    };
+    std::string convert_skip_and_limit(AcceptAsLimit limit = AcceptAsLimit::POSITIVE_INTEGER) const;
 
     template<class T>
     T value_as(Conversion conversion = Conversion::STRICT) const
