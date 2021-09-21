@@ -103,8 +103,6 @@ State Database::handle_msg(GWBUF* pRequest, Msg&& req, GWBUF** ppResponse)
 
     auto sCommand = OpMsgCommand::get(this, pRequest, std::move(req));
 
-    static const string get_last_error = mxb::tolower(command::GetLastError::KEY);
-
     if (sCommand->is_admin() && m_name != "admin")
     {
         SoftError error(sCommand->name() + " may only be run against the admin database.",
@@ -113,7 +111,7 @@ State Database::handle_msg(GWBUF* pRequest, Msg&& req, GWBUF** ppResponse)
 
         pResponse = error.create_response(*sCommand.get());
     }
-    else if (sCommand->name() != get_last_error)
+    else if (!sCommand->is_get_last_error())
     {
         m_context.reset_error();
     }

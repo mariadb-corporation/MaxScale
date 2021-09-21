@@ -770,6 +770,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
+    bool is_get_last_error() const override
+    {
+        return true;
+    }
+
     void populate_response(DocumentBuilder& doc) override
     {
         m_database.context().get_last_error(doc);

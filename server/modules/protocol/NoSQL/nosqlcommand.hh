@@ -61,6 +61,11 @@ public:
         return m_response_kind == ResponseKind::NONE;
     }
 
+    virtual bool is_get_last_error() const
+    {
+        return false;
+    }
+
     virtual std::string description() const = 0;
 
     virtual std::string to_json() const;
