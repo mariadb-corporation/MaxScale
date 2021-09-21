@@ -35,5 +35,5 @@ then
 fi
 
 npm install --production
-npm install --production pkg@5.1.0
+npm install --production pkg@5
 node_modules/pkg/lib-es5/bin.js $opts -t node10-linux .
