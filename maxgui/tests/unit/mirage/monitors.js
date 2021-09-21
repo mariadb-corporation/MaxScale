@@ -23,7 +23,7 @@ const dummy_all_monitors = [
                         gtid_current_pos: '0-1000-9',
                         lock_held: null,
                         master_group: null,
-                        name: 'server_1',
+                        name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
                         read_only: false,
                         server_id: 1001,
                         slave_connections: [
@@ -101,7 +101,7 @@ const dummy_all_monitors = [
                         type: 'servers',
                     },
                     {
-                        id: 'server_1',
+                        id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
                         type: 'servers',
                     },
                 ],

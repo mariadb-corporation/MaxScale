@@ -4,7 +4,7 @@ const dummy_all_servers = [
         attributes: {
             gtid_binlog_pos: '0-1000-9',
             gtid_current_pos: '0-1000-9',
-            last_event: 'server_down',
+            last_event: 'master_up',
             lock_held: null,
             master_group: null,
             master_id: -1,
@@ -217,11 +217,11 @@ const dummy_all_servers = [
         attributes: {
             gtid_binlog_pos: '0-1000-9',
             gtid_current_pos: '0-1000-9',
-            last_event: 'server_down',
+            last_event: 'slave_up',
             lock_held: null,
             master_group: null,
             master_id: 1000,
-            name: 'server_1',
+            name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
             node_id: 1001,
             parameters: {
                 address: '127.0.0.1',
@@ -414,7 +414,7 @@ const dummy_all_servers = [
             triggered_at: 'Mon, 20 Sep 2021 15:50:53 GMT',
             version_string: '10.4.15-MariaDB-1:10.4.15+maria~focal-log',
         },
-        id: 'server_1',
+        id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
         relationships: {
             monitors: {
                 data: [
@@ -430,10 +430,6 @@ const dummy_all_servers = [
                         id: 'Read-Only-Service',
                         type: 'services',
                     },
-                    {
-                        id: 'Read-Write-Service',
-                        type: 'services',
-                    },
                 ],
             },
         },
@@ -441,14 +437,6 @@ const dummy_all_servers = [
     },
     {
         attributes: {
-            gtid_binlog_pos: '0-1000-9',
-            gtid_current_pos: '0-1000-9',
-            last_event: 'server_down',
-            lock_held: null,
-            master_group: null,
-            master_id: 1000,
-            name: 'server_2',
-            node_id: 1002,
             parameters: {
                 address: '127.0.0.1',
                 disk_space_threshold: null,
@@ -472,25 +460,8 @@ const dummy_all_servers = [
                 ssl_verify_peer_host: false,
                 ssl_version: 'MAX',
             },
-            read_only: false,
-            replication_lag: 0,
-            server_id: 1002,
-            slave_connections: [
-                {
-                    connection_name: '',
-                    gtid_io_pos: '0-1000-9',
-                    last_io_error: '',
-                    last_sql_error: '',
-                    master_host: '127.0.0.1',
-                    master_port: 4000,
-                    master_server_id: 1000,
-                    seconds_behind_master: 0,
-                    slave_io_running: 'Yes',
-                    slave_sql_running: 'Yes',
-                },
-            ],
-            state: 'Slave, Running',
-            state_details: null,
+            replication_lag: -1,
+            state: 'Down',
             statistics: {
                 active_operations: 0,
                 adaptive_avg_select_time: '0ns',
@@ -637,28 +608,10 @@ const dummy_all_servers = [
                 routed_packets: 0,
                 total_connections: 0,
             },
-            triggered_at: 'Mon, 20 Sep 2021 15:50:53 GMT',
-            version_string: '10.4.15-MariaDB-1:10.4.15+maria~focal-log',
+            version_string: '',
         },
         id: 'server_2',
-        relationships: {
-            monitors: {
-                data: [
-                    {
-                        id: 'Monitor',
-                        type: 'monitors',
-                    },
-                ],
-            },
-            services: {
-                data: [
-                    {
-                        id: 'Read-Write-Service',
-                        type: 'services',
-                    },
-                ],
-            },
-        },
+        relationships: {},
         type: 'servers',
     },
 ]

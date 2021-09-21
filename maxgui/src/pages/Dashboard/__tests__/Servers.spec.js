@@ -13,7 +13,6 @@
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Servers from '@/pages/Dashboard/Servers'
-
 import { findAnchorLinkInTable, getUniqueResourceNamesStub } from '@tests/unit/utils'
 import { makeServer } from '@tests/unit/mirage/api'
 import { initAllServers } from '@tests/unit/mirage/servers'
@@ -44,12 +43,12 @@ const expectedTableRows = [
         showRepStats: false,
     },
     {
-        id: 'server_1',
+        id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
         serverAddress: '127.0.0.1',
         serverPort: 4001,
         serverConnections: 0,
         serverState: 'Slave, Running',
-        serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
+        serviceIds: ['Read-Only-Service'],
         gtid: '0-1000-9',
         groupId: 'Monitor',
         monitorState: 'Running',
@@ -61,18 +60,17 @@ const expectedTableRows = [
         serverAddress: '127.0.0.1',
         serverPort: 4002,
         serverConnections: 0,
-        serverState: 'Slave, Running',
-        serviceIds: ['Read-Write-Service'],
-        gtid: '0-1000-9',
-        groupId: 'Monitor',
-        monitorState: 'Running',
-        showSlaveStats: false,
-        showRepStats: true,
+        serverState: 'Down',
+        serviceIds: 'No services',
+        gtid: undefined,
+        groupId: 'Not monitored',
+        monitorState: '',
     },
 ]
 
 let api
 let originalXMLHttpRequest = XMLHttpRequest
+
 describe('Dashboard Servers tab', () => {
     let wrapper
     before(() => {
@@ -122,8 +120,8 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const serverId = wrapper.vm.all_servers[2].id // the last server has only one service
-        const serviceId = wrapper.vm.all_servers[2].relationships.services.data[0].id
+        const serverId = wrapper.vm.all_servers[1].id
+        const serviceId = wrapper.vm.all_servers[1].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -148,5 +146,87 @@ describe('Dashboard Servers tab', () => {
     it(`Should get total number of unique service names accurately`, async () => {
         const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
+    })
+
+    function getCell({ wrapper, rowId, cellId }) {
+        const cellIndex = expectedTableHeaders.findIndex(item => item.value === cellId)
+        const dataTable = wrapper.findComponent({ name: 'data-table' })
+        const tableCell = dataTable.find(`.cell-${cellIndex}-${rowId}`)
+        return tableCell
+    }
+    function getRepTooltipCell({ wrapper, rowId, cellId }) {
+        const tableCell = getCell({ wrapper, rowId, cellId })
+        const repTooltip = tableCell.findComponent({ name: 'rep-tooltip' })
+        return repTooltip
+    }
+    function assertRepTooltipRequiredProps({ wrapper, rowId, cellId }) {
+        const repTooltip = getRepTooltipCell({ wrapper, rowId, cellId })
+        expect(repTooltip.exists()).to.be.true
+        const { slaveConnectionsMap, slaveServersByMasterMap, serverId } = repTooltip.vm.$props
+        expect(slaveConnectionsMap).to.be.equals(wrapper.vm.slaveConnectionsMap)
+        expect(slaveServersByMasterMap).to.be.equals(wrapper.vm.slaveServersByMasterMap)
+        expect(serverId).to.be.equals(rowId)
+    }
+
+    const cells = ['id', 'serverState']
+    cells.forEach(cell => {
+        describe(`Test ${cell} column - Show replication stats for server monitored
+    by mariadbmon:`, () => {
+            const testCases = ['master', 'slave']
+            testCases.forEach(testCase => {
+                let serverId
+                let des = `${testCase} server: `
+                switch (testCase) {
+                    case 'master':
+                        des = `Rendering rep-tooltip to show slave replication stats`
+                        serverId = expectedTableRows[0].id
+                        break
+                    default:
+                        serverId = expectedTableRows[1].id
+                        des = `Rendering rep-tooltip to show replication stats`
+                }
+                it(des, () => {
+                    const { showRepStats, showSlaveStats } = getRepTooltipCell({
+                        wrapper,
+                        rowId: serverId,
+                        cellId: cell,
+                    }).vm.$props
+                    switch (testCase) {
+                        case 'master':
+                            expect(showRepStats).to.be.deep.equals(false)
+                            expect(showSlaveStats).to.be.equals(true)
+                            break
+                        default:
+                            expect(showRepStats).to.be.deep.equals(true)
+                            expect(showSlaveStats).to.be.equals(false)
+                    }
+                })
+                it(`Assert required tooltip for ${testCase} server`, () => {
+                    assertRepTooltipRequiredProps({ wrapper, rowId: serverId, cellId: cell })
+                })
+                it(`Assert add openDelay at server name cell for ${testCase} server`, () => {
+                    const { openDelay } = getRepTooltipCell({
+                        wrapper,
+                        rowId: serverId,
+                        cellId: cell,
+                    }).vm.$props
+                    if (cell === 'id') expect(openDelay).to.be.equals(400)
+                })
+                it(`Add accurate classes to server cell slot for ${testCase} server`, () => {
+                    const cellComponent = getCell({ wrapper, rowId: serverId, cellId: cell })
+                    expect(cellComponent.find('.override-td--padding').exists()).to.be.true
+                    // only add disable-auto-truncate class for server name cell
+                    expect(cellComponent.find('.disable-auto-truncate').exists()).to.be[
+                        cell === 'id'
+                    ]
+                })
+            })
+        })
+    })
+
+    it('Show not render rep-tooltip for server not monitored by mariadbmon', () => {
+        const serverId = expectedTableRows[2].id
+        const repTooltip = getRepTooltipCell({ wrapper, rowId: serverId, cellId: 'id' })
+        expect(repTooltip.exists()).to.be.false
     })
 })
