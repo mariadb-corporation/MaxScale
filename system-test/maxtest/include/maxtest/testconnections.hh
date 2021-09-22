@@ -399,6 +399,8 @@ private:
     bool m_cleaned_up {false};      /**< Cleanup done? */
     bool m_init_done {false};
 
+    int m_n_time_wait;      /**< Number of local TCP connections in the TIME_WAIT state */
+
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
 
@@ -428,6 +430,11 @@ private:
 
     void init_maxscale(int m = 0);
     void init_maxscales();
+
+    /**
+     * Counts the number of TCP connections in the TIME_WAIT state
+     */
+    int count_tcp_time_wait() const;
 };
 
 /**
