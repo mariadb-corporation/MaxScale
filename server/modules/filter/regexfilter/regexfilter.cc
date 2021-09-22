@@ -170,7 +170,7 @@ bool Config::post_configure()
         return false;
     }
 
-    match.set_options(options);
+    match = mxs::config::RegexValue(match.pattern(), options);
     return true;
 }
 
