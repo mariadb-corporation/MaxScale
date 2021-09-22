@@ -317,19 +317,22 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
 {
     GWBUF* pResponse = nullptr;
 
-    switch (m_response_kind)
+    if (!is_silent())
     {
-    case ResponseKind::REPLY:
-        pResponse = create_reply_response(doc, is_error);
-        break;
+        switch (m_response_kind)
+        {
+        case ResponseKind::REPLY:
+            pResponse = create_reply_response(doc, is_error);
+            break;
 
-    case ResponseKind::MSG:
-    case ResponseKind::MSG_WITH_CHECKSUM:
-        pResponse = create_msg_response(doc);
-        break;
+        case ResponseKind::MSG:
+        case ResponseKind::MSG_WITH_CHECKSUM:
+            pResponse = create_msg_response(doc);
+            break;
 
-    case ResponseKind::NONE:
-        mxb_assert(!true);
+        case ResponseKind::NONE:
+            mxb_assert(!true);
+        }
     }
 
     return pResponse;

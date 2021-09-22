@@ -56,7 +56,7 @@ public:
 
     virtual bool is_admin() const;
 
-    bool is_silent() const
+    virtual bool is_silent() const
     {
         return m_response_kind == ResponseKind::NONE;
     }
@@ -415,9 +415,14 @@ public:
         return m_name;
     }
 
+    bool is_silent() const override
+    {
+        return m_req.more_to_come();
+    }
+
     std::string description() const override
     {
-        return m_req.opcode() == MONGOC_OPCODE_QUERY ? "OP_QUERY" : ("OP_MSG(" + m_name + ")");
+        return "OP_MSG(" + m_name + ")";
     }
 
     virtual void diagnose(DocumentBuilder& doc) = 0;
