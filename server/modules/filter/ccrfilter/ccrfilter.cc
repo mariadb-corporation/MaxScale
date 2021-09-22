@@ -125,6 +125,30 @@ public:
 
     CCRConfig(CCRConfig&& rhs) = default;
 
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override
+    {
+        bool rv = true;
+
+        if (this->global && (this->count != 0))
+        {
+            MXS_ERROR("'count' and 'global' cannot be used at the same time.");
+            rv = false;
+        }
+
+        if (rv)
+        {
+            this->ovector_size = std::max(this->match.ovec_size, this->ignore.ovec_size);
+
+            if (this->options != 0)
+            {
+                this->match = mxs::config::RegexValue(this->match.pattern(), this->options);
+                this->ignore = mxs::config::RegexValue(this->ignore.pattern(), this->options);
+            }
+        }
+
+        return rv;
+    }
+
     mxs::config::RegexValue match;
     mxs::config::RegexValue ignore;
     std::chrono::seconds    time;

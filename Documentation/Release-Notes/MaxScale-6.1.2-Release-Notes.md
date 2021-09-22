@@ -14,13 +14,14 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-3775](https://jira.mariadb.org/browse/MXS-3775) Hang in RoutingWorker::execute_concurrently
 * [MXS-3773](https://jira.mariadb.org/browse/MXS-3773) nosqlprotocol should report 0 as the minimum wire protocol version
+* [MXS-3767](https://jira.mariadb.org/browse/MXS-3767) connector_plugindir does not pick up the default location.
 * [MXS-3766](https://jira.mariadb.org/browse/MXS-3766) Not able to insert data on Masking enabled table 
 * [MXS-3759](https://jira.mariadb.org/browse/MXS-3759) Client hangs forever when server failed or restarted
 * [MXS-3757](https://jira.mariadb.org/browse/MXS-3757) Don't allow any SIMD code run until called
 * [MXS-3704](https://jira.mariadb.org/browse/MXS-3704) MaxScale always advertises the SESSION_TRACK capability even with servers that don't support it (XPand)
 * [MXS-3580](https://jira.mariadb.org/browse/MXS-3580) Avrorouter should store full GTID coordinates
-* [MXS-3514](https://jira.mariadb.org/browse/MXS-3514) Speed up special query parsing (pcre2)
 
 ## Known Issues and Limitations
 
