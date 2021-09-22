@@ -881,6 +881,9 @@ add_test_executable(mxs3623_persistent_change_user.cc mxs3623_persistent_change_
 # MXS-3458: Prepared statements fail if strict_sp_calls is enabled
 add_test_executable(mxs3458_ps_with_strict_sp.cc mxs3458_ps_with_strict_sp mxs3458_ps_with_strict_sp LABELS REPL_BACKEND readwritesplit)
 
+# Qlafilter test
+add_test_executable(test_qlafilter.cc test_qlafilter test_qlafilter LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
