@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <grp.h>
+#include <pwd.h>
 
 #include <maxbase/alloc.h>
 #include <maxsql/mariadb.hh>
@@ -61,8 +62,8 @@ using TrxState = MYSQL_session::TrxState;
 using std::move;
 using std::string;
 
-const char WORD_KILL[] = "KILL";
 const string base_plugin = DEFAULT_MYSQL_AUTH_PLUGIN;
+const mxs::ListenerData::UserCreds default_mapped_creds = {"", base_plugin};
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
@@ -147,6 +148,105 @@ uint32_t parse_packet_length(GWBUF* buffer)
         prot_packet_len = mariadb::get_byte3(header) + MYSQL_HEADER_LEN;
     }
     return prot_packet_len;
+}
+
+bool call_getpwnam_r(const char* user, gid_t& group_id_out)
+{
+    bool rval = false;
+    // getpwnam_r requires a buffer for result data. The size is not known beforehand. Guess the size and
+    // try again with a larger buffer if necessary.
+    int buf_size = 1024;
+    const int buf_size_limit = 1024000;
+    const char err_msg[] = "'getpwnam_r' on '%s' failed. Error %i: %s";
+    string buffer;
+    passwd output {};
+    passwd* output_ptr = nullptr;
+    bool keep_trying = true;
+
+    while (buf_size <= buf_size_limit && keep_trying)
+    {
+        keep_trying = false;
+        buffer.resize(buf_size);
+        int ret = getpwnam_r(user, &output, &buffer[0], buffer.size(), &output_ptr);
+
+        if (output_ptr)
+        {
+            group_id_out = output_ptr->pw_gid;
+            rval = true;
+        }
+        else if (ret == 0)
+        {
+            // No entry found, likely the user is not a Linux user.
+            MXB_INFO("Tried to check groups of user '%s', but it is not a Linux user.", user);
+        }
+        else if (ret == ERANGE)
+        {
+            // Buffer was too small. Try again with a larger one.
+            buf_size *= 10;
+            if (buf_size > buf_size_limit)
+            {
+                MXB_ERROR(err_msg, user, ret, mxb_strerror(ret));
+            }
+            else
+            {
+                keep_trying = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR(err_msg, user, ret, mxb_strerror(ret));
+        }
+    }
+    return rval;
+}
+
+bool call_getgrgid_r(gid_t group_id, string& name_out)
+{
+    bool rval = false;
+    // getgrgid_r requires a buffer for result data. The size is not known beforehand. Guess the size and
+    // try again with a larger buffer if necessary.
+    int buf_size = 1024;
+    const int buf_size_limit = 1024000;
+    const char err_msg[] = "'getgrgid_r' on %ui failed. Error %i: %s";
+    string buffer;
+    group output {};
+    group* output_ptr = nullptr;
+    bool keep_trying = true;
+
+    while (buf_size <= buf_size_limit && keep_trying)
+    {
+        keep_trying = false;
+        buffer.resize(buf_size);
+        int ret = getgrgid_r(group_id, &output, &buffer[0], buffer.size(), &output_ptr);
+
+        if (output_ptr)
+        {
+            name_out = output_ptr->gr_name;
+            rval = true;
+        }
+        else if (ret == 0)
+        {
+            MXB_ERROR("Group id %ui is not a valid Linux group.", group_id);
+        }
+        else if (ret == ERANGE)
+        {
+            // Buffer was too small. Try again with a larger one.
+            buf_size *= 10;
+            if (buf_size > buf_size_limit)
+            {
+                MXB_ERROR(err_msg, group_id, ret, mxb_strerror(ret));
+            }
+            else
+            {
+                keep_trying = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR(err_msg, group_id, ret, mxb_strerror(ret));
+        }
+    }
+    return rval;
 }
 }
 
@@ -2833,45 +2933,73 @@ void MariaDBClientConnection::assign_backend_authenticator()
     {
         // Mapping is enabled for the listener. First, search based on username, then based on Linux user
         // group. Mapping does not depend on incoming user IP (can be added later if there is demand).
-        const mxs::ListenerData::MappingDest* mapped_user_info = nullptr;
+        const string* mapped_user = nullptr;
         const auto& user = ses->user;
-        const auto& user_map = mapping_info->user_mapping;
-        auto it = user_map.find(user);
-        if (it != user_map.end())
+        const auto& user_map = mapping_info->user_map;
+        auto it_u = user_map.find(user);
+        if (it_u != user_map.end())
         {
-            mapped_user_info = &it->second;
+            mapped_user = &it_u->second;
         }
         else
         {
-            // Perhaps the mapping is defined through the user's group. Assume that no user can be part of
-            // more than 100 groups.
-            const auto& group_map = mapping_info->group_mapping;
+            // Perhaps the mapping is defined through the user's Linux group.
+            const auto& group_map = mapping_info->group_map;
             if (!group_map.empty())
             {
-                // TODO: check linux user group membership
+                auto userc = user.c_str();
+
+                // getgrouplist accepts a default group which the user is always a member of. Use user id
+                // from passwd-structure.
+                gid_t user_group = 0;
+                if (call_getpwnam_r(userc, user_group))
+                {
+                    const int N = 100;      // Check at most 100 groups.
+                    gid_t user_gids[N];
+                    int n_groups = N;   // Input-output param
+                    getgrouplist(userc, user_group, user_gids, &n_groups);
+                    int found_groups = std::min(n_groups, N);
+                    for (int i = 0; i < found_groups; i++)
+                    {
+                        // The group id:s of the user's groups are in the array. Go through each, get
+                        // text-form group name and compare to mapping. Use first match.
+                        string group_name;
+                        if (call_getgrgid_r(user_gids[i], group_name))
+                        {
+                            auto it_g = group_map.find(group_name);
+                            if (it_g != group_map.end())
+                            {
+                                mapped_user = &it_g->second;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        if (mapped_user_info)
+        if (mapped_user)
         {
-            // Found a mapped user. Check that the plugin defined for the user is enabled.
-            auto* auth_module = find_auth_module(mapped_user_info->plugin);
+            // Found a mapped user. Search for credentials. If none found, use defaults.
+            const auto& creds = mapping_info->credentials;
+            const mxs::ListenerData::UserCreds* found_creds = &default_mapped_creds;
+            auto it2 = creds.find(*mapped_user);
+            if (it2 != creds.end())
+            {
+                found_creds = &it2->second;
+            }
+
+            // Check that the plugin defined for the user is enabled.
+            auto* auth_module = find_auth_module(found_creds->plugin);
             if (auth_module)
             {
                 // Found authentication module. Apply mapping.
                 ses->m_current_be_auth = auth_module;
-                const auto& mapped_pw = mapped_user_info->password;
-                if (mapped_pw.empty())
-                {
-                    MXB_INFO("Incoming user '%s' mapped to '%s' with no password.",
-                             ses->user.c_str(), mapped_user_info->username.c_str());
-                }
-                else
-                {
-                    MXB_INFO("Incoming user '%s' mapped to '%s' with password.",
-                             ses->user.c_str(), mapped_user_info->username.c_str());
-                }
-                ses->user = mapped_user_info->username;
+                const auto& mapped_pw = found_creds->password;
+                MXB_INFO("Incoming user '%s' mapped to '%s' using '%s' with %s.",
+                         ses->user.c_str(), mapped_user->c_str(), found_creds->plugin.c_str(),
+                         mapped_pw.empty() ? "no password" : "password");
+                ses->user = *mapped_user;   // TODO: save to separate field
                 ses->backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
                 user_is_mapped = true;
             }
@@ -2880,8 +3008,8 @@ void MariaDBClientConnection::assign_backend_authenticator()
                 MXB_ERROR("Client %s manually maps to '%s', who uses authenticator plugin '%s'. "
                           "The plugin is not enabled for listener '%s'. Falling back to normal "
                           "authentication.",
-                          ses->user_and_host().c_str(), mapped_user_info->username.c_str(),
-                          mapped_user_info->plugin.c_str(), listener_data->m_listener_name.c_str());
+                          ses->user_and_host().c_str(), mapped_user->c_str(),
+                          mapped_user->c_str(), listener_data->m_listener_name.c_str());
             }
         }
     }

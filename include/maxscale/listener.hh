@@ -55,22 +55,24 @@ public:
         std::vector<uint8_t>     buffer_contents;
     };
 
-    struct MappingDest
+    struct UserCreds
     {
-        std::string username;
         std::string password;
         std::string plugin;
     };
 
     struct MappingInfo
     {
-        std::unordered_map<std::string, MappingDest> user_mapping;      /**< user -> user */
-        std::unordered_map<std::string, MappingDest> group_mapping;     /**< Linux group -> user */
+        std::unordered_map<std::string, std::string> user_map;      /**< user -> user */
+        std::unordered_map<std::string, std::string> group_map;     /**< Linux group -> user */
+        std::unordered_map<std::string, UserCreds>   credentials;   /**< user -> plugin & pw */
     };
+    using SMappingInfo = std::unique_ptr<const MappingInfo>;
 
     ListenerData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                  SProtocol protocol_module, const std::string& listener_name,
-                 std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
+                 std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql,
+                 SMappingInfo mapping);
 
     ListenerData(const ListenerData&) = delete;
     ListenerData& operator=(const ListenerData&) = delete;

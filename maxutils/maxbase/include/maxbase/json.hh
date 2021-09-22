@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -394,6 +395,25 @@ public:
      */
     bool equal(const Json& other) const;
 
+    using ElemOkHandler = std::function<void (int ind, const char*)>;
+    using ElemFailHandler = std::function<void (int ind, const char*, const char*)>;
+
+    /**
+     * Utility function for parsing an array of objects. The function gets a json-array, then for every
+     * element, calls the Jansson 'unpack'-function with the format string. If unpack succeeds, calls
+     * elem_parsed, otherwise calls elem_failed. The variant arguments define additional arguments for
+     * the unpack-function.
+     *
+     * @param arr_name Array object key
+     * @param elem_ok Called when an array element was parsed. Arguments: array index, array name
+     * @param elem_fail Called when an array element parse failed. Arguments: array index, array name, error
+     * message
+     * @param fmt Unpacking format string. Given to 'unpack'.
+     * @param ... Additional arguments given to 'unpack'.
+     * @return True if arr_name exists and is an array
+     */
+    bool unpack_arr(const char* arr_name, const ElemOkHandler& elem_ok, const ElemFailHandler& elem_fail,
+                    const char* fmt, ...);
 private:
     json_t*             m_obj {nullptr};/**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */

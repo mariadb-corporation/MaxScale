@@ -2215,6 +2215,94 @@ set @myvar = 'mytext';
 set @myvar2 = 4;
 ```
 
+### `user_mapping_file`
+
+Path to a json-text file with user and group mapping, as well as server
+credentials. Only affects MariaDB-protocol based listeners. Default value is
+empty, which disables the feature.
+```
+user_mapping_file=/home/root/mapping.json
+```
+Should not be used together with `pam_backend_mapping` or `pam_mapped_pw_file`,
+as these may overwrite the mapped credentials. Is most powerful when combined
+with service setting `user_accounts_file`, as then MaxScale can accept users
+that do not exist on backends and map them to backend users.
+
+This file functions very similar to
+[PAM-based mapping](https://mariadb.com/kb/en/user-and-group-mapping-with-pam/).
+Both user-to-user and group-to-user mappings can be defined. Also, the password
+and authentication plugin for the mapped users can be added. The file is only
+read during listener creation (typically MaxScale start) or when a listener is
+modified during runtime. When a client logs into MaxScale, their username is
+searched from the mapping data. If the name matches either a name mapping or a
+Linux group mapping, the username is replaced by the mapped name. The mapped
+name is then used when logging into backends. If the file also contains
+credentials for the mapped user, then those are used. Otherwise, MaxScale tries
+to log in with an empty password and default MariaDB authentication.
+
+Three arrays are read from the file: "user_map", "group_map" and
+"server_credentials", none of which are mandatory.
+
+Each array element in the "user_map"-array must define the following fields:
+- "original_user": String. Incoming client username.
+- "mapped_user": String. Username the client is mapped to.
+
+Each array element in the "group_map"-array must define the following fields:
+- "original_group": String. Incoming client Linux group.
+- "mapped_user": String. Username the client is mapped to.
+
+Each array element in the "server_credentials"-array can define the following
+fields:
+- "mapped_user": String. The mapped username this password is for.
+- "password": String. Backend server password. Can be encrypted with *maxpasswd*.
+- "plugin": String, optional. Authentication plugin to use. Must be enabled on
+the listener. Defaults to empty, which results in standard MariaDB authentication.
+
+When a client successfully logs into MaxScale, MaxScale first searches for
+name-based mapping. The incoming client does not need to be a Linux user for
+name-based mapping to take place. If the name is not found, MaxScale checks if
+the client is a Linux user with a group membership matching an element in the
+group mapping array. If the client is a member of more than 100 groups, this
+check may fail.
+
+If a mapping is found, MaxScale searches the credentials array for a matching
+username, and uses the password and plugin listed. The plugin need not be the
+same as the one the original user used. Currently, "mysql_native_password" and
+"pam" are supported as mapped plugins.
+
+An example mapping file is below.
+```
+{
+    "user_map": [
+        {
+            "original_user": "bob",
+            "mapped_user": "janet"
+        },
+        {
+          "original_user": "karen",
+          "mapped_user": "janet"
+        }
+    ],
+    "group_map": [
+        {
+            "original_group": "visitors",
+            "mapped_user": "db_user"
+        }
+    ],
+    "server_credentials": [
+        {
+            "mapped_user": "janet",
+            "password": "secret_pw",
+            "plugin": "mysql_native_password"
+        },
+        {
+            "mapped_user": "db_user",
+            "password": "secret_pw2",
+            "plugin": "pam"
+        }
+    ]
+}
+```
 
 # Available Protocols
 

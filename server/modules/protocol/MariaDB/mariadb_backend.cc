@@ -484,6 +484,10 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                 // No more replies expected, generate and send the COM_CHANGE_USER.
                 send_change_user_to_backend();
             }
+            else
+            {
+                state_machine_continue = false;
+            }
             break;
 
         case State::PINGING:
