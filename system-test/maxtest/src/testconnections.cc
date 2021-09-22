@@ -108,6 +108,7 @@ void TestConnections::restart_galera(bool value)
 
 TestConnections::TestConnections()
     : global_result(m_shared.log.m_n_fails)
+    , m_n_time_wait(count_tcp_time_wait())
 {
 }
 
@@ -268,6 +269,28 @@ TestConnections::~TestConnections()
     delete xpand;
     delete maxscale;
     delete maxscale2;
+
+    // Wait for TCP sockets in the TIME_WAIT state to die. This can happen if the test repeatedly creates
+    // connections and then closes them. Checking that we're ending the test with roughly as many connections
+    // as we start with should help stabilize tests that follow a heavier tests.
+    //
+    // Anything below 1000 TCP connections is acceptable but if we start with a higher value, wait for at
+    // least that value plus some extra to be reached. This should make sure that large spikes of TCP
+    // connections in TIME_WAIT get smoothed out but a slow constant growth of them doesn't stop the test.
+    int limit = std::max(m_n_time_wait + 100, 1000);
+    int num = count_tcp_time_wait();
+
+    if (num > limit)
+    {
+        tprintf("Found %d TCP connections in TIME_WAIT state, waiting for it to drop below %d", num, limit);
+    }
+
+    // Don't wait forever in case it's something else that's creating the connections.
+    for (int i = 0; i < 120 && num > limit; i++)
+    {
+        sleep(1);
+        num = count_tcp_time_wait();
+    }
 }
 
 int TestConnections::cleanup()
@@ -1952,6 +1975,17 @@ int TestConnections::n_maxscales() const
         rval = maxscale2 ? 2 : 1;
     }
     return rval;
+}
+
+int TestConnections::count_tcp_time_wait() const
+{
+    FILE* f = popen("netstat -an -A inet|grep -c TIME_WAIT", "r");
+    char buf[256] = "";
+    fgets(buf, sizeof(buf), f);
+    pclose(f);
+
+    // If netstat wasn't installed or failed for some reason, this returns 0.
+    return strtol(buf, nullptr, 10);
 }
 
 int TestConnections::run_test(int argc, char* argv[], const std::function<void(TestConnections&)>& testfunc)
