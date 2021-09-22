@@ -8,7 +8,8 @@
                     <details-parameters-table
                         :resourceId="current_filter.id"
                         :parameters="current_filter.attributes.parameters"
-                        :editable="false"
+                        :updateResourceParameters="updateFilterParameters"
+                        :onEditSucceeded="dispatchFetchFilter"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -69,10 +70,13 @@ export default {
             fetchModuleParameters: 'fetchModuleParameters',
             getResourceState: 'getResourceState',
             fetchFilterById: 'filter/fetchFilterById',
+            updateFilterParameters: 'filter/updateFilterParameters',
         }),
-
-        async initialFetch() {
+        async dispatchFetchFilter() {
             await this.fetchFilterById(this.$route.params.id)
+        },
+        async initialFetch() {
+            await this.dispatchFetchFilter()
             // wait until get current_filter to fetch service state  and module parameters
             const {
                 attributes: { module: filterModule = null } = {},

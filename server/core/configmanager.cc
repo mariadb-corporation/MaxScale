@@ -339,7 +339,7 @@ bool ConfigManager::load_cached_config()
     // Check only if the file exists. If it does, try to load it.
     if (!m_cluster.empty() && access(filename.c_str(), F_OK) == 0)
     {
-        mxb::Json new_json(mxb::Json::Type::NONE);
+        mxb::Json new_json(mxb::Json::Type::UNDEFINED);
 
         if (new_json.load(filename))
         {
@@ -518,7 +518,7 @@ mxb::Json ConfigManager::to_json() const
     }
     else
     {
-        obj = mxb::Json(mxb::Json::Type::JS_NULL);
+        obj = mxb::Json(mxb::Json::Type::JSON_NULL);
     }
 
     return obj;
@@ -1309,7 +1309,7 @@ mxb::Json ConfigManager::fetch_config()
 {
     connect();
 
-    mxb::Json config(mxb::Json::Type::NONE);
+    mxb::Json config(mxb::Json::Type::UNDEFINED);
     auto res = m_conn.query(sql_select_version(m_cluster));
 
     if (!res)

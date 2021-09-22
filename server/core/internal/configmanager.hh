@@ -206,7 +206,7 @@ private:
     mxb::Json m_tmp {mxb::Json::Type::OBJECT};
 
     // The latest configuration that was either created or loaded
-    mxb::Json m_current_config {mxb::Json::Type::NONE};
+    mxb::Json m_current_config {mxb::Json::Type::UNDEFINED};
 
     // Contains the status information of all nodes in the cluster
     mxb::Json m_nodes;

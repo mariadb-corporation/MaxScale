@@ -4,7 +4,7 @@
 #include "config_sync_common.hh"
 
 using namespace std::chrono;
-using JsonType = mxb::Json::JsonType;
+using JsonType = mxb::Json::Type;
 using mxt::MaxScale;
 
 const auto NORMAL = mxb::Json::Format::NORMAL;

@@ -3,7 +3,7 @@
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
         :title="`${$tc('parameters', 2)}`"
-        :editable="editable"
+        :editable="isTableEditable"
         :isEditing="editableCell"
         :onEdit="() => (editableCell = true)"
         :doneEditingCb="() => (showConfirmDialog = true)"
@@ -208,6 +208,10 @@ export default {
             return this.overridingModuleParams
                 ? this.overridingModuleParams
                 : this.module_parameters
+        },
+        isTableEditable() {
+            // only enable editable feature when at least a module param is modifiable
+            return this.editable && this.moduleParams.some(param => param.modifiable)
         },
     },
     watch: {

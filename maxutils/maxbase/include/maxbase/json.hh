@@ -60,14 +60,6 @@ class Json
 {
 public:
 
-    enum class Type
-    {
-        OBJECT,     /**< Json object */
-        ARRAY,      /**< Json array */
-        JS_NULL,    /**< Json null */
-        NONE        /**< No object */
-    };
-
     enum class Format
     {
         NORMAL  = 0,                // JSON on one line
@@ -75,7 +67,7 @@ public:
         PRETTY  = JSON_INDENT(4),   // Pretty-printed
     };
 
-    enum class JsonType
+    enum class Type
     {
         OBJECT,
         ARRAY,
@@ -88,7 +80,7 @@ public:
     };
 
     /**
-     * Construct a new Json wrapper object.
+     * Construct a new Json wrapper object. The contained object is initialized with the given type.
      *
      * @param obj The type of the object to create
      */
@@ -152,7 +144,7 @@ public:
      *
      * @return the JsonType value or JsonType::UNDEFINED if the current object is not valid
      */
-    JsonType type() const;
+    Type type() const;
 
     /**
      * Get JSON object from a field
@@ -403,7 +395,7 @@ public:
     bool equal(const Json& other) const;
 
 private:
-    json_t*             m_obj{nullptr}; /**< Managed json-object */
+    json_t*             m_obj {nullptr};/**< Managed json-object */
     mutable std::string m_errormsg;     /**< Error message container */
 
     void swap(Json& rhs) noexcept;

@@ -10,77 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/* eslint-disable no-unused-vars */
-import chai, { expect } from 'chai'
+import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Servers from '@/pages/Dashboard/Servers'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-import {
-    getAllMonitorsMapStub,
-    findAnchorLinkInTable,
-    getUniqueResourceNamesStub,
-} from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
-
-const all_servers_mockup = [
-    {
-        id: 'row_server_0',
-        attributes: {
-            state: 'Master, Running',
-            statistics: { connections: 100 },
-            parameters: {
-                address: '127.0.0.1',
-                port: 4000,
-            },
-            gtid_current_pos: '0-1000-9',
-        },
-        relationships: {
-            monitors: {
-                data: [
-                    {
-                        id: 'monitor_0',
-                        type: 'monitors',
-                    },
-                ],
-            },
-            services: {
-                data: [
-                    {
-                        id: 'service_0',
-                        type: 'services',
-                    },
-                ],
-            },
-        },
-        type: 'servers',
-    },
-    {
-        id: 'row_server_1',
-        attributes: {
-            state: 'Slave, Running',
-            statistics: { connections: 1000 },
-            parameters: {
-                address: '127.0.0.1',
-                port: 4001,
-            },
-            gtid_current_pos: '0-1000-9',
-        },
-        relationships: {
-            monitors: {
-                data: [
-                    {
-                        id: 'monitor_0',
-                        type: 'monitors',
-                    },
-                ],
-            },
-        },
-        type: 'servers',
-    },
-]
+import { findAnchorLinkInTable, getUniqueResourceNamesStub } from '@tests/unit/utils'
+import { makeServer } from '@tests/unit/mirage/api'
+import { initAllServers } from '@tests/unit/mirage/servers'
+import { initAllMonitors } from '@tests/unit/mirage/monitors'
 const expectedTableHeaders = [
     { text: `Monitor`, value: 'groupId', autoTruncate: true },
     { text: 'State', value: 'monitorState' },
@@ -92,68 +28,74 @@ const expectedTableHeaders = [
     { text: 'GTID', value: 'gtid' },
     { text: 'Services', value: 'serviceIds', autoTruncate: true },
 ]
-
 const expectedTableRows = [
     {
-        id: 'row_server_0',
+        id: 'server_0',
         serverAddress: '127.0.0.1',
         serverPort: 4000,
-        serverConnections: 100,
+        serverConnections: 0,
         serverState: 'Master, Running',
-        serviceIds: ['service_0'],
+        serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
         gtid: '0-1000-9',
-        groupId: 'monitor_0',
+        groupId: 'Monitor',
         monitorState: 'Running',
+        showSlaveStats: true,
+        showRepStats: false,
     },
     {
-        id: 'row_server_1',
+        id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
         serverAddress: '127.0.0.1',
         serverPort: 4001,
-        serverConnections: 1000,
+        serverConnections: 0,
         serverState: 'Slave, Running',
-        serviceIds: 'No services',
+        serviceIds: ['Read-Only-Service'],
         gtid: '0-1000-9',
-        groupId: 'monitor_0',
+        groupId: 'Monitor',
         monitorState: 'Running',
+        showSlaveStats: false,
+        showRepStats: true,
     },
     {
-        groupId: 'monitor_1',
-        gtid: '',
-        id: '',
-        monitorState: 'Stopped',
-        serverAddress: '',
-        serverPort: '',
-        serverConnections: '',
-        serverState: '',
-        serviceIds: '',
+        id: 'server_2',
+        serverAddress: '127.0.0.1',
+        serverPort: 4002,
+        serverConnections: 0,
+        serverState: 'Down',
+        serviceIds: 'No services',
+        gtid: undefined,
+        groupId: 'Not monitored',
+        monitorState: '',
     },
 ]
 
+let api
+let originalXMLHttpRequest = XMLHttpRequest
+
 describe('Dashboard Servers tab', () => {
-    let wrapper, axiosStub
-
-    after(async () => {
-        await axiosStub.reset()
+    let wrapper
+    before(() => {
+        api = makeServer({ environment: 'test' })
+        initAllServers(api)
+        initAllMonitors(api)
+        // Force node to use the monkey patched window.XMLHttpRequest
+        // This needs to come after `makeServer()` is called.
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = window.XMLHttpRequest
     })
-
     beforeEach(async () => {
         wrapper = mount({
             shallow: false,
             component: Servers,
-            computed: {
-                all_servers: () => all_servers_mockup,
-                getAllMonitorsMap: () => getAllMonitorsMapStub,
-            },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        await wrapper.vm.$store.dispatch('server/fetchAllServers')
+        await wrapper.vm.$store.dispatch('monitor/fetchAllMonitors')
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
+    after(() => {
+        api.shutdown()
+        // Restore node's original window.XMLHttpRequest.
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = originalXMLHttpRequest
     })
 
     it(`Should process table rows accurately`, async () => {
@@ -167,7 +109,7 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to server detail page when a server is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
+        const serverId = wrapper.vm.all_servers[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -178,8 +120,8 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
-        const serviceId = all_servers_mockup[0].relationships.services.data[0].id
+        const serverId = wrapper.vm.all_servers[1].id
+        const serviceId = wrapper.vm.all_servers[1].relationships.services.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -190,8 +132,8 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should navigate to monitor detail page when a monitor is clicked`, async () => {
-        const serverId = all_servers_mockup[0].id
-        const monitorId = all_servers_mockup[0].relationships.monitors.data[0].id
+        const serverId = wrapper.vm.all_servers[0].id
+        const monitorId = wrapper.vm.all_servers[0].relationships.monitors.data[0].id
         const aTag = findAnchorLinkInTable({
             wrapper: wrapper,
             rowId: serverId,
@@ -204,5 +146,87 @@ describe('Dashboard Servers tab', () => {
     it(`Should get total number of unique service names accurately`, async () => {
         const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
+    })
+
+    function getCell({ wrapper, rowId, cellId }) {
+        const cellIndex = expectedTableHeaders.findIndex(item => item.value === cellId)
+        const dataTable = wrapper.findComponent({ name: 'data-table' })
+        const tableCell = dataTable.find(`.cell-${cellIndex}-${rowId}`)
+        return tableCell
+    }
+    function getRepTooltipCell({ wrapper, rowId, cellId }) {
+        const tableCell = getCell({ wrapper, rowId, cellId })
+        const repTooltip = tableCell.findComponent({ name: 'rep-tooltip' })
+        return repTooltip
+    }
+    function assertRepTooltipRequiredProps({ wrapper, rowId, cellId }) {
+        const repTooltip = getRepTooltipCell({ wrapper, rowId, cellId })
+        expect(repTooltip.exists()).to.be.true
+        const { slaveConnectionsMap, slaveServersByMasterMap, serverId } = repTooltip.vm.$props
+        expect(slaveConnectionsMap).to.be.equals(wrapper.vm.slaveConnectionsMap)
+        expect(slaveServersByMasterMap).to.be.equals(wrapper.vm.slaveServersByMasterMap)
+        expect(serverId).to.be.equals(rowId)
+    }
+
+    const cells = ['id', 'serverState']
+    cells.forEach(cell => {
+        describe(`Test ${cell} column - Show replication stats for server monitored
+    by mariadbmon:`, () => {
+            const testCases = ['master', 'slave']
+            testCases.forEach(testCase => {
+                let serverId
+                let des = `${testCase} server: `
+                switch (testCase) {
+                    case 'master':
+                        des = `Rendering rep-tooltip to show slave replication stats`
+                        serverId = expectedTableRows[0].id
+                        break
+                    default:
+                        serverId = expectedTableRows[1].id
+                        des = `Rendering rep-tooltip to show replication stats`
+                }
+                it(des, () => {
+                    const { showRepStats, showSlaveStats } = getRepTooltipCell({
+                        wrapper,
+                        rowId: serverId,
+                        cellId: cell,
+                    }).vm.$props
+                    switch (testCase) {
+                        case 'master':
+                            expect(showRepStats).to.be.deep.equals(false)
+                            expect(showSlaveStats).to.be.equals(true)
+                            break
+                        default:
+                            expect(showRepStats).to.be.deep.equals(true)
+                            expect(showSlaveStats).to.be.equals(false)
+                    }
+                })
+                it(`Assert required tooltip for ${testCase} server`, () => {
+                    assertRepTooltipRequiredProps({ wrapper, rowId: serverId, cellId: cell })
+                })
+                it(`Assert add openDelay at server name cell for ${testCase} server`, () => {
+                    const { openDelay } = getRepTooltipCell({
+                        wrapper,
+                        rowId: serverId,
+                        cellId: cell,
+                    }).vm.$props
+                    if (cell === 'id') expect(openDelay).to.be.equals(400)
+                })
+                it(`Add accurate classes to server cell slot for ${testCase} server`, () => {
+                    const cellComponent = getCell({ wrapper, rowId: serverId, cellId: cell })
+                    expect(cellComponent.find('.override-td--padding').exists()).to.be.true
+                    // only add disable-auto-truncate class for server name cell
+                    expect(cellComponent.find('.disable-auto-truncate').exists()).to.be[
+                        cell === 'id'
+                    ]
+                })
+            })
+        })
+    })
+
+    it('Show not render rep-tooltip for server not monitored by mariadbmon', () => {
+        const serverId = expectedTableRows[2].id
+        const repTooltip = getRepTooltipCell({ wrapper, rowId: serverId, cellId: 'id' })
+        expect(repTooltip.exists()).to.be.false
     })
 })

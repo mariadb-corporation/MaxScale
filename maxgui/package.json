@@ -69,6 +69,7 @@
         "@vue/test-utils": "^1.0.3",
         "canvas": "^2.6.1",
         "chai": "^4.3.4",
+        "miragejs": "^0.1.41",
         "prettier": "^1.19.1",
         "sinon": "9.0.2",
         "sinon-chai": "3.5.0"
