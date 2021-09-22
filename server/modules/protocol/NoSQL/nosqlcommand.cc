@@ -1518,6 +1518,12 @@ string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
             ss << nSkip << ", ";
         }
 
+        if (nLimit == 0)
+        {
+            // A limit of 0 should have no effect.
+            nLimit = std::numeric_limits<int64_t>::max();
+        }
+
         ss << nLimit;
 
         rv = ss.str();
