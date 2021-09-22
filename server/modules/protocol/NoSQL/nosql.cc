@@ -1545,6 +1545,30 @@ string exists_to_condition(const string& field, const bsoncxx::document::element
     return rv;
 }
 
+namespace
+{
+
+bool is_scalar_value(const bsoncxx::document::element& element)
+{
+    bool rv;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_array:
+    case bsoncxx::type::k_document:
+        rv = false;
+        break;
+
+    default:
+        rv = true;
+        break;
+    }
+
+    return rv;
+}
+
+}
+
 string default_field_and_value_to_comparison(const std::string& field,
                                              const bsoncxx::document::element& element,
                                              const string& mariadb_op,
@@ -1555,25 +1579,29 @@ string default_field_and_value_to_comparison(const std::string& field,
     // TODO: something, or for something in an array.
     auto expects_array = field.find("[*]") != string::npos;
 
-    string rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
-        + "AND (JSON_EXTRACT(doc, '$." + field + "') "
-        + mariadb_op + " ";
+    const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
-    if (expects_array)
+    ostringstream ss;
+
+    ss << "(" << zGet << "(doc, '$." << field << "') IS NOT NULL "
+       << "AND (" << zGet << "(doc, '$." + field + "') " << mariadb_op << " ";
+
+    bool is_array = element.type() == bsoncxx::type::k_array;
+
+    if (expects_array && !is_array)
     {
-        rv += "JSON_ARRAY(";
+        ss << "JSON_ARRAY("
+           << value_to_string(element, ValueFor::JSON_NESTED, nosql_op)
+           << ")";
+    }
+    else
+    {
+        ss << value_to_string(element, ValueFor::JSON, nosql_op);
     }
 
-    rv += value_to_string(element, expects_array ? ValueFor::JSON_NESTED : ValueFor::JSON, nosql_op);
+    ss << "))";
 
-    if (expects_array)
-    {
-        rv += ")";
-    }
-
-    rv += "))";
-
-    return rv;
+    return ss.str();
 }
 
 string field_and_value_to_nin_comparison(const std::string& field,
