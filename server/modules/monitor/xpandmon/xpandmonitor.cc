@@ -675,38 +675,27 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             // New node.
                             mxb_assert(!SERVER::find_by_unique_name(server_name));
 
-                            if (runtime_create_volatile_server(server_name, ip, mysql_port))
+                            SERVER* pServer = create_volatile_server(server_name, ip, mysql_port);
+                            if (pServer)
                             {
-                                SERVER* pServer = SERVER::find_by_unique_name(server_name);
-                                mxb_assert(pServer);
-
-                                if (pServer)
+                                if (softfailed)
                                 {
-                                    if (softfailed)
-                                    {
-                                        pServer->set_status(SERVER_DRAINING);
-                                    }
-
-                                    const XpandMembership& membership = mit->second;
-                                    int health_check_threshold = m_config.health_check_threshold();
-
-                                    XpandNode node(this, membership, ip, mysql_port, health_port,
-                                                   health_check_threshold, pServer);
-
-                                    m_nodes_by_id.insert(make_pair(id, node));
-
-                                    // New server, so it needs to be added to all services that
-                                    // use this monitor for defining its cluster of servers.
-                                    run_in_mainworker([this, pServer]() {
-                                                          service_add_server(this, pServer);
-                                                      });
+                                    pServer->set_status(SERVER_DRAINING);
                                 }
-                                else
-                                {
-                                    MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
-                                              "looked up using its name.",
-                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
-                                }
+
+                                const XpandMembership& membership = mit->second;
+                                int health_check_threshold = m_config.health_check_threshold();
+
+                                XpandNode node(this, membership, ip, mysql_port, health_port,
+                                               health_check_threshold, pServer);
+
+                                m_nodes_by_id.insert(make_pair(id, node));
+
+                                // New server, so it needs to be added to all services that
+                                // use this monitor for defining its cluster of servers.
+                                run_in_mainworker([this, pServer]() {
+                                        service_add_server(this, pServer);
+                                    });
                             }
                             else
                             {
@@ -1062,6 +1051,102 @@ void XpandMonitor::update_server_statuses()
             pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
         }
     }
+}
+
+SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
+                                          const std::string& ip,
+                                          int port)
+{
+    SERVER* pServer = nullptr;
+
+    auto pMain = mxs::MainWorker::get();
+
+    string who = name();
+
+    if (Worker::get_current() == pMain)
+    {
+        // Running in the main worker, we can call directly.
+        if (runtime_create_volatile_server(server_name, ip, port))
+        {
+            pServer = SERVER::find_by_unique_name(server_name);
+
+            if (!pServer)
+            {
+                MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
+                          "looked up using its name.",
+                          name(), server_name.c_str(), ip.c_str(), mysql_port);
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                      who.c_str(), server_name.c_str(), ip.c_str(), port);
+        }
+    }
+    else
+    {
+        // Not running in the main worker, we need to send the execution there.
+        auto f = [who, server_name, ip, port](){
+            if (!runtime_create_volatile_server(server_name, ip, port))
+            {
+                MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                          who.c_str(), server_name.c_str(), ip.c_str(), port);
+            }
+        };
+
+        // We don't call, as that could lead to a deadlock if someone precisely at
+        // the wrong moment mxsctrls the monitor.
+        if (pMain->execute(f, Worker::EXECUTE_QUEUED))
+        {
+            int attempts = 0;
+
+            using std::chrono::milliseconds;
+
+            milliseconds sleep(1); // Yielding is not sufficient, but 1ms seems to be most of the time.
+            milliseconds total_slept(0);
+            milliseconds max_sleep(5000);
+
+            while (true)
+            {
+                ++attempts;
+                pServer = SERVER::find_by_unique_name(server_name);
+
+                if (pServer || (total_slept >= max_sleep))
+                {
+                    break;
+                }
+
+                if (sleep < milliseconds(1000)) // Max will be 1024ms.
+                {
+                    sleep *= 2;
+                }
+
+                std::this_thread::sleep_for(sleep);
+                total_slept += sleep;
+            }
+
+            if (pServer)
+            {
+                MXS_INFO("Created volatile server found after %d lookup attempts and "
+                         "a total sleep time of %d milliseconds.",
+                         attempts, (int)total_slept.count());
+            }
+            else
+            {
+                MXS_ERROR("%s: After %d lookup attempts and a total sleep time of %d milliseconds, "
+                          "the volatile server %s was not found. The creation of the server may "
+                          "have failed. ",
+                          name(), attempts, (int)total_slept.count(), server_name.c_str());
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s: Could not send request to create server %s at %s:%d to main worker.",
+                      name(), server_name.c_str(), ip.c_str(), port);
+        }
+    }
+
+    return pServer;
 }
 
 void XpandMonitor::make_health_check()

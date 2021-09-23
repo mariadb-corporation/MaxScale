@@ -112,6 +112,8 @@ private:
 
     void update_server_statuses();
 
+    SERVER* create_volatile_server(const std::string& name, const std::string& ip, int port);
+
     void make_health_check();
     void initiate_delayed_http_check();
     bool check_http(Call::action_t action);
