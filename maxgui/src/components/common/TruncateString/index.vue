@@ -7,7 +7,6 @@
         :close-on-content-click="false"
         content-class="shadow-drop"
         open-on-hover
-        allow-overflow
         :nudge-left="nudgeLeft"
         :nudgeTop="nudgeTop"
         :max-width="menuMaxWidth"
@@ -26,7 +25,7 @@
                 <slot> {{ text }} </slot>
             </div>
         </template>
-        <v-sheet :class="contentClass">
+        <v-sheet :class="['truncate-string-menu-content', contentClass]">
             <pre v-if="!wrap" class="truncated-text-pre color text-navigation">{{ text }}</pre>
             <div v-else class="text-body-2 color text-navigation">{{ text }}</div>
         </v-sheet>
@@ -107,6 +106,9 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
+.truncate-string-menu-content {
+    overflow: auto;
+}
 .truncated-text-pre {
     font-size: 14px;
 }

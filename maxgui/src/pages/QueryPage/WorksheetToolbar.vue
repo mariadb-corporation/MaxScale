@@ -31,7 +31,6 @@
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
             activator="#active-db"
             :max-width="200"
-            :menuMaxWidth="400"
         >
             <v-list>
                 <v-list-item
