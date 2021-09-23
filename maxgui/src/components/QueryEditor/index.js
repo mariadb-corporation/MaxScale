@@ -238,7 +238,7 @@ export default {
                 )
             })
 
-            if (!this.isKeptAlive) this.registerCompleters()
+            if (!this.isKeptAlive && !this.readOnly) this.registerCompleters()
             const scope = this
             monaco.languages.registerDocumentFormattingEditProvider(this.language, {
                 provideDocumentFormattingEdits: model => [
