@@ -25,16 +25,22 @@ export default {
     },
     watch: {
         isDragging(v) {
-            if (v) {
-                document.addEventListener('mousemove', e => this.onDragging(e))
-                document.addEventListener('mouseup', e => this.onDragEnd(e))
-            } else {
-                document.removeEventListener('mousemove', e => this.onDragging(e))
-                document.removeEventListener('mouseup', e => this.onDragEnd(e))
-            }
+            if (v) this.addDragEvts()
+            else this.removeDragEvts()
         },
     },
+    beforeDestroy() {
+        this.removeDragEvts()
+    },
     methods: {
+        addDragEvts() {
+            document.addEventListener('mousemove', this.onDragging)
+            document.addEventListener('mouseup', this.onDragEnd)
+        },
+        removeDragEvts() {
+            document.removeEventListener('mousemove', this.onDragging)
+            document.removeEventListener('mouseup', this.onDragEnd)
+        },
         onDragging(e) {
             e.preventDefault()
             if (this.isDragging) {
