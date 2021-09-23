@@ -466,8 +466,6 @@ private:
 
     void check_drop_tmp_table(GWBUF* querybuf);
 
-    bool check_for_multi_stmt(GWBUF* buf, uint8_t packet_type);
-
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
                                                 GWBUF* querybuf,
                                                 uint8_t packet_type,
@@ -494,6 +492,8 @@ private:
     RouteInfo    m_route_info;
     RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
 
+    std::vector<const char*> m_markers; // for simd
+    std::string              m_sql;     // keep it around for performance
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/

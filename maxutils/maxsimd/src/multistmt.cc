@@ -34,7 +34,7 @@ bool is_multi_stmt(const std::string& sql, Markers* pMarkers)
 //    }
 //    else
     {
-        return generic::is_multi_stmt_impl(sql, pMarkers);
+        return generic::is_multi_stmt_impl(sql);
     }
 }
 #else

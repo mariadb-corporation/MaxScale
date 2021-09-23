@@ -216,10 +216,6 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
  */
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len);
 
-/** Character and token searching functions */
-bool is_mysql_statement_end(const char* start, int len);
-bool is_mysql_sp_end(const char* start, int len);
-
 // TODO: Move modutil out of the core
 const char* STRPACKETTYPE(int p);
 

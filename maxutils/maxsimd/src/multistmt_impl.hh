@@ -21,7 +21,7 @@ namespace maxsimd
 {
 namespace generic
 {
-bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarkers);
+bool is_multi_stmt_impl(const std::string& sql);
 }
 }
 
