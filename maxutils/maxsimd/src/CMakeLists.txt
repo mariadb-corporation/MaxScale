@@ -1,6 +1,8 @@
 add_library(maxsimd STATIC
   generic_canonical.cc
   canonical.cc
+  generic_multistmt.cc
+  multistmt.cc
   )
 
 target_link_libraries(maxsimd maxbase simdimpl)
