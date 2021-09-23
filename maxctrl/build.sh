@@ -35,5 +35,5 @@ then
 fi
 
 npm install --production
-npm install --production pkg@5.2.1
+npm install --production pkg@5
 npx pkg $opts -t node14-linux .
