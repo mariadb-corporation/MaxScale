@@ -808,12 +808,12 @@ bool QueryClassifier::check_for_multi_stmt(GWBUF* buf, uint8_t packet_type)
         /** Payload size without command byte */
         int buflen = gw_mysql_get_byte3((uint8_t*)GWBUF_DATA(buf)) - 1;
 
-        if (have_semicolon(data, buflen) && (ptr = strnchr_esc_mysql(data, ';', buflen)))
+        if (have_semicolon(data, buflen) && (ptr = mxb::strnchr_esc_mariadb(data, ';', buflen)))
         {
             /** Skip stored procedures etc. */
             while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
             {
-                ptr = strnchr_esc_mysql(ptr + 1, ';', buflen - (ptr - data) - 1);
+                ptr = mxb::strnchr_esc_mariadb(ptr + 1, ';', buflen - (ptr - data) - 1);
             }
 
             if (ptr)

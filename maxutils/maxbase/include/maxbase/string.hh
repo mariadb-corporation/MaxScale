@@ -413,4 +413,27 @@ struct StringToTHelper<char>
  * @param str String to process
  */
 void strip_escape_chars(std::string& str);
+
+/**
+ * Find the first occurrence of a character in a string. This function ignores
+ * escaped characters and all characters that are enclosed in single or double quotes.
+ * @param ptr Pointer to area of memory to inspect
+ * @param c Character to search for
+ * @param len Size of the memory area
+ * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
+ * If the character is not found, NULL is returned.
+ */
+char* strnchr_esc(char* ptr, char c, int len);
+
+/**
+ * Find the first occurrence of a character in a string. This function ignores
+ * escaped characters and all characters that are enclosed in single or double quotes.
+ * MariaDB style comment blocks and identifiers in backticks are also ignored.
+ * @param ptr Pointer to area of memory to inspect
+ * @param c Character to search for
+ * @param len Size of the memory area
+ * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
+ * If the character is not found, NULL is returned.
+ */
+char* strnchr_esc_mariadb(char* ptr, char c, int len);
 }

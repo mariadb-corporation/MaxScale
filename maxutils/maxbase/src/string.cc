@@ -202,4 +202,120 @@ void strip_escape_chars(string& val)
         }
     }
 }
+
+char* strnchr_esc(char* ptr, char c, int len)
+{
+    char* p = (char*)ptr;
+    char* start = p;
+    bool quoted = false, escaped = false;
+    char qc = 0;
+
+    while (p < start + len)
+    {
+        if (escaped)
+        {
+            escaped = false;
+        }
+        else if (*p == '\\')
+        {
+            escaped = true;
+        }
+        else if ((*p == '\'' || *p == '"') && !quoted)
+        {
+            quoted = true;
+            qc = *p;
+        }
+        else if (quoted && *p == qc)
+        {
+            quoted = false;
+        }
+        else if (*p == c && !escaped && !quoted)
+        {
+            return p;
+        }
+        p++;
+    }
+
+    return NULL;
+}
+
+char* strnchr_esc_mariadb(char* ptr, char c, int len)
+{
+    char* p = (char*) ptr;
+    char* start = p, * end = start + len;
+    bool quoted = false, escaped = false, backtick = false, comment = false;
+    char qc = 0;
+
+    while (p < end)
+    {
+        if (escaped)
+        {
+            escaped = false;
+        }
+        else if ((!comment && !quoted && !backtick) || (comment && *p == '*')
+                 || (!comment && quoted && *p == qc) || (!comment && backtick && *p == '`'))
+        {
+            switch (*p)
+            {
+            case '\\':
+                escaped = true;
+                break;
+
+            case '\'':
+            case '"':
+                if (!quoted)
+                {
+                    quoted = true;
+                    qc = *p;
+                }
+                else if (*p == qc)
+                {
+                    quoted = false;
+                }
+                break;
+
+            case '/':
+                if (p + 1 < end && *(p + 1) == '*')
+                {
+                    comment = true;
+                    p += 1;
+                }
+                break;
+
+            case '*':
+                if (comment && p + 1 < end && *(p + 1) == '/')
+                {
+                    comment = false;
+                    p += 1;
+                }
+                break;
+
+            case '`':
+                backtick = !backtick;
+                break;
+
+            case '#':
+                return NULL;
+
+            case '-':
+                if (p + 2 < end && *(p + 1) == '-'
+                    && isspace(*(p + 2)))
+                {
+                    return NULL;
+                }
+                break;
+
+            default:
+                break;
+            }
+
+            if (*p == c && !escaped && !quoted && !comment && !backtick)
+            {
+                return p;
+            }
+        }
+        p++;
+    }
+    return NULL;
+}
 }
