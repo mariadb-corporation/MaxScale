@@ -12,56 +12,6 @@
  */
 import { format } from 'sql-formatter'
 import { languageConfiguration, languageTokens } from './mariadbLang'
-/**
- * Monaco features
- * https://github.com/microsoft/monaco-editor-webpack-plugin/blob/main/src/features.ts
- * Only import necessary features to reduce bundle size,
- * others are commented out and will be uncommented when requested
- */
-import 'monaco-editor/esm/vs/editor/browser/controller/coreCommands.js'
-/*
-import 'monaco-editor/esm/vs/editor/browser/widget/codeEditorWidget.js';
-import 'monaco-editor/esm/vs/editor/browser/widget/diffEditorWidget.js';
-import 'monaco-editor/esm/vs/editor/browser/widget/diffNavigator.js';
-import 'monaco-editor/esm/vs/editor/contrib/anchorSelect/anchorSelect.js';
-import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/bracketMatching.js';
-import 'monaco-editor/esm/vs/editor/contrib/caretOperations/caretOperations.js';
-import 'monaco-editor/esm/vs/editor/contrib/caretOperations/transpose.js';
-import 'monaco-editor/esm/vs/editor/contrib/codeAction/codeActionContributions.js';
-import 'monaco-editor/esm/vs/editor/contrib/codelens/codelensController.js';
-import 'monaco-editor/esm/vs/editor/contrib/colorPicker/colorContributions.js';
-import 'monaco-editor/esm/vs/editor/contrib/cursorUndo/cursorUndo.js';
-import 'monaco-editor/esm/vs/editor/contrib/gotoError/gotoError.js';
-import 'monaco-editor/esm/vs/editor/contrib/gotoSymbol/goToCommands.js';
-import 'monaco-editor/esm/vs/editor/contrib/gotoSymbol/link/goToDefinitionAtPosition.js';
-import 'monaco-editor/esm/vs/editor/contrib/hover/hover.js';
-import 'monaco-editor/esm/vs/editor/contrib/inPlaceReplace/inPlaceReplace.js';
-import 'monaco-editor/esm/vs/editor/contrib/indentation/indentation.js';
-import 'monaco-editor/esm/vs/editor/contrib/inlineHints/inlineHintsController.js';
-import 'monaco-editor/esm/vs/editor/contrib/linesOperations/linesOperations.js';
-import 'monaco-editor/esm/vs/editor/contrib/linkedEditing/linkedEditing.js';
-import 'monaco-editor/esm/vs/editor/contrib/links/links.js';
-import 'monaco-editor/esm/vs/editor/contrib/parameterHints/parameterHints.js';
-import 'monaco-editor/esm/vs/editor/contrib/rename/rename.js';
-import 'monaco-editor/esm/vs/editor/contrib/smartSelect/smartSelect.js';
-import 'monaco-editor/esm/vs/editor/contrib/snippet/snippetController2.js';
-import 'monaco-editor/esm/vs/editor/contrib/toggleTabFocusMode/toggleTabFocusMode.js';
-import 'monaco-editor/esm/vs/editor/contrib/unusualLineTerminators/unusualLineTerminators.js';
-import 'monaco-editor/esm/vs/editor/contrib/viewportSemanticTokens/viewportSemanticTokens.js';
-import 'monaco-editor/esm/vs/editor/contrib/wordHighlighter/wordHighlighter.js';
-import 'monaco-editor/esm/vs/editor/contrib/wordOperations/wordOperations.js';
-import 'monaco-editor/esm/vs/editor/contrib/wordPartOperations/wordPartOperations.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/inspectTokens/inspectTokens.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneHelpQuickAccess.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js';
-import 'monaco-editor/esm/vs/editor/standalone/browser/toggleHighContrast/toggleHighContrast.js';
-*/
-
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 import './customStyle.css'
 export default {
     name: 'query-editor',
@@ -126,20 +76,21 @@ export default {
         },
     },
     beforeCreate() {
+        const monaco = require('monaco-editor/esm/vs/editor/editor.api.js')
         this.monaco = monaco
     },
     mounted() {
         this.initMonaco(this.monaco)
     },
     beforeDestroy() {
-        this.completionProvider.dispose()
+        this.handleDisposeCompletionProvider()
         if (this.editor) this.editor.dispose()
     },
     activated() {
-        if (this.isKeptAlive) this.registerCompleters()
+        if (this.isKeptAlive && !this.readOnly) this.regCompleters(this.monaco)
     },
     deactivated() {
-        if (this.isKeptAlive) this.completionProvider.dispose()
+        if (this.isKeptAlive && !this.readOnly) this.handleDisposeCompletionProvider()
     },
     methods: {
         codeFormatter(v) {
@@ -199,7 +150,7 @@ export default {
                 },
             })
 
-            const options = {
+            this.editor = monaco.editor.create(this.$el, {
                 value: this.codeFormatter(this.value),
                 theme: 'mariadb-theme',
                 language: this.language,
@@ -216,29 +167,15 @@ export default {
                 overviewRulerBorder: false,
                 readOnly: this.readOnly,
                 ...this.options,
-            }
-
-            this.editor = monaco.editor.create(this.$el, options)
-            //Lazy loading modules after editor is created
-            monaco.editor.onDidCreateEditor(() => {
-                import('monaco-editor/esm/vs/editor/contrib/clipboard/clipboard.js')
-                import('monaco-editor/esm/vs/editor/contrib/comment/comment.js')
-                import('monaco-editor/esm/vs/editor/contrib/contextmenu/contextmenu.js')
-                import('monaco-editor/esm/vs/editor/contrib/dnd/dnd.js')
-                import('monaco-editor/esm/vs/editor/contrib/documentSymbols/documentSymbols.js')
-                import('monaco-editor/esm/vs/editor/contrib/find/findController.js')
-                import('monaco-editor/esm/vs/editor/contrib/folding/folding.js')
-                import('monaco-editor/esm/vs/editor/contrib/fontZoom/fontZoom.js')
-                import('monaco-editor/esm/vs/editor/contrib/format/formatActions.js')
-                import('monaco-editor/esm/vs/editor/contrib/multicursor/multicursor.js')
-                import('monaco-editor/esm/vs/editor/contrib/suggest/suggestController.js')
-                import(
-                    // eslint-disable-next-line vue/max-len
-                    'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js'
-                )
             })
-
-            if (!this.isKeptAlive && !this.readOnly) this.registerCompleters()
+            if (!this.readOnly) {
+                if (!this.isKeptAlive) this.regCompleters(monaco)
+                this.regDocFormattingProvider(monaco)
+                this.addWatchers(this.editor)
+                this.addCustomCmds(monaco)
+            }
+        },
+        regDocFormattingProvider(monaco) {
             const scope = this
             monaco.languages.registerDocumentFormattingEditProvider(this.language, {
                 provideDocumentFormattingEdits: model => [
@@ -248,16 +185,44 @@ export default {
                     },
                 ],
             })
+        },
+        regCompleters(monaco) {
+            const scope = this
+            this.completionProvider = monaco.languages.registerCompletionItemProvider(
+                this.language,
+                {
+                    provideCompletionItems: function(model, position) {
+                        const wordObj = model.getWordUntilPosition(position)
+                        const range = {
+                            startLineNumber: position.lineNumber,
+                            endLineNumber: position.lineNumber,
+                            startColumn: wordObj.startColumn,
+                            endColumn: wordObj.endColumn,
+                        }
 
+                        const match = scope.completionItemLabels.find(label =>
+                            label.includes(wordObj.word)
+                        )
+
+                        const suggestions = match
+                            ? scope.completionItems.map(item => ({ ...item, range }))
+                            : []
+                        return { suggestions }
+                    },
+                }
+            )
+        },
+        addWatchers(editor) {
             // Editor watchers
-            this.editor.onDidChangeModelContent(event => {
+            editor.onDidChangeModelContent(event => {
                 const editorValue = this.getEditorValue()
                 if (this.value !== editorValue) this.$emit('change', editorValue, event)
             })
-            this.editor.onDidChangeCursorSelection(event => {
+            editor.onDidChangeCursorSelection(event => {
                 this.$emit('on-selection', this.getSelectedTxt(event.selection))
             })
-
+        },
+        addCustomCmds(monaco) {
             // Add custom commands to palette list
             const actionDescriptors = [
                 {
@@ -289,32 +254,8 @@ export default {
                 })
             }
         },
-        registerCompleters() {
-            const scope = this
-            this.completionProvider = monaco.languages.registerCompletionItemProvider(
-                this.language,
-                {
-                    provideCompletionItems: function(model, position) {
-                        const wordObj = model.getWordUntilPosition(position)
-                        const range = {
-                            startLineNumber: position.lineNumber,
-                            endLineNumber: position.lineNumber,
-                            startColumn: wordObj.startColumn,
-                            endColumn: wordObj.endColumn,
-                        }
-
-                        const match = scope.completionItemLabels.find(label =>
-                            label.includes(wordObj.word)
-                        )
-
-                        const suggestions = match ? scope.createCompleters(range) : []
-                        return { suggestions }
-                    },
-                }
-            )
-        },
-        createCompleters(range) {
-            return this.completionItems.map(item => ({ ...item, range }))
+        handleDisposeCompletionProvider() {
+            if (this.completionProvider) this.completionProvider.dispose()
         },
         getEditorValue() {
             return this.editor.getValue()
@@ -322,7 +263,11 @@ export default {
         setEditorValue(value) {
             if (this.editor) return this.editor.setValue(value)
         },
+        getSelectedTxt(selection) {
+            return this.editor.getModel().getValueInRange(selection)
+        },
         /**
+         * @public
          * @param {Object} editOptions - IIdentifiedSingleEditOperation
          */
         insertAtCursor(editOptions) {
@@ -341,9 +286,6 @@ export default {
                     },
                 ])
             }
-        },
-        getSelectedTxt(selection) {
-            return this.editor.getModel().getValueInRange(selection)
         },
     },
 
