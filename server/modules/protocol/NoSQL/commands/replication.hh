@@ -36,11 +36,32 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        populate_response(m_database, doc);
+        populate_response(m_database, m_doc, doc);
     }
 
-    static void populate_response(const Database& database, DocumentBuilder& doc)
+    static void populate_response(Database& database,
+                                  const bsoncxx::document::view& query,
+                                  DocumentBuilder& doc)
     {
+        auto client = query[key::CLIENT];
+
+        bool metadata_sent = database.context().metadata_sent();
+
+        if (client && metadata_sent)
+        {
+            throw SoftError("The client metadata document may only be sent in the first isMaster",
+                            error::CLIENT_METADATA_CANNOT_BE_MUTATED);
+        }
+        else if (!client && !metadata_sent)
+        {
+            throw SoftError("The client metadata document must be sent in the first isMaster",
+                            error::CLIENT_METADATA_MISSING_FIELD);
+        }
+        else if (client && !metadata_sent)
+        {
+            database.context().set_metadata_sent(true);
+        }
+
         doc.append(kvp(key::ISMASTER, true));
         doc.append(kvp(key::TOPOLOGY_VERSION, topology_version()));
         doc.append(kvp(key::MAX_BSON_OBJECT_SIZE, protocol::MAX_BSON_OBJECT_SIZE));

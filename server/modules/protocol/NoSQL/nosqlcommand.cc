@@ -1094,7 +1094,7 @@ State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
             if (key.compare(command::IsMaster::KEY) == 0 || key.compare(key::ISMASTER) == 0)
             {
                 DocumentBuilder doc;
-                command::IsMaster::populate_response(m_database, doc);
+                command::IsMaster::populate_response(m_database, m_req.query(), doc);
 
                 pResponse = create_response(doc.extract());
                 state = State::READY;

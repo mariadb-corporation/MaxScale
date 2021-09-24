@@ -419,6 +419,7 @@ const char ADMIN_ONLY[]                      = "adminOnly";
 const char ARGV[]                            = "argv";
 const char BATCH_SIZE[]                      = "batchSize";
 const char BITS[]                            = "bits";
+const char CLIENT[]                          = "client";
 const char CODE_NAME[]                       = "codeName";
 const char CODE[]                            = "code";
 const char COLLECTION[]                      = "collection";
@@ -1221,6 +1222,16 @@ public:
             return *m_session.worker();
         }
 
+        void set_metadata_sent(bool metadata_sent)
+        {
+            m_metadata_sent = metadata_sent;
+        }
+
+        bool metadata_sent() const
+        {
+            return m_metadata_sent;
+        }
+
     private:
         MXS_SESSION&               m_session;
         mxs::ClientConnection&     m_client_connection;
@@ -1228,6 +1239,7 @@ public:
         int32_t                    m_request_id { 1 };
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
+        bool                       m_metadata_sent { false };
 
         static std::atomic<int64_t> s_connection_id;
     };
