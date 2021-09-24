@@ -1589,10 +1589,15 @@ string default_field_and_value_to_comparison(const std::string& field,
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
+    bool is_date = (element.type() == bsoncxx::type::k_date);
+
+    // A date is stored as a document containing a field "$date" with the value.
+    string f = is_date ? field + ".$date" : field;
+
     ostringstream ss;
 
-    ss << "(" << zGet << "(doc, '$." << field << "') IS NOT NULL "
-       << "AND (" << zGet << "(doc, '$." + field + "') " << mariadb_op << " ";
+    ss << "(" << zGet << "(doc, '$." << f << "') IS NOT NULL "
+       << "AND (" << zGet << "(doc, '$." + f + "') " << mariadb_op << " ";
 
     bool is_array = element.type() == bsoncxx::type::k_array;
 
