@@ -1,9 +1,10 @@
 [maxscale]
 threads=###threads###
+log_info=1
 
 ###server###
 
-[MySQL-Monitor]
+[MariaDB-Monitor]
 type=monitor
 module=mysqlmon
 servers=###server_line###
@@ -15,6 +16,7 @@ monitor_interval=1000
 type=filter
 module=tee
 target=server2
+sync=true
 
 [RW-Split-Router]
 type=service
