@@ -15,11 +15,14 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-3775](https://jira.mariadb.org/browse/MXS-3775) Hang in RoutingWorker::execute_concurrently
+* [MXS-3774](https://jira.mariadb.org/browse/MXS-3774) Maxscale crash during xpand scale up
 * [MXS-3773](https://jira.mariadb.org/browse/MXS-3773) nosqlprotocol should report 0 as the minimum wire protocol version
 * [MXS-3767](https://jira.mariadb.org/browse/MXS-3767) connector_plugindir does not pick up the default location.
 * [MXS-3766](https://jira.mariadb.org/browse/MXS-3766) Not able to insert data on Masking enabled table 
 * [MXS-3759](https://jira.mariadb.org/browse/MXS-3759) Client hangs forever when server failed or restarted
 * [MXS-3757](https://jira.mariadb.org/browse/MXS-3757) Don't allow any SIMD code run until called
+* [MXS-3754](https://jira.mariadb.org/browse/MXS-3754) maxscale-6.1.1-1.rhel.8.x86_64 crashes and coredumps on first startup after upgrade maxscale-2.5.15-1.rhel.8.x86_64
+* [MXS-3750](https://jira.mariadb.org/browse/MXS-3750) 6.1.1 CentOS7 x86_64 RPMs fail on older CPUs without avx2 extension
 * [MXS-3704](https://jira.mariadb.org/browse/MXS-3704) MaxScale always advertises the SESSION_TRACK capability even with servers that don't support it (XPand)
 * [MXS-3580](https://jira.mariadb.org/browse/MXS-3580) Avrorouter should store full GTID coordinates
 
