@@ -1295,6 +1295,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     if (m_routing_state == RoutingState::CHANGING_DB
         || m_routing_state == RoutingState::CHANGING_ROLE
+        || m_routing_state == RoutingState::CHANGING_USER
         || m_routing_state == RoutingState::RECORD_HISTORY)
     {
         // We're still waiting for a response from the backend, read more data once we get it.
@@ -1402,6 +1403,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::CHANGING_DB:
     case RoutingState::CHANGING_ROLE:
+    case RoutingState::CHANGING_USER:
     case RoutingState::RECORD_HISTORY:
     case RoutingState::COMPARE_RESPONSES:
         mxb_assert_message(!true, "We should never end up here");
@@ -1426,10 +1428,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     return rval;
 }
-
-/**
- * MXS_PROTOCOL_API implementation.
- */
 
 void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
@@ -2112,8 +2110,12 @@ bool MariaDBClientConnection::complete_change_user()
     *m_session_data = *m_change_user.session;
     m_change_user.session.reset();
     assign_backend_authenticator();
-    bool rval = route_statement(move(m_change_user.client_query));
-    m_session->notify_userdata_change();
+    bool rval = false;
+    if (route_statement(move(m_change_user.client_query)))
+    {
+        m_routing_state = RoutingState::CHANGING_USER;
+        rval = true;
+    }
     return rval;
 }
 
@@ -2701,6 +2703,23 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             }
             // Regardless of result, role change is complete.
             m_pending_value.clear();
+            m_routing_state = RoutingState::PACKET_START;
+            m_dcb->trigger_read_event();
+            break;
+
+        case RoutingState::CHANGING_USER:
+            // Route the reply to client. The sequence in the server packet may be wrong, fix it.
+            GWBUF_DATA(buffer)[3] = m_session_data->next_sequence;
+            if (reply.is_ok())
+            {
+                m_session->notify_userdata_change();    // Change user succeeded.
+            }
+            else
+            {
+                // Change user succeeded on MaxScale but failed on backends. Session is faulty.
+                // Close session after routing reply to client.
+                m_state = State::FAILED;
+            }
             m_routing_state = RoutingState::PACKET_START;
             m_dcb->trigger_read_event();
             break;

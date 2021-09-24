@@ -262,6 +262,7 @@ private:
         LOAD_DATA,              /**< Expecting the client to continue streaming CSV-data */
         CHANGING_DB,            /**< Client is changing database, waiting server response */
         CHANGING_ROLE,          /**< Client is changing role, waiting server response */
+        CHANGING_USER,          /**< Session is changing user, waiting server response */
         RECORD_HISTORY,         /**< Recording a command and the result it generated */
         COMPARE_RESPONSES,      /**< Call callbacks that compare the recorded responses */
     };

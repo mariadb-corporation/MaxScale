@@ -945,15 +945,12 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
             // result processing code doesn't deal with the COM_CHANGE_USER responses.
             set_reply_state(ReplyState::DONE);
+            int cmd = mxs_mysql_get_command(buffer.get());
 
             if (m_state == State::READ_CHANGE_USER)
             {
-                // Fix the packet sequence number to be the same what the client expects
-                MYSQL_session* client_data = mysql_session();
-                buffer.data()[3] = client_data->next_sequence;
-
                 mxs::ReplyRoute route;
-
+                m_reply.set_is_ok(cmd == MYSQL_REPLY_OK);
                 if (m_upstream->clientReply(buffer.release(), route, m_reply))
                 {
                     // If packets were received from the router while the COM_CHANGE_USER was in progress,
@@ -968,7 +965,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             }
             else if (m_state == State::RESET_CONNECTION)
             {
-                if (mxs_mysql_get_command(buffer.get()) == MYSQL_REPLY_ERR)
+                if (cmd == MYSQL_REPLY_ERR)
                 {
                     std::string errmsg = "Failed to reuse connection: " + mxs::extract_error(buffer.get());
                     do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
