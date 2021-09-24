@@ -1016,6 +1016,8 @@ set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)
 
 add_test_executable(xpand_distribution.cpp xpand_distribution xpand_distribution LABELS XPAND_BACKEND)
 
+add_test_executable(xpand_alter_cluster.cpp xpand_alter_cluster xpand_alter_cluster LABELS XPAND_BACKEND)
+
 ############################################
 # END: tests for Xpand monitor             #
 ############################################
