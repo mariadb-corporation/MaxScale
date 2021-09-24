@@ -1186,6 +1186,29 @@ struct ElementValueInfo
     FieldAndElementValueToComparison field_and_value_to_comparison;
 };
 
+void double_to_string(double d, ostream& os)
+{
+    // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
+    char buffer[28];
+
+    sprintf(buffer, "%.20g", d);
+
+    os << buffer;
+
+    if (strpbrk(buffer, ".e") == nullptr)
+    {
+        // No decimal point, add ".0" to prevent this number from being an integer.
+        os << ".0";
+    }
+}
+
+string double_to_string(double d)
+{
+    ostringstream ss;
+    double_to_string(d, ss);
+    return ss.str();
+}
+
 template<class document_element_or_array_item>
 string element_to_value(const document_element_or_array_item& x, ValueFor value_for, const string& op = "")
 {
@@ -1194,22 +1217,7 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
     switch (x.type())
     {
     case bsoncxx::type::k_double:
-        {
-            double d = x.get_double();
-
-            // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
-            char buffer[28];
-
-            sprintf(buffer, "%.20g", d);
-
-            ss << buffer;
-
-            if (strpbrk(buffer, ".e") == nullptr)
-            {
-                // No decimal point, add ".0" to prevent this number from being an integer.
-                ss << ".0";
-            }
-        }
+        double_to_string(x.get_double(), ss);
         break;
 
     case bsoncxx::type::k_utf8:
@@ -2743,7 +2751,12 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
                     double inc;
                     if (element_as(field, Conversion::RELAXED, &inc))
                     {
-                        s += "JSON_VALUE(doc, '$." + key + "') + " + std::to_string(inc);
+                        auto d = double_to_string(inc);
+
+                        s += "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, ";
+                        s += "JSON_VALUE(doc, '$." + key + "') + " + d + ", ";
+                        s += d;
+                        s += ")";
                     }
                     else
                     {
