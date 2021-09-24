@@ -130,7 +130,8 @@ private:
         CHANGE_USER,
     };
 
-    bool read_first_client_packet(mxs::Buffer* output);
+    bool            read_first_client_packet(mxs::Buffer* output);
+    DCB::ReadResult read_protocol_packet();
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
@@ -160,12 +161,12 @@ private:
 
     void add_local_client(LocalClient* client);
 
-    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
     void execute_kill(std::shared_ptr<KillInfo> info);
+
+    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void track_current_command(const mxs::Buffer& buf);
-    void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
     bool require_ssl() const;
 
@@ -193,15 +194,12 @@ private:
     /**
      * Send an error packet to the client.
      *
-     * @param packet_number Sequence number
-     * @param in_affected_rows Affected rows
      * @param mysql_errno Error number
      * @param sqlstate_msg MySQL state message
      * @param mysql_message Error message
      * @return True on success
      */
-    bool send_mysql_err_packet(int packet_number, int in_affected_rows,
-                               int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
+    bool send_mysql_err_packet(int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
 
     void parse_and_set_trx_state(const mxs::Reply& reply);
     void start_change_role(std::string&& role);
@@ -292,6 +290,7 @@ private:
     MYSQL_session*  m_session_data {nullptr};
     qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
     uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
+    uint8_t         m_next_sequence {0};                /**< Next sequence to send to client */
     uint8_t         m_command {0};
     uint64_t        m_version {0};                  /**< Numeric server version */
 
