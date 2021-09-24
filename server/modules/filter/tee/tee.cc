@@ -85,6 +85,10 @@ cfg::ParamEnum<uint32_t> s_options(
         {PCRE2_EXTENDED, "extended"},
     }, 0, cfg::Param::AT_RUNTIME);
 
+cfg::ParamBool s_sync(
+    &s_spec, "sync", "Wait for both results before routing more queries",
+    false, cfg::Param::AT_RUNTIME);
+
 template<class Params>
 bool TeeSpecification::do_post_validate(Params params) const
 {
@@ -117,6 +121,7 @@ Tee::Config::Config(const char* name)
     add_native(&Config::m_v, &Values::source, &s_source);
     add_native(&Config::m_v, &Values::match, &s_match);
     add_native(&Config::m_v, &Values::exclude, &s_exclude);
+    add_native(&Config::m_v, &Values::sync, &s_sync);
 }
 
 bool Tee::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

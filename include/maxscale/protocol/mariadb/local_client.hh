@@ -30,6 +30,9 @@ class LocalClient : public mxs::Component
 public:
     ~LocalClient();
 
+    using NotifyCB = std::function<void (GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&)>;
+    using ErrorCB = std::function<void (GWBUF*, mxs::Target*, const mxs::Reply&)>;
+
     /**
      * Create a local client for a service
      *
@@ -60,6 +63,23 @@ public:
     }
 
     /**
+     * Set reply notification callback
+     *
+     * These functions are the equivalent of clientReply and handleError calls and are called
+     * with the same arguments with the exception that the error type is not passed to
+     * the error handler.
+     *
+     * @param cb  Reply handler
+     * @param err Error handler
+     */
+    void set_notify(NotifyCB cb, ErrorCB err)
+    {
+        mxb_assert_message(cb && err, "Both functions must be present and valid");
+        m_cb = std::move(cb);
+        m_err = std::move(err);
+    }
+
+    /**
      * Queue a new query for execution
      *
      * @param buffer Buffer containing the query. The function takes ownership of the buffer.
@@ -82,4 +102,6 @@ private:
     LocalClient() = default;
 
     std::unique_ptr<mxs::Endpoint> m_down;
+    NotifyCB                       m_cb;
+    ErrorCB                        m_err;
 };
