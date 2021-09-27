@@ -243,22 +243,60 @@ public:
                 ComResponse eof(&pBuffer);
                 mxb_assert(eof.type() == ComResponse::EOF_PACKET);
 
-                bool first = true;
+                set<string> values;
                 while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
                 {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        json << ", ";
-                    }
-
                     CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
                     auto it = row.begin();
 
-                    json << (*it).as_string().to_string();
+                    auto value = (*it).as_string().to_string();
+
+                    json_error_t error;
+                    json_t* pJson = json_loadb(value.c_str(), value.length(), JSON_DECODE_ANY, &error);
+
+                    if (pJson)
+                    {
+                        // If an individual value is an array, then it will be unwrapped.
+                        // TODO: Should an array recursively be unwrapped?
+
+                        if (json_is_array(pJson))
+                        {
+                            size_t index;
+                            json_t* pValue;
+
+                            json_array_foreach(pJson, index, pValue) {
+                                char* zValue = json_dumps(pValue, JSON_ENCODE_ANY);
+                                values.insert(zValue);
+                                free(zValue);
+                            }
+                        }
+                        else
+                        {
+                            values.insert(value);
+                        }
+
+                        json_decref(pJson);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Failed to parse result as individual json value: '%s'", value.c_str());
+                        values.insert(value);
+                    }
+                }
+
+                bool first = true;
+                for (const auto& value : values)
+                {
+                    if (!first)
+                    {
+                        json << ", ";
+                    }
+                    else
+                    {
+                        first = false;
+                    }
+
+                    json << value;
                 }
             }
         }
