@@ -74,7 +74,7 @@
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
             :activator="`#${activatorIdTransform(activeCtxItem.id)}`"
         >
-            <v-list v-for="option in getOptions(activeCtxItem.type)" :key="option">
+            <v-list v-for="option in getOptions(activeCtxItem)" :key="option">
                 <v-list-item
                     dense
                     link
@@ -115,6 +115,7 @@ export default {
                 this.$t('viewDetails'),
                 this.$t('placeSchemaInEditor'),
             ],
+            userTblOptions: [this.$t('alterTbl')],
             schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
             columnOptions: [this.$t('placeColumnNameInEditor')],
             spOptions: [this.$t('placeSchemaInEditor')],
@@ -128,6 +129,8 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
         }),
@@ -174,6 +177,8 @@ export default {
         ...mapMutations({
             UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
+            SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
+            SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
         }),
         addExpandedNodesWatcher() {
             this.rmExpandedNodesWatcher = this.$watch(
@@ -223,7 +228,7 @@ export default {
         },
         handleOpenCtxMenu({ e, item }) {
             e.stopPropagation()
-            if (this.activeCtxItem === item) {
+            if (this.$help.lodash.isEqual(this.activeCtxItem, item)) {
                 this.showCtxMenu = false
                 this.activeCtxItem = null
             } else {
@@ -238,18 +243,28 @@ export default {
             const schema = item.id
             switch (option) {
                 case this.$t('previewData'):
+                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('preview-data', schema)
                     this.updateActiveNode(item)
                     break
                 case this.$t('viewDetails'):
+                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('view-details', schema)
                     this.updateActiveNode(item)
                     break
                 case this.$t('placeSchemaInEditor'):
+                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
                 case this.$t('placeColumnNameInEditor'):
+                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
+                    break
+                case this.$t('alterTbl'):
+                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.DDL_EDITOR)
+                    this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
+                    this.$emit('alter-tbl', schema)
+                    this.updateActiveNode(item)
                     break
                 case this.$t('useDb'):
                     this.$emit('use-db', schema)
@@ -268,12 +283,13 @@ export default {
                 //TODO: an icon for Column
             }
         },
-        getOptions(type) {
-            switch (type) {
+        getOptions(node) {
+            switch (node.type) {
                 case 'Schema':
                     return this.schemaOptions
                 case 'Table':
-                    return this.tableOptions
+                    if (node.isSysTbl) return this.tableOptions
+                    else return [...this.tableOptions, ...this.userTblOptions]
                 case 'Stored Procedure':
                     return this.spOptions
                 case 'Column':

@@ -72,6 +72,7 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
@@ -93,6 +94,8 @@ export default {
         this.handleAutoClearQueryHistory()
         this.$help.doubleRAF(() => this.setCtrDim())
         await this.validatingConn()
+        // reset editor mode whenever page is refreshed
+        this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
     },
 
     async beforeRouteLeave(to, from, next) {
@@ -126,6 +129,7 @@ export default {
         ...mapMutations({
             UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES',
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
+            SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
         }),
         ...mapActions({
             validatingConn: 'query/validatingConn',

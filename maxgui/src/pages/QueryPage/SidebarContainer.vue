@@ -97,6 +97,7 @@
                         "
                         @load-children="handleLoadChildren"
                         @use-db="useDb"
+                        @alter-tbl="onAlterTable"
                         v-on="$listeners"
                     />
                 </keep-alive>
@@ -179,6 +180,10 @@ export default {
         },
         async handleLoadChildren(node) {
             await this.updateTreeNodes(node)
+        },
+        async onAlterTable(schemaId) {
+            console.log('sche', schemaId)
+            //TODO: dispatch action  "show create table tbl_name"
         },
     },
 }
