@@ -38,6 +38,7 @@ function sidebarStates() {
 function editorStates() {
     return {
         query_txt: '',
+        curr_ddl_alter_spec: '',
     }
 }
 /**
@@ -204,6 +205,14 @@ export default {
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },
+        SET_CURR_DDL_COL_SPEC(state, payload) {
+            patch_wke_property(state, {
+                obj: { curr_ddl_alter_spec: payload },
+                scope: this,
+                active_wke_id: state.active_wke_id,
+            })
+        },
+
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload

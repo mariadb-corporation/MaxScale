@@ -29,4 +29,8 @@ export const APP_CONFIG = Object.freeze({
         HISTORY: 'HISTORY',
         FAVORITE: 'FAVORITE',
     }),
+    SQL_DDL_ALTER_SPECS: Object.freeze({
+        COLUMNS: 'COLUMNS',
+        TRIGGERS: 'TRIGGERS',
+    }),
 })

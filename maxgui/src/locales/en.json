@@ -183,6 +183,7 @@
     "inDays": "in days",
     "replicationStatus": "Replication status",
     "slaveRepStatus": "Slave replication status",
+    "triggers": "triggers",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
