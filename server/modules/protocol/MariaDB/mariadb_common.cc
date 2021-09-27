@@ -576,8 +576,7 @@ namespace mariadb
 void set_byte2(uint8_t* buffer, uint16_t val)
 {
     uint16_t le16 = htole16(val);
-    auto ple16 = reinterpret_cast<uint16_t*>(buffer);
-    *ple16 = le16;
+    memcpy(buffer, &le16, 2);
 }
 
 void set_byte3(uint8_t* buffer, uint32_t val)
@@ -589,15 +588,13 @@ void set_byte3(uint8_t* buffer, uint32_t val)
 void set_byte4(uint8_t* buffer, uint32_t val)
 {
     uint32_t le32 = htole32(val);
-    auto ple32 = reinterpret_cast<uint32_t*>(buffer);
-    *ple32 = le32;
+    memcpy(buffer, &le32, 4);
 }
 
 void set_byte8(uint8_t* buffer, uint64_t val)
 {
     uint64_t le64 = htole64(val);
-    auto ple64 = reinterpret_cast<uint64_t*>(buffer);
-    *ple64 = le64;
+    memcpy(buffer, &le64, 8);
 }
 
 uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq)
@@ -616,7 +613,7 @@ uint8_t* copy_bytes(uint8_t* dest, const uint8_t* src, size_t n)
 
 uint8_t* copy_chars(uint8_t* dest, const char* src, size_t n)
 {
-    return copy_bytes(dest, reinterpret_cast<const uint8_t*>(src), n);
+    return static_cast<uint8_t*>(mempcpy(dest, src, n));
 }
 
 uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
@@ -627,9 +624,9 @@ uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
 
 uint16_t get_byte2(const uint8_t* buffer)
 {
-    uint16_t le16 = *(reinterpret_cast<const uint16_t*>(buffer));
-    auto host16 = le16toh(le16);
-    return host16;
+    uint16_t le16;
+    memcpy(&le16, buffer, 2);
+    return le16toh(le16);
 }
 
 uint32_t get_byte3(const uint8_t* buffer)
@@ -641,16 +638,16 @@ uint32_t get_byte3(const uint8_t* buffer)
 
 uint32_t get_byte4(const uint8_t* buffer)
 {
-    uint32_t le32 = *(reinterpret_cast<const uint32_t*>(buffer));
-    auto host32 = le32toh(le32);
-    return host32;
+    uint32_t le32;
+    memcpy(&le32, buffer, 4);
+    return le32toh(le32);
 }
 
 uint64_t get_byte8(const uint8_t* buffer)
 {
-    uint64_t le64 = *(reinterpret_cast<const uint64_t*>(buffer));
-    auto host64 = le64toh(le64);
-    return host64;
+    uint64_t le64;
+    memcpy(&le64, buffer, 8);
+    return le64toh(le64);
 }
 
 HeaderData get_header(const uint8_t* buffer)

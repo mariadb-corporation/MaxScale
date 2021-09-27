@@ -592,6 +592,21 @@ Always returns
 Since authentication and logging in is currently not supported,
 the command has no effect.
 
+## User Management Commands
+
+### dropAllUsersFromDatabase
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+dropAllUsersFromDatabase | any | Ignored.
+
+As there are no users, the response will always be:
+```
+{ "n" : 0, "ok" : 1 }
+```
+
 ## Replication Commands
 
 ### isMaster
@@ -639,17 +654,6 @@ createIndexes| string | The collection for which to create indexes.
 will nonetheless return success, provide the index specification passes
 some rudimentary sanity checks. Note also that the collection will be
 created if it does not exist.
-
-### currentOp
-
-Field | Type | Description
-------|------|------------
-currentOp| any | Ignored.
-
-Currently the response will always be
-```
-{ "inprog" : [ ], "ok" : 1 }
-```
 
 ### drop
 

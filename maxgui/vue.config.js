@@ -103,6 +103,10 @@ module.exports = {
         config.plugin('MonacoWebpackPlugin').use(require('monaco-editor-webpack-plugin'), [
             {
                 languages: ['mariadb'],
+                /**
+                 * Monaco features
+                 * Only use necessary features to reduce bundle size,
+                 */
                 // https://github.com/microsoft/monaco-editor-webpack-plugin/blob/main/src/features.ts
                 features: [
                     '!accessibilityHelp',

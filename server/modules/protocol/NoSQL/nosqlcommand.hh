@@ -56,7 +56,7 @@ public:
 
     virtual bool is_admin() const;
 
-    bool is_silent() const
+    virtual bool is_silent() const
     {
         return m_response_kind == ResponseKind::NONE;
     }
@@ -415,9 +415,14 @@ public:
         return m_name;
     }
 
+    bool is_silent() const override
+    {
+        return m_req.more_to_come();
+    }
+
     std::string description() const override
     {
-        return m_req.opcode() == MONGOC_OPCODE_QUERY ? "OP_QUERY" : ("OP_MSG(" + m_name + ")");
+        return "OP_MSG(" + m_name + ")";
     }
 
     virtual void diagnose(DocumentBuilder& doc) = 0;
@@ -514,7 +519,12 @@ protected:
      * @return A LIMIT clause, if 'skip' and/or 'limit' are present in the
      *         command object, otherwise an empty string.
      */
-    std::string convert_skip_and_limit() const;
+    enum class AcceptAsLimit
+    {
+        POSITIVE_INTEGER,
+        INTEGER           // The absolute value is used.
+    };
+    std::string convert_skip_and_limit(AcceptAsLimit limit = AcceptAsLimit::POSITIVE_INTEGER) const;
 
     template<class T>
     T value_as(Conversion conversion = Conversion::STRICT) const

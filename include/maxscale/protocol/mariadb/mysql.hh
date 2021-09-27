@@ -133,7 +133,7 @@ namespace mariadb
 {
 /**
  * Protocol packing and unpacking functions. The functions read or write unsigned integers from/to
- * MySQL-protocol buffers. MySQL saves integers in lsb-first format, so a conversion to host format
+ * MySQL-protocol buffers. MySQL saves integers in lsb-first format, so a conversion to/from host format
  * may be required.
  */
 

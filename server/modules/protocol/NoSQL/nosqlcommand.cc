@@ -33,7 +33,7 @@ using mxb::Worker;
 #include "commands/query_and_write_operation.hh"
 //#include "commands/query_plan_cache.hh"
 #include "commands/authentication.hh"
-//#include "commands/user_management.hh"
+#include "commands/user_management.hh"
 //#include "commands/role_management.hh"
 #include "commands/replication.hh"
 //#include "commands/sharding.hh"
@@ -185,44 +185,46 @@ struct ThisUnit
 
     InfosByName infos_by_name =
     {
-        { tolower(command::BuildInfo::KEY),               create_info<command::BuildInfo>() },
-        { tolower(command::Count::KEY),                   create_info<command::Count>() },
-        { tolower(command::Create::KEY),                  create_info<command::Create>() },
-        { tolower(command::CreateIndexes::KEY),           create_info<command::CreateIndexes>() },
-        { tolower(command::CurrentOp::KEY),               create_info<command::CurrentOp>() },
-        { tolower(command::Delete::KEY),                  create_info<command::Delete>() },
-        { tolower(command::Distinct::KEY),                create_info<command::Distinct>() },
-        { tolower(command::Drop::KEY),                    create_info<command::Drop>() },
-        { tolower(command::DropIndexes::KEY),             create_info<command::DropIndexes>() },
-        { tolower(command::DropDatabase::KEY),            create_info<command::DropDatabase>() },
-        { tolower(command::EndSessions::KEY),             create_info<command::EndSessions>() },
-        { tolower(command::Find::KEY),                    create_info<command::Find>() },
-        { tolower(command::GetCmdLineOpts::KEY),          create_info<command::GetCmdLineOpts>() },
-        { tolower(command::GetFreeMonitoringStatus::KEY), create_info<command::GetFreeMonitoringStatus>() },
-        { tolower(command::GetLastError::KEY),            create_info<command::GetLastError>() },
-        { tolower(command::GetLog::KEY),                  create_info<command::GetLog>() },
-        { tolower(command::GetMore::KEY),                 create_info<command::GetMore>() },
-        { tolower(command::Insert::KEY),                  create_info<command::Insert>() },
-        { tolower(command::IsMaster::KEY),                create_info<command::IsMaster>() },
-        { tolower(command::KillCursors::KEY),             create_info<command::KillCursors>() },
-        { tolower(command::ListCommands::KEY),            create_info<command::ListCommands>() },
-        { tolower(command::ListCollections::KEY),         create_info<command::ListCollections>() },
-        { tolower(command::ListDatabases::KEY),           create_info<command::ListDatabases>() },
-        { tolower(command::ListIndexes::KEY),             create_info<command::ListIndexes>() },
-        { tolower(command::Logout::KEY),                  create_info<command::Logout>() },
-        { tolower(command::Ping::KEY),                    create_info<command::Ping>() },
-        { tolower(command::ReplSetGetStatus::KEY),        create_info<command::ReplSetGetStatus>() },
-        { tolower(command::RenameCollection::KEY),        create_info<command::RenameCollection>() },
-        { tolower(command::ResetError::KEY),              create_info<command::ResetError>() },
-        { tolower(command::ServerStatus::KEY),            create_info<command::ServerStatus>() },
-        { tolower(command::Update::KEY),                  create_info<command::Update>() },
-        { tolower(command::Validate::KEY),                create_info<command::Validate>() },
-        { tolower(command::WhatsMyUri::KEY),              create_info<command::WhatsMyUri>() },
+        { tolower(command::BuildInfo::KEY),                create_info<command::BuildInfo>() },
+        { tolower(command::Count::KEY),                    create_info<command::Count>() },
+        { tolower(command::Create::KEY),                   create_info<command::Create>() },
+        { tolower(command::CreateIndexes::KEY),            create_info<command::CreateIndexes>() },
+        //Cannot be included as a mockup.
+        //{ tolower(command::CurrentOp::KEY),                create_info<command::CurrentOp>() },
+        { tolower(command::Delete::KEY),                   create_info<command::Delete>() },
+        { tolower(command::Distinct::KEY),                 create_info<command::Distinct>() },
+        { tolower(command::Drop::KEY),                     create_info<command::Drop>() },
+        { tolower(command::DropAllUsersFromDatabase::KEY), create_info<command::DropAllUsersFromDatabase>() },
+        { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
+        { tolower(command::DropDatabase::KEY),             create_info<command::DropDatabase>() },
+        { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
+        { tolower(command::Find::KEY),                     create_info<command::Find>() },
+        { tolower(command::GetCmdLineOpts::KEY),           create_info<command::GetCmdLineOpts>() },
+        { tolower(command::GetFreeMonitoringStatus::KEY),  create_info<command::GetFreeMonitoringStatus>() },
+        { tolower(command::GetLastError::KEY),             create_info<command::GetLastError>() },
+        { tolower(command::GetLog::KEY),                   create_info<command::GetLog>() },
+        { tolower(command::GetMore::KEY),                  create_info<command::GetMore>() },
+        { tolower(command::Insert::KEY),                   create_info<command::Insert>() },
+        { tolower(command::IsMaster::KEY),                 create_info<command::IsMaster>() },
+        { tolower(command::KillCursors::KEY),              create_info<command::KillCursors>() },
+        { tolower(command::ListCommands::KEY),             create_info<command::ListCommands>() },
+        { tolower(command::ListCollections::KEY),          create_info<command::ListCollections>() },
+        { tolower(command::ListDatabases::KEY),            create_info<command::ListDatabases>() },
+        { tolower(command::ListIndexes::KEY),              create_info<command::ListIndexes>() },
+        { tolower(command::Logout::KEY),                   create_info<command::Logout>() },
+        { tolower(command::Ping::KEY),                     create_info<command::Ping>() },
+        { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },
+        { tolower(command::RenameCollection::KEY),         create_info<command::RenameCollection>() },
+        { tolower(command::ResetError::KEY),               create_info<command::ResetError>() },
+        { tolower(command::ServerStatus::KEY),             create_info<command::ServerStatus>() },
+        { tolower(command::Update::KEY),                   create_info<command::Update>() },
+        { tolower(command::Validate::KEY),                 create_info<command::Validate>() },
+        { tolower(command::WhatsMyUri::KEY),               create_info<command::WhatsMyUri>() },
 
-        { tolower(command::MxsDiagnose::KEY),             create_info<command::MxsDiagnose>() },
-        { tolower(command::MxsCreateDatabase::KEY),       create_info<command::MxsCreateDatabase>() },
-        { tolower(command::MxsGetConfig::KEY),            create_info<command::MxsGetConfig>() },
-        { tolower(command::MxsSetConfig::KEY),            create_info<command::MxsSetConfig>() },
+        { tolower(command::MxsDiagnose::KEY),              create_info<command::MxsDiagnose>() },
+        { tolower(command::MxsCreateDatabase::KEY),        create_info<command::MxsCreateDatabase>() },
+        { tolower(command::MxsGetConfig::KEY),             create_info<command::MxsGetConfig>() },
+        { tolower(command::MxsSetConfig::KEY),             create_info<command::MxsSetConfig>() },
     };
 } this_unit;
 
@@ -315,19 +317,22 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
 {
     GWBUF* pResponse = nullptr;
 
-    switch (m_response_kind)
+    if (!is_silent())
     {
-    case ResponseKind::REPLY:
-        pResponse = create_reply_response(doc, is_error);
-        break;
+        switch (m_response_kind)
+        {
+        case ResponseKind::REPLY:
+            pResponse = create_reply_response(doc, is_error);
+            break;
 
-    case ResponseKind::MSG:
-    case ResponseKind::MSG_WITH_CHECKSUM:
-        pResponse = create_msg_response(doc);
-        break;
+        case ResponseKind::MSG:
+        case ResponseKind::MSG_WITH_CHECKSUM:
+            pResponse = create_msg_response(doc);
+            break;
 
-    case ResponseKind::NONE:
-        mxb_assert(!true);
+        case ResponseKind::NONE:
+            mxb_assert(!true);
+        }
     }
 
     return pResponse;
@@ -1455,7 +1460,7 @@ void OpMsgCommand::require_admin_db()
     }
 }
 
-string OpMsgCommand::convert_skip_and_limit() const
+string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
 {
     string rv;
 
@@ -1484,23 +1489,28 @@ string OpMsgCommand::convert_skip_and_limit() const
         }
 
         int64_t nLimit = std::numeric_limits<int64_t>::max();
-        if (limit && (!get_number_as_integer(limit, &nLimit) || nLimit < 0))
+        if (limit)
         {
-            ostringstream ss;
-            int code;
+            if (!get_number_as_integer(limit, &nLimit))
+            {
+                ostringstream ss;
+                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
 
             if (nLimit < 0)
             {
-                ss << "Limit value must be non-negative, but received: " << nLimit;
-                code = error::BAD_VALUE;
+                if (accept_as_limit == AcceptAsLimit::INTEGER)
+                {
+                    nLimit = -nLimit;
+                }
+                else
+                {
+                    ostringstream ss;
+                    ss << "Limit value must be non-negative, but received: " << nLimit;
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
             }
-            else
-            {
-                ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";
-                code = error::FAILED_TO_PARSE;
-            }
-
-            throw SoftError(ss.str(), code);
         }
 
         ostringstream ss;
@@ -1509,6 +1519,12 @@ string OpMsgCommand::convert_skip_and_limit() const
         if (nSkip != 0)
         {
             ss << nSkip << ", ";
+        }
+
+        if (nLimit == 0)
+        {
+            // A limit of 0 should have no effect.
+            nLimit = std::numeric_limits<int64_t>::max();
         }
 
         ss << nLimit;
