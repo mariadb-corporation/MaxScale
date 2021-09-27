@@ -288,6 +288,11 @@ private:
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
     }
 
+    inline bool can_recover_master() const
+    {
+        return m_config.master_reconnection && can_recover_servers();
+    }
+
     inline bool have_open_connections() const
     {
         return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) {

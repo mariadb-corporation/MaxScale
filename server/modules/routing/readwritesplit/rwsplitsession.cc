@@ -445,7 +445,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
 
         if (backend == m_current_master)
         {
-            if (can_retry_query())
+            if (can_retry_query() && can_recover_master())
             {
                 ok = retry_master_query(backend);
             }
@@ -919,7 +919,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
             errmsg += " Lost connection to master server while waiting for a result.";
 
-            if (can_retry_query())
+            if (can_retry_query() && can_recover_master())
             {
                 can_continue = retry_master_query(backend);
             }
