@@ -14,6 +14,7 @@
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <unordered_map>
 #include <maxbase/alloc.h>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -83,19 +84,6 @@ uint16_t qc_extract_ps_param_count(GWBUF* buffer)
     }
 
     return rval;
-}
-
-bool have_semicolon(const char* ptr, int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        if (ptr[i] == ';')
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 bool is_packet_a_query(int packet_type)
@@ -787,50 +775,6 @@ void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
 }
 
 /**
- * @brief Detect multi-statement queries
- *
- * It is possible that the session state is modified inside a multi-statement
- * query which would leave any slave sessions in an inconsistent state. Due to
- * this, for the duration of this session, all queries will be sent to the
- * master
- * if the current query contains a multi-statement query.
- * @param rses Router client session
- * @param buf Buffer containing the full query
- * @return True if the query contains multiple statements
- */
-bool QueryClassifier::check_for_multi_stmt(GWBUF* buf, uint8_t packet_type)
-{
-    bool rval = false;
-
-    if (multi_statements_allowed() && packet_type == MXS_COM_QUERY)
-    {
-        char* ptr, * data = (char*)GWBUF_DATA(buf) + 5;
-        /** Payload size without command byte */
-        int buflen = gw_mysql_get_byte3((uint8_t*)GWBUF_DATA(buf)) - 1;
-
-        if (have_semicolon(data, buflen) && (ptr = strnchr_esc_mysql(data, ';', buflen)))
-        {
-            /** Skip stored procedures etc. */
-            while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
-            {
-                ptr = strnchr_esc_mysql(ptr + 1, ';', buflen - (ptr - data) - 1);
-            }
-
-            if (ptr)
-            {
-                if (ptr < data + buflen
-                    && !is_mysql_statement_end(ptr, buflen - (ptr - data)))
-                {
-                    rval = true;
-                }
-            }
-        }
-    }
-
-    return rval;
-}
-
-/**
  * @brief Handle multi statement queries and load statements
  *
  * One of the possible types of handling required when a request is routed
@@ -855,13 +799,24 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
      * when the query is routed. */
-    if ((current_target != QueryClassifier::CURRENT_TARGET_MASTER)
-        && (check_for_multi_stmt(querybuf, packet_type)
-            || check_for_sp_call(querybuf, packet_type)))
+    if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        MXS_INFO("Multi-statement query or stored procedure call, routing "
-                 "all future queries to master.");
-        rv = QueryClassifier::CURRENT_TARGET_MASTER;
+        bool is_multi = check_for_sp_call(querybuf, packet_type);
+        if (!is_multi && multi_statements_allowed() && packet_type == MXS_COM_QUERY)
+        {
+            // This is wasteful, the sql is extracted multiple times
+            // it should be in the Context, after first call.
+            mxb_assert(gwbuf_is_contiguous(querybuf));
+            m_sql = maxscale::extract_sql(querybuf);
+            is_multi = maxsimd::is_multi_stmt(m_sql, &m_markers);
+        }
+
+        if (is_multi)
+        {
+            MXS_INFO("Multi-statement query or stored procedure call, routing "
+                     "all future queries to master.");
+            rv = QueryClassifier::CURRENT_TARGET_MASTER;
+        }
     }
 
     /**
