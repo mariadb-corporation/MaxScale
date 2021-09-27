@@ -37,6 +37,7 @@ function sidebarStates() {
  */
 function editorStates() {
     return {
+        curr_editor_mode: 'TXT_EDITOR',
         query_txt: '',
         curr_ddl_alter_spec: '',
     }
@@ -195,6 +196,13 @@ export default {
         },
 
         // editor mutations
+        SET_CURR_EDITOR_MODE(state, payload) {
+            patch_wke_property(state, {
+                obj: { curr_editor_mode: payload },
+                scope: this,
+                active_wke_id: state.active_wke_id,
+            })
+        },
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, {
                 obj: { query_txt: payload },
@@ -622,6 +630,9 @@ export default {
                         draggable: true,
                         data: row,
                         level: 2,
+                        isSysTbl: ['information_schema', 'performance_schema', 'mysql'].includes(
+                            dbName.toLowerCase()
+                        ),
                     }
                     // For child node of Tables, it has canBeHighlighted and children props
                     if (node.type === 'Tables') {
