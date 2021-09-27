@@ -1382,13 +1382,13 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
     payload.push_back(token.size());
     payload.insert(payload.end(), token.begin(), token.end());
 
-    insert_stringz(mses->db);
+    insert_stringz(mses->auth_data.default_db);
 
     uint8_t charset[2];
-    mariadb::set_byte2(charset, mses->client_info.m_charset);
+    mariadb::set_byte2(charset, mses->auth_data.collation);
     payload.insert(payload.end(), charset, charset + sizeof(charset));
 
-    insert_stringz(mses->plugin);
+    insert_stringz(mses->auth_data.plugin);
     auto& attr = mses->connect_attrs;
     payload.insert(payload.end(), attr.begin(), attr.end());
 
@@ -1812,7 +1812,8 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         curr_passwd = client_data->backend_token.data();
     }
 
-    uint32_t capabilities = create_capabilities(with_ssl, client_data->db[0], service_capabilities);
+    const auto& default_db = client_data->auth_data.default_db;
+    uint32_t capabilities = create_capabilities(with_ssl, default_db[0], service_capabilities);
     mariadb::set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1828,7 +1829,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
                                  ssl_established,
                                  username.c_str(),
                                  curr_passwd,
-                                 client_data->db.c_str(),
+                                 default_db.c_str(),
                                  auth_plugin_name);
 
     if (!with_ssl || ssl_established)
@@ -1862,7 +1863,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
 
     // set the charset
     payload += 4;
-    *payload = client_data->client_info.m_charset;
+    *payload = client_data->auth_data.collation;
 
     payload++;
 
@@ -1891,10 +1892,10 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         }
 
         // if the db is not NULL append it
-        if (client_data->db[0])
+        if (default_db[0])
         {
-            memcpy(payload, client_data->db.c_str(), client_data->db.length());
-            payload += client_data->db.length();
+            memcpy(payload, default_db.c_str(), default_db.length());
+            payload += default_db.length();
             payload++;
         }
 

@@ -52,25 +52,28 @@ StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client
 namespace packet_parser
 {
 
-ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
+ClientCapsResult parse_client_capabilities(ByteVec& data, const ClientInfo& old_info)
 {
-    auto rval = old_info ? *old_info : ClientInfo();
+    ClientCapsResult rval;
+    rval.capabilities = old_info;
+    auto& caps = rval.capabilities;
 
     // Can assume that client capabilities are in the first 32 bytes and the buffer is large enough.
     const uint8_t* ptr = data.data();
+
     /**
      * We OR the capability bits in order to retain the starting bits sent
      * when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
      * the SSL capability bit mid-authentication which causes MaxScale to think
      * that SSL is not used.
      */
-    rval.m_client_capabilities |= mariadb::get_byte4(ptr);
+    caps.basic_capabilities |= mariadb::get_byte4(ptr);
     ptr += 4;
 
     // Next is max packet size, skip it.
     ptr += 4;
 
-    rval.m_charset = *ptr;
+    rval.collation = *ptr;
     ptr += 1;
 
     // Next, 19 bytes of reserved filler. Skip.
@@ -81,11 +84,11 @@ ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
      * MariaDB 10.2 compatible clients don't set the first bit to signal that
      * there are extra capabilities stored in the last 4 bytes of the filler.
      */
-    if ((rval.m_client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    if ((caps.basic_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
         // We don't support COM_MULTI or progress reporting. The former is not used and the latter requires
         // some extra work to implement correctly.
-        rval.m_extra_capabilities = (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
+        caps.ext_capabilities = (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
     }
     ptr += 4;
     pop_front(data, ptr - data.data());
@@ -243,7 +246,7 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     rval.token_res = parse_auth_token(data, client_caps, AuthPacketType::COM_CHANGE_USER);
     if (rval.token_res.success)
     {
-        auto db_res = read_stringz_if_cap(data, client_caps, 0); // Is always present.
+        auto db_res = read_stringz_if_cap(data, client_caps, 0);    // Is always present.
         if (db_res.success)
         {
             rval.db = std::move(db_res.result_str);
@@ -314,5 +317,4 @@ void ByteVec::push_back(const std::string& str)
     auto n = str.length() + 1;
     insert(end(), src, src + n);
 }
-
 }

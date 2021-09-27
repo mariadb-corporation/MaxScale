@@ -135,7 +135,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
-    auto client_data = session;
+    auto& client_data = session->auth_data;
 
     switch (m_state)
     {
@@ -143,7 +143,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
         // First, check that session is using correct plugin. The handshake response has already been
         // parsed in protocol code. Some old clients may send an empty plugin name. If so, assume
         // that they are using "mysql_native_password". If this is not the case, authentication will fail.
-        if (client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN || client_data->plugin.empty())
+        if (client_data.plugin == DEFAULT_MYSQL_AUTH_PLUGIN || client_data.plugin.empty())
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
@@ -154,9 +154,9 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
             // Client is attempting to use wrong authenticator, send switch request packet.
             MXS_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
                      "switch to '%s'.",
-                     client_data->user_and_host().c_str(),
-                     client_data->plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
-            GWBUF* switch_packet = gen_auth_switch_request_packet(client_data);
+                     session->user_and_host().c_str(),
+                     client_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
+            GWBUF* switch_packet = gen_auth_switch_request_packet(session);
             if (switch_packet)
             {
                 rval.packet.reset(switch_packet);
@@ -172,7 +172,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
             // the authentication token.
             if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
             {
-                auto& auth_token = client_data->client_token;
+                auto& auth_token = session->client_token;
                 auth_token.clear();
                 auth_token.resize(MYSQL_SCRAMBLE_LEN);
                 gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());

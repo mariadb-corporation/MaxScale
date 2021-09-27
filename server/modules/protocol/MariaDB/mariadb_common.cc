@@ -369,27 +369,26 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
 
 bool MYSQL_session::ssl_capable() const
 {
-    return (client_info.m_client_capabilities & GW_MYSQL_CAPABILITIES_SSL) != 0;
+    return (client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_SSL) != 0;
 }
 
 uint32_t MYSQL_session::client_capabilities() const
 {
-    return client_info.m_client_capabilities;
+    return client_caps.basic_capabilities;
 }
 
 uint32_t MYSQL_session::extra_capabilitites() const
 {
-    return client_info.m_extra_capabilities;
+    return client_caps.ext_capabilities;
 }
 
 MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     : user(rhs.user)
     , remote(rhs.remote)
-    , db(rhs.db)
     , current_db(rhs.current_db)
-    , plugin(rhs.plugin)
     , connect_attrs(rhs.connect_attrs)
-    , client_info(rhs.client_info)
+    , auth_data(rhs.auth_data)
+    , client_caps(rhs.client_caps)
     , client_token(rhs.client_token)
     , client_token_2fa(rhs.client_token_2fa)
     , backend_token(rhs.backend_token)

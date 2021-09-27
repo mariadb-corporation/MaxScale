@@ -229,9 +229,9 @@ bool ClientConnection::setup_session()
 
     m_session_data.user = m_config.user;
     m_session.set_user(m_session_data.user);
-    m_session_data.db = "";
+    m_session_data.auth_data.default_db = "";
     m_session_data.current_db = "";
-    m_session_data.plugin = "mysql_native_password";
+    m_session_data.auth_data.plugin = "mysql_native_password";
 
     if (!m_config.password.empty())
     {
@@ -251,7 +251,7 @@ bool ClientConnection::setup_session()
 
     m_session_data.m_current_client_auth = pAuthenticator;
     m_session_data.m_current_be_auth = pAuthenticator;
-    m_session_data.client_info.m_client_capabilities = CLIENT_LONG_FLAG
+    m_session_data.client_caps.basic_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41
         | CLIENT_INTERACTIVE
@@ -263,8 +263,8 @@ bool ClientConnection::setup_session()
         | CLIENT_PLUGIN_AUTH
         | CLIENT_SESSION_TRACKING
         | CLIENT_PROGRESS;
-    m_session_data.client_info.m_extra_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
-    m_session_data.client_info.m_charset = 33;      // UTF8
+    m_session_data.client_caps.ext_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+    m_session_data.auth_data.collation = 33;        // UTF8
 
     return m_session.start();
 }
