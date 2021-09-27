@@ -115,10 +115,8 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
     unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
     GWBUF* buffer = gwbuf_alloc(buflen);
     uint8_t* bufdata = GWBUF_DATA(buffer);
-    gw_mysql_set_byte3(bufdata, payloadlen);
-    bufdata += 3;
-    *bufdata++ = client_data->next_sequence;
-    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;     // AuthSwitchRequest command
+    bufdata = mariadb::write_header(bufdata, payloadlen, 0);// protocol will set sequence
+    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;             // AuthSwitchRequest command
     memcpy(bufdata, plugin, sizeof(plugin));
     bufdata += sizeof(plugin);
     memcpy(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
@@ -133,10 +131,11 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
 }
 
 mariadb::ClientAuthenticator::ExchRes
-MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
+MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
 {
+    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
+    ExchRes rval;
     auto client_data = session;
-    auto rval = ExchRes::FAIL;
 
     switch (m_state)
     {
@@ -148,21 +147,21 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
-            rval = ExchRes::READY;
+            rval.status = ExchRes::Status::READY;
         }
         else
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
-            MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
-                     "plugin '%s'. Trying to switch to '%s'.",
-                     client_data->user.c_str(), client_data->remote.c_str(),
+            MXS_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
+                     "switch to '%s'.",
+                     client_data->user_and_host().c_str(),
                      client_data->plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
             GWBUF* switch_packet = gen_auth_switch_request_packet(client_data);
             if (switch_packet)
             {
-                output_packet->reset(switch_packet);
+                rval.packet.reset(switch_packet);
                 m_state = State::AUTHSWITCH_SENT;
-                rval = ExchRes::INCOMPLETE;
+                rval.status = ExchRes::Status::INCOMPLETE;
             }
         }
         break;
@@ -180,7 +179,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
                 m_state = State::CHECK_TOKEN;
-                rval = ExchRes::READY;
+                rval.status = ExchRes::Status::READY;
             }
         }
         break;

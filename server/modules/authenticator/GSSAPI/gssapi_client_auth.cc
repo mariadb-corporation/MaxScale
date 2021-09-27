@@ -59,7 +59,7 @@ mxs::Buffer GSSAPIClientAuthenticator::create_auth_change_packet()
     size_t plen = 1 + auth_plugin_name_len + principal_name_len + 1;
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
-    uint8_t* data = mariadb::write_header(bufdata, plen, ++m_sequence);
+    uint8_t* data = mariadb::write_header(bufdata, plen, 0);
     *data++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
     data = mariadb::copy_chars(data, auth_plugin_name, auth_plugin_name_len);
     data = mariadb::copy_chars(data, m_service_principal.c_str(), principal_name_len);
@@ -85,16 +85,11 @@ void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->client_token.data());
 }
 
-/**
- * @brief Extract data from client response
- *
- * @param read_buffer Buffer containing the client's response
- * @return True if authentication can continue, false if not
- */
 mariadb::ClientAuthenticator::ExchRes
-GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
+GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session)
 {
-    auto rval = ExchRes::FAIL;
+    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
+    ExchRes rval;
 
     switch (m_state)
     {
@@ -106,9 +101,9 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
             auto buffer = create_auth_change_packet();
             if (buffer.length())
             {
-                *output = std::move(buffer);
+                rval.packet = std::move(buffer);
                 m_state = State::DATA_SENT;
-                rval = ExchRes::INCOMPLETE;
+                rval.status = ExchRes::Status::INCOMPLETE;
             }
             break;
         }
@@ -116,7 +111,7 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
     case State::DATA_SENT:
         store_client_token(session, read_buffer);
         m_state = State::TOKEN_READY;
-        rval = ExchRes::READY;
+        rval.status = ExchRes::Status::READY;
         break;
 
     default:

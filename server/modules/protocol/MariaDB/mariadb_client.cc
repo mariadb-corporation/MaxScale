@@ -2160,9 +2160,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
         return StateMachineRes::IN_PROGRESS;
     }
 
-    auto buffer = read_buffer.get();
-    m_session_data->next_sequence = m_next_sequence;
-
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
                                   "Expected %i, got %i.";
     const char packets_ooo[] = "Got packets out of order";
@@ -2170,8 +2167,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     const int er_bad_handshake = 1043;
     const int er_out_of_order = 1156;
 
+    auto buffer = read_buffer.get();
     auto rval = StateMachineRes::IN_PROGRESS;   // Returned to upper level SM
     bool state_machine_continue = true;
+
     while (state_machine_continue)
     {
         switch (m_handshake_state)
@@ -2345,11 +2344,9 @@ bool MariaDBClientConnection::perform_auth_exchange()
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
         auto read_res = read_protocol_packet();
-        read_buffer = move(read_res.data);
         if (read_res)
         {
-            // Save next sequence to session. Authenticator may use the value.
-            m_session_data->next_sequence = m_next_sequence;
+            read_buffer = move(read_res.data);
         }
         else if (read_res.error())
         {
@@ -2364,20 +2361,20 @@ bool MariaDBClientConnection::perform_auth_exchange()
         }
     }
 
-    mxs::Buffer auth_output;
-    auto auth_val = m_authenticator->exchange(read_buffer.get(), m_session_data, &auth_output);
-    if (!auth_output.empty())
+    auto res = m_authenticator->exchange(read_buffer.get(), m_session_data);
+    if (!res.packet.empty())
     {
-        write(auth_output.release());
+        res.packet.data()[MYSQL_SEQ_OFFSET] = m_next_sequence;
+        write(res.packet.release());
     }
 
     bool state_machine_continue = true;
-    if (auth_val == ExcRes::READY)
+    if (res.status == ExcRes::Status::READY)
     {
         // Continue to password check.
         m_auth_state = AuthState::CHECK_TOKEN;
     }
-    else if (auth_val == ExcRes::INCOMPLETE)
+    else if (res.status == ExcRes::Status::INCOMPLETE)
     {
         // Authentication is expecting another packet from client, so jump out.
         if (m_auth_state == AuthState::START_EXCHANGE)
@@ -2522,8 +2519,6 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
     switch (m_command)
     {
     case MXS_COM_CHANGE_USER:
-        m_session_data->next_sequence = m_next_sequence;
-
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
         if (start_change_user(move(buffer)))
         {
