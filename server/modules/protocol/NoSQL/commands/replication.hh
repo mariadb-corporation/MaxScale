@@ -67,7 +67,7 @@ public:
         doc.append(kvp(key::MAX_BSON_OBJECT_SIZE, protocol::MAX_BSON_OBJECT_SIZE));
         doc.append(kvp(key::MAX_MESSAGE_SIZE_BYTES, protocol::MAX_MSG_SIZE));
         doc.append(kvp(key::MAX_WRITE_BATCH_SIZE, protocol::MAX_WRITE_BATCH_SIZE));
-        doc.append(kvp(key::LOCALTIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
+        doc.append(kvp(key::LOCAL_TIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
         doc.append(kvp(key::LOGICAL_SESSION_TIMEOUT_MINUTES, 30));
         doc.append(kvp(key::CONNECTION_ID, database.context().connection_id()));
         doc.append(kvp(key::MIN_WIRE_VERSION, MIN_WIRE_VERSION));

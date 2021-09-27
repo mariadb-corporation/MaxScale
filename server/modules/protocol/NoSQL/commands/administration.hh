@@ -1300,7 +1300,10 @@ public:
                 }
 
                 doc.append(kvp(key::DATABASES, databases.extract()));
-                doc.append(kvp(key::TOTAL_SIZE, total_size));
+                if (!m_name_only)
+                {
+                    doc.append(kvp(key::TOTAL_SIZE, total_size));
+                }
                 doc.append(kvp(key::OK, 1));
             }
         }
