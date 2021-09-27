@@ -2284,6 +2284,21 @@ string get_comparison_condition(const string& field,
     return condition;
 }
 
+namespace
+{
+
+bool is_hex(const string& s)
+{
+    auto isxdigit = [](char c)
+    {
+        return std::isxdigit(c);
+    };
+
+    return std::all_of(s.begin(), s.end(), isxdigit);
+}
+
+}
+
 // https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string get_comparison_condition(const bsoncxx::document::element& element)
 {
@@ -2296,19 +2311,33 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     {
         condition = "( id = '";
 
-        if (type == bsoncxx::type::k_utf8)
+        bool is_utf8 = (type == bsoncxx::type::k_utf8);
+
+        if (is_utf8)
         {
             condition += "\"";
         }
 
-        condition += to_string(element);
+        auto id = to_string(element);
 
-        if (type == bsoncxx::type::k_utf8)
+        condition += id;
+
+        if (is_utf8)
         {
             condition += "\"";
         }
 
-        condition += "')";
+        condition += "'";
+
+        if (is_utf8 && id.length() == 24 && is_hex(id))
+        {
+            // This sure looks like an ObjectId. And this is the way it will appear
+            // if a search is made using a DBPointer. So we'll cover that case as well.
+
+            condition += " OR id = '{\"$oid\":\"" + id + "\"}'";
+        }
+
+        condition += ")";
     }
     else
     {
