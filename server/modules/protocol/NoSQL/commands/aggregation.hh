@@ -168,7 +168,7 @@ public:
         sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " ";
 
         bsoncxx::document::view query;
-        if (optional(key::QUERY, &query))
+        if (optional(key::QUERY, &query, Conversion::RELAXED))
         {
             auto where = query_to_where_clause(query);
 

@@ -243,9 +243,9 @@ template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
-                                                            Conversion)
+                                                            Conversion conversion)
 {
-    if (element.type() != bsoncxx::type::k_document)
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
@@ -254,7 +254,28 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const string& comman
         throw SoftError(ss.str(), error::TYPE_MISMATCH);
     }
 
-    return element.get_document();
+    bsoncxx::document::view doc;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_document:
+        doc = element.get_document();
+        break;
+
+    case bsoncxx::type::k_null:
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return doc;
 }
 
 template<>
