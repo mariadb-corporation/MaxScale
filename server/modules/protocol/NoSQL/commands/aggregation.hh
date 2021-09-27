@@ -158,6 +158,11 @@ public:
             throw SoftError("FieldPath cannot be constructed with empty string", error::LOCATION40352);
         }
 
+        if (key.find('\0') != string::npos)
+        {
+            throw SoftError("Key field cannot contain an embedded null byte", error::LOCATION31032);
+        }
+
         if (key.back() == '.')
         {
             throw SoftError("FieldPath must not end with a '.'.", error::LOCATION40353);
