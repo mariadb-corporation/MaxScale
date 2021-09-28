@@ -99,5 +99,4 @@ private:
     Config   m_config;
 
     PerformanceInfoUpdater m_updater;
-    std::future<void>      m_updater_future;
 };

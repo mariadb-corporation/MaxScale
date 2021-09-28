@@ -16,6 +16,7 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
+#include <future>
 
 namespace maxbase
 {
@@ -185,7 +186,7 @@ public:
               bool updates_only = false);
 
 
-    void run();
+    void start();
     void stop();
 
     // The SharedDataType instances are owned by GCUpdater, get pointers to all of them...
@@ -200,12 +201,14 @@ public:
     typename SharedDataType::DataType* get_pLatest();
 
 private:
+    void run();
     int  gc();
     void read_clients(std::vector<int> clients);
 
     std::vector<const typename SD::DataType*> get_in_use_ptrs();
 
     std::atomic<bool>                  m_running;
+    std::future<void>                  m_future;
     typename SharedDataType::DataType* m_pLatest_data;
 
     int    m_num_clients;
@@ -309,8 +312,6 @@ std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
 template<typename SD>
 void GCUpdater<SD>::run()
 {
-    m_running.store(true, std::memory_order_relaxed);
-
     const maxbase::Duration garbage_wait_tmo {std::chrono::microseconds(100)};
     int gc_ptr_count = 0;
 
@@ -448,6 +449,13 @@ void GCUpdater<SD>::run()
 }
 
 template<typename SD>
+void GCUpdater<SD>::start()
+{
+    m_running.store(true, std::memory_order_release);
+    m_future = std::async(std::launch::async, &GCUpdater<SD>::run, this);
+}
+
+template<typename SD>
 void GCUpdater<SD>::stop()
 {
     m_running.store(false, std::memory_order_release);
@@ -456,6 +464,7 @@ void GCUpdater<SD>::stop()
         s.reset_ptrs();
     }
     m_shared_data[0].shutdown();
+    m_future.get();
 }
 
 template<typename SD>
