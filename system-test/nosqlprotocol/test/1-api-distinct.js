@@ -67,6 +67,8 @@ describe('distinct', function () {
         var mngrv = await distinct_db(mngdb, key, query);
         var mxsrv = await distinct_db(mxsdb, key, query);
 
+        mngrv.values.sort();
+        mxsrv.values.sort();
         assert.deepEqual(mngrv, mxsrv);
 
         if (n != undefined)
