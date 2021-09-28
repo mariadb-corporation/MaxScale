@@ -24,7 +24,7 @@ then
     # We don't care about memory leaks in the tests (e.g. servers are never freed)
     export ASAN_OPTIONS=detect_leaks=0
     # All tests must pass otherwise the build is considered a failure
-    ctest --output-on-failure || exit 1
+    ctest --timeout 120 --output-on-failure || exit 1
 
     # See if docker is installed and run REST API and MaxCtrl tests if it is
     command -v docker
