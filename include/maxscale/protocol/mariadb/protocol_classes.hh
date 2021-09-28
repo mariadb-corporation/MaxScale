@@ -76,12 +76,25 @@ DCB::ReadResult       read_protocol_packet(DCB* dcb);
  */
 struct AuthenticationData
 {
-    std::string default_db;     /**< Initial default database */
-    std::string plugin;         /**< Authentication plugin name */
+    std::string default_db;   /**< Initial default database */
+    std::string plugin;       /**< Authentication plugin name */
+    ByteVec     attributes;   /**< Raw connection attribute data, sent to backends. */
 
     /** Character collation, defines charset as well. Usually just one byte is needed.
      * COM_CHANGE_USER sends two. */
     uint16_t collation {0};
+
+    /**
+     * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and
+     * backends. The client tokens store the tokens sent by client. The backend tokens store tokens for
+     * backend authentication. The authenticator module calculates the backend tokens from the client tokens.
+     * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
+     */
+
+    ByteVec client_token;       /**< First client token */
+    ByteVec client_token_2fa;   /**< Second client token */
+    ByteVec backend_token;      /**< First backend token */
+    ByteVec backend_token_2fa;  /**< Second backend token */
 };
 }
 
@@ -133,24 +146,9 @@ public:
     std::string current_db;     /**< Current default database */
     std::string role;           /**< Current role */
 
-    // Raw connection attribute data, copied to all backend connections
-    std::vector<uint8_t> connect_attrs;
-
     mariadb::AuthenticationData auth_data;
 
     ClientCapabilities client_caps;     /**< Client capabilities from handshake response packet */
-
-    /**
-     * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and
-     * backends. The client tokens store the tokens sent by client. The backend tokens store tokens for
-     * backend authentication. The authenticator module calculates the backend tokens from the client tokens.
-     * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
-     */
-
-    mariadb::AuthByteVec client_token;      /**< First client token */
-    mariadb::AuthByteVec client_token_2fa;  /**< Second client token */
-    mariadb::AuthByteVec backend_token;     /**< First backend token */
-    mariadb::AuthByteVec backend_token_2fa; /**< Second backend token */
 
     // Client authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_client_auth {nullptr};

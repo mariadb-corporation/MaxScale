@@ -242,7 +242,7 @@ bool ClientConnection::setup_session()
         gw_sha1_str(pPassword, nPassword, auth_token);
 
         // This will be used when authenticating with the backend.
-        m_session_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+        m_session_data.auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
     }
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;

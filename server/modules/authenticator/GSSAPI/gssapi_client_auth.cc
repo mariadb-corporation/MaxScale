@@ -81,8 +81,9 @@ void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
     auto* data = gwbuf_link_data(buffer);
     auto header = mariadb::get_header(data);
     size_t plen = header.pl_length;
-    session->client_token.resize(plen);
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->client_token.data());
+    auto& token = session->auth_data.client_token;
+    token.resize(plen);
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, token.data());
 }
 
 mariadb::ClientAuthenticator::ExchRes
@@ -168,8 +169,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const 
         // gssapi wants more communication, authentication fails.
         gss_ctx_id_t handle = GSS_C_NO_CONTEXT;
         gss_buffer_desc in = GSS_C_EMPTY_BUFFER;
-        in.value = ses->client_token.data();
-        in.length = ses->client_token.size();
+        in.value = ses->auth_data.client_token.data();
+        in.length = ses->auth_data.client_token.size();
 
         gss_name_t client = GSS_C_NO_NAME;
         gss_buffer_desc out = GSS_C_EMPTY_BUFFER;
@@ -253,7 +254,7 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
     if (validate_gssapi_token(session, entry))
     {
         rval.status = AuthRes::Status::SUCCESS;
-        session->backend_token = session->client_token;
+        session->auth_data.backend_token = session->auth_data.client_token;
     }
     return rval;
 }

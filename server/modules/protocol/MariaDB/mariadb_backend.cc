@@ -1349,7 +1349,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
                               concat_hash);
 
                 // SHA1(password) was sent by client and is in binary form.
-                auto& hash1 = m_auth_data.client_data->backend_token;
+                auto& hash1 = m_auth_data.client_data->auth_data.backend_token;
                 if (hash1.size() == SHA_DIGEST_LENGTH)
                 {
                     m_current_auth_token = hash1;
@@ -1389,7 +1389,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
     payload.insert(payload.end(), charset, charset + sizeof(charset));
 
     insert_stringz(mses->auth_data.plugin);
-    auto& attr = mses->connect_attrs;
+    auto& attr = mses->auth_data.attributes;
     payload.insert(payload.end(), attr.begin(), attr.end());
 
     GWBUF* buffer = gwbuf_alloc(payload.size() + MYSQL_HEADER_LEN);
@@ -1807,9 +1807,9 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     const uint8_t* curr_passwd = NULL;
 
-    if (client_data->backend_token.size() == SHA_DIGEST_LENGTH)
+    if (client_data->auth_data.backend_token.size() == SHA_DIGEST_LENGTH)
     {
-        curr_passwd = client_data->backend_token.data();
+        curr_passwd = client_data->auth_data.backend_token.data();
     }
 
     const auto& default_db = client_data->auth_data.default_db;
@@ -1832,11 +1832,12 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
                                  default_db.c_str(),
                                  auth_plugin_name);
 
+    const auto& attrs = client_data->auth_data.attributes;
     if (!with_ssl || ssl_established)
     {
         if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
         {
-            bytes += client_data->connect_attrs.size();
+            bytes += attrs.size();
         }
     }
 
@@ -1902,11 +1903,11 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
 
         if ((capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
-            && !client_data->connect_attrs.empty())
+            && !attrs.empty())
         {
             // Copy client attributes as-is. This allows us to pass them along without having to process them.
             payload += strlen(auth_plugin_name) + 1;
-            memcpy(payload, client_data->connect_attrs.data(), client_data->connect_attrs.size());
+            memcpy(payload, attrs.data(), attrs.size());
         }
     }
 
