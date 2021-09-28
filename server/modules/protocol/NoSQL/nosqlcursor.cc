@@ -167,6 +167,18 @@ public:
         }
     }
 
+    void purge(const std::string& collection)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+
+        auto it = m_collection_cursors.find(collection);
+
+        if (it != m_collection_cursors.end())
+        {
+            m_collection_cursors.erase(it);
+        }
+    }
+
 private:
     void throw_cursor_not_found(int64_t id)
     {
@@ -359,6 +371,12 @@ void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
 
     doc.append(kvp(key::CURSOR, cursor.extract()));
     doc.append(kvp(key::OK, 1));
+}
+
+//static
+void NoSQLCursor::purge(const std::string& collection)
+{
+    this_unit.purge(collection);
 }
 
 void NoSQLCursor::create_batch(mxb::Worker& worker,

@@ -785,6 +785,7 @@ public:
         {
         case ComResponse::OK_PACKET:
             ok = 1;
+            NoSQLCursor::purge(table(Quoted::NO));
             break;
 
         case ComResponse::ERR_PACKET:
