@@ -107,6 +107,15 @@ transaction or change the autocommit mode using a prepared statement.
   ignored. Due to this, they will always appear to succeed even if the user is
   lacking the permissions.
 
+* The change user command (COM_CHANGE_USER) only works with standard
+  authentication.
+
+* If a COM_CHANGE_USER succeeds on MaxScale yet fails on the server the session
+  ends up in an inconsistent state. This can happen if the password of the
+  target user is changed and MaxScale uses old user account data when processing
+  the change user. In such a situation, MaxScale and server will disagree on the
+  current user. This can affect e.g. reconnections.
+
 ## Authenticator limitations
 
 ### Limitations in the GSSAPI authenticator
