@@ -18,6 +18,7 @@
 #include <maxbase/assert.h>
 #include <functional>
 #include <algorithm>
+#include <limits>
 
 namespace
 {
