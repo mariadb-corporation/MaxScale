@@ -1478,6 +1478,34 @@ private:
 // https://docs.mongodb.com/v4.4/reference/command/setIndexCommitQuorum/
 
 // https://docs.mongodb.com/v4.4/reference/command/setParameter/
+class SetParameter;
+
+template<>
+struct IsAdmin<command::SetParameter>
+{
+    static const bool is_admin { true };
+};
+
+class SetParameter : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "setParameter";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<SetParameter>::is_admin;
+    }
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        // TODO: Should be assigned to the session so that getParamter
+        // TODO: would return the set value.
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/setDefaultRWConcern/
 

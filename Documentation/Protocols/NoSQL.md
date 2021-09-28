@@ -784,6 +784,19 @@ Field | Type | Description
 ------|------|------------
 ping | any | Ignored.
 
+### setParameter
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+setParameter | any | Ignored.
+
+Any kind of parameter is accepted and the response will always be:
+```
+{ "ok" : 1 }
+```
+
 ### validate
 
 The following fields are relevant.
