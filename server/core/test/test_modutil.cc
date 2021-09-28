@@ -453,26 +453,26 @@ void test_multiple_sql_packets2()
     mxb_assert_message(buffer == NULL, "Buffer should be NULL");
 }
 
-void test_strnchr_esc_mysql()
+void test_strnchr_esc_mariadb()
 {
     char comment1[] = "This will -- fail.";
-    mxb_assert_message(strnchr_esc_mysql(comment1, '.', sizeof(comment1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(comment1, '.', sizeof(comment1) - 1) == NULL,
                        "Commented character should return NULL");
 
     char comment2[] = "This will # fail.";
-    mxb_assert_message(strnchr_esc_mysql(comment2, '.', sizeof(comment2) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(comment2, '.', sizeof(comment2) - 1) == NULL,
                        "Commented character should return NULL");
 
     char comment3[] = "This will fail/* . */";
-    mxb_assert_message(strnchr_esc_mysql(comment3, '.', sizeof(comment3) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(comment3, '.', sizeof(comment3) - 1) == NULL,
                        "Commented character should return NULL");
 
     char comment4[] = "This will not /* . */ fail.";
-    mxb_assert_message(strnchr_esc_mysql(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
+    mxb_assert_message(mxb::strnchr_esc_mariadb(comment4, '.', sizeof(comment4) - 1) == strrchr(comment4, '.'),
                        "Uncommented character should be matched");
 
     char comment5[] = "This will fail/* . ";
-    mxb_assert_message(strnchr_esc_mysql(comment5, '.', sizeof(comment5) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(comment5, '.', sizeof(comment5) - 1) == NULL,
                        "Bad comment should fail");
 }
 
@@ -480,57 +480,57 @@ void test_strnchr_esc()
 {
     /** Single escaped and quoted characters */
     char esc1[] = "This will fail\\.";
-    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
-    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
 
     char esc2[] = "This will fail\".\"";
-    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
-    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
 
     char esc3[] = "This will fail'.'";
-    mxb_assert_message(strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
-    mxb_assert_message(strnchr_esc_mysql(esc1, '.', sizeof(esc1) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc_mariadb(esc1, '.', sizeof(esc1) - 1) == NULL,
                        "Only escaped character should return NULL");
 
     /** Test escaped and quoted characters */
     char str1[] = "this \\. is a test.";
-    mxb_assert_message(strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+    mxb_assert_message(mxb::strnchr_esc(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
                        "Escaped characters should be ignored");
-    mxb_assert_message(strnchr_esc_mysql(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
+    mxb_assert_message(mxb::strnchr_esc_mariadb(str1, '.', sizeof(str1) - 1) == strrchr(str1, '.'),
                        "Escaped characters should be ignored");
     char str2[] = "this \"is . \" a test .";
-    mxb_assert_message(strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+    mxb_assert_message(mxb::strnchr_esc(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
                        "Double quoted characters should be ignored");
-    mxb_assert_message(strnchr_esc_mysql(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
+    mxb_assert_message(mxb::strnchr_esc_mariadb(str2, '.', sizeof(str2) - 1) == strrchr(str2, '.'),
                        "Double quoted characters should be ignored");
     char str3[] = "this 'is . ' a test .";
-    mxb_assert_message(strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+    mxb_assert_message(mxb::strnchr_esc(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
                        "Double quoted characters should be ignored");
-    mxb_assert_message(strnchr_esc_mysql(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
+    mxb_assert_message(mxb::strnchr_esc_mariadb(str3, '.', sizeof(str3) - 1) == strrchr(str3, '.'),
                        "Double quoted characters should be ignored");
 
     /** Bad quotation tests */
     char bad1[] = "This will \" fail.";
-    mxb_assert_message(strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
-    mxb_assert_message(strnchr_esc_mysql(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(mxb::strnchr_esc(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(mxb::strnchr_esc_mariadb(bad1, '.', sizeof(bad1) - 1) == NULL, "Bad quotation should fail");
 
     char bad2[] = "This will ' fail.";
-    mxb_assert_message(strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
-    mxb_assert_message(strnchr_esc_mysql(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(mxb::strnchr_esc(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
+    mxb_assert_message(mxb::strnchr_esc_mariadb(bad2, '.', sizeof(bad2) - 1) == NULL, "Bad quotation should fail");
 
     char bad3[] = "This will \" fail. '";
-    mxb_assert_message(strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
-    mxb_assert_message(strnchr_esc_mysql(bad3, '.', sizeof(bad3) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc(bad3, '.', sizeof(bad3) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(mxb::strnchr_esc_mariadb(bad3, '.', sizeof(bad3) - 1) == NULL,
                        "Different quote pairs should fail");
 
     char bad4[] = "This will ' fail. \"";
-    mxb_assert_message(strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
-    mxb_assert_message(strnchr_esc_mysql(bad4, '.', sizeof(bad4) - 1) == NULL,
+    mxb_assert_message(mxb::strnchr_esc(bad4, '.', sizeof(bad4) - 1) == NULL, "Different quote pairs should fail");
+    mxb_assert_message(mxb::strnchr_esc_mariadb(bad4, '.', sizeof(bad4) - 1) == NULL,
                        "Different quote pairs should fail");
 }
 
@@ -643,7 +643,7 @@ int main(int argc, char** argv)
     test_multiple_sql_packets1();
     test_multiple_sql_packets2();
     test_strnchr_esc();
-    test_strnchr_esc_mysql();
+    test_strnchr_esc_mariadb();
     test_large_packets();
     test_bypass_whitespace();
     exit(result);
