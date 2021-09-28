@@ -114,6 +114,7 @@ function patch_wke_property(state, { obj, scope, active_wke_id }) {
 export default {
     namespaced: true,
     state: {
+        //TODO: Convert object map to Map
         // connection related states
         is_validating_conn: true,
         is_querying_map: {},
@@ -125,6 +126,10 @@ export default {
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
+        // editor states
+        tbl_creation_info_map: {},
+        charset_collation_map: new Map(),
+        engines: [],
         /**
          * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
          * because it's not possible at the moment to fetch query results using query id, it can only be read once.
@@ -220,7 +225,20 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-
+        UPDATE_TBL_CREATION_INFO_MAP(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state.tbl_creation_info_map, id)
+            else
+                state.tbl_creation_info_map = {
+                    ...state.tbl_creation_info_map,
+                    ...{ [id]: { ...state.tbl_creation_info_map[id], ...payload } },
+                }
+        },
+        SET_CHARSET_COLLATION_MAP(state, payload) {
+            state.charset_collation_map = payload
+        },
+        SET_ENGINES(state, payload) {
+            state.engines = payload
+        },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
@@ -1009,6 +1027,102 @@ export default {
                 logger.error(e)
             }
         },
+        async queryCharsetCollationMap({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                const sql =
+                    // eslint-disable-next-line vue/max-len
+                    'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql,
+                })
+                let charsetCollationMap = new Map()
+                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
+                data.forEach(row => {
+                    const charset = row[0]
+                    const collation = row[1]
+                    const isDefCollation = row[2] === 'Yes'
+                    let charsetObj = charsetCollationMap.get(charset) || {
+                        collations: [],
+                    }
+                    if (isDefCollation) charsetObj.defCollation = collation
+                    charsetObj.collations.push(collation)
+                    charsetCollationMap.set(charset, charsetObj)
+                })
+                commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryCharsetCollationMap')
+                logger.error(e)
+            }
+        },
+        async queryEngines({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql: 'SELECT engine FROM information_schema.ENGINES',
+                })
+                commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryEngines')
+                logger.error(e)
+            }
+        },
+        async getTblCreationInfo({ state, rootState, dispatch, commit }, schemaId) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            const active_wke_id = state.active_wke_id
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
+                    commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            loading_create_tbl_script: true,
+                        },
+                    })
+                    const schemas = schemaId.split('.')
+                    const db = schemas[0]
+                    const tblName = schemas[1]
+                    const cols =
+                        // eslint-disable-next-line vue/max-len
+                        'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
+                    const sql = `SELECT ${cols} FROM information_schema.tables t
+                    JOIN information_schema.collations c ON t.table_collation = c.collation_name
+                    WHERE table_schema = "${db}" AND table_name = "${tblName}";`
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+
+                    const dataRows = this.vue.$help.getObjectRows({
+                        columns: res.data.data.attributes.results[0].fields,
+                        rows: res.data.data.attributes.results[0].data,
+                    })
+                    commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
+                        id: active_wke_id,
+                        payload: {
+                            table_info: dataRows[0],
+                            loading_create_tbl_script: false,
+                        },
+                    })
+                },
+                actionName: 'getTblCreationInfo',
+                catchAction: e => {
+                    commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            loading_create_tbl_script: false,
+                        },
+                    })
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: this.vue.$help.getErrorsArr(e),
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                },
+            })
+        },
 
         changeWkeName({ state, getters, commit }, name) {
             let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
@@ -1025,6 +1139,7 @@ export default {
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
             commit('UPDATE_IS_QUERYING_MAP', payload)
+            commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -1166,6 +1281,12 @@ export default {
         getPrvwTotalDuration: (state, getters) => mode => {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
+        },
+        // tbl_creation_info_map getters
+        getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
+        getLoadingTblCreationInfo: (state, getters) => {
+            const { loading_create_tbl_script = false } = getters.getTblCreationInfo
+            return loading_create_tbl_script
         },
     },
 }

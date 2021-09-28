@@ -52,7 +52,7 @@
                                         @on-selection="SET_SELECTED_QUERY_TXT($event)"
                                         v-on="$listeners"
                                     />
-                                    <ddl-editor v-show="isDDLEditor" />
+                                    <ddl-editor v-if="isDDLEditor" />
                                 </template>
                                 <template slot="pane-right">
                                     <chart-container

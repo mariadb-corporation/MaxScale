@@ -1,5 +1,11 @@
 <template>
+    <v-card
+        v-if="getLoadingTblCreationInfo"
+        class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
+        :loading="getLoadingTblCreationInfo"
+    />
     <div
+        v-else
         class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
     >
         <v-tooltip
@@ -15,6 +21,7 @@
             <span>{{ $t('closeDDLEditor') }}</span>
         </v-tooltip>
 
+        <!-- TODO: Detach table functions to a dedicated component -->
         <div class="pa-4 pt-2">
             <!-- TODO: Replace below inputs with actual data -->
             <v-row>
@@ -23,10 +30,10 @@
                         {{ $t('name') }}
                     </label>
                     <v-text-field
-                        id="tableName"
-                        v-model="tableName"
-                        :rules="rules.tableName"
-                        name="id"
+                        id="table_name"
+                        v-model="tableInfo.table_name"
+                        :rules="rules.table_name"
+                        name="table_name"
                         required
                         :height="32"
                         class="std error--text__bottom"
@@ -39,9 +46,9 @@
                         {{ $t('engine') }}
                     </label>
                     <v-select
-                        v-model="engine"
+                        v-model="tableInfo.table_engine"
                         :items="engines"
-                        name="resourceName"
+                        name="table_engine"
                         outlined
                         class="std mariadb-select-input error--text__bottom"
                         :menu-props="{
@@ -52,12 +59,70 @@
                         dense
                         :height="32"
                         hide-details="auto"
-                        :rules="rules.engine"
+                        :rules="rules.table_engine"
                         required
                     />
                 </v-col>
             </v-row>
-            <!-- TODO: Add Charset/Collation and Comment inputs -->
+            <v-row>
+                <v-col cols="12" md="6" class="">
+                    <label class="field__label color text-small-text label-required">
+                        {{ $t('charset') }}
+                    </label>
+                    <!-- TODO: Indicate default charset -->
+                    <v-select
+                        v-model="tableInfo.table_charset"
+                        :items="charsets"
+                        name="table_charset"
+                        outlined
+                        class="std mariadb-select-input error--text__bottom"
+                        :menu-props="{
+                            contentClass: 'mariadb-select-v-menu',
+                            bottom: true,
+                            offsetY: true,
+                        }"
+                        dense
+                        :height="32"
+                        hide-details="auto"
+                        :rules="rules.table_charset"
+                        required
+                    />
+                </v-col>
+                <v-col cols="12" md="6" class="">
+                    <label class="field__label color text-small-text label-required">
+                        {{ $t('collation') }}
+                    </label>
+                    <v-select
+                        v-model="tableInfo.table_collation"
+                        :items="collations"
+                        name="table_collation"
+                        outlined
+                        class="std mariadb-select-input error--text__bottom"
+                        :menu-props="{
+                            contentClass: 'mariadb-select-v-menu',
+                            bottom: true,
+                            offsetY: true,
+                        }"
+                        dense
+                        :height="32"
+                        hide-details="auto"
+                        :rules="rules.table_collation"
+                        required
+                    >
+                        <template v-slot:item="{ item, on, attrs }">
+                            <div
+                                class="v-list-item__title d-flex align-center flex-row flex-grow-1"
+                                v-bind="attrs"
+                                v-on="on"
+                            >
+                                {{ item }}
+                                {{ item === defCollation ? `(${$t('defCollation')})` : '' }}
+                            </div>
+                        </template>
+                    </v-select>
+                </v-col>
+            </v-row>
+            <!-- TODO: Add Comment inputs -->
         </div>
 
         <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
@@ -84,23 +149,36 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
 export default {
     name: 'ddl-editor',
     data() {
         return {
-            tableName: '',
+            tableInfo: {
+                table_name: '',
+                table_engine: '',
+                table_charset: '',
+                table_collation: '',
+                table_comment: '',
+            },
             rules: {
-                tableName: [
+                table_name: [
                     val => !!val || this.$t('errors.requiredInput', { inputName: this.$t('name') }),
                 ],
-                engine: [
+                table_engine: [
                     val =>
                         !!val || this.$t('errors.requiredInput', { inputName: this.$t('engine') }),
                 ],
+                table_charset: [
+                    val =>
+                        !!val || this.$t('errors.requiredInput', { inputName: this.$t('charset') }),
+                ],
+                table_collation: [
+                    val =>
+                        !!val ||
+                        this.$t('errors.requiredInput', { inputName: this.$t('collation') }),
+                ],
             },
-            engine: '',
-            engines: [],
         }
     },
     computed: {
@@ -108,6 +186,12 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
+            charset_collation_map: state => state.query.charset_collation_map,
+            engines: state => state.query.engines,
+        }),
+        ...mapGetters({
+            getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
+            getTblCreationInfo: 'query/getTblCreationInfo',
         }),
         activeColSpec: {
             get() {
@@ -116,6 +200,27 @@ export default {
             set(value) {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
+        },
+        charsets() {
+            return [...this.charset_collation_map.keys()]
+        },
+        collations() {
+            return this.$typy(
+                this.charset_collation_map.get(this.tableInfo.table_charset),
+                'collations'
+            ).safeArray
+        },
+        defCollation() {
+            return this.$typy(
+                this.charset_collation_map.get(this.tableInfo.table_charset),
+                'defCollation'
+            ).safeString
+        },
+    },
+    watch: {
+        getTblCreationInfo(v) {
+            const tblCreationInfo = v.table_info
+            this.tableInfo = tblCreationInfo
         },
     },
     methods: {

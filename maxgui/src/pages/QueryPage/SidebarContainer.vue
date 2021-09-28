@@ -132,6 +132,8 @@ export default {
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
+            engines: state => state.query.engines,
+            charset_collation_map: state => state.query.charset_collation_map,
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
@@ -161,6 +163,9 @@ export default {
             updateTreeNodes: 'query/updateTreeNodes',
             useDb: 'query/useDb',
             reloadTreeNodes: 'query/reloadTreeNodes',
+            getTblCreationInfo: 'query/getTblCreationInfo',
+            queryCharsetCollationMap: 'query/queryCharsetCollationMap',
+            queryEngines: 'query/queryEngines',
         }),
         async reloadSchema() {
             await this.reloadTreeNodes()
@@ -182,8 +187,11 @@ export default {
             await this.updateTreeNodes(node)
         },
         async onAlterTable(schemaId) {
-            console.log('sche', schemaId)
-            //TODO: dispatch action  "show create table tbl_name"
+            //Query once only as the data won't be changed
+            if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
+            if (this.charset_collation_map.size === 0) await this.queryCharsetCollationMap()
+
+            await this.getTblCreationInfo(schemaId)
         },
     },
 }
