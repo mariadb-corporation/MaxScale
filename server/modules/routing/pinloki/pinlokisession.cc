@@ -370,7 +370,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     }
     else
     {
-        MXB_SWARNING("Ignore set " << key << " = " << value);
+        MXB_SINFO("Ignore set " << key << " = " << value);
         buf = modutil_create_ok();
     }
 
