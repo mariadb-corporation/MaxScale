@@ -419,12 +419,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$label-size: 0.75rem;
-.field__label {
-    font-size: $label-size;
-}
 ::v-deep .show-trendline label {
-    @extend .field__label;
+    font-size: $label-control-size;
     color: $small-text;
     font-weight: 400;
 }

@@ -43,7 +43,7 @@
             </template>
             <template v-if="selectedForm" v-slot:form-body>
                 <div class="mb-0">
-                    <label class="label color text-small-text d-block">
+                    <label class="field__label color text-small-text d-block">
                         {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
                     </label>
                     <v-text-field
@@ -416,8 +416,5 @@ export default {
     ::v-deep .v-select__selection--comma {
         font-weight: bold;
     }
-}
-.label {
-    font-size: 0.625rem;
 }
 </style>

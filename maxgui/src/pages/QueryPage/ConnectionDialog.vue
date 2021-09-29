@@ -296,11 +296,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-$label-size: 0.625rem;
-$input-size: 0.875rem;
-.field__label {
-    font-size: $label-size;
-}
-</style>
