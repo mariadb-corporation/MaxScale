@@ -29,4 +29,12 @@ export const APP_CONFIG = Object.freeze({
         HISTORY: 'HISTORY',
         FAVORITE: 'FAVORITE',
     }),
+    SQL_DDL_ALTER_SPECS: Object.freeze({
+        COLUMNS: 'COLUMNS',
+        TRIGGERS: 'TRIGGERS',
+    }),
+    SQL_EDITOR_MODES: Object.freeze({
+        TXT_EDITOR: 'TXT_EDITOR',
+        DDL_EDITOR: 'DDL_EDITOR',
+    }),
 })

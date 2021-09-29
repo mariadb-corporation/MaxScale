@@ -29,6 +29,7 @@
                         v-model="editorPct"
                         split="horiz"
                         :minPercent="minEditorPct"
+                        :disable="isDDLEditor"
                     >
                         <template slot="pane-left">
                             <split-pane
@@ -40,15 +41,18 @@
                             >
                                 <!-- Editor pane contains editor and chart pane -->
                                 <template slot="pane-left">
+                                    <!-- Use v-show so that queryEditor ref can still be accessed -->
                                     <query-editor
+                                        v-show="isTxtEditor"
                                         ref="queryEditor"
                                         v-model="allQueryTxt"
-                                        class="editor pt-2 pl-2"
+                                        :class="`editor ${isTxtEditor ? 'pt-2 pl-2' : 'no-border'}`"
                                         :cmplList="getDbCmplList"
                                         isKeptAlive
                                         @on-selection="SET_SELECTED_QUERY_TXT($event)"
                                         v-on="$listeners"
                                     />
+                                    <ddl-editor v-show="isDDLEditor" />
                                 </template>
                                 <template slot="pane-right">
                                     <chart-container
@@ -66,6 +70,7 @@
                         </template>
                         <template slot="pane-right">
                             <query-result
+                                v-if="isTxtEditor"
                                 ref="queryResultPane"
                                 :dynDim="resultPaneDim"
                                 class="query-result"
@@ -109,6 +114,7 @@ import QueryResult from './QueryResult'
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import VisualizeSideBar from './VisualizeSideBar'
 import ChartContainer from './ChartContainer'
+import DDLEditor from './DDLEditor.vue'
 export default {
     name: 'worksheet',
     components: {
@@ -117,6 +123,7 @@ export default {
         QueryResult,
         'visualize-sidebar': VisualizeSideBar,
         ChartContainer,
+        'ddl-editor': DDLEditor,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -149,9 +156,11 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
+            curr_editor_mode: state => state.query.curr_editor_mode,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -175,6 +184,12 @@ export default {
             set(value) {
                 this.SET_QUERY_TXT(value)
             },
+        },
+        isTxtEditor() {
+            return this.curr_editor_mode === this.SQL_EDITOR_MODES.TXT_EDITOR
+        },
+        isDDLEditor() {
+            return this.curr_editor_mode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
     },
     watch: {
@@ -207,6 +222,15 @@ export default {
         },
         is_sidebar_collapsed() {
             this.handleSetSidebarPct()
+        },
+        curr_editor_mode(v) {
+            switch (v) {
+                case this.SQL_EDITOR_MODES.TXT_EDITOR:
+                    this.editorPct = 60
+                    break
+                case this.SQL_EDITOR_MODES.DDL_EDITOR:
+                    this.editorPct = 100
+            }
         },
     },
     activated() {
