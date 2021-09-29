@@ -1101,7 +1101,7 @@ export default {
                     commit('UPDATE_TBL_CREATION_INFO_MAP', {
                         id: active_wke_id,
                         payload: {
-                            loading_create_tbl_script: true,
+                            loading_tbl_creation_info: true,
                         },
                     })
                     const schemas = schemaId.split('.')
@@ -1126,7 +1126,7 @@ export default {
                         id: active_wke_id,
                         payload: {
                             table_info: { dbName: db, ...dataRows[0] },
-                            loading_create_tbl_script: false,
+                            loading_tbl_creation_info: false,
                         },
                     })
                 },
@@ -1135,7 +1135,7 @@ export default {
                     commit('UPDATE_TBL_CREATION_INFO_MAP', {
                         id: active_wke_id,
                         payload: {
-                            loading_create_tbl_script: false,
+                            loading_tbl_creation_info: false,
                         },
                     })
                     commit(
@@ -1311,8 +1311,8 @@ export default {
         // tbl_creation_info_map getters
         getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
         getLoadingTblCreationInfo: (state, getters) => {
-            const { loading_create_tbl_script = false } = getters.getTblCreationInfo
-            return loading_create_tbl_script
+            const { loading_tbl_creation_info = false } = getters.getTblCreationInfo
+            return loading_tbl_creation_info
         },
     },
 }
