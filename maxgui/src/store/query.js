@@ -114,34 +114,45 @@ function patch_wke_property(state, { obj, scope, active_wke_id }) {
 export default {
     namespaced: true,
     state: {
-        //TODO: Convert object map to Map
         // connection related states
         is_validating_conn: true,
-        is_querying_map: {},
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
-        // sidebar states
-        db_tree_map: {},
-        // results states
-        prvw_data_map: {},
-        prvw_data_details_map: {},
         // editor states
-        tbl_creation_info_map: {},
         charset_collation_map: new Map(),
         def_db_charset_map: new Map(),
         engines: [],
-        /**
-         * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
-         * because it's not possible at the moment to fetch query results using query id, it can only be read once.
-         */
-        query_results_map: {},
         selected_query_txt: '',
         // worksheet states
-        worksheets_arr: [defWorksheetState()],
+        worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
         cnct_resources: [],
-        // standalone wke states
+        /**
+         * Below states are stored in hash map structure.
+         * Using worksheet's id as key. This helps to preserve
+         * multiple worksheet's data in memory
+         */
+        // connection related states
+        is_querying_map: {},
+        // sidebar states
+        db_tree_map: {},
+        // editor states
+        tbl_creation_info_map: {},
+        // results states
+        prvw_data_map: {},
+        prvw_data_details_map: {},
+        query_results_map: {},
+        /**
+         * Below is standalone wke states. The value
+         * of each state is replicated from current active
+         * worksheet in persisted worksheets_arr.
+         * Using this to reduce unnecessary recomputation instead of
+         * directly accessing value in worksheets_arr because vuex getters
+         * or vue.js's computed properties will recompute when a property
+         * is changed in worksheets_arr then causes other properties also
+         * have to recompute.
+         */
         ...saWkeStates(),
     },
     mutations: {
@@ -162,7 +173,7 @@ export default {
             })
         },
         UPDATE_IS_QUERYING_MAP(state, { id, payload }) {
-            if (payload === undefined) this.vue.$delete(state.is_querying_map, id)
+            if (!payload) this.vue.$delete(state.is_querying_map, id)
             else
                 state.is_querying_map = {
                     ...state.is_querying_map,
