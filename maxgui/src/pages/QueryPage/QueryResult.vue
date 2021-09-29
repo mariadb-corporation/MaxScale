@@ -38,7 +38,6 @@
                         activeTab === SQL_QUERY_MODES.PRVW_DATA ||
                             activeTab === SQL_QUERY_MODES.PRVW_DATA_DETAILS
                     "
-                    ref="prvwDataTab"
                     :style="{
                         height: `calc(100% - 24px)`,
                     }"

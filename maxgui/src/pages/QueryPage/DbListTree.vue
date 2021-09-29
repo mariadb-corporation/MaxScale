@@ -149,8 +149,8 @@ export default {
                 return [this.getActiveTreeNode]
             },
             set(v) {
-                const activeNodes = this.minimizeNodes(v)
-                if (activeNodes.length) {
+                if (v.length) {
+                    const activeNodes = this.minimizeNodes(v)
                     this.UPDATE_DB_TREE_MAP({
                         id: this.active_wke_id,
                         payload: {
@@ -204,9 +204,8 @@ export default {
          * @param {Array} nodes - array of nodes
          * @returns {Array} minimized nodes where each node is an object with id and type props
          */
-        minimizeNodes(nodes) {
-            return nodes.map(node => ({ id: node.id, type: node.type, level: node.level }))
-        },
+        minimizeNodes: nodes =>
+            nodes.map(node => ({ id: node.id, type: node.type, level: node.level })),
         /** This replaces dots with __ as vuetify activator slots
          * can't not parse html id contains dots.
          * @param {String} id - html id attribute
@@ -241,33 +240,41 @@ export default {
         },
         optionHandler({ item, option }) {
             const schema = item.id
+            const txtEditorOptions = [
+                this.$t('previewData'),
+                this.$t('viewDetails'),
+                this.$t('placeSchemaInEditor'),
+                this.$t('placeColumnNameInEditor'),
+            ]
+            if (txtEditorOptions.includes(option))
+                this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
+
+            const nodeRelatedOptions = [
+                this.$t('previewData'),
+                this.$t('viewDetails'),
+                this.$t('alterTbl'),
+            ]
+            if (nodeRelatedOptions.includes(option)) this.updateActiveNode(item)
             switch (option) {
                 case this.$t('previewData'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('preview-data', schema)
-                    this.updateActiveNode(item)
                     break
                 case this.$t('viewDetails'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('view-details', schema)
-                    this.updateActiveNode(item)
                     break
                 case this.$t('placeSchemaInEditor'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
                 case this.$t('placeColumnNameInEditor'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
+                    break
+                case this.$t('useDb'):
+                    this.$emit('use-db', schema)
                     break
                 case this.$t('alterTbl'):
                     this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.DDL_EDITOR)
                     this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
                     this.$emit('alter-tbl', schema)
-                    this.updateActiveNode(item)
-                    break
-                case this.$t('useDb'):
-                    this.$emit('use-db', schema)
                     break
             }
         },
