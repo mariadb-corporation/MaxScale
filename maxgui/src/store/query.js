@@ -129,6 +129,7 @@ export default {
         // editor states
         tbl_creation_info_map: {},
         charset_collation_map: new Map(),
+        def_db_charset_map: new Map(),
         engines: [],
         /**
          * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
@@ -235,6 +236,9 @@ export default {
         },
         SET_CHARSET_COLLATION_MAP(state, payload) {
             state.charset_collation_map = payload
+        },
+        SET_DEF_DB_CHARSET_MAP(state, payload) {
+            state.def_db_charset_map = payload
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
@@ -1055,6 +1059,28 @@ export default {
                 logger.error(e)
             }
         },
+        async queryDefDbCharsetMap({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                const sql =
+                    // eslint-disable-next-line vue/max-len
+                    'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql,
+                })
+                let defDbCharsetMap = new Map()
+                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
+                data.forEach(row => {
+                    const schema_name = row[0]
+                    const default_character_set_name = row[1]
+                    defDbCharsetMap.set(schema_name, default_character_set_name)
+                })
+                commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryDefDbCharsetMap')
+                logger.error(e)
+            }
+        },
         async queryEngines({ state, commit }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
@@ -1099,7 +1125,7 @@ export default {
                     commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
                         id: active_wke_id,
                         payload: {
-                            table_info: dataRows[0],
+                            table_info: { dbName: db, ...dataRows[0] },
                             loading_create_tbl_script: false,
                         },
                     })

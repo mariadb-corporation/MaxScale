@@ -190,6 +190,7 @@
     "charset": "Character set",
     "collation": "Collation",
     "defCollation": "default collation",
+    "defCharset": "default character set",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

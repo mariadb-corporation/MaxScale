@@ -69,7 +69,6 @@
                     <label class="field__label color text-small-text label-required">
                         {{ $t('charset') }}
                     </label>
-                    <!-- TODO: Indicate default charset -->
                     <v-select
                         v-model="tableInfo.table_charset"
                         :items="charsets"
@@ -86,7 +85,18 @@
                         hide-details="auto"
                         :rules="rules.table_charset"
                         required
-                    />
+                    >
+                        <template v-slot:item="{ item, on, attrs }">
+                            <div
+                                class="v-list-item__title d-flex align-center flex-row flex-grow-1"
+                                v-bind="attrs"
+                                v-on="on"
+                            >
+                                {{ item }}
+                                {{ item === defDbCharset ? `(${$t('defCharset')})` : '' }}
+                            </div>
+                        </template>
+                    </v-select>
                 </v-col>
                 <v-col cols="12" md="6" class="">
                     <label class="field__label color text-small-text label-required">
@@ -160,6 +170,7 @@ export default {
                 table_charset: '',
                 table_collation: '',
                 table_comment: '',
+                dbName: '', // no need to show this input
             },
             rules: {
                 table_name: [
@@ -188,6 +199,7 @@ export default {
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
             charset_collation_map: state => state.query.charset_collation_map,
             engines: state => state.query.engines,
+            def_db_charset_map: state => state.query.def_db_charset_map,
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
@@ -215,6 +227,9 @@ export default {
                 this.charset_collation_map.get(this.tableInfo.table_charset),
                 'defCollation'
             ).safeString
+        },
+        defDbCharset() {
+            return this.$typy(this.def_db_charset_map.get(this.tableInfo.dbName)).safeString
         },
     },
     watch: {

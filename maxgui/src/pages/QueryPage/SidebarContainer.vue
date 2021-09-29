@@ -134,6 +134,7 @@ export default {
             search_schema: state => state.query.search_schema,
             engines: state => state.query.engines,
             charset_collation_map: state => state.query.charset_collation_map,
+            def_db_charset_map: state => state.query.def_db_charset_map,
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
@@ -166,6 +167,7 @@ export default {
             getTblCreationInfo: 'query/getTblCreationInfo',
             queryCharsetCollationMap: 'query/queryCharsetCollationMap',
             queryEngines: 'query/queryEngines',
+            queryDefDbCharsetMap: 'query/queryDefDbCharsetMap',
         }),
         async reloadSchema() {
             await this.reloadTreeNodes()
@@ -190,7 +192,7 @@ export default {
             //Query once only as the data won't be changed
             if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
             if (this.charset_collation_map.size === 0) await this.queryCharsetCollationMap()
-
+            if (this.def_db_charset_map.size === 0) await this.queryDefDbCharsetMap()
             await this.getTblCreationInfo(schemaId)
         },
     },
