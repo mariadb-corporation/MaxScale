@@ -188,12 +188,12 @@ export default {
         async handleLoadChildren(node) {
             await this.updateTreeNodes(node)
         },
-        async onAlterTable(schemaId) {
+        async onAlterTable(node) {
             //Query once only as the data won't be changed
             if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
             if (this.charset_collation_map.size === 0) await this.queryCharsetCollationMap()
             if (this.def_db_charset_map.size === 0) await this.queryDefDbCharsetMap()
-            await this.getTblCreationInfo(schemaId)
+            await this.getTblCreationInfo(node)
         },
     },
 }

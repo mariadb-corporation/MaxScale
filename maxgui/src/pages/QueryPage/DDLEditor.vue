@@ -59,11 +59,11 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
             getTblCreationInfo: 'query/getTblCreationInfo',
-            getActiveTreeNode: 'query/getActiveTreeNode',
         }),
         activeColSpec: {
             get() {
@@ -81,8 +81,16 @@ export default {
         ...mapMutations({
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
             SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
+            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
         closeDDLEditor() {
+            // Clear altered active node
+            this.UPDATE_TBL_CREATION_INFO_MAP({
+                id: this.active_wke_id,
+                payload: {
+                    altered_active_node: null,
+                },
+            })
             this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
         },
     },

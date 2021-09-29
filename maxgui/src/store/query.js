@@ -1093,7 +1093,7 @@ export default {
                 logger.error(e)
             }
         },
-        async getTblCreationInfo({ state, rootState, dispatch, commit }, schemaId) {
+        async getTblCreationInfo({ state, rootState, dispatch, commit }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             await dispatch('queryingActionWrapper', {
@@ -1102,9 +1102,10 @@ export default {
                         id: active_wke_id,
                         payload: {
                             loading_tbl_creation_info: true,
+                            altered_active_node: node,
                         },
                     })
-                    const schemas = schemaId.split('.')
+                    const schemas = node.id.split('.')
                     const db = schemas[0]
                     const tblName = schemas[1]
                     const cols =
@@ -1313,6 +1314,10 @@ export default {
         getLoadingTblCreationInfo: (state, getters) => {
             const { loading_tbl_creation_info = false } = getters.getTblCreationInfo
             return loading_tbl_creation_info
+        },
+        getAlteredActiveNode: (state, getters) => {
+            const { altered_active_node = null } = getters.getTblCreationInfo
+            return altered_active_node
         },
     },
 }
