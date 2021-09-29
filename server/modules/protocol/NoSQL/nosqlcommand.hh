@@ -87,6 +87,13 @@ public:
 
     GWBUF* create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
 
+    static GWBUF* create_reply_response(int32_t request_id,
+                                        int32_t response_to,
+                                        int64_t cursor_id,
+                                        int32_t position,
+                                        size_t size_of_documents,
+                                        const std::vector<bsoncxx::document::value>& documents);
+
     GWBUF* create_reply_response(int64_t cursor_id,
                                  int32_t position,
                                  size_t size_of_documents,
@@ -138,11 +145,13 @@ protected:
     std::string   m_last_statement;
 
 private:
-    std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int64_t cursor_id,
-                                                             int32_t position,
-                                                             size_t size_of_documents,
-                                                             size_t nDocuments,
-                                                             IsError is_error) const;
+    static std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int32_t request_id,
+                                                                    int32_t response_to,
+                                                                    int64_t cursor_id,
+                                                                    int32_t position,
+                                                                    size_t size_of_documents,
+                                                                    size_t nDocuments,
+                                                                    IsError is_error);
 
     GWBUF* create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const;
 

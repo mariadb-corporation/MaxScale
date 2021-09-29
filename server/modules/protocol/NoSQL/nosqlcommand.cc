@@ -339,11 +339,14 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
     return pResponse;
 }
 
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int64_t cursor_id,
+//static
+pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
+                                                             int32_t response_to,
+                                                             int64_t cursor_id,
                                                              int32_t starting_from,
                                                              size_t size_of_documents,
                                                              size_t nDocuments,
-                                                             IsError is_error) const
+                                                             IsError is_error)
 {
     // TODO: In the following is assumed that whatever is returned will
     // TODO: fit into a MongoDB packet.
@@ -363,8 +366,8 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int64_t cursor_id,
 
     auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
     pRes_hdr->msg_len = response_size;
-    pRes_hdr->request_id = m_database.context().next_request_id();
-    pRes_hdr->response_to = m_request_id;
+    pRes_hdr->request_id = request_id;
+    pRes_hdr->response_to = response_to;
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 
     uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
@@ -377,15 +380,20 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int64_t cursor_id,
     return make_pair(pResponse, pData);
 }
 
-GWBUF* Command::create_reply_response(int64_t cursor_id,
+//static
+GWBUF* Command::create_reply_response(int32_t request_id,
+                                      int32_t response_to,
+                                      int64_t cursor_id,
                                       int32_t position,
                                       size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents) const
+                                      const vector<bsoncxx::document::value>& documents)
 {
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(cursor_id,
+    tie(pResponse, pData) = create_reply_response_buffer(request_id,
+                                                         response_to,
+                                                         cursor_id,
                                                          position,
                                                          size_of_documents,
                                                          documents.size(),
@@ -403,6 +411,19 @@ GWBUF* Command::create_reply_response(int64_t cursor_id,
     return pResponse;
 }
 
+GWBUF* Command::create_reply_response(int64_t cursor_id,
+                                      int32_t position,
+                                      size_t size_of_documents,
+                                      const vector<bsoncxx::document::value>& documents) const
+{
+    return create_reply_response(m_database.context().next_request_id(),
+                                 m_request_id,
+                                 cursor_id,
+                                 position,
+                                 size_of_documents,
+                                 documents);
+}
+
 GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
@@ -413,7 +434,8 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsErr
     GWBUF* pResponse;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(0, 0, doc_len, 1, is_error);
+    tie(pResponse, pData) = create_reply_response_buffer(m_database.context().next_request_id(), m_request_id,
+                                                         0, 0, doc_len, 1, is_error);
 
     memcpy(pData, doc_view.data(), doc_view.length());
 
@@ -1175,7 +1197,36 @@ State OpQueryCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_
 
             int64_t cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
 
-            pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+            int32_t response_to = m_request_id;
+            int32_t request_id = m_database.context().next_request_id();
+
+            pResponse = create_reply_response(request_id, response_to,
+                                              cursor_id, position, size_of_documents, documents);
+
+            // TODO: Somewhat unclear how exhaust should interact with single_batch.
+            if (m_req.is_exhaust())
+            {
+                // Return everything in as many reply packets as needed.
+                size_t nReturn = std::numeric_limits<int32_t>::max();
+
+                while (!sCursor->exhausted())
+                {
+                    int32_t position = sCursor->position();
+
+                    documents.clear();
+                    sCursor->create_batch(worker(), nReturn, false, &size_of_documents, &documents);
+
+                    cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
+
+                    response_to = request_id;
+                    request_id = m_database.context().next_request_id();
+
+                    auto* pMore = create_reply_response(request_id, response_to,
+                                                        cursor_id, position, size_of_documents, documents);
+
+                    gwbuf_append(pResponse, pMore);
+                }
+            }
 
             if (!sCursor->exhausted())
             {

@@ -891,9 +891,55 @@ public:
     Query(const Packet& packet);
     Query(Query&& rhs) = default;
 
+    enum Flags
+    {
+        TAILABLE_CURSOR   = (1 << 1),
+        SLAVE_OK          = (1 << 2),
+        OPLOG_REPLAY      = (1 << 3),
+        NO_CURSOR_TIMEOUT = (1 << 4),
+        AWAIT_DATA        = (1 << 5),
+        EXHAUST           = (1 << 6),
+        PARTIAL           = (1 << 7)
+    };
+
     uint32_t flags() const
     {
         return m_flags;
+    }
+
+    bool is_tailable_cursor() const
+    {
+        return m_flags & TAILABLE_CURSOR;
+    }
+
+    bool is_slave_ok() const
+    {
+        return m_flags & SLAVE_OK;
+    }
+
+    bool is_oplog_replay() const
+    {
+        return m_flags & OPLOG_REPLAY;
+    }
+
+    bool is_no_cursor_timeout() const
+    {
+        return m_flags & NO_CURSOR_TIMEOUT;
+    }
+
+    bool is_await_data() const
+    {
+        return m_flags & AWAIT_DATA;
+    }
+
+    bool is_exhaust() const
+    {
+        return m_flags & EXHAUST;
+    }
+
+    bool is_partial() const
+    {
+        return m_flags & PARTIAL;
     }
 
     const char* zCollection() const
