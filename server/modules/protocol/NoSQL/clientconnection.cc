@@ -227,8 +227,8 @@ bool ClientConnection::setup_session()
 
     mxb_assert(!is_ready());
 
-    m_session_data.user = m_config.user;
-    m_session.set_user(m_session_data.user);
+    m_session_data.auth_data.user = m_config.user;
+    m_session.set_user(m_session_data.auth_data.user);
     m_session_data.auth_data.default_db = "";
     m_session_data.current_db = "";
     m_session_data.auth_data.plugin = "mysql_native_password";

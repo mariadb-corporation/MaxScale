@@ -21,6 +21,7 @@
 #include <mysql.h>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
+#include <maxbase/format.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/utils.h>
@@ -383,21 +384,19 @@ uint32_t MYSQL_session::extra_capabilitites() const
 }
 
 MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
-    : user(rhs.user)
-    , remote(rhs.remote)
+    : remote(rhs.remote)
     , current_db(rhs.current_db)
     , auth_data(rhs.auth_data)
     , client_caps(rhs.client_caps)
     , m_current_client_auth(rhs.m_current_client_auth)
     , user_search_settings(rhs.user_search_settings)
-    , user_entry(rhs.user_entry)
 {
     memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);
 }
 
 std::string MYSQL_session::user_and_host() const
 {
-    return "'" + user + "'@'" + remote + "'";
+    return mxb::string_printf("'%s'@'%s'", auth_data.user.c_str(), remote.c_str());
 }
 
 bool MYSQL_session::is_trx_read_only() const

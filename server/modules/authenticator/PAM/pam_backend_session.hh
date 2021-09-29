@@ -46,7 +46,6 @@ private:
     };
 
     const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
-    const std::string               m_clienthost;   /**< Client 'name'@'host', for logging. */
     const AuthMode                  m_mode {AuthMode::PW};
 
     State   m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */

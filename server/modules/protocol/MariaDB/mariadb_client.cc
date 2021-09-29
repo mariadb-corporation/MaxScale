@@ -586,7 +586,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
     auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
     // The referenced object may be updated during this function.
-    const auto& user_entry = m_session_data->user_entry;
+    const auto& user_entry = m_session_data->auth_data.user_entry;
 
     while (state_machine_continue)
     {
@@ -734,7 +734,7 @@ void MariaDBClientConnection::update_user_account_entry()
 {
     const auto mses = m_session_data;
     auto users = user_account_cache();
-    auto search_res = users->find_user(mses->user, mses->remote, mses->auth_data.default_db,
+    auto search_res = users->find_user(mses->auth_data.user, mses->remote, mses->auth_data.default_db,
                                        mses->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
@@ -755,7 +755,7 @@ void MariaDBClientConnection::update_user_account_entry()
                  search_res.entry.username.c_str(), search_res.entry.host_pattern.c_str(),
                  search_res.entry.plugin.c_str());
     }
-    mses->user_entry = move(search_res);
+    mses->auth_data.user_entry = move(search_res);
 }
 
 /**
@@ -1909,19 +1909,20 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
             if (data_size >= 1)
             {
                 // Success, save data to session.
-                m_session_data->user = parse_res.username;
+                auto& auth_data = m_session_data->auth_data;
+                auth_data.user = parse_res.username;
                 m_session->set_user(parse_res.username);
-                m_session_data->auth_data.client_token = move(parse_res.token_res.auth_token);
-                m_session_data->auth_data.default_db = parse_res.db;
+                auth_data.client_token = move(parse_res.token_res.auth_token);
+                auth_data.default_db = parse_res.db;
                 m_session_data->current_db = parse_res.db;
-                m_session_data->auth_data.plugin = move(parse_res.plugin);
-                m_session_data->auth_data.collation = client_info.collation;
+                auth_data.plugin = move(parse_res.plugin);
+                auth_data.collation = client_info.collation;
 
                 // Discard the attributes if there is any indication of failed parsing, as the contents
                 // may be garbled.
                 if (parse_res.success && data_size == 1)
                 {
-                    m_session_data->auth_data.attributes = move(parse_res.attr_res.attr_data);
+                    auth_data.attributes = move(parse_res.attr_res.attr_data);
                 }
                 else
                 {
@@ -2072,7 +2073,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 // user, some need to be overwritten. The client authenticator does not need to be preserved.
                 m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
                 auto& auth_data = m_change_user.session->auth_data;
-                m_change_user.session->user = parse_res.username;
+                auth_data.user = parse_res.username;
                 auth_data.default_db = parse_res.db;
                 m_change_user.session->current_db = parse_res.db;
                 auth_data.plugin = parse_res.plugin;
@@ -2090,7 +2091,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 m_session_data = m_change_user.session.get();
                 rval = true;
                 MXB_INFO("Client %s is attempting a COM_CHANGE_USER to '%s'.",
-                         m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+                         m_session->user_and_host().c_str(), auth_data.user.c_str());
             }
         }
         else if (parse_res.token_res.old_protocol)
@@ -2105,16 +2106,17 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 bool MariaDBClientConnection::complete_change_user()
 {
     // Finalize results by writing session-level objects and routing the original change-user packet.
-    if (m_change_user.session->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
+    if (m_change_user.session->auth_data.user_entry.entry.super_priv
+        && mxs::Config::get().log_warn_super_user)
     {
         MXB_WARNING("COM_CHANGE_USER from %s to super user '%s' in service '%s'.",
-                    m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
+                    m_session->user_and_host().c_str(), m_change_user.session->auth_data.user.c_str(),
                     m_session->service->name());
     }
     else
     {
         MXB_INFO("COM_CHANGE_USER from %s to '%s' in service '%s' succeeded.",
-                 m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
+                 m_session->user_and_host().c_str(), m_change_user.session->auth_data.user.c_str(),
                  m_session->service->name());
     }
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
@@ -2135,7 +2137,7 @@ bool MariaDBClientConnection::complete_change_user()
 void MariaDBClientConnection::cancel_change_user()
 {
     MXB_INFO("COM_CHANGE_USER from %s to '%s' failed.",
-             m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+             m_session->user_and_host().c_str(), m_change_user.session->auth_data.user.c_str());
     // Cancel by restoring old values. An error message should have been sent to the client.
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     m_change_user.client_query.reset();
@@ -2312,7 +2314,8 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
         break;
 
     case AuthErrorType::NO_PLUGIN:
-        mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded", ses->user_entry.entry.plugin.c_str());
+        mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded",
+                                         ses->auth_data.user_entry.entry.plugin.c_str());
         send_mysql_err_packet(1524, "HY000", mariadb_msg.c_str());
         break;
     }
@@ -2322,7 +2325,7 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     {
         string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
                                               "Originating listener: '%s'. MariaDB error: '%s'.",
-                                              ses->user.c_str(), ses->remote.c_str(),
+                                              ses->auth_data.user.c_str(), ses->remote.c_str(),
                                               m_session->service->name(),
                                               m_session->listener_data()->m_listener_name.c_str(),
                                               mariadb_msg.c_str());
@@ -2407,7 +2410,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 {
     // If the user entry didn't exist in the first place, don't check token and just fail.
     // TODO: server likely checks some random token to spend time, could add it later.
-    const auto& user_entry = m_session_data->user_entry;
+    const auto& user_entry = m_session_data->auth_data.user_entry;
     const auto entrytype = user_entry.type;
 
     if (entrytype == UserEntryType::USER_NOT_FOUND)
@@ -2951,7 +2954,7 @@ void MariaDBClientConnection::assign_backend_authenticator()
         // Mapping is enabled for the listener. First, search based on username, then based on Linux user
         // group. Mapping does not depend on incoming user IP (can be added later if there is demand).
         const string* mapped_user = nullptr;
-        const auto& user = ses->user;
+        const auto& user = ses->auth_data.user;
         const auto& user_map = mapping_info->user_map;
         auto it_u = user_map.find(user);
         if (it_u != user_map.end())
@@ -3014,9 +3017,9 @@ void MariaDBClientConnection::assign_backend_authenticator()
                 ses->m_current_be_auth = auth_module;
                 const auto& mapped_pw = found_creds->password;
                 MXB_INFO("Incoming user '%s' mapped to '%s' using '%s' with %s.",
-                         ses->user.c_str(), mapped_user->c_str(), found_creds->plugin.c_str(),
+                         ses->auth_data.user.c_str(), mapped_user->c_str(), found_creds->plugin.c_str(),
                          mapped_pw.empty() ? "no password" : "password");
-                ses->user = *mapped_user;   // TODO: save to separate field
+                ses->auth_data.user = *mapped_user;   // TODO: save to separate field
                 ses->auth_data.backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
                 user_is_mapped = true;
             }

@@ -234,7 +234,7 @@ public:
 protected:
     // Common error message formats, used in several authenticators.
     static constexpr const char* WRONG_PLUGIN_REQ =
-        "'%s' asked for authentication plugin '%s' when authenticating '%s'. Only '%s' is supported.";
+        "'%s' asked for authentication plugin '%s' when authenticating %s. Only '%s' is supported.";
     static constexpr const char* MALFORMED_AUTH_SWITCH =
         "Received malformed AuthSwitchRequest-packet from '%s'.";
 };

@@ -1327,7 +1327,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
 {
     auto make_auth_token = [this] {
             std::vector<uint8_t> rval;
-            const string& hex_hash2 = m_auth_data.client_data->user_entry.entry.password;
+            const string& hex_hash2 = m_auth_data.client_data->auth_data.user_entry.entry.password;
             if (hex_hash2.empty())
             {
                 m_current_auth_token.clear();
@@ -1375,7 +1375,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
     // Command byte COM_CHANGE_USER 0x11 */
     payload.push_back(MXS_COM_CHANGE_USER);
 
-    insert_stringz(mses->user);
+    insert_stringz(mses->auth_data.user);
 
     // Calculate the authentication token.
     auto token = make_auth_token();
@@ -1823,7 +1823,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    const std::string& username = client_data->user;
+    const std::string& username = client_data->auth_data.user;
     // TODO: Make this a member function, only MariaDBBackendConnection uses it
     long bytes = response_length(with_ssl,
                                  ssl_established,

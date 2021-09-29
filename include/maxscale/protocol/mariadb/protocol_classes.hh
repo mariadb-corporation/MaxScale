@@ -76,6 +76,7 @@ DCB::ReadResult       read_protocol_packet(DCB* dcb);
  */
 struct AuthenticationData
 {
+    std::string user;         /**< Username */
     std::string default_db;   /**< Initial default database */
     std::string plugin;       /**< Authentication plugin name */
     ByteVec     attributes;   /**< Raw connection attribute data, sent to backends. */
@@ -95,6 +96,8 @@ struct AuthenticationData
     ByteVec client_token_2fa;   /**< Second client token */
     ByteVec backend_token;      /**< First backend token */
     ByteVec backend_token_2fa;  /**< Second backend token */
+
+    mariadb::UserEntryResult user_entry; /**< User account information */
 };
 }
 
@@ -141,7 +144,6 @@ public:
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
-    std::string user;           /**< username       */
     std::string remote;         /**< client ip      */
     std::string current_db;     /**< Current default database */
     std::string role;           /**< Current role */
@@ -158,9 +160,6 @@ public:
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
-
-    // User entry used by the session.
-    mariadb::UserEntryResult user_entry;
 
     // History of all commands that modify the session state
     std::deque<mxs::Buffer> history;

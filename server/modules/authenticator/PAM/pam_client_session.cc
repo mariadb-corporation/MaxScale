@@ -167,9 +167,10 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     auto& auth_data = session->auth_data;
     const auto& tok1 = auth_data.client_token;
     const auto& tok2 = auth_data.client_token_2fa;
+    const auto& user_name = auth_data.user;
 
     // Take username from the session object, not the user entry. The entry may be anonymous.
-    mxb::pam::UserData user = {session->user, session->remote};
+    mxb::pam::UserData user = {user_name, session->remote};
     mxb::pam::PwdData pwds;
     pwds.password.assign((const char*)tok1.data(), tok1.size());
     if (twofa)
@@ -201,11 +202,11 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
 
         if (map_to_mariadbauth && !res.mapped_user.empty())
         {
-            if (res.mapped_user != session->user)
+            if (res.mapped_user != user_name)
             {
                 MXB_INFO("Incoming user '%s' mapped to '%s'.",
-                         session->user.c_str(), res.mapped_user.c_str());
-                session->user = res.mapped_user;    // TODO: Think if using a separate field would be better.
+                         user_name.c_str(), res.mapped_user.c_str());
+                auth_data.user = res.mapped_user;    // TODO: Think if using a separate field would be better.
                 // If a password for the user is found in the passwords map, use that. Otherwise, try
                 // passwordless authentication.
                 const auto& it = m_backend_pwds.find(res.mapped_user);
