@@ -57,112 +57,120 @@
         </v-tooltip>
 
         <v-spacer></v-spacer>
-        <!-- Run section-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    outlined
-                    class="run-btn text-capitalize px-2 font-weight-medium"
-                    depressed
-                    small
-                    color="accent-dark"
-                    :loading="getLoadingQueryResult"
-                    :disabled="
-                        !query_txt ||
-                            !curr_cnct_resource.id ||
-                            (getIsQuerying && !getLoadingQueryResult)
-                    "
-                    v-on="on"
-                    @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
-                >
-                    <v-icon size="16" class="mr-2">
-                        $vuetify.icons.running
-                    </v-icon>
-                    {{ $t('run') }}
-                </v-btn>
-            </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{
-                    selected_query_txt
-                        ? `${$t('runStatements', { quantity: $t('selected') })}\nCmd/Ctrl + Enter`
-                        : `${$t('runStatements', {
-                              quantity: $t('all'),
-                          })}\nCmd/Ctrl + Shift + Enter`
-                }}
-            </span>
-        </v-tooltip>
-        <!-- Visualize section-->
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="ml-2 visualize"
-                    :outlined="!show_vis_sidebar"
-                    depressed
-                    small
-                    :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                    :disabled="!curr_cnct_resource.id || getIsQuerying"
-                    v-on="on"
-                    @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
-                >
-                    <v-icon
-                        size="16"
-                        :color="
-                            curr_cnct_resource.id
-                                ? show_vis_sidebar
-                                    ? 'background'
-                                    : 'accent-dark'
-                                : ''
+        <portal-target name="wke-toolbar-right">
+            <!-- Run section-->
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        outlined
+                        class="run-btn text-capitalize px-2 font-weight-medium"
+                        depressed
+                        small
+                        color="accent-dark"
+                        :loading="getLoadingQueryResult"
+                        :disabled="
+                            !query_txt ||
+                                !curr_cnct_resource.id ||
+                                (getIsQuerying && !getLoadingQueryResult)
                         "
+                        v-on="on"
+                        @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
                     >
-                        $vuetify.icons.reports
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span class="text-capitalize">
-                {{ $t('visualizedConfig', { action: show_vis_sidebar ? $t('hide') : $t('show') }) }}
-            </span>
-        </v-tooltip>
-        <confirm-dialog
-            v-if="query_confirm_flag"
-            ref="runConfirmDialog"
-            :title="$t('confirmations.runQuery')"
-            type="run"
-            :onSave="confirmRunning"
-            minBodyWidth="768px"
-            closeImmediate
-        >
-            <template v-slot:body-prepend>
-                <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                    <readonly-query-editor
-                        :value="activeRunMode === 'selected' ? selected_query_txt : query_txt"
-                        class="readonly-editor fill-height"
-                        readOnly
-                        :options="{
-                            fontSize: 10,
-                            contextmenu: false,
-                        }"
+                        <v-icon size="16" class="mr-2">
+                            $vuetify.icons.running
+                        </v-icon>
+                        {{ $t('run') }}
+                    </v-btn>
+                </template>
+                <span style="white-space: pre;" class="d-inline-block text-center">
+                    {{
+                        selected_query_txt
+                            ? `${$t('runStatements', {
+                                  quantity: $t('selected'),
+                              })}\nCmd/Ctrl + Enter`
+                            : `${$t('runStatements', {
+                                  quantity: $t('all'),
+                              })}\nCmd/Ctrl + Shift + Enter`
+                    }}
+                </span>
+            </v-tooltip>
+            <!-- Visualize section-->
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        class="ml-2 visualize"
+                        :outlined="!show_vis_sidebar"
+                        depressed
+                        small
+                        :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+                        :disabled="!curr_cnct_resource.id || getIsQuerying"
+                        v-on="on"
+                        @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
+                    >
+                        <v-icon
+                            size="16"
+                            :color="
+                                curr_cnct_resource.id
+                                    ? show_vis_sidebar
+                                        ? 'background'
+                                        : 'accent-dark'
+                                    : ''
+                            "
+                        >
+                            $vuetify.icons.reports
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span class="text-capitalize">
+                    {{
+                        $t('visualizedConfig', {
+                            action: show_vis_sidebar ? $t('hide') : $t('show'),
+                        })
+                    }}
+                </span>
+            </v-tooltip>
+            <confirm-dialog
+                v-if="query_confirm_flag"
+                ref="runConfirmDialog"
+                :title="$t('confirmations.runQuery')"
+                type="run"
+                :onSave="confirmRunning"
+                minBodyWidth="768px"
+                closeImmediate
+            >
+                <template v-slot:body-prepend>
+                    <div class="mb-4 readonly-sql-code-wrapper pa-2">
+                        <readonly-query-editor
+                            :value="activeRunMode === 'selected' ? selected_query_txt : query_txt"
+                            class="readonly-editor fill-height"
+                            readOnly
+                            :options="{
+                                fontSize: 10,
+                                contextmenu: false,
+                            }"
+                        />
+                    </div>
+                </template>
+                <template v-slot:action-prepend>
+                    <v-checkbox
+                        v-model="dontShowConfirm"
+                        class="pa-0 ma-0"
+                        :label="$t('dontAskMeAgain')"
+                        color="primary"
+                        hide-details
                     />
-                </div>
-            </template>
-            <template v-slot:action-prepend>
-                <v-checkbox
-                    v-model="dontShowConfirm"
-                    class="pa-0 ma-0"
-                    :label="$t('dontAskMeAgain')"
-                    color="primary"
-                    hide-details
-                />
-                <v-spacer />
-            </template>
-        </confirm-dialog>
+                    <v-spacer />
+                </template>
+            </confirm-dialog>
+        </portal-target>
     </v-toolbar>
 </template>
 
@@ -198,14 +206,16 @@ export default {
     },
     computed: {
         ...mapState({
-            is_fullscreen: state => state.query.is_fullscreen,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+            is_fullscreen: state => state.query.is_fullscreen,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,
+            curr_editor_mode: state => state.query.curr_editor_mode,
         }),
         ...mapGetters({
             getIsQuerying: 'query/getIsQuerying',
@@ -219,6 +229,15 @@ export default {
                 !this.curr_cnct_resource.id ||
                 (this.getIsQuerying && this.getLoadingQueryResult)
             )
+        },
+        isDDLEditor() {
+            return this.curr_editor_mode === this.SQL_EDITOR_MODES.DDL_EDITOR
+        },
+    },
+    watch: {
+        //Hide visualize sidebar when editor mode is DDL
+        isDDLEditor(v) {
+            if (v) this.SET_SHOW_VIS_SIDEBAR(false)
         },
     },
     methods: {
