@@ -885,6 +885,9 @@ add_test_executable(test_qlafilter.cc test_qlafilter test_qlafilter LABELS REPL_
 # MXS-3770: Bundled connector plugins
 add_test_executable(mxs3770_connector_plugins.cc mxs3770_connector_plugins mxs3770_connector_plugins LABELS REPL_BACKEND LIGHT)
 
+# MXS-3796: Hang with readconnroute and large-ish queries
+add_test_executable(mxs3796_rcr_hang.cc mxs3796_rcr_hang replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
