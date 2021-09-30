@@ -1137,7 +1137,7 @@ export default {
                     commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
                         id: active_wke_id,
                         payload: {
-                            table_info: { dbName: db, ...dataRows[0] },
+                            table_opts_data: { dbName: db, ...dataRows[0] },
                             loading_tbl_creation_info: false,
                         },
                     })

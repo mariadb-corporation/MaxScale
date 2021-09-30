@@ -1,8 +1,8 @@
 <template>
     <v-card
-        v-if="getLoadingTblCreationInfo || !tableInfo"
+        v-if="getLoadingTblCreationInfo || !initialTblOptsData"
         class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
-        :loading="Boolean(getLoadingTblCreationInfo && !tableInfo)"
+        :loading="Boolean(getLoadingTblCreationInfo && !initialTblOptsData)"
     />
     <div
         v-else
@@ -25,38 +25,56 @@
                 <span>{{ $t('closeDDLEditor') }}</span>
             </v-tooltip>
         </div>
-        <alter-table-opts :data="tableInfo" />
-
-        <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
-            <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
-                <span> {{ $t('columns') }} </span>
-            </v-tab>
-            <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.TRIGGERS}`">
-                <span>{{ $t('triggers') }} </span>
-            </v-tab>
-        </v-tabs>
-        <v-slide-x-transition>
-            <keep-alive>
-                <div v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS" class="px-4 py-2">
-                    <!-- TODO: Replace with column functions -->
-                    Alter column functions here
-                </div>
-                <div v-else-if="activeColSpec === SQL_DDL_ALTER_SPECS.TRIGGERS" class="px-4 py-2">
-                    <!-- TODO: Replace with triggers functions -->
-                    Alter triggers functions here
-                </div>
-            </keep-alive>
-        </v-slide-x-transition>
+        <portal to="wke-toolbar-right">
+            <alter-table-toolbar
+                :disableRevert="!hasChanged"
+                :disableApply="!hasValidChanges"
+                @on-revert="revertChanges"
+                @on-apply="applyChanges"
+            />
+        </portal>
+        <v-form v-model="isFormValid">
+            <alter-table-opts v-model="tableOptsData" />
+            <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
+                <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
+                    <span> {{ $t('columns') }} </span>
+                </v-tab>
+                <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.TRIGGERS}`">
+                    <span>{{ $t('triggers') }} </span>
+                </v-tab>
+                <v-tabs-items v-model="activeColSpec">
+                    <v-tab-item
+                        v-for="spec in SQL_DDL_ALTER_SPECS"
+                        :id="spec"
+                        :key="spec"
+                        class="pt-2"
+                    >
+                        <div v-if="activeColSpec === spec" class="px-4 py-2">
+                            <!-- TODO: Replace with columns/triggers input specs -->
+                            {{ spec }} input specs here
+                        </div>
+                    </v-tab-item>
+                </v-tabs-items>
+            </v-tabs>
+        </v-form>
     </div>
 </template>
 
 <script>
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import AlterTableOpts from './AlterTableOpts.vue'
+import AlterTableToolbar from './AlterTableToolbar.vue'
 export default {
     name: 'ddl-editor',
     components: {
         'alter-table-opts': AlterTableOpts,
+        'alter-table-toolbar': AlterTableToolbar,
+    },
+    data() {
+        return {
+            isFormValid: true,
+            tableOptsData: {},
+        }
     },
     computed: {
         ...mapState({
@@ -77,8 +95,33 @@ export default {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
         },
-        tableInfo() {
-            return this.$typy(this.getTblCreationInfo, 'table_info').safeObject
+        /**
+         * TODO: Add more inputs to initialData and newData
+         * All inputs will be stored in an object,
+         * for now only table option inputs (tableOptsData) here.
+         */
+        initialData() {
+            return { ...this.initialTblOptsData }
+        },
+        newData() {
+            return { ...this.tableOptsData }
+        },
+        initialTblOptsData() {
+            return this.$typy(this.getTblCreationInfo, 'table_opts_data').safeObject
+        },
+        hasChanged() {
+            return !this.$help.lodash.isEqual(this.initialData, this.newData)
+        },
+        hasValidChanges() {
+            return this.isFormValid && this.hasChanged
+        },
+    },
+    watch: {
+        initialTblOptsData: {
+            deep: true,
+            handler(v) {
+                this.tableOptsData = this.$help.lodash.cloneDeep(v)
+            },
         },
     },
     methods: {
@@ -96,6 +139,12 @@ export default {
                 },
             })
             this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
+        },
+        revertChanges() {
+            this.tableOptsData = this.$help.lodash.cloneDeep(this.initialTblOptsData)
+        },
+        applyChanges() {
+            //TODO: Pick only keys have value changes and build SQL alter statements here
         },
     },
 }
