@@ -367,11 +367,8 @@ void test_compare()
     // Identical, but one containing empty segments.
     gwbuf_free(rhs);
     rhs = NULL;
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
     rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data + 5));
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
     rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data));
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
 
     mxb_assert(gwbuf_compare(lhs, rhs) == 0);
     mxb_assert(gwbuf_compare(rhs, lhs) == 0);

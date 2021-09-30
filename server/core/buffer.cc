@@ -56,6 +56,14 @@ inline void ensure_at_head(const GWBUF* buf)
     mxb_assert(buf->tail != reinterpret_cast<GWBUF*>(0xdeadbeef));
 }
 
+inline void ensure_not_empty(const GWBUF* buf)
+{
+    for (; buf; buf = buf->next)
+    {
+        mxb_assert(!gwbuf_link_empty(buf));
+    }
+}
+
 inline void ensure_owned(const GWBUF* buf)
 {
     // TODO: Currently not possible to know whether manually triggered
@@ -77,6 +85,7 @@ inline void ensure_owned(const GWBUF* buf)
 inline bool validate_buffer(const GWBUF* buf)
 {
     mxb_assert(buf);
+    ensure_not_empty(buf);
     ensure_at_head(buf);
     ensure_owned(buf);
     return true;
@@ -88,6 +97,10 @@ inline void invalidate_tail_pointers(GWBUF* head)
 }
 
 inline void ensure_at_head(const GWBUF* head)
+{
+}
+
+inline void ensure_not_empty(const GWBUF* buf)
 {
 }
 
@@ -114,6 +127,7 @@ inline bool validate_buffer(const GWBUF* head)
  */
 GWBUF* gwbuf_alloc(unsigned int size)
 {
+    mxb_assert(size > 0);
     size_t sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
     GWBUF* rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
     SHARED_BUF* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
@@ -155,6 +169,7 @@ GWBUF* gwbuf_alloc(unsigned int size)
  */
 GWBUF* gwbuf_alloc_and_load(unsigned int size, const void* data)
 {
+    mxb_assert(size > 0);
     GWBUF* rval = gwbuf_alloc(size);
 
     if (rval)
@@ -554,7 +569,7 @@ GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 
     invalidate_tail_pointers(head);
 
-    mxb_assert(head == NULL || (head->end >= head->start));
+    mxb_assert(head == NULL || (head->end > head->start));
     return head;
 }
 

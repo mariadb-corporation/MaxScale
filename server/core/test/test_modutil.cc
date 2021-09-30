@@ -211,7 +211,7 @@ void test_multiple_sql_packets1()
     gwbuf_free(complete);
 
     /** Sliding cutoff of the buffer boundary */
-    for (size_t i = 0; i < sizeof(resultset); i++)
+    for (size_t i = 1; i < sizeof(resultset); i++)
     {
         head = gwbuf_alloc_and_load(i, resultset);
         tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
@@ -408,7 +408,7 @@ void test_multiple_sql_packets2()
 
     GWBUF* head;
     /** Sliding cutoff of the buffer boundary */
-    for (size_t i = 0; i < sizeof(resultset); i++)
+    for (size_t i = 1; i < sizeof(resultset); i++)
     {
         head = gwbuf_alloc_and_load(i, resultset);
         tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
