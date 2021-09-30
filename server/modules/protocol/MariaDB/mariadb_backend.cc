@@ -2437,7 +2437,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     m_upstream = upstream;
     MYSQL_session* client_data = mysql_session();
     m_auth_data.client_data = client_data;
-    m_authenticator = client_data->m_current_be_auth->create_backend_authenticator(m_auth_data);
+    m_authenticator = client_data->auth_data.be_auth_module->create_backend_authenticator(m_auth_data);
 }
 
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)

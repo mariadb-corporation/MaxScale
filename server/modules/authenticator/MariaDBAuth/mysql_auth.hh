@@ -44,8 +44,9 @@ public:
     MariaDBClientAuthenticator(bool log_pw_mismatch);
     ~MariaDBClientAuthenticator() override = default;
 
-    ExchRes exchange(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
+    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
+    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session,
+                         AuthenticationData& auth_data) override;
 
 private:
     enum class State
@@ -54,8 +55,6 @@ private:
         AUTHSWITCH_SENT,
         CHECK_TOKEN
     };
-
-    AuthRes check_password(MYSQL_session* session, const std::string& stored_pw_hash2);
 
     State m_state {State::INIT};
     bool  m_log_pw_mismatch {false};/**< Print pw hash when authentication fails */

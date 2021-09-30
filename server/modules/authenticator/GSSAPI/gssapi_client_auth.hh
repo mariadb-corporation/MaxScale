@@ -22,8 +22,9 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticator
 public:
     GSSAPIClientAuthenticator(const std::string& service_principal);
 
-    ExchRes exchange(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
+    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
+    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session,
+                         AuthenticationData& auth_data) override;
 
 private:
     void store_client_token(MYSQL_session* session, GWBUF* buffer);

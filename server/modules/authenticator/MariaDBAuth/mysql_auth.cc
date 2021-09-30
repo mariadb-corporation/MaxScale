@@ -131,11 +131,10 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
 }
 
 mariadb::ClientAuthenticator::ExchRes
-MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
+MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
-    auto& client_data = session->auth_data;
 
     switch (m_state)
     {
@@ -143,7 +142,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
         // First, check that session is using correct plugin. The handshake response has already been
         // parsed in protocol code. Some old clients may send an empty plugin name. If so, assume
         // that they are using "mysql_native_password". If this is not the case, authentication will fail.
-        if (client_data.plugin == DEFAULT_MYSQL_AUTH_PLUGIN || client_data.plugin.empty())
+        if (auth_data.plugin == DEFAULT_MYSQL_AUTH_PLUGIN || auth_data.plugin.empty())
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
@@ -155,7 +154,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
             MXS_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
                      "switch to '%s'.",
                      session->user_and_host().c_str(),
-                     client_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
+                     auth_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
             GWBUF* switch_packet = gen_auth_switch_request_packet(session);
             if (switch_packet)
             {
@@ -172,7 +171,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
             // the authentication token.
             if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
             {
-                auto& auth_token = session->auth_data.client_token;
+                auto& auth_token = auth_data.client_token;
                 auth_token.clear();
                 auth_token.resize(MYSQL_SCRAMBLE_LEN);
                 gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
@@ -192,23 +191,12 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
     return rval;
 }
 
-AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
+AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session,
+                                                 AuthenticationData& auth_data)
 {
     mxb_assert(m_state == State::CHECK_TOKEN);
-    return check_password(session, entry->password);
-}
-
-/**
- * Check if auth token sent by client matches the one in the user account entry.
- *
- * @param session Client session with auth token
- * @param stored_pw_hash2 SHA1(SHA1(password)) in hex form, as queried from server.
- * @return Authentication result
- */
-AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
-{
-
-    const auto& auth_token = session->auth_data.client_token;       // Binary-form token sent by client.
+    const auto& stored_pw_hash2 = auth_data.user_entry.entry.password;
+    const auto& auth_token = auth_data.client_token;        // Binary-form token sent by client.
 
     bool empty_token = auth_token.empty();
     bool empty_pw = stored_pw_hash2.empty();

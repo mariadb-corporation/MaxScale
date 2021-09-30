@@ -26,8 +26,9 @@ public:
     using AuthMode = mxb::pam::AuthMode;
     PamClientAuthenticator(AuthSettings settings, const PasswordMap& backend_pwds);
 
-    ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session) override;
-    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
+    ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
+    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session,
+                         AuthenticationData& auth_data) override;
 
 private:
     maxscale::Buffer create_auth_change_packet() const;

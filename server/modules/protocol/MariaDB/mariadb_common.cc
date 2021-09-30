@@ -388,7 +388,6 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     , current_db(rhs.current_db)
     , auth_data(rhs.auth_data)
     , client_caps(rhs.client_caps)
-    , m_current_client_auth(rhs.m_current_client_auth)
     , user_search_settings(rhs.user_search_settings)
 {
     memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);

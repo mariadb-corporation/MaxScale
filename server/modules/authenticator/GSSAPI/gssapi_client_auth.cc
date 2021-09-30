@@ -87,7 +87,7 @@ void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
 }
 
 mariadb::ClientAuthenticator::ExchRes
-GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session)
+GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -244,7 +244,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const 
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry, MYSQL_session* session)
+AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry, MYSQL_session* session,
+                                                AuthenticationData& auth_data)
 {
     mxb_assert(m_state == State::TOKEN_READY);
     AuthRes rval;

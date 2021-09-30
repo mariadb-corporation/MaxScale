@@ -21,7 +21,6 @@ struct KillInfo;
 
 class MariaDBUserManager;
 class MariaDBUserCache;
-struct UserEntryResult;
 
 class MariaDBClientConnection : public mxs::ClientConnectionBase
                               , public mariadb::QueryClassifier::Handler
@@ -141,7 +140,7 @@ private:
     bool parse_ssl_request_packet(GWBUF* buffer);
     bool parse_handshake_response_packet(GWBUF* buffer);
 
-    bool perform_auth_exchange();
+    bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(mxs::Buffer&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
@@ -170,11 +169,12 @@ private:
     bool large_query_continues(const mxs::Buffer& buffer) const;
     bool require_ssl() const;
 
-    void update_user_account_entry();
+    void update_user_account_entry(mariadb::AuthenticationData& auth_data);
     void assign_backend_authenticator();
 
     mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
     const MariaDBUserCache*       user_account_cache();
+    mariadb::AuthenticationData&  authentication_data(AuthType auth_type);
 
     enum class AuthErrorType
     {
@@ -270,6 +270,8 @@ private:
     {
         mxs::Buffer                    client_query;    /**< The original change-user-query from client. */
         std::unique_ptr<MYSQL_session> session;         /**< Temporary session-data */
+
+        std::unique_ptr<mariadb::AuthenticationData> auth_data;
     };
 
     SSLState ssl_authenticate_check_status();

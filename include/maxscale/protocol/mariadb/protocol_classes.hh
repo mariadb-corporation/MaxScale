@@ -22,7 +22,6 @@
 
 namespace mariadb
 {
-using ByteVec = std::vector<uint8_t>;
 
 // Total user search settings structure.
 struct UserSearchSettings
@@ -69,36 +68,6 @@ struct AuthSwitchReqContents
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
 DCB::ReadResult       read_protocol_packet(DCB* dcb);
-
-/**
- * Authentication-related data. These fields are set during authentication and can only change
- * with COM_CHANGE_USER.
- */
-struct AuthenticationData
-{
-    std::string user;         /**< Username */
-    std::string default_db;   /**< Initial default database */
-    std::string plugin;       /**< Authentication plugin name */
-    ByteVec     attributes;   /**< Raw connection attribute data, sent to backends. */
-
-    /** Character collation, defines charset as well. Usually just one byte is needed.
-     * COM_CHANGE_USER sends two. */
-    uint16_t collation {0};
-
-    /**
-     * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and
-     * backends. The client tokens store the tokens sent by client. The backend tokens store tokens for
-     * backend authentication. The authenticator module calculates the backend tokens from the client tokens.
-     * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
-     */
-
-    ByteVec client_token;       /**< First client token */
-    ByteVec client_token_2fa;   /**< Second client token */
-    ByteVec backend_token;      /**< First backend token */
-    ByteVec backend_token_2fa;  /**< Second backend token */
-
-    mariadb::UserEntryResult user_entry; /**< User account information */
-};
 }
 
 /*
@@ -151,12 +120,6 @@ public:
     mariadb::AuthenticationData auth_data;
 
     ClientCapabilities client_caps;     /**< Client capabilities from handshake response packet */
-
-    // Client authenticator module currently in use by the session. May change on COM_CHANGE_USER.
-    mariadb::AuthenticatorModule* m_current_client_auth {nullptr};
-
-    // Backend authenticator module in use by the session. Usually same as client authenticator.
-    mariadb::AuthenticatorModule* m_current_be_auth {nullptr};
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
