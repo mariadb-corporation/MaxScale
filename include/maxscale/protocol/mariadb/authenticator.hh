@@ -222,11 +222,10 @@ public:
     /**
      * Check client token against the password.
      *
-     * @param entry User account entry
      * @param session Protocol session data
+     * @param auth_data Authentication data to read/modify
      */
-    virtual AuthRes authenticate(const UserEntry* entry, MYSQL_session* session,
-                                 AuthenticationData& auth_data) = 0;
+    virtual AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) = 0;
 };
 
 /**

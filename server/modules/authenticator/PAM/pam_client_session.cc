@@ -152,14 +152,13 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
     return rval;
 }
 
-AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session,
-                                             AuthenticationData& auth_data)
+AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
     using mxb::pam::AuthResult;
-    AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
     bool twofa = (m_settings.mode == AuthMode::PW_2FA);
     bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
+    const auto& entry = auth_data.user_entry.entry;
 
     /** We sent the authentication change packet + plugin name and the client
      * responded with the password. Try to continue authentication without more
@@ -182,9 +181,10 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     mxb::pam::AuthSettings sett;
-    sett.service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+    sett.service = entry.auth_string.empty() ? "mysql" : entry.auth_string;
     sett.mapping_on = map_to_mariadbauth;
 
+    AuthRes rval;
     AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, sett, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {

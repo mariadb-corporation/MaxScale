@@ -191,8 +191,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, Authent
     return rval;
 }
 
-AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session,
-                                                 AuthenticationData& auth_data)
+AuthRes MariaDBClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
     mxb_assert(m_state == State::CHECK_TOKEN);
     const auto& stored_pw_hash2 = auth_data.user_entry.entry.password;
@@ -262,7 +261,7 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
 
     // SHA1(password) needs to be copied to the shared data structure as it is required during
     // backend authentication. */
-    session->auth_data.backend_token.assign(step2, step2 + SHA_DIGEST_LENGTH);
+    auth_data.backend_token.assign(step2, step2 + SHA_DIGEST_LENGTH);
 
     // Finally, calculate the SHA1(SHA1(password). */
     uint8_t final_step[SHA_DIGEST_LENGTH];

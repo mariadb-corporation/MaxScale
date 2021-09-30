@@ -271,6 +271,12 @@ private:
         mxs::Buffer                    client_query;    /**< The original change-user-query from client. */
         std::unique_ptr<MYSQL_session> session;         /**< Temporary session-data */
 
+        /**
+         * Authentication data. All client-side code should read this field for authentication-related data
+         * when processing COM_CHANGE_USER. Backend code should always use the auth data in the protocol
+         * session object. The backend authenticator will always read the most recent auth data when
+         * connecting or sending COM_CHANGE_USER. This does not cause issues when replaying session commands,
+         * as the command history is erased on COM_CHANGE_USER. */
         std::unique_ptr<mariadb::AuthenticationData> auth_data;
     };
 

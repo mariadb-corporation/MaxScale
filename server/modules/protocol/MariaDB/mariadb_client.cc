@@ -2417,7 +2417,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
         AuthRes auth_val;
         if (m_session_data->user_search_settings.listener.check_password)
         {
-            auth_val = m_authenticator->authenticate(&user_entry.entry, m_session_data, auth_data);
+            auth_val = m_authenticator->authenticate(m_session_data, auth_data);
         }
         else
         {

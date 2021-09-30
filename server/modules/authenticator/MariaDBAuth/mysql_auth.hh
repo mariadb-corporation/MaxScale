@@ -45,8 +45,7 @@ public:
     ~MariaDBClientAuthenticator() override = default;
 
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
-    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session,
-                         AuthenticationData& auth_data) override;
+    AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:
     enum class State
