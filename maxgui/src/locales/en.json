@@ -192,6 +192,10 @@
     "defCollation": "default collation",
     "defCharset": "default character set",
     "comment": "Comment",
+    "revert": "revert",
+    "revertChanges": "Revert changes",
+    "apply": "apply",
+    "applyChanges": "Apply changes",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
