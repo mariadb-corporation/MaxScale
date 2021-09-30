@@ -1556,17 +1556,45 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
 
 string exists_to_condition(const string& field, const bsoncxx::document::element& element)
 {
-    string rv = "(JSON_EXTRACT(doc, '$." + field + "') IS ";
+    // TODO: When this is called, we already know whether we are looking for
+    // TODO: something, or for something in an array.
+    auto expects_array = field.find("[*]") != string::npos;
+
+    string rv("(");
 
     bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
 
     if (b)
     {
-        rv += "NOT NULL";
+        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL";
     }
     else
     {
-        rv += "NULL";
+        bool close = false;
+
+        if (!expects_array)
+        {
+            // TODO: We could easily push downward the parent information so that
+            // TODO: we woudn't have to figure it out here.
+            auto i = field.find_last_of(".");
+
+            if (i != string::npos)
+            {
+                auto parent = field.substr(0, i);
+
+                rv += "JSON_QUERY(doc, '$." + parent + "') IS NULL OR "
+                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent + "')) = 'OBJECT'"
+                    " AND ";
+                close = true;
+            }
+        }
+
+        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NULL";
+
+        if (close)
+        {
+            rv += ")";
+        }
     }
 
     rv += ")";
@@ -1659,14 +1687,45 @@ string field_and_value_to_nin_comparison(const std::string& field,
     return rv;
 }
 
+string field_and_value_to_eq_comparison(const std::string& field,
+                                        const bsoncxx::document::element& element,
+                                        const string& mariadb_op,
+                                        const string& nosql_op,
+                                        ElementValueToString value_to_string)
+{
+    string rv;
+
+    if (element.type() == bsoncxx::type::k_null)
+    {
+        if (nosql_op == "$eq")
+        {
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
+                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) "
+                + "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+        }
+        else if (nosql_op == "$ne")
+        {
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
+                + "AND (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), 'null') = 0) "
+                + "OR (JSON_VALUE(doc, '$." + field + "') != 'null'))";
+        }
+    }
+    else
+    {
+        rv = default_field_and_value_to_comparison(field, element, mariadb_op, nosql_op, value_to_string);
+    }
+
+    return rv;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$eq",     { "=",      &element_to_value, field_and_value_to_eq_comparison } },
     { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { "!=",     &element_to_value, field_and_value_to_eq_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
 };
 
@@ -2286,6 +2345,14 @@ string get_comparison_condition(const string& field,
             element_to_value(element, ValueFor::SQL) + ")";
         break;
 
+    case bsoncxx::type::k_null:
+        {
+            condition = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
+                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
+                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+        }
+        break;
+
     case bsoncxx::type::k_array:
         // TODO: This probably needs to be dealt with explicitly.
     default:
@@ -2374,6 +2441,8 @@ string get_comparison_condition(const bsoncxx::document::element& element)
             string head = field.substr(0, i);
             string tail = field.substr(i + 1);
 
+            condition += "JSON_TYPE(JSON_QUERY(doc, '$." + head + "')) = 'ARRAY' AND (";
+
             string path(head);
             path += "[*].";
             path += tail;
@@ -2399,7 +2468,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
                 condition += get_comparison_condition(path, type, element);
             }
 
-            condition += ")";
+            condition += "))";
         }
         else
         {
