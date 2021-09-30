@@ -279,8 +279,6 @@ void test_consume()
     GWBUF* buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
                                  gwbuf_alloc_and_load(5, data + 5));
 
-    mxb_assert_message(gwbuf_consume(buffer, 0) == buffer,
-                       "Consuming 0 bytes from a buffer should return original buffer");
     mxb_assert_message(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes after consuming 0 bytes");
 
     buffer = gwbuf_consume(buffer, 1);

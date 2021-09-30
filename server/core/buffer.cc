@@ -546,6 +546,7 @@ GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 {
     validate_buffer(head);
+    mxb_assert(length > 0);
 
     while (head && length > 0)
     {
