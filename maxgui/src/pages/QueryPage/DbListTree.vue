@@ -137,6 +137,7 @@ export default {
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
             getActiveTreeNode: 'query/getActiveTreeNode',
+            getAlteredActiveNode: 'query/getAlteredActiveNode',
         }),
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
@@ -144,19 +145,29 @@ export default {
         showCtxBtn() {
             return item => this.activeCtxItem && item.id === this.activeCtxItem.id
         },
+        // Use either getActiveTreeNode or getAlteredActiveNode
         activeNodes: {
             get() {
-                return [this.getActiveTreeNode]
+                if (this.getAlteredActiveNode) return [this.getAlteredActiveNode]
+                else return [this.getActiveTreeNode]
             },
             set(v) {
-                const activeNodes = this.minimizeNodes(v)
-                if (activeNodes.length) {
-                    this.UPDATE_DB_TREE_MAP({
-                        id: this.active_wke_id,
-                        payload: {
-                            active_tree_node: activeNodes[0],
-                        },
-                    })
+                if (v.length) {
+                    const activeNodes = this.minimizeNodes(v)
+                    if (this.getAlteredActiveNode) {
+                        this.UPDATE_TBL_CREATION_INFO_MAP({
+                            id: this.active_wke_id,
+                            payload: {
+                                altered_active_node: activeNodes[0],
+                            },
+                        })
+                    } else
+                        this.UPDATE_DB_TREE_MAP({
+                            id: this.active_wke_id,
+                            payload: {
+                                active_tree_node: activeNodes[0],
+                            },
+                        })
                 }
             },
         },
@@ -179,6 +190,7 @@ export default {
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
             SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
+            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
         addExpandedNodesWatcher() {
             this.rmExpandedNodesWatcher = this.$watch(
@@ -204,9 +216,8 @@ export default {
          * @param {Array} nodes - array of nodes
          * @returns {Array} minimized nodes where each node is an object with id and type props
          */
-        minimizeNodes(nodes) {
-            return nodes.map(node => ({ id: node.id, type: node.type, level: node.level }))
-        },
+        minimizeNodes: nodes =>
+            nodes.map(node => ({ id: node.id, type: node.type, level: node.level })),
         /** This replaces dots with __ as vuetify activator slots
          * can't not parse html id contains dots.
          * @param {String} id - html id attribute
@@ -241,33 +252,60 @@ export default {
         },
         optionHandler({ item, option }) {
             const schema = item.id
+            const txtEditorOptions = [
+                this.$t('previewData'),
+                this.$t('viewDetails'),
+                this.$t('placeSchemaInEditor'),
+                this.$t('placeColumnNameInEditor'),
+            ]
+            if (txtEditorOptions.includes(option))
+                this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
+
+            const prvwDataOpts = [this.$t('previewData'), this.$t('viewDetails')]
+            if (prvwDataOpts.includes(option)) {
+                /**
+                 * If altered_active_node exists, clear it first so that
+                 * activeNodes can be updated
+                 */
+                if (this.getAlteredActiveNode)
+                    // Clear altered active node
+                    this.UPDATE_TBL_CREATION_INFO_MAP({
+                        id: this.active_wke_id,
+                        payload: {
+                            altered_active_node: null,
+                        },
+                    })
+                this.updateActiveNode(item)
+            }
             switch (option) {
                 case this.$t('previewData'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('preview-data', schema)
-                    this.updateActiveNode(item)
                     break
                 case this.$t('viewDetails'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('view-details', schema)
-                    this.updateActiveNode(item)
                     break
                 case this.$t('placeSchemaInEditor'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
                 case this.$t('placeColumnNameInEditor'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
-                    break
-                case this.$t('alterTbl'):
-                    this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.DDL_EDITOR)
-                    this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
-                    this.$emit('alter-tbl', schema)
-                    this.updateActiveNode(item)
                     break
                 case this.$t('useDb'):
                     this.$emit('use-db', schema)
+                    break
+                case this.$t('alterTbl'):
+                    {
+                        const alterActiveNode = { id: item.id, type: item.type, level: item.level }
+                        this.UPDATE_TBL_CREATION_INFO_MAP({
+                            id: this.active_wke_id,
+                            payload: {
+                                altered_active_node: alterActiveNode,
+                            },
+                        })
+                        this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.DDL_EDITOR)
+                        this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
+                        this.$emit('alter-tbl', alterActiveNode)
+                    }
                     break
             }
         },

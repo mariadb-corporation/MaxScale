@@ -1,6 +1,6 @@
 <template>
     <div>
-        <label class="text-capitalize label color text-small-text d-block">
+        <label class="text-capitalize field__label color text-small-text d-block">
             {{ $tc(moduleName, 1) }}
         </label>
         <v-select
@@ -100,8 +100,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.label {
-    font-size: 0.625rem;
-}
-</style>

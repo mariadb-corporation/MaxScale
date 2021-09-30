@@ -98,7 +98,7 @@ export default {
                 language: this.language,
                 indent: '   ',
                 uppercase: true,
-                linesBetweenQueries: 1,
+                linesBetweenQueries: 2,
             })
         },
         initMonaco(monaco) {

@@ -52,7 +52,7 @@
                         <!-- maxWidth: minus padding and sort-icon -->
                         <truncate-string
                             v-else
-                            :text="`${header.text}`.toUpperCase()"
+                            :text="`${header.text}`"
                             :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
                         />
                         <span v-if="header.text === '#'" class="ml-1 color text-field-text">
@@ -316,7 +316,6 @@ export default {
             font-size: 0.75rem;
             color: $small-text;
             background-color: $table-border;
-            text-transform: uppercase;
             border-bottom: none;
             user-select: none;
             &:first-child {

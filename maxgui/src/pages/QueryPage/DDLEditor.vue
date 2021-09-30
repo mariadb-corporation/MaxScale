@@ -1,5 +1,11 @@
 <template>
+    <v-card
+        v-if="getLoadingTblCreationInfo || !tableInfo"
+        class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
+        :loading="Boolean(getLoadingTblCreationInfo && !tableInfo)"
+    />
     <div
+        v-else
         class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
     >
         <v-tooltip
@@ -15,50 +21,7 @@
             <span>{{ $t('closeDDLEditor') }}</span>
         </v-tooltip>
 
-        <div class="pa-4 pt-2">
-            <!-- TODO: Replace below inputs with actual data -->
-            <v-row>
-                <v-col cols="12" md="6" class="">
-                    <label class="field__label color text-small-text label-required">
-                        {{ $t('name') }}
-                    </label>
-                    <v-text-field
-                        id="tableName"
-                        v-model="tableName"
-                        :rules="rules.tableName"
-                        name="id"
-                        required
-                        :height="32"
-                        class="std error--text__bottom"
-                        dense
-                        outlined
-                    />
-                </v-col>
-                <v-col cols="12" md="6" class="">
-                    <label class="field__label color text-small-text label-required">
-                        {{ $t('engine') }}
-                    </label>
-                    <v-select
-                        v-model="engine"
-                        :items="engines"
-                        name="resourceName"
-                        outlined
-                        class="std mariadb-select-input error--text__bottom"
-                        :menu-props="{
-                            contentClass: 'mariadb-select-v-menu',
-                            bottom: true,
-                            offsetY: true,
-                        }"
-                        dense
-                        :height="32"
-                        hide-details="auto"
-                        :rules="rules.engine"
-                        required
-                    />
-                </v-col>
-            </v-row>
-            <!-- TODO: Add Charset/Collation and Comment inputs -->
-        </div>
+        <alter-table-opts :data="tableInfo" />
 
         <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
             <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
@@ -84,30 +47,23 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from 'vuex'
+import { mapGetters, mapMutations, mapState } from 'vuex'
+import AlterTableOpts from './AlterTableOpts.vue'
 export default {
     name: 'ddl-editor',
-    data() {
-        return {
-            tableName: '',
-            rules: {
-                tableName: [
-                    val => !!val || this.$t('errors.requiredInput', { inputName: this.$t('name') }),
-                ],
-                engine: [
-                    val =>
-                        !!val || this.$t('errors.requiredInput', { inputName: this.$t('engine') }),
-                ],
-            },
-            engine: '',
-            engines: [],
-        }
+    components: {
+        'alter-table-opts': AlterTableOpts,
     },
     computed: {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
+            active_wke_id: state => state.query.active_wke_id,
+        }),
+        ...mapGetters({
+            getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
+            getTblCreationInfo: 'query/getTblCreationInfo',
         }),
         activeColSpec: {
             get() {
@@ -117,13 +73,24 @@ export default {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
         },
+        tableInfo() {
+            return this.$typy(this.getTblCreationInfo, 'table_info').safeObject
+        },
     },
     methods: {
         ...mapMutations({
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
             SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
+            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
         closeDDLEditor() {
+            // Clear altered active node
+            this.UPDATE_TBL_CREATION_INFO_MAP({
+                id: this.active_wke_id,
+                payload: {
+                    altered_active_node: null,
+                },
+            })
             this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
         },
     },

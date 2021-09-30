@@ -116,26 +116,43 @@ export default {
     state: {
         // connection related states
         is_validating_conn: true,
-        is_querying_map: {},
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
+        // editor states
+        charset_collation_map: new Map(),
+        def_db_charset_map: new Map(),
+        engines: [],
+        selected_query_txt: '',
+        // worksheet states
+        worksheets_arr: [defWorksheetState()], // persisted
+        active_wke_id: '',
+        cnct_resources: [],
+        /**
+         * Below states are stored in hash map structure.
+         * Using worksheet's id as key. This helps to preserve
+         * multiple worksheet's data in memory
+         */
+        // connection related states
+        is_querying_map: {},
         // sidebar states
         db_tree_map: {},
+        // editor states
+        tbl_creation_info_map: {},
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
-        /**
-         * Use worksheet id to get corresponding query results from query_results_map which is stored in memory
-         * because it's not possible at the moment to fetch query results using query id, it can only be read once.
-         */
         query_results_map: {},
-        selected_query_txt: '',
-        // worksheet states
-        worksheets_arr: [defWorksheetState()],
-        active_wke_id: '',
-        cnct_resources: [],
-        // standalone wke states
+        /**
+         * Below is standalone wke states. The value
+         * of each state is replicated from current active
+         * worksheet in persisted worksheets_arr.
+         * Using this to reduce unnecessary recomputation instead of
+         * directly accessing value in worksheets_arr because vuex getters
+         * or vue.js's computed properties will recompute when a property
+         * is changed in worksheets_arr then causes other properties also
+         * have to recompute.
+         */
         ...saWkeStates(),
     },
     mutations: {
@@ -156,7 +173,7 @@ export default {
             })
         },
         UPDATE_IS_QUERYING_MAP(state, { id, payload }) {
-            if (payload === undefined) this.vue.$delete(state.is_querying_map, id)
+            if (!payload) this.vue.$delete(state.is_querying_map, id)
             else
                 state.is_querying_map = {
                     ...state.is_querying_map,
@@ -220,7 +237,23 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-
+        UPDATE_TBL_CREATION_INFO_MAP(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state.tbl_creation_info_map, id)
+            else
+                state.tbl_creation_info_map = {
+                    ...state.tbl_creation_info_map,
+                    ...{ [id]: { ...state.tbl_creation_info_map[id], ...payload } },
+                }
+        },
+        SET_CHARSET_COLLATION_MAP(state, payload) {
+            state.charset_collation_map = payload
+        },
+        SET_DEF_DB_CHARSET_MAP(state, payload) {
+            state.def_db_charset_map = payload
+        },
+        SET_ENGINES(state, payload) {
+            state.engines = payload
+        },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
             state.rc_target_names_map = payload
@@ -1009,6 +1042,125 @@ export default {
                 logger.error(e)
             }
         },
+        async queryCharsetCollationMap({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                const sql =
+                    // eslint-disable-next-line vue/max-len
+                    'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql,
+                })
+                let charsetCollationMap = new Map()
+                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
+                data.forEach(row => {
+                    const charset = row[0]
+                    const collation = row[1]
+                    const isDefCollation = row[2] === 'Yes'
+                    let charsetObj = charsetCollationMap.get(charset) || {
+                        collations: [],
+                    }
+                    if (isDefCollation) charsetObj.defCollation = collation
+                    charsetObj.collations.push(collation)
+                    charsetCollationMap.set(charset, charsetObj)
+                })
+                commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryCharsetCollationMap')
+                logger.error(e)
+            }
+        },
+        async queryDefDbCharsetMap({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                const sql =
+                    // eslint-disable-next-line vue/max-len
+                    'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql,
+                })
+                let defDbCharsetMap = new Map()
+                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
+                data.forEach(row => {
+                    const schema_name = row[0]
+                    const default_character_set_name = row[1]
+                    defDbCharsetMap.set(schema_name, default_character_set_name)
+                })
+                commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryDefDbCharsetMap')
+                logger.error(e)
+            }
+        },
+        async queryEngines({ state, commit }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    sql: 'SELECT engine FROM information_schema.ENGINES',
+                })
+                commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-queryEngines')
+                logger.error(e)
+            }
+        },
+        async getTblCreationInfo({ state, rootState, dispatch, commit }, node) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            const active_wke_id = state.active_wke_id
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
+                    commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            loading_tbl_creation_info: true,
+                            altered_active_node: node,
+                        },
+                    })
+                    const schemas = node.id.split('.')
+                    const db = schemas[0]
+                    const tblName = schemas[1]
+                    const cols =
+                        // eslint-disable-next-line vue/max-len
+                        'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
+                    const sql = `SELECT ${cols} FROM information_schema.tables t
+                    JOIN information_schema.collations c ON t.table_collation = c.collation_name
+                    WHERE table_schema = "${db}" AND table_name = "${tblName}";`
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+
+                    const dataRows = this.vue.$help.getObjectRows({
+                        columns: res.data.data.attributes.results[0].fields,
+                        rows: res.data.data.attributes.results[0].data,
+                    })
+                    commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
+                        id: active_wke_id,
+                        payload: {
+                            table_info: { dbName: db, ...dataRows[0] },
+                            loading_tbl_creation_info: false,
+                        },
+                    })
+                },
+                actionName: 'getTblCreationInfo',
+                catchAction: e => {
+                    commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            loading_tbl_creation_info: false,
+                        },
+                    })
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: this.vue.$help.getErrorsArr(e),
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                },
+            })
+        },
 
         changeWkeName({ state, getters, commit }, name) {
             let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
@@ -1025,6 +1177,7 @@ export default {
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
             commit('UPDATE_IS_QUERYING_MAP', payload)
+            commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -1166,6 +1319,16 @@ export default {
         getPrvwTotalDuration: (state, getters) => mode => {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
+        },
+        // tbl_creation_info_map getters
+        getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
+        getLoadingTblCreationInfo: (state, getters) => {
+            const { loading_tbl_creation_info = false } = getters.getTblCreationInfo
+            return loading_tbl_creation_info
+        },
+        getAlteredActiveNode: (state, getters) => {
+            const { altered_active_node = null } = getters.getTblCreationInfo
+            return altered_active_node
         },
     },
 }

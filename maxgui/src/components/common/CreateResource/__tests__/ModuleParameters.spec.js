@@ -71,11 +71,12 @@ describe('ModuleParameters.vue', () => {
     })
 
     it(`Should render module name as input label accurately`, async () => {
-        const arrayClasses = wrapper.find('.label').classes()
+        const arrayClasses = wrapper.find('.field__label').classes()
         const strClasses = arrayClasses.toString().replace(/,/g, ' ')
-        expect(strClasses).to.be.equals('text-capitalize label color text-small-text d-block')
-
-        expect(wrapper.find('.label').text()).to.be.equals('router')
+        expect(strClasses).to.be.equals(
+            'text-capitalize field__label color text-small-text d-block'
+        )
+        expect(wrapper.find('.field__label').text()).to.be.equals('router')
     })
 
     it(`Should render error message if selectedModule is empty`, async () => {

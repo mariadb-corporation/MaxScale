@@ -166,13 +166,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$label-size: 0.75rem;
-.field__label {
-    font-size: $label-size;
-}
 ::v-deep .show-confirm-switch {
     label {
-        font-size: $label-size;
+        font-size: $label-control-size;
         color: $small-text;
     }
 }

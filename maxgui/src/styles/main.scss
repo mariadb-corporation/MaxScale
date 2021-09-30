@@ -381,6 +381,9 @@ input:-webkit-autofill:active {
         content: none;
     }
 }
+.field__label {
+    font-size: 0.625rem !important;
+}
 //-------------------------------------------------Typography
 h1 {
     font-size: map-deep-get($headings, 'h1', 'size');
