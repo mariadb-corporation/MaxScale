@@ -8,6 +8,7 @@
         :saveText="type"
         :minBodyWidth="minBodyWidth"
         :closeImmediate="closeImmediate"
+        :hasSavingErr="hasSavingErr"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
@@ -22,7 +23,7 @@
             <slot name="body-append"></slot>
         </template>
 
-        <template v-slot:actions="{ cancel, save }">
+        <template v-slot:actions="{ cancel, save, isSaveDisabled }">
             <slot name="action-prepend"></slot>
             <v-spacer />
             <v-btn
@@ -44,6 +45,7 @@
                 class="save font-weight-medium px-7 text-capitalize"
                 rounded
                 depressed
+                :disabled="isSaveDisabled"
                 @click="save"
             >
                 {{ $t(type) }}
@@ -77,6 +79,7 @@ export default {
         smallInfo: { type: String, default: '' },
         minBodyWidth: { type: String, default: '466px' },
         closeImmediate: { type: Boolean, default: false },
+        hasSavingErr: { type: Boolean, default: false },
     },
     data() {
         return {
