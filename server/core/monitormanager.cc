@@ -62,6 +62,8 @@ public:
     std::vector<Monitor*> clear()
     {
         Guard guard(m_all_monitors_lock);
+        m_all_monitors.insert(m_all_monitors.end(), m_deact_monitors.begin(), m_deact_monitors.end());
+        m_deact_monitors.clear();
         return std::move(m_all_monitors);
     }
 
