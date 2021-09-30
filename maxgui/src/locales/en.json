@@ -191,6 +191,7 @@
     "collation": "Collation",
     "defCollation": "default collation",
     "defCharset": "default character set",
+    "comment": "Comment",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

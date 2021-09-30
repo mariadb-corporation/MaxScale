@@ -8,19 +8,23 @@
         v-else
         class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
     >
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn class="close-ddl-editor-btn" icon small v-on="on" @click="closeDDLEditor">
-                    <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
-                </v-btn>
-            </template>
-            <span>{{ $t('closeDDLEditor') }}</span>
-        </v-tooltip>
-
+        <div class="pt-2 pl-3 pr-2 d-flex align-center justify-space-between">
+            <span class="text-body-2 color text-navigation font-weight-bold text-uppercase">
+                {{ $t('alterTbl') }}
+            </span>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small v-on="on" @click="closeDDLEditor">
+                        <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('closeDDLEditor') }}</span>
+            </v-tooltip>
+        </div>
         <alter-table-opts :data="tableInfo" />
 
         <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
@@ -96,11 +100,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.close-ddl-editor-btn {
-    position: absolute;
-    right: 8px;
-    top: 4px;
-}
-</style>

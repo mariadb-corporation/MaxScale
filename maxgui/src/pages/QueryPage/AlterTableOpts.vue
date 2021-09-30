@@ -1,7 +1,7 @@
 <template>
-    <v-form lazy-validation class="pa-4 pt-2">
-        <v-row>
-            <v-col cols="12" md="6" class="pa-1">
+    <v-form lazy-validation class="py-0 px-2 mb-4">
+        <v-row class="ma-0">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('name') }}
                 </label>
@@ -14,11 +14,12 @@
                     name="table_name"
                     :height="32"
                     class="std error--text__bottom"
+                    hide-details="auto"
                     dense
                     outlined
                 />
             </v-col>
-            <v-col cols="12" md="6" class="pa-1">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('engine') }}
                 </label>
@@ -42,8 +43,8 @@
                 />
             </v-col>
         </v-row>
-        <v-row>
-            <v-col cols="12" md="6" class="pa-1">
+        <v-row class="ma-0">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('charset') }}
                 </label>
@@ -77,7 +78,7 @@
                     </template>
                 </v-select>
             </v-col>
-            <v-col cols="12" md="6" class="pa-1">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('collation') }}
                 </label>
@@ -112,7 +113,22 @@
                 </v-select>
             </v-col>
         </v-row>
-        <!-- TODO: Add Comment inputs -->
+        <v-row class="ma-0">
+            <v-col cols="12" class="py-0 px-1">
+                <label class="field__label color text-small-text">
+                    {{ $t('comment') }}
+                </label>
+                <v-textarea
+                    v-model="tableInfo.table_comment"
+                    class="std txt-area"
+                    dense
+                    auto-grow
+                    outlined
+                    rows="1"
+                    hide-details="auto"
+                />
+            </v-col>
+        </v-row>
     </v-form>
 </template>
 
