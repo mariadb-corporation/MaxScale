@@ -1748,7 +1748,12 @@ void Service::request_user_account_update()
 
 void Service::sync_user_account_caches()
 {
-    // Message each routingworker to update their caches. Do not wait for operation to finish.
+    // Message each routingworker to update their caches.
+    //
+    // The sync must wait for the update to be applied on all RoutingWorkers. This has to be done as it's
+    // possible that the service is being destroyed by the MainWorker while this function is called by the
+    // updater thread. This is safe as the MainWorker will wait for the updater thread to return before
+    // deleting the service.
     auto update_cache = [this]() {
             auto& user_cache = *m_usercache;
             if (user_cache)
@@ -1757,7 +1762,7 @@ void Service::sync_user_account_caches()
             }
             wakeup_sessions_waiting_userdata();
         };
-    mxs::RoutingWorker::broadcast(update_cache, nullptr, mxb::Worker::EXECUTE_AUTO);
+    mxs::RoutingWorker::execute_concurrently(update_cache);
 }
 
 std::string SERVICE::version_string() const
