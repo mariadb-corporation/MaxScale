@@ -14,17 +14,12 @@
 
 #include <maxscale/authenticator.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
+#include <maxscale/buffer.hh>
 #include <unordered_set>
 
 class DCB;
 class SERVICE;
-class GWBUF;
 class MYSQL_session;
-
-namespace maxscale
-{
-class Buffer;
-}
 
 namespace mariadb
 {
@@ -133,20 +128,27 @@ public:
     virtual AuthByteVec generate_token(const std::string& password);
 };
 
-using SAuthModule = std::unique_ptr<AuthenticatorModule>;
-
 /**
  * The base class of authenticator client sessions. Contains session-specific data for an authenticator.
  */
 class ClientAuthenticator
 {
 public:
-    enum class ExchRes
+    struct ExchRes
     {
-        FAIL,           /**< Packet processing failed */
-        INCOMPLETE,     /**< Should be called again after client responds to output */
-        READY           /**< Exchange with client complete, should continue to password check */
+        enum class Status
+        {
+            FAIL,           /**< Packet processing failed */
+            INCOMPLETE,     /**< Should be called again after client responds to output */
+            READY           /**< Exchange with client complete, should continue to password check */
+        };
+
+        Status status {Status::FAIL};   /**< Authentication exchange status */
+
+        /** Packet that is sent to the client. Protocol code will set the sequence number. */
+        mxs::Buffer packet;
     };
+
 
     // Return values for authenticate()-function
     struct AuthRes
@@ -169,15 +171,14 @@ public:
     virtual ~ClientAuthenticator() = default;
 
     /**
-     * Exchange authentication packets. The module should read the input, optionally write to output,
-     * and return status.
+     * Exchange authentication packets. The module should read the input and return a struct with status
+     * and an optional buffer to client.
      *
      * @param input Packet from client
      * @param ses MySQL session
-     * @param output Output for a packet that is sent to the client
-     * @return Authentication status
+     * @return Authentication status and reply buffer
      */
-    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses, mxs::Buffer* output) = 0;
+    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses) = 0;
 
     /**
      * Check client token against the password.

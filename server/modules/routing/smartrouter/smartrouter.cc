@@ -111,13 +111,12 @@ SmartRouter::SmartRouter(SERVICE* service)
                           Worker::EXECUTE_AUTO);
     }
 
-    m_updater_future = std::async(std::launch::async, &PerformanceInfoUpdater::run, &m_updater);
+    m_updater.start();
 }
 
 SmartRouter::~SmartRouter()
 {
     m_updater.stop();
-    m_updater_future.get();
 }
 
 mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)

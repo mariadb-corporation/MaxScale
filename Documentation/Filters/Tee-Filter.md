@@ -81,17 +81,37 @@ sessions that are connected using this username are replicated.
 user=john
 ```
 
+### `sync`
+
+Enable synchronous routing mode. This boolean parameter was added in MaxScale
+6.2.0 and is disabled by default.
+
+When configured with `sync=true`, the filter will queue new queries until the
+response from both the main and the branch target has been received. This means
+that for `n` executed queries, `n - 1` queries are guaranteed to be
+synchronized. Adding one extra statement (e.g. `SELECT 1`) to a batch of
+statements guarantees that all previous SQL statements have been successfully
+executed on both targets.
+
+In the synchronous routing mode, a failure of the branch target will cause the
+client session to be closed.
+
 ## Limitations
 
 - All statements that are executed on the branch target are done in an
   asynchronous manner. This means that when the client receives the response
-  there is no guarantee that the statement has completed on the branch target.
+  there is no guarantee that the statement has completed on the branch
+  target. The `sync` feature provides some synchronization guarantees that can
+  be used to verify successful execution on both targets.
 
 - Any errors on the branch target will cause the connection to it to be
   closed. If `target` is a service, it is up to the router to decide whether the
   connection is closed. For direct connections to servers, any network errors
   cause the connection to be closed. When the connection is closed, no new
   queries will be routed to the branch target.
+
+  With `sync=true`, a failure of the branch target will cause the whole session
+  to be closed.
 
 ## Module commands
 

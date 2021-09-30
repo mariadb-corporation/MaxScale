@@ -22,7 +22,7 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticator
 public:
     GSSAPIClientAuthenticator(const std::string& service_principal);
 
-    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
+    ExchRes exchange(GWBUF* buffer, MYSQL_session* session) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
 private:
@@ -39,6 +39,5 @@ private:
     };
 
     State              m_state {State::INIT};   /**< Authentication state*/
-    uint8_t            m_sequence {0};          /**< The next packet sequence number */
     const std::string& m_service_principal;     /**< Service principal */
 };

@@ -124,7 +124,6 @@ public:
     std::string current_db;                         /*< Current default database */
     std::string role;                               /*< Current role */
     std::string plugin;                             /*< authentication plugin requested by client */
-    uint8_t     next_sequence {0};                  /*< Next packet sequence */
 
     // Raw connection attribute data, copied to all backend connections
     std::vector<uint8_t> connect_attrs;

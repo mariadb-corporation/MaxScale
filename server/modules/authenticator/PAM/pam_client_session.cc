@@ -78,10 +78,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     size_t plen = dialog ? (1 + DIALOG_SIZE + 1 + PASSWORD_QUERY.length()) : (1 + CLEAR_PW_SIZE);
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
-    uint8_t* pData = bufdata;
-    mariadb::set_byte3(pData, plen);
-    pData += 3;
-    *pData++ = m_sequence;
+    uint8_t* pData = mariadb::write_header(bufdata, plen, 0);
     *pData++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
     if (dialog)
     {
@@ -100,10 +97,10 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
 }
 
 mariadb::ClientAuthenticator::ExchRes
-PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet)
+PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session)
 {
-    m_sequence = session->next_sequence;
-    auto rval = ExchRes::FAIL;
+    using ExchRes = mariadb::ClientAuthenticator::ExchRes;
+    ExchRes rval;
 
     switch (m_state)
     {
@@ -114,8 +111,8 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
             if (authbuf.length())
             {
                 m_state = State::ASKED_FOR_PW;
-                *output_packet = std::move(authbuf);
-                rval = ExchRes::INCOMPLETE;
+                rval.packet = std::move(authbuf);
+                rval.status = ExchRes::Status::INCOMPLETE;
             }
         }
         break;
@@ -127,15 +124,14 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
             if (m_settings.mode == AuthMode::PW)
             {
                 m_state = State::PW_RECEIVED;
-                rval = ExchRes::READY;
+                rval.status = ExchRes::Status::READY;
             }
             else
             {
                 // Generate prompt for 2FA.
-                Buffer prompt = create_2fa_prompt_packet();
-                *output_packet = std::move(prompt);
                 m_state = State::ASKED_FOR_2FA;
-                rval = ExchRes::INCOMPLETE;
+                rval.packet = create_2fa_prompt_packet();
+                rval.status = ExchRes::Status::INCOMPLETE;
             }
         }
         break;
@@ -144,7 +140,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
         if (store_client_password(buffer, &session->client_token_2fa))
         {
             m_state = State::PW_RECEIVED;
-            rval = ExchRes::READY;
+            rval.status = ExchRes::Status::READY;
         }
         break;
 
@@ -252,10 +248,7 @@ Buffer PamClientAuthenticator::create_2fa_prompt_packet() const
     size_t plen = 1 + TWO_FA_QUERY.length();
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
-    uint8_t* pData = bufdata;
-    mariadb::set_byte3(pData, plen);
-    pData += 3;
-    *pData++ = m_sequence;
+    uint8_t* pData = mariadb::write_header(bufdata, plen, 0);
     *pData++ = DIALOG_ECHO_DISABLED;    // Equivalent to server 2FA prompt
     memcpy(pData, TWO_FA_QUERY.c_str(), TWO_FA_QUERY.length());
     Buffer buffer(bufdata, buflen);

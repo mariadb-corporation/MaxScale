@@ -71,6 +71,11 @@ bool LocalClient::routeQuery(GWBUF* buffer)
 
 bool LocalClient::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    if (m_cb)
+    {
+        m_cb(buffer, down, reply);
+    }
+
     gwbuf_free(buffer);
     return 0;
 }
@@ -79,6 +84,11 @@ bool LocalClient::handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* 
 {
     if (m_down->is_open())
     {
+        if (m_err)
+        {
+            m_err(error, down->target(), reply);
+        }
+
         m_down->close();
     }
 

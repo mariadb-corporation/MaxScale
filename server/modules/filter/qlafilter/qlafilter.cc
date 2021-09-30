@@ -203,7 +203,6 @@ QlaInstance::~QlaInstance()
 QlaInstance::LogManager::~LogManager()
 {
     m_qlalog.stop();
-    m_log_future.get();
 }
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session, SERVICE* service)
@@ -252,7 +251,7 @@ QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& setting
     : m_settings(settings)
     , m_rotation_count(mxs_get_log_rotation_count())
 {
-    m_log_future = std::async(std::launch::async, &QlaLog::run, &m_qlalog);
+    m_qlalog.start();
 }
 
 bool QlaInstance::LogManager::prepare()

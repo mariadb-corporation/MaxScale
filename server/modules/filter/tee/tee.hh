@@ -44,6 +44,7 @@ public:
             std::string             source; /* The source of the client connection */
             mxs::config::RegexValue match;  /* Compiled match pattern */
             mxs::config::RegexValue exclude;/* Compiled exclude pattern*/
+            bool                    sync;   /* Wait for replies before routing more */
         };
 
         Config(const char* name);
