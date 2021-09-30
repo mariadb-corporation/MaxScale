@@ -2353,6 +2353,11 @@ string get_comparison_condition(const string& field,
         }
         break;
 
+    case bsoncxx::type::k_date:
+        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
+            + element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
     case bsoncxx::type::k_array:
         // TODO: This probably needs to be dealt with explicitly.
     default:
