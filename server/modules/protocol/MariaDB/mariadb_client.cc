@@ -671,7 +671,7 @@ void MariaDBClientConnection::update_user_account_entry()
 char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
 {
     char* message = NULL;
-    auto read_buffer = buffer.get();
+    auto read_buffer = buffer.release();
     SetParser set_parser;
     SetParser::Result result;
 
@@ -744,6 +744,8 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
     default:
         mxb_assert(!true);
     }
+
+    buffer.reset(read_buffer);
 
     return message;
 }
