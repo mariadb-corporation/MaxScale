@@ -71,13 +71,13 @@ DCB::ReadResult       read_protocol_packet(DCB* dcb);
 }
 
 /*
- * Data shared with authenticators
+ * Protocol-specific session data
  */
 class MYSQL_session : public MXS_SESSION::ProtocolData
 {
 public:
     MYSQL_session() = default;
-    MYSQL_session(const MYSQL_session& rhs);
+    MYSQL_session(const MYSQL_session& rhs) = delete;
 
     /**
      * Convenience method to print user and host.

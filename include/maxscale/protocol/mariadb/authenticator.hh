@@ -73,7 +73,7 @@ struct UserEntryResult
 
 /**
  * Authentication-related data. These fields are set during authentication and can only change
- * with COM_CHANGE_USER.
+ * with COM_CHANGE_USER. The structure should be default copyable/movable.
  */
 struct AuthenticationData
 {
