@@ -69,6 +69,20 @@ struct AuthSwitchReqContents
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
 DCB::ReadResult       read_protocol_packet(DCB* dcb);
+
+/**
+ * Authentication-related data. These fields are set during authentication and can only change
+ * with COM_CHANGE_USER.
+ */
+struct AuthenticationData
+{
+    std::string default_db;     /**< Initial default database */
+    std::string plugin;         /**< Authentication plugin name */
+
+    /** Character collation, defines charset as well. Usually just one byte is needed.
+     * COM_CHANGE_USER sends two. */
+    uint16_t collation {0};
+};
 }
 
 /*
@@ -91,14 +105,10 @@ public:
      * Contains client capabilities. The client sends this data in the handshake response-packet, and the
      * same data is sent to backends. Usually only the client protocol should write to these.
      */
-    class ClientInfo
+    struct ClientCapabilities
     {
-    public:
-        uint32_t m_client_capabilities {0};     /*< Basic client capabilities */
-        uint32_t m_extra_capabilities {0};      /*< MariaDB 10.2 capabilities */
-
-        /** Connection character set. Usually just one byte is needed. COM_CHANGE_USER sends two. */
-        uint16_t m_charset {0};
+        uint32_t basic_capabilities {0};    /*< Basic client capabilities */
+        uint32_t ext_capabilities {0};      /*< MariaDB 10.2 capabilities (extended capabilities) */
     };
 
     // The struct used to communicate information from the backend protocol to the client protocol.
@@ -118,17 +128,17 @@ public:
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
-    std::string user;                               /*< username       */
-    std::string remote;                             /*< client ip      */
-    std::string db;                                 /*< Initial default database */
-    std::string current_db;                         /*< Current default database */
-    std::string role;                               /*< Current role */
-    std::string plugin;                             /*< authentication plugin requested by client */
+    std::string user;           /**< username       */
+    std::string remote;         /**< client ip      */
+    std::string current_db;     /**< Current default database */
+    std::string role;           /**< Current role */
 
     // Raw connection attribute data, copied to all backend connections
     std::vector<uint8_t> connect_attrs;
 
-    ClientInfo client_info;     /**< Client capabilities from handshake response packet */
+    mariadb::AuthenticationData auth_data;
+
+    ClientCapabilities client_caps;     /**< Client capabilities from handshake response packet */
 
     /**
      * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and

@@ -734,7 +734,8 @@ void MariaDBClientConnection::update_user_account_entry()
 {
     const auto mses = m_session_data;
     auto users = user_account_cache();
-    auto search_res = users->find_user(mses->user, mses->remote, mses->db, mses->user_search_settings);
+    auto search_res = users->find_user(mses->user, mses->remote, mses->auth_data.default_db,
+                                       mses->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
     mariadb::AuthenticatorModule* selected_module = find_auth_module(search_res.entry.plugin);
@@ -1866,7 +1867,9 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
         packet_parser::ByteVec data;
         data.resize(CLIENT_CAPABILITIES_LEN);
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
-        m_session_data->client_info = packet_parser::parse_client_capabilities(data, nullptr);
+        auto res = packet_parser::parse_client_capabilities(data, MYSQL_session::ClientCapabilities());
+        m_session_data->client_caps = res.capabilities;
+        m_session_data->auth_data.collation = res.collation;
         rval = true;
     }
     return rval;
@@ -1894,8 +1897,9 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
 
-        auto client_info = packet_parser::parse_client_capabilities(data, &m_session_data->client_info);
-        auto parse_res = packet_parser::parse_client_response(data, client_info.m_client_capabilities);
+        auto client_info = packet_parser::parse_client_capabilities(data, m_session_data->client_caps);
+        auto parse_res = packet_parser::parse_client_response(data,
+                                                              client_info.capabilities.basic_capabilities);
 
         if (parse_res.success)
         {
@@ -1908,9 +1912,10 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
                 m_session_data->client_token = move(parse_res.token_res.auth_token);
-                m_session_data->db = parse_res.db;
+                m_session_data->auth_data.default_db = parse_res.db;
                 m_session_data->current_db = parse_res.db;
-                m_session_data->plugin = move(parse_res.plugin);
+                m_session_data->auth_data.plugin = move(parse_res.plugin);
+                m_session_data->auth_data.collation = client_info.collation;
 
                 // Discard the attributes if there is any indication of failed parsing, as the contents
                 // may be garbled.
@@ -1920,9 +1925,9 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 }
                 else
                 {
-                    client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_ATTRS;
+                    client_info.capabilities.basic_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_ATTRS;
                 }
-                m_session_data->client_info = client_info;
+                m_session_data->client_caps = client_info.capabilities;
 
                 rval = true;
             }
@@ -2067,10 +2072,10 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 // user, some need to be overwritten. The client authenticator does not need to be preserved.
                 m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
                 m_change_user.session->user = parse_res.username;
-                m_change_user.session->db = parse_res.db;
+                m_change_user.session->auth_data.default_db = parse_res.db;
                 m_change_user.session->current_db = parse_res.db;
-                m_change_user.session->plugin = parse_res.plugin;
-                m_change_user.session->client_info.m_charset = parse_res.charset;
+                m_change_user.session->auth_data.plugin = parse_res.plugin;
+                m_change_user.session->auth_data.collation = parse_res.charset;
                 m_change_user.session->client_token = parse_res.token_res.auth_token;
                 m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
 
@@ -2294,13 +2299,13 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
         break;
 
     case AuthErrorType::DB_ACCESS_DENIED:
-        mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
-                                         ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
+        mariadb_msg = mxb::string_printf("Access denied for user %s to database '%s'",
+                                         ses->user_and_host().c_str(), ses->auth_data.default_db.c_str());
         send_mysql_err_packet(1044, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::BAD_DB:
-        mariadb_msg = mxb::string_printf("Unknown database '%s'", ses->db.c_str());
+        mariadb_msg = mxb::string_printf("Unknown database '%s'", ses->auth_data.default_db.c_str());
         send_mysql_err_packet(1049, "42000", mariadb_msg.c_str());
         break;
 
@@ -2554,7 +2559,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          */
         {
             buffer.make_contiguous();
-            auto& caps = m_session_data->client_info.m_client_capabilities;
+            auto& caps = m_session_data->client_caps.basic_capabilities;
             if (buffer.data()[MYSQL_HEADER_LEN + 2])
             {
                 caps &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;

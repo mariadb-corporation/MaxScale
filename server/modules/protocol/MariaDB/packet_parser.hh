@@ -18,7 +18,7 @@
 
 namespace packet_parser
 {
-using ClientInfo = MYSQL_session::ClientInfo;
+using ClientInfo = MYSQL_session::ClientCapabilities;
 
 class ByteVec : public std::vector<uint8_t>
 {
@@ -57,6 +57,12 @@ struct AttrParseResult
     AttrParseResult() = default;
 };
 
+struct ClientCapsResult
+{
+    ClientInfo capabilities;
+    uint16_t   collation {0};
+};
+
 struct ClientResponseResult
 {
     bool success {false};
@@ -90,10 +96,10 @@ struct ChangeUserParseResult
  * Parse 32 bytes of client capabilities.
  *
  * @param data Data array. Should be at least 32 bytes.
- * @param old_info Old client capabilities info from SSLRequest packet. Can be null.
+ * @param old_info Old client capabilities info from SSLRequest packet.
  * @return Parsed client capabilities
  */
-ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info);
+ClientCapsResult parse_client_capabilities(ByteVec& data, const ClientInfo& old_info);
 
 /**
  * Parse username, database etc from client handshake response. Client capabilities should have
