@@ -82,7 +82,6 @@ private:
 
 Initer::component_t Initer::s_components[] =
 {
-    MAXBASE_COMPONENT(MessageQueue),
     MAXBASE_COMPONENT(Worker),
 };
 

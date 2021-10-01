@@ -13,6 +13,8 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <mutex>
+#include <vector>
 #include <maxbase/poll.hh>
 
 namespace maxbase
@@ -104,17 +106,15 @@ public:
 
 
 /**
- * The class @c MessageQueue provides a cross thread message queue implemented
- * on top of a pipe.
+ * The class @c MessageQueue provides a cross thread message queue.
  */
 class MessageQueue : private mxb::PollData
 {
-    MessageQueue(const MessageQueue&);
-    MessageQueue& operator=(const MessageQueue&);
-
 public:
     typedef MessageQueueHandler Handler;
     typedef MessageQueueMessage Message;
+    MessageQueue(const MessageQueue&) = delete;
+    MessageQueue& operator=(const MessageQueue&) = delete;
 
     /**
      * Creates a @c MessageQueue with the provided handler.
@@ -151,7 +151,7 @@ public:
      * @attention Note that the message queue must have been added to a worker
      *            before a message can be posted.
      */
-    bool post(const Message& message) const;
+    bool post(const Message& message);
 
     /**
      * Adds the message queue to a particular worker.
@@ -176,21 +176,30 @@ public:
     Worker* remove_from_worker();
 
 private:
-    friend class Initer;
-    static bool init();
-    static void finish();
+    MessageQueue(Handler* pHandler, int event_fd);
 
-private:
-    MessageQueue(Handler* pHandler, int read_fd, int write_fd);
-
-    uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
-
+    uint32_t        handle_poll_events(Worker* pWorker, uint32_t events);
     static uint32_t poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* worker, uint32_t events);
+    void            swap_messages_and_work();
+    void            add_message(const Message& message);
 
-private:
-    Handler& m_handler;
-    int      m_read_fd;
-    int      m_write_fd;
-    Worker*  m_pWorker;
+    using MessageVector = std::vector<Message>;
+
+    Handler&      m_handler;
+    Worker*       m_pWorker {nullptr};
+    int           m_event_fd {-1};  /**< Event file descriptor */
+    std::mutex    m_messages_lock;  /**< Protects access to message queue */
+    MessageVector m_messages;       /**< Message queue. Accessed from multiple threads. */
+    MessageVector m_work;           /**< Work array for messages. Only accessed in the worker thread. */
+
+#ifdef SS_DEBUG
+    // Statistics data. May be useful when running in a debugger.
+    uint64_t m_total_msgs {0};          /**< Total number of messages seen */
+    uint64_t m_single_msg_events {0};   /**< Number of events with one message in queue */
+    uint64_t m_multi_msg_events {0};    /**< Number of events with multiple messages in queue */
+    uint64_t m_max_msgs_seen {0};       /**< Maximum number of messages in a single event */
+    uint64_t m_total_events {0};        /**< Total number of I/O events */
+    double   m_ave_msgs_per_event {0};  /**< Average number of messages per I/O event */
+#endif
 };
 }
