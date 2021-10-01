@@ -113,13 +113,12 @@ public:
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
-    std::string remote;         /**< client ip      */
+    std::string remote;         /**< client ip */
     std::string current_db;     /**< Current default database */
     std::string role;           /**< Current role */
 
-    mariadb::AuthenticationData auth_data;
-
-    ClientCapabilities client_caps;     /**< Client capabilities from handshake response packet */
+    mariadb::SAuthData auth_data;   /**< Authentication data used by backends */
+    ClientCapabilities client_caps; /**< Client capabilities from handshake response packet */
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;

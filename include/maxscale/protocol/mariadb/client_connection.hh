@@ -281,12 +281,12 @@ private:
          * session object. The backend authenticator will always read the most recent auth data when
          * connecting or sending COM_CHANGE_USER. This does not cause issues when replaying session commands,
          * as the command history is erased on COM_CHANGE_USER. */
-        std::unique_ptr<mariadb::AuthenticationData> auth_data;
+        mariadb::SAuthData auth_data;
 
         /**
          * Backup of original auth data while waiting for server reply. This is required so the original
          * data can be restored if server replies with error. */
-        std::unique_ptr<mariadb::AuthenticationData> auth_data_bu;
+        mariadb::SAuthData auth_data_bu;
     };
 
     SSLState ssl_authenticate_check_status();

@@ -119,7 +119,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
 
     case State::ASKED_FOR_PW:
         // Client should have responded with password.
-        if (store_client_password(buffer, &session->auth_data.client_token))
+        if (store_client_password(buffer, &session->auth_data->client_token))
         {
             if (m_settings.mode == AuthMode::PW)
             {
@@ -137,7 +137,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
         break;
 
     case State::ASKED_FOR_2FA:
-        if (store_client_password(buffer, &session->auth_data.client_token_2fa))
+        if (store_client_password(buffer, &session->auth_data->client_token_2fa))
         {
             m_state = State::PW_RECEIVED;
             rval.status = ExchRes::Status::READY;

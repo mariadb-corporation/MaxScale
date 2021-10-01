@@ -585,7 +585,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 {
     auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
-    auto& auth_data = (auth_type == AuthType::NORMAL_AUTH) ? m_session_data->auth_data :
+    auto& auth_data = (auth_type == AuthType::NORMAL_AUTH) ? *m_session_data->auth_data :
         *m_change_user.auth_data;
     const auto& user_entry_type = auth_data.user_entry.type;
 
@@ -674,6 +674,8 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
         case AuthState::START_SESSION:
             // Authentication success, initialize session. Backend authenticator must be set before
             // connecting to backends.
+            m_session_data->current_db = auth_data.default_db;
+            m_session_data->role = auth_data.user_entry.entry.default_role;
             assign_backend_authenticator(auth_data);
             if (m_session->start())
             {
@@ -1870,7 +1872,7 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
         auto res = packet_parser::parse_client_capabilities(data, MYSQL_session::ClientCapabilities());
         m_session_data->client_caps = res.capabilities;
-        m_session_data->auth_data.collation = res.collation;
+        m_session_data->auth_data->collation = res.collation;
         rval = true;
     }
     return rval;
@@ -1910,12 +1912,11 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
             if (data_size >= 1)
             {
                 // Success, save data to session.
-                auto& auth_data = m_session_data->auth_data;
-                auth_data.user = parse_res.username;
-                m_session->set_user(parse_res.username);
+                auto& auth_data = *m_session_data->auth_data;
+                auth_data.user = move(parse_res.username);
+                m_session->set_user(auth_data.user);
                 auth_data.client_token = move(parse_res.token_res.auth_token);
-                auth_data.default_db = parse_res.db;
-                m_session_data->current_db = parse_res.db;
+                auth_data.default_db = move(parse_res.db);
                 auth_data.plugin = move(parse_res.plugin);
                 auth_data.collation = client_info.collation;
 
@@ -2102,11 +2103,10 @@ bool MariaDBClientConnection::complete_change_user_p1()
     // the change-user authentication data. Backend authenticators will read the new data.
 
     auto& curr_auth_data = m_session_data->auth_data;
-    m_change_user.auth_data_bu = std::make_unique<mariadb::AuthenticationData>();
-    *m_change_user.auth_data_bu = move(curr_auth_data);
-    curr_auth_data = move(*m_change_user.auth_data);
+    m_change_user.auth_data_bu = move(curr_auth_data);
+    curr_auth_data = move(m_change_user.auth_data);
 
-    assign_backend_authenticator(curr_auth_data);
+    assign_backend_authenticator(*curr_auth_data);
 
     bool rval = false;
     // Failure here means a comms error -> session failure.
@@ -2121,7 +2121,7 @@ bool MariaDBClientConnection::complete_change_user_p1()
 void MariaDBClientConnection::cancel_change_user_p1()
 {
     MXB_INFO("COM_CHANGE_USER from '%s' to '%s' failed.",
-             m_session_data->auth_data.user.c_str(), m_change_user.auth_data->user.c_str());
+             m_session_data->auth_data->user.c_str(), m_change_user.auth_data->user.c_str());
     // The main session fields have not been modified at this point, so canceling is simple.
     m_change_user.client_query.reset();
     m_change_user.auth_data.reset();
@@ -2131,30 +2131,29 @@ void MariaDBClientConnection::complete_change_user_p2()
 {
     // At this point, the original auth data is in backup storage and the change-user data is "current".
     const auto& curr_auth_data = m_session_data->auth_data;
-    const auto& orig_auth_data = *m_change_user.auth_data_bu;
+    const auto& orig_auth_data = m_change_user.auth_data_bu;
 
-    if (curr_auth_data.user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
+    if (curr_auth_data->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
     {
-        MXB_WARNING("COM_CHANGE_USER from '%s' to super user '%s' in service '%s'.",
-                    orig_auth_data.user.c_str(), curr_auth_data.user.c_str(), m_session->service->name());
+        MXB_WARNING("COM_CHANGE_USER from '%s' to super user '%s'.",
+                    orig_auth_data->user.c_str(), curr_auth_data->user.c_str());
     }
     else
     {
-        MXB_INFO("COM_CHANGE_USER from '%s' to '%s' in service '%s' succeeded.",
-                 orig_auth_data.user.c_str(), curr_auth_data.user.c_str(), m_session->service->name());
+        MXB_INFO("COM_CHANGE_USER from '%s' to '%s' succeeded.",
+                 orig_auth_data->user.c_str(), curr_auth_data->user.c_str());
     }
     m_change_user.auth_data_bu.reset();     // No longer needed.
-    m_session_data->current_db = curr_auth_data.default_db;
-    m_session_data->role = curr_auth_data.user_entry.entry.default_role;
+    m_session_data->current_db = curr_auth_data->default_db;
+    m_session_data->role = curr_auth_data->user_entry.entry.default_role;
 }
 
 void MariaDBClientConnection::cancel_change_user_p2()
 {
     auto& curr_auth_data = m_session_data->auth_data;
-    auto& orig_auth_data = *m_change_user.auth_data_bu;
-    MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' in service '%s' succeeded on MaxScale yet failed on "
-                "backends.", orig_auth_data.user.c_str(), curr_auth_data.user.c_str(),
-                m_session->service->name());
+    auto& orig_auth_data = m_change_user.auth_data_bu;
+    MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale yet failed on backends.",
+                orig_auth_data->user.c_str(), curr_auth_data->user.c_str());
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);
 }
@@ -2202,6 +2201,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
         {
         case HSState::INIT:
             m_handshake_state = require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP;
+            m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
             break;
 
         case HSState::EXPECT_SSL_REQ:
@@ -2306,7 +2306,7 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
 {
     auto ses = m_session_data;
     string mariadb_msg;
-    const auto& auth_data = ses->auth_data;
+    const auto& auth_data = *ses->auth_data;
 
     switch (error)
     {
@@ -2330,7 +2330,7 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
 
     case AuthErrorType::NO_PLUGIN:
         mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded",
-                                         ses->auth_data.user_entry.entry.plugin.c_str());
+                                         auth_data.user_entry.entry.plugin.c_str());
         send_mysql_err_packet(1524, "HY000", mariadb_msg.c_str());
         break;
     }
@@ -2340,7 +2340,7 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     {
         string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
                                               "Originating listener: '%s'. MariaDB error: '%s'.",
-                                              ses->auth_data.user.c_str(), ses->remote.c_str(),
+                                              auth_data.user.c_str(), ses->remote.c_str(),
                                               m_session->service->name(),
                                               m_session->listener_data()->m_listener_name.c_str(),
                                               mariadb_msg.c_str());
@@ -3089,5 +3089,5 @@ DCB::ReadResult MariaDBClientConnection::read_protocol_packet()
 
 mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthType type)
 {
-    return (type == AuthType::NORMAL_AUTH) ? m_session_data->auth_data : *m_change_user.auth_data;
+    return (type == AuthType::NORMAL_AUTH) ? *m_session_data->auth_data : *m_change_user.auth_data;
 }

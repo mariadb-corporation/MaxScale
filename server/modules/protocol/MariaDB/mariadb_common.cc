@@ -385,7 +385,7 @@ uint32_t MYSQL_session::extra_capabilitites() const
 
 std::string MYSQL_session::user_and_host() const
 {
-    return mxb::string_printf("'%s'@'%s'", auth_data.user.c_str(), remote.c_str());
+    return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
 }
 
 bool MYSQL_session::is_trx_read_only() const

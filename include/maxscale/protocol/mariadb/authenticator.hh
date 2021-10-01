@@ -105,6 +105,7 @@ struct AuthenticationData
     /** Backend authenticator module. Usually same as client authenticator. */
     mariadb::AuthenticatorModule* be_auth_module {nullptr};
 };
+using SAuthData = std::unique_ptr<AuthenticationData>;
 
 /**
  * The base class of all authenticators for MariaDB-protocol. Contains the global data for

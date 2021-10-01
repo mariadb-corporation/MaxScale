@@ -339,7 +339,7 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
     uint8_t* data = buffer.data();
     mariadb::set_byte3(data, pload_len);
     data[3] = seqno;
-    auto& sha_pw = m_shared_data.client_data->auth_data.backend_token;
+    auto& sha_pw = m_shared_data.client_data->auth_data->backend_token;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
     return buffer;
