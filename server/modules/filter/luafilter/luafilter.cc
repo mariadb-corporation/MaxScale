@@ -49,6 +49,7 @@ extern "C"
 #include <string.h>
 }
 
+#include <dlfcn.h>
 #include <mutex>
 #include <maxbase/alloc.h>
 #include <maxscale/filter.hh>
@@ -122,6 +123,23 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {MXS_END_MODULE_PARAMS}
         }
     };
+
+    // Some luarocks libraries (e.g. lpeg) do not dynamically link to the lua libraries and expect the symbols
+    // to be globally available. The correct way to solve this would be to rebuild the luarocks library and
+    // link it against the lua libraries but this isn't a realistic option. Luckily, lua uses dlopen to load
+    // modules and we can inject the symbols from it by loading the liblua.so library with dlopen using
+    // RTLD_GLOBAL. This globally exposes the symbols from it to all subsequent dynamically loaded libraries
+    // which pretty much amounts to the same as recompiling the libraries and linking them against liblua.so.
+    if (void* handle = dlopen("liblua.so", RTLD_NOW | RTLD_GLOBAL))
+    {
+        dlclose(handle);
+    }
+    else
+    {
+        MXS_WARNING("Failed to load the core Lua library: %s. Some external Lua libraries might not work "
+                    "as a result of this. The core Lua library can be manually loaded by using "
+                    "LD_PRELOAD and pointing it at the correct 'liblua.so' library.", dlerror());
+    }
 
     return &info;
 }
