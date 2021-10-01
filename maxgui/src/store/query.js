@@ -573,6 +573,7 @@ export default {
                     })
                     dataRows.forEach(row => {
                         db_tree.push({
+                            key: uniqueId('node_key_'),
                             type: nodeType,
                             name: row.SCHEMA_NAME,
                             id: row.SCHEMA_NAME,
@@ -581,6 +582,7 @@ export default {
                             level: 0,
                             children: [
                                 {
+                                    key: uniqueId('node_key_'),
                                     type: 'Tables',
                                     name: 'Tables',
                                     // only use to identify active node
@@ -590,6 +592,7 @@ export default {
                                     children: [],
                                 },
                                 {
+                                    key: uniqueId('node_key_'),
                                     type: 'Stored Procedures',
                                     name: 'Stored Procedures',
                                     // only use to identify active node
@@ -666,6 +669,7 @@ export default {
                 let cmpList = []
                 dataRows.forEach(row => {
                     let grandChildNode = {
+                        key: uniqueId('node_key_'),
                         type: grandChildNodeType,
                         name: row[rowName],
                         id: `${dbName}.${row[rowName]}`,
@@ -681,6 +685,7 @@ export default {
                         grandChildNode.canBeHighlighted = true
                         grandChildNode.children = [
                             {
+                                key: uniqueId('node_key_'),
                                 type: 'Columns',
                                 name: 'Columns',
                                 // only use to identify active node
@@ -690,6 +695,7 @@ export default {
                                 level: 3,
                             },
                             {
+                                key: uniqueId('node_key_'),
                                 type: 'Triggers',
                                 name: 'Triggers',
                                 // only use to identify active node
@@ -755,6 +761,7 @@ export default {
 
                 dataRows.forEach(row => {
                     gch.push({
+                        key: uniqueId('node_key_'),
                         type: nodeType,
                         name: row[rowName],
                         id: `${dbName}.${row[rowName]}`,
