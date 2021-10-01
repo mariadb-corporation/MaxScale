@@ -328,24 +328,6 @@ void close_client(void* cls,
     delete client;
 }
 
-bool authorize_user(const char* user, const char* method, const char* url)
-{
-    bool rval = true;
-
-    if (modifies_data(method) && !admin_user_is_inet_admin(user, nullptr))
-    {
-        if (mxs::Config::get().admin_log_auth_failures.get())
-        {
-            MXS_WARNING("Authorization failed for '%s', request requires "
-                        "administrative privileges. Request: %s %s",
-                        user, method, url);
-        }
-        rval = false;
-    }
-
-    return rval;
-}
-
 void add_extra_headers(MHD_Response* response)
 {
     MHD_add_response_header(response, "X-Frame-Options", "Deny");
@@ -437,6 +419,30 @@ Client::Client(MHD_Connection* connection, const char* url, const char* method)
     , m_headers(get_headers(connection))
     , m_request(connection, url, method, nullptr)
 {
+}
+
+bool Client::is_basic_endpoint() const
+{
+    // TODO: Move this into resource.cc, this is not the best place to do this
+    return m_request.uri_part(0) == "sql";
+}
+
+bool Client::authorize_user(const char* user, const char* method, const char* url) const
+{
+    bool rval = true;
+
+    if (modifies_data(method) && !admin_user_is_inet_admin(user, nullptr) && !is_basic_endpoint())
+    {
+        if (mxs::Config::get().admin_log_auth_failures.get())
+        {
+            MXS_WARNING("Authorization failed for '%s', request requires "
+                        "administrative privileges. Request: %s %s",
+                        user, method, url);
+        }
+        rval = false;
+    }
+
+    return rval;
 }
 
 std::string Client::get_header(const std::string& key) const
