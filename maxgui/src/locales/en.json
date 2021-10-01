@@ -237,10 +237,11 @@
         "maxRows": "Increasing max rows can cause MaxScale to run out of memory. Alternatively, use <code style='line-height: unset;' class='pa-0 mariadb-code-style'>LIMIT offset, row_count</code> to navigate through the result set",
         "disconnectAll": "You have opened connections, uncheck the box below to keep them open.",
         "notFoundConn": "Connection is not found, please reconnect",
-        "connSuccessful": "Connection successful",
-        "disconnectSuccessful": "Disconnect successful",
+        "connSuccessfully": "Connect successfully",
+        "disconnSuccessfully": "Disconnect successfully",
         "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
-        "alterTableInfo": "This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above."
+        "alterTableInfo": "This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
+        "alterTableSuccessfully": "Alter table successfully"
     },
 
     "$vuetify": {

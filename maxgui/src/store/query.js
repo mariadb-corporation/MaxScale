@@ -376,7 +376,7 @@ export default {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
                         {
-                            text: [this.i18n.t('info.connSuccessful')],
+                            text: [this.i18n.t('info.connSuccessfully')],
                             type: 'success',
                         },
                         { root: true }
@@ -407,7 +407,7 @@ export default {
                         commit(
                             'SET_SNACK_BAR_MESSAGE',
                             {
-                                text: [this.i18n.t('info.disconnectSuccessful')],
+                                text: [this.i18n.t('info.disconnSuccessfully')],
                                 type: 'success',
                             },
                             { root: true }
@@ -1194,6 +1194,14 @@ export default {
                             data: res.data.data.attributes,
                         },
                     })
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.i18n.t('info.alterTableSuccessfully')],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
                     dispatch(
                         'persisted/pushQueryLog',
                         {
