@@ -223,9 +223,10 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
+    std::string reason = mxs::extract_error(buffer);
     std::string errmsg = mxb::string_printf(
         "Authentication to '%s' failed: %hu, %s",
-        dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
+        dcb->server()->name(), errcode, reason.c_str());
 
     if (m_session->service->config()->log_auth_warnings)
     {
@@ -267,7 +268,16 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
         // If user cache does not exist, do nothing.
     }
 
-    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+    auto error_type = mxs::ErrorType::PERMANENT;
+
+    // XPand responds with this sort of an authentication failure error while it's doing a group change. To
+    // avoid permanently closing the backends, treat it as a transient error.
+    if (errcode == 1 && reason.find("Group change during GTM operation") != std::string::npos)
+    {
+        error_type = mxs::ErrorType::TRANSIENT;
+    }
+
+    do_handle_error(m_dcb, errmsg, error_type);
 }
 
 /**
