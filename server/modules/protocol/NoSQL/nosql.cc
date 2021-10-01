@@ -3392,6 +3392,101 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
     return state;
 }
 
+std::string Path::to_string() const
+{
+    string rv { "kind: " };
+    switch (m_kind)
+    {
+    case ELEMENT:
+        rv += "element";
+        break;
+
+    case ARRAY:
+        rv += "array";
+        break;
+    }
+
+    rv += "path: " + m_path + ", ";
+    rv += "array: " + m_array;
+
+    return rv;
+}
+
+//static
+vector<Path> nosql::Path::get_paths(const string& key)
+{
+    vector<Path> rv;
+
+    string::size_type i = 0;
+    string::size_type j;
+    while ((j = key.find_first_of('.', i)) != string::npos)
+    {
+        string part = key.substr(i, j - i);
+
+        if (rv.empty())
+        {
+            rv.push_back(Path("$." + part));
+        }
+        else
+        {
+            add_part(rv, part);
+        }
+
+        i = j + 1;
+    }
+
+    if (rv.empty())
+    {
+        rv.push_back(Path("$." + key));
+    }
+    else
+    {
+        add_part(rv, key.substr(i, j));
+    }
+
+    return rv;
+}
+
+//static
+void nosql::Path::add_part(vector<Path>& rv, const string& part)
+{
+    bool is_number = false;
+
+    char* zEnd;
+    auto l = strtol(part.c_str(), &zEnd, 10);
+
+    // Is the part a number?
+    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+    {
+        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
+        // or the n'th element (e.g. { a: [ ... ] }).
+        is_number = true;
+    }
+
+    vector<Path> tmp;
+
+    for (const auto& p : rv)
+    {
+        if (p.kind() == Path::ELEMENT)
+        {
+            tmp.push_back(Path(p.path() + "." + part));
+        }
+        else
+        {
+            tmp.push_back(Path(Path::ELEMENT, p.path() + "." + part, p.array()));
+        }
+
+        if (is_number)
+        {
+            tmp.push_back(Path(Path::ARRAY, p.path() + "[" + part + "]", p.path()));
+        }
+
+        tmp.push_back(Path(Path::ARRAY, p.path() + "[*]." + part, p.path()));
+    }
+
+    rv.swap(tmp);
+}
+
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(MSG): %s", req.to_string().c_str());

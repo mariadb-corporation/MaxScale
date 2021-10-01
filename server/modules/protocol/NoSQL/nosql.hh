@@ -1360,6 +1360,56 @@ private:
     SDatabase          m_sDatabase;
 };
 
+
+class Path
+{
+public:
+    enum Kind
+    {
+        ELEMENT,
+        ARRAY
+    };
+
+    Path(const std::string& path)
+        : m_kind(ELEMENT)
+        , m_path(path)
+    {
+    }
+
+    Path(Kind kind, const std::string& path, const std::string& array)
+        : m_kind(ARRAY)
+        , m_path(path)
+        , m_array(array)
+    {
+    }
+
+    static std::vector<Path> get_paths(const std::string& key);
+
+    std::string to_string() const;
+
+    Kind kind() const
+    {
+        return m_kind;
+    }
+
+    const std::string& path() const
+    {
+        return m_path;
+    }
+
+    const std::string& array() const
+    {
+        return m_array;
+    }
+
+private:
+    static void add_part(std::vector<Path>& rv, const std::string& part);
+
+    Kind        m_kind;
+    std::string m_path;
+    std::string m_array;
+};
+
 /**
  * Get SQL statement for creating a document table.
  *
