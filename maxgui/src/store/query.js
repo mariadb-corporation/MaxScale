@@ -1174,6 +1174,7 @@ export default {
         async alterTable({ state, rootState, dispatch, commit }, sql) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
+            const request_sent_time = new Date().valueOf()
             await dispatch('queryingActionWrapper', {
                 action: async () => {
                     commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
@@ -1193,6 +1194,16 @@ export default {
                             data: res.data.data.attributes,
                         },
                     })
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        {
+                            startTime: request_sent_time,
+                            query: sql,
+                            res,
+                            connection_name: curr_cnct_resource.name,
+                        },
+                        { root: true }
+                    )
                 },
                 actionName: 'alterTable',
                 catchAction: e => {
