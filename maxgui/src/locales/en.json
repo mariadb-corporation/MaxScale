@@ -223,9 +223,9 @@
         "stop": "Are you sure you want to stop {targetId}?",
         "start": "Are you sure you want to start {targetId}?",
         "disconnect": "Are you sure you want to disconnect from {targetId}?",
-        "runQuery": "Are you sure you want to run the following statements?",
+        "runQuery": "Run the following statements?",
         "leavePage": "Are you sure you want to leave?",
-        "addToFavorite": "Are you sure you want to add the following statements to favorite?",
+        "addToFavorite": "Add the following statements to favorite?",
         "alterTable": "Executing the following statements?"
     },
     "info": {
