@@ -139,6 +139,7 @@ export default {
         db_tree_map: {},
         // editor states
         tbl_creation_info_map: {},
+        altering_table_result_map: {},
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -253,6 +254,14 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
+        },
+        UPDATE_ALTERING_TABLE_RESULT_MAP(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state.altering_table_result_map, id)
+            else
+                state.altering_table_result_map = {
+                    ...state.altering_table_result_map,
+                    ...{ [id]: { ...state.altering_table_result_map[id], ...payload } },
+                }
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
@@ -1162,6 +1171,42 @@ export default {
             })
         },
 
+        async alterTable({ state, rootState, dispatch, commit }, sql) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            const active_wke_id = state.active_wke_id
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
+                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            is_altering_table: true,
+                        },
+                    })
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            is_altering_table: false,
+                            data: res.data.data.attributes,
+                        },
+                    })
+                },
+                actionName: 'alterTable',
+                catchAction: e => {
+                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            is_altering_table: false,
+                            result: this.vue.$help.getErrorsArr(e),
+                        },
+                    })
+                },
+            })
+        },
+
         changeWkeName({ state, getters, commit }, name) {
             let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
             newWke.name = name
@@ -1178,6 +1223,7 @@ export default {
             commit('UPDATE_PRVW_DATA_MAP', payload)
             commit('UPDATE_IS_QUERYING_MAP', payload)
             commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
+            commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -1329,6 +1375,13 @@ export default {
         getAlteredActiveNode: (state, getters) => {
             const { altered_active_node = null } = getters.getTblCreationInfo
             return altered_active_node
+        },
+        // altering_table_result_map getters
+        getAlteringTableResultMap: state =>
+            state.altering_table_result_map[state.active_wke_id] || {},
+        getIsAlteringTable: (state, getters) => {
+            const { is_altering_table = false } = getters.getAlteringTableResultMap
+            return is_altering_table
         },
     },
 }

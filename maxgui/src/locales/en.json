@@ -196,6 +196,7 @@
     "revertChanges": "Revert changes",
     "apply": "apply",
     "applyChanges": "Apply changes",
+    "execute": "Execute",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -209,7 +210,8 @@
         "refreshLater": "Please refresh in a few moments",
         "largerThanZero": "{inputName} must be larger than zero",
         "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones",
-        "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Favorite tab and delete some to create more space."
+        "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Favorite tab and delete some to create more space.",
+        "alterFailed": "Failed to alter table"
     },
     "confirmations": {
         "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
@@ -223,7 +225,8 @@
         "disconnect": "Are you sure you want to disconnect from {targetId}?",
         "runQuery": "Are you sure you want to run the following statements?",
         "leavePage": "Are you sure you want to leave?",
-        "addToFavorite": "Are you sure you want to add the following statements to favorite?"
+        "addToFavorite": "Are you sure you want to add the following statements to favorite?",
+        "alterTable": "Executing the following statements?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",
@@ -236,7 +239,8 @@
         "notFoundConn": "Connection is not found, please reconnect",
         "connSuccessful": "Connection successful",
         "disconnectSuccessful": "Disconnect successful",
-        "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs."
+        "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
+        "alterTableInfo": "This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above."
     },
 
     "$vuetify": {
