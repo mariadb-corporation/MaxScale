@@ -40,9 +40,6 @@ namespace
 
 using maxbase::Worker;
 
-const int MXB_WORKER_MSG_TASK = -1;
-const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
-
 /**
  * Unit variables.
  */
@@ -613,13 +610,15 @@ void Worker::join()
 void Worker::shutdown()
 {
     // NOTE: No logging here, this function must be signal safe.
-
+    // This function could set m_should_shutdown directly, but posting it in a message also ensures
+    // the thread wakes up from epoll_wait.
     if (!m_shutdown_initiated)
     {
-        if (post_message(MXB_WORKER_MSG_SHUTDOWN, 0, 0))
-        {
-            m_shutdown_initiated = true;
-        }
+        auto init_shutdown = [this]() {
+            MXB_INFO("Worker %p received shutdown message.", this);
+            m_should_shutdown = true;
+        };
+        execute(init_shutdown, EXECUTE_QUEUED);
     }
 }
 
@@ -634,21 +633,6 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 {
     switch ((int)msg.id())
     {
-    case MXB_WORKER_MSG_SHUTDOWN:
-        {
-            MXB_INFO("Worker %p received shutdown message.", this);
-            m_should_shutdown = true;
-        }
-        break;
-
-    case MXB_WORKER_MSG_CALL:
-        {
-            void (* f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*))msg.arg1();
-
-            f(this, (void*)msg.arg2());
-        }
-        break;
-
     case MXB_WORKER_MSG_TASK:
         {
             Task* pTask = reinterpret_cast<Task*>(msg.arg1());
@@ -784,7 +768,7 @@ void Worker::poll_waitevents()
     int64_t nFds_total = 0;
     int64_t nPolls_effective = 0;
 
-    while (!should_shutdown())
+    while (!m_should_shutdown)
     {
         m_state = POLLING;
 
@@ -1015,15 +999,4 @@ bool Worker::cancel_delayed_call(uint32_t id)
 
     return found;
 }
-}
-
-
-MXB_WORKER* mxb_worker_get_current()
-{
-    return Worker::get_current();
-}
-
-bool mxb_worker_post_message(MXB_WORKER* pWorker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
-{
-    return static_cast<Worker*>(pWorker)->post_message(msg_id, arg1, arg2);
 }

@@ -1855,9 +1855,9 @@ void BackendDCB::reset(MXS_SESSION* session)
 }
 
 // static
-void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
+void BackendDCB::hangup_cb(const SERVER* server)
 {
-    RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
+    auto* rworker = RoutingWorker::get_current();
     DCB* old_current = this_thread.current_dcb;
 
     for (DCB* dcb : rworker->dcbs())
@@ -1890,10 +1890,10 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 // static
 void BackendDCB::hangup(const SERVER* server)
 {
-    intptr_t arg1 = (intptr_t)&BackendDCB::hangup_cb;
-    intptr_t arg2 = (intptr_t)server;
-
-    RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
+    auto hangup_server = [server]() {
+            hangup_cb(server);
+        };
+    mxs::RoutingWorker::broadcast(hangup_server, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 
 mxs::BackendConnection* BackendDCB::protocol() const

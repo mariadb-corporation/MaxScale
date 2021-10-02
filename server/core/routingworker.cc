@@ -323,11 +323,6 @@ bool RoutingWorker::remove_shared_fd(int fd)
     return rv;
 }
 
-bool mxs_worker_should_shutdown(MXB_WORKER* pWorker)
-{
-    return static_cast<RoutingWorker*>(pWorker)->should_shutdown();
-}
-
 RoutingWorker* RoutingWorker::get(int worker_id)
 {
     mxb_assert(this_unit.initialized);

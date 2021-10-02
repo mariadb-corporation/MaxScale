@@ -846,7 +846,7 @@ private:
 
     bool release_from(MXS_SESSION* session) override;
 
-    static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
+    static void hangup_cb(const SERVER* server);
 
     SERVER* const                           m_server;   /**< The associated backend server */
     std::shared_ptr<mxs::SSLContext>        m_ssl;      /**< SSL context for this connection */

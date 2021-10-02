@@ -27,12 +27,17 @@
 #include <maxbase/average.hh>
 #include <maxbase/messagequeue.hh>
 #include <maxbase/semaphore.hh>
-#include <maxbase/worker.h>
 #include <maxbase/workertask.hh>
 #include <maxbase/random.hh>
 #include <maxbase/stopwatch.hh>
 
 using namespace std::chrono_literals;
+
+enum mxb_worker_msg_id_t
+{
+    MXB_WORKER_MSG_TASK,
+    MXB_WORKER_MSG_DISPOSABLE_TASK
+};
 
 namespace maxbase
 {
@@ -471,16 +476,6 @@ public:
      * @attention This function is signal safe.
      */
     void shutdown();
-
-    /**
-     * Query whether worker should shutdown.
-     *
-     * @return True, if the worker should shut down, false otherwise.
-     */
-    bool should_shutdown() const
-    {
-        return m_should_shutdown;
-    }
 
     /**
      * Executes a task on the worker thread.
