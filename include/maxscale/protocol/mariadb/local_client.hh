@@ -16,7 +16,6 @@
 
 #include <deque>
 
-#include <maxbase/poll.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

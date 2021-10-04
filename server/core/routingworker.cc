@@ -13,14 +13,12 @@
 
 #include <maxscale/routingworker.hh>
 
-#include <errno.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <csignal>
 #include <unistd.h>
 #include <vector>
 #include <sstream>
-
+#include <sys/epoll.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/average.hh>
 #include <maxbase/semaphore.hh>
@@ -153,8 +151,8 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     , m_id(next_worker_id())
     , m_pool_handler(this)
 {
-    MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
-    MXB_POLL_DATA::owner = this;
+    POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
+    POLL_DATA::owner = this;
 }
 
 RoutingWorker::~RoutingWorker()
@@ -278,7 +276,7 @@ void RoutingWorker::finish()
 }
 
 // static
-bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
+bool RoutingWorker::add_shared_fd(int fd, uint32_t events, POLL_DATA* pData)
 {
     bool rv = true;
 
@@ -945,7 +943,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
     {
         struct epoll_event ev;
         ev.events = EPOLLIN;
-        MXB_POLL_DATA* pData = pThis;
+        POLL_DATA* pData = pThis;
         ev.data.ptr = pData;    // Necessary for pointer adjustment, otherwise downcast will not work.
 
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
@@ -1004,7 +1002,7 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 // static
-uint32_t RoutingWorker::epoll_instance_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
     mxb_assert(pThis == pWorker);
@@ -1026,7 +1024,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     // We extract just one event
     int nfds = epoll_wait(this_unit.epoll_listener_fd, epoll_events, 1, 0);
 
-    uint32_t actions = MXB_POLL_NOP;
+    uint32_t actions = mxb::poll_action::NOP;
 
     if (nfds == -1)
     {
@@ -1039,7 +1037,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     else
     {
         MXS_DEBUG("1 event for worker %d.", m_id);
-        MXB_POLL_DATA* pData = static_cast<MXB_POLL_DATA*>(epoll_events[0].data.ptr);
+        POLL_DATA* pData = static_cast<POLL_DATA*>(epoll_events[0].data.ptr);
 
         actions = pData->handler(pData, this, epoll_events[0].events);
     }
@@ -1742,7 +1740,7 @@ void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
 }
 }
 
-MXB_WORKER* mxs_rworker_get(int worker_id)
+mxb::WORKER* mxs_rworker_get(int worker_id)
 {
     return RoutingWorker::get(worker_id);
 }

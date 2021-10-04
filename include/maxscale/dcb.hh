@@ -21,7 +21,6 @@
 #include <openssl/ssl.h>
 #include <netinet/in.h>
 
-#include <maxbase/poll.h>
 #include <maxbase/worker.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
@@ -49,7 +48,7 @@ class SSLContext;
  * A wrapper for a socket descriptor within MaxScale. For each client
  * session there will be one ClientDCB and several BackendDCBs.
  */
-class DCB : public MXB_POLL_DATA
+class DCB : public mxb::POLL_DATA
 {
 public:
     static const int FD_CLOSED = -1;
@@ -691,7 +690,7 @@ private:
 
     static void free(DCB* dcb);
 
-    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
     uint32_t        process_events(uint32_t events);
 

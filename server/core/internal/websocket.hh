@@ -23,7 +23,7 @@
 
 // A class that handles the framing and sending of WebSocket messages.
 // The WebSocket protocol can be found here: https://tools.ietf.org/html/rfc6455#section-5.2
-class WebSocket : public MXB_POLL_DATA
+class WebSocket : public mxb::POLL_DATA
 {
 public:
     WebSocket(const WebSocket&) = delete;
@@ -65,7 +65,7 @@ private:
     };
 
     WebSocket(int fd, MHD_UpgradeResponseHandle* urh, std::function<std::string ()> cb);
-    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
     static void     close(WebSocket* ws);
 
     bool send();

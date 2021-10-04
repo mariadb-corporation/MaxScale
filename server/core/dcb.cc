@@ -141,7 +141,7 @@ static int         dcb_set_socket_option(int sockfd, int level, int optname, voi
 static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
-static MXB_WORKER* get_dcb_owner()
+static mxb::WORKER* get_dcb_owner()
 {
     /** The DCB is owned by the thread that allocates it */
     mxb_assert(RoutingWorker::get_current_id() != -1);
@@ -154,7 +154,7 @@ DCB::DCB(int fd,
          MXS_SESSION* session,
          Handler* handler,
          Manager* manager)
-    : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
+    : POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_role(role)
@@ -198,7 +198,7 @@ DCB::~DCB()
     gwbuf_free(m_writeq);
     gwbuf_free(m_readq);
 
-    MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
+    POLL_DATA::owner = reinterpret_cast<mxb::WORKER*>(0xdeadbeef);
 }
 
 void DCB::clear()
@@ -1196,7 +1196,7 @@ uint32_t DCB::process_events(uint32_t events)
 {
     mxb_assert(static_cast<RoutingWorker*>(this->owner) == RoutingWorker::get_current());
 
-    uint32_t rc = MXB_POLL_NOP;
+    uint32_t rc = mxb::poll_action::NOP;
 
     /*
      * It isn't obvious that this is impossible
@@ -1229,7 +1229,7 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        rc |= MXB_POLL_ERROR;
+        rc |= mxb::poll_action::ERROR;
 
         m_handler->error(this);
     }
@@ -1238,7 +1238,7 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        rc |= MXB_POLL_WRITE;
+        rc |= mxb::poll_action::WRITE;
 
         m_handler->write_ready(this);
     }
@@ -1247,7 +1247,7 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        rc |= MXB_POLL_READ;
+        rc |= mxb::poll_action::READ;
 
         int return_code = 1;
         /** SSL authentication is still going on, we need to call DCB::ssl_handehake
@@ -1270,7 +1270,7 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        rc |= MXB_POLL_HUP;
+        rc |= mxb::poll_action::HUP;
 
         if (!m_hanged_up)
         {
@@ -1285,7 +1285,7 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        rc |= MXB_POLL_HUP;
+        rc |= mxb::poll_action::HUP;
 
         if (!m_hanged_up)
         {
@@ -1333,7 +1333,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 }
 
 // static
-uint32_t DCB::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+uint32_t DCB::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB* dcb = (DCB*)data;

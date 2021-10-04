@@ -13,6 +13,7 @@
 
 #include "reader.hh"
 
+#include <sys/epoll.h>
 #include <maxbase/hexdump.hh>
 #include <maxbase/log.hh>
 
@@ -28,7 +29,7 @@ namespace pinloki
 {
 
 Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
-    : MXB_POLL_DATA{Reader::epoll_update, worker}
+    : POLL_DATA{Reader::epoll_update, worker}
     , reader(reader)
 {
 }
@@ -127,7 +128,7 @@ Reader::~Reader()
     }
 }
 
-uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+uint32_t Reader::epoll_update(mxb::POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
 {
     Reader* self = static_cast<PollData*>(data)->reader;
     self->notify_concrete_reader(events);

@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <vector>
 #include <sstream>
+#include <sys/epoll.h>
 #include <sys/timerfd.h>
 
 #include <maxbase/assert.h>
@@ -168,8 +169,8 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
-    MXB_POLL_DATA::handler = handler;
-    MXB_POLL_DATA::owner = m_pWorker;
+    POLL_DATA::handler = handler;
+    POLL_DATA::owner = m_pWorker;
 
     if (m_fd != -1)
     {
@@ -239,11 +240,11 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
 
     tick();
 
-    return MXB_POLL_READ;
+    return poll_action::READ;
 }
 
 // static
-uint32_t WorkerTimer::handler(MXB_POLL_DATA* pThis, MXB_WORKER* pWorker, uint32_t events)
+uint32_t WorkerTimer::handler(POLL_DATA* pThis, WORKER* pWorker, uint32_t events)
 {
     return static_cast<WorkerTimer*>(pThis)->handle(static_cast<Worker*>(pWorker), events);
 }
@@ -363,7 +364,7 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
     }
 }
 
-bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
+bool Worker::add_fd(int fd, uint32_t events, POLL_DATA* pData)
 {
     bool rv = true;
 
@@ -834,14 +835,14 @@ void Worker::poll_waitevents()
             ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
-            MXB_POLL_DATA* data = (MXB_POLL_DATA*)events[i].data.ptr;
+            POLL_DATA* data = (POLL_DATA*)events[i].data.ptr;
             uint32_t actions = data->handler(data, this, events[i].events);
 
-            m_statistics.n_accept += bool(actions & MXB_POLL_ACCEPT);
-            m_statistics.n_read += bool(actions & MXB_POLL_READ);
-            m_statistics.n_write += bool(actions & MXB_POLL_WRITE);
-            m_statistics.n_hup += bool(actions & MXB_POLL_HUP);
-            m_statistics.n_error += bool(actions & MXB_POLL_ERROR);
+            m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
+            m_statistics.n_read += bool(actions & poll_action::READ);
+            m_statistics.n_write += bool(actions & poll_action::WRITE);
+            m_statistics.n_hup += bool(actions & poll_action::HUP);
+            m_statistics.n_error += bool(actions & poll_action::ERROR);
 
             /** Calculate event execution statistics */
             loop_now = maxbase::Clock::now();

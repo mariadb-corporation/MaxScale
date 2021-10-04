@@ -48,7 +48,7 @@ MXS_BEGIN_DECLS
  * @return The corresponding routing worker instance, or NULL if the
  *         id does not correspond to a routing worker.
  */
-MXB_WORKER* mxs_rworker_get(int worker_id);
+mxb::WORKER* mxs_rworker_get(int worker_id);
 
 /**
  * Return the id of the current routing worker.
@@ -66,7 +66,7 @@ namespace maxscale
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
-                    , private MXB_POLL_DATA
+                    , private mxb::POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
     RoutingWorker& operator=(const RoutingWorker&) = delete;
@@ -122,7 +122,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData);
+    static bool add_shared_fd(int fd, uint32_t events, POLL_DATA* pData);
 
     /**
      * Remove a file descriptor from the epoll instance shared between all workers.
@@ -522,7 +522,7 @@ private:
     void delete_zombies();
     void rebalance();
 
-    static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+    static uint32_t epoll_instance_handler(POLL_DATA* data, WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
     class ConnPoolEntry

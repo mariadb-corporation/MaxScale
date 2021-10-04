@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <sys/epoll.h>
 
 #include <maxscale/utils.h>
 #include <maxscale/mainworker.hh>
@@ -106,7 +107,7 @@ void WebSocket::shutdown()
 }
 
 // static
-uint32_t WebSocket::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+uint32_t WebSocket::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
 {
     WebSocket* ws = static_cast<WebSocket*>(data);
     bool ok = false;

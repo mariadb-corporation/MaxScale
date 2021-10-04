@@ -14,6 +14,7 @@
 #include <maxbase/messagequeue.hh>
 #include <cerrno>
 #include <cstring>
+#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
@@ -125,7 +126,7 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
     mxb_assert(Worker::get_current() == m_pWorker);
     // We only expect EPOLLIN events since that was subscribed to.
     mxb_assert(events == EPOLLIN);
-    uint32_t rc = MXB_POLL_NOP;
+    uint32_t rc = poll_action::NOP;
 
     if (events & EPOLLIN)
     {
@@ -158,7 +159,7 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
                 m_handler.handle_message(*this, msg);
             }
             m_work.clear();
-            rc = MXB_POLL_READ;
+            rc = poll_action::READ;
         }
         else
         {
@@ -166,7 +167,7 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
             // Even EAGAIN can be considered an error, as we listen for EPOLLIN.
             MXB_ERROR("Failed to read from eventfd of worker %d. Error %d: %s",
                       m_pWorker->id(), eno, mxb_strerror(eno));
-            rc = MXB_POLL_ERROR;
+            rc = poll_action::ERROR;
         }
     }
 
@@ -174,7 +175,7 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 }
 
 // static
-uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, uint32_t events)
+uint32_t MessageQueue::poll_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
 {
     MessageQueue* pThis = static_cast<MessageQueue*>(pData);
 

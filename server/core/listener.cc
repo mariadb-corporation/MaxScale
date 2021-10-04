@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <cstdio>
 #include <cstring>
+#include <sys/epoll.h>
 #include <sys/stat.h>
 
 #include <chrono>
@@ -439,7 +440,7 @@ mxs::config::Specification* Listener::specification()
 }
 
 Listener::Listener(const std::string& name)
-    : MXB_POLL_DATA{Listener::poll_handler}
+    : POLL_DATA{Listener::poll_handler}
     , m_config(name, this)
     , m_name(name)
     , m_state(CREATED)
@@ -1005,11 +1006,11 @@ bool Listener::listen()
     return rval;
 }
 
-uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
+uint32_t Listener::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
 {
     Listener* listener = static_cast<Listener*>(data);
     listener->accept_connections();
-    return MXB_POLL_ACCEPT;
+    return mxb::poll_action::ACCEPT;
 }
 
 void Listener::reject_connection(int fd, const char* host)

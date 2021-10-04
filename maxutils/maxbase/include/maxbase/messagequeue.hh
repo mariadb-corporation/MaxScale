@@ -179,7 +179,7 @@ private:
     MessageQueue(Handler* pHandler, int event_fd);
 
     uint32_t        handle_poll_events(Worker* pWorker, uint32_t events);
-    static uint32_t poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* pData, WORKER* worker, uint32_t events);
     void            swap_messages_and_work();
     void            add_message(const Message& message);
 
