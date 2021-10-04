@@ -417,6 +417,7 @@ namespace key
 
 const char ADMIN_ONLY[]                      = "adminOnly";
 const char ARGV[]                            = "argv";
+const char ASSERTS[]                         = "asserts";
 const char BATCH_SIZE[]                      = "batchSize";
 const char BITS[]                            = "bits";
 const char CLIENT[]                          = "client";
@@ -428,6 +429,7 @@ const char COMMAND[]                         = "command";
 const char COMPILED[]                        = "compiled";
 const char CONFIG[]                          = "config";
 const char CONNECTION_ID[]                   = "connectionId";
+const char CONNECTIONS[]                     = "connections";
 const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
 const char CURSORS_ALIVE[]                   = "cursorsAlive";
 const char CURSORS_KILLED[]                  = "cursorsKilled";
@@ -439,14 +441,17 @@ const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
 const char DOCUMENTS[]                       = "documents";
 const char DROPPED[]                         = "dropped";
+const char ELECTION_METRICS[]                = "electionMetrics";
 const char EMPTY[]                           = "empty";
 const char ERRMSG[]                          = "errmsg";
 const char ERROR[]                           = "error";
 const char ERRORS[]                          = "errors";
 const char ERR[]                             = "err";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
+const char EXTRA_INFO[]                      = "extraInfo";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
+const char FLOW_CONTROL[]                    = "flowControl";
 const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
 const char ID[]                              = "id";
@@ -463,7 +468,7 @@ const char KEY[]                             = "key";
 const char KEYS_PER_INDEX[]                  = "keysPerIndex";
 const char KIND[]                            = "kind";
 const char LIMIT[]                           = "limit";
-const char LOCALTIME[]                       = "localTime";
+const char LOCAL_TIME[]                      = "localTime";
 const char LOGICAL_SESSION_TIMEOUT_MINUTES[] = "logicalSessionTimeoutMinutes";
 const char LOG[]                             = "log";
 const char MARIADB[]                         = "mariadb";
@@ -494,6 +499,7 @@ const char OPTIONS[]                         = "options";
 const char ORDERBY[]                         = "orderby";
 const char ORDERED[]                         = "ordered";
 const char PARSED[]                          = "parsed";
+const char PID[]                             = "pid";
 const char PROJECTION[]                      = "projection";
 const char QUERY[]                           = "query";
 const char Q[]                               = "q";
@@ -517,6 +523,9 @@ const char UPDATED_EXISTING[]                = "updatedExisting";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
 const char UPSERTED[]                        = "upserted";
+const char UPTIME[]                          = "uptime";
+const char UPTIME_ESTIMATE[]                 = "uptimeEstimate";
+const char UPTIME_MILLIS[]                   = "uptimeMillis";
 const char U[]                               = "u";
 const char V[]                               = "v";
 const char VALID[]                           = "valid";
@@ -882,9 +891,55 @@ public:
     Query(const Packet& packet);
     Query(Query&& rhs) = default;
 
+    enum Flags
+    {
+        TAILABLE_CURSOR   = (1 << 1),
+        SLAVE_OK          = (1 << 2),
+        OPLOG_REPLAY      = (1 << 3),
+        NO_CURSOR_TIMEOUT = (1 << 4),
+        AWAIT_DATA        = (1 << 5),
+        EXHAUST           = (1 << 6),
+        PARTIAL           = (1 << 7)
+    };
+
     uint32_t flags() const
     {
         return m_flags;
+    }
+
+    bool is_tailable_cursor() const
+    {
+        return m_flags & TAILABLE_CURSOR;
+    }
+
+    bool is_slave_ok() const
+    {
+        return m_flags & SLAVE_OK;
+    }
+
+    bool is_oplog_replay() const
+    {
+        return m_flags & OPLOG_REPLAY;
+    }
+
+    bool is_no_cursor_timeout() const
+    {
+        return m_flags & NO_CURSOR_TIMEOUT;
+    }
+
+    bool is_await_data() const
+    {
+        return m_flags & AWAIT_DATA;
+    }
+
+    bool is_exhaust() const
+    {
+        return m_flags & EXHAUST;
+    }
+
+    bool is_partial() const
+    {
+        return m_flags & PARTIAL;
     }
 
     const char* zCollection() const
@@ -1303,6 +1358,56 @@ private:
     Config&            m_config;
     std::deque<GWBUF*> m_requests;
     SDatabase          m_sDatabase;
+};
+
+
+class Path
+{
+public:
+    enum Kind
+    {
+        ELEMENT,
+        ARRAY
+    };
+
+    Path(const std::string& path)
+        : m_kind(ELEMENT)
+        , m_path(path)
+    {
+    }
+
+    Path(Kind kind, const std::string& path, const std::string& array)
+        : m_kind(ARRAY)
+        , m_path(path)
+        , m_array(array)
+    {
+    }
+
+    static std::vector<Path> get_paths(const std::string& key);
+
+    std::string to_string() const;
+
+    Kind kind() const
+    {
+        return m_kind;
+    }
+
+    const std::string& path() const
+    {
+        return m_path;
+    }
+
+    const std::string& array() const
+    {
+        return m_array;
+    }
+
+private:
+    static void add_part(std::vector<Path>& rv, const std::string& part);
+
+    Kind        m_kind;
+    std::string m_path;
+    std::string m_array;
 };
 
 /**

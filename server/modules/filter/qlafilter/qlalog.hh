@@ -15,10 +15,27 @@
 #include <maxscale/ccdefs.hh>
 #include <maxbase/gcupdater.hh>
 
+#include <fstream>
+
 struct LogFile
 {
-    FILE*       pFile;
-    std::string filename;
+    LogFile(const std::string& filename, std::ios_base::openmode mode)
+        : log_stream(filename, mode)
+        , filename(filename)
+    {
+    }
+
+    LogFile() = default;
+    LogFile(LogFile&&) = default;
+    LogFile& operator=(LogFile&&) = default;
+
+    bool is_open()
+    {
+        return log_stream.is_open();
+    }
+
+    std::ofstream log_stream;
+    std::string   filename;
 };
 
 using SFile = std::shared_ptr<LogFile>;

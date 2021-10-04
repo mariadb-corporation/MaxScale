@@ -701,6 +701,37 @@ export function daysDiff(timestamp) {
     const end = Vue.moment(timestamp).startOf('day')
     return Vue.moment.duration(end.diff(now)).asDays()
 }
+
+/**
+ * Deep diff between two objects
+ * @param  {Object} base - Base object
+ * @param  {Object} object - New object
+ * @returns {Object} - Returns a new object that represents the diff
+ */
+export function objectDiff({ base, object }) {
+    const changes = {}
+
+    function walkObject(base, object, path = '') {
+        for (const key of Object.keys(base)) {
+            const currentPath = path === '' ? key : `${path}.${key}`
+            if (object[key] === undefined) changes[currentPath] = '-'
+        }
+
+        for (const [key, value] of Object.entries(object)) {
+            let currentPath
+            if (Array.isArray(object)) currentPath = path + `[${key}]`
+            else currentPath = path === '' ? key : `${path}.${key}`
+
+            if (base[key] === undefined) changes[currentPath] = '+'
+            else if (value !== base[key])
+                if (typeof value === 'object' && typeof base[key] === 'object')
+                    walkObject(base[key], value, currentPath)
+                else changes[currentPath] = object[key]
+        }
+    }
+    walkObject(base, object)
+    return changes
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -753,6 +784,7 @@ Object.defineProperties(Vue.prototype, {
                 preventNonInteger,
                 addDaysToNow,
                 daysDiff,
+                objectDiff,
             }
         },
     },

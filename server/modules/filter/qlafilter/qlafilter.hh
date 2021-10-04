@@ -149,7 +149,7 @@ public:
         std::string generate_log_header(uint64_t data_flags) const;
         void        check_reopen_session_file(const std::string& filename, SFile* psFile) const;
         void        write_unified_log_entry(const std::string& contents);
-        bool        write_to_logfile(FILE* fp, const std::string& contents) const;
+        bool        write_to_logfile(std::ofstream& of, const std::string& contents) const;
         void        write_stdout_log_entry(const std::string& contents) const;
         bool        match_exclude(const char* sql, int len);
         bool        read_to_json(int start, int end, json_t** output);

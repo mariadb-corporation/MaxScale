@@ -60,6 +60,9 @@ $colors: (
         &.border-#{$name} {
             border-color: $value !important;
         }
+        &.border-all-#{$name} {
+            border: thin solid $value !important;
+        }
         &.border-bottom-#{$name} {
             border-bottom: thin solid $value !important;
         }

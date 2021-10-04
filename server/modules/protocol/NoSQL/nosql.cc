@@ -243,9 +243,9 @@ template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
-                                                            Conversion)
+                                                            Conversion conversion)
 {
-    if (element.type() != bsoncxx::type::k_document)
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
@@ -254,7 +254,28 @@ bsoncxx::document::view element_as<bsoncxx::document::view>(const string& comman
         throw SoftError(ss.str(), error::TYPE_MISMATCH);
     }
 
-    return element.get_document();
+    bsoncxx::document::view doc;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_document:
+        doc = element.get_document();
+        break;
+
+    case bsoncxx::type::k_null:
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return doc;
 }
 
 template<>
@@ -1186,6 +1207,29 @@ struct ElementValueInfo
     FieldAndElementValueToComparison field_and_value_to_comparison;
 };
 
+void double_to_string(double d, ostream& os)
+{
+    // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
+    char buffer[28];
+
+    sprintf(buffer, "%.20g", d);
+
+    os << buffer;
+
+    if (strpbrk(buffer, ".e") == nullptr)
+    {
+        // No decimal point, add ".0" to prevent this number from being an integer.
+        os << ".0";
+    }
+}
+
+string double_to_string(double d)
+{
+    ostringstream ss;
+    double_to_string(d, ss);
+    return ss.str();
+}
+
 template<class document_element_or_array_item>
 string element_to_value(const document_element_or_array_item& x, ValueFor value_for, const string& op = "")
 {
@@ -1194,22 +1238,7 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
     switch (x.type())
     {
     case bsoncxx::type::k_double:
-        {
-            double d = x.get_double();
-
-            // printf("%.20g\n", -std::numeric_limits<double>::max()) => "-1.7976931348623157081e+308"
-            char buffer[28];
-
-            sprintf(buffer, "%.20g", d);
-
-            ss << buffer;
-
-            if (strpbrk(buffer, ".e") == nullptr)
-            {
-                // No decimal point, add ".0" to prevent this number from being an integer.
-                ss << ".0";
-            }
-        }
+        double_to_string(x.get_double(), ss);
         break;
 
     case bsoncxx::type::k_utf8:
@@ -1527,17 +1556,45 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
 
 string exists_to_condition(const string& field, const bsoncxx::document::element& element)
 {
-    string rv = "(JSON_EXTRACT(doc, '$." + field + "') IS ";
+    // TODO: When this is called, we already know whether we are looking for
+    // TODO: something, or for something in an array.
+    auto expects_array = field.find("[*]") != string::npos;
+
+    string rv("(");
 
     bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
 
     if (b)
     {
-        rv += "NOT NULL";
+        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL";
     }
     else
     {
-        rv += "NULL";
+        bool close = false;
+
+        if (!expects_array)
+        {
+            // TODO: We could easily push downward the parent information so that
+            // TODO: we woudn't have to figure it out here.
+            auto i = field.find_last_of(".");
+
+            if (i != string::npos)
+            {
+                auto parent = field.substr(0, i);
+
+                rv += "JSON_QUERY(doc, '$." + parent + "') IS NULL OR "
+                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent + "')) = 'OBJECT'"
+                    " AND ";
+                close = true;
+            }
+        }
+
+        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NULL";
+
+        if (close)
+        {
+            rv += ")";
+        }
     }
 
     rv += ")";
@@ -1581,10 +1638,15 @@ string default_field_and_value_to_comparison(const std::string& field,
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
+    bool is_date = (element.type() == bsoncxx::type::k_date);
+
+    // A date is stored as a document containing a field "$date" with the value.
+    string f = is_date ? field + ".$date" : field;
+
     ostringstream ss;
 
-    ss << "(" << zGet << "(doc, '$." << field << "') IS NOT NULL "
-       << "AND (" << zGet << "(doc, '$." + field + "') " << mariadb_op << " ";
+    ss << "(" << zGet << "(doc, '$." << f << "') IS NOT NULL "
+       << "AND (" << zGet << "(doc, '$." + f + "') " << mariadb_op << " ";
 
     bool is_array = element.type() == bsoncxx::type::k_array;
 
@@ -1625,14 +1687,45 @@ string field_and_value_to_nin_comparison(const std::string& field,
     return rv;
 }
 
+string field_and_value_to_eq_comparison(const std::string& field,
+                                        const bsoncxx::document::element& element,
+                                        const string& mariadb_op,
+                                        const string& nosql_op,
+                                        ElementValueToString value_to_string)
+{
+    string rv;
+
+    if (element.type() == bsoncxx::type::k_null)
+    {
+        if (nosql_op == "$eq")
+        {
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
+                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) "
+                + "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+        }
+        else if (nosql_op == "$ne")
+        {
+            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
+                + "AND (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), 'null') = 0) "
+                + "OR (JSON_VALUE(doc, '$." + field + "') != 'null'))";
+        }
+    }
+    else
+    {
+        rv = default_field_and_value_to_comparison(field, element, mariadb_op, nosql_op, value_to_string);
+    }
+
+    return rv;
+}
+
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value, default_field_and_value_to_comparison } },
+    { "$eq",     { "=",      &element_to_value, field_and_value_to_eq_comparison } },
     { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
     { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
     { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
     { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$ne",     { "!=",     &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { "!=",     &element_to_value, field_and_value_to_eq_comparison } },
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
 };
 
@@ -2252,6 +2345,19 @@ string get_comparison_condition(const string& field,
             element_to_value(element, ValueFor::SQL) + ")";
         break;
 
+    case bsoncxx::type::k_null:
+        {
+            condition = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
+                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
+                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+        }
+        break;
+
+    case bsoncxx::type::k_date:
+        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
+            + element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
     case bsoncxx::type::k_array:
         // TODO: This probably needs to be dealt with explicitly.
     default:
@@ -2271,6 +2377,21 @@ string get_comparison_condition(const string& field,
     return condition;
 }
 
+namespace
+{
+
+bool is_hex(const string& s)
+{
+    auto isxdigit = [](char c)
+    {
+        return std::isxdigit(c);
+    };
+
+    return std::all_of(s.begin(), s.end(), isxdigit);
+}
+
+}
+
 // https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string get_comparison_condition(const bsoncxx::document::element& element)
 {
@@ -2283,19 +2404,33 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     {
         condition = "( id = '";
 
-        if (type == bsoncxx::type::k_utf8)
+        bool is_utf8 = (type == bsoncxx::type::k_utf8);
+
+        if (is_utf8)
         {
             condition += "\"";
         }
 
-        condition += to_string(element);
+        auto id = to_string(element);
 
-        if (type == bsoncxx::type::k_utf8)
+        condition += id;
+
+        if (is_utf8)
         {
             condition += "\"";
         }
 
-        condition += "')";
+        condition += "'";
+
+        if (is_utf8 && id.length() == 24 && is_hex(id))
+        {
+            // This sure looks like an ObjectId. And this is the way it will appear
+            // if a search is made using a DBPointer. So we'll cover that case as well.
+
+            condition += " OR id = '{\"$oid\":\"" + id + "\"}'";
+        }
+
+        condition += ")";
     }
     else
     {
@@ -2310,6 +2445,8 @@ string get_comparison_condition(const bsoncxx::document::element& element)
 
             string head = field.substr(0, i);
             string tail = field.substr(i + 1);
+
+            condition += "JSON_TYPE(JSON_QUERY(doc, '$." + head + "')) = 'ARRAY' AND (";
 
             string path(head);
             path += "[*].";
@@ -2336,7 +2473,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
                 condition += get_comparison_condition(path, type, element);
             }
 
-            condition += ")";
+            condition += "))";
         }
         else
         {
@@ -2743,7 +2880,12 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
                     double inc;
                     if (element_as(field, Conversion::RELAXED, &inc))
                     {
-                        s += "JSON_VALUE(doc, '$." + key + "') + " + std::to_string(inc);
+                        auto d = double_to_string(inc);
+
+                        s += "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, ";
+                        s += "JSON_VALUE(doc, '$." + key + "') + " + d + ", ";
+                        s += d;
+                        s += ")";
                     }
                     else
                     {
@@ -3248,6 +3390,101 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
     }
 
     return state;
+}
+
+std::string Path::to_string() const
+{
+    string rv { "kind: " };
+    switch (m_kind)
+    {
+    case ELEMENT:
+        rv += "element";
+        break;
+
+    case ARRAY:
+        rv += "array";
+        break;
+    }
+
+    rv += "path: " + m_path + ", ";
+    rv += "array: " + m_array;
+
+    return rv;
+}
+
+//static
+vector<Path> nosql::Path::get_paths(const string& key)
+{
+    vector<Path> rv;
+
+    string::size_type i = 0;
+    string::size_type j;
+    while ((j = key.find_first_of('.', i)) != string::npos)
+    {
+        string part = key.substr(i, j - i);
+
+        if (rv.empty())
+        {
+            rv.push_back(Path("$." + part));
+        }
+        else
+        {
+            add_part(rv, part);
+        }
+
+        i = j + 1;
+    }
+
+    if (rv.empty())
+    {
+        rv.push_back(Path("$." + key));
+    }
+    else
+    {
+        add_part(rv, key.substr(i, j));
+    }
+
+    return rv;
+}
+
+//static
+void nosql::Path::add_part(vector<Path>& rv, const string& part)
+{
+    bool is_number = false;
+
+    char* zEnd;
+    auto l = strtol(part.c_str(), &zEnd, 10);
+
+    // Is the part a number?
+    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+    {
+        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
+        // or the n'th element (e.g. { a: [ ... ] }).
+        is_number = true;
+    }
+
+    vector<Path> tmp;
+
+    for (const auto& p : rv)
+    {
+        if (p.kind() == Path::ELEMENT)
+        {
+            tmp.push_back(Path(p.path() + "." + part));
+        }
+        else
+        {
+            tmp.push_back(Path(Path::ELEMENT, p.path() + "." + part, p.array()));
+        }
+
+        if (is_number)
+        {
+            tmp.push_back(Path(Path::ARRAY, p.path() + "[" + part + "]", p.path()));
+        }
+
+        tmp.push_back(Path(Path::ARRAY, p.path() + "[*]." + part, p.path()));
+    }
+
+    rv.swap(tmp);
 }
 
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)

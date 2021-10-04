@@ -18,6 +18,7 @@
 #include "defs.hh"
 #include <openssl/opensslv.h>
 #include <maxscale/config.hh>
+#include <maxscale/maxscale.h>
 
 namespace nosql
 {
@@ -233,10 +234,26 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        DocumentBuilder asserts;
+        DocumentBuilder connections; // TODO: Populate this.
+        DocumentBuilder election_metrics;
+        DocumentBuilder extra_info;
+        DocumentBuilder flow_control;
         DocumentBuilder storage_engine;
         storage_engine.append(kvp(key::NAME, key::MARIADB));
+        int uptime_seconds = maxscale_uptime();
 
+        doc.append(kvp(key::ASSERTS, asserts.extract()));
+        doc.append(kvp(key::CONNECTIONS, connections.extract()));
+        doc.append(kvp(key::ELECTION_METRICS, election_metrics.extract()));
+        doc.append(kvp(key::EXTRA_INFO, election_metrics.extract()));
+        doc.append(kvp(key::FLOW_CONTROL, flow_control.extract()));
+        doc.append(kvp(key::LOCAL_TIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
+        doc.append(kvp(key::PID, getpid()));
         doc.append(kvp(key::STORAGE_ENGINE, storage_engine.extract()));
+        doc.append(kvp(key::UPTIME, uptime_seconds));
+        doc.append(kvp(key::UPTIME_ESTIMATE, uptime_seconds));
+        doc.append(kvp(key::UPTIME_MILLIS, uptime_seconds * 1000));
         doc.append(kvp(key::OK, 1));
     }
 };

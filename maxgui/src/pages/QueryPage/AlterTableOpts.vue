@@ -1,29 +1,29 @@
 <template>
-    <v-form lazy-validation class="pa-4 pt-2">
-        <v-row>
-            <v-col cols="12" md="6" class="pa-1">
+    <div class="py-0 px-2 mb-4">
+        <v-row class="ma-0">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('name') }}
                 </label>
                 <v-text-field
                     id="table_name"
-                    v-model="tableInfo.table_name"
+                    v-model="tableOptsData.table_name"
                     :rules="rules.table_name"
                     required
-                    validate-on-blur
                     name="table_name"
                     :height="32"
                     class="std error--text__bottom"
+                    hide-details="auto"
                     dense
                     outlined
                 />
             </v-col>
-            <v-col cols="12" md="6" class="pa-1">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('engine') }}
                 </label>
                 <v-select
-                    v-model="tableInfo.table_engine"
+                    v-model="tableOptsData.table_engine"
                     :items="engines"
                     name="table_engine"
                     outlined
@@ -36,19 +36,16 @@
                     dense
                     :height="32"
                     hide-details="auto"
-                    :rules="rules.table_engine"
-                    required
-                    validate-on-blur
                 />
             </v-col>
         </v-row>
-        <v-row>
-            <v-col cols="12" md="6" class="pa-1">
+        <v-row class="ma-0">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('charset') }}
                 </label>
                 <v-select
-                    v-model="tableInfo.table_charset"
+                    v-model="tableOptsData.table_charset"
                     :items="charsets"
                     name="table_charset"
                     outlined
@@ -61,9 +58,7 @@
                     dense
                     :height="32"
                     hide-details="auto"
-                    :rules="rules.table_charset"
-                    required
-                    validate-on-blur
+                    @change="onChangeCharset"
                 >
                     <template v-slot:item="{ item, on, attrs }">
                         <div
@@ -77,12 +72,12 @@
                     </template>
                 </v-select>
             </v-col>
-            <v-col cols="12" md="6" class="pa-1">
+            <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('collation') }}
                 </label>
                 <v-select
-                    v-model="tableInfo.table_collation"
+                    v-model="tableOptsData.table_collation"
                     :items="collations"
                     name="table_collation"
                     outlined
@@ -95,9 +90,6 @@
                     dense
                     :height="32"
                     hide-details="auto"
-                    :rules="rules.table_collation"
-                    required
-                    validate-on-blur
                 >
                     <template v-slot:item="{ item, on, attrs }">
                         <div
@@ -112,8 +104,23 @@
                 </v-select>
             </v-col>
         </v-row>
-        <!-- TODO: Add Comment inputs -->
-    </v-form>
+        <v-row class="ma-0">
+            <v-col cols="12" class="py-0 px-1">
+                <label class="field__label color text-small-text">
+                    {{ $t('comment') }}
+                </label>
+                <v-textarea
+                    v-model="tableOptsData.table_comment"
+                    class="std txt-area"
+                    dense
+                    auto-grow
+                    outlined
+                    rows="1"
+                    hide-details="auto"
+                />
+            </v-col>
+        </v-row>
+    </div>
 </template>
 
 <script>
@@ -121,34 +128,13 @@ import { mapState } from 'vuex'
 export default {
     name: 'alter-table-opts',
     props: {
-        data: { type: Object, required: true },
+        value: { type: Object, required: true },
     },
     data() {
         return {
-            tableInfo: {
-                table_name: '',
-                table_engine: '',
-                table_charset: '',
-                table_collation: '',
-                table_comment: '',
-                dbName: '', // no need to show this input
-            },
             rules: {
                 table_name: [
                     val => !!val || this.$t('errors.requiredInput', { inputName: this.$t('name') }),
-                ],
-                table_engine: [
-                    val =>
-                        !!val || this.$t('errors.requiredInput', { inputName: this.$t('engine') }),
-                ],
-                table_charset: [
-                    val =>
-                        !!val || this.$t('errors.requiredInput', { inputName: this.$t('charset') }),
-                ],
-                table_collation: [
-                    val =>
-                        !!val ||
-                        this.$t('errors.requiredInput', { inputName: this.$t('collation') }),
                 ],
             },
         }
@@ -159,27 +145,38 @@ export default {
             engines: state => state.query.engines,
             def_db_charset_map: state => state.query.def_db_charset_map,
         }),
+        tableOptsData: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
         charsets() {
             return [...this.charset_collation_map.keys()]
         },
         collations() {
             return this.$typy(
-                this.charset_collation_map.get(this.tableInfo.table_charset),
+                this.charset_collation_map.get(this.tableOptsData.table_charset),
                 'collations'
             ).safeArray
         },
         defCollation() {
             return this.$typy(
-                this.charset_collation_map.get(this.tableInfo.table_charset),
+                this.charset_collation_map.get(this.tableOptsData.table_charset),
                 'defCollation'
             ).safeString
         },
         defDbCharset() {
-            return this.$typy(this.def_db_charset_map.get(this.tableInfo.dbName)).safeString
+            return this.$typy(this.def_db_charset_map.get(this.tableOptsData.dbName)).safeString
         },
     },
-    mounted() {
-        this.tableInfo = this.data
+    methods: {
+        onChangeCharset() {
+            // Use default collation of selected charset
+            this.tableOptsData.table_collation = this.defCollation
+        },
     },
 }
 </script>

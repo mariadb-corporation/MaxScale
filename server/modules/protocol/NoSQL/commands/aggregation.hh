@@ -158,35 +158,59 @@ public:
             throw SoftError("FieldPath cannot be constructed with empty string", error::LOCATION40352);
         }
 
-        if (key.back() == '.')
+        if (key.find('\0') != string::npos)
+        {
+            throw SoftError("Key field cannot contain an embedded null byte", error::LOCATION31032);
+        }
+
+        auto i = key.find_last_of('.');
+
+        if (i == key.length() - 1)
         {
             throw SoftError("FieldPath must not end with a '.'.", error::LOCATION40353);
         }
 
-        string extract = "JSON_EXTRACT(doc, '$." + key + "')";
-
-        sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " ";
-
+        string where;
         bsoncxx::document::view query;
-        if (optional(key::QUERY, &query))
+        if (optional(key::QUERY, &query, Conversion::RELAXED))
         {
-            auto where = query_to_where_clause(query);
+            auto w = query_to_where_clause(query);
 
-            if (where.empty())
+            if (w.empty())
             {
-                sql << "WHERE ";
+                where = "WHERE ";
             }
             else
             {
-                sql << where << " AND ";
+                where = w + " AND ";
             }
         }
         else
         {
-            sql << "WHERE ";
+            where = "WHERE ";
         }
 
-        sql << extract << " IS NOT NULL";
+        vector<Path> paths = Path::get_paths(key);
+
+        for (auto it = paths.begin(); it != paths.end(); ++it)
+        {
+            if (it != paths.begin())
+            {
+                sql << " UNION ";
+            }
+
+            const Path& p = *it;
+
+            string extract = "JSON_EXTRACT(doc, '" + p.path() + "')";
+
+            sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " "
+                << where << extract << " IS NOT NULL";
+
+            if (!p.array().empty())
+            {
+                sql << " AND JSON_TYPE(JSON_EXTRACT(doc, '" << p.array() << "')) = 'ARRAY'";
+            }
+        }
 
         return sql.str();
     }
@@ -238,22 +262,60 @@ public:
                 ComResponse eof(&pBuffer);
                 mxb_assert(eof.type() == ComResponse::EOF_PACKET);
 
-                bool first = true;
+                set<string> values;
                 while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
                 {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        json << ", ";
-                    }
-
                     CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
                     auto it = row.begin();
 
-                    json << (*it).as_string().to_string();
+                    auto value = (*it).as_string().to_string();
+
+                    json_error_t error;
+                    json_t* pJson = json_loadb(value.c_str(), value.length(), JSON_DECODE_ANY, &error);
+
+                    if (pJson)
+                    {
+                        // If an individual value is an array, then it will be unwrapped.
+                        // TODO: Should an array recursively be unwrapped?
+
+                        if (json_is_array(pJson))
+                        {
+                            size_t index;
+                            json_t* pValue;
+
+                            json_array_foreach(pJson, index, pValue) {
+                                char* zValue = json_dumps(pValue, JSON_ENCODE_ANY);
+                                values.insert(zValue);
+                                free(zValue);
+                            }
+                        }
+                        else
+                        {
+                            values.insert(value);
+                        }
+
+                        json_decref(pJson);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Failed to parse result as individual json value: '%s'", value.c_str());
+                        values.insert(value);
+                    }
+                }
+
+                bool first = true;
+                for (const auto& value : values)
+                {
+                    if (!first)
+                    {
+                        json << ", ";
+                    }
+                    else
+                    {
+                        first = false;
+                    }
+
+                    json << value;
                 }
             }
         }

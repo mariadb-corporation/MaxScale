@@ -37,7 +37,7 @@
                 </v-form>
             </v-card-text>
             <v-card-actions class="v-card-actions_padding color border-top-reflection">
-                <slot :cancel="cancel" :save="save" name="actions">
+                <slot :cancel="cancel" :save="save" :isSaveDisabled="isSaveDisabled" name="actions">
                     <v-spacer></v-spacer>
                     <v-btn
                         v-if="!isForceAccept"
@@ -59,7 +59,7 @@
                         class="save font-weight-medium px-7 text-capitalize"
                         rounded
                         depressed
-                        :disabled="!hasChanged || !isFormValid"
+                        :disabled="isSaveDisabled"
                         @click="save"
                     >
                         {{ $t(saveText) }}
@@ -117,6 +117,11 @@ export default {
             isFormValid: true,
         }
     },
+    computed: {
+        isSaveDisabled() {
+            return this.hasSavingErr || !this.hasChanged || !this.isFormValid
+        },
+    },
     watch: {
         isFormValid(v) {
             this.$emit('is-form-valid', v)
@@ -168,7 +173,10 @@ export default {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
                 if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
                 await this.onSave()
-                if (!this.hasSavingErr && !this.closeImmediate) await this.waitClose()
+                if (!this.closeImmediate) {
+                    if (!this.hasSavingErr) await this.waitClose()
+                    else this.SET_OVERLAY_TYPE(null)
+                }
             }
         },
     },

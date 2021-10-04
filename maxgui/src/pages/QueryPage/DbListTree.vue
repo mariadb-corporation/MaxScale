@@ -19,7 +19,7 @@
         >
             <template v-slot:label="{ item }">
                 <div
-                    :id="`item-label-${activatorIdTransform(item.id)}`"
+                    :id="`node-tooltip-activator-${item.key}`"
                     class="d-flex align-center node-label"
                     :class="{ 'cursor--grab': item.draggable }"
                     @mousedown="item.draggable ? onNodeDragStart($event) : null"
@@ -35,7 +35,7 @@
             <template v-slot:append="{ isHover, item }">
                 <v-btn
                     v-show="nodesHasCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
-                    :id="activatorIdTransform(item.id)"
+                    :id="`ctx-menu-activator-${item.key}`"
                     icon
                     x-small
                     @click="e => handleOpenCtxMenu({ e, item })"
@@ -52,7 +52,7 @@
             :nudge-right="45"
             transition="slide-x-transition"
             content-class="shadow-drop"
-            :activator="`#item-label-${activatorIdTransform(hoveredItem.id)}`"
+            :activator="`#node-tooltip-activator-${hoveredItem.key}`"
         >
             <table class="node-tooltip color text-text py-2 px-4">
                 <tbody>
@@ -65,14 +65,14 @@
         </v-tooltip>
         <v-menu
             v-if="activeCtxItem"
-            :key="activeCtxItem.id"
+            :key="activeCtxItem.key"
             v-model="showCtxMenu"
             transition="slide-y-transition"
             left
             nudge-right="12"
             nudge-bottom="28"
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
-            :activator="`#${activatorIdTransform(activeCtxItem.id)}`"
+            :activator="`#ctx-menu-activator-${activeCtxItem.key}`"
         >
             <v-list v-for="option in getOptions(activeCtxItem)" :key="option">
                 <v-list-item
@@ -218,14 +218,7 @@ export default {
          */
         minimizeNodes: nodes =>
             nodes.map(node => ({ id: node.id, type: node.type, level: node.level })),
-        /** This replaces dots with __ as vuetify activator slots
-         * can't not parse html id contains dots.
-         * @param {String} id - html id attribute
-         * @returns {String} valid id that works with vuetify activator props
-         */
-        activatorIdTransform(id) {
-            return id.replace(/\./g, '__')
-        },
+
         async handleLoadChildren(item) {
             await this.emitPromise('load-children', item)
         },

@@ -13,12 +13,15 @@
                     </v-icon>
                 </v-btn>
                 <div class="d-inline-flex align-center">
-                    <h4
-                        style="line-height: normal;"
-                        class="ml-1 mb-0 color text-navigation text-h4  page-title"
-                    >
-                        {{ $route.params.id }}
-                    </h4>
+                    <truncate-string :text="$route.params.id" :maxWidth="600">
+                        <span
+                            style="line-height: normal;"
+                            class="ml-1 mb-0 color text-navigation text-h4 page-title"
+                        >
+                            {{ $route.params.id }}
+                        </span>
+                    </truncate-string>
+
                     <v-menu transition="slide-y-transition" offset-y content-class="setting-menu">
                         <template v-slot:activator="{ on }">
                             <v-btn class="ml-2 gear-btn" icon v-on="on">

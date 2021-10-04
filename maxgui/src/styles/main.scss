@@ -258,7 +258,12 @@ input:-webkit-autofill:active {
     margin: 0px;
     transform: translateY(-100%);
 }
-
+.std.txt-area > .v-input__control {
+    textarea {
+        font-size: 0.875rem;
+        margin-top: 3px !important;
+    }
+}
 // vuetify checkbox restyle
 .v-input.small.v-input--checkbox {
     label {
