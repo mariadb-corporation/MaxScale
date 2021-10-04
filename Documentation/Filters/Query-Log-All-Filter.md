@@ -94,23 +94,24 @@ Type of data to log in the log files. The parameter value is a comma separated
 list of the following elements. By default the _date_, _user_ and _query_
 options are enabled.
 
-| Value       | Description                                      |
-| --------    |--------------------------------------------------|
-| service     | Service name                                     |
-| session     | Unique session id (ignored for session files)    |
-| date        | Timestamp                                        |
-| user        | User and hostname of client                      |
-| reply_time  | Response time (ms until first reply from server) |
-| query       | Query                                            |
-| default_db  | The default (current) database                   |
+| Value             | Description                                          |
+| --------          |------------------------------------------------------|
+| service           | Service name                                         |
+| session           | Unique session id (ignored for session files)        |
+| date              | Timestamp                                            |
+| user              | User and hostname of client                          |
+| reply_time        | Response time (ms until first reply from server)     |
+| total_reply_time  | Time in ms until last reply received (added in v6.2) |
+| query             | Query                                                |
+| default_db        | The default (current) database                       |
 
 ```
 log_data=date, user, query
 ```
 
-If *reply_time* is enabled, the log entry is written when the first reply from
-server is received. Otherwise, the entry is written when receiving query from
-client.
+The log entry is written when the last reply from the server is received.
+Prior to version 6.2 the entry was written when the query was received from
+the client, or if *reply_time* was specified, on first reply from the server.
 
 ### `use_canonical_form`
 

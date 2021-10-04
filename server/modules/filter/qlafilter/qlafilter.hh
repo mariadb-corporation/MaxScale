@@ -58,7 +58,8 @@ public:
     static const int64_t LOG_DATA_USER = (1 << 3);
     static const int64_t LOG_DATA_QUERY = (1 << 4);
     static const int64_t LOG_DATA_REPLY_TIME = (1 << 5);
-    static const int64_t LOG_DATA_DEFAULT_DB = (1 << 6);
+    static const int64_t LOG_DATA_TOTAL_REPLY_TIME = (1 << 6);
+    static const int64_t LOG_DATA_DEFAULT_DB = (1 << 7);
 
     /**
      * Associate a new session with this instance of the filter. Creates a session-specific logfile.
@@ -225,9 +226,11 @@ private:
     int   m_rotation_count {0};         /* Log rotation counter */
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
+    bool                 m_first_reply;
     std::string          m_sql;             // Sql, in canonical form if asked for
     mxb::TimePoint       m_begin_time;      // Timer value at the moment of receiving query.
-    std::string          m_wall_time_str;   // Wall time as a string
+    mxb::TimePoint       m_first_response_time;
+    std::string          m_wall_time_str;   // Wall time as a string when query began
     std::chrono::seconds m_last_wall_second;
 
     maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
@@ -245,12 +248,17 @@ struct LogEventElems
 {
     mxb::TimePoint     begin_time;
     const std::string& sql;
-    mxb::TimePoint     end_time;
+    mxb::TimePoint     first_response_time;
+    mxb::TimePoint     last_response_time;
 
-    LogEventElems(mxb::TimePoint begin_time, const std::string& sql, mxb::TimePoint end_time)
+    LogEventElems(mxb::TimePoint begin_time,
+                  const std::string& sql,
+                  mxb::TimePoint first_response_time,
+                  mxb::TimePoint last_response_time)
         : begin_time(begin_time)
         , sql(sql)
-        , end_time(end_time)
+        , first_response_time(first_response_time)
+        , last_response_time(last_response_time)
     {
     }
 };

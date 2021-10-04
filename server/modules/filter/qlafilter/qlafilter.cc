@@ -115,6 +115,7 @@ cfg::ParamEnumMask<int64_t> s_log_data(
         {QlaInstance::LOG_DATA_USER, "user"},
         {QlaInstance::LOG_DATA_QUERY, "query"},
         {QlaInstance::LOG_DATA_REPLY_TIME, "reply_time"},
+        {QlaInstance::LOG_DATA_TOTAL_REPLY_TIME, "total_reply_time"},
         {QlaInstance::LOG_DATA_DEFAULT_DB, "default_db"},
     },
     QlaInstance::LOG_DATA_DATE | QlaInstance::LOG_DATA_USER | QlaInstance::LOG_DATA_QUERY,
@@ -449,6 +450,7 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
+        m_first_reply = true;
         m_sql.assign(query, query_len);
         if (m_log->settings().use_canonical_form)
         {
@@ -468,13 +470,6 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
                 m_wall_time_str = wall_time::to_string(now, "%F %T");
             }
         }
-
-        if (!(data_flags & QlaInstance::LOG_DATA_REPLY_TIME))
-        {
-            // If execution times are not logged, write the log entry now.
-            LogEventElems elems(m_begin_time, m_sql, m_begin_time);
-            write_log_entries(elems);
-        }
     }
     /* Pass the query downstream */
     return mxs::FilterSession::routeQuery(queue);
@@ -482,9 +477,19 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
 bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (m_log->settings().log_file_data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
+    if (m_first_reply)
     {
-        LogEventElems elems(m_begin_time, m_sql, m_pSession->worker()->epoll_tick_now());
+        m_first_response_time = m_pSession->worker()->epoll_tick_now();
+        m_first_reply = false;
+    }
+
+    if (reply.is_complete())
+    {
+        LogEventElems elems(m_begin_time,
+                            m_sql,
+                            m_first_response_time,
+                            m_pSession->worker()->epoll_tick_now());
+
         write_log_entries(elems);
     }
 
@@ -551,6 +556,7 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     const char USERHOST[] = "User@Host";
     const char QUERY[] = "Query";
     const char REPLY_TIME[] = "Reply_time";
+    const char TOTAL_REPLY_TIME[] = "Total_reply_time";
     const char DEFAULT_DB[] = "Default_db";
 
     std::stringstream header;
@@ -590,6 +596,11 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     {
         header << curr_sep << DEFAULT_DB;
     }
+    if (data_flags & LOG_DATA_TOTAL_REPLY_TIME)
+    {
+        header << curr_sep << TOTAL_REPLY_TIME;
+        curr_sep = real_sep;
+    }
     header << '\n';
     return header.str();
 }
@@ -624,7 +635,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
-        auto secs = mxb::to_secs(elems.end_time - elems.begin_time);
+        auto secs = mxb::to_secs(elems.first_response_time - elems.begin_time);
         output << curr_sep << int(1000 * secs + 0.5);
         curr_sep = real_sep;
     }
@@ -650,6 +661,12 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         const char* db = maria_ses->current_db.empty() ? "(none)" : maria_ses->current_db.c_str();
 
         output << curr_sep << db;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_TOTAL_REPLY_TIME)
+    {
+        auto secs = mxb::to_secs(elems.last_response_time - elems.begin_time);
+        output << curr_sep << int(1000 * secs + 0.5);
         curr_sep = real_sep;
     }
     output << "\n";
