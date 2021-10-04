@@ -2267,32 +2267,9 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        vector<Path> paths = Path::get_paths(field);
+        Paths paths(element);
 
-        if (paths.size() > 1)
-        {
-            condition += "(";
-        }
-
-        bool first = true;
-        for (const auto& p : paths)
-        {
-            if (first)
-            {
-                first = false;
-            }
-            else
-            {
-                condition += " OR ";
-            }
-
-            condition += "(" + p.get_comparison_condition(element) + ")";
-        }
-
-        if (paths.size() > 1)
-        {
-            condition += ")";
-        }
+        condition = paths.get_comparison_condition();
     }
 
     return condition;
@@ -3478,6 +3455,45 @@ void nosql::Path::add_part(vector<Path>& rv, const string& part)
     }
 
     rv.swap(tmp);
+}
+
+Paths::Paths(const bsoncxx::document::element& element)
+    : m_element(element)
+    , m_paths(Path::get_paths(static_cast<string>(element.key())))
+{
+}
+
+// https://docs.mongodb.com/manual/reference/operator/query/#comparison
+string Paths::get_comparison_condition() const
+{
+    string condition;
+
+    if (m_paths.size() > 1)
+    {
+        condition += "(";
+    }
+
+    bool first = true;
+    for (const auto& p : m_paths)
+    {
+        if (first)
+        {
+            first = false;
+        }
+        else
+        {
+            condition += " OR ";
+        }
+
+        condition += "(" + p.get_comparison_condition(m_element) + ")";
+    }
+
+    if (m_paths.size() > 1)
+    {
+        condition += ")";
+    }
+
+    return condition;
 }
 
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)

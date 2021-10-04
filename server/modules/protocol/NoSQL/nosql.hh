@@ -1360,7 +1360,9 @@ private:
     SDatabase          m_sDatabase;
 };
 
-
+/**
+ * A Path represents a single JSON path.
+ */
 class Path
 {
 public:
@@ -1422,6 +1424,22 @@ private:
     Kind        m_kind;
     std::string m_path;
     std::string m_array;
+};
+
+
+/**
+ * A Paths represents at least one JSON path, possibly more.
+ */
+class Paths
+{
+public:
+    Paths(const bsoncxx::document::element& element);
+
+    std::string get_comparison_condition() const;
+
+private:
+    bsoncxx::document::element m_element;
+    std::vector<Path>          m_paths;
 };
 
 /**
