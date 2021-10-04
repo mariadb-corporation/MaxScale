@@ -3425,7 +3425,7 @@ vector<Path> nosql::Path::get_paths(const string& key)
 
         if (rv.empty())
         {
-            rv.push_back(Path("$." + part));
+            rv.push_back(Path(part));
         }
         else
         {
@@ -3437,7 +3437,7 @@ vector<Path> nosql::Path::get_paths(const string& key)
 
     if (rv.empty())
     {
-        rv.push_back(Path("$." + key));
+        rv.push_back(Path(key));
     }
     else
     {
