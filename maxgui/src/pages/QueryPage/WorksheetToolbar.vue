@@ -207,7 +207,6 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             active_db: state => state.query.active_db,
@@ -215,7 +214,6 @@ export default {
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,
-            curr_editor_mode: state => state.query.curr_editor_mode,
         }),
         ...mapGetters({
             getIsQuerying: 'query/getIsQuerying',
@@ -229,15 +227,6 @@ export default {
                 !this.curr_cnct_resource.id ||
                 (this.getIsQuerying && this.getLoadingQueryResult)
             )
-        },
-        isDDLEditor() {
-            return this.curr_editor_mode === this.SQL_EDITOR_MODES.DDL_EDITOR
-        },
-    },
-    watch: {
-        //Hide visualize sidebar when editor mode is DDL
-        isDDLEditor(v) {
-            if (v) this.SET_SHOW_VIS_SIDEBAR(false)
         },
     },
     methods: {
