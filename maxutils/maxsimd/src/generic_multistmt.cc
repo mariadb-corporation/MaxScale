@@ -31,55 +31,45 @@ bool have_semicolon(const char* ptr, int len)
     return false;
 }
 
-/**
- * @brief Check if the string is the final part of a valid SQL statement
- *
- * This function checks whether the string pointed by @p start contains any
- * tokens that are interpreted as executable commands.
- * @param start String containing the statement
- * @param len Length of the string
- * @return True if statement contains no executable parts
- */
-bool is_mysql_statement_end(const char* start, int len)
+inline const char* consume_comment(const char* read_ptr, const char* read_end)
 {
-    const char* ptr = start;
-    bool rval = false;
+    bool end_of_line_comment = *read_ptr == '#'
+        || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
+            && read_ptr + 2 != read_end && *(read_ptr + 2) == ' ');
+    bool regular_comment = *read_ptr == '/' && read_ptr + 1 != read_end && *(read_ptr + 1) == '*';
 
-    while (ptr < start + len && (isspace(*ptr) || *ptr == ';'))
+    if (end_of_line_comment)
     {
-        ptr++;
-    }
-
-    if (ptr < start + len)
-    {
-        switch (*ptr)
+        while (++read_ptr != read_end)
         {
-        case '-':
-            if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
+            if (*read_ptr == '\n')
             {
-                rval = true;
+                break;
             }
-            break;
-
-        case '#':
-            rval = true;
-            break;
-
-        case '/':
-            if (ptr < start + len - 1 && *(ptr + 1) == '*')
+            else if (*read_ptr == '\r' && ++read_ptr != read_end && *read_ptr == '\n')
             {
-                rval = true;
+                ++read_ptr;
+                break;
             }
-            break;
         }
     }
-    else
+    else if (regular_comment)
     {
-        rval = true;
+        ++read_ptr;
+        while (++read_ptr < read_end)
+        {
+            if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
+            {
+                // end of comment
+                ++read_ptr;
+                break;
+            }
+        }
     }
 
-    return rval;
+    return read_ptr;
 }
+
 
 /**
  * @brief Check if the token is the END part of a BEGIN ... END block.
@@ -121,7 +111,7 @@ bool is_multi_stmt_impl(const std::string& sql)
 {
     bool rval = false;
 
-    char* ptr;
+    const char* ptr;
     char* data = const_cast<char*>(sql.c_str());
     size_t buflen = sql.size();
 
@@ -133,13 +123,24 @@ bool is_multi_stmt_impl(const std::string& sql)
             ptr = mxb::strnchr_esc_mariadb(ptr + 1, ';', buflen - (ptr - data) - 1);
         }
 
-        if (ptr)
+        // A semicolon has been seen, what follows must be only space,
+        // semicolons or comments.
+        while (!rval && ptr < data + buflen)
         {
-            if (ptr < data + buflen
-                && !is_mysql_statement_end(ptr, buflen - (ptr - data)))
+            if (isspace(*ptr) || *ptr == ';')
             {
-                rval = true;
+                ++ptr;
+                continue;
             }
+
+            auto ptr_before = ptr;
+            ptr = consume_comment(ptr, data + buflen);
+            if (ptr != ptr_before)
+            {
+                continue;
+            }
+
+            rval = true;
         }
     }
 
