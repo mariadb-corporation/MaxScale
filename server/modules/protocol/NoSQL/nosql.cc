@@ -2331,14 +2331,12 @@ string get_comparison_condition(const Path& p, const bsoncxx::document::view& do
     return rv;
 }
 
-string get_comparison_condition(const Path& p,
-                                bsoncxx::type type,
-                                const bsoncxx::document::element& element)
+string get_comparison_condition(const Path& p, const bsoncxx::document::element& element)
 {
     string field = p.path();
     string condition;
 
-    switch (type)
+    switch (element.type())
     {
     case bsoncxx::type::k_document:
         condition = get_comparison_condition(p, element.get_document());
@@ -2469,7 +2467,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
                 condition += " OR ";
             }
 
-            condition += "(" + get_comparison_condition(p, type, element) + ")";
+            condition += "(" + get_comparison_condition(p, element) + ")";
         }
 
         if (paths.size() > 1)
