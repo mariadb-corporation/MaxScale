@@ -2351,9 +2351,21 @@ string get_comparison_condition(const Path& p,
 
     case bsoncxx::type::k_null:
         {
-            condition = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
+            bool is_array = p.is_array();
+
+            if (is_array)
+            {
+                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + p.array() + "')) = 'ARRAY' AND ";
+            }
+
+            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
                 "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
                 "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+
+            if (is_array)
+            {
+                condition += ")";
+            }
         }
         break;
 
@@ -2457,21 +2469,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
                 condition += " OR ";
             }
 
-            condition += "(";
-
-            if (p.is_array())
-            {
-                condition += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array() + "')) = 'ARRAY' AND (";
-            }
-
-            condition += get_comparison_condition(p.path(), type, element);
-
-            if (p.is_array())
-            {
-                condition += ")";
-            }
-
-            condition += ")";
+            condition += "(" + get_comparison_condition(p, type, element) + ")";
         }
 
         if (paths.size() > 1)
