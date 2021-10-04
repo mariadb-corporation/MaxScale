@@ -19,6 +19,8 @@ will create a separate connection. This reduces the amount of work the master
 database has to do which can be significant if there are a large number of
 replicating slaves.
 
+[TOC]
+
 ## Differences Between Old and New Binlogrouter Implementations
 
 The binlogrouter in MaxScale 2.5.0 is a new and improved version of the original

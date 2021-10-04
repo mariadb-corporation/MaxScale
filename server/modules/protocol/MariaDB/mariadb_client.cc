@@ -1911,7 +1911,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 // Success, save data to session.
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
-                m_session_data->client_token = move(parse_res.token_res.auth_token);
+                m_session_data->auth_data.client_token = move(parse_res.token_res.auth_token);
                 m_session_data->auth_data.default_db = parse_res.db;
                 m_session_data->current_db = parse_res.db;
                 m_session_data->auth_data.plugin = move(parse_res.plugin);
@@ -1921,7 +1921,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 // may be garbled.
                 if (parse_res.success && data_size == 1)
                 {
-                    m_session_data->connect_attrs = move(parse_res.attr_res.attr_data);
+                    m_session_data->auth_data.attributes = move(parse_res.attr_res.attr_data);
                 }
                 else
                 {
@@ -2071,13 +2071,14 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
                 // Make a temporary session for the change user. Some of the fields persist for the new
                 // user, some need to be overwritten. The client authenticator does not need to be preserved.
                 m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
+                auto& auth_data = m_change_user.session->auth_data;
                 m_change_user.session->user = parse_res.username;
-                m_change_user.session->auth_data.default_db = parse_res.db;
+                auth_data.default_db = parse_res.db;
                 m_change_user.session->current_db = parse_res.db;
-                m_change_user.session->auth_data.plugin = parse_res.plugin;
-                m_change_user.session->auth_data.collation = parse_res.charset;
-                m_change_user.session->client_token = parse_res.token_res.auth_token;
-                m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
+                auth_data.plugin = parse_res.plugin;
+                auth_data.collation = parse_res.charset;
+                auth_data.client_token = parse_res.token_res.auth_token;
+                auth_data.attributes = parse_res.attr_res.attr_data;
 
                 // Keep track of the session command responses across COM_CHANGE_USER boundaries. This allows
                 // the backends to asynchronously execute any pending commands while the client protocol
@@ -2288,24 +2289,25 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
 {
     auto ses = m_session_data;
     string mariadb_msg;
+    const auto& auth_data = ses->auth_data;
 
     switch (error)
     {
     case AuthErrorType::ACCESS_DENIED:
-        mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-                                         ses->user.c_str(), ses->remote.c_str(),
-                                         ses->client_token.empty() ? "NO" : "YES");
+        mariadb_msg = mxb::string_printf("Access denied for user %s (using password: %s)",
+                                         ses->user_and_host().c_str(),
+                                         auth_data.client_token.empty() ? "NO" : "YES");
         send_mysql_err_packet(1045, "28000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::DB_ACCESS_DENIED:
         mariadb_msg = mxb::string_printf("Access denied for user %s to database '%s'",
-                                         ses->user_and_host().c_str(), ses->auth_data.default_db.c_str());
+                                         ses->user_and_host().c_str(), auth_data.default_db.c_str());
         send_mysql_err_packet(1044, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::BAD_DB:
-        mariadb_msg = mxb::string_printf("Unknown database '%s'", ses->auth_data.default_db.c_str());
+        mariadb_msg = mxb::string_printf("Unknown database '%s'", auth_data.default_db.c_str());
         send_mysql_err_packet(1049, "42000", mariadb_msg.c_str());
         break;
 
@@ -2425,8 +2427,9 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
             auth_val.status = AuthRes::Status::SUCCESS;
             // Need to copy the authentication tokens directly. The tokens should work as is for PAM and
             // GSSAPI.
-            m_session_data->backend_token = m_session_data->client_token;
-            m_session_data->backend_token_2fa = m_session_data->client_token_2fa;
+            auto& auth_data = m_session_data->auth_data;
+            auth_data.backend_token = auth_data.client_token;
+            auth_data.backend_token_2fa = auth_data.client_token_2fa;
         }
 
         if (auth_val.status == AuthRes::Status::SUCCESS)
@@ -3014,7 +3017,7 @@ void MariaDBClientConnection::assign_backend_authenticator()
                          ses->user.c_str(), mapped_user->c_str(), found_creds->plugin.c_str(),
                          mapped_pw.empty() ? "no password" : "password");
                 ses->user = *mapped_user;   // TODO: save to separate field
-                ses->backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
+                ses->auth_data.backend_token = ses->m_current_be_auth->generate_token(mapped_pw);
                 user_is_mapped = true;
             }
             else

@@ -895,6 +895,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
     size_t nbytes = gwbuf_link_length(writeq);
     void* buf = GWBUF_DATA(writeq);
     int saved_errno;
+    mxb_assert(nbytes > 0);
 
     errno = 0;
 

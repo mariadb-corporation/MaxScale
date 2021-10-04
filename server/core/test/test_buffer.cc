@@ -279,8 +279,6 @@ void test_consume()
     GWBUF* buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
                                  gwbuf_alloc_and_load(5, data + 5));
 
-    mxb_assert_message(gwbuf_consume(buffer, 0) == buffer,
-                       "Consuming 0 bytes from a buffer should return original buffer");
     mxb_assert_message(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes after consuming 0 bytes");
 
     buffer = gwbuf_consume(buffer, 1);
@@ -367,11 +365,8 @@ void test_compare()
     // Identical, but one containing empty segments.
     gwbuf_free(rhs);
     rhs = NULL;
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
     rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data + 5));
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
     rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data));
-    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
 
     mxb_assert(gwbuf_compare(lhs, rhs) == 0);
     mxb_assert(gwbuf_compare(rhs, lhs) == 0);

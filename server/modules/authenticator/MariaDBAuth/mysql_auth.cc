@@ -172,7 +172,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session)
             // the authentication token.
             if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
             {
-                auto& auth_token = session->client_token;
+                auto& auth_token = session->auth_data.client_token;
                 auth_token.clear();
                 auth_token.resize(MYSQL_SCRAMBLE_LEN);
                 gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
@@ -208,7 +208,7 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
 AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
 {
 
-    const auto& auth_token = session->client_token;     // Binary-form token sent by client.
+    const auto& auth_token = session->auth_data.client_token;       // Binary-form token sent by client.
 
     bool empty_token = auth_token.empty();
     bool empty_pw = stored_pw_hash2.empty();
@@ -274,7 +274,7 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
 
     // SHA1(password) needs to be copied to the shared data structure as it is required during
     // backend authentication. */
-    session->backend_token.assign(step2, step2 + SHA_DIGEST_LENGTH);
+    session->auth_data.backend_token.assign(step2, step2 + SHA_DIGEST_LENGTH);
 
     // Finally, calculate the SHA1(SHA1(password). */
     uint8_t final_step[SHA_DIGEST_LENGTH];
@@ -352,7 +352,7 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
     uint8_t* data = buffer.data();
     mariadb::set_byte3(data, pload_len);
     data[3] = seqno;
-    auto& sha_pw = m_shared_data.client_data->backend_token;
+    auto& sha_pw = m_shared_data.client_data->auth_data.backend_token;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
     return buffer;

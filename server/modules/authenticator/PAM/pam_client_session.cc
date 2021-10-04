@@ -119,7 +119,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session)
 
     case State::ASKED_FOR_PW:
         // Client should have responded with password.
-        if (store_client_password(buffer, &session->client_token))
+        if (store_client_password(buffer, &session->auth_data.client_token))
         {
             if (m_settings.mode == AuthMode::PW)
             {
@@ -137,7 +137,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session)
         break;
 
     case State::ASKED_FOR_2FA:
-        if (store_client_password(buffer, &session->client_token_2fa))
+        if (store_client_password(buffer, &session->auth_data.client_token_2fa))
         {
             m_state = State::PW_RECEIVED;
             rval.status = ExchRes::Status::READY;
@@ -164,8 +164,9 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
      * responded with the password. Try to continue authentication without more
      * messages to client. */
 
-    const auto& tok1 = session->client_token;
-    const auto& tok2 = session->client_token_2fa;
+    auto& auth_data = session->auth_data;
+    const auto& tok1 = auth_data.client_token;
+    const auto& tok2 = auth_data.client_token_2fa;
 
     // Take username from the session object, not the user entry. The entry may be anonymous.
     mxb::pam::UserData user = {session->user, session->remote};
@@ -191,10 +192,10 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
         // without a password.
         if (!map_to_mariadbauth)
         {
-            session->backend_token = tok1;
+            auth_data.backend_token = tok1;
             if (twofa)
             {
-                session->backend_token_2fa = tok2;
+                auth_data.backend_token_2fa = tok2;
             }
         }
 
@@ -214,7 +215,7 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
                              res.mapped_user.c_str());
                     auto begin = it->second.pw_hash;
                     auto end = begin + SHA_DIGEST_LENGTH;
-                    session->backend_token.assign(begin, end);
+                    auth_data.backend_token.assign(begin, end);
                 }
             }
         }
