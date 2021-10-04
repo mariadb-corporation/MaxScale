@@ -1412,6 +1412,8 @@ public:
         return m_array;
     }
 
+    std::string get_comparison_condition(const bsoncxx::document::element& element) const;
+
 private:
     static void add_part(std::vector<Path>& rv, const std::string& part);
 

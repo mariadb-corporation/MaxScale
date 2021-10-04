@@ -2331,66 +2331,6 @@ string get_comparison_condition(const Path& p, const bsoncxx::document::view& do
     return rv;
 }
 
-string get_comparison_condition(const Path& p, const bsoncxx::document::element& element)
-{
-    string field = p.path();
-    string condition;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_document:
-        condition = get_comparison_condition(p, element.get_document());
-        break;
-
-    case bsoncxx::type::k_regex:
-        condition = "(JSON_VALUE(doc, '$." + field + "') " +
-            element_to_value(element, ValueFor::SQL) + ")";
-        break;
-
-    case bsoncxx::type::k_null:
-        {
-            bool is_array = p.is_array();
-
-            if (is_array)
-            {
-                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + p.array() + "')) = 'ARRAY' AND ";
-            }
-
-            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
-                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
-                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
-
-            if (is_array)
-            {
-                condition += ")";
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_date:
-        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
-            + element_to_value(element, ValueFor::SQL) + ")";
-        break;
-
-    case bsoncxx::type::k_array:
-        // TODO: This probably needs to be dealt with explicitly.
-    default:
-        {
-            condition
-                // Without the explicit check for NULL, this does not work when NOT due to $nor
-                // is stashed in front of the whole thing.
-                = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
-                + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
-                + element_to_value(element, ValueFor::JSON) + ") = 1)"
-                + " OR "
-                + "(JSON_VALUE(doc, '$." + field + "') = "
-                + element_to_value(element, ValueFor::SQL) + "))";
-        }
-    }
-
-    return condition;
-}
-
 namespace
 {
 
@@ -2467,7 +2407,7 @@ string get_comparison_condition(const bsoncxx::document::element& element)
                 condition += " OR ";
             }
 
-            condition += "(" + get_comparison_condition(p, element) + ")";
+            condition += "(" + p.get_comparison_condition(element) + ")";
         }
 
         if (paths.size() > 1)
@@ -3405,6 +3345,64 @@ std::string Path::to_string() const
     rv += "array: " + m_array;
 
     return rv;
+}
+
+string Path::get_comparison_condition(const bsoncxx::document::element& element) const
+{
+    string field = path();
+    string condition;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_document:
+        condition = ::get_comparison_condition(*this, element.get_document());
+        break;
+
+    case bsoncxx::type::k_regex:
+        condition = "(JSON_VALUE(doc, '$." + field + "') " +
+            element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
+    case bsoncxx::type::k_null:
+        {
+            if (is_array())
+            {
+                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + m_array + "')) = 'ARRAY' AND ";
+            }
+
+            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
+                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
+                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+
+            if (is_array())
+            {
+                condition += ")";
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_date:
+        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
+            + element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
+    case bsoncxx::type::k_array:
+        // TODO: This probably needs to be dealt with explicitly.
+    default:
+        {
+            condition
+                // Without the explicit check for NULL, this does not work when NOT due to $nor
+                // is stashed in front of the whole thing.
+                = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
+                + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
+                + element_to_value(element, ValueFor::JSON) + ") = 1)"
+                + " OR "
+                + "(JSON_VALUE(doc, '$." + field + "') = "
+                + element_to_value(element, ValueFor::SQL) + "))";
+        }
+    }
+
+    return condition;
 }
 
 //static
