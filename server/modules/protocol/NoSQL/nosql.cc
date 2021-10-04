@@ -1194,7 +1194,7 @@ enum class ValueFor
 using ElementValueToString = string (*)(const bsoncxx::document::element& element,
                                         ValueFor,
                                         const string& op);
-using FieldAndElementValueToComparison = string (*) (const std::string& field,
+using FieldAndElementValueToComparison = string (*) (const Path& p,
                                                      const bsoncxx::document::element& element,
                                                      const string& mariadb_op,
                                                      const string& nosql_op,
@@ -1412,7 +1412,7 @@ string element_to_array(const bsoncxx::document::element& element,
 }
 
 string elemMatch_to_json_contain(const string& subfield,
-                                 const string& field,
+                                 const Path& p,
                                  const bsoncxx::document::element& elemMatch)
 {
     auto key = elemMatch.key();
@@ -1434,11 +1434,11 @@ string elemMatch_to_json_contain(const string& subfield,
 
     return "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + subfield + "\", "
         + element_to_value(elemMatch, ValueFor::JSON_NESTED, "$elemMatch") + "), '$."
-        + field + "') = " + value + ")";
+        + p.path() + "') = " + value + ")";
 }
 
 string elemMatch_to_json_contain(const string& subfield,
-                                 const string& field,
+                                 const Path& p,
                                  const bsoncxx::document::view& elemMatch)
 {
     string rv;
@@ -1451,14 +1451,14 @@ string elemMatch_to_json_contain(const string& subfield,
     {
         for (const auto& element : elemMatch)
         {
-            rv = elemMatch_to_json_contain(subfield, field, element);
+            rv = elemMatch_to_json_contain(subfield, p, element);
         }
     }
 
     return rv;
 }
 
-string elemMatch_to_json_contain(const string& field, const bsoncxx::document::element& elemMatch)
+string elemMatch_to_json_contain(const Path& p, const bsoncxx::document::element& elemMatch)
 {
     string rv;
 
@@ -1483,7 +1483,7 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
         }
 
         rv = "(JSON_CONTAINS(doc, "
-            + element_to_value(elemMatch, ValueFor::JSON, "$elemMatch") + ", '$." + field + "') = " + value
+            + element_to_value(elemMatch, ValueFor::JSON, "$elemMatch") + ", '$." + p.path() + "') = " + value
             + ")";
     }
     else
@@ -1491,17 +1491,17 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
         if (elemMatch.type() == bsoncxx::type::k_document)
         {
             bsoncxx::document::view doc = elemMatch.get_document();
-            rv = elemMatch_to_json_contain((string)key, field, doc);
+            rv = elemMatch_to_json_contain((string)key, p, doc);
         }
         else
         {
             rv = "(JSON_CONTAINS(doc, JSON_OBJECT(\"" + (string)key + "\", "
                 + element_to_value(elemMatch, ValueFor::JSON_NESTED, "$elemMatch") + "), '$."
-                + field + "') = 1)";
+                + p.path() + "') = 1)";
 
             if (elemMatch.type() == bsoncxx::type::k_null)
             {
-                rv += " OR (JSON_EXTRACT(doc, '$." + field + "." + (string)key + "') IS NULL)";
+                rv += " OR (JSON_EXTRACT(doc, '$." + p.path() + "." + (string)key + "') IS NULL)";
             }
         }
     }
@@ -1509,7 +1509,7 @@ string elemMatch_to_json_contain(const string& field, const bsoncxx::document::e
     return rv;
 }
 
-string elemMatch_to_json_contains(const string& field, const bsoncxx::document::view& doc)
+string elemMatch_to_json_contains(const Path& p, const bsoncxx::document::view& doc)
 {
     string condition;
 
@@ -1520,7 +1520,7 @@ string elemMatch_to_json_contains(const string& field, const bsoncxx::document::
             condition += " AND ";
         }
 
-        condition += elemMatch_to_json_contain(field, elemMatch);
+        condition += elemMatch_to_json_contain(p, elemMatch);
     }
 
     if (!condition.empty())
@@ -1531,7 +1531,7 @@ string elemMatch_to_json_contains(const string& field, const bsoncxx::document::
     return condition;
 }
 
-string elemMatch_to_condition(const string& field, const bsoncxx::document::element& element)
+string elemMatch_to_condition(const Path& p, const bsoncxx::document::element& element)
 {
     string condition;
 
@@ -1548,17 +1548,15 @@ string elemMatch_to_condition(const string& field, const bsoncxx::document::elem
     }
     else
     {
-        condition = elemMatch_to_json_contains(field, doc);
+        condition = elemMatch_to_json_contains(p, doc);
     }
 
     return condition;
 }
 
-string exists_to_condition(const string& field, const bsoncxx::document::element& element)
+string exists_to_condition(const Path& p, const bsoncxx::document::element& element)
 {
-    // TODO: When this is called, we already know whether we are looking for
-    // TODO: something, or for something in an array.
-    auto expects_array = field.find("[*]") != string::npos;
+    auto expects_array = p.is_array();
 
     string rv("(");
 
@@ -1566,7 +1564,7 @@ string exists_to_condition(const string& field, const bsoncxx::document::element
 
     if (b)
     {
-        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL";
+        rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NOT NULL";
     }
     else
     {
@@ -1576,6 +1574,7 @@ string exists_to_condition(const string& field, const bsoncxx::document::element
         {
             // TODO: We could easily push downward the parent information so that
             // TODO: we woudn't have to figure it out here.
+            string field = p.path();
             auto i = field.find_last_of(".");
 
             if (i != string::npos)
@@ -1588,8 +1587,12 @@ string exists_to_condition(const string& field, const bsoncxx::document::element
                 close = true;
             }
         }
+        else
+        {
+            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array() + "')) = 'ARRAY' AND ";
+        }
 
-        rv += "JSON_EXTRACT(doc, '$." + field + "') IS NULL";
+        rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL";
 
         if (close)
         {
@@ -1626,22 +1629,20 @@ bool is_scalar_value(const bsoncxx::document::element& element)
 
 }
 
-string default_field_and_value_to_comparison(const std::string& field,
+string default_field_and_value_to_comparison(const Path& p,
                                              const bsoncxx::document::element& element,
                                              const string& mariadb_op,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    // TODO: When this is called, we already know whether we are looking for
-    // TODO: something, or for something in an array.
-    auto expects_array = field.find("[*]") != string::npos;
+    auto expects_array = p.is_array();
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
     bool is_date = (element.type() == bsoncxx::type::k_date);
 
     // A date is stored as a document containing a field "$date" with the value.
-    string f = is_date ? field + ".$date" : field;
+    string f = is_date ? p.path() + ".$date" : p.path();
 
     ostringstream ss;
 
@@ -1666,7 +1667,7 @@ string default_field_and_value_to_comparison(const std::string& field,
     return ss.str();
 }
 
-string field_and_value_to_nin_comparison(const std::string& field,
+string field_and_value_to_nin_comparison(const Path& p,
                                          const bsoncxx::document::element& element,
                                          const string& mariadb_op,
                                          const string& nosql_op,
@@ -1677,7 +1678,7 @@ string field_and_value_to_nin_comparison(const std::string& field,
 
     if (!s.empty())
     {
-        rv = "(JSON_EXTRACT(doc, '$." + field + "') " + mariadb_op + " " + s + ")";
+        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb_op + " " + s + ")";
     }
     else
     {
@@ -1687,7 +1688,7 @@ string field_and_value_to_nin_comparison(const std::string& field,
     return rv;
 }
 
-string field_and_value_to_eq_comparison(const std::string& field,
+string field_and_value_to_eq_comparison(const Path& p,
                                         const bsoncxx::document::element& element,
                                         const string& mariadb_op,
                                         const string& nosql_op,
@@ -1699,20 +1700,20 @@ string field_and_value_to_eq_comparison(const std::string& field,
     {
         if (nosql_op == "$eq")
         {
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NULL "
-                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) "
-                + "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+            rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL "
+                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + p.path() + "'), null) = 1) "
+                + "OR (JSON_VALUE(doc, '$." + p.path() + "') = 'null'))";
         }
         else if (nosql_op == "$ne")
         {
-            rv = "(JSON_EXTRACT(doc, '$." + field + "') IS NOT NULL "
-                + "AND (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), 'null') = 0) "
-                + "OR (JSON_VALUE(doc, '$." + field + "') != 'null'))";
+            rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') IS NOT NULL "
+                + "AND (JSON_CONTAINS(JSON_QUERY(doc, '$." + p.path() + "'), 'null') = 0) "
+                + "OR (JSON_VALUE(doc, '$." + p.path() + "') != 'null'))";
         }
     }
     else
     {
-        rv = default_field_and_value_to_comparison(field, element, mariadb_op, nosql_op, value_to_string);
+        rv = default_field_and_value_to_comparison(p, element, mariadb_op, nosql_op, value_to_string);
     }
 
     return rv;
@@ -1904,7 +1905,7 @@ void add_element_array(ostream& ss,
     }
 }
 
-string array_op_to_condition(const string& field,
+string array_op_to_condition(const Path& p,
                              const bsoncxx::document::element& element,
                              ArrayOp array_op)
 {
@@ -1928,6 +1929,8 @@ string array_op_to_condition(const string& field,
     }
     else
     {
+        // TODO: We have this information higher up already.
+        string field = p.path();
         auto i = field.find_last_of('.');
         bool is_scoped = (i != string::npos);
 
@@ -1944,7 +1947,7 @@ string array_op_to_condition(const string& field,
 
                 ss << "(";
                 bool add_or = false;
-                for (auto p : { field, path })
+                for (auto f : { field, path })
                 {
                     if (add_or)
                     {
@@ -1955,7 +1958,7 @@ string array_op_to_condition(const string& field,
                         add_or = true;
                     }
 
-                    add_element_array(ss, is_scoped, p, zDescription, all_elements);
+                    add_element_array(ss, is_scoped, f, zDescription, all_elements);
                 };
                 ss << ")";
             }
@@ -2089,18 +2092,18 @@ string protocol_type_to_mariadb_type(int32_t number)
     return nullptr;
 }
 
-string type_to_condition_from_value(const string& field, int32_t number)
+string type_to_condition_from_value(const Path& p, int32_t number)
 {
     ostringstream ss;
 
-    ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = "
+    ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = "
        << protocol_type_to_mariadb_type(number)
        << ")";
 
     return ss.str();
 }
 
-string type_to_condition_from_value(const string& field, const bsoncxx::stdx::string_view& alias)
+string type_to_condition_from_value(const Path& p, const bsoncxx::stdx::string_view& alias)
 {
     string rv;
 
@@ -2108,28 +2111,28 @@ string type_to_condition_from_value(const string& field, const bsoncxx::stdx::st
     {
         ostringstream ss;
 
-        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'DOUBLE' OR "
-           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << field << "')) = 'INTEGER')";
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'DOUBLE' OR "
+           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'INTEGER')";
 
         rv = ss.str();
     }
     else
     {
-        rv = type_to_condition_from_value(field, protocol::alias::to_type(alias));
+        rv = type_to_condition_from_value(p, protocol::alias::to_type(alias));
     }
 
     return rv;
 }
 
 template<class document_or_array_element>
-string type_to_condition_from_value(const string& field, const document_or_array_element& element)
+string type_to_condition_from_value(const Path& p, const document_or_array_element& element)
 {
     string rv;
 
     switch (element.type())
     {
     case bsoncxx::type::k_utf8:
-        rv = type_to_condition_from_value(field, (bsoncxx::stdx::string_view)element.get_utf8());
+        rv = type_to_condition_from_value(p, (bsoncxx::stdx::string_view)element.get_utf8());
         break;
 
     case bsoncxx::type::k_double:
@@ -2144,16 +2147,16 @@ string type_to_condition_from_value(const string& field, const document_or_array
                 throw SoftError(ss.str(), error::BAD_VALUE);
             }
 
-            rv = type_to_condition_from_value(field, i);
+            rv = type_to_condition_from_value(p, i);
         };
         break;
 
     case bsoncxx::type::k_int32:
-        rv = type_to_condition_from_value(field, (int32_t)element.get_int32());
+        rv = type_to_condition_from_value(p, (int32_t)element.get_int32());
         break;
 
     case bsoncxx::type::k_int64:
-        rv = type_to_condition_from_value(field, (int32_t)(int64_t)element.get_int64());
+        rv = type_to_condition_from_value(p, (int32_t)(int64_t)element.get_int64());
         break;
 
     default:
@@ -2163,7 +2166,7 @@ string type_to_condition_from_value(const string& field, const document_or_array
     return rv;
 }
 
-string type_to_condition(const string& field, const bsoncxx::document::element& element)
+string type_to_condition(const Path& p, const bsoncxx::document::element& element)
 {
     string rv;
 
@@ -2192,7 +2195,7 @@ string type_to_condition(const string& field, const bsoncxx::document::element& 
                 ss << " OR ";
             }
 
-            ss << type_to_condition_from_value(field, one_element);
+            ss << type_to_condition_from_value(p, one_element);
         }
 
         ss << ")";
@@ -2201,13 +2204,13 @@ string type_to_condition(const string& field, const bsoncxx::document::element& 
     }
     else
     {
-        rv = type_to_condition_from_value(field, element);
+        rv = type_to_condition_from_value(p, element);
     }
 
     return rv;
 }
 
-string get_comparison_condition(const string& field, const bsoncxx::document::view& doc)
+string get_comparison_condition(const Path& p, const bsoncxx::document::view& doc)
 {
     string rv;
 
@@ -2238,8 +2241,8 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
             const auto& mariadb_op = jt->second.mariadb_op;
             const auto& value_to_string = jt->second.value_to_string;
 
-            rv += jt->second.field_and_value_to_comparison(field, element, mariadb_op,
-                                                          nosql_op, value_to_string);
+            rv += jt->second.field_and_value_to_comparison(p, element, mariadb_op,
+                                                           nosql_op, value_to_string);
         }
         else if (nosql_op == "$not")
         {
@@ -2253,32 +2256,32 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
 
             auto doc = element.get_document();
 
-            rv += "(NOT " + get_comparison_condition(field, doc) + ")";
+            rv += "(NOT " + get_comparison_condition(p, doc) + ")";
         }
         else if (nosql_op == "$elemMatch")
         {
-            rv += elemMatch_to_condition(field, element);
+            rv += elemMatch_to_condition(p, element);
         }
         else if (nosql_op == "$exists")
         {
-            rv += exists_to_condition(field, element);
+            rv += exists_to_condition(p, element);
         }
         else if (nosql_op == "$size")
         {
-            rv += "(JSON_LENGTH(doc, '$." + field + "') = " +
+            rv += "(JSON_LENGTH(doc, '$." + p.path() + "') = " +
                 element_to_value(element, ValueFor::SQL, nosql_op) + ")";
         }
         else if (nosql_op == "$all")
         {
-            rv += array_op_to_condition(field, element, ArrayOp::AND);
+            rv += array_op_to_condition(p, element, ArrayOp::AND);
         }
         else if (nosql_op == "$in")
         {
-            rv += array_op_to_condition(field, element, ArrayOp::OR);
+            rv += array_op_to_condition(p, element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
-            rv += type_to_condition(field, element);
+            rv += type_to_condition(p, element);
         }
         else if (nosql_op.front() == '$')
         {
@@ -2305,7 +2308,7 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
         // TODO: returns just the former.
 
         ostringstream ss;
-        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << field << "'), JSON_OBJECT(";
+        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << p.path() << "'), JSON_OBJECT(";
 
         while (it != end)
         {
@@ -2328,16 +2331,17 @@ string get_comparison_condition(const string& field, const bsoncxx::document::vi
     return rv;
 }
 
-string get_comparison_condition(const string& field,
+string get_comparison_condition(const Path& p,
                                 bsoncxx::type type,
                                 const bsoncxx::document::element& element)
 {
+    string field = p.path();
     string condition;
 
     switch (type)
     {
     case bsoncxx::type::k_document:
-        condition = get_comparison_condition(field, element.get_document());
+        condition = get_comparison_condition(p, element.get_document());
         break;
 
     case bsoncxx::type::k_regex:

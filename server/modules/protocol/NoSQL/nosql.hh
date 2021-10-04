@@ -1370,13 +1370,13 @@ public:
         ARRAY
     };
 
-    Path(const std::string& path)
+    explicit Path(const std::string& path)
         : m_kind(ELEMENT)
         , m_path(path)
     {
     }
 
-    Path(Kind kind, const std::string& path, const std::string& array)
+    explicit Path(Kind kind, const std::string& path, const std::string& array)
         : m_kind(ARRAY)
         , m_path(path)
         , m_array(array)
