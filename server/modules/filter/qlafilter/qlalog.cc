@@ -45,7 +45,7 @@ void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::Inter
 {
     for (const auto& e : queue)
     {
-        if (fprintf(e.update.sFile->pFile, "%s", e.update.line.c_str()) < 0)
+        if (!(e.update.sFile->log_stream << e.update.line))
         {
             if (!m_error_logged)
             {
@@ -56,9 +56,9 @@ void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::Inter
     }
 
     const auto& last = queue.back();
-    if (last.update.flush && fflush(last.update.sFile->pFile) != 0)
+    if (last.update.flush)
     {
-        if (!m_error_logged)
+        if (!last.update.sFile->log_stream.flush() && !m_error_logged)
         {
             log_error(errno, last);
             m_error_logged = true;

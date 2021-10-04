@@ -136,20 +136,9 @@ cfg::ParamBool s_append(
     &s_spec, "append", "Append new entries to log files instead of overwriting them", true,
     cfg::Param::AT_RUNTIME);
 
-auto LogFileDeleter = [](LogFile* ptr) {
-        if (ptr)
-        {
-            if (ptr->pFile)
-            {
-                fclose(ptr->pFile);
-            }
-            delete ptr;
-        }
-    };
-
-auto open_file(const char* filename, const char* modes)
+auto open_file(const std::string& filename, std::ios_base::openmode mode)
 {
-    return SFile(new LogFile {fopen(filename, modes), filename}, LogFileDeleter);
+    return SFile(new LogFile {filename, mode});
 }
 
 void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
@@ -251,6 +240,7 @@ QlaInstance::LogManager::LogManager(const QlaInstance::Settings::Values& setting
     : m_settings(settings)
     , m_rotation_count(mxs_get_log_rotation_count())
 {
+    m_sUnified_file = std::make_shared<LogFile>();      // The shared_ptr is always valid
     m_qlalog.start();
 }
 
@@ -263,6 +253,8 @@ bool QlaInstance::LogManager::prepare()
         // Open the file. It is only closed at program exit.
         if (!open_unified_logfile())
         {
+            MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.",
+                      m_unified_filename.c_str(), errno, mxs_strerror(errno));
             return false;
         }
     }
@@ -333,7 +325,7 @@ bool QlaInstance::read_to_json(int start, int end, json_t** output) const
 bool QlaInstance::LogManager::read_to_json(int start, int end, json_t** output)
 {
     bool rval = false;
-    mxb_assert(m_sUnified_file && !m_unified_filename.empty());
+    mxb_assert(m_sUnified_file->is_open() && !m_unified_filename.empty());
     std::ifstream file(m_unified_filename);
 
     if (file)
@@ -388,10 +380,9 @@ void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t
     {
         // New file created, print the log header.
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile((*psFile)->pFile, header))
+        if (!write_to_logfile((*psFile)->log_stream, header))
         {
             MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
-            (*psFile).reset();
         }
     }
     // Either the old file existed or file creation failed.
@@ -507,9 +498,8 @@ SFile QlaInstance::LogManager::open_session_log_file(const string& filename) con
 
 bool QlaInstance::LogManager::open_unified_logfile()
 {
-    mxb_assert(!m_sUnified_file);
     m_sUnified_file = open_log_file(m_settings.log_file_data_flags, m_unified_filename);
-    return m_sUnified_file.get();
+    return m_sUnified_file->is_open();
 }
 
 /**
@@ -521,42 +511,31 @@ bool QlaInstance::LogManager::open_unified_logfile()
  */
 SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& filename) const
 {
-    auto zfilename = filename.c_str();
-    bool file_existed = false;
+    std::ifstream try_file(filename);
+    bool file_existed = try_file.is_open();
+
     SFile sFile;
     if (m_settings.append == false)
     {
         // Just open the file (possibly overwriting) and then print header.
-        sFile = open_file(zfilename, "w");
+        file_existed = false;
+        sFile = open_file(filename, std::ios_base::out);
     }
     else
     {
-        /**
-         *  Using open_file() with 'a+' means we will always write to the end but can read
-         *  anywhere.
-         */
-        if ((sFile = open_file(zfilename, "a+")))
-        {
-            // Check to see if file already has contents
-            fseek(sFile->pFile, 0, SEEK_END);
-            if (ftell(sFile->pFile) > 0)
-            {
-                file_existed = true;
-            }
-        }
+        sFile = open_file(filename, std::ios_base::app);
     }
 
-    if (!sFile)
+    if (!sFile->is_open())
     {
-        MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", zfilename, errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", filename.c_str(), errno, mxs_strerror(errno));
     }
     else if (!file_existed && data_flags != 0)
     {
         string header = generate_log_header(data_flags);
-        if (!write_to_logfile(sFile->pFile, header))
+        if (!write_to_logfile(sFile->log_stream, header))
         {
-            MXS_ERROR(HEADER_ERROR, zfilename, errno, mxs_strerror(errno));
-            sFile.reset();
+            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
         }
     }
 
@@ -677,17 +656,20 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     return output.str();
 }
 
-bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& contents) const
+bool QlaInstance::LogManager::write_to_logfile(std::ofstream& of, const std::string& contents) const
 {
     bool error = false;
-    int written = fprintf(fp, "%s", contents.c_str());
-    if (written < 0)
+
+    if (!(of << contents))
     {
         error = true;
     }
-    else if (m_settings.flush_writes && (fflush(fp) != 0))
+    else if (!error && m_settings.flush_writes)
     {
-        error = true;
+        if (!(of.flush()))
+        {
+            error = true;
+        }
     }
 
     return !error;
@@ -701,7 +683,7 @@ bool QlaInstance::LogManager::write_to_logfile(FILE* fp, const std::string& cont
 void QlaFilterSession::write_session_log_entry(const string& entry)
 {
     mxb_assert(m_sSession_file);
-    if (!m_log->write_to_logfile(m_sSession_file->pFile, entry))
+    if (!m_log->write_to_logfile(m_sSession_file->log_stream, entry))
     {
         if (!m_write_error_logged)
         {
@@ -811,39 +793,23 @@ void print_string_replace_newlines(const char* sql_string,
  */
 bool check_replace_file(const string& filename, SFile* psFile)
 {
-    auto zfilename = filename.c_str();
     const char retry_later[] = "Logging to file is disabled. The operation will be retried later.";
 
-    bool newfile = false;
     // Check if file exists and create it if not.
-    int fd = open(zfilename, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-    if (fd < 0)
+    std::ifstream try_file(filename);
+    bool newfile = !try_file.is_open();
+
+    if (newfile)
     {
-        // EEXIST is the expected error code.
-        if (errno != EEXIST)
+        *psFile = open_file(filename, std::ios_base::app);
+        if (!(*psFile)->log_stream.is_open())
         {
             MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
-                      zfilename, errno, mxs_strerror(errno), retry_later);
-            // Do not close the existing file in this case since it was not touched. Likely though,
-            // writing to it will fail.
-        }
-        // Otherwise the file already exists and the existing file stream should be valid.
-    }
-    else
-    {
-        MXS_INFO("Log file '%s' recreated.", zfilename);
-        // File was created. Close the original file stream since it's pointing to a moved file.
-        if ((*psFile = SFile(new LogFile {fdopen(fd, "w"), filename}, LogFileDeleter)))
-        {
-            newfile = true;
-        }
-        else
-        {
-            MXS_ERROR("Could not convert file descriptor of '%s' to stream. fdopen() "
-                      "failed with error code %i: '%s'. %s",
                       filename.c_str(), errno, mxs_strerror(errno), retry_later);
         }
+        MXS_INFO("Log file '%s' recreated.", filename.c_str());
     }
+
     return newfile;
 }
 
