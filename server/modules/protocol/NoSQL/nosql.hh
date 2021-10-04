@@ -1415,6 +1415,8 @@ public:
     std::string get_comparison_condition(const bsoncxx::document::element& element) const;
 
 private:
+    std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
+
     static void add_part(std::vector<Path>& rv, const std::string& part);
 
     Kind        m_kind;

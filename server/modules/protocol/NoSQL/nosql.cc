@@ -2210,127 +2210,6 @@ string type_to_condition(const Path& p, const bsoncxx::document::element& elemen
     return rv;
 }
 
-string get_comparison_condition(const Path& p, const bsoncxx::document::view& doc)
-{
-    string rv;
-
-    // We will ignore all but the last field. That's what MongoDB does
-    // but as it is unlikely that there will be more fields than one,
-    // explicitly ignoring fields at the beginning would just make
-    // things messier without adding much benefit.
-    auto it = doc.begin();
-    auto end = doc.end();
-    for (; it != end; ++it)
-    {
-        if (rv.empty())
-        {
-            rv += "(";
-        }
-        else
-        {
-            rv += " AND ";
-        }
-
-        const auto& element = *it;
-        const auto nosql_op = static_cast<string>(element.key());
-
-        auto jt = converters.find(nosql_op);
-
-        if (jt != converters.end())
-        {
-            const auto& mariadb_op = jt->second.mariadb_op;
-            const auto& value_to_string = jt->second.value_to_string;
-
-            rv += jt->second.field_and_value_to_comparison(p, element, mariadb_op,
-                                                           nosql_op, value_to_string);
-        }
-        else if (nosql_op == "$not")
-        {
-            if (element.type() != bsoncxx::type::k_document)
-            {
-                ostringstream ss;
-                ss << "$not needs a document (regex not yet supported)";
-
-                throw SoftError(ss.str(), error::BAD_VALUE);
-            }
-
-            auto doc = element.get_document();
-
-            rv += "(NOT " + get_comparison_condition(p, doc) + ")";
-        }
-        else if (nosql_op == "$elemMatch")
-        {
-            rv += elemMatch_to_condition(p, element);
-        }
-        else if (nosql_op == "$exists")
-        {
-            rv += exists_to_condition(p, element);
-        }
-        else if (nosql_op == "$size")
-        {
-            rv += "(JSON_LENGTH(doc, '$." + p.path() + "') = " +
-                element_to_value(element, ValueFor::SQL, nosql_op) + ")";
-        }
-        else if (nosql_op == "$all")
-        {
-            rv += array_op_to_condition(p, element, ArrayOp::AND);
-        }
-        else if (nosql_op == "$in")
-        {
-            rv += array_op_to_condition(p, element, ArrayOp::OR);
-        }
-        else if (nosql_op == "$type")
-        {
-            rv += type_to_condition(p, element);
-        }
-        else if (nosql_op.front() == '$')
-        {
-            ostringstream ss;
-            ss << "unknown operator: " << nosql_op;
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    if (it == end)
-    {
-        rv += ")";
-    }
-    else
-    {
-        // We are simply looking for an object.
-        // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
-        // TODO: a query like '{"a": {x: 1}}' will return them both, although MongoDB
-        // TODO: returns just the former.
-
-        ostringstream ss;
-        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << p.path() << "'), JSON_OBJECT(";
-
-        while (it != end)
-        {
-            auto element = *it;
-
-            ss << "\"" << element.key() << "\", ";
-            ss << element_to_value(element, ValueFor::JSON_NESTED);
-
-            if (++it != end)
-            {
-                ss << ", ";
-            }
-        }
-
-        ss << "))";
-
-        rv = ss.str();
-    }
-
-    return rv;
-}
-
 namespace
 {
 
@@ -3355,7 +3234,7 @@ string Path::get_comparison_condition(const bsoncxx::document::element& element)
     switch (element.type())
     {
     case bsoncxx::type::k_document:
-        condition = ::get_comparison_condition(*this, element.get_document());
+        condition = get_comparison_condition(element.get_document());
         break;
 
     case bsoncxx::type::k_regex:
@@ -3403,6 +3282,127 @@ string Path::get_comparison_condition(const bsoncxx::document::element& element)
     }
 
     return condition;
+}
+
+string Path::get_comparison_condition(const bsoncxx::document::view& doc) const
+{
+    string rv;
+
+    // We will ignore all but the last field. That's what MongoDB does
+    // but as it is unlikely that there will be more fields than one,
+    // explicitly ignoring fields at the beginning would just make
+    // things messier without adding much benefit.
+    auto it = doc.begin();
+    auto end = doc.end();
+    for (; it != end; ++it)
+    {
+        if (rv.empty())
+        {
+            rv += "(";
+        }
+        else
+        {
+            rv += " AND ";
+        }
+
+        const auto& element = *it;
+        const auto nosql_op = static_cast<string>(element.key());
+
+        auto jt = converters.find(nosql_op);
+
+        if (jt != converters.end())
+        {
+            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto& value_to_string = jt->second.value_to_string;
+
+            rv += jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
+                                                           nosql_op, value_to_string);
+        }
+        else if (nosql_op == "$not")
+        {
+            if (element.type() != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "$not needs a document (regex not yet supported)";
+
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            auto doc = element.get_document();
+
+            rv += "(NOT " + get_comparison_condition(doc) + ")";
+        }
+        else if (nosql_op == "$elemMatch")
+        {
+            rv += elemMatch_to_condition(*this, element);
+        }
+        else if (nosql_op == "$exists")
+        {
+            rv += exists_to_condition(*this, element);
+        }
+        else if (nosql_op == "$size")
+        {
+            rv += "(JSON_LENGTH(doc, '$." + path() + "') = " +
+                element_to_value(element, ValueFor::SQL, nosql_op) + ")";
+        }
+        else if (nosql_op == "$all")
+        {
+            rv += array_op_to_condition(*this, element, ArrayOp::AND);
+        }
+        else if (nosql_op == "$in")
+        {
+            rv += array_op_to_condition(*this, element, ArrayOp::OR);
+        }
+        else if (nosql_op == "$type")
+        {
+            rv += type_to_condition(*this, element);
+        }
+        else if (nosql_op.front() == '$')
+        {
+            ostringstream ss;
+            ss << "unknown operator: " << nosql_op;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    if (it == end)
+    {
+        rv += ")";
+    }
+    else
+    {
+        // We are simply looking for an object.
+        // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
+        // TODO: a query like '{"a": {x: 1}}' will return them both, although MongoDB
+        // TODO: returns just the former.
+
+        ostringstream ss;
+        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << path() << "'), JSON_OBJECT(";
+
+        while (it != end)
+        {
+            auto element = *it;
+
+            ss << "\"" << element.key() << "\", ";
+            ss << element_to_value(element, ValueFor::JSON_NESTED);
+
+            if (++it != end)
+            {
+                ss << ", ";
+            }
+        }
+
+        ss << "))";
+
+        rv = ss.str();
+    }
+
+    return rv;
 }
 
 //static
