@@ -2434,50 +2434,45 @@ string get_comparison_condition(const bsoncxx::document::element& element)
     }
     else
     {
-        auto i = field.find_last_of('.');
+        vector<Path> paths = Path::get_paths(field);
 
-        if (i != string::npos)
+        if (paths.size() > 1)
         {
-            // Dot notation used, extra trickery needed.
             condition += "(";
-            condition += get_comparison_condition(field, type, element);
-            condition += " OR ";
+        }
 
-            string head = field.substr(0, i);
-            string tail = field.substr(i + 1);
-
-            condition += "JSON_TYPE(JSON_QUERY(doc, '$." + head + "')) = 'ARRAY' AND (";
-
-            string path(head);
-            path += "[*].";
-            path += tail;
-
-            condition += get_comparison_condition(path, type, element);
-
-            // Now let's check whether it is a number.
-            char* zEnd;
-            auto l = strtol(tail.c_str(), &zEnd, 10);
-
-            if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+        bool first = true;
+        for (const auto& p : paths)
+        {
+            if (first)
             {
-                // Indeed it is. So we need to cater for the
-                // case that it refers to the n'th item in an array.
-
+                first = false;
+            }
+            else
+            {
                 condition += " OR ";
-
-                // So, we change e.g. "var.3" => "var[3]". Former is MongoDB,
-                // latter is MariaDB JSON.
-                path = head;
-                path += "[" + tail + "]";
-
-                condition += get_comparison_condition(path, type, element);
             }
 
-            condition += "))";
+            condition += "(";
+
+            if (p.is_array())
+            {
+                condition += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array() + "')) = 'ARRAY' AND (";
+            }
+
+            condition += get_comparison_condition(p.path(), type, element);
+
+            if (p.is_array())
+            {
+                condition += ")";
+            }
+
+            condition += ")";
         }
-        else
+
+        if (paths.size() > 1)
         {
-            condition = get_comparison_condition(field, type, element);
+            condition += ")";
         }
     }
 

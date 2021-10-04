@@ -1392,6 +1392,16 @@ public:
         return m_kind;
     }
 
+    bool is_element() const
+    {
+        return m_kind == ELEMENT;
+    }
+
+    bool is_array() const
+    {
+        return m_kind == ARRAY;
+    }
+
     const std::string& path() const
     {
         return m_path;
