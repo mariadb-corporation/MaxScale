@@ -1361,9 +1361,9 @@ private:
 };
 
 /**
- * A Path represents a single JSON path.
+ * An Incarnation represents a single JSON path.
  */
-class Path
+class Incarnation
 {
 public:
     enum Kind
@@ -1372,20 +1372,20 @@ public:
         ARRAY
     };
 
-    explicit Path(const std::string& path)
+    explicit Incarnation(const std::string& path)
         : m_kind(ELEMENT)
         , m_path(path)
     {
     }
 
-    explicit Path(Kind kind, const std::string& path, const std::string& array)
+    explicit Incarnation(Kind kind, const std::string& path, const std::string& array)
         : m_kind(ARRAY)
         , m_path(path)
         , m_array(array)
     {
     }
 
-    static std::vector<Path> get_paths(const std::string& key);
+    static std::vector<Incarnation> get_paths(const std::string& key);
 
     std::string to_string() const;
 
@@ -1419,7 +1419,7 @@ public:
 private:
     std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
 
-    static void add_part(std::vector<Path>& rv, const std::string& part);
+    static void add_part(std::vector<Incarnation>& rv, const std::string& part);
 
     Kind        m_kind;
     std::string m_path;
@@ -1428,18 +1428,18 @@ private:
 
 
 /**
- * A Paths represents at least one JSON path, possibly more.
+ * A Path represents all incarnations of a particular JSON path.
  */
-class Paths
+class Path
 {
 public:
-    Paths(const bsoncxx::document::element& element);
+    Path(const bsoncxx::document::element& element);
 
     std::string get_comparison_condition() const;
 
 private:
     bsoncxx::document::element m_element;
-    std::vector<Path>          m_paths;
+    std::vector<Incarnation>   m_paths;
 };
 
 /**

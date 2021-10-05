@@ -190,7 +190,7 @@ public:
             where = "WHERE ";
         }
 
-        vector<Path> paths = Path::get_paths(key);
+        vector<Incarnation> paths = Incarnation::get_paths(key);
 
         for (auto it = paths.begin(); it != paths.end(); ++it)
         {
@@ -199,7 +199,7 @@ public:
                 sql << " UNION ";
             }
 
-            const Path& p = *it;
+            const Incarnation& p = *it;
 
             string extract = "JSON_EXTRACT(doc, '$." + p.path() + "')";
 
