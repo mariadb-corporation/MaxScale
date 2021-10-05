@@ -1199,14 +1199,18 @@ export default {
                             data: res.data.data.attributes,
                         },
                     })
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('info.alterTableSuccessfully')],
-                            type: 'success',
-                        },
-                        { root: true }
+                    const isQueryFailed = Boolean(
+                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
                     )
+                    if (!isQueryFailed)
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [this.i18n.t('info.alterTableSuccessfully')],
+                                type: 'success',
+                            },
+                            { root: true }
+                        )
                     dispatch(
                         'persisted/pushQueryLog',
                         {
