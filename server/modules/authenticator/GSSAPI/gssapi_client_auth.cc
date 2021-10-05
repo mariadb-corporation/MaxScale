@@ -87,7 +87,7 @@ void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
 }
 
 mariadb::ClientAuthenticator::ExchRes
-GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session)
+GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -127,12 +127,12 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session)
 /**
  * Check if the client token is valid
  *
- * @param ses Session
- * @param entry User entry
+ * @param auth_data Authentication data
  * @return True if client token is valid
  */
-bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const mariadb::UserEntry* entry)
+bool GSSAPIClientAuthenticator::validate_gssapi_token(AuthenticationData& auth_data)
 {
+    const auto& entry = auth_data.user_entry.entry;
     gss_buffer_desc service_name_buf = GSS_C_EMPTY_BUFFER;
     service_name_buf.value = (void*)m_service_principal.c_str();
     service_name_buf.length = m_service_principal.length() + 1;
@@ -169,8 +169,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const 
         // gssapi wants more communication, authentication fails.
         gss_ctx_id_t handle = GSS_C_NO_CONTEXT;
         gss_buffer_desc in = GSS_C_EMPTY_BUFFER;
-        in.value = ses->auth_data.client_token.data();
-        in.length = ses->auth_data.client_token.size();
+        in.value = auth_data.client_token.data();
+        in.length = auth_data.client_token.size();
 
         gss_name_t client = GSS_C_NO_NAME;
         gss_buffer_desc out = GSS_C_EMPTY_BUFFER;
@@ -202,14 +202,14 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const 
                 string found_name;
                 found_name.assign((const char*)client_name.value, client_name.length);
                 const std::string* expected_str = nullptr;
-                if (entry->auth_string.empty())
+                if (entry.auth_string.empty())
                 {
-                    expected_str = &entry->username;
+                    expected_str = &entry.username;
                     found_name.erase(found_name.find('@'));
                 }
                 else
                 {
-                    expected_str = &entry->auth_string;
+                    expected_str = &entry.auth_string;
                 }
 
                 if (found_name == *expected_str)
@@ -236,25 +236,17 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(MYSQL_session* ses, const 
     return auth_ok;
 }
 
-/**
- * @brief Authenticate the client
- *
- * @param dcb Client DCB
- * @return MXS_AUTH_INCOMPLETE if authentication is not yet complete, MXS_AUTH_SUCCEEDED
- * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
- * has failed.
- */
-AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry, MYSQL_session* session)
+AuthRes GSSAPIClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
     mxb_assert(m_state == State::TOKEN_READY);
     AuthRes rval;
 
     /** We sent the principal name and the client responded with the GSSAPI
      * token that we must validate */
-    if (validate_gssapi_token(session, entry))
+    if (validate_gssapi_token(auth_data))
     {
         rval.status = AuthRes::Status::SUCCESS;
-        session->auth_data.backend_token = session->auth_data.client_token;
+        auth_data.backend_token = auth_data.client_token;
     }
     return rval;
 }

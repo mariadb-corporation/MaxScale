@@ -227,8 +227,8 @@ bool ClientConnection::setup_session()
 
     mxb_assert(!is_ready());
 
-    m_session_data.user = m_config.user;
-    m_session.set_user(m_session_data.user);
+    m_session_data.auth_data.user = m_config.user;
+    m_session.set_user(m_session_data.auth_data.user);
     m_session_data.auth_data.default_db = "";
     m_session_data.current_db = "";
     m_session_data.auth_data.plugin = "mysql_native_password";
@@ -249,8 +249,8 @@ bool ClientConnection::setup_session()
     mxb_assert(authenticators.size() == 1);
     auto* pAuthenticator = static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
 
-    m_session_data.m_current_client_auth = pAuthenticator;
-    m_session_data.m_current_be_auth = pAuthenticator;
+    m_session_data.auth_data.client_auth_module = pAuthenticator;
+    m_session_data.auth_data.be_auth_module = pAuthenticator;
     m_session_data.client_caps.basic_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41

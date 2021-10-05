@@ -435,5 +435,5 @@ char* strnchr_esc(char* ptr, char c, int len);
  * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
  * If the character is not found, NULL is returned.
  */
-char* strnchr_esc_mariadb(char* ptr, char c, int len);
+char* strnchr_esc_mariadb(const char *ptr, char c, int len);
 }

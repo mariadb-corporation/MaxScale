@@ -34,6 +34,7 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
     data.push_back('\0');   // Simplifies parsing by ensuring 0-termination.
     const uint8_t* ptr = data.data();
     const char* server_name = m_shared_data.servername;
+    auto* client_data = m_shared_data.client_data;
     auto pw_type = PromptType::FAIL;
     int msg_type = *ptr++;
     if (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
@@ -47,7 +48,7 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
         {
             int msg_len = linebrk_pos - messages;
             MXS_INFO("'%s' sent message when authenticating %s: %.*s",
-                     server_name, m_clienthost.c_str(), msg_len, messages);
+                     server_name, client_data->user_and_host().c_str(), msg_len, messages);
             prompt = linebrk_pos + 1;
         }
         else
@@ -65,7 +66,8 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
             else
             {
                 MXB_ERROR("'%s' asked for '%s' when authenticating %s. '%s' was expected.",
-                          server_name, prompt, m_clienthost.c_str(), mxb::pam::EXP_PW_QUERY.c_str());
+                          server_name, prompt, client_data->user_and_host().c_str(),
+                          mxb::pam::EXP_PW_QUERY.c_str());
             }
         }
         else
@@ -78,7 +80,7 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
     else
     {
         MXB_ERROR("'%s' sent an unknown message type %i when authenticating %s.",
-                  server_name, msg_type, m_clienthost.c_str());
+                  server_name, msg_type, client_data->user_and_host().c_str());
     }
     return pw_type;
 }
@@ -188,7 +190,7 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
                 }
                 else
                 {
-                    const char msg[] = "'%s' asked for authentication plugin '%s' when authenticating '%s'. "
+                    const char msg[] = "'%s' asked for authentication plugin '%s' when authenticating %s. "
                                        "Only '%s' and '%s' are supported.";
                     MXB_ERROR(msg, m_shared_data.servername, parse_res.plugin_name.c_str(),
                               m_shared_data.client_data->user_and_host().c_str(),
@@ -242,7 +244,6 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
 
 PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data, AuthMode mode)
     : m_shared_data(shared_data)
-    , m_clienthost(shared_data.client_data->user_and_host())
     , m_mode(mode)
 {
 }

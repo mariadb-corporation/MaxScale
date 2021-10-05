@@ -239,7 +239,7 @@ char* strnchr_esc(char* ptr, char c, int len)
     return NULL;
 }
 
-char* strnchr_esc_mariadb(char* ptr, char c, int len)
+char* strnchr_esc_mariadb(const char* ptr, char c, int len)
 {
     char* p = (char*) ptr;
     char* start = p, * end = start + len;

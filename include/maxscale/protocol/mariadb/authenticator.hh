@@ -23,7 +23,7 @@ class MYSQL_session;
 
 namespace mariadb
 {
-
+class AuthenticatorModule;
 class ClientAuthenticator;
 class BackendAuthenticator;
 struct BackendAuthData;
@@ -31,6 +31,7 @@ struct BackendAuthData;
 using SClientAuth = std::unique_ptr<ClientAuthenticator>;
 using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
 using AuthByteVec = std::vector<uint8_t>;
+using ByteVec = std::vector<uint8_t>;
 
 struct UserEntry
 {
@@ -68,6 +69,41 @@ struct UserEntryResult
 {
     mariadb::UserEntry entry;
     UserEntryType      type {UserEntryType::USER_NOT_FOUND};
+};
+
+/**
+ * Authentication-related data. These fields are set during authentication and can only change
+ * with COM_CHANGE_USER.
+ */
+struct AuthenticationData
+{
+    std::string user;           /**< Username */
+    std::string default_db;     /**< Initial default database */
+    std::string plugin;         /**< Authentication plugin name */
+    ByteVec     attributes;     /**< Raw connection attribute data, sent to backends. */
+
+    /** Character collation, defines charset as well. Usually just one byte is needed.
+     * COM_CHANGE_USER sends two. */
+    uint16_t collation {0};
+
+    /**
+     * Authentication tokens are the passwords or password hashes used for authenticating to MaxScale and
+     * backends. The client tokens store the tokens sent by client. The backend tokens store tokens for
+     * backend authentication. The authenticator module calculates the backend tokens from the client tokens.
+     * Usually, just one pair of tokens are required. The second tokens are only used by pam 2FA.
+     */
+
+    ByteVec client_token;       /**< First client token */
+    ByteVec client_token_2fa;   /**< Second client token */
+    ByteVec backend_token;      /**< First backend token */
+    ByteVec backend_token_2fa;  /**< Second backend token */
+
+    mariadb::UserEntryResult user_entry;    /**< User account information */
+
+    /** Client authenticator module. */
+    mariadb::AuthenticatorModule* client_auth_module {nullptr};
+    /** Backend authenticator module. Usually same as client authenticator. */
+    mariadb::AuthenticatorModule* be_auth_module {nullptr};
 };
 
 /**
@@ -134,6 +170,8 @@ public:
 class ClientAuthenticator
 {
 public:
+    using AuthenticationData = mariadb::AuthenticationData;
+
     struct ExchRes
     {
         enum class Status
@@ -176,17 +214,18 @@ public:
      *
      * @param input Packet from client
      * @param ses MySQL session
+     * @param auth_data Authentication data to read/modify
      * @return Authentication status and reply buffer
      */
-    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses) = 0;
+    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses, AuthenticationData& auth_data) = 0;
 
     /**
      * Check client token against the password.
      *
-     * @param entry User account entry
      * @param session Protocol session data
+     * @param auth_data Authentication data to read/modify
      */
-    virtual AuthRes authenticate(const UserEntry* entry, MYSQL_session* session) = 0;
+    virtual AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) = 0;
 };
 
 /**
@@ -234,7 +273,7 @@ public:
 protected:
     // Common error message formats, used in several authenticators.
     static constexpr const char* WRONG_PLUGIN_REQ =
-        "'%s' asked for authentication plugin '%s' when authenticating '%s'. Only '%s' is supported.";
+        "'%s' asked for authentication plugin '%s' when authenticating %s. Only '%s' is supported.";
     static constexpr const char* MALFORMED_AUTH_SWITCH =
         "Received malformed AuthSwitchRequest-packet from '%s'.";
 };

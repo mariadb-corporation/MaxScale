@@ -97,7 +97,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
 }
 
 mariadb::ClientAuthenticator::ExchRes
-PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session)
+PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -152,24 +152,24 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session)
     return rval;
 }
 
-AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
+AuthRes PamClientAuthenticator::authenticate(MYSQL_session* session, AuthenticationData& auth_data)
 {
     using mxb::pam::AuthResult;
-    AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
     bool twofa = (m_settings.mode == AuthMode::PW_2FA);
     bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
+    const auto& entry = auth_data.user_entry.entry;
 
     /** We sent the authentication change packet + plugin name and the client
      * responded with the password. Try to continue authentication without more
      * messages to client. */
 
-    auto& auth_data = session->auth_data;
     const auto& tok1 = auth_data.client_token;
     const auto& tok2 = auth_data.client_token_2fa;
+    const auto& user_name = auth_data.user;
 
     // Take username from the session object, not the user entry. The entry may be anonymous.
-    mxb::pam::UserData user = {session->user, session->remote};
+    mxb::pam::UserData user = {user_name, session->remote};
     mxb::pam::PwdData pwds;
     pwds.password.assign((const char*)tok1.data(), tok1.size());
     if (twofa)
@@ -181,9 +181,10 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
     mxb::pam::AuthSettings sett;
-    sett.service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+    sett.service = entry.auth_string.empty() ? "mysql" : entry.auth_string;
     sett.mapping_on = map_to_mariadbauth;
 
+    AuthRes rval;
     AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, sett, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
@@ -201,11 +202,11 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
 
         if (map_to_mariadbauth && !res.mapped_user.empty())
         {
-            if (res.mapped_user != session->user)
+            if (res.mapped_user != user_name)
             {
                 MXB_INFO("Incoming user '%s' mapped to '%s'.",
-                         session->user.c_str(), res.mapped_user.c_str());
-                session->user = res.mapped_user;    // TODO: Think if using a separate field would be better.
+                         user_name.c_str(), res.mapped_user.c_str());
+                auth_data.user = res.mapped_user;   // TODO: Think if using a separate field would be better.
                 // If a password for the user is found in the passwords map, use that. Otherwise, try
                 // passwordless authentication.
                 const auto& it = m_backend_pwds.find(res.mapped_user);
