@@ -114,7 +114,7 @@ import AlterTableOpts from './AlterTableOpts.vue'
 import AlterTableToolbar from './AlterTableToolbar.vue'
 import QueryEditor from '@/components/QueryEditor'
 export default {
-    name: 'ddl-editor',
+    name: 'ddl-editor-container',
     components: {
         'alter-table-opts': AlterTableOpts,
         'alter-table-toolbar': AlterTableToolbar,

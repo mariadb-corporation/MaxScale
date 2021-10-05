@@ -19,7 +19,7 @@
             />
         </template>
         <template slot="pane-right">
-            <ddl-editor v-if="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
+            <ddl-editor-container v-if="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
             <txt-editor-container
                 v-show="isTxtEditor"
                 ref="txtEditorPane"
@@ -45,14 +45,14 @@
  */
 import SidebarContainer from './SidebarContainer'
 import { mapGetters, mapState } from 'vuex'
-import DDLEditor from './DDLEditor.vue'
+import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
 export default {
     name: 'worksheet',
     components: {
         SidebarContainer,
         'txt-editor-container': TxtEditorContainer,
-        'ddl-editor': DDLEditor,
+        'ddl-editor-container': DDLEditorContainer,
     },
     props: {
         ctrDim: { type: Object, required: true },
