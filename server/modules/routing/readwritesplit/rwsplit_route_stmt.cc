@@ -644,6 +644,13 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
     {
         return m_target_node;
     }
+    else if (m_config.transaction_replay && trx_is_open() && m_trx.target())
+    {
+        // If transaction replay is enabled and a transaction is open, we'll route all the queries
+        // to the same target. This prevents routing hints from overriding the transaction target
+        // which is what would normally happen.
+        return m_trx.target();
+    }
 
     RWBackend* rval = nullptr;
     if (name)
