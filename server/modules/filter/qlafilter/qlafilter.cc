@@ -528,6 +528,11 @@ SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
     }
     else
     {
+        if (try_file.is_open())
+        {
+            // set file_existed to false if the file is empty to generate the header
+            file_existed = try_file.peek() != std::ifstream::traits_type::eof();
+        }
         sFile = open_file(filename, std::ios_base::app);
     }
 
