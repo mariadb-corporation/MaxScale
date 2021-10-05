@@ -1,8 +1,8 @@
 <template>
     <v-card
-        v-if="getLoadingTblCreationInfo || !initialTblOptsData"
+        v-if="getLoadingTblCreationInfo || !initialData"
         class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
-        :loading="Boolean(getLoadingTblCreationInfo && !initialTblOptsData)"
+        :loading="Boolean(getLoadingTblCreationInfo && !initialData)"
     />
     <div
         v-else
@@ -157,22 +157,17 @@ export default {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
         },
-        /**
-         * TODO: Add more inputs to initialData and newData
-         * All inputs will be stored in an object,
-         * for now only table option inputs (tableOptsData) here.
-         */
         initialData() {
-            return { ...this.initialTblOptsData }
+            return this.$typy(this.getTblCreationInfo, 'data').safeObject
         },
         newData() {
-            return { ...this.tableOptsData }
-        },
-        initialTblOptsData() {
-            return this.$typy(this.getTblCreationInfo, 'table_opts_data').safeObject
+            return { table_opts_data: this.tableOptsData }
         },
         hasChanged() {
-            return !this.$help.lodash.isEqual(this.initialData, this.newData)
+            return !this.$help.lodash.isEqual(
+                this.initialData.table_opts_data,
+                this.newData.table_opts_data
+            )
         },
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
@@ -192,10 +187,12 @@ export default {
         },
     },
     watch: {
-        initialTblOptsData: {
+        initialData: {
             deep: true,
             handler(v) {
-                this.tableOptsData = this.$help.lodash.cloneDeep(v)
+                this.tableOptsData = this.$help.lodash.cloneDeep(
+                    this.$typy(v, 'table_opts_data').safeObjectOrEmpty
+                )
             },
         },
     },
@@ -220,16 +217,20 @@ export default {
             this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
         },
         revertChanges() {
-            this.tableOptsData = this.$help.lodash.cloneDeep(this.initialTblOptsData)
+            this.tableOptsData = this.$help.lodash.cloneDeep(this.initialData.table_opts_data)
         },
         handleAddDelimiter({ sql, isLastKey }) {
             return `${sql}${isLastKey ? ';' : ', '}`
         },
         applyChanges() {
             const { escapeIdentifiers: escape, objectDiff } = this.$help
-            const { dbName, table_name: initialTblName } = this.initialTblOptsData
+            const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
-            const diff = objectDiff({ base: this.initialTblOptsData, object: this.newData })
+            //Diff of table_opts_data
+            const diff = objectDiff({
+                base: this.initialData.table_opts_data,
+                object: this.newData.table_opts_data,
+            })
             const keys = Object.keys(diff)
             keys.forEach((key, i) => {
                 switch (key) {

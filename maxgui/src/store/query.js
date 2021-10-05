@@ -1120,7 +1120,7 @@ export default {
                 logger.error(e)
             }
         },
-        async getTblCreationInfo({ state, dispatch, commit }, node) {
+        async queryTblCreationInfo({ state, dispatch, commit }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             await dispatch('queryingActionWrapper', {
@@ -1147,13 +1147,15 @@ export default {
                     commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
                         id: active_wke_id,
                         payload: {
-                            table_opts_data: { dbName: db, ...tblOptsData },
-                            cols_opts_data: colsOptsData,
+                            data: {
+                                table_opts_data: { dbName: db, ...tblOptsData },
+                                cols_opts_data: colsOptsData,
+                            },
                             loading_tbl_creation_info: false,
                         },
                     })
                 },
-                actionName: 'getTblCreationInfo',
+                actionName: 'queryTblCreationInfo',
                 catchAction: e => {
                     commit('UPDATE_TBL_CREATION_INFO_MAP', {
                         id: active_wke_id,
@@ -1390,7 +1392,7 @@ export default {
         // tbl_creation_info_map getters
         getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
         getLoadingTblCreationInfo: (state, getters) => {
-            const { loading_tbl_creation_info = false } = getters.getTblCreationInfo
+            const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
             return loading_tbl_creation_info
         },
         getAlteredActiveNode: (state, getters) => {
