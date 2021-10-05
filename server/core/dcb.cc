@@ -828,9 +828,10 @@ static int dcb_log_errors_SSL(DCB* dcb, int ret)
     }
     if (ret || ssl_errno)
     {
-        MXS_ERROR("SSL operation failed, %s in state "
+        MXS_ERROR("SSL operation failed, %s at '%s' in state "
                   "%s fd %d return code %d. More details may follow.",
                   dcb->type(),
+                  dcb->remote ? dcb->remote : "<no remote>",
                   STRDCBSTATE(dcb->state),
                   dcb->fd,
                   ret);
