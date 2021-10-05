@@ -37,7 +37,6 @@ function sidebarStates() {
  */
 function editorStates() {
     return {
-        curr_editor_mode: 'TXT_EDITOR',
         query_txt: '',
         curr_ddl_alter_spec: '',
     }
@@ -138,6 +137,7 @@ export default {
         // sidebar states
         db_tree_map: {},
         // editor states
+        curr_editor_mode_map: {},
         tbl_creation_info_map: {},
         altering_table_result_map: {},
         // results states
@@ -214,12 +214,13 @@ export default {
         },
 
         // editor mutations
-        SET_CURR_EDITOR_MODE(state, payload) {
-            patch_wke_property(state, {
-                obj: { curr_editor_mode: payload },
-                scope: this,
-                active_wke_id: state.active_wke_id,
-            })
+        SET_CURR_EDITOR_MODE_MAP(state, { id, mode }) {
+            if (!mode) this.vue.$delete(state.curr_editor_mode_map, id)
+            else
+                state.curr_editor_mode_map = {
+                    ...state.curr_editor_mode_map,
+                    ...{ [id]: mode },
+                }
         },
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, {
@@ -1245,6 +1246,7 @@ export default {
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
             commit('UPDATE_IS_QUERYING_MAP', payload)
+            commit('SET_CURR_EDITOR_MODE_MAP', payload)
             commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
             commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
         },
@@ -1389,6 +1391,8 @@ export default {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
         },
+        //editor mode getter
+        getCurrEditorMode: state => state.curr_editor_mode_map[state.active_wke_id] || 'TXT_EDITOR',
         // tbl_creation_info_map getters
         getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
         getLoadingTblCreationInfo: (state, getters) => {

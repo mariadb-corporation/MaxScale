@@ -199,7 +199,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
-            SET_CURR_EDITOR_MODE: 'query/SET_CURR_EDITOR_MODE',
+            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
             UPDATE_ALTERING_TABLE_RESULT_MAP: 'query/UPDATE_ALTERING_TABLE_RESULT_MAP',
         }),
@@ -214,7 +214,10 @@ export default {
                     altered_active_node: null,
                 },
             })
-            this.SET_CURR_EDITOR_MODE(this.SQL_EDITOR_MODES.TXT_EDITOR)
+            this.SET_CURR_EDITOR_MODE_MAP({
+                id: this.active_wke_id,
+                mode: this.SQL_EDITOR_MODES.TXT_EDITOR,
+            })
         },
         revertChanges() {
             this.tableOptsData = this.$help.lodash.cloneDeep(this.initialData.table_opts_data)

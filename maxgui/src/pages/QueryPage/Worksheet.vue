@@ -71,16 +71,16 @@ export default {
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
-            curr_editor_mode: state => state.query.curr_editor_mode,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
+            getCurrEditorMode: 'query/getCurrEditorMode',
         }),
         isTxtEditor() {
-            return this.curr_editor_mode === this.SQL_EDITOR_MODES.TXT_EDITOR
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
         },
         isDDLEditor() {
-            return this.curr_editor_mode === this.SQL_EDITOR_MODES.DDL_EDITOR
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
         minSidebarPct() {
             if (!this.ctrDim.width) return 0
@@ -99,7 +99,7 @@ export default {
                 if (oV.height) this.$nextTick(() => this.handleRecalPanesDim())
             },
         },
-        curr_editor_mode() {
+        getCurrEditorMode() {
             this.$nextTick(() => this.handleRecalPanesDim())
         },
     },
@@ -139,7 +139,7 @@ export default {
             }
         },
         handleRecalPanesDim() {
-            switch (this.curr_editor_mode) {
+            switch (this.getCurrEditorMode) {
                 case this.SQL_EDITOR_MODES.TXT_EDITOR:
                     this.setTxtEditorPaneDim()
                     break
