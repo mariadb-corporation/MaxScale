@@ -52,16 +52,15 @@ public:
     void add_stmt(mxs::RWBackend* target, GWBUF* buf)
     {
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
+        mxb_assert(target);
 
-        if (mxb_log_should_log(LOG_INFO))
-        {
-            MXS_INFO("Adding to trx: %s", mxs::extract_sql(buf, 512).c_str());
-        }
+        MXS_INFO("Adding to trx: %s", mxs::extract_sql(buf, 512).c_str());
 
         m_size += gwbuf_length(buf);
         m_log.emplace_back(buf);
 
-        mxb_assert(target == m_target);
+        mxb_assert_message(target == m_target, "Target should be '%s', not '%s'",
+                           m_target ? m_target->name() : "<no target>", target->name());
     }
 
     /**
