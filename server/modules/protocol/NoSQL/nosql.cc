@@ -1194,7 +1194,7 @@ enum class ValueFor
 using ElementValueToString = string (*)(const bsoncxx::document::element& element,
                                         ValueFor,
                                         const string& op);
-using FieldAndElementValueToComparison = string (*) (const Incarnation& p,
+using FieldAndElementValueToComparison = string (*) (const Path::Incarnation& p,
                                                      const bsoncxx::document::element& element,
                                                      const string& mariadb_op,
                                                      const string& nosql_op,
@@ -1412,7 +1412,7 @@ string element_to_array(const bsoncxx::document::element& element,
 }
 
 string elemMatch_to_json_contain(const string& subfield,
-                                 const Incarnation& p,
+                                 const Path::Incarnation& p,
                                  const bsoncxx::document::element& elemMatch)
 {
     auto key = elemMatch.key();
@@ -1438,7 +1438,7 @@ string elemMatch_to_json_contain(const string& subfield,
 }
 
 string elemMatch_to_json_contain(const string& subfield,
-                                 const Incarnation& p,
+                                 const Path::Incarnation& p,
                                  const bsoncxx::document::view& elemMatch)
 {
     string rv;
@@ -1458,7 +1458,7 @@ string elemMatch_to_json_contain(const string& subfield,
     return rv;
 }
 
-string elemMatch_to_json_contain(const Incarnation& p, const bsoncxx::document::element& elemMatch)
+string elemMatch_to_json_contain(const Path::Incarnation& p, const bsoncxx::document::element& elemMatch)
 {
     string rv;
 
@@ -1509,7 +1509,7 @@ string elemMatch_to_json_contain(const Incarnation& p, const bsoncxx::document::
     return rv;
 }
 
-string elemMatch_to_json_contains(const Incarnation& p, const bsoncxx::document::view& doc)
+string elemMatch_to_json_contains(const Path::Incarnation& p, const bsoncxx::document::view& doc)
 {
     string condition;
 
@@ -1531,7 +1531,7 @@ string elemMatch_to_json_contains(const Incarnation& p, const bsoncxx::document:
     return condition;
 }
 
-string elemMatch_to_condition(const Incarnation& p, const bsoncxx::document::element& element)
+string elemMatch_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
 {
     string condition;
 
@@ -1554,9 +1554,10 @@ string elemMatch_to_condition(const Incarnation& p, const bsoncxx::document::ele
     return condition;
 }
 
-string exists_to_condition(const Incarnation& p, const bsoncxx::document::element& element)
+string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
 {
-    auto expects_array = p.is_array();
+    auto expects_array = p.is_array_element();
+    //auto expects_array = p.path().find("[*]") != string::npos;
 
     string rv("(");
 
@@ -1589,7 +1590,7 @@ string exists_to_condition(const Incarnation& p, const bsoncxx::document::elemen
         }
         else
         {
-            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array() + "')) = 'ARRAY' AND ";
+            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.parent() + "')) = 'ARRAY' AND ";
         }
 
         rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL";
@@ -1629,13 +1630,13 @@ bool is_scalar_value(const bsoncxx::document::element& element)
 
 }
 
-string default_field_and_value_to_comparison(const Incarnation& p,
+string default_field_and_value_to_comparison(const Path::Incarnation& p,
                                              const bsoncxx::document::element& element,
                                              const string& mariadb_op,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    auto expects_array = p.is_array();
+    auto expects_array = p.is_array_element();
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
@@ -1667,7 +1668,7 @@ string default_field_and_value_to_comparison(const Incarnation& p,
     return ss.str();
 }
 
-string field_and_value_to_nin_comparison(const Incarnation& p,
+string field_and_value_to_nin_comparison(const Path::Incarnation& p,
                                          const bsoncxx::document::element& element,
                                          const string& mariadb_op,
                                          const string& nosql_op,
@@ -1688,7 +1689,7 @@ string field_and_value_to_nin_comparison(const Incarnation& p,
     return rv;
 }
 
-string field_and_value_to_eq_comparison(const Incarnation& p,
+string field_and_value_to_eq_comparison(const Path::Incarnation& p,
                                         const bsoncxx::document::element& element,
                                         const string& mariadb_op,
                                         const string& nosql_op,
@@ -1905,7 +1906,7 @@ void add_element_array(ostream& ss,
     }
 }
 
-string array_op_to_condition(const Incarnation& p,
+string array_op_to_condition(const Path::Incarnation& p,
                              const bsoncxx::document::element& element,
                              ArrayOp array_op)
 {
@@ -2092,7 +2093,7 @@ string protocol_type_to_mariadb_type(int32_t number)
     return nullptr;
 }
 
-string type_to_condition_from_value(const Incarnation& p, int32_t number)
+string type_to_condition_from_value(const Path::Incarnation& p, int32_t number)
 {
     ostringstream ss;
 
@@ -2103,7 +2104,7 @@ string type_to_condition_from_value(const Incarnation& p, int32_t number)
     return ss.str();
 }
 
-string type_to_condition_from_value(const Incarnation& p, const bsoncxx::stdx::string_view& alias)
+string type_to_condition_from_value(const Path::Incarnation& p, const bsoncxx::stdx::string_view& alias)
 {
     string rv;
 
@@ -2125,7 +2126,7 @@ string type_to_condition_from_value(const Incarnation& p, const bsoncxx::stdx::s
 }
 
 template<class document_or_array_element>
-string type_to_condition_from_value(const Incarnation& p, const document_or_array_element& element)
+string type_to_condition_from_value(const Path::Incarnation& p, const document_or_array_element& element)
 {
     string rv;
 
@@ -2166,7 +2167,7 @@ string type_to_condition_from_value(const Incarnation& p, const document_or_arra
     return rv;
 }
 
-string type_to_condition(const Incarnation& p, const bsoncxx::document::element& element)
+string type_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
 {
     string rv;
 
@@ -3183,7 +3184,7 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
     return state;
 }
 
-std::string Incarnation::to_string() const
+std::string Path::Incarnation::to_string() const
 {
     string rv { "kind: " };
     switch (m_kind)
@@ -3192,18 +3193,22 @@ std::string Incarnation::to_string() const
         rv += "element";
         break;
 
-    case ARRAY:
-        rv += "array";
+    case ARRAY_ELEMENT:
+        rv += "array_element";
+        break;
+
+    case INDEXED_ELEMENT:
+        rv += "indexed_element";
         break;
     }
 
     rv += "path: " + m_path + ", ";
-    rv += "array: " + m_array;
+    rv += "parent: " + m_parent;
 
     return rv;
 }
 
-string Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
 {
     string field = path();
     string condition;
@@ -3221,16 +3226,16 @@ string Incarnation::get_comparison_condition(const bsoncxx::document::element& e
 
     case bsoncxx::type::k_null:
         {
-            if (is_array())
+            if (is_array_element())
             {
-                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + m_array + "')) = 'ARRAY' AND ";
+                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + m_parent + "')) = 'ARRAY' AND ";
             }
 
             condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
                 "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
                 "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
 
-            if (is_array())
+            if (is_array_element())
             {
                 condition += ")";
             }
@@ -3261,14 +3266,10 @@ string Incarnation::get_comparison_condition(const bsoncxx::document::element& e
     return condition;
 }
 
-string Incarnation::get_comparison_condition(const bsoncxx::document::view& doc) const
+string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view& doc) const
 {
     string rv;
 
-    // We will ignore all but the last field. That's what MongoDB does
-    // but as it is unlikely that there will be more fields than one,
-    // explicitly ignoring fields at the beginning would just make
-    // things messier without adding much benefit.
     auto it = doc.begin();
     auto end = doc.end();
     for (; it != end; ++it)
@@ -3383,7 +3384,7 @@ string Incarnation::get_comparison_condition(const bsoncxx::document::view& doc)
 }
 
 //static
-vector<Incarnation> nosql::Incarnation::get_paths(const string& key)
+vector<Path::Incarnation> nosql::Path::get_incarnations(const string& key)
 {
     vector<Incarnation> rv;
 
@@ -3418,7 +3419,7 @@ vector<Incarnation> nosql::Incarnation::get_paths(const string& key)
 }
 
 //static
-void nosql::Incarnation::add_part(vector<Incarnation>& rv, const string& part)
+void nosql::Path::add_part(vector<Path::Incarnation>& rv, const string& part)
 {
     bool is_number = false;
 
@@ -3437,21 +3438,20 @@ void nosql::Incarnation::add_part(vector<Incarnation>& rv, const string& part)
 
     for (const auto& p : rv)
     {
-        if (p.kind() == Incarnation::ELEMENT)
+        if (p.is_indexed_element() || p.is_element())
         {
-            tmp.push_back(Incarnation(p.path() + "." + part));
+            tmp.push_back(Incarnation(Incarnation::ELEMENT, part, p.path()));
         }
         else
         {
-            tmp.push_back(Incarnation(Incarnation::ELEMENT, p.path() + "." + part, p.array()));
+            tmp.push_back(Incarnation(Incarnation::ARRAY_ELEMENT, part, p.path()));
         }
+        tmp.push_back(Incarnation(Incarnation::ARRAY_ELEMENT, part, p.path()));
 
         if (is_number)
         {
-            tmp.push_back(Incarnation(Incarnation::ARRAY, p.path() + "[" + part + "]", p.path()));
+            tmp.push_back(Incarnation(part, p.path()));
         }
-
-        tmp.push_back(Incarnation(Incarnation::ARRAY, p.path() + "[*]." + part, p.path()));
     }
 
     rv.swap(tmp);
@@ -3459,12 +3459,28 @@ void nosql::Incarnation::add_part(vector<Incarnation>& rv, const string& part)
 
 Path::Path(const bsoncxx::document::element& element)
     : m_element(element)
-    , m_paths(Incarnation::get_paths(static_cast<string>(element.key())))
+    , m_paths(get_incarnations(static_cast<string>(element.key())))
 {
 }
 
 // https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string Path::get_comparison_condition() const
+{
+    string condition;
+
+    if (m_element.type() == bsoncxx::type::k_document)
+    {
+        condition = get_document_condition(m_element.get_document());
+    }
+    else
+    {
+        condition = get_element_condition(m_element);
+    }
+
+    return condition;
+}
+
+string Path::get_element_condition(const bsoncxx::document::element& element) const
 {
     string condition;
 
@@ -3494,6 +3510,71 @@ string Path::get_comparison_condition() const
     }
 
     return condition;
+}
+
+string Path::get_document_condition(const bsoncxx::document::view& doc) const
+{
+    string condition;
+
+    auto it = doc.begin();
+    auto end = doc.end();
+    for (; it != end; ++it)
+    {
+        auto element = *it;
+
+        if (!condition.empty())
+        {
+            condition += " AND ";
+        }
+
+        const auto nosql_op = static_cast<string>(element.key());
+
+        if (nosql_op == "$not")
+        {
+            if (element.type() != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "$not needs a document (regex not yet supported)";
+
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            condition += "(NOT ";
+
+            if (m_paths.size() > 1)
+            {
+                condition += "(";
+            }
+
+            bool first = true;
+            for (const auto& p : m_paths)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    condition += " OR ";
+                }
+
+                condition += "(" + p.get_comparison_condition(element.get_document()) + ")";
+            }
+
+            if (m_paths.size() > 1)
+            {
+                condition += ")";
+            }
+
+            condition += ")";
+        }
+        else
+        {
+            condition += get_element_condition(element);
+        }
+    }
+
+    return "(" + condition + ")";
 }
 
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
