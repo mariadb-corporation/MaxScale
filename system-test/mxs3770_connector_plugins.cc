@@ -17,6 +17,12 @@ int main(int argc, char** argv)
         test.repl->sync_slaves();
 
         test.maxscale->start();
+
+        // There's a race condition in the connector (CONC-568) that can cause the first connection attempt
+        // with a non-default auth plugin to fail. To work around this, we can wait for the monitor which
+        // causes a reconnection to occur.
+        test.maxscale->wait_for_monitor();
+
         auto rws = test.maxscale->rwsplit();
         test.expect(rws.connect(), "Failed to connect to readwritesplit: %s", rws.error());
         test.expect(rws.query("SELECT 1"), "Query failed: %s", rws.error());
