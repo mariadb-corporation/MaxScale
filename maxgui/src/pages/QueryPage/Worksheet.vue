@@ -19,7 +19,7 @@
             />
         </template>
         <template slot="pane-right">
-            <ddl-editor v-if="isDDLEditor" />
+            <ddl-editor v-if="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
             <txt-editor-container
                 v-show="isTxtEditor"
                 ref="txtEditorPane"
@@ -60,9 +60,9 @@ export default {
     data() {
         return {
             // split-pane states
-            minSidebarPct: 0,
-            sidebarPct: 0,
             txtEditorPaneDim: { width: 0, height: 0 },
+            ddlDim: { height: 0, width: 0 },
+            sidebarPct: 0,
         }
     },
     computed: {
@@ -82,55 +82,70 @@ export default {
         isDDLEditor() {
             return this.curr_editor_mode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
+        minSidebarPct() {
+            if (!this.ctrDim.width) return 0
+            if (this.is_sidebar_collapsed)
+                return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
+            else return this.$help.pxToPct({ px: 200, containerPx: this.ctrDim.width })
+        },
     },
     watch: {
-        sidebarPct() {
-            this.$nextTick(() => {
-                this.setTxtEditorPaneDim()
-            })
-        },
-        is_sidebar_collapsed() {
-            this.handleSetSidebarPct()
+        sidebarPct(v) {
+            if (v) this.$nextTick(() => this.handleRecalPanesDim())
         },
         ctrDim: {
             deep: true,
             handler(v, oV) {
-                if (oV) {
-                    this.$nextTick(() => {
-                        this.setTxtEditorPaneDim()
-                    })
-                }
+                if (oV.height) this.$nextTick(() => this.handleRecalPanesDim())
             },
         },
-        isTxtEditor(v) {
-            if (v)
-                this.$nextTick(() => {
-                    this.setTxtEditorPaneDim()
-                })
+        curr_editor_mode() {
+            this.$nextTick(() => this.handleRecalPanesDim())
         },
     },
-    activated() {
+    created() {
         this.$help.doubleRAF(() => {
             this.handleSetSidebarPct()
-            this.setTxtEditorPaneDim()
         })
     },
+    activated() {
+        this.addIsSidebarCollapsedsWatcher()
+    },
+    deactivated() {
+        this.rmIsSidebarCollapsedsWatcher()
+    },
     methods: {
+        //Watchers to work with multiple worksheets which are kept alive
+        addIsSidebarCollapsedsWatcher() {
+            this.rmIsSidebarCollapsedsWatcher = this.$watch('is_sidebar_collapsed', () =>
+                this.handleSetSidebarPct()
+            )
+        },
         // panes dimension/percentages calculation functions
         handleSetSidebarPct() {
-            const containerWidth = this.ctrDim.width
-            if (this.is_sidebar_collapsed) {
-                this.minSidebarPct = this.$help.pxToPct({ px: 40, containerPx: containerWidth })
-                this.sidebarPct = this.minSidebarPct
-            } else {
-                this.minSidebarPct = this.$help.pxToPct({ px: 200, containerPx: containerWidth })
-                this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: containerWidth })
-            }
+            if (this.is_sidebar_collapsed) this.sidebarPct = this.minSidebarPct
+            else this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
         setTxtEditorPaneDim() {
             if (this.$refs.txtEditorPane.$el) {
-                const { clientHeight: height, clientWidth: width } = this.$refs.txtEditorPane.$el
-                this.txtEditorPaneDim = { width, height }
+                const { width, height } = this.$refs.txtEditorPane.$el.getBoundingClientRect()
+                if (width !== 0 || height !== 0) this.txtEditorPaneDim = { width, height }
+            }
+        },
+        setDdlDim() {
+            if (this.$refs.ddlEditor) {
+                const { width, height } = this.$refs.ddlEditor.$el.getBoundingClientRect()
+                if (width !== 0 || height !== 0) this.ddlDim = { width, height }
+            }
+        },
+        handleRecalPanesDim() {
+            switch (this.curr_editor_mode) {
+                case this.SQL_EDITOR_MODES.TXT_EDITOR:
+                    this.setTxtEditorPaneDim()
+                    break
+                case this.SQL_EDITOR_MODES.DDL_EDITOR:
+                    this.setDdlDim()
+                    break
             }
         },
     },
