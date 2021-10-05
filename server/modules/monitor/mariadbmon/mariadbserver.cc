@@ -2235,8 +2235,9 @@ void MariaDBServer::update_server(bool time_to_update_disk_space)
         }
 
         /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
-         * iteration. */
-        if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT))
+         * iteration. If we failed to log in due to authentication failure, log that as well. */
+        if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT)
+            || (conn_status == ConnectResult::ACCESS_DENIED && !server->had_status(SERVER_AUTH_ERROR)))
         {
             mon_srv->log_connect_error(conn_status);
         }

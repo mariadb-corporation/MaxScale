@@ -2153,6 +2153,11 @@ mxb::Json MonitorServer::journal_data() const
 void MonitorServer::read_journal_data(const mxb::Json& data)
 {
     uint64_t status = data.get_int(journal_fields::FIELD_STATUS);
+
+    // Ignoring the AUTH_ERROR status causes the authentication error message to be logged every time MaxScale
+    // is restarted. This should make it easier to spot authentication related problems during startup.
+    status &= ~SERVER_AUTH_ERROR;
+
     mon_prev_status = status;
     server->set_status(status);
 }
