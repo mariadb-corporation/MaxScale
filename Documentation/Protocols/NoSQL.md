@@ -768,6 +768,14 @@ getLog | string | `*`, `global` and `startupWarnings`
 
 The command returns a document of the correct format, but _no_ actual log data will be returned.
 
+### hostInfo
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+hostInfo | any | Ignored.
+
 ### listCommands
 
 The following fields are relevant.
