@@ -3372,216 +3372,155 @@ string Path::get_comparison_condition() const
     return condition;
 }
 
-namespace
+string Path::Part::name() const
 {
+    string rv;
 
-class Part
-{
-public:
-    enum Kind
+    switch (m_kind)
     {
-        ELEMENT,
-        ARRAY,
-        INDEXED_ELEMENT
-    };
-
-    Part(Kind kind, const string& name, Part* pParent = 0)
-        : m_kind(kind)
-        , m_name(name)
-        , m_pParent(pParent)
-    {
+    case Part::ELEMENT:
         if (m_pParent)
         {
-            m_pParent->add_child(this);
+            rv = m_pParent->path() + ".";
         }
-    }
+        rv += m_name;
+        break;
 
-    Kind kind() const
-    {
-        return m_kind;
-    }
-
-    bool is_element() const
-    {
-        return m_kind == ELEMENT;
-    }
-
-    bool is_array() const
-    {
-        return m_kind == ARRAY;
-    }
-
-    bool is_indexed_element() const
-    {
-        return m_kind == INDEXED_ELEMENT;
-    }
-
-    Part* parent() const
-    {
-        return m_pParent;
-    }
-
-    string name() const
-    {
-        string rv;
-
-        switch (m_kind)
+    case Part::ARRAY:
+        if (m_pParent)
         {
-        case Part::ELEMENT:
-            if (m_pParent)
-            {
-                rv = m_pParent->path() + ".";
-            }
-            rv += m_name;
-            break;
-
-        case Part::ARRAY:
-            if (m_pParent)
-            {
-                rv = m_pParent->path() + ".";
-            }
-            rv += m_name;
-            break;
-
-        case INDEXED_ELEMENT:
-            if (m_pParent)
-            {
-                rv = m_pParent->path();
-            }
-            rv += "[" + m_name + "]";
-            break;
+            rv = m_pParent->path() + ".";
         }
+        rv += m_name;
+        break;
 
-        return rv;
-    }
-
-    string path() const
-    {
-        string rv;
-
-        switch (m_kind)
+    case INDEXED_ELEMENT:
+        if (m_pParent)
         {
-        case Part::ELEMENT:
-            if (m_pParent)
-            {
-                rv = m_pParent->path() + ".";
-            }
-            rv += m_name;
-            break;
-
-        case Part::ARRAY:
-            if (m_pParent)
-            {
-                rv = m_pParent->path() + ".";
-            }
-            rv += m_name + "[*]";
-            break;
-
-        case INDEXED_ELEMENT:
-            if (m_pParent)
-            {
-                rv = m_pParent->path();
-            }
-            rv += "[" + m_name + "]";
-            break;
+            rv = m_pParent->path();
         }
-
-        return rv;
+        rv += "[" + m_name + "]";
+        break;
     }
 
-    static vector<Part*> get_leafs(const string& path, vector<std::unique_ptr<Part>>& parts)
+    return rv;
+}
+
+string Path::Part::path() const
+{
+    string rv;
+
+    switch (m_kind)
     {
-        string::size_type i = 0;
-        string::size_type j = path.find_first_of('.', i);
-
-        vector<Part*> leafs;
-
-        while (j != string::npos)
+    case Part::ELEMENT:
+        if (m_pParent)
         {
-            string part = path.substr(i, j - i);
-
-            i = j + 1;
-            j = path.find_first_of('.', i);
-
-            add_part(part, false, leafs, parts);
+            rv = m_pParent->path() + ".";
         }
+        rv += m_name;
+        break;
 
-        add_part(path.substr(i, j), true, leafs, parts);
+    case Part::ARRAY:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name + "[*]";
+        break;
 
-        return leafs;
+    case INDEXED_ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path();
+        }
+        rv += "[" + m_name + "]";
+        break;
     }
 
-private:
-    void add_child(Part* pChild)
+    return rv;
+}
+
+//static
+vector<Path::Part*> Path::Part::get_leafs(const string& path, vector<std::unique_ptr<Part>>& parts)
+{
+    string::size_type i = 0;
+    string::size_type j = path.find_first_of('.', i);
+
+    vector<Part*> leafs;
+
+    while (j != string::npos)
     {
-        m_children.push_back(pChild);
+        string part = path.substr(i, j - i);
+
+        i = j + 1;
+        j = path.find_first_of('.', i);
+
+        add_part(part, false, leafs, parts);
     }
 
-    static void add_leaf(const string& part,
-                         bool last,
-                         bool is_number,
-                         Part* pParent,
-                         vector<Part*>& leafs,
-                         vector<std::unique_ptr<Part>>& parts)
+    add_part(path.substr(i, j), true, leafs, parts);
+
+    return leafs;
+}
+
+//static
+void Path::Part::add_leaf(const string& part,
+                          bool last,
+                          bool is_number,
+                          Part* pParent,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    parts.push_back(std::make_unique<Part>(Part::ELEMENT, part, pParent));
+    leafs.push_back(parts.back().get());
+
+    if (!last)
     {
-        parts.push_back(std::make_unique<Part>(Part::ELEMENT, part, pParent));
+        parts.push_back(std::make_unique<Part>(Part::ARRAY, part, pParent));
         leafs.push_back(parts.back().get());
-
-        if (!last)
-        {
-            parts.push_back(std::make_unique<Part>(Part::ARRAY, part, pParent));
-            leafs.push_back(parts.back().get());
-        }
-
-        if (is_number && pParent && pParent->is_element())
-        {
-            parts.push_back(std::make_unique<Part>(Part::INDEXED_ELEMENT, part, pParent));
-            leafs.push_back(parts.back().get());
-        }
     }
 
-    static void add_part(const string& part,
-                         bool last,
-                         vector<Part*>& leafs,
-                         vector<std::unique_ptr<Part>>& parts)
+    if (is_number && pParent && pParent->is_element())
     {
-        bool is_number = false;
+        parts.push_back(std::make_unique<Part>(Part::INDEXED_ELEMENT, part, pParent));
+        leafs.push_back(parts.back().get());
+    }
+}
 
-        char* zEnd;
-        auto l = strtol(part.c_str(), &zEnd, 10);
+//static
+void Path::Part::add_part(const string& part,
+                          bool last,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    bool is_number = false;
 
-        // Is the part a number?
-        if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
-        {
-            // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
-            // or the n'th element (e.g. { a: [ ... ] }).
-            is_number = true;
-        }
+    char* zEnd;
+    auto l = strtol(part.c_str(), &zEnd, 10);
 
-        vector<Part*> tmp;
-
-        if (leafs.empty())
-        {
-            add_leaf(part, last, is_number, nullptr, tmp, parts);
-        }
-        else
-        {
-            for (auto& pLeaf : leafs)
-            {
-                add_leaf(part, last, is_number, pLeaf, tmp, parts);
-            }
-        }
-
-        tmp.swap(leafs);
+    // Is the part a number?
+    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+    {
+        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
+        // or the n'th element (e.g. { a: [ ... ] }).
+        is_number = true;
     }
 
+    vector<Part*> tmp;
 
-    Kind          m_kind;
-    string        m_name;
-    Part*         m_pParent { nullptr };
-    vector<Part*> m_children;
-};
+    if (leafs.empty())
+    {
+        add_leaf(part, last, is_number, nullptr, tmp, parts);
+    }
+    else
+    {
+        for (auto& pLeaf : leafs)
+        {
+            add_leaf(part, last, is_number, pLeaf, tmp, parts);
+        }
+    }
 
+    tmp.swap(leafs);
 }
 
 //static

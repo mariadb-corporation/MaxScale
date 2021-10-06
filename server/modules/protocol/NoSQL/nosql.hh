@@ -1431,6 +1431,82 @@ public:
         std::string m_array_path;
     };
 
+    class Part
+    {
+    public:
+        enum Kind
+        {
+            ELEMENT,
+            ARRAY,
+            INDEXED_ELEMENT
+        };
+
+        Part(Kind kind, const std::string& name, Part* pParent = 0)
+            : m_kind(kind)
+            , m_name(name)
+            , m_pParent(pParent)
+        {
+            if (m_pParent)
+            {
+                m_pParent->add_child(this);
+            }
+        }
+
+        Kind kind() const
+        {
+            return m_kind;
+        }
+
+        bool is_element() const
+        {
+            return m_kind == ELEMENT;
+        }
+
+        bool is_array() const
+        {
+            return m_kind == ARRAY;
+        }
+
+        bool is_indexed_element() const
+        {
+            return m_kind == INDEXED_ELEMENT;
+        }
+
+        Part* parent() const
+        {
+            return m_pParent;
+        }
+
+        std::string name() const;
+
+        std::string path() const;
+
+        static std::vector<Part*> get_leafs(const std::string& path,
+                                            std::vector<std::unique_ptr<Part>>& parts);
+
+    private:
+        void add_child(Part* pChild)
+        {
+            m_children.push_back(pChild);
+        }
+
+        static void add_leaf(const std::string& part,
+                             bool last,
+                             bool is_number,
+                             Part* pParent,
+                             std::vector<Part*>& leafs,
+                             std::vector<std::unique_ptr<Part>>& parts);
+
+        static void add_part(const std::string& part,
+                             bool last,
+                             std::vector<Part*>& leafs,
+                             std::vector<std::unique_ptr<Part>>& parts);
+
+        Kind               m_kind;
+        std::string        m_name;
+        Part*              m_pParent { nullptr };
+        std::vector<Part*> m_children;
+    };
 
     Path(const bsoncxx::document::element& element);
 
