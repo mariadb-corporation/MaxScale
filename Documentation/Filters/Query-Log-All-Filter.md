@@ -104,6 +104,10 @@ options are enabled.
 | total_reply_time  | Duration from client query to last server reply (v6.2) |
 | query             | Query                                                  |
 | default_db        | The default (current) database                         |
+| num_rows          | Number of rows in the result set                       |
+| reply_size        | Number of bytes received from the server               |
+| num_warnings      | Number of warnings in the server reply                 |
+| error_msg         | Error message from the server (if any)                 |
 
 ```
 log_data=date, user, query, total_reply_time
@@ -115,6 +119,16 @@ but can be specified to be in microseconds using *duration_unit*.
 The log entry is written when the last reply from the server is received.
 Prior to version 6.2 the entry was written when the query was received from
 the client, or if *reply_time* was specified, on first reply from the server.
+
+**NOTE** The *error_msg* is the raw message from the server. Even if *use_canonical_form*
+is set the error message may contain user defined constants. For example:
+
+```
+MariaDB [test]> select secret from T where x password="clear text pwd";
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual
+that corresponds to your MariaDB server version for the right syntax to
+use near 'password="clear text pwd"' at line 1
+```
 
 ### `duration_unit`
 
@@ -150,7 +164,7 @@ flush=true
 
 Append new entries to log files instead of overwriting them. The default is
 true.
-NOTE: the default was changed from false to true, as of the following
+**NOTE**: the default was changed from false to true, as of the following
 versions: 2.4.18, 2.5.16 and 6.2.
 
 ```

@@ -60,6 +60,10 @@ public:
     static const int64_t LOG_DATA_REPLY_TIME = (1 << 5);
     static const int64_t LOG_DATA_TOTAL_REPLY_TIME = (1 << 6);
     static const int64_t LOG_DATA_DEFAULT_DB = (1 << 7);
+    static const int64_t LOG_DATA_NUM_ROWS = (1 << 8);
+    static const int64_t LOG_DATA_REPLY_SIZE = (1 << 9);
+    static const int64_t LOG_DATA_NUM_WARNINGS = (1 << 10);
+    static const int64_t LOG_DATA_ERR_MSG = (1 << 11);
 
     enum DurationMultiplier
     {
@@ -181,8 +185,7 @@ public:
         int              m_rotation_count {0};          /* Log rotation counter */
         bool             m_write_error_logged {false};  /* Avoid repeatedly printing some errors/warnings. */
 
-        QlaLog            m_qlalog;
-        std::future<void> m_log_future;
+        QlaLog m_qlalog;
     };
 
     std::shared_ptr<LogManager> log() const
@@ -258,15 +261,18 @@ struct LogEventElems
     const std::string& sql;
     mxb::TimePoint     first_response_time;
     mxb::TimePoint     last_response_time;
+    const mxs::Reply&  reply;
 
     LogEventElems(mxb::TimePoint begin_time,
                   const std::string& sql,
                   mxb::TimePoint first_response_time,
-                  mxb::TimePoint last_response_time)
+                  mxb::TimePoint last_response_time,
+                  const mxs::Reply& reply)
         : begin_time(begin_time)
         , sql(sql)
         , first_response_time(first_response_time)
         , last_response_time(last_response_time)
+        , reply(reply)
     {
     }
 };
