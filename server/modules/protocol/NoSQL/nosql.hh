@@ -1372,73 +1372,65 @@ public:
     class Incarnation
     {
     public:
-        enum Kind
-        {
-            ELEMENT,
-            ARRAY_ELEMENT,
-            INDEXED_ELEMENT
-        };
-
-        explicit Incarnation(const std::string& part)
-            : m_kind(ELEMENT)
-            , m_path(part)
+        Incarnation(std::string&& path,
+                    std::string&& parent_path,
+                    std::string&& array_path)
+            : m_path(std::move(path))
+            , m_parent_path(std::move(parent_path))
+            , m_array_path(std::move(array_path))
         {
         }
 
-        explicit Incarnation(Kind kind, const std::string& part, const std::string& parent)
-            : m_kind(kind)
-            , m_path(kind == ELEMENT ? parent + "." + part : parent + "[*]." + part)
-            , m_parent(parent)
-        {
-        }
-
-        explicit Incarnation(const std::string& index, const std::string& parent)
-            : m_kind(Incarnation::INDEXED_ELEMENT)
-            , m_path(parent + "[" + index + "]")
-            , m_parent(parent)
-        {
-        }
-
-        std::string to_string() const;
-
-        Kind kind() const
-        {
-            return m_kind;
-        }
-
-        bool is_element() const
-        {
-            return m_kind == ELEMENT;
-        }
-
-        bool is_array_element() const
-        {
-            return m_kind == ARRAY_ELEMENT || m_kind == INDEXED_ELEMENT;
-        }
-
-        bool is_indexed_element() const
-        {
-            return m_kind == INDEXED_ELEMENT;
-        }
-
+        /**
+         * @return A complete JSON path.
+         */
         const std::string& path() const
         {
             return m_path;
         }
 
-        const std::string& parent() const
+        /**
+         * @return The JSON path of the parent element or an empty string if there is no parent.
+         *
+         * @note The path does *not* contain any suffixes like "[*]" and is intended to be used
+         *       e.g. for ensuring that the parent is an OBJECT.
+         */
+        const std::string& parent_path() const
         {
-            return m_parent;
+            return m_parent_path;
+        }
+
+        /**
+         * @return The JSON path of the nearest ancestor element that is expected to be an array,
+         *         or an empty string if no such ancestor exists.
+         *
+         * @note The path does *not* contain any suffixes like "[*]" and is intended to be used
+         *       e.g. for ensuring that the ancestor is an ARRAY.
+         */
+        const std::string& array_path() const
+        {
+            return m_array_path;
+        }
+
+        bool has_parent() const
+        {
+            return !m_parent_path.empty();
+        }
+
+        bool has_array_demand() const
+        {
+            return !m_array_path.empty();
         }
 
         std::string get_comparison_condition(const bsoncxx::document::element& element) const;
         std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
 
     private:
-        Kind        m_kind;
         std::string m_path;
-        std::string m_parent;
+        std::string m_parent_path;
+        std::string m_array_path;
     };
+
 
     Path(const bsoncxx::document::element& element);
 
