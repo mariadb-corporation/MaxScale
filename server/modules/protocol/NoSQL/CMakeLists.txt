@@ -26,3 +26,7 @@ target_link_libraries(nosqlprotocol
   )
 set_target_properties(nosqlprotocol PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(nosqlprotocol core)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
