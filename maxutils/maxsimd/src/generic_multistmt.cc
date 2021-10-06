@@ -31,46 +31,6 @@ bool have_semicolon(const char* ptr, int len)
     return false;
 }
 
-inline const char* consume_comment(const char* read_ptr, const char* read_end)
-{
-    bool end_of_line_comment = *read_ptr == '#'
-        || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
-            && read_ptr + 2 != read_end && *(read_ptr + 2) == ' ');
-    bool regular_comment = *read_ptr == '/' && read_ptr + 1 != read_end && *(read_ptr + 1) == '*';
-
-    if (end_of_line_comment)
-    {
-        while (++read_ptr != read_end)
-        {
-            if (*read_ptr == '\n')
-            {
-                break;
-            }
-            else if (*read_ptr == '\r' && ++read_ptr != read_end && *read_ptr == '\n')
-            {
-                ++read_ptr;
-                break;
-            }
-        }
-    }
-    else if (regular_comment)
-    {
-        ++read_ptr;
-        while (++read_ptr < read_end)
-        {
-            if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
-            {
-                // end of comment
-                ++read_ptr;
-                break;
-            }
-        }
-    }
-
-    return read_ptr;
-}
-
-
 /**
  * @brief Check if the token is the END part of a BEGIN ... END block.
  * @param ptr String with at least three non-whitespace characters in it
@@ -134,7 +94,7 @@ bool is_multi_stmt_impl(const std::string& sql)
             }
 
             auto ptr_before = ptr;
-            ptr = consume_comment(ptr, data + buflen);
+            ptr = maxbase::consume_comment(ptr, data + buflen);
             if (ptr != ptr_before)
             {
                 continue;

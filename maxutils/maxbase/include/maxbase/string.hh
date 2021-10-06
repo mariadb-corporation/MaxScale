@@ -435,5 +435,46 @@ char* strnchr_esc(char* ptr, char c, int len);
  * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
  * If the character is not found, NULL is returned.
  */
-char* strnchr_esc_mariadb(const char *ptr, char c, int len);
+char* strnchr_esc_mariadb(const char* ptr, char c, int len);
+
+/**
+ * @brief consume_comment - Starting at read_ptr skip sql comment, if it is a comment,
+ *                          and return ptr to one past end of comment.
+ * @param read_ptr        - Comment start.
+ * @param read_end        - End of buffer
+ * @return                - One past end of comment, or read_ptr if it was not a comment,
+ *                          or read_end.
+ */
+inline const char* consume_comment(const char* read_ptr, const char* read_end)
+{
+    bool end_of_line_comment = *read_ptr == '#'
+        || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
+            && read_ptr + 2 != read_end && *(read_ptr + 2) == ' ');
+    bool regular_comment = *read_ptr == '/' && read_ptr + 1 != read_end && *(read_ptr + 1) == '*';
+
+    if (end_of_line_comment)
+    {
+        while (++read_ptr != read_end)
+        {
+            if (*read_ptr == '\n')
+            {
+                break;
+            }
+        }
+    }
+    else if (regular_comment)
+    {
+        ++read_ptr;
+        while (++read_ptr < read_end)
+        {
+            if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
+            {
+                ++read_ptr;
+                break;
+            }
+        }
+    }
+
+    return read_ptr;
+}
 }

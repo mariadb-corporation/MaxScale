@@ -16,6 +16,7 @@
 #include "../multistmt_impl.hh"
 #include "simd256.hh"
 #include <maxbase/assert.h>
+#include <maxbase/string.hh>
 #include <functional>
 #include <algorithm>
 #include <limits>
@@ -110,45 +111,6 @@ inline const char* find_matching_delimiter(Markers* pMarkers, char ch)
 
     return nullptr;
 }
-
-inline const char* consume_comment(const char* read_ptr, const char* read_end)
-{
-    bool end_of_line_comment = *read_ptr == '#'
-        || (*read_ptr == '-' && read_ptr + 1 != read_end && *(read_ptr + 1) == '-'
-            && read_ptr + 2 != read_end && *(read_ptr + 2) == ' ');
-    bool regular_comment = *read_ptr == '/' && read_ptr + 1 != read_end && *(read_ptr + 1) == '*';
-
-    if (end_of_line_comment)
-    {
-        while (++read_ptr != read_end)
-        {
-            if (*read_ptr == '\n')
-            {
-                break;
-            }
-            else if (*read_ptr == '\r' && ++read_ptr != read_end && *read_ptr == '\n')
-            {
-                ++read_ptr;
-                break;
-            }
-        }
-    }
-    else if (regular_comment)
-    {
-        ++read_ptr;
-        while (++read_ptr < read_end)
-        {
-            if (*read_ptr == '*' && read_ptr + 1 != read_end && *++read_ptr == '/')
-            {
-                // end of comment
-                ++read_ptr;
-                break;
-            }
-        }
-    }
-
-    return read_ptr;
-}
 }
 
 namespace maxsimd
@@ -231,7 +193,7 @@ bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarke
             break;
 
         case IS_COMMENT:
-            read_ptr = consume_comment(read_ptr, read_end);
+            read_ptr = maxbase::consume_comment(read_ptr, read_end);
             break;
 
         case IS_ESCAPE:
@@ -260,7 +222,7 @@ bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarke
                     case IS_COMMENT:
                     {
                         auto ptr_before = read_ptr;
-                        read_ptr = consume_comment(read_ptr, read_end);
+                        read_ptr = maxbase::consume_comment(read_ptr, read_end);
                         if (read_ptr == ptr_before)
                         {
                             is_multi = true;
