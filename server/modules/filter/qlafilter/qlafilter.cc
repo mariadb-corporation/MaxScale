@@ -62,6 +62,17 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
+cfg::ParamEnum<QlaInstance::DurationMultiplier> s_duration_multiplier(
+    &s_spec, "duration_unit", "Duration in milliseconds (ms) or microseconds (us)",
+    {
+        {QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS, "ms"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS, "milliseconds"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MICROSECONDS, "us"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MICROSECONDS, "microseconds"},
+    },
+    QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS,
+    cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool s_use_canonical_form(
     &s_spec, "use_canonical_form", "Write queries in canonical form", false,
     cfg::Param::AT_RUNTIME);
@@ -158,6 +169,7 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
     , m_instance(instance)
 {
+    add_native(&Settings::m_v, &Values::duration_multiplier, &s_duration_multiplier);
     add_native(&Settings::m_v, &Values::use_canonical_form, &s_use_canonical_form);
     add_native(&Settings::m_v, &Values::filebase, &s_filebase);
     add_native(&Settings::m_v, &Values::flush_writes, &s_flush);
@@ -641,7 +653,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
         auto secs = mxb::to_secs(elems.first_response_time - elems.begin_time);
-        output << curr_sep << int(1000 * secs + 0.5);
+        output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_QUERY)
@@ -671,7 +683,7 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_TOTAL_REPLY_TIME)
     {
         auto secs = mxb::to_secs(elems.last_response_time - elems.begin_time);
-        output << curr_sep << int(1000 * secs + 0.5);
+        output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
         curr_sep = real_sep;
     }
     output << "\n";

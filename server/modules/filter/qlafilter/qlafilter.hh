@@ -61,6 +61,12 @@ public:
     static const int64_t LOG_DATA_TOTAL_REPLY_TIME = (1 << 6);
     static const int64_t LOG_DATA_DEFAULT_DB = (1 << 7);
 
+    enum DurationMultiplier
+    {
+        DURATION_IN_MILLISECONDS = 1000,
+        DURATION_IN_MICROSECONDS = 1000000
+    };
+
     /**
      * Associate a new session with this instance of the filter. Creates a session-specific logfile.
      *
@@ -106,6 +112,8 @@ public:
 
         struct Values
         {
+            DurationMultiplier duration_multiplier = DURATION_IN_MILLISECONDS;
+
             bool        use_canonical_form {false};
             bool        write_unified_log {false};
             bool        write_session_log {false};
