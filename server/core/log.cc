@@ -628,12 +628,16 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
 
     if (cnf.syslog.get())
     {
+#ifdef HAVE_SYSTEMD
         if (auto stream = JournalStream::create(cursor, priorities))
         {
             return [stream]() {
                        return stream->get_value();
                    };
         }
+#else
+	MXS_ERROR("MaxScale was built without SystemD support.");
+#endif
     }
     else if (cnf.maxlog.get())
     {
