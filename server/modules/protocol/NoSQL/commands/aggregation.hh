@@ -190,7 +190,7 @@ public:
             where = "WHERE ";
         }
 
-        vector<Path> paths = Path::get_paths(key);
+        vector<Path::Incarnation> paths = Path::get_incarnations(key);
 
         for (auto it = paths.begin(); it != paths.end(); ++it)
         {
@@ -199,16 +199,16 @@ public:
                 sql << " UNION ";
             }
 
-            const Path& p = *it;
+            const Path::Incarnation& p = *it;
 
-            string extract = "JSON_EXTRACT(doc, '" + p.path() + "')";
+            string extract = "JSON_EXTRACT(doc, '$." + p.path() + "')";
 
             sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " "
                 << where << extract << " IS NOT NULL";
 
-            if (!p.array().empty())
+            if (p.is_array_element())
             {
-                sql << " AND JSON_TYPE(JSON_EXTRACT(doc, '" << p.array() << "')) = 'ARRAY'";
+                sql << " AND JSON_TYPE(JSON_EXTRACT(doc, '$." << p.parent() << "')) = 'ARRAY'";
             }
         }
 

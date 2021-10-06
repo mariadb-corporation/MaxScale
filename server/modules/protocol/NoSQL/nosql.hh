@@ -1360,54 +1360,100 @@ private:
     SDatabase          m_sDatabase;
 };
 
-
+/**
+ * A Path represents all incarnations of a particular JSON path.
+ */
 class Path
 {
 public:
-    enum Kind
+    /**
+     * An Incarnation represents a single JSON path.
+     */
+    class Incarnation
     {
-        ELEMENT,
-        ARRAY
+    public:
+        enum Kind
+        {
+            ELEMENT,
+            ARRAY_ELEMENT,
+            INDEXED_ELEMENT
+        };
+
+        explicit Incarnation(const std::string& part)
+            : m_kind(ELEMENT)
+            , m_path(part)
+        {
+        }
+
+        explicit Incarnation(Kind kind, const std::string& part, const std::string& parent)
+            : m_kind(kind)
+            , m_path(kind == ELEMENT ? parent + "." + part : parent + "[*]." + part)
+            , m_parent(parent)
+        {
+        }
+
+        explicit Incarnation(const std::string& index, const std::string& parent)
+            : m_kind(Incarnation::INDEXED_ELEMENT)
+            , m_path(parent + "[" + index + "]")
+            , m_parent(parent)
+        {
+        }
+
+        std::string to_string() const;
+
+        Kind kind() const
+        {
+            return m_kind;
+        }
+
+        bool is_element() const
+        {
+            return m_kind == ELEMENT;
+        }
+
+        bool is_array_element() const
+        {
+            return m_kind == ARRAY_ELEMENT || m_kind == INDEXED_ELEMENT;
+        }
+
+        bool is_indexed_element() const
+        {
+            return m_kind == INDEXED_ELEMENT;
+        }
+
+        const std::string& path() const
+        {
+            return m_path;
+        }
+
+        const std::string& parent() const
+        {
+            return m_parent;
+        }
+
+        std::string get_comparison_condition(const bsoncxx::document::element& element) const;
+        std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
+
+    private:
+        Kind        m_kind;
+        std::string m_path;
+        std::string m_parent;
     };
 
-    Path(const std::string& path)
-        : m_kind(ELEMENT)
-        , m_path(path)
-    {
-    }
+    Path(const bsoncxx::document::element& element);
 
-    Path(Kind kind, const std::string& path, const std::string& array)
-        : m_kind(ARRAY)
-        , m_path(path)
-        , m_array(array)
-    {
-    }
+    std::string get_comparison_condition() const;
 
-    static std::vector<Path> get_paths(const std::string& key);
-
-    std::string to_string() const;
-
-    Kind kind() const
-    {
-        return m_kind;
-    }
-
-    const std::string& path() const
-    {
-        return m_path;
-    }
-
-    const std::string& array() const
-    {
-        return m_array;
-    }
+    static std::vector<Incarnation> get_incarnations(const std::string& key);
 
 private:
-    static void add_part(std::vector<Path>& rv, const std::string& part);
+    std::string get_element_condition(const bsoncxx::document::element& element) const;
+    std::string get_document_condition(const bsoncxx::document::view& doc) const;
 
-    Kind        m_kind;
-    std::string m_path;
-    std::string m_array;
+    static void add_part(std::vector<Incarnation>& rv, const std::string& part);
+
+    bsoncxx::document::element m_element;
+    std::vector<Incarnation>   m_paths;
 };
 
 /**
