@@ -19,7 +19,7 @@
             />
         </template>
         <template slot="pane-right">
-            <ddl-editor-container v-if="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
+            <ddl-editor-container v-show="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
             <txt-editor-container
                 v-show="isTxtEditor"
                 ref="txtEditorPane"

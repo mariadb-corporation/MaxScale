@@ -1,13 +1,22 @@
 <template>
     <v-card
-        v-if="getLoadingTblCreationInfo || !initialData"
+        v-if="isLoading"
         class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
-        :loading="Boolean(getLoadingTblCreationInfo && !initialData)"
+        :loading="isLoading"
     />
     <div
         v-else
         class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
     >
+        <!-- Only render the portal when component is activated otherwise it has function reference issue -->
+        <portal v-if="activated" to="wke-toolbar-right">
+            <alter-table-toolbar
+                :disableRevert="!hasChanged"
+                :disableApply="!hasValidChanges"
+                @on-revert="revertChanges"
+                @on-apply="applyChanges"
+            />
+        </portal>
         <div class="pt-2 pl-3 pr-2 d-flex align-center justify-space-between">
             <span class="text-body-2 color text-navigation font-weight-bold text-uppercase">
                 {{ $t('alterTbl') }}
@@ -25,39 +34,7 @@
                 <span>{{ $t('closeDDLEditor') }}</span>
             </v-tooltip>
         </div>
-        <portal to="wke-toolbar-right">
-            <alter-table-toolbar
-                :disableRevert="!hasChanged"
-                :disableApply="!hasValidChanges"
-                @on-revert="revertChanges"
-                @on-apply="applyChanges"
-            />
-        </portal>
-        <v-form v-model="isFormValid">
-            <alter-table-opts v-model="tableOptsData" />
-            <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
-                <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
-                    <span> {{ $t('columns') }} </span>
-                </v-tab>
-                <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.TRIGGERS}`">
-                    <span>{{ $t('triggers') }} </span>
-                </v-tab>
-                <v-tabs-items v-model="activeColSpec">
-                    <v-tab-item
-                        v-for="spec in SQL_DDL_ALTER_SPECS"
-                        :id="spec"
-                        :key="spec"
-                        class="pt-2"
-                    >
-                        <div v-if="activeColSpec === spec" class="px-4 py-2">
-                            <!-- TODO: Replace with columns/triggers input specs -->
-                            {{ spec }} input specs here
-                        </div>
-                    </v-tab-item>
-                </v-tabs-items>
-            </v-tabs>
-        </v-form>
-
+        <ddl-editor-form v-model="formData" @is-form-valid="isFormValid = $event" />
         <confirm-dialog
             ref="confirmAlterDialog"
             :title="isErrDialogShown ? $t('errors.alterFailed') : $t('confirmations.alterTable')"
@@ -110,20 +87,20 @@
 
 <script>
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
-import AlterTableOpts from './AlterTableOpts.vue'
+import DDLEditorForm from './DDLEditorForm.vue'
 import AlterTableToolbar from './AlterTableToolbar.vue'
 import QueryEditor from '@/components/QueryEditor'
 export default {
     name: 'ddl-editor-container',
     components: {
-        'alter-table-opts': AlterTableOpts,
+        'ddl-editor-form': DDLEditorForm,
         'alter-table-toolbar': AlterTableToolbar,
         'query-editor': QueryEditor,
     },
     data() {
         return {
+            formData: {},
             isFormValid: true,
-            tableOptsData: {},
             sql: '',
             /**
              * Using isErrDialogShown instead of isAlterFailed because
@@ -134,78 +111,81 @@ export default {
              *
              */
             isErrDialogShown: false,
+            activated: true,
         }
     },
     computed: {
         ...mapState({
-            SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
             getTblCreationInfo: 'query/getTblCreationInfo',
-            getDbCmplList: 'query/getDbCmplList',
             getAlteringTableResultMap: 'query/getAlteringTableResultMap',
+            getDbCmplList: 'query/getDbCmplList',
         }),
-        activeColSpec: {
-            get() {
-                return this.curr_ddl_alter_spec
-            },
-            set(value) {
-                this.SET_CURR_DDL_COL_SPEC(value)
-            },
+        isLoading() {
+            return Boolean(this.getLoadingTblCreationInfo && !this.initialData)
         },
         initialData() {
             return this.$typy(this.getTblCreationInfo, 'data').safeObject
         },
-        newData() {
-            return { table_opts_data: this.tableOptsData }
-        },
         hasChanged() {
             return !this.$help.lodash.isEqual(
                 this.initialData.table_opts_data,
-                this.newData.table_opts_data
+                this.formData.table_opts_data
             )
         },
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
+
         notAlteredYet() {
             return Boolean(this.$typy(this.getAlteringTableResultMap).isEmptyObject)
-        },
-        alterResult() {
-            return this.$typy(this.getAlteringTableResultMap, 'data.results[0]').safeObject
         },
         isAlterFailed() {
             if (this.notAlteredYet) return false
             return Boolean(this.$typy(this.alterResult, 'errno').safeObject)
         },
+        alterResult() {
+            return this.$typy(this.getAlteringTableResultMap, 'data.results[0]').safeObject
+        },
         alterSql() {
             return this.$typy(this.getAlteringTableResultMap, 'data.sql').safeString
         },
     },
-    watch: {
-        initialData: {
-            deep: true,
-            handler(v) {
-                this.tableOptsData = this.$help.lodash.cloneDeep(
-                    this.$typy(v, 'table_opts_data').safeObjectOrEmpty
-                )
-            },
-        },
+    activated() {
+        this.addInitialDataWatcher()
+        this.activated = true
+    },
+    deactivated() {
+        this.rmInitialDataWatcher()
+        this.activated = false
     },
     methods: {
         ...mapMutations({
-            SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
-            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
             UPDATE_ALTERING_TABLE_RESULT_MAP: 'query/UPDATE_ALTERING_TABLE_RESULT_MAP',
+            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
+            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
             alterTable: 'query/alterTable',
         }),
+        //Watcher to work with multiple worksheets which are kept alive
+        addInitialDataWatcher() {
+            this.rmInitialDataWatcher = this.$watch(
+                'initialData',
+                v => {
+                    if (v && !this.$help.lodash.isEqual(this.formData, v)) {
+                        this.formData = this.$help.lodash.cloneDeep(v)
+                    }
+                },
+                {
+                    deep: true,
+                }
+            )
+        },
         closeDDLEditor() {
             // Clear altered active node
             this.UPDATE_TBL_CREATION_INFO_MAP({
@@ -220,11 +200,12 @@ export default {
             })
         },
         revertChanges() {
-            this.tableOptsData = this.$help.lodash.cloneDeep(this.initialData.table_opts_data)
+            this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
         handleAddDelimiter({ sql, isLastKey }) {
             return `${sql}${isLastKey ? ';' : ', '}`
         },
+
         applyChanges() {
             const { escapeIdentifiers: escape, objectDiff } = this.$help
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
@@ -232,7 +213,7 @@ export default {
             //Diff of table_opts_data
             const diff = objectDiff({
                 base: this.initialData.table_opts_data,
-                object: this.newData.table_opts_data,
+                object: this.formData.table_opts_data,
             })
             const keys = Object.keys(diff)
             keys.forEach((key, i) => {
@@ -266,7 +247,7 @@ export default {
                 this.UPDATE_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
                     payload: {
-                        table_opts_data: this.tableOptsData,
+                        data: this.$help.lodash.cloneDeep(this.formData),
                     },
                 })
             else this.isErrDialogShown = true
