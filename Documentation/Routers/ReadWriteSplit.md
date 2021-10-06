@@ -784,6 +784,12 @@ the session state and the actual data in the database by adding routing hints
 to DDL/DML statements which are then directed to slave servers. Only use routing
 hints when you are sure that they can cause no harm.
 
+An exception to this rule is `transaction_replay`: when it is enabled, all
+routing hints inside transaction are ignored. This is done to prevent changes
+done inside a replayable transaction from affecting servers outside of the
+transaction. This behavior was added in MaxScale 6.1.4. Older versions allowed
+routing hints to override the transaction logic.
+
 ## Examples
 
 Examples of the readwritesplit router in use can be found in the

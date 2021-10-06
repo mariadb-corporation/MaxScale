@@ -888,6 +888,9 @@ add_test_executable(mxs3770_connector_plugins.cc mxs3770_connector_plugins mxs37
 # MXS-3796: Hang with readconnroute and large-ish queries
 add_test_executable(mxs3796_rcr_hang.cc mxs3796_rcr_hang replication LABELS REPL_BACKEND)
 
+# MXS-3803: Routing hints override transaction target
+add_test_executable(mxs3803_trx_replay_hints.cc mxs3803_trx_replay_hints mxs3803_trx_replay_hints LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
