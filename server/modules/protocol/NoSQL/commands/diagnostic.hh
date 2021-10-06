@@ -161,8 +161,9 @@ public:
         else if (value == "global" || value == "startupWarnings")
         {
             ArrayBuilder log;
+            log.append("No news is good news."); // TODO: The MaxScale log could be returned.
 
-            doc.append(kvp(key::TOTAL_LINES_WRITTEN, 0));
+            doc.append(kvp(key::TOTAL_LINES_WRITTEN, 1));
             doc.append(kvp(key::LOG, log.extract()));
             doc.append(kvp(key::OK, 1));
         }
