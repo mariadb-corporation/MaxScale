@@ -444,6 +444,16 @@ bool MariaDB::ping()
     return rval;
 }
 
+bool MariaDB::change_user(const string& user, const string& pw, const string& db)
+{
+    bool rval = false;
+    if (is_open())
+    {
+        rval = (mysql_change_user(m_conn, user.c_str(), pw.c_str(), db.c_str()) == 0);
+    }
+    return rval;
+}
+
 bool MariaDB::run_query(const string& query, const std::function<bool()>& result_handler)
 {
     bool rval = false;

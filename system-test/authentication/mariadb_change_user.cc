@@ -12,8 +12,83 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
 
-void run_test(TestConnections& test, MYSQL* conn)
+using std::string;
+void test_main(TestConnections& test);
+void test_connection(TestConnections& test, MYSQL* conn);
+
+int main(int argc, char* argv[])
+{
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
+
+void test_main(TestConnections& test)
+{
+    auto& repl = *test.repl;
+    auto server_conn = repl.backend(0)->open_connection();
+
+    auto user = server_conn->create_user("user", "%", "pass2");
+    user.grant("select on test.*");
+    server_conn->cmd("flush privileges;");
+
+    auto table = server_conn->create_table("test.t1", "x1 int, fl int");
+
+    repl.sync_slaves();
+    auto& mxs = *test.maxscale;
+
+    mxs.connect();
+    test.tprintf("Testing readwritesplit");
+    test_connection(test, mxs.conn_rwsplit[0]);
+    test.tprintf("Testing readconnroute");
+    test_connection(test, mxs.conn_master);
+    mxs.disconnect();
+
+    // Test MXS-3366.
+    mxs.connect_rwsplit("");
+    auto rwsplit_conn = mxs.conn_rwsplit[0];
+    test.expect(mysql_change_user(rwsplit_conn, "user", "pass2", "test") == 0,
+                "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(rwsplit_conn));
+    mxs.disconnect();
+
+    // Log in as userA. Change password of userB on backend, then try "change user". MaxScale is using old
+    // user account data and accepts the command. In the end, change user should fail but session should
+    // remain open.
+    const string unA = "userA";
+    const string pwA = "passA";
+    const string unB = "userB";
+    const string pwB = "passB";
+    const string select_user = "select current_user()";
+
+    auto user_A = server_conn->create_user(unA, "%", pwA);
+    auto user_B = server_conn->create_user(unB, "%", pwB);
+
+    auto connA = mxs.try_open_rwsplit_connection(unA, pwA);
+    auto connB = mxs.try_open_rwsplit_connection(unB, pwB);
+    test.expect(connA->is_open() && connB->is_open(), "Login failed");
+
+    if (test.ok())
+    {
+        const char expected[] = "userA@%";
+        const char errmsg_fmt[] = "Wrong user. Got '%s', expected '%s'.";
+        string orig_user = connA->simple_query(select_user);
+        test.expect(orig_user == expected, errmsg_fmt, orig_user.c_str(), expected);
+
+        server_conn->cmd_f("alter user '%s' identified by '%s';", unB.c_str(), "passC");
+        if (test.ok())
+        {
+            test.tprintf("Password changed on server, trying COM_CHANGE_USER.");
+            bool user_changed = connA->change_user(unB, pwB, "");
+            test.expect(!user_changed, "Change user succeeded when it should have failed.");
+            string curr_user = connA->simple_query("select current_user()");
+            test.expect(curr_user == expected, "Wrong user. Got '%s', expected '%s'.",
+                        curr_user.c_str(), expected);
+        }
+    }
+}
+
+void test_connection(TestConnections& test, MYSQL* conn)
 {
     test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
                 "changing user failed: %s", mysql_error(conn));
@@ -30,46 +105,11 @@ void run_test(TestConnections& test, MYSQL* conn)
 
 
     test.expect(mysql_change_user(conn, "user", "wrong_pass2", "test") != 0,
-                "changing user with wrong password successed!");
+                "changing user with wrong password succeeded!");
 
     test.expect(strstr(mysql_error(conn), "Access denied for user"),
                 "Wrong error message returned on failed authentication");
 
     test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") == 0,
                 "MaxScale should not disconnect on COM_CHANGE_USER failure");
-}
-
-int main(int argc, char *argv[])
-{
-    TestConnections test(argc, argv);
-
-    test.repl->connect();
-    execute_query(test.repl->nodes[0], "DROP USER 'user'@'%%'");
-    test.try_query(test.repl->nodes[0], "CREATE USER user@'%%' identified by 'pass2'");
-    test.try_query(test.repl->nodes[0], "GRANT SELECT ON test.* TO user@'%%'");
-    test.try_query(test.repl->nodes[0], "FLUSH PRIVILEGES;");
-    test.try_query(test.repl->nodes[0], "DROP TABLE IF EXISTS t1");
-    test.try_query(test.repl->nodes[0], "CREATE TABLE t1 (x1 int, fl int)");
-    test.repl->sync_slaves();
-    test.repl->disconnect();
-
-    test.maxscale->connect();
-    test.tprintf("Testing readwritesplit");
-    run_test(test, test.maxscale->conn_rwsplit[0]);
-    test.tprintf("Testing readconnroute");
-    run_test(test, test.maxscale->conn_master);
-    test.maxscale->disconnect();
-
-    // Test MXS-3366.
-    test.maxscale->connect_rwsplit("");
-    auto conn = test.maxscale->conn_rwsplit[0];
-    test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
-                "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(conn));
-    test.maxscale->disconnect();
-
-    test.repl->connect();
-    execute_query_silent(test.repl->nodes[0], "DROP USER user@'%%';");
-    execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
-    test.repl->disconnect();
-    return test.global_result;
 }
