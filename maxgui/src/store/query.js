@@ -37,7 +37,6 @@ function sidebarStates() {
  */
 function editorStates() {
     return {
-        curr_editor_mode: 'TXT_EDITOR',
         query_txt: '',
         curr_ddl_alter_spec: '',
     }
@@ -138,6 +137,7 @@ export default {
         // sidebar states
         db_tree_map: {},
         // editor states
+        curr_editor_mode_map: {},
         tbl_creation_info_map: {},
         altering_table_result_map: {},
         // results states
@@ -214,12 +214,13 @@ export default {
         },
 
         // editor mutations
-        SET_CURR_EDITOR_MODE(state, payload) {
-            patch_wke_property(state, {
-                obj: { curr_editor_mode: payload },
-                scope: this,
-                active_wke_id: state.active_wke_id,
-            })
+        SET_CURR_EDITOR_MODE_MAP(state, { id, mode }) {
+            if (!mode) this.vue.$delete(state.curr_editor_mode_map, id)
+            else
+                state.curr_editor_mode_map = {
+                    ...state.curr_editor_mode_map,
+                    ...{ [id]: mode },
+                }
         },
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, {
@@ -1120,7 +1121,7 @@ export default {
                 logger.error(e)
             }
         },
-        async getTblCreationInfo({ state, rootState, dispatch, commit }, node) {
+        async queryTblCreationInfo({ state, dispatch, commit }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             await dispatch('queryingActionWrapper', {
@@ -1134,31 +1135,28 @@ export default {
                     })
                     const schemas = node.id.split('.')
                     const db = schemas[0]
-                    const tblName = schemas[1]
-                    const cols =
-                        // eslint-disable-next-line vue/max-len
-                        'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
-                    const sql = `SELECT ${cols} FROM information_schema.tables t
-                    JOIN information_schema.collations c ON t.table_collation = c.collation_name
-                    WHERE table_schema = "${db}" AND table_name = "${tblName}";`
-                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                        sql,
-                        max_rows: rootState.persisted.query_max_rows,
+                    const tblOptsData = await queryHelper.queryTblOptsData({
+                        curr_cnct_resource,
+                        nodeId: node.id,
+                        vue: this.vue,
                     })
-
-                    const dataRows = this.vue.$help.getObjectRows({
-                        columns: res.data.data.attributes.results[0].fields,
-                        rows: res.data.data.attributes.results[0].data,
+                    const colsOptsData = await queryHelper.queryColsOptsData({
+                        curr_cnct_resource,
+                        nodeId: node.id,
+                        vue: this.vue,
                     })
                     commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
                         id: active_wke_id,
                         payload: {
-                            table_opts_data: { dbName: db, ...dataRows[0] },
+                            data: {
+                                table_opts_data: { dbName: db, ...tblOptsData },
+                                cols_opts_data: colsOptsData,
+                            },
                             loading_tbl_creation_info: false,
                         },
                     })
                 },
-                actionName: 'getTblCreationInfo',
+                actionName: 'queryTblCreationInfo',
                 catchAction: e => {
                     commit('UPDATE_TBL_CREATION_INFO_MAP', {
                         id: active_wke_id,
@@ -1201,14 +1199,18 @@ export default {
                             data: res.data.data.attributes,
                         },
                     })
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('info.alterTableSuccessfully')],
-                            type: 'success',
-                        },
-                        { root: true }
+                    const isQueryFailed = Boolean(
+                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
                     )
+                    if (!isQueryFailed)
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [this.i18n.t('info.alterTableSuccessfully')],
+                                type: 'success',
+                            },
+                            { root: true }
+                        )
                     dispatch(
                         'persisted/pushQueryLog',
                         {
@@ -1248,6 +1250,7 @@ export default {
             commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
             commit('UPDATE_PRVW_DATA_MAP', payload)
             commit('UPDATE_IS_QUERYING_MAP', payload)
+            commit('SET_CURR_EDITOR_MODE_MAP', payload)
             commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
             commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
         },
@@ -1392,10 +1395,12 @@ export default {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
         },
+        //editor mode getter
+        getCurrEditorMode: state => state.curr_editor_mode_map[state.active_wke_id] || 'TXT_EDITOR',
         // tbl_creation_info_map getters
         getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
         getLoadingTblCreationInfo: (state, getters) => {
-            const { loading_tbl_creation_info = false } = getters.getTblCreationInfo
+            const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
             return loading_tbl_creation_info
         },
         getAlteredActiveNode: (state, getters) => {

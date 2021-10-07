@@ -104,8 +104,48 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
     }
 }
 
+/**
+ * @param {Object} curr_cnct_resource - current connecting resource
+ * @param {String} nodeId - node id .i.e schema_name.tbl_name
+ * @param {Object} vue - vue instance
+ * @returns {Object} - returns object row data
+ */
+async function queryTblOptsData({ curr_cnct_resource, nodeId, vue }) {
+    const schemas = nodeId.split('.')
+    const db = schemas[0]
+    const tblName = schemas[1]
+    const cols =
+        // eslint-disable-next-line vue/max-len
+        'table_name, ENGINE as table_engine, character_set_name as table_charset, table_collation, table_comment'
+    const sql = `SELECT ${cols} FROM information_schema.tables t
+JOIN information_schema.collations c ON t.table_collation = c.collation_name
+WHERE table_schema = "${db}" AND table_name = "${tblName}";`
+    let tblOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+        sql,
+    })
+    const tblOptsRows = vue.$help.getObjectRows({
+        columns: tblOptsRes.data.data.attributes.results[0].fields,
+        rows: tblOptsRes.data.data.attributes.results[0].data,
+    })
+    return tblOptsRows[0]
+}
+/**
+ * @param {Object} curr_cnct_resource - current connecting resource
+ * @param {String} nodeId - node id .i.e schema_name.tbl_name
+ * @param {Object} vue - vue instance
+ * @returns {Object} - returns object data contains `data` and `fields`
+ */
+async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
+    const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+        sql: `DESCRIBE ${vue.$help.escapeIdentifiers(nodeId)}`,
+    })
+    return colsOptsRes.data.data.attributes.results[0]
+}
+
 export default {
     getClientConnIds,
     updateDbChild,
     updateTblChild,
+    queryTblOptsData,
+    queryColsOptsData,
 }

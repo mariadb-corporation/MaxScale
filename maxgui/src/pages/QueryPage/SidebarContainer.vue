@@ -164,7 +164,7 @@ export default {
             updateTreeNodes: 'query/updateTreeNodes',
             useDb: 'query/useDb',
             reloadTreeNodes: 'query/reloadTreeNodes',
-            getTblCreationInfo: 'query/getTblCreationInfo',
+            queryTblCreationInfo: 'query/queryTblCreationInfo',
             queryCharsetCollationMap: 'query/queryCharsetCollationMap',
             queryEngines: 'query/queryEngines',
             queryDefDbCharsetMap: 'query/queryDefDbCharsetMap',
@@ -193,7 +193,7 @@ export default {
             if (this.$typy(this.engines).isEmptyArray) await this.queryEngines()
             if (this.charset_collation_map.size === 0) await this.queryCharsetCollationMap()
             if (this.def_db_charset_map.size === 0) await this.queryDefDbCharsetMap()
-            await this.getTblCreationInfo(node)
+            await this.queryTblCreationInfo(node)
         },
     },
 }
