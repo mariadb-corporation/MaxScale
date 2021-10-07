@@ -62,6 +62,17 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
 
+cfg::ParamEnum<QlaInstance::DurationMultiplier> s_duration_multiplier(
+    &s_spec, "duration_unit", "Duration in milliseconds (ms) or microseconds (us)",
+    {
+        {QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS, "ms"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS, "milliseconds"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MICROSECONDS, "us"},
+        {QlaInstance::DurationMultiplier::DURATION_IN_MICROSECONDS, "microseconds"},
+    },
+    QlaInstance::DurationMultiplier::DURATION_IN_MILLISECONDS,
+    cfg::Param::AT_RUNTIME);
+
 cfg::ParamBool s_use_canonical_form(
     &s_spec, "use_canonical_form", "Write queries in canonical form", false,
     cfg::Param::AT_RUNTIME);
@@ -115,7 +126,12 @@ cfg::ParamEnumMask<int64_t> s_log_data(
         {QlaInstance::LOG_DATA_USER, "user"},
         {QlaInstance::LOG_DATA_QUERY, "query"},
         {QlaInstance::LOG_DATA_REPLY_TIME, "reply_time"},
+        {QlaInstance::LOG_DATA_TOTAL_REPLY_TIME, "total_reply_time"},
         {QlaInstance::LOG_DATA_DEFAULT_DB, "default_db"},
+        {QlaInstance::LOG_DATA_NUM_ROWS, "num_rows"},
+        {QlaInstance::LOG_DATA_REPLY_SIZE, "reply_size"},
+        {QlaInstance::LOG_DATA_NUM_WARNINGS, "num_warnings"},
+        {QlaInstance::LOG_DATA_ERR_MSG, "error_msg"},
     },
     QlaInstance::LOG_DATA_DATE | QlaInstance::LOG_DATA_USER | QlaInstance::LOG_DATA_QUERY,
     cfg::Param::AT_RUNTIME);
@@ -157,6 +173,7 @@ QlaInstance::Settings::Settings(const std::string& name, QlaInstance* instance)
     : mxs::config::Configuration(name, &s_spec)
     , m_instance(instance)
 {
+    add_native(&Settings::m_v, &Values::duration_multiplier, &s_duration_multiplier);
     add_native(&Settings::m_v, &Values::use_canonical_form, &s_use_canonical_form);
     add_native(&Settings::m_v, &Values::filebase, &s_filebase);
     add_native(&Settings::m_v, &Values::flush_writes, &s_flush);
@@ -449,6 +466,7 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
     {
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
+        m_first_reply = true;
         m_sql.assign(query, query_len);
         if (m_log->settings().use_canonical_form)
         {
@@ -468,13 +486,6 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
                 m_wall_time_str = wall_time::to_string(now, "%F %T");
             }
         }
-
-        if (!(data_flags & QlaInstance::LOG_DATA_REPLY_TIME))
-        {
-            // If execution times are not logged, write the log entry now.
-            LogEventElems elems(m_begin_time, m_sql, m_begin_time);
-            write_log_entries(elems);
-        }
     }
     /* Pass the query downstream */
     return mxs::FilterSession::routeQuery(queue);
@@ -482,9 +493,19 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
 
 bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (m_log->settings().log_file_data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
+    if (m_first_reply)
     {
-        LogEventElems elems(m_begin_time, m_sql, m_pSession->worker()->epoll_tick_now());
+        m_first_response_time = m_pSession->worker()->epoll_tick_now();
+    }
+
+    if (reply.is_complete())
+    {
+        LogEventElems elems(m_begin_time,
+                            m_sql,
+                            m_first_response_time,
+                            m_pSession->worker()->epoll_tick_now(),
+                            reply);
+
         write_log_entries(elems);
     }
 
@@ -523,6 +544,11 @@ SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
     }
     else
     {
+        if (try_file.is_open())
+        {
+            // set file_existed to false if the file is empty to generate the header
+            file_existed = try_file.peek() != std::ifstream::traits_type::eof();
+        }
         sFile = open_file(filename, std::ios_base::app);
     }
 
@@ -551,7 +577,12 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     const char USERHOST[] = "User@Host";
     const char QUERY[] = "Query";
     const char REPLY_TIME[] = "Reply_time";
+    const char TOTAL_REPLY_TIME[] = "Total_reply_time";
     const char DEFAULT_DB[] = "Default_db";
+    const char NUM_ROWS[] = "Num_rows";
+    const char REPLY_SIZE[] = "Reply_size";
+    const char NUM_WARNINGS[] = "Num_warnings";
+    const char ERR_MSG[] = "Error_msg";
 
     std::stringstream header;
     string curr_sep;    // Use empty string as the first separator
@@ -590,6 +621,31 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     {
         header << curr_sep << DEFAULT_DB;
     }
+    if (data_flags & LOG_DATA_TOTAL_REPLY_TIME)
+    {
+        header << curr_sep << TOTAL_REPLY_TIME;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_NUM_ROWS)
+    {
+        header << curr_sep << NUM_ROWS;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_REPLY_SIZE)
+    {
+        header << curr_sep << REPLY_SIZE;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_NUM_WARNINGS)
+    {
+        header << curr_sep << NUM_WARNINGS;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_ERR_MSG)
+    {
+        header << curr_sep << ERR_MSG;
+        curr_sep = real_sep;
+    }
     header << '\n';
     return header.str();
 }
@@ -624,8 +680,8 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     }
     if (data_flags & QlaInstance::LOG_DATA_REPLY_TIME)
     {
-        auto secs = mxb::to_secs(elems.end_time - elems.begin_time);
-        output << curr_sep << int(1000 * secs + 0.5);
+        auto secs = mxb::to_secs(elems.first_response_time - elems.begin_time);
+        output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_QUERY)
@@ -650,6 +706,36 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         const char* db = maria_ses->current_db.empty() ? "(none)" : maria_ses->current_db.c_str();
 
         output << curr_sep << db;
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_TOTAL_REPLY_TIME)
+    {
+        auto secs = mxb::to_secs(elems.last_response_time - elems.begin_time);
+        output << curr_sep << int(m_log->settings().duration_multiplier * secs + 0.5);
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_NUM_ROWS)
+    {
+        output << curr_sep << elems.reply.rows_read();
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_REPLY_SIZE)
+    {
+        output << curr_sep << elems.reply.size();
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_NUM_WARNINGS)
+    {
+        output << curr_sep << elems.reply.num_warnings();
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_ERR_MSG)
+    {
+        output << curr_sep;
+        if (elems.reply.error())
+        {
+            output << elems.reply.error().message();
+        }
         curr_sep = real_sep;
     }
     output << "\n";

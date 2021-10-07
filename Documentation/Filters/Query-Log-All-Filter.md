@@ -94,30 +94,59 @@ Type of data to log in the log files. The parameter value is a comma separated
 list of the following elements. By default the _date_, _user_ and _query_
 options are enabled.
 
-| Value       | Description                                      |
-| --------    |--------------------------------------------------|
-| service     | Service name                                     |
-| session     | Unique session id (ignored for session files)    |
-| date        | Timestamp                                        |
-| user        | User and hostname of client                      |
-| reply_time  | Response time (ms until first reply from server) |
-| query       | Query                                            |
-| default_db  | The default (current) database                   |
+| Value             | Description                                            |
+| --------          |--------------------------------------------------------|
+| service           | Service name                                           |
+| session           | Unique session id (ignored for session files)          |
+| date              | Timestamp                                              |
+| user              | User and hostname of client                            |
+| reply_time        | Duration from client query to first server reply       |
+| total_reply_time  | Duration from client query to last server reply (v6.2) |
+| query             | Query                                                  |
+| default_db        | The default (current) database                         |
+| num_rows          | Number of rows in the result set                       |
+| reply_size        | Number of bytes received from the server               |
+| num_warnings      | Number of warnings in the server reply                 |
+| error_msg         | Error message from the server (if any)                 |
 
 ```
-log_data=date, user, query
+log_data=date, user, query, total_reply_time
 ```
 
-If *reply_time* is enabled, the log entry is written when the first reply from
-server is received. Otherwise, the entry is written when receiving query from
-client.
+The durations *reply_time* and *total_reply_time* are by default in milliseconds,
+but can be specified to be in microseconds using *duration_unit*.
+
+The log entry is written when the last reply from the server is received.
+Prior to version 6.2 the entry was written when the query was received from
+the client, or if *reply_time* was specified, on first reply from the server.
+
+**NOTE** The *error_msg* is the raw message from the server. Even if *use_canonical_form*
+is set the error message may contain user defined constants. For example:
+
+```
+MariaDB [test]> select secret from T where x password="clear text pwd";
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual
+that corresponds to your MariaDB server version for the right syntax to
+use near 'password="clear text pwd"' at line 1
+```
+
+### `duration_unit`
+
+The unit for logging a duration. The unit can be `milliseconds` or `microseconds`.
+The abbreviations `ms` for milliseconds and `us` for microseconds are also valid.
+The default is `milliseconds`.
+This option is available as of MaxScale version 6.2.
+
+```
+duration_unit=microseconds
+```
 
 ### `use_canonical_form`
 
 When this option is true the canonical form of the query is logged. In the
 canonical form all user defined constants are replaced with question marks.
 The default is false, i.e. log the sql as is.
-This option is available starting from MaxScale version 6.2.
+This option is available as of MaxScale version 6.2.
 
 ```
 use_canonical_form=true
@@ -135,7 +164,7 @@ flush=true
 
 Append new entries to log files instead of overwriting them. The default is
 true.
-NOTE: the default was changed from false to true, as of the following
+**NOTE**: the default was changed from false to true, as of the following
 versions: 2.4.18, 2.5.16 and 6.2.
 
 ```

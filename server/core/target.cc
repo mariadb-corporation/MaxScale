@@ -408,7 +408,7 @@ void Reply::add_rows(uint64_t row_count)
 
 void Reply::add_bytes(uint64_t size)
 {
-    m_size = size;
+    m_size += size;
 }
 
 void Reply::add_field_count(uint64_t field_count)
