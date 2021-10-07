@@ -684,6 +684,25 @@ will never be any indexes that could be dropped. However, provided the
 specfied collection exists, dropping indexes will always succeed except
 for an attempt to drop the built-in `_id_` index.
 
+### fsync
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+fsync| any | Ignored
+
+The response will always be
+```
+{
+  "errmsg" : "fsync not supported by MaxScale:nosqlprotocol",
+  "code" : 115,
+  "codeName" : "CommandNotSupported",
+  "ok" : 0
+}
+```
+
+
 ### killCursors
 
 The following fields are relevant.

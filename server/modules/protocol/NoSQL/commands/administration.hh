@@ -964,6 +964,22 @@ private:
 // https://docs.mongodb.com/v4.4/reference/command/filemd5/
 
 // https://docs.mongodb.com/v4.4/reference/command/fsync/
+class FSync : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "fsync";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        doc.append(kvp(key::ERRMSG, "fsync not supported by MaxScale:nosqlprotocol"));
+        doc.append(kvp(key::CODE, (int)error::COMMAND_NOT_SUPPORTED));
+        doc.append(kvp(key::CODE_NAME, nosql::error::name(error::COMMAND_NOT_SUPPORTED)));
+        doc.append(kvp(key::OK, 0));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/fsyncUnlock/
 
