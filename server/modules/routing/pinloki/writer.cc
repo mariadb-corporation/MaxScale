@@ -112,10 +112,12 @@ bool Writer::has_master_changed(const mxq::Connection& conn)
 
 void Writer::run()
 {
+    mxb::LogScope scope(m_inventory.config().name().c_str());
     bool log_host_warning = true;
 
     while (m_running)
     {
+        std::string host = "<no host>";
         Error error;
         try
         {
@@ -145,6 +147,9 @@ void Writer::run()
             FileWriter file(&m_inventory, *this);
             mxq::Connection conn(get_connection_details());
             start_replication(conn);
+            std::ostringstream ss;
+            ss << conn.host();
+            host = ss.str();
 
             maxbase::Timer timer(1s);   // Check if the master has changed at the most once a second
 
@@ -158,7 +163,8 @@ void Writer::run()
 
                 if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
                 {
-                    MXB_INFO("Pinloki switching to new master");
+
+                    MXB_INFO("Pinloki switching to new master at '%s'", host.c_str());
                     break;
                 }
 
@@ -220,7 +226,7 @@ void Writer::run()
             m_error = error;
             if (m_timer.alarm())
             {
-                MXS_SERROR("Error received during replication: " << error.str);
+                MXS_SERROR("Error received during replication from '" << host << "': " << error.str);
             }
 
             m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
