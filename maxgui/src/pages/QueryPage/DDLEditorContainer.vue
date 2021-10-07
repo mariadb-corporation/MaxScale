@@ -1,87 +1,96 @@
 <template>
-    <v-card
-        v-if="isLoading"
-        class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
-        :loading="isLoading"
-    />
-    <div
-        v-else
-        class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
-    >
-        <!-- Only render the portal when component is activated otherwise it has function reference issue -->
-        <portal v-if="activated" to="wke-toolbar-right">
-            <alter-table-toolbar
-                :disableRevert="!hasChanged"
-                :disableApply="!hasValidChanges"
-                @on-revert="revertChanges"
-                @on-apply="applyChanges"
-            />
-        </portal>
-        <div class="pt-2 pl-3 pr-2 d-flex align-center justify-space-between">
-            <span class="text-body-2 color text-navigation font-weight-bold text-uppercase">
-                {{ $t('alterTbl') }}
-            </span>
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn icon small v-on="on" @click="closeDDLEditor">
-                        <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
-                    </v-btn>
-                </template>
-                <span>{{ $t('closeDDLEditor') }}</span>
-            </v-tooltip>
-        </div>
-        <ddl-editor-form v-model="formData" @is-form-valid="isFormValid = $event" />
-        <confirm-dialog
-            ref="confirmAlterDialog"
-            :title="isErrDialogShown ? $t('errors.alterFailed') : $t('confirmations.alterTable')"
-            :smallInfo="isErrDialogShown ? '' : $t('info.alterTableInfo')"
-            type="execute"
-            :onSave="confirmAlter"
-            minBodyWidth="768px"
-            :hasSavingErr="isAlterFailed"
-            :onCancel="clearAlterResult"
-            :onClose="clearAlterResult"
+    <div class="fill-height">
+        <v-card
+            v-if="isLoading"
+            class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
+            :loading="isLoading"
+        />
+        <!-- Use v-show to always render it so that multiple worksheets would be kept alive -->
+        <div
+            v-show="!isLoading"
+            class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
         >
-            <template v-slot:body-prepend>
-                <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
-                    <tr>
-                        <td><b>sql</b></td>
-                        <td>
-                            {{ alterSql }}
-                        </td>
-                    </tr>
-                    <tr v-for="(v, key) in alterResult" :key="key">
-                        <td>
-                            <b>{{ key }}</b>
-                        </td>
-                        <td>
-                            {{ v }}
-                        </td>
-                    </tr>
-                </table>
-
-                <div
-                    v-else
-                    class="mb-4 pt-2 pl-2 color border-all-table-border"
-                    style="height:250px"
+            <!-- Only render the portal when component is activated otherwise it has function reference issue -->
+            <portal v-if="activated" to="wke-toolbar-right">
+                <alter-table-toolbar
+                    :disableRevert="!hasChanged"
+                    :disableApply="!hasValidChanges"
+                    @on-revert="revertChanges"
+                    @on-apply="applyChanges"
+                />
+            </portal>
+            <div class="pt-2 pl-3 pr-2 d-flex align-center justify-space-between">
+                <span class="text-body-2 color text-navigation font-weight-bold text-uppercase">
+                    {{ $t('alterTbl') }}
+                </span>
+                <v-tooltip
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
                 >
-                    <query-editor
-                        v-if="sql"
-                        v-model="sql"
-                        :class="`fill-height`"
-                        :cmplList="getDbCmplList"
-                        :options="{
-                            fontSize: 10,
-                            contextmenu: false,
-                        }"
-                    />
-                </div>
-            </template>
-        </confirm-dialog>
+                    <template v-slot:activator="{ on }">
+                        <v-btn icon small v-on="on" @click="closeDDLEditor">
+                            <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t('closeDDLEditor') }}</span>
+                </v-tooltip>
+            </div>
+            <ddl-editor-form
+                v-model="formData"
+                :dynDim="formDim"
+                @is-form-valid="isFormValid = $event"
+            />
+            <confirm-dialog
+                ref="confirmAlterDialog"
+                :title="
+                    isErrDialogShown ? $t('errors.alterFailed') : $t('confirmations.alterTable')
+                "
+                :smallInfo="isErrDialogShown ? '' : $t('info.alterTableInfo')"
+                type="execute"
+                :onSave="confirmAlter"
+                minBodyWidth="768px"
+                :hasSavingErr="isAlterFailed"
+                :onCancel="clearAlterResult"
+                :onClose="clearAlterResult"
+            >
+                <template v-slot:body-prepend>
+                    <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
+                        <tr>
+                            <td><b>sql</b></td>
+                            <td>
+                                {{ alterSql }}
+                            </td>
+                        </tr>
+                        <tr v-for="(v, key) in alterResult" :key="key">
+                            <td>
+                                <b>{{ key }}</b>
+                            </td>
+                            <td>
+                                {{ v }}
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div
+                        v-else
+                        class="mb-4 pt-2 pl-2 color border-all-table-border"
+                        style="height:250px"
+                    >
+                        <query-editor
+                            v-if="sql"
+                            v-model="sql"
+                            :class="`fill-height`"
+                            :cmplList="getDbCmplList"
+                            :options="{
+                                fontSize: 10,
+                                contextmenu: false,
+                            }"
+                        />
+                    </div>
+                </template>
+            </confirm-dialog>
+        </div>
     </div>
 </template>
 
@@ -96,6 +105,9 @@ export default {
         'ddl-editor-form': DDLEditorForm,
         'alter-table-toolbar': AlterTableToolbar,
         'query-editor': QueryEditor,
+    },
+    props: {
+        dynDim: { type: Object, required: true },
     },
     data() {
         return {
@@ -125,6 +137,10 @@ export default {
             getAlteringTableResultMap: 'query/getAlteringTableResultMap',
             getDbCmplList: 'query/getDbCmplList',
         }),
+        formDim() {
+            // title height: 36, border thickness: 2
+            return { ...this.dynDim, height: this.dynDim.height - 36 - 2 }
+        },
         isLoading() {
             return Boolean(this.getLoadingTblCreationInfo && !this.initialData)
         },
@@ -133,8 +149,8 @@ export default {
         },
         hasChanged() {
             return !this.$help.lodash.isEqual(
-                this.initialData.table_opts_data,
-                this.formData.table_opts_data
+                this.$typy(this.initialData, 'table_opts_data').safeObject,
+                this.$typy(this.formData, 'table_opts_data').safeObject
             )
         },
         hasValidChanges() {

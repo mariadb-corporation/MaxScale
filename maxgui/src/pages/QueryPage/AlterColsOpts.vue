@@ -1,8 +1,9 @@
 <template>
+    <!-- TODO: make virtual-scroll-table cell editable -->
     <virtual-scroll-table
         :benched="0"
         :headers="headers"
-        :rows="colsOptsData.data"
+        :rows="$typy(colsOptsData, 'data').safeArray"
         :itemHeight="30"
         :height="tableHeight"
         :boundingWidth="boundingWidth"
@@ -29,7 +30,7 @@ export default {
             },
         },
         headers() {
-            return this.colsOptsData.fields.map(field => ({ text: field }))
+            return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => ({ text: field }))
         },
     },
 }

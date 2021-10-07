@@ -1,6 +1,8 @@
 <template>
     <v-form v-model="isFormValid">
-        <alter-table-opts v-model="tableOptsData" />
+        <div ref="header">
+            <alter-table-opts v-model="tableOptsData" class="py-0 px-2 pb-4" />
+        </div>
         <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
             <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
                 <span> {{ $t('columns') }} </span>
@@ -8,25 +10,34 @@
             <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.TRIGGERS}`">
                 <span>{{ $t('triggers') }} </span>
             </v-tab>
-            <v-tabs-items v-model="activeColSpec">
-                <v-tab-item v-for="spec in SQL_DDL_ALTER_SPECS" :id="spec" :key="spec" class="pt-2">
-                    <div v-if="activeColSpec === spec" class="px-4 py-2">
-                        <!-- TODO: Replace with columns/triggers input specs -->
-                        {{ spec }} input specs here
-                    </div>
-                </v-tab-item>
-            </v-tabs-items>
         </v-tabs>
+        <div class="px-4 py-4">
+            <div :style="{ maxHeight: `${colSpecTabDim.height}px`, overflowY: 'auto' }">
+                <v-slide-x-transition>
+                    <keep-alive>
+                        <alter-cols-opts
+                            v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
+                            v-model="colsOptsData"
+                            :tableHeight="(colSpecTabDim.height * 60) / 100"
+                            :boundingWidth="colSpecTabDim.width"
+                        />
+                    </keep-alive>
+                </v-slide-x-transition>
+            </div>
+        </div>
     </v-form>
 </template>
 
 <script>
 import { mapMutations, mapState } from 'vuex'
 import AlterTableOpts from './AlterTableOpts.vue'
+import AlterColsOpts from './AlterColsOpts.vue'
+
 export default {
     name: 'ddl-editor-form',
     components: {
         'alter-table-opts': AlterTableOpts,
+        'alter-cols-opts': AlterColsOpts,
     },
     model: {
         prop: 'formData',
@@ -34,10 +45,12 @@ export default {
     },
     props: {
         formData: { type: Object, required: true },
+        dynDim: { type: Object, required: true },
     },
     data() {
         return {
             isFormValid: true,
+            headerHeight: 0,
         }
     },
     computed: {
@@ -53,6 +66,14 @@ export default {
                 this.$emit('input', { ...this.formData, table_opts_data: v })
             },
         },
+        colsOptsData: {
+            get() {
+                return this.$typy(this.formData, 'cols_opts_data').safeObjectOrEmpty
+            },
+            set(v) {
+                this.$emit('input', { ...this.formData, cols_opts_data: v })
+            },
+        },
         activeColSpec: {
             get() {
                 return this.curr_ddl_alter_spec
@@ -61,16 +82,31 @@ export default {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
         },
+        colSpecTabDim() {
+            // v-tab-item class px-4 py-4: 32
+            // v-tabs-bar: 24
+            return {
+                width: this.dynDim.width - 32,
+                height: this.dynDim.height - this.headerHeight - 24 - 32,
+            }
+        },
     },
     watch: {
         isFormValid(v) {
             this.$emit('is-form-valid', v)
         },
     },
+    mounted() {
+        this.setHeaderHeight()
+    },
     methods: {
         ...mapMutations({
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
         }),
+        setHeaderHeight() {
+            if (!this.$refs.header) return
+            this.headerHeight = this.$refs.header.clientHeight
+        },
     },
 }
 </script>
