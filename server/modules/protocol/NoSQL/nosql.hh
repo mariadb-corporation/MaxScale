@@ -434,6 +434,7 @@ const char CPU_ADDR_SIZE[]                   = "cpuAddrSize";
 const char CPU_ARCH[]                        = "cpuArch";
 const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
 const char CURRENT_TIME[]                    = "currentTime";
+const char CURSORS[]                         = "cursors";
 const char CURSORS_ALIVE[]                   = "cursorsAlive";
 const char CURSORS_KILLED[]                  = "cursorsKilled";
 const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";

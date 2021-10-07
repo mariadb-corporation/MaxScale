@@ -982,8 +982,29 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        string collection = m_database.name() + "." + value_as<string>();
-        auto cursors = required<bsoncxx::array::view>("cursors");
+        auto argument = m_doc[m_name];
+
+        if (argument.type() != bsoncxx::type::k_utf8)
+        {
+            ostringstream ss;
+            ss << "First parameter must be a string in: " << bsoncxx::to_json(m_doc);
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        string collection = m_database.name() + "." + (string)argument.get_utf8().value;
+
+        auto e = m_doc[key::CURSORS];
+
+        if (e.type() != bsoncxx::type::k_array)
+        {
+            ostringstream ss;
+            ss << "Field 'cursors' must be of type array in: " << bsoncxx::to_json(m_doc).c_str();
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        auto cursors = static_cast<bsoncxx::array::view>(e.get_array());
 
         vector<int64_t> ids;
 
