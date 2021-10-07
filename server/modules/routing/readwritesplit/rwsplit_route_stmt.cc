@@ -385,9 +385,20 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
     // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.
     if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
     {
-        rval = handle_hinted_target(buffer.get(), route_target);
+        // If transaction replay is enabled and a transaction is open, hints must be ignored. This prevents
+        // them from overriding the transaction target which is what would otherwise happen and which causes
+        // problems.
+        if (m_config.transaction_replay && trx_is_open() && m_trx.target())
+        {
+            MXS_INFO("Transaction replay is enabled, ignoring routing hint while inside a transaction.");
+        }
+        else
+        {
+            return handle_hinted_target(buffer.get(), route_target);
+        }
     }
-    else if (TARGET_IS_LAST_USED(route_target))
+
+    if (TARGET_IS_LAST_USED(route_target))
     {
         rval = get_last_used_backend();
     }
@@ -643,13 +654,6 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
     if (m_target_node && trx_is_read_only())
     {
         return m_target_node;
-    }
-    else if (m_config.transaction_replay && trx_is_open() && m_trx.target())
-    {
-        // If transaction replay is enabled and a transaction is open, we'll route all the queries
-        // to the same target. This prevents routing hints from overriding the transaction target
-        // which is what would normally happen.
-        return m_trx.target();
     }
 
     RWBackend* rval = nullptr;
