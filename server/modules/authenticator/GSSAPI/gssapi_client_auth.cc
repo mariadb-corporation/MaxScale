@@ -81,7 +81,7 @@ void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
     auto* data = gwbuf_link_data(buffer);
     auto header = mariadb::get_header(data);
     size_t plen = header.pl_length;
-    auto& token = session->auth_data.client_token;
+    auto& token = session->auth_data->client_token;
     token.resize(plen);
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, token.data());
 }

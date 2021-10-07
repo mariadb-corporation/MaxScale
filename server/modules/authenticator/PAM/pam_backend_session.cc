@@ -93,8 +93,8 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
 mxs::Buffer PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) const
 {
     const auto& source = (pw_type == PromptType::PASSWORD) ?
-        m_shared_data.client_data->auth_data.backend_token :
-        m_shared_data.client_data->auth_data.backend_token_2fa;
+        m_shared_data.client_data->auth_data->backend_token :
+        m_shared_data.client_data->auth_data->backend_token_2fa;
 
     auto auth_token_len = source.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;

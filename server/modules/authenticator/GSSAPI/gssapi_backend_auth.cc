@@ -24,7 +24,7 @@
  */
 mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
 {
-    const auto& auth_token = m_shared_data.client_data->auth_data.backend_token;
+    const auto& auth_token = m_shared_data.client_data->auth_data->backend_token;
     auto auth_token_len = auth_token.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
     mxs::Buffer rval(buflen);

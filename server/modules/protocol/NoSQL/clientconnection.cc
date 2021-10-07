@@ -223,15 +223,15 @@ bool ClientConnection::is_movable() const
 
 bool ClientConnection::setup_session()
 {
-    bool rv = false;
-
     mxb_assert(!is_ready());
 
-    m_session_data.auth_data.user = m_config.user;
-    m_session.set_user(m_session_data.auth_data.user);
-    m_session_data.auth_data.default_db = "";
+    m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
+    auto& auth_data = *m_session_data.auth_data;
+    auth_data.user = m_config.user;
+    m_session.set_user(auth_data.user);
+    auth_data.default_db = "";
     m_session_data.current_db = "";
-    m_session_data.auth_data.plugin = "mysql_native_password";
+    auth_data.plugin = "mysql_native_password";
 
     if (!m_config.password.empty())
     {
@@ -242,15 +242,15 @@ bool ClientConnection::setup_session()
         gw_sha1_str(pPassword, nPassword, auth_token);
 
         // This will be used when authenticating with the backend.
-        m_session_data.auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+        auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
     }
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;
     mxb_assert(authenticators.size() == 1);
     auto* pAuthenticator = static_cast<mariadb::AuthenticatorModule*>(authenticators.front().get());
 
-    m_session_data.auth_data.client_auth_module = pAuthenticator;
-    m_session_data.auth_data.be_auth_module = pAuthenticator;
+    auth_data.client_auth_module = pAuthenticator;
+    auth_data.be_auth_module = pAuthenticator;
     m_session_data.client_caps.basic_capabilities = CLIENT_LONG_FLAG
         | CLIENT_LOCAL_FILES
         | CLIENT_PROTOCOL_41
@@ -264,7 +264,7 @@ bool ClientConnection::setup_session()
         | CLIENT_SESSION_TRACKING
         | CLIENT_PROGRESS;
     m_session_data.client_caps.ext_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
-    m_session_data.auth_data.collation = 33;        // UTF8
+    auth_data.collation = 33;       // UTF8
 
     return m_session.start();
 }

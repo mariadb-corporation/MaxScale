@@ -149,8 +149,10 @@ private:
     void prune_history();
 
     bool start_change_user(mxs::Buffer&& buffer);
-    bool complete_change_user();
-    void cancel_change_user();
+    bool complete_change_user_p1();
+    void complete_change_user_p2();
+    void cancel_change_user_p1();
+    void cancel_change_user_p2();
 
     void  handle_use_database(GWBUF* read_buffer);
     char* handle_variables(mxs::Buffer& buffer);
@@ -170,7 +172,7 @@ private:
     bool require_ssl() const;
 
     void update_user_account_entry(mariadb::AuthenticationData& auth_data);
-    void assign_backend_authenticator();
+    void assign_backend_authenticator(mariadb::AuthenticationData& auth_data);
 
     mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
     const MariaDBUserCache*       user_account_cache();
@@ -265,11 +267,13 @@ private:
         COMPARE_RESPONSES,      /**< Call callbacks that compare the recorded responses */
     };
 
-    /** Temporary data required during COM_CHANGE_USER. */
+    /** Data required during COM_CHANGE_USER. */
     struct ChangeUserFields
     {
-        mxs::Buffer                    client_query;    /**< The original change-user-query from client. */
-        std::unique_ptr<MYSQL_session> session;         /**< Temporary session-data */
+        /**
+         * The original change-user-packet from client. Given as-is to router, although backend protocol
+         * will replace it with a generated packed. */
+        mxs::Buffer client_query;
 
         /**
          * Authentication data. All client-side code should read this field for authentication-related data
@@ -277,7 +281,12 @@ private:
          * session object. The backend authenticator will always read the most recent auth data when
          * connecting or sending COM_CHANGE_USER. This does not cause issues when replaying session commands,
          * as the command history is erased on COM_CHANGE_USER. */
-        std::unique_ptr<mariadb::AuthenticationData> auth_data;
+        mariadb::SAuthData auth_data;
+
+        /**
+         * Backup of original auth data while waiting for server reply. This is required so the original
+         * data can be restored if server replies with error. */
+        mariadb::SAuthData auth_data_bu;
     };
 
     SSLState ssl_authenticate_check_status();

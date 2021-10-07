@@ -73,7 +73,7 @@ struct UserEntryResult
 
 /**
  * Authentication-related data. These fields are set during authentication and can only change
- * with COM_CHANGE_USER.
+ * with COM_CHANGE_USER. The structure should be default copyable/movable.
  */
 struct AuthenticationData
 {
@@ -105,6 +105,7 @@ struct AuthenticationData
     /** Backend authenticator module. Usually same as client authenticator. */
     mariadb::AuthenticatorModule* be_auth_module {nullptr};
 };
+using SAuthData = std::unique_ptr<AuthenticationData>;
 
 /**
  * The base class of all authenticators for MariaDB-protocol. Contains the global data for

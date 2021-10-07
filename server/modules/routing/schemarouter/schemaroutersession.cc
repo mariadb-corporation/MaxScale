@@ -54,7 +54,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_load_target(NULL)
 {
     m_mysql_session = static_cast<MYSQL_session*>(session->protocol_data());
-    auto current_db = m_mysql_session->auth_data.default_db;
+    auto current_db = m_mysql_session->auth_data->default_db;
 
     // TODO: The following is not pretty and is bound to cause problems in the future.
 
@@ -63,7 +63,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     if (m_mysql_session->client_capabilities() & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB && !current_db.empty())
     {
         m_mysql_session->client_caps.basic_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-        m_mysql_session->auth_data.default_db.clear();
+        m_mysql_session->auth_data->default_db.clear();
 
         /* Store the database the client is connecting to */
         m_connect_db = current_db;

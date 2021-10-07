@@ -383,19 +383,9 @@ uint32_t MYSQL_session::extra_capabilitites() const
     return client_caps.ext_capabilities;
 }
 
-MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
-    : remote(rhs.remote)
-    , current_db(rhs.current_db)
-    , auth_data(rhs.auth_data)
-    , client_caps(rhs.client_caps)
-    , user_search_settings(rhs.user_search_settings)
-{
-    memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);
-}
-
 std::string MYSQL_session::user_and_host() const
 {
-    return mxb::string_printf("'%s'@'%s'", auth_data.user.c_str(), remote.c_str());
+    return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
 }
 
 bool MYSQL_session::is_trx_read_only() const
