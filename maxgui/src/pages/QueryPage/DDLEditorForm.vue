@@ -3,12 +3,19 @@
         <div ref="header">
             <alter-table-opts v-model="tableOptsData" class="py-0 px-2 pb-4" />
         </div>
-        <v-tabs v-model="activeColSpec" :height="24" class="tab-navigation-wrapper">
-            <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.COLUMNS}`">
-                <span> {{ $t('columns') }} </span>
-            </v-tab>
-            <v-tab color="primary" :href="`#${SQL_DDL_ALTER_SPECS.TRIGGERS}`">
-                <span>{{ $t('triggers') }} </span>
+        <v-tabs
+            v-if="!isEmptyFormData && activated"
+            v-model="activeColSpec"
+            :height="24"
+            class="tab-navigation-wrapper"
+        >
+            <v-tab
+                v-for="spec of SQL_DDL_ALTER_SPECS"
+                :key="spec"
+                color="primary"
+                :href="`#${spec}`"
+            >
+                <span> {{ $t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
         <div class="px-4 py-4">
@@ -51,6 +58,7 @@ export default {
         return {
             isFormValid: true,
             headerHeight: 0,
+            activated: false,
         }
     },
     computed: {
@@ -90,14 +98,23 @@ export default {
                 height: this.dynDim.height - this.headerHeight - 24 - 32,
             }
         },
+        isEmptyFormData() {
+            return this.$typy(this.formData).isEmptyObject
+        },
     },
     watch: {
         isFormValid(v) {
             this.$emit('is-form-valid', v)
         },
+        isEmptyFormData(v) {
+            if (!v) this.setHeaderHeight()
+        },
     },
-    mounted() {
-        this.setHeaderHeight()
+    activated() {
+        this.activated = true
+    },
+    deactivated() {
+        this.activated = false
     },
     methods: {
         ...mapMutations({
