@@ -1,15 +1,14 @@
-/**
- * @file change_user.cpp mysql_change_user test
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * - using RWSplit and user 'skysql': GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH
- * PRIVILEGES;
- * - create a new connection to RSplit as 'user'
- * - try INSERT expecting 'access denied'
- * - call mysql_change_user() to change user to 'skysql'
- * - try INSERT again expecting success
- * - try to execute mysql_change_user() to switch to user 'user' but use rong password (expecting access
- * denied)
- * - try INSERT again expecting success (user should not be changed)
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-07-14
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <maxtest/testconnections.hh>

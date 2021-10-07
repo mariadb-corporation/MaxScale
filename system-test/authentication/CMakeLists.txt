@@ -22,3 +22,7 @@ add_test_executable_ex(NAME xpand_mapped_auth SOURCE xpand_mapped_auth.cc
 # GSSAPI/Kerberos authentication. MXS-3733.
 add_test_executable_ex(NAME gss_authentication SOURCE gss_authentication.cc
         CONFIG gss_authentication.cnf VMS repl_backend)
+
+# Executes change_user commands. Also tests MXS-3366.
+add_test_executable_ex(NAME mariadb_change_user SOURCE mariadb_change_user.cc CONFIG mariadb_change_user.cnf
+        VMS repl_backend LABELS MariaDBAuth LIGHT)
