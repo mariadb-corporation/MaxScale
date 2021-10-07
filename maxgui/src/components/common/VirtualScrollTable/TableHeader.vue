@@ -1,17 +1,14 @@
 <template>
     <div class="virtual-table__header">
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
-            <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
+            <div class="tr">
                 <div
                     v-if="!areHeadersHidden && showSelect && !isVertTable"
-                    class="th d-flex align-center"
+                    class="th d-flex justify-center align-center"
                     :style="{
                         ...headerStyle,
-                        height: $parent.lineHeight,
-                        maxWidth: activeGroupBy ? '90px' : '50px',
-                        minWidth: activeGroupBy ? '90px' : '50px',
-                        paddingLeft: activeGroupBy ? '29px' : '12px',
-                        paddingRight: '12px',
+                        maxWidth: activeGroupBy ? '82px' : '50px',
+                        minWidth: activeGroupBy ? '82px' : '50px',
                     }"
                 >
                     <v-checkbox
@@ -33,7 +30,6 @@
                         :ref="`header__${i}`"
                         :style="{
                             ...headerStyle,
-                            height: $parent.lineHeight,
                             maxWidth: header.width
                                 ? $help.handleAddPxUnit(header.width)
                                 : $help.handleAddPxUnit(headerWidthMap[i]),
@@ -307,6 +303,7 @@ export default {
         flex-direction: row;
         box-shadow: -7px 5px 7px -7px rgb(0 0 0 / 10%);
         flex-wrap: nowrap;
+        line-height: 30px;
         .th {
             display: flex;
             position: relative;
@@ -318,6 +315,7 @@ export default {
             background-color: $table-border;
             border-bottom: none;
             user-select: none;
+            height: 30px;
             &:first-child {
                 border-radius: 5px 0 0 0;
             }

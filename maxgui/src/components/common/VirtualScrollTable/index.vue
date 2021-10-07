@@ -74,13 +74,11 @@
                 >
                     <div
                         v-if="!areHeadersHidden && showSelect"
-                        class="td"
+                        class="td d-flex align-center justify-center"
                         :style="{
                             height: lineHeight,
-                            maxWidth: activeGroupBy ? '90px' : '50px',
-                            minWidth: activeGroupBy ? '90px' : '50px',
-                            paddingLeft: activeGroupBy ? '25px' : '12px',
-                            paddingRight: '12px',
+                            maxWidth: activeGroupBy ? '82px' : '50px',
+                            minWidth: activeGroupBy ? '82px' : '50px',
                         }"
                     >
                         <v-checkbox
@@ -102,7 +100,7 @@
                         <div
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
-                            class="td px-3"
+                            class="td px-3 d-flex align-center"
                             :class="{
                                 'cursor--grab no-userSelect': h.draggable,
                                 'td--last-cell': i === visHeaders.length - 1,
