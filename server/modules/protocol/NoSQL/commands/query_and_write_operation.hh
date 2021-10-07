@@ -1057,6 +1057,15 @@ protected:
 
         if (element)
         {
+            if (element.type() == bsoncxx::type::k_undefined)
+            {
+                ostringstream ss;
+                ss << "can't use a undefined for _id";
+
+                // TODO: Should be returned as a write error for this particular document.
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
             for (const auto& e : doc)
             {
                 check_top_level_field_name(e.key());
