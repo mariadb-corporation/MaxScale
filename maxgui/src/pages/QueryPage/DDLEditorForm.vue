@@ -18,19 +18,17 @@
                 <span> {{ $t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
-        <div class="px-4 py-4">
-            <div :style="{ maxHeight: `${colSpecTabDim.height}px`, overflowY: 'auto' }">
-                <v-slide-x-transition>
-                    <keep-alive>
-                        <alter-cols-opts
-                            v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
-                            v-model="colsOptsData"
-                            :tableHeight="(colSpecTabDim.height * 60) / 100"
-                            :boundingWidth="colSpecTabDim.width"
-                        />
-                    </keep-alive>
-                </v-slide-x-transition>
-            </div>
+        <div class="px-4 py-2">
+            <v-slide-x-transition>
+                <keep-alive>
+                    <alter-cols-opts
+                        v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
+                        v-model="colsOptsData"
+                        :height="tabDim.height"
+                        :boundingWidth="tabDim.width"
+                    />
+                </keep-alive>
+            </v-slide-x-transition>
         </div>
     </v-form>
 </template>
@@ -90,12 +88,11 @@ export default {
                 this.SET_CURR_DDL_COL_SPEC(value)
             },
         },
-        colSpecTabDim() {
-            // v-tab-item class px-4 py-4: 32
-            // v-tabs-bar: 24
+        tabDim() {
             return {
-                width: this.dynDim.width - 32,
-                height: this.dynDim.height - this.headerHeight - 24 - 32,
+                width: this.dynDim.width - 32, // v-tab-item class px-4
+                // v-tab-item class py-2: 16 && v-tabs-bar: 24
+                height: this.dynDim.height - this.headerHeight - 24 - 16,
             }
         },
         isEmptyFormData() {
