@@ -544,6 +544,7 @@ const char VALID[]                           = "valid";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
 const char WARNINGS[]                        = "warnings";
+const char WAS[]                             = "was";
 const char WRITE_CONCERN[]                   = "writeConcern";
 const char WRITE_ERRORS[]                    = "writeErrors";
 const char WRITTEN_TO[]                      = "writtenTo";

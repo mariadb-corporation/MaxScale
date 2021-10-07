@@ -1540,6 +1540,10 @@ public:
     {
         // TODO: Should be assigned to the session so that getParamter
         // TODO: would return the set value.
+
+        DocumentBuilder was;
+
+        doc.append(kvp(key::WAS, was.extract()));
         doc.append(kvp(key::OK, 1));
     }
 };
