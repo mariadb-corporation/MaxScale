@@ -461,6 +461,7 @@ const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
 const char HOSTNAME[]                        = "hostname";
 const char ID[]                              = "id";
+const char ID_INDEX[]                        = "idIndex";
 const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
 const char INDEXES[]                         = "indexes";

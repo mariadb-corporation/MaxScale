@@ -1185,14 +1185,17 @@ public:
                         DocumentBuilder info;
                         info.append(kvp(key::READ_ONLY, false));
                         //info.append(kvp(key::UUID, ...); // TODO: Could something meaningful be added here?
-                        // DocumentBuilder idIndex;
-                        // idIndex.append(kvp(key::V, ...));
-                        // idIndex.append(kvp(key::KEY, ...));
-                        // idIndex.append(kvp(key::NAME, ...));
+
+                        DocumentBuilder key;
+                        key.append(kvp(key::_ID, 1));
+                        DocumentBuilder idIndex;
+                        idIndex.append(kvp(key::V, 2));
+                        idIndex.append(kvp(key::KEY, key.extract()));
+                        idIndex.append(kvp(key::NAME, key::_ID_));
 
                         collection.append(kvp(key::OPTIONS, options.extract()));
                         collection.append(kvp(key::INFO, info.extract()));
-                        //collection.append(kvp(key::IDINDEX, idIndex.extract()));
+                        collection.append(kvp(key::ID_INDEX, idIndex.extract()));
                     }
 
                     firstBatch.append(collection.extract());
