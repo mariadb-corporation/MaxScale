@@ -52,6 +52,7 @@
 #include "sqlmodeparser.hh"
 #include "user_data.hh"
 #include "packet_parser.hh"
+#include "detect_special_query.hh"
 
 namespace
 {
@@ -1030,11 +1031,21 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
 
     if (packet_len >= min_len && packet_len <= max_len)
     {
-        char* sql = nullptr;
+        const char* sql = nullptr;
         int len = 0;
 
         buffer.make_contiguous();
-        if (modutil_extract_SQL(buffer.get(), &sql, &len))
+
+        bool is_special = false;
+
+        if (modutil_extract_SQL(buffer.get(), const_cast<char**>(&sql), &len))
+        {
+            auto pEnd = sql + len;
+            is_special = detect_special_query(&sql, pEnd);
+            len = pEnd - sql;
+        }
+
+        if (is_special)
         {
             auto fields = parse_special_query(sql, len);
             switch (fields.type)
@@ -2866,14 +2877,6 @@ bool MariaDBClientConnection::module_init()
      * Comments at start are skipped. Executable comments are not parsed.
      */
     const char regex_string[] =
-        // May start with comments. Individual comments may be preceded by ws (=whitespace).
-        R"(^(?:\s*)"
-        // Line comment
-        R"((?:--|#).*\n)"
-        // Multiline comment
-        R"(|\s*/\*[^*]*\*+([^*/][^*]*\*+)*/)"
-        // Close comments definition. May have ws after.
-        R"()*\s*)"
         // <main> captures the entire statement.
         R"((?<main>)"
         // Capture "USE database".
