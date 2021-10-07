@@ -1025,6 +1025,20 @@ protected:
         return query;
     }
 
+    static void check_top_level_field_name(const string_view& s)
+    {
+        if (!s.empty() && s.front() == '$')
+        {
+            ostringstream ss;
+            ss << "Document can't have $ prefixed field names: " << s;
+
+            // TODO: This should actually not cause the entire processing to be
+            // TODO: terminated, but only generate a write error for the particular
+            // TODO: document in question.
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+    }
+
     string convert_document(const bsoncxx::document::view& doc) override
     {
         ostringstream sql;
@@ -1043,6 +1057,11 @@ protected:
 
         if (element)
         {
+            for (const auto& e : doc)
+            {
+                check_top_level_field_name(e.key());
+            }
+
             json = bsoncxx::to_json(doc);
         }
         else
@@ -1057,6 +1076,7 @@ protected:
 
             for (const auto& e : doc)
             {
+                check_top_level_field_name(e.key());
                 append(builder, e.key(), e);
             }
 
