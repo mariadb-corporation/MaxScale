@@ -149,8 +149,8 @@ export default {
         },
         hasChanged() {
             return !this.$help.lodash.isEqual(
-                this.$typy(this.initialData, 'table_opts_data').safeObject,
-                this.$typy(this.formData, 'table_opts_data').safeObject
+                this.$typy(this.initialData).safeObject,
+                this.$typy(this.formData).safeObject
             )
         },
         hasValidChanges() {
@@ -221,11 +221,8 @@ export default {
         handleAddDelimiter({ sql, isLastKey }) {
             return `${sql}${isLastKey ? ';' : ', '}`
         },
-
-        applyChanges() {
+        buildTblOptSql({ sql, dbName }) {
             const { escapeIdentifiers: escape, objectDiff } = this.$help
-            const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
-            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
             //Diff of table_opts_data
             const diff = objectDiff({
                 base: this.initialData.table_opts_data,
@@ -252,6 +249,14 @@ export default {
                 }
                 sql = this.handleAddDelimiter({ sql, isLastKey: i === keys.length - 1 })
             })
+            return sql
+        },
+        applyChanges() {
+            const { escapeIdentifiers: escape } = this.$help
+            const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
+            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
+            sql = this.buildTblOptSql({ sql, dbName })
+            // TODO: build alter column sql
             this.sql = sql
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false

@@ -95,10 +95,14 @@ export default {
         setHeaderHeight() {
             if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
-        // TODO: add handlers
         deleteSelectedRows(selectedItems) {
-            console.log('DELETE selectedItems', selectedItems)
+            const { xorWith, isEqual } = this.$help.lodash
+            this.colsOptsData = {
+                ...this.colsOptsData,
+                data: xorWith(this.colsOptsData.data, selectedItems, isEqual),
+            }
         },
+        // TODO: add handlers
         addNewCol() {},
     },
 }
