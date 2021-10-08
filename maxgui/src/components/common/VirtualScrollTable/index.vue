@@ -31,7 +31,7 @@
             class="tbody"
             @scroll.native="scrolling"
         >
-            <template v-slot:default="{ item: row }">
+            <template v-slot:default="{ item: row, index: rowIdx }">
                 <vertical-row
                     v-if="isVertTable"
                     :row="row"
@@ -123,6 +123,8 @@
                                     cell: row[i],
                                     header: h,
                                     maxWidth: cellMaxWidth(i),
+                                    rowIdx: rowIdx,
+                                    colIdx: i,
                                 }"
                             >
                                 <truncate-string

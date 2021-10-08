@@ -37,10 +37,15 @@
                         }"
                         class="th d-flex align-center px-3"
                         :class="{
-                            pointer: enableSorting,
+                            pointer: enableSorting && header.sortable !== false,
                             [`sort--active ${sortOrder}`]: activeSort === header.text,
                         }"
-                        @click="() => (enableSorting ? handleSort(header.text) : null)"
+                        @click="
+                            () =>
+                                enableSorting && header.sortable !== false
+                                    ? handleSort(header.text)
+                                    : null
+                        "
                     >
                         <span v-if="header.text === '#'">
                             {{ header.text }}
@@ -54,7 +59,11 @@
                         <span v-if="header.text === '#'" class="ml-1 color text-field-text">
                             ({{ rowsLength }})
                         </span>
-                        <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
+                        <v-icon
+                            v-if="enableSorting && header.sortable !== false"
+                            size="14"
+                            class="sort-icon ml-2"
+                        >
                             $vuetify.icons.arrowDown
                         </v-icon>
                         <span
@@ -106,6 +115,7 @@
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
   hidden?: boolean, hidden the column
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
+  sortable?: boolean, if false, column won't be sortable
 }
  */
 export default {
