@@ -1,5 +1,5 @@
 <template>
-    <div class="py-0 px-2 mb-4">
+    <v-container fluid>
         <v-row class="ma-0">
             <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
@@ -120,7 +120,7 @@
                 />
             </v-col>
         </v-row>
-    </div>
+    </v-container>
 </template>
 
 <script>

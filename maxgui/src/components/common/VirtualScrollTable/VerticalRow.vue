@@ -37,6 +37,11 @@
                         <truncate-string :text="`${row[i]}`" :maxWidth="cellMaxWidth(1)" />
                     </slot>
                 </div>
+                <div
+                    v-if="!isXOverflowed"
+                    :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
+                    class="dummy-cell color border-right-table-border"
+                />
             </div>
         </template>
     </div>
@@ -70,6 +75,7 @@ export default {
         lineHeight: { type: String, required: true },
         headerWidthMap: { type: Object, required: true },
         cellMaxWidth: { type: Function, required: true },
+        isXOverflowed: { type: Boolean, required: true },
     },
 }
 </script>

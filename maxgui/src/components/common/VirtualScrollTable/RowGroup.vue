@@ -108,3 +108,8 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.td-col-span {
+    border-right: none !important;
+}
+</style>

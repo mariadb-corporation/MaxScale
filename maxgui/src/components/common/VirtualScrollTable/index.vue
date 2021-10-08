@@ -39,6 +39,7 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :cellMaxWidth="cellMaxWidth"
+                    :isXOverflowed="isXOverflowed"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 />
                 <row-group
@@ -102,7 +103,10 @@
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td px-3"
-                            :class="{ 'cursor--grab no-userSelect': h.draggable }"
+                            :class="{
+                                'cursor--grab no-userSelect': h.draggable,
+                                'td--last-cell': i === visHeaders.length - 1,
+                            }"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
@@ -131,6 +135,11 @@
                             </slot>
                         </div>
                     </template>
+                    <div
+                        v-if="!isXOverflowed"
+                        :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
+                        class="dummy-cell color border-right-table-border border-bottom-table-border"
+                    />
                 </div>
             </template>
         </v-virtual-scroll>
@@ -225,6 +234,10 @@ export default {
             return this.isVertTable
                 ? `${this.itemHeight * this.visHeaders.length}px`
                 : this.itemHeight
+        },
+        isXOverflowed() {
+            const rowHeight = Number(`${this.rowHeight}`.replace(/px/g, ''))
+            return this.currRows.length * rowHeight > this.tbodyHeight
         },
         rowsLength() {
             return this.rows.length
@@ -463,8 +476,7 @@ export default {
 ::v-deep.virtual-table {
     width: 100%;
     .tbody {
-        // Always show scrollbar to make table header and table cell align vertically
-        overflow: scroll;
+        overflow: auto;
         .tr {
             display: flex;
             .td {
@@ -476,27 +488,26 @@ export default {
                 &:first-of-type {
                     border-left: thin solid $table-border;
                 }
-                &:last-of-type {
+                &--last-cell {
                     border-right: none;
                 }
             }
             &:hover {
-                .td {
+                .td,
+                .dummy-cell {
                     background: $table-row-hover;
                 }
             }
-            &:active {
-                .td {
-                    background: #f2fcff;
-                }
-            }
+            &:active,
             &--active {
-                .td {
+                .td,
+                .dummy-cell {
                     background: #f2fcff !important;
                 }
             }
             &--selected {
-                .td {
+                .td,
+                .dummy-cell {
                     background: $selected-row !important;
                 }
             }

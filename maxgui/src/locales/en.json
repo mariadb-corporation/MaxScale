@@ -197,6 +197,9 @@
     "apply": "apply",
     "applyChanges": "Apply changes",
     "execute": "Execute",
+    "addNewCol": "Add new column",
+    "drop": "Drop",
+    "dropSelectedCols": "Drop selected columns",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

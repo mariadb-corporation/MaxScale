@@ -79,6 +79,7 @@
         <keep-alive>
             <virtual-scroll-table
                 v-if="tableHeight > 0"
+                class="pb-2"
                 :benched="0"
                 :headers="visibleHeaders"
                 :rows="filteredRows"
@@ -155,8 +156,7 @@ export default {
     },
     computed: {
         tableHeight() {
-            let res = this.height - this.tableToolsHeight
-            return res
+            return this.height - this.tableToolsHeight - 8
         },
         tableHeaders() {
             let headers = []

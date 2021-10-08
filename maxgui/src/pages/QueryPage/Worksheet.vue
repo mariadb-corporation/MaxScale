@@ -19,13 +19,15 @@
             />
         </template>
         <template slot="pane-right">
-            <ddl-editor-container v-show="isDDLEditor" ref="ddlEditor" :dynDim="ddlDim" />
-            <txt-editor-container
-                v-show="isTxtEditor"
-                ref="txtEditorPane"
-                :dim="txtEditorPaneDim"
-                v-on="$listeners"
-            />
+            <keep-alive>
+                <txt-editor-container
+                    v-if="isTxtEditor"
+                    ref="txtEditorPane"
+                    :dim="txtEditorPaneDim"
+                    v-on="$listeners"
+                />
+                <ddl-editor-container v-else ref="ddlEditor" :dynDim="ddlDim" />
+            </keep-alive>
         </template>
     </split-pane>
 </template>
@@ -78,9 +80,6 @@ export default {
         }),
         isTxtEditor() {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
-        },
-        isDDLEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
         minSidebarPct() {
             if (!this.ctrDim.width) return 0

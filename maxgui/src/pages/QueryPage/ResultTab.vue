@@ -28,6 +28,7 @@
                 hide-slider
                 :height="20"
                 class="tab-navigation--btn-style tab-navigation--btn-style--custom-max-width"
+                center-active
             >
                 <v-tab
                     v-for="(resSet, name) in resultData"
