@@ -677,9 +677,12 @@ export default {
                         draggable: true,
                         data: row,
                         level: 2,
-                        isSysTbl: ['information_schema', 'performance_schema', 'mysql'].includes(
-                            dbName.toLowerCase()
-                        ),
+                        isSysTbl: [
+                            'information_schema',
+                            'performance_schema',
+                            'mysql',
+                            'sys',
+                        ].includes(dbName.toLowerCase()),
                     }
                     // For child node of Tables, it has canBeHighlighted and children props
                     if (node.type === 'Tables') {
