@@ -1,0 +1,30 @@
+{
+    "user_map": [
+        {
+            "original_user": "beta",
+            "mapped_user": "delta"
+        },
+        {
+          "original_user": "gamma",
+          "mapped_user": "delta"
+        }
+    ],
+    "group_map": [
+        {
+            "original_group": "psi",
+            "mapped_user": "omega"
+        }
+    ],
+    "server_credentials": [
+        {
+            "mapped_user": "delta",
+            "password": "686F6B8627B25649C065C413539B2B6E4B81A751685397730339FDAF3683C8B8",
+            "plugin": "mysql_native_password"
+        },
+        {
+            "mapped_user": "omega",
+            "password": "pw_omega",
+            "plugin": "mysql_native_password"
+        }
+    ]
+}

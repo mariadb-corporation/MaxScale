@@ -254,6 +254,12 @@ public:
     SMariaDB try_open_rwsplit_connection(SslMode ssl, const std::string& user, const std::string& pass,
                                          const std::string& db = "");
 
+    SMariaDB try_open_connection(SslMode ssl, int port, const std::string& user, const std::string& pass,
+                                 const std::string& db = "");
+
+    SMariaDB try_open_connection(int port, const std::string& user, const std::string& pass,
+                                 const std::string& db = "");
+
     /**
      * Get a readwritesplit Connection
      */
