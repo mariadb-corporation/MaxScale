@@ -115,6 +115,7 @@ enum qc_query_op_t
     QUERY_OP_SHOW,
     QUERY_OP_TRUNCATE,
     QUERY_OP_UPDATE,
+    QUERY_OP_KILL,
 };
 
 /**

@@ -2531,6 +2531,14 @@ public:
         }
     }
 
+    void maxscaleKill(Parse* pParse, Token* pToken)
+    {
+        mxb_assert(this_thread.initialized);
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+        m_operation = QUERY_OP_KILL;
+    }
+
     int maxscaleTranslateKeyword(int token)
     {
         switch (token)
@@ -3601,6 +3609,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse* pParse, SrcList*);
+extern void maxscaleKill(Parse* pParse, Token* pToken);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
@@ -4589,6 +4598,16 @@ void maxscaleOptimize(Parse* pParse, SrcList* pTables)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleOptimize(pParse, pTables));
+}
+
+void maxscaleKill(Parse* pParse, Token* pToken)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleKill(pParse, pToken));
 }
 
 void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)

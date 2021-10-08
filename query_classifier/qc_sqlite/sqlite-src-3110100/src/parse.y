@@ -124,6 +124,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse*, SrcList*);
+extern void maxscaleKill(Parse*, Token*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
@@ -3556,6 +3557,29 @@ optimize_arg2_opt ::= WAIT INTEGER.
 
 optimize(A) ::= OPTIMIZE optimize_arg1_opt TABLE fullnames(X) optimize_arg2_opt. {
     A = X;
+}
+
+//////////////////////// KILL statement ////////////////////////////////////
+//
+
+cmd ::= kill(X). {
+    maxscaleKill(pParse, &X);
+}
+
+kill_hardness_opt ::= .
+kill_hardness_opt ::= HARD.
+kill_hardness_opt ::= SOFT.
+
+kill_type_opt ::= .
+kill_type_opt ::= CONNECTION.
+kill_type_opt ::= QUERY.
+kill_type_opt ::= QUERY ID.
+
+kill_id(A) ::= INTEGER(X). { A = X; }
+kill_id(A) ::= USER STRING(X). {A = X; }
+
+kill(A) ::= KILL kill_hardness_opt kill_type_opt kill_id(Y). {
+    A = Y;
 }
 
 //////////////////////// ORACLE Assignment ////////////////////////////////////

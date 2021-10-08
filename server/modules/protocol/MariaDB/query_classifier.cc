@@ -858,6 +858,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_UPDATE:
         return "QUERY_OP_UPDATE";
 
+    case QUERY_OP_KILL:
+        return "QUERY_OP_KILL";
+
     default:
         return "UNKNOWN_QUERY_OP";
     }

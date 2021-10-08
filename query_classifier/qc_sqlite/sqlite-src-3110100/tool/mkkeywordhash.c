@@ -305,6 +305,7 @@ static Keyword aKeywordTable[] = {
   { "GROUP",            "TK_GROUP",        ALWAYS                 },
 #ifdef MAXSCALE
   { "HANDLER",          "TK_HANDLER",      ALWAYS                 },
+  { "HARD",             "TK_HARD",         ALWAYS                 },
 #endif
   { "HAVING",           "TK_HAVING",       ALWAYS                 },
 #ifdef MAXSCALE
@@ -339,6 +340,7 @@ static Keyword aKeywordTable[] = {
   { "KEY",              "TK_KEY",          ALWAYS                 },
 #ifdef MAXSCALE
   { "KEYS",             "TK_KEYS",         ALWAYS                 },
+  { "KILL",             "TK_KILL",         ALWAYS                 },
   { "LEADING",          "TK_TRIM_ARG"  ,   ALWAYS                 },
 #endif
   { "LEFT",             "TK_JOIN_KW",      ALWAYS                 },
@@ -464,6 +466,7 @@ static Keyword aKeywordTable[] = {
   { "SQL_CALC_FOUND_ROWS","TK_SELECT_OPTIONS_KW", ALWAYS          },
   { "SQL_NO_CACHE",     "TK_SELECT_OPTIONS_KW", ALWAYS            },
   { "SQL_SMALL_RESULT", "TK_SELECT_OPTIONS_KW", ALWAYS            },
+  { "SOFT",             "TK_SOFT",              ALWAYS            },
 #endif
   { "SET",              "TK_SET",          ALWAYS                 },
 #ifdef MAXSCALE
@@ -504,6 +507,7 @@ static Keyword aKeywordTable[] = {
 #endif
   { "UPDATE",           "TK_UPDATE",       ALWAYS                 },
   { "USE",              "TK_USE",          ALWAYS                 },
+  { "USER",             "TK_USER",         ALWAYS                 },
   { "USING",            "TK_USING",        ALWAYS                 },
   { "VACUUM",           "TK_VACUUM",       VACUUM                 },
 #ifdef MAXSCALE
