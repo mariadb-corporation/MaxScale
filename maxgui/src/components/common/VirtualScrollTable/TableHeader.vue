@@ -54,7 +54,10 @@
                         <truncate-string
                             v-else
                             :text="`${header.text}`"
-                            :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
+                            :maxWidth="
+                                $typy(headerWidthMap[i]).safeNumber -
+                                    (enableSorting && header.sortable !== false ? 46 : 0)
+                            "
                         />
                         <span v-if="header.text === '#'" class="ml-1 color text-field-text">
                             ({{ rowsLength }})
@@ -193,6 +196,7 @@ export default {
     methods: {
         //threshold, user cannot resize header smaller than this
         getMinHeaderWidth(header) {
+            if (header.maxWidth) return header.maxWidth
             return this.$typy(header, 'groupable').safeBoolean ? 117 : 67
         },
         resetHeaderWidth() {
