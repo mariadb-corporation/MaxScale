@@ -572,7 +572,32 @@ const char UNDECIDED[]  = "undecided";
 }
 
 bool get_integer(const bsoncxx::document::element& element, int64_t* pInt);
-bool get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt);
+template<class bsoncxx_document_or_array_element>
+bool get_number_as_integer(const bsoncxx_document_or_array_element& element, int64_t* pInt)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pInt = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pInt = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        // Integers are often passed as double.
+        *pInt = element.get_double();
+        break;
+
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
 bool get_number_as_double(const bsoncxx::document::element& element, double* pDouble);
 
 /**

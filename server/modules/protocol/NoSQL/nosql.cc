@@ -2201,6 +2201,62 @@ string type_to_condition(const Path::Incarnation& p, const bsoncxx::document::el
     return rv;
 }
 
+string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("malformed mod, needs to be an array", error::BAD_VALUE);
+    }
+
+    bsoncxx::array::view arguments = element.get_array();
+
+    auto n = std::distance(arguments.begin(), arguments.end());
+
+    const char* zMessage = nullptr;
+    switch (n)
+    {
+    case 0:
+    case 1:
+        zMessage = "malformed mod, not enough elements";
+        break;
+
+    case 2:
+        break;
+
+    default:
+        zMessage = "malformed mod, too many elements";
+    }
+
+    if (zMessage)
+    {
+        throw SoftError(zMessage, error::BAD_VALUE);
+    }
+
+    int64_t divisor;
+    if (!get_number_as_integer(arguments[0], &divisor))
+    {
+        throw SoftError("malformed mod, divisor is not a number", error::BAD_VALUE);
+    }
+
+    if (divisor == 0)
+    {
+        throw SoftError("divisor cannot be 0", error::BAD_VALUE);
+    }
+
+    int64_t remainder;
+    if (!get_number_as_integer(arguments[1], &remainder))
+    {
+        throw SoftError("malformed mod, remainder is not a number", error::BAD_VALUE);
+    }
+
+    ostringstream ss;
+    ss << "((JSON_TYPE(JSON_VALUE(doc, '$." << p.path() << "')) = 'INTEGER' || "
+       << "JSON_TYPE(JSON_VALUE(doc, '$." << p.path() << "')) = 'DOUBLE') AND "
+       << "(MOD(JSON_VALUE(doc, '$." << p.path() << "'), " << divisor << ") = " << remainder << "))";
+
+    return ss.str();
+}
+
 namespace
 {
 
@@ -2783,32 +2839,6 @@ bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt
     return rv;
 }
 
-bool nosql::get_number_as_integer(const bsoncxx::document::element& element, int64_t* pInt)
-{
-    bool rv = true;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        *pInt = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        *pInt = element.get_int64();
-        break;
-
-    case bsoncxx::type::k_double:
-        // Integers are often passed as double.
-        *pInt = element.get_double();
-        break;
-
-    default:
-        rv = false;
-    }
-
-    return rv;
-}
-
 bool nosql::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
 {
     bool rv = true;
@@ -3300,6 +3330,10 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         else if (nosql_op == "$type")
         {
             rv += type_to_condition(*this, element);
+        }
+        else if (nosql_op == "$mod")
+        {
+            rv += mod_to_condition(*this, element);
         }
         else if (nosql_op.front() == '$')
         {

@@ -287,6 +287,10 @@ Boolean | 5 | "bool" | `BOOLEAN`
 The _"number"_ alias is supported and will match values whose MariaDB type is
 `DOUBLE` or `INTEGER`.
 
+### Evaluation Query Operators
+
+* $mod
+
 ### Array Query Operators
 
 * $all
