@@ -1347,6 +1347,7 @@ private:
 
             rv = zJson;
             MXS_FREE(zJson);
+            json_decref(pJson);
         }
         else
         {
