@@ -435,7 +435,7 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     {
         if (create_batch([&batch](bsoncxx::document::value&& doc)
                          {
-                             if (batch.view().length() + doc.view().length() > protocol::MAX_MSG_SIZE)
+                             if (batch.view().length() + doc.view().length() > protocol::MAX_BSON_OBJECT_SIZE)
                              {
                                  return false;
                              }
