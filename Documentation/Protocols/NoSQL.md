@@ -645,6 +645,12 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 create| string | The name of the collection to create.
+capped| boolean | Optional. If specified, the value must be `false` as capped collections are not supported.
+viewOn| string | Optional. If specified, the command will fail as views are not supported.
+
+Currently, _capped collections_ and _views_ are not supported. Consequently,
+specifying that the collection should be capped or that it should be a
+view on another collection, will cause the command to fail.
 
 ### createIndexes
 

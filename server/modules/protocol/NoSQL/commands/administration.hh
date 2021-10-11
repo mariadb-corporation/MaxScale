@@ -347,6 +347,24 @@ public:
 
     string generate_sql() override
     {
+        bool capped;
+        if (optional(key::CAPPED, &capped) && capped)
+        {
+            const char* zMessage = "Capped collections are not supported (MaxScale)";
+
+            MXS_WARNING("%s", zMessage);
+            throw SoftError(zMessage, error::COMMAND_NOT_SUPPORTED);
+        }
+
+        string view_on;
+        if (optional(key::VIEW_ON, &view_on))
+        {
+            const char* zMessage = "Views are not supported (MaxScale)";
+
+            MXS_WARNING("%s", zMessage);
+            throw SoftError(zMessage, error::COMMAND_NOT_SUPPORTED);
+        }
+
         bsoncxx::document::view storage_engine;
         if (optional(key::STORAGE_ENGINE, &storage_engine))
         {
