@@ -1,5 +1,5 @@
 <template>
-    <v-select
+    <v-combobox
         v-model="collation"
         :items="collations"
         outlined
@@ -12,6 +12,7 @@
         dense
         :height="height"
         hide-details="auto"
+        :disabled="disabled"
     >
         <template v-slot:item="{ item, on, attrs }">
             <div
@@ -23,7 +24,7 @@
                 {{ item === defCollation ? `(${$t('defCollation')})` : '' }}
             </div>
         </template>
-    </v-select>
+    </v-combobox>
 </template>
 
 <script>
@@ -47,6 +48,7 @@ export default {
         defCollation: { type: String, required: true },
         charset: { type: String },
         height: { type: Number, default: 32 },
+        disabled: { type: Boolean, default: false },
     },
     computed: {
         ...mapState({
