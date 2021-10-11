@@ -239,6 +239,7 @@ authentication. It is recommended to enable SSL whenever plaintext
 authentication is used.
 
 Allowed values are:
+
 * `PLAIN`
 * `SCRAM-SHA-256`
 * `SCRAM-SHA-512`
@@ -284,5 +285,3 @@ topic=my-cdc-topic
 * The KafkaCDC module provides at-least-once semantics for the generated
   events. This means that each replication event is delivered to kafka at least
   once but there can be duplicate events in case of failures.
-
-* Authentication to Kafka is not currently supported.
