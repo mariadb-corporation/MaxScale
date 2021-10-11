@@ -44,33 +44,11 @@
                 <label class="field__label color text-small-text label-required">
                     {{ $t('charset') }}
                 </label>
-                <v-select
+                <charset-input
                     v-model="tableOptsData.table_charset"
-                    :items="charsets"
-                    name="table_charset"
-                    outlined
-                    class="std mariadb-select-input error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'mariadb-select-v-menu',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="32"
-                    hide-details="auto"
-                    @change="onChangeCharset"
-                >
-                    <template v-slot:item="{ item, on, attrs }">
-                        <div
-                            class="v-list-item__title d-flex align-center flex-row flex-grow-1"
-                            v-bind="attrs"
-                            v-on="on"
-                        >
-                            {{ item }}
-                            {{ item === defDbCharset ? `(${$t('defCharset')})` : '' }}
-                        </div>
-                    </template>
-                </v-select>
+                    :defCharset="defDbCharset"
+                    @on-change="onChangeCharset"
+                />
             </v-col>
             <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
@@ -137,8 +115,12 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import CharsetInput from './CharsetInput.vue'
 export default {
     name: 'alter-table-opts',
+    components: {
+        'charset-input': CharsetInput,
+    },
     props: {
         value: { type: Object, required: true },
     },
@@ -164,9 +146,6 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
-        },
-        charsets() {
-            return [...this.charset_collation_map.keys()]
         },
         collations() {
             return this.$typy(
