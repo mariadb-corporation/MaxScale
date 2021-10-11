@@ -34,9 +34,9 @@ target_link_libraries(version_sensitivity maxscale-common)
 add_executable(crash_qc_sqlite crash_qc_sqlite.cc)
 target_link_libraries(crash_qc_sqlite maxscale-common)
 
-add_test(test_qc_crash_qcsqlite crash_qc_sqlite)
+add_test(test_crash_qc_sqlite crash_qc_sqlite)
 
-add_test(testQC_SqLite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
+add_test(test_qc_sqlite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 
 if (BUILD_QC_MYSQLEMBEDDED)
   # test_qc_MySQLEmbedded excluded, classify is now solely used for verifying the
