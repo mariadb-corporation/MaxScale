@@ -178,6 +178,15 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
         m_sCommand = std::move(sCommand);
         set_busy();
 
+        // This check could be made earlier, but it is more convenient to do it here.
+        if (m_name.empty() || m_name.find_first_of(" /\\.\"$") != string::npos)
+        {
+            ostringstream ss;
+            ss << "Invalid database name: '" << m_name << "'";
+
+            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+        }
+
         state = m_sCommand->execute(&pResponse);
     }
     catch (const Exception& x)

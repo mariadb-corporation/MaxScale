@@ -712,7 +712,15 @@ void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
 
 mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_inventory.rpl_state();
+    auto rval = m_inventory.rpl_state();
+
+    if (rval.gtids().empty())
+    {
+        // No events have been replicated yet, use the requested position as the current one
+        rval = m_inventory.requested_rpl_state();
+    }
+
+    return rval;
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const

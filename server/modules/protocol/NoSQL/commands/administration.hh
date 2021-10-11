@@ -964,6 +964,22 @@ private:
 // https://docs.mongodb.com/v4.4/reference/command/filemd5/
 
 // https://docs.mongodb.com/v4.4/reference/command/fsync/
+class FSync : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "fsync";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        doc.append(kvp(key::ERRMSG, "fsync not supported by MaxScale:nosqlprotocol"));
+        doc.append(kvp(key::CODE, (int)error::COMMAND_NOT_SUPPORTED));
+        doc.append(kvp(key::CODE_NAME, nosql::error::name(error::COMMAND_NOT_SUPPORTED)));
+        doc.append(kvp(key::OK, 0));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/fsyncUnlock/
 
@@ -982,8 +998,29 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        string collection = m_database.name() + "." + value_as<string>();
-        auto cursors = required<bsoncxx::array::view>("cursors");
+        auto argument = m_doc[m_name];
+
+        if (argument.type() != bsoncxx::type::k_utf8)
+        {
+            ostringstream ss;
+            ss << "First parameter must be a string in: " << bsoncxx::to_json(m_doc);
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        string collection = m_database.name() + "." + (string)argument.get_utf8().value;
+
+        auto e = m_doc[key::CURSORS];
+
+        if (e.type() != bsoncxx::type::k_array)
+        {
+            ostringstream ss;
+            ss << "Field 'cursors' must be of type array in: " << bsoncxx::to_json(m_doc).c_str();
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        auto cursors = static_cast<bsoncxx::array::view>(e.get_array());
 
         vector<int64_t> ids;
 
@@ -1148,14 +1185,17 @@ public:
                         DocumentBuilder info;
                         info.append(kvp(key::READ_ONLY, false));
                         //info.append(kvp(key::UUID, ...); // TODO: Could something meaningful be added here?
-                        // DocumentBuilder idIndex;
-                        // idIndex.append(kvp(key::V, ...));
-                        // idIndex.append(kvp(key::KEY, ...));
-                        // idIndex.append(kvp(key::NAME, ...));
+
+                        DocumentBuilder key;
+                        key.append(kvp(key::_ID, 1));
+                        DocumentBuilder idIndex;
+                        idIndex.append(kvp(key::V, 2));
+                        idIndex.append(kvp(key::KEY, key.extract()));
+                        idIndex.append(kvp(key::NAME, key::_ID_));
 
                         collection.append(kvp(key::OPTIONS, options.extract()));
                         collection.append(kvp(key::INFO, info.extract()));
-                        //collection.append(kvp(key::IDINDEX, idIndex.extract()));
+                        collection.append(kvp(key::ID_INDEX, idIndex.extract()));
                     }
 
                     firstBatch.append(collection.extract());
@@ -1503,6 +1543,10 @@ public:
     {
         // TODO: Should be assigned to the session so that getParamter
         // TODO: would return the set value.
+
+        DocumentBuilder was;
+
+        doc.append(kvp(key::WAS, was.extract()));
         doc.append(kvp(key::OK, 1));
     }
 };

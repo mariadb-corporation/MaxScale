@@ -206,9 +206,9 @@ public:
             sql << "SELECT DISTINCT(" << extract << ") FROM " << table() << " "
                 << where << extract << " IS NOT NULL";
 
-            if (p.is_array_element())
+            if (p.has_array_demand())
             {
-                sql << " AND JSON_TYPE(JSON_EXTRACT(doc, '$." << p.parent() << "')) = 'ARRAY'";
+                sql << " AND JSON_TYPE(JSON_EXTRACT(doc, '$." << p.array_path() << "')) = 'ARRAY'";
             }
         }
 

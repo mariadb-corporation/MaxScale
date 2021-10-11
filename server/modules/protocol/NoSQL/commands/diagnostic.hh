@@ -161,8 +161,9 @@ public:
         else if (value == "global" || value == "startupWarnings")
         {
             ArrayBuilder log;
+            log.append("No news is good news."); // TODO: The MaxScale log could be returned.
 
-            doc.append(kvp(key::TOTAL_LINES_WRITTEN, 0));
+            doc.append(kvp(key::TOTAL_LINES_WRITTEN, 1));
             doc.append(kvp(key::LOG, log.extract()));
             doc.append(kvp(key::OK, 1));
         }
@@ -179,6 +180,59 @@ public:
 
 
 // https://docs.mongodb.com/v4.4/reference/command/hostInfo/
+class HostInfo;
+
+template<>
+struct IsAdmin<command::HostInfo>
+{
+    static const bool is_admin { true };
+};
+
+class HostInfo final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "hostInfo";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<HostInfo>::is_admin;
+    }
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        long memory = get_total_memory();
+
+        const auto& config = mxs::Config::get();
+
+        DocumentBuilder system;
+        system.append(kvp(key::CURRENT_TIME, bsoncxx::types::b_date(std::chrono::system_clock::now())));
+        system.append(kvp(key::HOSTNAME, config.nodename));
+        system.append(kvp(key::CPU_ADDR_SIZE, 64));
+        system.append(kvp(key::MEM_SIZE_MB, memory));
+        system.append(kvp(key::MEM_LIMIT_MB, memory));
+        system.append(kvp(key::NUM_CORES, (int)get_processor_count()));
+        system.append(kvp(key::CPU_ARCH, config.machine));
+        system.append(kvp(key::NUMA_ENABLED, false));
+
+        DocumentBuilder os;
+        os.append(kvp(key::TYPE, config.sysname));
+        // TODO: Enhance config.c:get_release_string() so that you can get the information
+        // TODO: in a structured format.
+        os.append(kvp(key::NAME, "Unknown"));
+        os.append(kvp(key::VERSION, "Unknown"));
+
+        DocumentBuilder extra;
+
+        doc.append(kvp(key::SYSTEM, system.extract()));
+        doc.append(kvp(key::OS, os.extract()));
+        doc.append(kvp(key::EXTRA, extra.extract()));
+
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/isSelf/
 

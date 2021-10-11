@@ -430,7 +430,11 @@ const char COMPILED[]                        = "compiled";
 const char CONFIG[]                          = "config";
 const char CONNECTION_ID[]                   = "connectionId";
 const char CONNECTIONS[]                     = "connections";
+const char CPU_ADDR_SIZE[]                   = "cpuAddrSize";
+const char CPU_ARCH[]                        = "cpuArch";
 const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
+const char CURRENT_TIME[]                    = "currentTime";
+const char CURSORS[]                         = "cursors";
 const char CURSORS_ALIVE[]                   = "cursorsAlive";
 const char CURSORS_KILLED[]                  = "cursorsKilled";
 const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";
@@ -449,12 +453,15 @@ const char ERRORS[]                          = "errors";
 const char ERR[]                             = "err";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char EXTRA_INFO[]                      = "extraInfo";
+const char EXTRA[]                           = "extra";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
 const char FLOW_CONTROL[]                    = "flowControl";
 const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
+const char HOSTNAME[]                        = "hostname";
 const char ID[]                              = "id";
+const char ID_INDEX[]                        = "idIndex";
 const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
 const char INDEXES[]                         = "indexes";
@@ -477,27 +484,32 @@ const char MAX_MESSAGE_SIZE_BYTES[]          = "maxMessageSizeBytes";
 const char MAXSCALE[]                        = "maxscale";
 const char MAX_WIRE_VERSION[]                = "maxWireVersion";
 const char MAX_WRITE_BATCH_SIZE[]            = "maxWriteBatchSize";
+const char MEM_LIMIT_MB[]                    = "memLimitMB";
+const char MEM_SIZE_MB[]                     = "memSizeMB";
 const char MESSAGE[]                         = "message";
 const char MIN_WIRE_VERSION[]                = "minWireVersion";
 const char MISSING_INDEX_ENTRIES[]           = "missingIndexEntries";
 const char MODULES[]                         = "modules";
 const char MULTI[]                           = "multi";
-const char NAME_ONLY[]                       = "nameOnly";
 const char NAMES[]                           = "names";
 const char NAME[]                            = "name";
+const char NAME_ONLY[]                       = "nameOnly";
 const char NEXT_BATCH[]                      = "nextBatch";
+const char NRECORDS[]                        = "nrecords";
+const char NS[]                              = "ns";
+const char NUMA_ENABLED[]                    = "numaEnabled";
+const char NUM_CORES[]                       = "numCores";
+const char N[]                               = "n";
 const char N_INDEXES[]                       = "nIndexes";
 const char N_INDEXES_WAS[]                   = "nIndexesWas";
 const char N_INVALID_DOCUMENTS[]             = "nInvalidDocuments";
 const char N_MODIFIED[]                      = "nModified";
-const char NRECORDS[]                        = "nrecords";
-const char NS[]                              = "ns";
-const char N[]                               = "n";
 const char OK[]                              = "ok";
 const char OPENSSL[]                         = "openssl";
 const char OPTIONS[]                         = "options";
 const char ORDERBY[]                         = "orderby";
 const char ORDERED[]                         = "ordered";
+const char OS[]                              = "os";
 const char PARSED[]                          = "parsed";
 const char PID[]                             = "pid";
 const char PROJECTION[]                      = "projection";
@@ -505,16 +517,19 @@ const char QUERY[]                           = "query";
 const char Q[]                               = "q";
 const char READ_ONLY[]                       = "readOnly";
 const char RESPONSE[]                        = "response";
+const char REQUIRES_AUTH[]                   = "requiresAuth";
 const char RUNNING[]                         = "running";
 const char SINGLE_BATCH[]                    = "singleBatch";
 const char SIZE_ON_DISK[]                    = "sizeOnDisk";
 const char SKIP[]                            = "skip";
+const char SLAVE_OK[]                        = "slaveOk";
 const char SORT[]                            = "sort";
 const char SQL[]                             = "sql";
 const char STORAGE_ENGINE[]                  = "storageEngine";
 const char STATE[]                           = "state";
 const char STORAGE_ENGINES[]                 = "storageEngines";
 const char SYNC_MILLIS[]                     = "syncMillis";
+const char SYSTEM[]                          = "system";
 const char TOPOLOGY_VERSION[]                = "topologyVersion";
 const char TOTAL_LINES_WRITTEN[]             = "totalLinesWritten";
 const char TOTAL_SIZE[]                      = "totalSize";
@@ -532,6 +547,7 @@ const char VALID[]                           = "valid";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
 const char WARNINGS[]                        = "warnings";
+const char WAS[]                             = "was";
 const char WRITE_CONCERN[]                   = "writeConcern";
 const char WRITE_ERRORS[]                    = "writeErrors";
 const char WRITTEN_TO[]                      = "writtenTo";
@@ -1372,34 +1388,85 @@ public:
     class Incarnation
     {
     public:
+        Incarnation(std::string&& path,
+                    std::string&& parent_path,
+                    std::string&& array_path)
+            : m_path(std::move(path))
+            , m_parent_path(std::move(parent_path))
+            , m_array_path(std::move(array_path))
+        {
+        }
+
+        /**
+         * @return A complete JSON path.
+         */
+        const std::string& path() const
+        {
+            return m_path;
+        }
+
+        /**
+         * @return The JSON path of the parent element or an empty string if there is no parent.
+         *
+         * @note The path does *not* contain any suffixes like "[*]" and is intended to be used
+         *       e.g. for ensuring that the parent is an OBJECT.
+         */
+        const std::string& parent_path() const
+        {
+            return m_parent_path;
+        }
+
+        /**
+         * @return The JSON path of the nearest ancestor element that is expected to be an array,
+         *         or an empty string if no such ancestor exists.
+         *
+         * @note The path does *not* contain any suffixes like "[*]" and is intended to be used
+         *       e.g. for ensuring that the ancestor is an ARRAY.
+         */
+        const std::string& array_path() const
+        {
+            return m_array_path;
+        }
+
+        bool has_parent() const
+        {
+            return !m_parent_path.empty();
+        }
+
+        bool has_array_demand() const
+        {
+            return !m_array_path.empty();
+        }
+
+        std::string get_comparison_condition(const bsoncxx::document::element& element) const;
+        std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
+
+    private:
+        std::string m_path;
+        std::string m_parent_path;
+        std::string m_array_path;
+    };
+
+    class Part
+    {
+    public:
         enum Kind
         {
             ELEMENT,
-            ARRAY_ELEMENT,
+            ARRAY,
             INDEXED_ELEMENT
         };
 
-        explicit Incarnation(const std::string& part)
-            : m_kind(ELEMENT)
-            , m_path(part)
-        {
-        }
-
-        explicit Incarnation(Kind kind, const std::string& part, const std::string& parent)
+        Part(Kind kind, const std::string& name, Part* pParent = 0)
             : m_kind(kind)
-            , m_path(kind == ELEMENT ? parent + "." + part : parent + "[*]." + part)
-            , m_parent(parent)
+            , m_name(name)
+            , m_pParent(pParent)
         {
+            if (m_pParent)
+            {
+                m_pParent->add_child(this);
+            }
         }
-
-        explicit Incarnation(const std::string& index, const std::string& parent)
-            : m_kind(Incarnation::INDEXED_ELEMENT)
-            , m_path(parent + "[" + index + "]")
-            , m_parent(parent)
-        {
-        }
-
-        std::string to_string() const;
 
         Kind kind() const
         {
@@ -1411,9 +1478,9 @@ public:
             return m_kind == ELEMENT;
         }
 
-        bool is_array_element() const
+        bool is_array() const
         {
-            return m_kind == ARRAY_ELEMENT || m_kind == INDEXED_ELEMENT;
+            return m_kind == ARRAY;
         }
 
         bool is_indexed_element() const
@@ -1421,23 +1488,40 @@ public:
             return m_kind == INDEXED_ELEMENT;
         }
 
-        const std::string& path() const
+        Part* parent() const
         {
-            return m_path;
+            return m_pParent;
         }
 
-        const std::string& parent() const
-        {
-            return m_parent;
-        }
+        std::string name() const;
 
-        std::string get_comparison_condition(const bsoncxx::document::element& element) const;
-        std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
+        std::string path() const;
+
+        static std::vector<Part*> get_leafs(const std::string& path,
+                                            std::vector<std::unique_ptr<Part>>& parts);
 
     private:
-        Kind        m_kind;
-        std::string m_path;
-        std::string m_parent;
+        void add_child(Part* pChild)
+        {
+            m_children.push_back(pChild);
+        }
+
+        static void add_leaf(const std::string& part,
+                             bool last,
+                             bool is_number,
+                             Part* pParent,
+                             std::vector<Part*>& leafs,
+                             std::vector<std::unique_ptr<Part>>& parts);
+
+        static void add_part(const std::string& part,
+                             bool last,
+                             std::vector<Part*>& leafs,
+                             std::vector<std::unique_ptr<Part>>& parts);
+
+        Kind               m_kind;
+        std::string        m_name;
+        Part*              m_pParent { nullptr };
+        std::vector<Part*> m_children;
     };
 
     Path(const bsoncxx::document::element& element);

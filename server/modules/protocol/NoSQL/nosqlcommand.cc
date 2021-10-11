@@ -185,47 +185,49 @@ struct ThisUnit
 
     InfosByName infos_by_name =
     {
+        // NOTE: This *MUST* be kept in alphabetical order.
         { tolower(command::BuildInfo::KEY),                create_info<command::BuildInfo>() },
         { tolower(command::Count::KEY),                    create_info<command::Count>() },
         { tolower(command::Create::KEY),                   create_info<command::Create>() },
         { tolower(command::CreateIndexes::KEY),            create_info<command::CreateIndexes>() },
-        //Cannot be included as a mockup.
+        //Cannot be included as a mockup, causes hangs.
         //{ tolower(command::CurrentOp::KEY),                create_info<command::CurrentOp>() },
         { tolower(command::Delete::KEY),                   create_info<command::Delete>() },
         { tolower(command::Distinct::KEY),                 create_info<command::Distinct>() },
         { tolower(command::Drop::KEY),                     create_info<command::Drop>() },
         { tolower(command::DropAllUsersFromDatabase::KEY), create_info<command::DropAllUsersFromDatabase>() },
-        { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
         { tolower(command::DropDatabase::KEY),             create_info<command::DropDatabase>() },
+        { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
         { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
+        { tolower(command::FSync::KEY),                    create_info<command::FSync>() },
         { tolower(command::Find::KEY),                     create_info<command::Find>() },
         { tolower(command::GetCmdLineOpts::KEY),           create_info<command::GetCmdLineOpts>() },
         { tolower(command::GetFreeMonitoringStatus::KEY),  create_info<command::GetFreeMonitoringStatus>() },
         { tolower(command::GetLastError::KEY),             create_info<command::GetLastError>() },
         { tolower(command::GetLog::KEY),                   create_info<command::GetLog>() },
         { tolower(command::GetMore::KEY),                  create_info<command::GetMore>() },
+        { tolower(command::HostInfo::KEY),                 create_info<command::HostInfo>() },
         { tolower(command::Insert::KEY),                   create_info<command::Insert>() },
         { tolower(command::IsMaster::KEY),                 create_info<command::IsMaster>() },
         { tolower(command::KillCursors::KEY),              create_info<command::KillCursors>() },
-        { tolower(command::ListCommands::KEY),             create_info<command::ListCommands>() },
         { tolower(command::ListCollections::KEY),          create_info<command::ListCollections>() },
+        { tolower(command::ListCommands::KEY),             create_info<command::ListCommands>() },
         { tolower(command::ListDatabases::KEY),            create_info<command::ListDatabases>() },
         { tolower(command::ListIndexes::KEY),              create_info<command::ListIndexes>() },
         { tolower(command::Logout::KEY),                   create_info<command::Logout>() },
+        { tolower(command::MxsCreateDatabase::KEY),        create_info<command::MxsCreateDatabase>() },
+        { tolower(command::MxsDiagnose::KEY),              create_info<command::MxsDiagnose>() },
+        { tolower(command::MxsGetConfig::KEY),             create_info<command::MxsGetConfig>() },
+        { tolower(command::MxsSetConfig::KEY),             create_info<command::MxsSetConfig>() },
         { tolower(command::Ping::KEY),                     create_info<command::Ping>() },
-        { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },
         { tolower(command::RenameCollection::KEY),         create_info<command::RenameCollection>() },
+        { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },
         { tolower(command::ResetError::KEY),               create_info<command::ResetError>() },
         { tolower(command::ServerStatus::KEY),             create_info<command::ServerStatus>() },
         { tolower(command::SetParameter::KEY),             create_info<command::SetParameter>() },
         { tolower(command::Update::KEY),                   create_info<command::Update>() },
         { tolower(command::Validate::KEY),                 create_info<command::Validate>() },
         { tolower(command::WhatsMyUri::KEY),               create_info<command::WhatsMyUri>() },
-
-        { tolower(command::MxsDiagnose::KEY),              create_info<command::MxsDiagnose>() },
-        { tolower(command::MxsCreateDatabase::KEY),        create_info<command::MxsCreateDatabase>() },
-        { tolower(command::MxsGetConfig::KEY),             create_info<command::MxsGetConfig>() },
-        { tolower(command::MxsSetConfig::KEY),             create_info<command::MxsSetConfig>() },
     };
 } this_unit;
 
@@ -1495,7 +1497,9 @@ void OpMsgCommand::list_commands(DocumentBuilder& commands)
 
         DocumentBuilder command;
         command.append(kvp(key::HELP, zHelp));
+        command.append(kvp(key::SLAVE_OK, bsoncxx::types::b_undefined()));
         command.append(kvp(key::ADMIN_ONLY, info.is_admin));
+        command.append(kvp(key::REQUIRES_AUTH, (name == "ismaster" ? false : true)));
 
         // Yes, passing a literal string to kvp as first argument works, but
         // passing a 'const char*' does not.

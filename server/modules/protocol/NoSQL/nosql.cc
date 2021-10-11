@@ -1556,9 +1556,6 @@ string elemMatch_to_condition(const Path::Incarnation& p, const bsoncxx::documen
 
 string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
 {
-    auto expects_array = p.is_array_element();
-    //auto expects_array = p.path().find("[*]") != string::npos;
-
     string rv("(");
 
     bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
@@ -1570,27 +1567,19 @@ string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::
     else
     {
         bool close = false;
-
-        if (!expects_array)
+        if (!p.has_array_demand())
         {
-            // TODO: We could easily push downward the parent information so that
-            // TODO: we woudn't have to figure it out here.
-            string field = p.path();
-            auto i = field.find_last_of(".");
-
-            if (i != string::npos)
+            if (p.has_parent())
             {
-                auto parent = field.substr(0, i);
-
-                rv += "JSON_QUERY(doc, '$." + parent + "') IS NULL OR "
-                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent + "')) = 'OBJECT'"
+                rv += "JSON_QUERY(doc, '$." + p.parent_path() + "') IS NULL OR "
+                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + p.parent_path() + "')) = 'OBJECT'"
                     " AND ";
                 close = true;
             }
         }
         else
         {
-            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.parent() + "')) = 'ARRAY' AND ";
+            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array_path() + "')) = 'ARRAY' AND ";
         }
 
         rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL";
@@ -1636,7 +1625,8 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    auto expects_array = p.is_array_element();
+     // TODO: This is true with array anywhere, so p.is_parent_array() is probably needed.
+    auto expects_array = p.has_array_demand();
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
@@ -3184,30 +3174,6 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
     return state;
 }
 
-std::string Path::Incarnation::to_string() const
-{
-    string rv { "kind: " };
-    switch (m_kind)
-    {
-    case ELEMENT:
-        rv += "element";
-        break;
-
-    case ARRAY_ELEMENT:
-        rv += "array_element";
-        break;
-
-    case INDEXED_ELEMENT:
-        rv += "indexed_element";
-        break;
-    }
-
-    rv += "path: " + m_path + ", ";
-    rv += "parent: " + m_parent;
-
-    return rv;
-}
-
 string Path::Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
 {
     string field = path();
@@ -3226,16 +3192,16 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
 
     case bsoncxx::type::k_null:
         {
-            if (is_array_element())
+            if (has_array_demand())
             {
-                condition = "(JSON_TYPE(JSON_CONTAINS(doc, '$." + m_parent + "')) = 'ARRAY' AND ";
+                condition = "(JSON_TYPE(JSON_QUERY(doc, '$." + m_array_path + "')) = 'ARRAY' AND ";
             }
 
             condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
                 "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
                 "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
 
-            if (is_array_element())
+            if (has_array_demand())
             {
                 condition += ")";
             }
@@ -3383,80 +3349,6 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
     return rv;
 }
 
-//static
-vector<Path::Incarnation> nosql::Path::get_incarnations(const string& key)
-{
-    vector<Incarnation> rv;
-
-    string::size_type i = 0;
-    string::size_type j;
-    while ((j = key.find_first_of('.', i)) != string::npos)
-    {
-        string part = key.substr(i, j - i);
-
-        if (rv.empty())
-        {
-            rv.push_back(Incarnation(part));
-        }
-        else
-        {
-            add_part(rv, part);
-        }
-
-        i = j + 1;
-    }
-
-    if (rv.empty())
-    {
-        rv.push_back(Incarnation(key));
-    }
-    else
-    {
-        add_part(rv, key.substr(i, j));
-    }
-
-    return rv;
-}
-
-//static
-void nosql::Path::add_part(vector<Path::Incarnation>& rv, const string& part)
-{
-    bool is_number = false;
-
-    char* zEnd;
-    auto l = strtol(part.c_str(), &zEnd, 10);
-
-    // Is the part a number?
-    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
-    {
-        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
-        // or the n'th element (e.g. { a: [ ... ] }).
-        is_number = true;
-    }
-
-    vector<Incarnation> tmp;
-
-    for (const auto& p : rv)
-    {
-        if (p.is_indexed_element() || p.is_element())
-        {
-            tmp.push_back(Incarnation(Incarnation::ELEMENT, part, p.path()));
-        }
-        else
-        {
-            tmp.push_back(Incarnation(Incarnation::ARRAY_ELEMENT, part, p.path()));
-        }
-        tmp.push_back(Incarnation(Incarnation::ARRAY_ELEMENT, part, p.path()));
-
-        if (is_number)
-        {
-            tmp.push_back(Incarnation(part, p.path()));
-        }
-    }
-
-    rv.swap(tmp);
-}
-
 Path::Path(const bsoncxx::document::element& element)
     : m_element(element)
     , m_paths(get_incarnations(static_cast<string>(element.key())))
@@ -3478,6 +3370,205 @@ string Path::get_comparison_condition() const
     }
 
     return condition;
+}
+
+string Path::Part::name() const
+{
+    string rv;
+
+    switch (m_kind)
+    {
+    case Part::ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case Part::ARRAY:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case INDEXED_ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path();
+        }
+        rv += "[" + m_name + "]";
+        break;
+    }
+
+    return rv;
+}
+
+string Path::Part::path() const
+{
+    string rv;
+
+    switch (m_kind)
+    {
+    case Part::ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case Part::ARRAY:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name + "[*]";
+        break;
+
+    case INDEXED_ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path();
+        }
+        rv += "[" + m_name + "]";
+        break;
+    }
+
+    return rv;
+}
+
+//static
+vector<Path::Part*> Path::Part::get_leafs(const string& path, vector<std::unique_ptr<Part>>& parts)
+{
+    string::size_type i = 0;
+    string::size_type j = path.find_first_of('.', i);
+
+    vector<Part*> leafs;
+
+    while (j != string::npos)
+    {
+        string part = path.substr(i, j - i);
+
+        i = j + 1;
+        j = path.find_first_of('.', i);
+
+        add_part(part, false, leafs, parts);
+    }
+
+    add_part(path.substr(i, j), true, leafs, parts);
+
+    return leafs;
+}
+
+//static
+void Path::Part::add_leaf(const string& part,
+                          bool last,
+                          bool is_number,
+                          Part* pParent,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    parts.push_back(std::make_unique<Part>(Part::ELEMENT, part, pParent));
+    leafs.push_back(parts.back().get());
+
+    if (!last)
+    {
+        parts.push_back(std::make_unique<Part>(Part::ARRAY, part, pParent));
+        leafs.push_back(parts.back().get());
+    }
+
+    if (is_number && pParent && pParent->is_element())
+    {
+        parts.push_back(std::make_unique<Part>(Part::INDEXED_ELEMENT, part, pParent));
+        leafs.push_back(parts.back().get());
+    }
+}
+
+//static
+void Path::Part::add_part(const string& part,
+                          bool last,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    bool is_number = false;
+
+    char* zEnd;
+    auto l = strtol(part.c_str(), &zEnd, 10);
+
+    // Is the part a number?
+    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+    {
+        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
+        // or the n'th element (e.g. { a: [ ... ] }).
+        is_number = true;
+    }
+
+    vector<Part*> tmp;
+
+    if (leafs.empty())
+    {
+        add_leaf(part, last, is_number, nullptr, tmp, parts);
+    }
+    else
+    {
+        for (auto& pLeaf : leafs)
+        {
+            add_leaf(part, last, is_number, pLeaf, tmp, parts);
+        }
+    }
+
+    tmp.swap(leafs);
+}
+
+//static
+std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
+{
+    vector<Incarnation> rv;
+    vector<std::unique_ptr<Part>> parts;
+    vector<Part*> leafs = Part::get_leafs(path, parts);
+
+    for (const Part* pLeaf : leafs)
+    {
+        string path = pLeaf->path();
+        Part* pParent = pLeaf->parent();
+
+        string parent_path;
+        string array_path;
+
+        if (pParent)
+        {
+            parent_path = pParent->name();
+
+            while (pLeaf && array_path.empty())
+            {
+                if (pLeaf->is_indexed_element() || (pParent && pParent->is_array()))
+                {
+                    array_path = pParent->name();
+                }
+                else if (pLeaf->is_element() && (pParent && pParent->is_indexed_element()))
+                {
+                    auto* pGramps = pParent->parent();
+                    if (pGramps)
+                    {
+                        array_path = pGramps->name();
+                    }
+                }
+
+                pLeaf = pParent;
+                if (pParent)
+                {
+                    pParent = pParent->parent();
+                }
+            }
+        }
+
+        rv.push_back(Incarnation(std::move(path), std::move(parent_path), std::move(array_path)));
+    }
+
+    return rv;
 }
 
 string Path::get_element_condition(const bsoncxx::document::element& element) const
