@@ -154,6 +154,14 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
     return to ? to : from;
 }
 
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 5
+#define mxs_my_strdup(a, f) my_strdup(PSI_NOT_INSTRUMENTED, a, f)
+#define mxs_strptr(a) a.str
+#else
+#define mxs_my_strdup(a, f) my_strdup(a, f)
+#define mxs_strptr(a) a
+#endif
+
 #define MYSQL_COM_QUERY_HEADER_SIZE 5   /*< 3 bytes size, 1 sequence, 1 command */
 #define MAX_QUERYBUF_SIZE           2048
 typedef struct parsing_info_st : public QC_STMT_INFO
@@ -1690,7 +1698,11 @@ static bool is_show_command(int sql_command)
     case SQLCOM_SHOW_DATABASES:
     case SQLCOM_SHOW_FIELDS:
     case SQLCOM_SHOW_KEYS:
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 5
+    case SQLCOM_SHOW_BINLOG_STAT:
+#else
     case SQLCOM_SHOW_MASTER_STAT:
+#endif
     case SQLCOM_SHOW_SLAVE_STAT:
     case SQLCOM_SHOW_STATUS:
     case SQLCOM_SHOW_TABLES:
@@ -1903,8 +1915,8 @@ static parsing_info_t* parsing_info_init(void (* donefun)(void*))
     mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
     mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
     mysql->methods = &embedded_methods;
-    mysql->user = my_strdup(user, MYF(0));
-    mysql->db = my_strdup(db, MYF(0));
+    mysql->user = mxs_my_strdup(user, MYF(0));
+    mysql->db = mxs_my_strdup(db, MYF(0));
     mysql->passwd = NULL;
 
     pi = (parsing_info_t*) calloc(1, sizeof(parsing_info_t));
@@ -2204,7 +2216,11 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_SHOW_FUNC_CODE:
                     case SQLCOM_SHOW_GRANTS:
                     case SQLCOM_SHOW_KEYS:
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 5
+                    case SQLCOM_SHOW_BINLOG_STAT:
+#else
                     case SQLCOM_SHOW_MASTER_STAT:
+#endif
                     case SQLCOM_SHOW_PROC_CODE:
                     case SQLCOM_SHOW_SLAVE_HOSTS:
                     case SQLCOM_SHOW_SLAVE_STAT:
@@ -2618,10 +2634,10 @@ static void add_function_field_usage(st_select_lex* select,
                                      Item_field* item,
                                      QC_FUNCTION_INFO* fi)
 {
-    const char* database = item->db_name;
-    const char* table = item->table_name;
+    const char* database = mxs_strptr(item->db_name);
+    const char* table = mxs_strptr(item->table_name);
 
-    unalias_names(select, item->db_name, item->table_name, &database, &table);
+    unalias_names(select, mxs_strptr(item->db_name), mxs_strptr(item->table_name), &database, &table);
 
     const char* s1;
     size_t l1;
@@ -2650,8 +2666,8 @@ static void add_function_field_usage(st_select_lex* select,
                         get_string_and_length(field->orig_field_name, &s1, &l1);
                         column = strndup(s1, l1);
 
-                        table = field->orig_table_name;
-                        database = field->orig_db_name;
+                        table = mxs_strptr(field->orig_table_name);
+                        database = mxs_strptr(field->orig_db_name);
                     }
                 }
             }
@@ -2822,8 +2838,8 @@ static void add_field_info(parsing_info_t* pi,
                            Item_field* item,
                            List<Item>* excludep)
 {
-    const char* database = item->db_name;
-    const char* table = item->table_name;
+    const char* database = mxs_strptr(item->db_name);
+    const char* table = mxs_strptr(item->table_name);
     const char* s;
     size_t l;
     get_string_and_length(item->field_name, &s, &l);
