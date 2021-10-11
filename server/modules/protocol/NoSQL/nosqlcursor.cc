@@ -198,51 +198,45 @@ private:
 // If bit 63 is 0 and bit 62 a 1, then the value is interpreted as a 'Long'.
 const int64_t BSON_LONG_BIT = (int64_t(1) << 62);
 
-string create_leaf_entry(const string& extraction, const std::string& value)
+void add_value(json_t* pParent, const string& key, const string& value)
 {
-    mxb_assert(extraction.find('.') == string::npos);
+    json_error_t error;
+    json_t* pItem = json_loadb(value.data(), value.length(), JSON_DECODE_ANY, &error);
 
-    return "\"" + extraction + "\": " + value;
-}
-
-string create_nested_entry(const string& extraction, const std::string& value)
-{
-    string entry;
-    auto i = extraction.find('.');
-
-    if (i == string::npos)
+    if (pItem)
     {
-        entry = "{ "  + create_leaf_entry(extraction, value) + " }";
+        json_object_set_new(pParent, key.c_str(), pItem);
     }
     else
     {
-        auto head = extraction.substr(0, i);
-        auto tail = extraction.substr(i + 1);
-
-        entry = "{ \"" + head + "\": " + create_nested_entry(tail, value) + "}";
+        MXS_ERROR("Could not decode JSON value '%s': %s", value.c_str(), error.text);
     }
-
-    return entry;
 }
 
-string create_entry(const string& extraction, const std::string& value)
+void create_entry(json_t* pRoot, const string& extraction, const std::string& value)
 {
-    string entry;
-    auto i = extraction.find('.');
+    string key = extraction;
+    json_t* pParent = pRoot;
 
-    if (i == string::npos)
+    string::size_type i;
+
+    while ((i = key.find('.')) != string::npos)
     {
-        entry = create_leaf_entry(extraction, value);
-    }
-    else
-    {
-        auto head = extraction.substr(0, i);
-        auto tail = extraction.substr(i + 1);
+        auto child = key.substr(0, i);
+        key = key.substr(i + 1);
 
-        entry = "\"" + head + "\": " + create_nested_entry(tail, value);;
+        json_t* pChild = json_object_get(pParent, child.c_str());
+
+        if (!pChild)
+        {
+            pChild = json_object();
+            json_object_set_new(pParent, child.c_str(), pChild);
+        }
+
+        pParent = pChild;
     }
 
-    return entry;
+    add_value(pParent, key, value);
 }
 
 }
@@ -502,10 +496,10 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
         }
         else
         {
+            json_t* pJson = json_object();
+
             auto jt = m_extractions.begin();
 
-            bool first = true;
-            json += "{";
             for (; it != row.end(); ++it, ++jt)
             {
                 const auto& value = *it;
@@ -515,19 +509,14 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
 
                 if (!s.is_null())
                 {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        json += ", ";
-                    }
-
-                    json += create_entry(extraction, value.as_string().to_string());
+                    create_entry(pJson, extraction, value.as_string().to_string());
                 }
             }
-            json += "}";
+
+            char* zJson = json_dumps(pJson, 0);
+            json = zJson;
+            MXS_FREE(zJson);
+            json_decref(pJson);
         }
 
         try
