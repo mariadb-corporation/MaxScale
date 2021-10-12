@@ -27,7 +27,7 @@
         class="checkbox--scale-reduce ma-0 pa-0"
         primary
         hide-details
-        :disabled="isCheckboxDisabled"
+        :disabled="isDisabled"
         @change="handleChange"
     />
     <charset-input
@@ -35,7 +35,7 @@
         v-model="input.value"
         :defCharset="defTblCharset"
         :height="height"
-        :disabled="!supportCharset"
+        :disabled="isDisabled"
         @on-change="handleChange"
     />
     <collation-input
@@ -43,8 +43,8 @@
         v-model="input.value"
         :height="height"
         :defCollation="defTblCollation"
-        :charset="currCharset"
-        :disabled="!supportCharset"
+        :charset="columnCharset"
+        :disabled="isDisabled"
         @on-change="handleChange"
     />
     <v-text-field
@@ -79,6 +79,7 @@
  * data: {
  *  field?: string, header name
  *  value?: string, cell value
+ *  rowObj?: object, entire row data
  * }
  * Events
  * Below events are used to handle "coupled case",
@@ -94,6 +95,7 @@
 import column_types from './column_types'
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
+import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
     name: 'column-input',
     components: {
@@ -106,9 +108,6 @@ export default {
         // for data type supports charset/collation
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
-        currCharset: { type: String, default: '' },
-        supportCharset: { type: Boolean, default: false },
-        supportUnZF: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -119,12 +118,22 @@ export default {
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
         },
-        isCheckboxDisabled() {
-            switch (this.input.field) {
+        columnCharset() {
+            return this.$typy(this.input, 'rowObj.charset').safeString
+        },
+        columnType() {
+            return this.$typy(this.input, 'rowObj.column_type').safeString
+        },
+        isDisabled() {
+            switch (this.$typy(this.input, 'field').safeString) {
+                case 'charset':
+                case 'collation':
+                    return !check_charset_support(this.columnType)
                 case 'UN':
                 case 'ZF':
-                    return !this.supportUnZF
-                //TODO: Handle AI (AUTO_INCREMENT)
+                    return !check_UN_ZF_support(this.columnType)
+                case 'AI':
+                    return !check_AI_support(this.columnType)
                 default:
                     return false
             }
@@ -134,15 +143,15 @@ export default {
         data: {
             deep: true,
             handler(v, oV) {
-                if (!this.$help.lodash.isEqual(v, oV)) this.initInput(v)
+                if (!this.$help.lodash.isEqual(v, oV)) this.initInputType(v)
             },
         },
     },
     created() {
-        this.initInput(this.data)
+        this.initInputType(this.data)
     },
     methods: {
-        initInput(data) {
+        initInputType(data) {
             this.input = this.handleAddType(data)
         },
         /**

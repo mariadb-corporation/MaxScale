@@ -55,7 +55,10 @@
             v-on="$listeners"
             @item-selected="selectedItems = $event"
         >
-            <template v-for="h in headers" v-slot:[h.text]="{ data: { cell, rowIdx, colIdx } }">
+            <template
+                v-for="h in headers"
+                v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
+            >
                 <column-input
                     :key="h.text"
                     :data="{
@@ -63,13 +66,11 @@
                         value: cell,
                         rowIdx,
                         colIdx,
+                        rowObj: rowDataToObj(rowData),
                     }"
                     :height="30"
                     :defTblCharset="defTblCharset"
                     :defTblCollation="defTblCollation"
-                    :currCharset="$typy(currColCharsetMap, `${rowIdx}`).safeString"
-                    :supportCharset="$typy(supportCharsetColMap, `${rowIdx}`).safeBoolean"
-                    :supportUnZF="$typy(support_UN_ZF_colMap, `${rowIdx}`).safeBoolean"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
                     @on-change-charset="onChangeCharset"
@@ -94,6 +95,7 @@ import { mapState } from 'vuex'
  * Public License.
  */
 import ColumnInput from './ColumnInput.vue'
+import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
     name: 'alter-cols-opts',
     components: {
@@ -110,36 +112,6 @@ export default {
         return {
             selectedItems: [],
             headerHeight: 0,
-            typesSupportCharset: [
-                'TINYTEXT',
-                'TEXT',
-                'MEDIUMTEXT',
-                'LONGTEXT',
-                'CHAR',
-                'ENUM',
-                'VARCHAR',
-                'SET',
-            ],
-            typesSupport_UN_ZF: [
-                'TINYINT',
-                'SMALLINT',
-                'MEDIUMINT',
-                'INT',
-                'BIGINT',
-                'DECIMAL',
-                'FLOAT',
-                'DOUBLE',
-            ],
-            /** supportCharsetColMap is used to handle disable charset/collation inputs
-             * a map with rowIdx set as key and boolean value of
-             * whether column_type supports charset/collation set as value.
-             */
-            supportCharsetColMap: {},
-            support_UN_ZF_colMap: {},
-            /** currColCharsetMap is used to get collations of the charset
-             * a map with rowIdx set as key and charset name of the column set as value
-             */
-            currColCharsetMap: {},
         }
     },
     computed: {
@@ -176,24 +148,16 @@ export default {
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
         },
-        idxOfColumnType() {
-            return this.headers.findIndex(h => h.text === 'column_type')
+        idxOfCollation() {
+            return this.findHeaderIdx('collation')
         },
         idxOfCharset() {
-            return this.headers.findIndex(h => h.text === 'charset')
+            return this.findHeaderIdx('charset')
         },
     },
     watch: {
         colsOptsData(v) {
             if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
-        },
-        rows: {
-            deep: true,
-            handler(v, oV) {
-                if (!this.$help.lodash.isEqual(v, oV)) {
-                    this.evaluateInput()
-                }
-            },
         },
     },
     methods: {
@@ -230,36 +194,16 @@ export default {
             })
             this.colsOptsData.data.push(row)
         },
-        /**
-         * This iterates each row to check if column's data type supports
-         * the use of charset/collation and store it to `supportCharsetColMap`.
-         * It also store charset value of the column to `currColCharsetMap`.
-         */
-        evaluateInput() {
-            let supportCharsetColMap = {},
-                currColCharsetMap = {},
-                support_UN_ZF_colMap = {}
-            this.rows.forEach((row, i) => {
-                supportCharsetColMap = {
-                    ...supportCharsetColMap,
-                    [i]: this.typesSupportCharset.some(v =>
-                        row[this.idxOfColumnType].toUpperCase().includes(v)
-                    ),
-                }
-                support_UN_ZF_colMap = {
-                    ...support_UN_ZF_colMap,
-                    [i]: this.typesSupport_UN_ZF.some(v =>
-                        row[this.idxOfColumnType].toUpperCase().includes(v)
-                    ),
-                }
-                currColCharsetMap = {
-                    ...currColCharsetMap,
-                    [i]: row[this.idxOfCharset],
-                }
+        rowDataToObj(rowData) {
+            const rows = this.$help.getObjectRows({
+                columns: this.$typy(this.colsOptsData, 'fields').safeArray,
+                rows: [rowData],
             })
-            this.supportCharsetColMap = supportCharsetColMap
-            this.currColCharsetMap = currColCharsetMap
-            this.support_UN_ZF_colMap = support_UN_ZF_colMap
+            if (rows.length) return rows[0]
+            return []
+        },
+        findHeaderIdx(headerName) {
+            return this.headers.findIndex(h => h.text === headerName)
         },
         /**
          * @param {Object} item - cell data
@@ -273,64 +217,67 @@ export default {
                 },
             })
         },
-        updateCharsetCollation({ rowIdx, charset, collation }) {
-            const charsetColIdx = this.headers.findIndex(h => h.text === 'charset')
-            const collationColIdx = this.headers.findIndex(h => h.text === 'collation')
-            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
-                data: {
-                    [rowIdx]: {
-                        [charsetColIdx]: { $set: charset },
-                        [collationColIdx]: { $set: collation },
-                    },
-                },
-            })
-        },
+
         /**
          * @param {Object} item - column_type cell data
          */
         onChangeColumnType(item) {
-            this.updateCell(item)
-            this.$nextTick(() => {
-                if (this.supportCharsetColMap[item.rowIdx])
-                    this.updateCharsetCollation({
-                        rowIdx: item.rowIdx,
-                        charset: this.defTblCharset,
-                        collation: this.defTblCollation,
-                    })
-                else
-                    this.updateCharsetCollation({
-                        rowIdx: item.rowIdx,
-                        charset: null,
-                        collation: null,
-                    })
-                //TODO: Handle AI (AUTO_INCREMENT)
-                // update UN, ZF, AI value to NO if chosen type doesn't support
-                if (!this.support_UN_ZF_colMap[item.rowIdx]) {
-                    const idxOfUN = this.headers.findIndex(h => h.text === 'UN')
-                    const idxOfZF = this.headers.findIndex(h => h.text === 'ZF')
-                    const idxOfAI = this.headers.findIndex(h => h.text === 'AI')
-                    this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
-                        data: {
-                            [item.rowIdx]: {
-                                [idxOfUN]: { $set: 'NO' },
-                                [idxOfZF]: { $set: 'NO' },
-                                [idxOfAI]: { $set: 'NO' },
-                            },
+            let colsOptsData
+            if (check_charset_support(item.value))
+                colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [this.idxOfCharset]: { $set: this.defTblCharset },
+                            [this.idxOfCollation]: { $set: this.defTblCollation },
+                            [item.colIdx]: { $set: item.value },
                         },
-                    })
-                }
-            })
+                    },
+                })
+            else
+                colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [this.idxOfCharset]: { $set: null },
+                            [this.idxOfCollation]: { $set: null },
+                            [item.colIdx]: { $set: item.value },
+                        },
+                    },
+                })
+
+            // update UN, ZF, AI value to NO if chosen type doesn't support
+            if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
+                const idxOfUN = this.findHeaderIdx('UN')
+                const idxOfZF = this.findHeaderIdx('ZF')
+                const idxOfAI = this.findHeaderIdx('AI')
+                colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [idxOfUN]: { $set: 'NO' },
+                            [idxOfZF]: { $set: 'NO' },
+                            [idxOfAI]: { $set: 'NO' },
+                        },
+                    },
+                })
+            }
+            this.colsOptsData = colsOptsData
         },
 
         /**
          * @param {Object} item - charset cell data
          */
         onChangeCharset(item) {
-            this.updateCharsetCollation({
-                rowIdx: item.rowIdx,
-                charset: item.value,
-                collation: this.$typy(this.charset_collation_map.get(item.value), 'defCollation')
-                    .safeString,
+            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [this.idxOfCharset]: { $set: item.value },
+                        [this.idxOfCollation]: {
+                            $set: this.$typy(
+                                this.charset_collation_map.get(item.value),
+                                'defCollation'
+                            ).safeString,
+                        },
+                    },
+                },
             })
         },
     },
