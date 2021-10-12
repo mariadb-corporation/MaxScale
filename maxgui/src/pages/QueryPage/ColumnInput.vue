@@ -27,6 +27,7 @@
         class="checkbox--scale-reduce ma-0 pa-0"
         primary
         hide-details
+        :disabled="isCheckboxDisabled"
         @change="handleChange"
     />
     <charset-input
@@ -75,16 +76,20 @@
  */
 /*
  *
- Events
- Below events are used to handle "coupled case",
- e.g. When column_type changes its value to a data type
- that supports charset/collation, `on-change-column_type`
- will be used to update charset/collation input to fill
- data with default table charset/collation.
- on-change-column_type: (cell)
- on-change-charset: (cell)
-
- on-change: (cell)
+ * data: {
+ *  field?: string, header name
+ *  value?: string, cell value
+ * }
+ * Events
+ * Below events are used to handle "coupled case",
+ * e.g. When column_type changes its value to a data type
+ * that supports charset/collation, `on-change-column_type`
+ * will be used to update charset/collation input to fill
+ * data with default table charset/collation.
+ * on-change-column_type: (cell)
+ * on-change-charset: (cell)
+ * Event for normal cell
+ * on-change: (cell)
  */
 import column_types from './column_types'
 import CharsetInput from './CharsetInput.vue'
@@ -103,6 +108,7 @@ export default {
         defTblCollation: { type: String, default: '' },
         currCharset: { type: String, default: '' },
         supportCharset: { type: Boolean, default: false },
+        supportUnZF: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -112,6 +118,16 @@ export default {
     computed: {
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
+        },
+        isCheckboxDisabled() {
+            switch (this.input.field) {
+                case 'UN':
+                case 'ZF':
+                    return !this.supportUnZF
+                //TODO: Handle AI (AUTO_INCREMENT)
+                default:
+                    return false
+            }
         },
     },
     watch: {

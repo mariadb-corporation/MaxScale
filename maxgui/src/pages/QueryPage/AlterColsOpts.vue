@@ -69,6 +69,7 @@
                     :defTblCollation="defTblCollation"
                     :currCharset="$typy(currColCharsetMap, `${rowIdx}`).safeString"
                     :supportCharset="$typy(supportCharsetColMap, `${rowIdx}`).safeBoolean"
+                    :supportUnZF="$typy(support_UN_ZF_colMap, `${rowIdx}`).safeBoolean"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
                     @on-change-charset="onChangeCharset"
@@ -119,11 +120,22 @@ export default {
                 'VARCHAR',
                 'SET',
             ],
+            typesSupport_UN_ZF: [
+                'TINYINT',
+                'SMALLINT',
+                'MEDIUMINT',
+                'INT',
+                'BIGINT',
+                'DECIMAL',
+                'FLOAT',
+                'DOUBLE',
+            ],
             /** supportCharsetColMap is used to handle disable charset/collation inputs
              * a map with rowIdx set as key and boolean value of
              * whether column_type supports charset/collation set as value.
              */
             supportCharsetColMap: {},
+            support_UN_ZF_colMap: {},
             /** currColCharsetMap is used to get collations of the charset
              * a map with rowIdx set as key and charset name of the column set as value
              */
@@ -224,12 +236,19 @@ export default {
          * It also store charset value of the column to `currColCharsetMap`.
          */
         evaluateInput() {
-            let supportCharsetColMap,
-                currColCharsetMap = {}
+            let supportCharsetColMap = {},
+                currColCharsetMap = {},
+                support_UN_ZF_colMap = {}
             this.rows.forEach((row, i) => {
                 supportCharsetColMap = {
                     ...supportCharsetColMap,
                     [i]: this.typesSupportCharset.some(v =>
+                        row[this.idxOfColumnType].toUpperCase().includes(v)
+                    ),
+                }
+                support_UN_ZF_colMap = {
+                    ...support_UN_ZF_colMap,
+                    [i]: this.typesSupport_UN_ZF.some(v =>
                         row[this.idxOfColumnType].toUpperCase().includes(v)
                     ),
                 }
@@ -240,6 +259,7 @@ export default {
             })
             this.supportCharsetColMap = supportCharsetColMap
             this.currColCharsetMap = currColCharsetMap
+            this.support_UN_ZF_colMap = support_UN_ZF_colMap
         },
         /**
          * @param {Object} item - cell data
@@ -283,6 +303,22 @@ export default {
                         charset: null,
                         collation: null,
                     })
+                //TODO: Handle AI (AUTO_INCREMENT)
+                // update UN, ZF, AI value to NO if chosen type doesn't support
+                if (!this.support_UN_ZF_colMap[item.rowIdx]) {
+                    const idxOfUN = this.headers.findIndex(h => h.text === 'UN')
+                    const idxOfZF = this.headers.findIndex(h => h.text === 'ZF')
+                    const idxOfAI = this.headers.findIndex(h => h.text === 'AI')
+                    this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                        data: {
+                            [item.rowIdx]: {
+                                [idxOfUN]: { $set: 'NO' },
+                                [idxOfZF]: { $set: 'NO' },
+                                [idxOfAI]: { $set: 'NO' },
+                            },
+                        },
+                    })
+                }
             })
         },
 
