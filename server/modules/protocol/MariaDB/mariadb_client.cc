@@ -1017,6 +1017,23 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
     }
 }
 
+bool MariaDBClientConnection::should_inspect_query(mxs::Buffer& buffer) const
+{
+    bool rval = true;
+
+    if (qc_parse(buffer.get(), QC_COLLECT_ALL) == QC_QUERY_PARSED)
+    {
+        auto op = qc_get_operation(buffer.get());
+
+        if (op != QUERY_OP_KILL && op != QUERY_OP_SET && op != QUERY_OP_CHANGE_DB)
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
@@ -2638,32 +2655,39 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
     case MXS_COM_QUERY:
         {
+            bool route = true;
+            bool inspect = true;
+
             if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
             {
                 buffer.make_contiguous();
+                inspect = should_inspect_query(buffer);
             }
 
-            // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
-            // so that the same variable is visible on backend.
-            char* errmsg = handle_variables(buffer);
-            if (errmsg)
+            if (inspect)
             {
-                // No need to route the query, send error to client.
-                success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
-                MXS_FREE(errmsg);
-            }
-            else
-            {
+                // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
+                // so that the same variable is visible on backend.
+                char* errmsg = handle_variables(buffer);
+                if (errmsg)
+                {
+                    // No need to route the query, send error to client.
+                    success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
+                    MXS_FREE(errmsg);
+                    route = false;
+                }
                 // Some queries require special handling. Some of these are text versions of other
                 // similarly handled commands.
-                if (process_special_queries(buffer) == SpecialCmdRes::END)
+                else if (process_special_queries(buffer) == SpecialCmdRes::END)
                 {
                     success = true;     // No need to route query.
+                    route = false;
                 }
-                else
-                {
-                    success = route_statement(move(buffer));
-                }
+            }
+
+            if (route)
+            {
+                success = route_statement(move(buffer));
             }
         }
         break;

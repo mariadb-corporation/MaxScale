@@ -157,6 +157,7 @@ private:
     void  handle_use_database(GWBUF* read_buffer);
     char* handle_variables(mxs::Buffer& buffer);
 
+    bool          should_inspect_query(mxs::Buffer& buffer) const;
     SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
     void          handle_query_kill(const SpecialQueryDesc& kill_contents);
 
