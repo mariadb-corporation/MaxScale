@@ -314,6 +314,128 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
+
+    // MXS-3377: Parsing of KILL queries
+    {
+        "KILL 1",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL CONNECTION 2",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL CONNECTION USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL QUERY 3",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL QUERY USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL QUERY ID 4",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL QUERY ID USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD 5",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD CONNECTION 6",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD CONNECTION USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD QUERY 7",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD QUERY USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD QUERY ID 8",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL HARD QUERY ID USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT 9",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT CONNECTION 10",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT CONNECTION USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT QUERY 11",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT QUERY USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT QUERY ID 12",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
+    {
+        "KILL SOFT QUERY ID USER 'bob'",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_KILL
+    },
 };
 
 int main(int argc, char** argv)
