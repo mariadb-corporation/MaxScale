@@ -45,12 +45,8 @@ struct IsAdmin
 class Command
 {
 public:
-    // For the time being, the requirement is that the SQL a document corresponds to
-    // must fit into a single COM_QUERY packet.
-    // The first -1 is the command byte and the second to ensure that the length stays
-    // below 0xffffff, as a length of exactly that would require an additional empty
-    // packet to be sent.
-    static const int32_t MAX_QUERY_LEN = (GW_MYSQL_MAX_PACKET_LEN - MYSQL_HEADER_LEN - 1 - 1);
+    static const int32_t MAX_PAYLOAD_LEN = 0xffffff;
+    static const int32_t MAX_PACKET_LEN = MYSQL_HEADER_LEN + MAX_PAYLOAD_LEN;
 
     virtual ~Command();
 
@@ -98,12 +94,6 @@ public:
                                  int32_t position,
                                  size_t size_of_documents,
                                  const std::vector<bsoncxx::document::value>& documents) const;
-
-    static void check_maximum_sql_length(int length);
-    static void check_maximum_sql_length(const std::string& s)
-    {
-        check_maximum_sql_length(s.length());
-    }
 
     enum class ResponseKind
     {
