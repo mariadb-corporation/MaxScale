@@ -44,64 +44,21 @@
                 <label class="field__label color text-small-text label-required">
                     {{ $t('charset') }}
                 </label>
-                <v-select
+                <charset-input
                     v-model="tableOptsData.table_charset"
-                    :items="charsets"
-                    name="table_charset"
-                    outlined
-                    class="std mariadb-select-input error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'mariadb-select-v-menu',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="32"
-                    hide-details="auto"
-                    @change="onChangeCharset"
-                >
-                    <template v-slot:item="{ item, on, attrs }">
-                        <div
-                            class="v-list-item__title d-flex align-center flex-row flex-grow-1"
-                            v-bind="attrs"
-                            v-on="on"
-                        >
-                            {{ item }}
-                            {{ item === defDbCharset ? `(${$t('defCharset')})` : '' }}
-                        </div>
-                    </template>
-                </v-select>
+                    :defCharset="defDbCharset"
+                    @on-change="onChangeCharset"
+                />
             </v-col>
             <v-col cols="12" md="6" class="py-0 px-1">
                 <label class="field__label color text-small-text label-required">
                     {{ $t('collation') }}
                 </label>
-                <v-select
+                <collation-input
                     v-model="tableOptsData.table_collation"
-                    :items="collations"
-                    name="table_collation"
-                    outlined
-                    class="std mariadb-select-input error--text__bottom"
-                    :menu-props="{
-                        contentClass: 'mariadb-select-v-menu',
-                        bottom: true,
-                        offsetY: true,
-                    }"
-                    dense
-                    :height="32"
-                    hide-details="auto"
-                >
-                    <template v-slot:item="{ item, on, attrs }">
-                        <div
-                            class="v-list-item__title d-flex align-center flex-row flex-grow-1"
-                            v-bind="attrs"
-                            v-on="on"
-                        >
-                            {{ item }}
-                            {{ item === defCollation ? `(${$t('defCollation')})` : '' }}
-                        </div>
-                    </template>
-                </v-select>
+                    :defCollation="defCollation"
+                    :charset="tableOptsData.table_charset"
+                />
             </v-col>
         </v-row>
         <v-row class="ma-0">
@@ -124,9 +81,27 @@
 </template>
 
 <script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-09-20
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import { mapState } from 'vuex'
+import CharsetInput from './CharsetInput.vue'
+import CollationInput from './CollationInput.vue'
 export default {
     name: 'alter-table-opts',
+    components: {
+        'charset-input': CharsetInput,
+        'collation-input': CollationInput,
+    },
     props: {
         value: { type: Object, required: true },
     },
@@ -152,15 +127,6 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
-        },
-        charsets() {
-            return [...this.charset_collation_map.keys()]
-        },
-        collations() {
-            return this.$typy(
-                this.charset_collation_map.get(this.tableOptsData.table_charset),
-                'collations'
-            ).safeArray
         },
         defCollation() {
             return this.$typy(

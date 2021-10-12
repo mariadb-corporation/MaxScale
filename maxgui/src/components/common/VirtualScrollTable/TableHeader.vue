@@ -169,8 +169,11 @@ export default {
         },
     },
     watch: {
-        tableHeaders() {
-            this.recalculateWidth()
+        tableHeaders: {
+            deep: true,
+            handler(v, oV) {
+                if (!this.$help.lodash.isEqual(v, oV)) this.recalculateWidth()
+            },
         },
         boundingWidth() {
             this.recalculateWidth()
