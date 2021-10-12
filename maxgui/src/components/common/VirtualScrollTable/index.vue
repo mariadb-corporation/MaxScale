@@ -38,10 +38,28 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
-                    :cellMaxWidth="cellMaxWidth"
                     :isXOverflowed="isXOverflowed"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
-                />
+                >
+                    <template
+                        v-for="h in tableHeaders"
+                        v-slot:[h.text]="{ data: { cell, header, colIdx } }"
+                    >
+                        <slot
+                            :name="`${h.text}`"
+                            :data="{
+                                rowData: row,
+                                cell,
+                                header,
+                                maxWidth: cellMaxWidth(1),
+                                rowIdx,
+                                colIdx,
+                            }"
+                        >
+                            <truncate-string :text="`${cell}`" :maxWidth="cellMaxWidth(1)" />
+                        </slot>
+                    </template>
+                </vertical-row>
                 <row-group
                     v-else-if="isRowGroup(row) && !areHeadersHidden"
                     :row="row"
@@ -120,6 +138,7 @@
                             <slot
                                 :name="h.text"
                                 :data="{
+                                    rowData: row,
                                     cell: row[i],
                                     header: h,
                                     maxWidth: cellMaxWidth(i),
