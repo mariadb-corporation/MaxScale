@@ -112,7 +112,208 @@ private:
 
 static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
 {
-    // TODO: Add test cases
+    {
+        "select sleep(2);",
+        QUERY_TYPE_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select * from tst where lname like '%e%' order by fname;",
+        QUERY_TYPE_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "insert into tst values ('Jane','Doe'),('Daisy','Duck'),('Marie','Curie');",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_INSERT
+    },
+    {
+        "update tst set fname='Farmer', lname='McDonald' where lname='%Doe' and fname='John';",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_UPDATE
+    },
+    {
+        "create table tmp as select * from t1;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_CREATE
+    },
+    {
+        "create temporary table tmp as select * from t1;",
+        QUERY_TYPE_WRITE | QUERY_TYPE_CREATE_TMP_TABLE,
+        QUERY_OP_CREATE
+    },
+    {
+        "select @@server_id;",
+        QUERY_TYPE_READ | QUERY_TYPE_SYSVAR_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select @OLD_SQL_NOTES;",
+        QUERY_TYPE_READ | QUERY_TYPE_USERVAR_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SET autocommit=1;",
+        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_ENABLE_AUTOCOMMIT
+        | QUERY_TYPE_COMMIT,
+        QUERY_OP_SET
+    },
+    {
+        "SET autocommit=0;",
+        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_GSYSVAR_WRITE | QUERY_TYPE_BEGIN_TRX
+        | QUERY_TYPE_DISABLE_AUTOCOMMIT,
+        QUERY_OP_SET
+    },
+    {
+        "BEGIN;",
+        QUERY_TYPE_BEGIN_TRX,
+        QUERY_OP_UNDEFINED
+    },
+    {
+        "ROLLBACK;",
+        QUERY_TYPE_ROLLBACK,
+        QUERY_OP_UNDEFINED
+    },
+    {
+        "COMMIT;",
+        QUERY_TYPE_COMMIT,
+        QUERY_OP_UNDEFINED
+    },
+    {
+        "use X;",
+        QUERY_TYPE_SESSION_WRITE,
+        QUERY_OP_CHANGE_DB
+    },
+    {
+        "select last_insert_id();",
+        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select @@last_insert_id;",
+        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select @@identity;",
+        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select if(@@hostname='box02','prod_mariadb02','n');",
+        QUERY_TYPE_READ | QUERY_TYPE_SYSVAR_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "select next value for seq1;",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "select nextval(seq1);",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "select seq1.nextval;",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT GET_LOCK('lock1',10);",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT IS_FREE_LOCK('lock1');",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT IS_USED_LOCK('lock1');",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT RELEASE_LOCK('lock1');",
+        QUERY_TYPE_READ | QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "deallocate prepare select_stmt;",
+        QUERY_TYPE_DEALLOC_PREPARE,
+        QUERY_OP_UNDEFINED
+    },
+    {
+        "SELECT a FROM tbl FOR UPDATE;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT a INTO OUTFILE 'out.txt';",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT a INTO DUMPFILE 'dump.txt';",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT a INTO @var;",
+        QUERY_TYPE_GSYSVAR_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "select timediff(cast('2004-12-30 12:00:00' as time), '12:00:00');",
+        QUERY_TYPE_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "(select 1 as a from t1) union all (select 1 from dual) limit 1;",
+        QUERY_TYPE_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SET @saved_cs_client= @@character_set_client;",
+        QUERY_TYPE_SESSION_WRITE | QUERY_TYPE_USERVAR_WRITE,
+        QUERY_OP_SET
+    },
+    {
+        "SELECT 1 AS c1 FROM t1 ORDER BY ( SELECT 1 AS c2 FROM t1 GROUP BY GREATEST(LAST_INSERT_ID(), t1.a) ORDER BY GREATEST(LAST_INSERT_ID(), t1.a) LIMIT 1);",
+        QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SET
+    },
+    {
+        "SELECT UTC_TIMESTAMP();",
+        QUERY_TYPE_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT COUNT(IF(!c.ispackage, 1, NULL)) as cnt FROM test FOR UPDATE;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT handler FROM abc FOR UPDATE;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT * FROM test LOCK IN SHARE MODE;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT * FROM test FOR SHARE;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_SELECT
+    },
 };
 
 int main(int argc, char** argv)
