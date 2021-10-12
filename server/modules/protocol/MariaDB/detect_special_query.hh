@@ -17,14 +17,14 @@
 #include <vector>
 
 /**
- * @brief  detect_special_query - Quickly determine if the query is
+ * @brief  detect_special_query - Quickly determine if the query is potentially
  *                                special and needs futher handling.
  *
  * @param  ppSql     In:  pSql points to the start of the query.
- *                   Out: pSql points to the start of the special query
- *                   (i.e points to "USE", "SET ROLE" or "KILL").
- *                   Unmodified if the query is not special.
+ *                   Out: pSql points to a possible start of the special query
+ *                   (points to "USE", "SET" or "KIL", yes only 3 characters are checked).
+ *                   Unmodified if the query does not have the prefix.
  * @param  pEnd      Points to one passed end of sql
- * @return bool      true if the query is special. ppSql set as described above.
+ * @return bool      true if the query has the prefix. ppSql set as described above.
  */
 bool detect_special_query(const char** ppSql, const char* pEnd);
