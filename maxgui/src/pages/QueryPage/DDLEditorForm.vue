@@ -26,6 +26,8 @@
                         v-model="colsOptsData"
                         :height="tabDim.height"
                         :boundingWidth="tabDim.width"
+                        :defTblCharset="$typy(tableOptsData, 'table_charset').safeString"
+                        :defTblCollation="$typy(tableOptsData, 'table_collation').safeString"
                     />
                 </keep-alive>
             </v-slide-x-transition>

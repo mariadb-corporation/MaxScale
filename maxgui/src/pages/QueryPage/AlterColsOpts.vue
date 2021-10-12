@@ -44,36 +44,96 @@
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
         </div>
-        <!-- TODO: make virtual-scroll-table cell editable -->
         <virtual-scroll-table
             :benched="0"
             :headers="headers"
-            :rows="$typy(colsOptsData, 'data').safeArray"
-            :itemHeight="30"
+            :rows="rows"
+            :itemHeight="40"
             :height="height - headerHeight"
             :boundingWidth="boundingWidth"
             showSelect
             v-on="$listeners"
             @item-selected="selectedItems = $event"
-        />
+        >
+            <template v-for="h in headers" v-slot:[h.text]="{ data: { cell, rowIdx, colIdx } }">
+                <column-input
+                    :key="h.text"
+                    :data="{
+                        field: h.text,
+                        value: cell,
+                        rowIdx,
+                        colIdx,
+                    }"
+                    :height="30"
+                    :defTblCharset="defTblCharset"
+                    :defTblCollation="defTblCollation"
+                    :currCharset="$typy(currColCharsetMap, `${rowIdx}`).safeString"
+                    :supportCharset="$typy(supportCharsetColMap, `${rowIdx}`).safeBoolean"
+                    @on-change="updateCell"
+                    @on-change-column_type="onChangeColumnType"
+                    @on-change-charset="onChangeCharset"
+                />
+            </template>
+        </virtual-scroll-table>
     </div>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-09-20
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+import ColumnInput from './ColumnInput.vue'
 export default {
     name: 'alter-cols-opts',
+    components: {
+        'column-input': ColumnInput,
+    },
     props: {
         value: { type: Object, required: true },
         height: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
+        defTblCharset: { type: String, required: true },
+        defTblCollation: { type: String, required: true },
     },
     data() {
         return {
             selectedItems: [],
             headerHeight: 0,
+            typesSupportCharset: [
+                'TINYTEXT',
+                'TEXT',
+                'MEDIUMTEXT',
+                'LONGTEXT',
+                'CHAR',
+                'ENUM',
+                'VARCHAR',
+                'SET',
+            ],
+            /** supportCharsetColMap is used to handle disable charset/collation inputs
+             * a map with rowIdx set as key and boolean value of
+             * whether column_type supports charset/collation set as value.
+             */
+            supportCharsetColMap: {},
+            /** currColCharsetMap is used to get collations of the charset
+             * a map with rowIdx set as key and charset name of the column set as value
+             */
+            currColCharsetMap: {},
         }
     },
     computed: {
+        ...mapState({
+            charset_collation_map: state => state.query.charset_collation_map,
+        }),
         colsOptsData: {
             get() {
                 return this.value
@@ -83,12 +143,45 @@ export default {
             },
         },
         headers() {
-            return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => ({ text: field }))
+            return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => {
+                let h = {
+                    text: field,
+                    sortable: false,
+                }
+                switch (field) {
+                    case 'PK':
+                    case 'NN':
+                    case 'UN':
+                    case 'ZF':
+                    case 'AI':
+                        h.width = 50
+                        h.maxWidth = 50
+                        break
+                }
+                return h
+            })
+        },
+        rows() {
+            return this.$typy(this.colsOptsData, 'data').safeArray
+        },
+        idxOfColumnType() {
+            return this.headers.findIndex(h => h.text === 'column_type')
+        },
+        idxOfCharset() {
+            return this.headers.findIndex(h => h.text === 'charset')
         },
     },
     watch: {
         colsOptsData(v) {
             if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
+        },
+        rows: {
+            deep: true,
+            handler(v, oV) {
+                if (!this.$help.lodash.isEqual(v, oV)) {
+                    this.evaluateInput()
+                }
+            },
         },
     },
     methods: {
@@ -102,10 +195,108 @@ export default {
                 data: xorWith(this.colsOptsData.data, selectedItems, isEqual),
             }
         },
-        // TODO: add handlers
-        addNewCol() {},
+        addNewCol() {
+            let row = []
+            this.headers.forEach(h => {
+                switch (h.text) {
+                    case 'column_name':
+                    case 'column_type':
+                    case 'comment':
+                        row.push('')
+                        break
+                    case 'PK':
+                    case 'NN':
+                    case 'UN':
+                    case 'ZF':
+                    case 'AI':
+                        row.push('NO')
+                        break
+                    default:
+                        row.push(null)
+                        break
+                }
+            })
+            this.colsOptsData.data.push(row)
+        },
+        /**
+         * This iterates each row to check if column's data type supports
+         * the use of charset/collation and store it to `supportCharsetColMap`.
+         * It also store charset value of the column to `currColCharsetMap`.
+         */
+        evaluateInput() {
+            let supportCharsetColMap,
+                currColCharsetMap = {}
+            this.rows.forEach((row, i) => {
+                supportCharsetColMap = {
+                    ...supportCharsetColMap,
+                    [i]: this.typesSupportCharset.some(v =>
+                        row[this.idxOfColumnType].toUpperCase().includes(v)
+                    ),
+                }
+                currColCharsetMap = {
+                    ...currColCharsetMap,
+                    [i]: row[this.idxOfCharset],
+                }
+            })
+            this.supportCharsetColMap = supportCharsetColMap
+            this.currColCharsetMap = currColCharsetMap
+        },
+        /**
+         * @param {Object} item - cell data
+         */
+        updateCell(item) {
+            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                    },
+                },
+            })
+        },
+        updateCharsetCollation({ rowIdx, charset, collation }) {
+            const charsetColIdx = this.headers.findIndex(h => h.text === 'charset')
+            const collationColIdx = this.headers.findIndex(h => h.text === 'collation')
+            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [rowIdx]: {
+                        [charsetColIdx]: { $set: charset },
+                        [collationColIdx]: { $set: collation },
+                    },
+                },
+            })
+        },
+        /**
+         * @param {Object} item - column_type cell data
+         */
+        onChangeColumnType(item) {
+            this.updateCell(item)
+            this.$nextTick(() => {
+                if (this.supportCharsetColMap[item.rowIdx])
+                    this.updateCharsetCollation({
+                        rowIdx: item.rowIdx,
+                        charset: this.defTblCharset,
+                        collation: this.defTblCollation,
+                    })
+                else
+                    this.updateCharsetCollation({
+                        rowIdx: item.rowIdx,
+                        charset: null,
+                        collation: null,
+                    })
+            })
+        },
+
+        /**
+         * @param {Object} item - charset cell data
+         */
+        onChangeCharset(item) {
+            this.updateCharsetCollation({
+                rowIdx: item.rowIdx,
+                charset: item.value,
+                collation: this.$typy(this.charset_collation_map.get(item.value), 'defCollation')
+                    .safeString,
+            })
+        },
     },
 }
 </script>
-
-<style lang="scss" scoped></style>
