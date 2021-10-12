@@ -1,17 +1,14 @@
 <template>
     <div class="virtual-table__header">
         <div class="thead d-inline-block" :style="{ width: headerWidth }">
-            <div class="tr" :style="{ lineHeight: $parent.lineHeight }">
+            <div class="tr">
                 <div
                     v-if="!areHeadersHidden && showSelect && !isVertTable"
-                    class="th d-flex align-center"
+                    class="th d-flex justify-center align-center"
                     :style="{
                         ...headerStyle,
-                        height: $parent.lineHeight,
-                        maxWidth: activeGroupBy ? '90px' : '50px',
-                        minWidth: activeGroupBy ? '90px' : '50px',
-                        paddingLeft: activeGroupBy ? '29px' : '12px',
-                        paddingRight: '12px',
+                        maxWidth: activeGroupBy ? '82px' : '50px',
+                        minWidth: activeGroupBy ? '82px' : '50px',
                     }"
                 >
                     <v-checkbox
@@ -33,7 +30,6 @@
                         :ref="`header__${i}`"
                         :style="{
                             ...headerStyle,
-                            height: $parent.lineHeight,
                             maxWidth: header.width
                                 ? $help.handleAddPxUnit(header.width)
                                 : $help.handleAddPxUnit(headerWidthMap[i]),
@@ -41,10 +37,15 @@
                         }"
                         class="th d-flex align-center px-3"
                         :class="{
-                            pointer: enableSorting,
+                            pointer: enableSorting && header.sortable !== false,
                             [`sort--active ${sortOrder}`]: activeSort === header.text,
                         }"
-                        @click="() => (enableSorting ? handleSort(header.text) : null)"
+                        @click="
+                            () =>
+                                enableSorting && header.sortable !== false
+                                    ? handleSort(header.text)
+                                    : null
+                        "
                     >
                         <span v-if="header.text === '#'">
                             {{ header.text }}
@@ -53,12 +54,19 @@
                         <truncate-string
                             v-else
                             :text="`${header.text}`"
-                            :maxWidth="$typy(headerWidthMap[i]).safeNumber - 46"
+                            :maxWidth="
+                                $typy(headerWidthMap[i]).safeNumber -
+                                    (enableSorting && header.sortable !== false ? 46 : 0)
+                            "
                         />
                         <span v-if="header.text === '#'" class="ml-1 color text-field-text">
                             ({{ rowsLength }})
                         </span>
-                        <v-icon v-if="enableSorting" size="14" class="sort-icon ml-2">
+                        <v-icon
+                            v-if="enableSorting && header.sortable !== false"
+                            size="14"
+                            class="sort-icon ml-2"
+                        >
                             $vuetify.icons.arrowDown
                         </v-icon>
                         <span
@@ -110,6 +118,7 @@
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
   hidden?: boolean, hidden the column
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
+  sortable?: boolean, if false, column won't be sortable
 }
  */
 export default {
@@ -187,6 +196,7 @@ export default {
     methods: {
         //threshold, user cannot resize header smaller than this
         getMinHeaderWidth(header) {
+            if (header.maxWidth) return header.maxWidth
             return this.$typy(header, 'groupable').safeBoolean ? 117 : 67
         },
         resetHeaderWidth() {
@@ -307,6 +317,7 @@ export default {
         flex-direction: row;
         box-shadow: -7px 5px 7px -7px rgb(0 0 0 / 10%);
         flex-wrap: nowrap;
+        line-height: 30px;
         .th {
             display: flex;
             position: relative;
@@ -318,6 +329,7 @@ export default {
             background-color: $table-border;
             border-bottom: none;
             user-select: none;
+            height: 30px;
             &:first-child {
                 border-radius: 5px 0 0 0;
             }

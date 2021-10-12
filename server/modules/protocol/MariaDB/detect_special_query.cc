@@ -14,6 +14,7 @@
 #include <maxbase/string.hh>
 #include <cstring>
 #include <functional>
+#include <limits>
 
 namespace
 {
