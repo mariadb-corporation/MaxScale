@@ -19,9 +19,6 @@ if (BUILD_QC_MYSQLEMBEDDED)
   endif()
 endif()
 
-add_executable(classify classify.cc)
-target_link_libraries(classify maxscale-common)
-
 add_executable(compare compare.cc testreader.cc)
 target_link_libraries(compare maxscale-common)
 
@@ -38,14 +35,9 @@ add_executable(test_qc_sqlite test_qc_sqlite.cc)
 target_link_libraries(test_qc_sqlite maxscale-common)
 
 add_test(test_crash_qc_sqlite crash_qc_sqlite)
-
-add_test(test_qc_sqlite_old classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 add_test(test_qc_sqlite test_qc_sqlite)
 
 if (BUILD_QC_MYSQLEMBEDDED)
-  # test_qc_MySQLEmbedded excluded, classify is now solely used for verifying the
-  # functionality of qc_sqlite.
-  #add_test(test_qc_MySQLEmbedded classify qc_mysqlembedded ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 
   add_test(test_qc_comparecreate compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/create.test)
   add_test(test_qc_comparedelete compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/delete.test)
