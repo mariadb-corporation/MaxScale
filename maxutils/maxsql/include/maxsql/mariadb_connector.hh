@@ -156,6 +156,16 @@ public:
     bool ping();
 
     /**
+     * Run COM_CHANGE_USER. Connection settings are not changed.
+     *
+     * @param user New username
+     * @param pw New password
+     * @param db New database
+     * @return True on success
+     */
+    bool change_user(const std::string& user, const std::string& pw, const std::string& db);
+
+    /**
      * Get latest error.
      *
      * @return Error string

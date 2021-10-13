@@ -263,29 +263,70 @@ void Command::free_request()
     }
 }
 
+namespace
+{
+
+GWBUF* create_packet(const char* zSql, size_t sql_len, uint8_t seq_no)
+{
+    bool is_first = (seq_no == 0);
+
+    size_t payload_len = sql_len + (is_first ? 1 : 0);
+    mxb_assert(payload_len <= Command::MAX_PAYLOAD_LEN);
+
+    GWBUF* pPacket = gwbuf_alloc(MYSQL_HEADER_LEN + payload_len);
+
+    uint8_t* p = (uint8_t*)pPacket->start;
+    *p++ = payload_len;
+    *p++ = (payload_len >> 8);
+    *p++ = (payload_len >> 16);
+    *p++ = seq_no;
+
+    if (is_first)
+    {
+        *p++ = 0x03;
+    }
+
+    memcpy(p, zSql, sql_len);
+
+    return pPacket;
+}
+
+}
+
 void Command::send_downstream(const string& sql)
 {
     MXB_INFO("SQL: %s", sql.c_str());
 
-    m_last_statement = sql;
+    uint8_t seq_no = 0;
 
-    GWBUF* pRequest = modutil_create_query(sql.c_str());
+    const char* zSql = sql.data();
+    const char* end = zSql + sql.length();
 
-    m_database.context().downstream().routeQuery(pRequest);
-}
+    size_t nRemaining = end - zSql;
+    size_t payload_len = (nRemaining + 1 > MAX_PAYLOAD_LEN ? MAX_PAYLOAD_LEN : nRemaining + 1);
+    size_t sql_len = payload_len - 1; // First packet, 1 byte for the command byte.
 
-//static
-void Command::check_maximum_sql_length(int length)
-{
-    if (length > MAX_QUERY_LEN)
+    GWBUF* pPacket = create_packet(zSql, sql_len, seq_no++);
+
+    m_database.context().downstream().routeQuery(pPacket);
+
+    zSql += sql_len;
+    nRemaining -= sql_len;
+
+    while (nRemaining != 0 || payload_len == MAX_PAYLOAD_LEN)
     {
-        ostringstream ss;
-        ss << "Generated SQL of " << length
-           << " bytes, exceeds the maximum of " << MAX_QUERY_LEN
-           << " bytes.";
+        payload_len = (nRemaining > MAX_PAYLOAD_LEN ? MAX_PAYLOAD_LEN : nRemaining);
+        sql_len = payload_len; // NOT first packet, no command byte is present.
 
-        throw HardError(ss.str(), error::COMMAND_FAILED);
+        pPacket = create_packet(zSql, sql_len, seq_no++);
+
+        m_database.context().downstream().routeQuery(pPacket);
+
+        zSql += sql_len;
+        nRemaining -= sql_len;
     }
+
+    m_last_statement = sql;
 }
 
 namespace
@@ -507,8 +548,6 @@ State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
 
     auto statement = ss.str();
 
-    check_maximum_sql_length(statement);
-
     send_downstream(statement);
 
     *ppNoSQL_response = nullptr;
@@ -579,8 +618,6 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
     ss << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc) << ";";
 
     m_statement = ss.str();
-
-    check_maximum_sql_length(m_statement);
 
     send_downstream(m_statement);
 
@@ -779,8 +816,6 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 
     auto sql = ss.str();
 
-    check_maximum_sql_length(sql);
-
     return update_document(sql);
 }
 
@@ -928,8 +963,6 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
 
         auto sql = ss.str();
 
-        check_maximum_sql_length(sql);
-
         mxb_assert(m_dcid == 0);
         m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
                 m_dcid = 0;
@@ -1075,8 +1108,6 @@ State OpUpdateCommand::insert_document()
     ss << "')";
 
     m_insert = ss.str();
-
-    check_maximum_sql_length(m_insert);
 
     mxb_assert(m_dcid == 0);
     m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
@@ -1688,8 +1719,6 @@ State SingleCommand::execute(GWBUF** ppNoSQL_response)
     prepare();
 
     string statement = generate_sql();
-
-    check_maximum_sql_length(statement);
 
     m_statement = std::move(statement);
 

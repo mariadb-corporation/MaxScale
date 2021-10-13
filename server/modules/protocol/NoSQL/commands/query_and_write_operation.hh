@@ -80,11 +80,6 @@ public:
     {
         auto query = generate_sql();
 
-        for (const auto& statement : query.statements())
-        {
-            check_maximum_sql_length(statement);
-        }
-
         m_query = std::move(query);
 
         m_it = m_query.statements().begin();
@@ -1347,6 +1342,7 @@ private:
 
             rv = zJson;
             MXS_FREE(zJson);
+            json_decref(pJson);
         }
         else
         {
@@ -1513,8 +1509,6 @@ private:
 
         string sql = ss.str();
 
-        check_maximum_sql_length(sql);
-
         mxb_assert(m_dcid == 0);
         m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
                 m_dcid = 0;
@@ -1591,8 +1585,6 @@ private:
         ss << "')";
 
         m_insert = ss.str();
-
-        check_maximum_sql_length(m_insert);
 
         mxb_assert(m_dcid == 0);
         m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {

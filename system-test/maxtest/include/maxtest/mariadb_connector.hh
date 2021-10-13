@@ -19,6 +19,7 @@ namespace maxtest
 {
 class TestLogger;
 class ScopedUser;
+class ScopedTable;
 
 /**
  * Connection helper class for tests. Reports errors to the system test log.
@@ -44,6 +45,15 @@ public:
     std::unique_ptr<mxq::QueryResult> try_query(const std::string& query);
 
     /**
+     * Perform a simple query. The first column of the first row is returned as string. Query fail or
+     * no valid result is a test error.
+     *
+     * @param q The query
+     * @return Result as string. Empty on failure.
+     */
+    std::string simple_query(const std::string& q);
+
+    /**
      * Create a user that is automatically deleted when the object goes out of scope. Depends on the
      * generating connection object, so be careful when moving or manually destroying the user object.
      *
@@ -60,6 +70,17 @@ public:
      */
     ScopedUser create_user_xpand(const std::string& user, const std::string& host,
                                  const std::string& pw);
+
+    /**
+     * Create a table that is automatically deleted when the object goes out of scope. Depends on the
+     * generating connection object, so be careful when moving or manually destroying the table object.
+     *
+     * @param name Table name
+     * @param col_defs Column definitions. Given to "create table"-command.
+     * @return Table object
+     */
+    ScopedTable create_table(const std::string& name, const std::string& col_defs);
+
 private:
     TestLogger& m_log;
 };
@@ -84,5 +105,24 @@ public:
 private:
     std::string   m_user_host;      /**< user@host */
     mxt::MariaDB* m_conn {nullptr}; /**< Connection managing this user */
+};
+
+/**
+ * Helper class for managing tables in tests. When the object goes out of scope, the table is deleted
+ * from backend. The object is dependent on the connection that created it. Should not be generated manually.
+ */
+class ScopedTable final
+{
+public:
+    ScopedTable& operator=(ScopedTable&& rhs);
+
+    ScopedTable() = default;
+    ScopedTable(std::string name, maxtest::MariaDB* conn);
+    ScopedTable(ScopedTable&& rhs);
+    ~ScopedTable();
+
+private:
+    std::string   m_name;           /**< Table name */
+    mxt::MariaDB* m_conn {nullptr}; /**< Connection managing this table */
 };
 }

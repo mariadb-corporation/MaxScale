@@ -287,6 +287,10 @@ Boolean | 5 | "bool" | `BOOLEAN`
 The _"number"_ alias is supported and will match values whose MariaDB type is
 `DOUBLE` or `INTEGER`.
 
+### Evaluation Query Operators
+
+* $mod
+
 ### Array Query Operators
 
 * $all
@@ -641,6 +645,12 @@ The following fields are relevant.
 Field | Type | Description
 ------|------|------------
 create| string | The name of the collection to create.
+capped| boolean | Optional. If specified, the value must be `false` as capped collections are not supported.
+viewOn| string | Optional. If specified, the command will fail as views are not supported.
+
+Currently, _capped collections_ and _views_ are not supported. Consequently,
+specifying that the collection should be capped or that it should be a
+view on another collection, will cause the command to fail.
 
 ### createIndexes
 

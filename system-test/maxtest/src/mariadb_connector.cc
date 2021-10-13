@@ -157,6 +157,38 @@ maxtest::MariaDB::create_user_xpand(const string& user, const string& host, cons
     return rval;
 }
 
+mxt::ScopedTable
+maxtest::MariaDB::create_table(const std::string& name, const std::string& col_defs)
+{
+    mxt::ScopedTable rval;
+    if (is_open())
+    {
+        if (cmd_f("create or replace table %s (%s);", name.c_str(), col_defs.c_str()))
+        {
+            rval = ScopedTable(name, this);
+        }
+    }
+    return rval;
+}
+
+std::string maxtest::MariaDB::simple_query(const string& q)
+{
+    string rval;
+    auto res = query(q);
+    if (res)
+    {
+        if (res->next_row() && res->get_col_count() > 0)
+        {
+            rval = res->get_string(0);
+        }
+        else
+        {
+            m_log.add_failure("Query '%s' did not return any results.", q.c_str());
+        }
+    }
+    return rval;
+}
+
 maxtest::ScopedUser::ScopedUser(std::string user_host, maxtest::MariaDB* conn)
     : m_user_host(std::move(user_host))
     , m_conn(conn)
@@ -199,4 +231,33 @@ maxtest::ScopedUser& maxtest::ScopedUser::operator=(maxtest::ScopedUser&& rhs)
 maxtest::ScopedUser::ScopedUser(maxtest::ScopedUser&& rhs)
 {
     *this = std::move(rhs);
+}
+
+maxtest::ScopedTable::ScopedTable(std::string name, maxtest::MariaDB* conn)
+    : m_name(std::move(name))
+    , m_conn(conn)
+{
+}
+
+maxtest::ScopedTable::~ScopedTable()
+{
+    if (m_conn)
+    {
+        m_conn->cmd_f("drop table %s;", m_name.c_str());
+    }
+}
+
+maxtest::ScopedTable& maxtest::ScopedTable::operator=(maxtest::ScopedTable&& rhs)
+{
+    m_conn = rhs.m_conn;
+    rhs.m_conn = nullptr;
+    m_name = std::move(rhs.m_name);
+    return *this;
+}
+
+maxtest::ScopedTable::ScopedTable(maxtest::ScopedTable&& rhs)
+    : m_name(std::move(rhs.m_name))
+    , m_conn(rhs.m_conn)
+{
+    rhs.m_conn = nullptr;
 }

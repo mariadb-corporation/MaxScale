@@ -16,6 +16,7 @@
 #include <string>
 #include <maxbase/format.hh>
 #include <maxtest/mariadb_connector.hh>
+#include <maxtest/execute_cmd.hh>
 
 using std::string;
 using std::cout;
@@ -58,13 +59,8 @@ void test_main(TestConnections& test)
     const char pam_pw[] = "313";
     const char pam_config_name[] = "pam_config_msg";
 
-    const string add_user_cmd = (string)"useradd " + pam_user;
-    const string add_pw_cmd = mxb::string_printf("echo %s:%s | chpasswd", pam_user, pam_pw);
     const string read_shadow = "chmod o+r /etc/shadow";
-
-    const string remove_user_cmd = (string)"userdel --remove " + pam_user;
     const string read_shadow_off = "chmod o-r /etc/shadow";
-
     const string pam_message_contents = "Lorem ipsum";
 
     // To make most out of this test, use a custom pam service configuration. It needs to be written to
@@ -92,8 +88,7 @@ void test_main(TestConnections& test)
         test.try_query(conn, install_plugin);
 
         auto& vm = test.repl->backend(i)->vm_node();
-        vm.run_cmd_sudo(add_user_cmd);
-        vm.run_cmd_sudo(add_pw_cmd);
+        vm.add_linux_user(pam_user, pam_pw);
         vm.run_cmd_sudo(read_shadow);
 
         // Also, copy the custom pam config and message file.
@@ -104,8 +99,7 @@ void test_main(TestConnections& test)
     // Also create the user on the node running MaxScale, as the MaxScale PAM plugin compares against
     // local users.
     auto& mxs_vm = test.maxscale->vm_node();
-    mxs_vm.run_cmd_sudo(add_user_cmd);
-    mxs_vm.run_cmd_sudo(add_pw_cmd);
+    mxs_vm.add_linux_user(pam_user, pam_pw);
     mxs_vm.run_cmd_sudo(read_shadow);
     mxs_vm.copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
     mxs_vm.copy_to_node_sudo(pam_msgfile_path_src, pam_msgfile_path_dst);
@@ -273,7 +267,7 @@ void test_main(TestConnections& test)
     }
 
     // Remove the linux user from the MaxScale node. Required for next test cases.
-    test.maxscale->ssh_node_f(true, "%s", remove_user_cmd.c_str());
+    mxs_vm.remove_linux_user(pam_user);
 
     int normal_port = test.maxscale->rwsplit_port;
     int skip_auth_port = 4007;
@@ -472,8 +466,7 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             // The user needs to be recreated on the MaxScale node.
-            test.maxscale->ssh_node_f(true, "%s", add_user_cmd.c_str());
-            test.maxscale->ssh_node_f(true, "%s", add_pw_cmd.c_str());
+            mxs_vm.add_linux_user(pam_user, pam_pw);
 
             cout << "Testing listener with " << setting_val << "\n";
             MYSQL* conn = test.repl->nodes[0];
@@ -504,49 +497,18 @@ void test_main(TestConnections& test)
         // Test user account mapping (MXS-3475). For this, the pam_user_map.so-file is required.
         // This file is installed with the server, but not with MaxScale. Depending on distro, the file
         // may be in different places. Check both.
-        auto& vm = test.repl->backend(0)->vm_node();
-        auto test_dir = mxt::SOURCE_DIR;
-        string lib_source1 = "/usr/lib64/security/pam_user_map.so";
-        string lib_source2 = "/usr/lib/security/pam_user_map.so";
-        string lib_temp = "/tmp/pam_user_map.so";
+        // Copy the pam mapping module to the MaxScale VM. Also copy pam service config and mapping config.
+        pam::copy_user_map_lib(test.repl->backend(0)->vm_node(), mxs_vm);
+        pam::copy_map_config(mxs_vm);
+
         const char pam_map_config_name[] = "pam_config_user_map";
-
-        string pam_map_config_path_src = mxb::string_printf("%s/authentication/%s",
-                                                            test_dir, pam_map_config_name);
-        string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
-        string pam_user_map_conf_src = mxb::string_printf("%s/authentication/user_map.conf", test_dir);
-        string pam_user_map_conf_dst = "/etc/security/user_map.conf";
-
-        if (vm.copy_from_node(lib_source1, lib_temp) || vm.copy_from_node(lib_source2, lib_temp))
-        {
-            if (mxs_vm.copy_to_node(lib_temp, lib_temp))
-            {
-                test.logger().log_msg("pam_user_map.so copied to MaxScale VM.");
-            }
-            else
-            {
-                test.add_failure("Failed to copy library '%s' to %s.",
-                                 lib_temp.c_str(), mxs_vm.m_name.c_str());
-            }
-        }
-        else
-        {
-            test.add_failure("Failed to copy library '%s' or '%s' to host machine.",
-                             lib_source1.c_str(), lib_source2.c_str());
-        }
-
-        mxs_vm.copy_to_node_sudo(pam_map_config_path_src, pam_map_config_path_dst);
-        mxs_vm.copy_to_node_sudo(pam_user_map_conf_src, pam_user_map_conf_dst);
 
         if (test.ok())
         {
             // For this case, it's enough to create the Linux user on the MaxScale VM.
             const char orig_user[] = "orig_pam_user";
             const char orig_pass[] = "orig_pam_pw";
-            const string add_orig_user_cmd = (string)"useradd " + orig_user;
-            const string add_orig_pw_cmd = mxb::string_printf("echo %s:%s | chpasswd", orig_user, orig_pass);
-            mxs_vm.run_cmd_output_sudo(add_orig_user_cmd);
-            mxs_vm.run_cmd_sudo(add_orig_pw_cmd);
+            mxs_vm.add_linux_user(orig_user, orig_pass);
 
             auto srv = test.repl->backend(0);
             auto conn = srv->try_open_connection();
@@ -572,25 +534,18 @@ void test_main(TestConnections& test)
             conn->cmd(drop_orig_user_query);
             string drop_mapped_user_query = mxb::string_printf(drop_user_fmt, mapped_user);
             conn->cmd(drop_mapped_user_query);
-            const string remove_orig_user_cmd = (string)"userdel --remove " + orig_user;
-            mxs_vm.run_cmd_output_sudo(remove_orig_user_cmd);
+            mxs_vm.remove_linux_user(orig_user);
         }
 
-        // Delete the library file from both the tester VM and MaxScale VM.
-        string del_pam_lib_cmd = "rm -f " + lib_temp;
-        system(del_pam_lib_cmd.c_str());
-        mxs_vm.run_cmd_output_sudo(del_pam_lib_cmd);
-
         // Delete config files from MaxScale VM.
-        const string delete_pam_map_conf_cmd = "rm -f " + pam_map_config_path_dst;
-        const string delete_pam_user_map_conf_cmd = "rm -f " + pam_user_map_conf_dst;
-        mxs_vm.run_cmd_output_sudo(delete_pam_map_conf_cmd);
-        mxs_vm.run_cmd_output_sudo(delete_pam_user_map_conf_cmd);
+        pam::delete_map_config(mxs_vm);
+        // Delete the library file from both the tester VM and MaxScale VM.
+        pam::delete_user_map_lib(mxs_vm);
     }
 
     test.tprintf("Test complete. Cleaning up.");
     // Cleanup: remove linux user and files from the MaxScale node.
-    mxs_vm.run_cmd_sudo(remove_user_cmd);
+    mxs_vm.remove_linux_user(pam_user);
     mxs_vm.run_cmd_sudo(read_shadow_off);
     mxs_vm.run_cmd_sudo(delete_pam_conf_cmd);
     mxs_vm.run_cmd_sudo(delete_pam_message_cmd);
@@ -601,7 +556,7 @@ void test_main(TestConnections& test)
         MYSQL* conn = test.repl->nodes[i];
         test.try_query(conn, "UNINSTALL SONAME 'auth_pam';");
         auto& vm = test.repl->backend(i)->vm_node();
-        vm.run_cmd_sudo(remove_user_cmd);
+        vm.remove_linux_user(pam_user);
         vm.run_cmd_sudo(read_shadow_off);
         vm.run_cmd_sudo(delete_pam_conf_cmd);
         vm.run_cmd_sudo(delete_pam_message_cmd);

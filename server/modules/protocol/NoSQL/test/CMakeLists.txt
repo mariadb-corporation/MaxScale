@@ -19,5 +19,6 @@ target_link_libraries(nosqltest_path
   ${BSON_CXX_LIBRARIES}
   ${BSON_C_LIBRARIES}
   )
+add_dependencies(nosqltest_path mariadbprotocol mongo-c-driver mongo-cxx-driver)
 
 add_test(nosqltest_path nosqltest_path)
