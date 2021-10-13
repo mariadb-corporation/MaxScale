@@ -227,39 +227,55 @@ export default {
                 },
             })
         },
-
         /**
-         * @param {Object} item - column_type cell data
+         * This patches charset and collation at provided rowIdx
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Number} payload.rowIdx - row to be updated
+         * @param {String} payload.charset - charset to set.
+         * @returns {Object} - returns new colsOptsData
          */
-        onChangeColumnType(item) {
-            let colsOptsData
-            if (check_charset_support(item.value))
-                colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
-                    data: {
-                        [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: this.defTblCharset },
-                            [this.idxOfCollation]: { $set: this.defTblCollation },
-                            [item.colIdx]: { $set: item.value },
+        patchCharsetCollation({ colsOptsData, rowIdx, charset }) {
+            return this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [rowIdx]: {
+                        [this.idxOfCharset]: { $set: charset },
+                        [this.idxOfCollation]: {
+                            $set: this.$typy(
+                                this.charset_collation_map.get(charset),
+                                'defCollation'
+                            ).safeString,
                         },
                     },
+                },
+            })
+        },
+        /**
+         * This handles auto set charset/collation to use utf8
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Object} payload.item - cell item
+         * @returns {Object} - returns new colsOptsData
+         */
+        handleNationalType({ colsOptsData, item }) {
+            if (item.value.includes('NATIONAL'))
+                return this.patchCharsetCollation({
+                    colsOptsData,
+                    rowIdx: item.rowIdx,
+                    charset: 'utf8mb3',
                 })
-            else
-                colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
-                    data: {
-                        [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: null },
-                            [this.idxOfCollation]: { $set: null },
-                            [item.colIdx]: { $set: item.value },
-                        },
-                    },
-                })
-
-            // update UN, ZF, AI value to NO if chosen type doesn't support
+            return colsOptsData
+        },
+        /**
+         * This handles auto uncheck UN, ZF, AI checkboxes if chosen type doesn't support
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Object} payload.item - cell item
+         * @returns {Object} - returns new colsOptsData
+         */
+        handleUncheck_UN_ZF_AI({ colsOptsData, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
                 const idxOfUN = this.findHeaderIdx('UN')
                 const idxOfZF = this.findHeaderIdx('ZF')
                 const idxOfAI = this.findHeaderIdx('AI')
-                colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
                             [idxOfUN]: { $set: 'NO' },
@@ -269,25 +285,55 @@ export default {
                     },
                 })
             }
+            return colsOptsData
+        },
+        /**
+         * This handles set default charset/collation
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Object} payload.item - cell item
+         * @returns {Object} - returns new colsOptsData
+         */
+        handleSetDefCharset({ colsOptsData, item }) {
+            if (check_charset_support(item.value))
+                return this.$help.immutableUpdate(colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [this.idxOfCharset]: { $set: this.defTblCharset },
+                            [this.idxOfCollation]: { $set: this.defTblCollation },
+                            [item.colIdx]: { $set: item.value },
+                        },
+                    },
+                })
+            else
+                return this.$help.immutableUpdate(colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [this.idxOfCharset]: { $set: null },
+                            [this.idxOfCollation]: { $set: null },
+                            [item.colIdx]: { $set: item.value },
+                        },
+                    },
+                })
+        },
+        /**
+         * @param {Object} item - column_type cell data
+         */
+        onChangeColumnType(item) {
+            let colsOptsData = this.colsOptsData
+            colsOptsData = this.handleSetDefCharset({ colsOptsData, item })
+            colsOptsData = this.handleUncheck_UN_ZF_AI({ colsOptsData, item })
+            colsOptsData = this.handleNationalType({ colsOptsData, item })
+            // TODO: handle SERIAL type
             this.colsOptsData = colsOptsData
         },
-
         /**
          * @param {Object} item - charset cell data
          */
         onChangeCharset(item) {
-            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
-                data: {
-                    [item.rowIdx]: {
-                        [this.idxOfCharset]: { $set: item.value },
-                        [this.idxOfCollation]: {
-                            $set: this.$typy(
-                                this.charset_collation_map.get(item.value),
-                                'defCollation'
-                            ).safeString,
-                        },
-                    },
-                },
+            this.colsOptsData = this.patchCharsetCollation({
+                colsOptsData: this.colsOptsData,
+                rowIdx: item.rowIdx,
+                charset: item.value,
             })
         },
     },
