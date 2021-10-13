@@ -177,11 +177,7 @@ private:
             break;
 
         case PARSER_UNKNOWN_TOKEN:
-            if (consume_id())
-            {
-                *pSql_mode = SOMETHING;
-            }
-            else
+            if (!consume_id())
             {
                 rv = false;
             }
