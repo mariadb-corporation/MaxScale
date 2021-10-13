@@ -299,7 +299,7 @@ export default {
                 return this.patchCharsetCollation({
                     colsOptsData,
                     rowIdx: item.rowIdx,
-                    charset: 'utf8mb3',
+                    charset: 'utf8',
                 })
             return colsOptsData
         },

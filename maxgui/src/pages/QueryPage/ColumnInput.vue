@@ -130,6 +130,7 @@ export default {
             switch (this.$typy(this.input, 'field').safeString) {
                 case 'charset':
                 case 'collation':
+                    if (this.columnCharset === 'utf8') return true
                     return !check_charset_support(this.columnType)
                 case 'UN':
                 case 'ZF':
