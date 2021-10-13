@@ -13,6 +13,7 @@ int errors = 0;
 #define expect(a, fmt, ...)                    \
     do{if (!(a)) {                             \
            const char* what = #a;              \
+           printf("Error: %s\n", what);        \
            printf(fmt, ##__VA_ARGS__);         \
            printf("\n");                       \
            ++errors;                           \
@@ -72,6 +73,19 @@ public:
         }
 
         return type;
+    }
+
+    QC_KILL get_kill(const std::string& sql)
+    {
+        mxs::Buffer buffer(modutil_create_query(sql.c_str()));
+        QC_KILL rval;
+
+        if (m_qc->qc_get_kill_info(buffer.get(), &rval) != QC_RESULT_OK)
+        {
+            std::cout << "failed to get kill info for: " << sql << std::endl;
+        }
+
+        return rval;
     }
 
 private:
@@ -438,6 +452,49 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
     },
 };
 
+void test_kill(Tester& tester)
+{
+    int i = 0;
+
+    for (const std::string hardness : {"", "HARD", "SOFT"})
+    {
+        bool soft = hardness == "SOFT";
+
+        for (const std::string type : {"", "CONNECTION", "QUERY", "QUERY ID"})
+        {
+            qc_kill_type_t qtype = type == "QUERY" ? QC_KILL_QUERY :
+                (type == "QUERY ID" ? QC_KILL_QUERY_ID : QC_KILL_CONNECTION);
+            std::string id = std::to_string(i++);
+            std::string sql_id = "KILL " + hardness + " " + type + " " + id;
+            std::string sql_user = "KILL " + hardness + " " + type + " USER 'bob'";
+
+            auto res_id = tester.get_kill(sql_id);
+
+            expect(res_id.soft == soft, "Soft is not %s for: %s",
+                   soft ? "true" : "false", sql_user.c_str());
+            expect(res_id.user == false, "User should be false for: %s", sql_user.c_str());
+
+            expect(res_id.type == qtype, "Type should be '%s', not '%s' for: %s",
+                   qc_kill_type_to_string(res_id.type), qc_kill_type_to_string(qtype), sql_user.c_str());
+
+            expect(res_id.target == id, "Target should be '%s', not '%s' for: %s",
+                   id.c_str(), res_id.target.c_str(), sql_user.c_str());
+
+            auto res_user = tester.get_kill(sql_user);
+
+            expect(res_user.soft == soft, "Soft is not %s for: %s",
+                   soft ? "true" : "false", sql_user.c_str());
+            expect(res_user.user == true, "User should be true for: %s", sql_user.c_str());
+
+            expect(res_user.type == qtype, "Type should be '%s', not '%s' for: %s",
+                   qc_kill_type_to_string(res_user.type), qc_kill_type_to_string(qtype), sql_user.c_str());
+
+            expect(res_user.target == "bob", "Target should be 'bob', not '%s' for: %s",
+                   res_user.target.c_str(), sql_user.c_str());
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     int rc = 0;
@@ -467,6 +524,8 @@ int main(int argc, char** argv)
             free(type_str);
             free(expected_type_str);
         }
+
+        test_kill(tester);
 
         rc = errors;
     }
