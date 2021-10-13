@@ -43,6 +43,32 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        x-small
+                        class="ml-2 pa-1"
+                        outlined
+                        depressed
+                        color="accent-dark"
+                        v-on="on"
+                        @click="isVertTable = !isVertTable"
+                    >
+                        <v-icon
+                            size="14"
+                            color="accent-dark"
+                            :class="{ 'rotate-icon__vert': !isVertTable }"
+                        >
+                            rotate_90_degrees_ccw
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
+            </v-tooltip>
         </div>
         <virtual-scroll-table
             :benched="0"
@@ -52,6 +78,7 @@
             :height="height - headerHeight"
             :boundingWidth="boundingWidth"
             showSelect
+            :isVertTable="isVertTable"
             v-on="$listeners"
             @item-selected="selectedItems = $event"
         >
@@ -115,6 +142,7 @@ export default {
         return {
             selectedItems: [],
             headerHeight: 0,
+            isVertTable: false,
         }
     },
     computed: {
