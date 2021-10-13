@@ -74,6 +74,7 @@
                     :dataTypes="dataTypes"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
+                    @on-change-AI="onChangeAI"
                     @on-change-charset="onChangeCharset"
                 />
             </template>
@@ -163,6 +164,16 @@ export default {
         },
         idxOfCharset() {
             return this.findHeaderIdx('charset')
+        },
+        idxOfAI() {
+            return this.findHeaderIdx('AI')
+        },
+        hasValidAI() {
+            let count = 0
+            this.rows.forEach(row => {
+                if (row[this.idxOfAI] === 'YES') count++
+            })
+            return count === 1
         },
     },
     watch: {
@@ -325,6 +336,36 @@ export default {
             colsOptsData = this.handleNationalType({ colsOptsData, item })
             // TODO: handle SERIAL type
             this.colsOptsData = colsOptsData
+        },
+
+        /**
+         * This unchecks the other auto_increment as there
+         * can be one table column has this.
+         * @param {Number} rowIdx - rowIdx to be excluded
+         */
+        uncheckOtherAI(rowIdx) {
+            let idx
+            for (const [i, row] of this.rows.entries())
+                if (row[this.idxOfAI] === 'YES' && i !== rowIdx) {
+                    idx = i
+                    break
+                }
+
+            if (idx >= 0)
+                this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                    data: {
+                        [idx]: {
+                            [this.idxOfAI]: { $set: 'No' },
+                        },
+                    },
+                })
+        },
+        /**
+         * @param {Object} item - AI cell data
+         */
+        onChangeAI(item) {
+            if (!this.hasValidAI) this.uncheckOtherAI(item.rowIdx)
+            this.updateCell(item)
         },
         /**
          * @param {Object} item - charset cell data

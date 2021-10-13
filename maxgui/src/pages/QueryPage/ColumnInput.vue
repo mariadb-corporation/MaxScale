@@ -89,6 +89,7 @@
  * data with default table charset/collation.
  * on-change-column_type: (cell)
  * on-change-charset: (cell)
+ * on-change-AI: (cell)
  * Event for normal cell
  * on-change: (cell)
  */
@@ -208,7 +209,8 @@ export default {
                         this.$emit('on-change-charset', newInput)
                         break
                     case 'bool': {
-                        switch (newInput.field) {
+                        const field = newInput.field
+                        switch (field) {
                             case 'PK':
                             case 'NN':
                             case 'UN':
@@ -217,7 +219,8 @@ export default {
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
                         }
-                        this.$emit('on-change', newInput)
+                        if (field === 'AI') this.$emit('on-change-AI', newInput)
+                        else this.$emit('on-change', newInput)
                         break
                     }
                     default:
