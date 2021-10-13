@@ -547,12 +547,12 @@ public:
         MAX_PAYLOAD_LEN = 0xffffff
     };
 
-    ComPacket(uint8_t* pBuffer)
+    explicit ComPacket(uint8_t* pBuffer)
         : ComPacket(pBuffer, packet_len(pBuffer))
     {
     }
 
-    ComPacket(uint8_t** ppBuffer)
+    explicit ComPacket(uint8_t** ppBuffer)
         : ComPacket(*ppBuffer)
     {
         *ppBuffer += packet_len();
@@ -573,7 +573,7 @@ public:
     {
     }
 
-    ComPacket(GWBUF* pPacket)
+    explicit ComPacket(GWBUF* pPacket)
         : ComPacket(GWBUF_DATA(pPacket), gwbuf_link_length(pPacket))
     {
     }
@@ -638,7 +638,23 @@ public:
         LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE  // 0xfb
     };
 
-    ComResponse(GWBUF* pPacket)
+    explicit ComResponse(uint8_t* pBuffer)
+        : ComPacket(pBuffer)
+        , m_type(*m_pData)
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(uint8_t** ppBuffer)
+        : ComPacket(ppBuffer)
+        , m_type(*m_pData)
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(GWBUF* pPacket)
         : ComPacket(pPacket)
         , m_type(*m_pData)
     {
