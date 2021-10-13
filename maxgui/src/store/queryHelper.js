@@ -153,7 +153,7 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
     const tblName = schemas[1]
     //TODO: Add more columns .i.e UQ, BIN, G
     const cols = `column_name,
-    REGEXP_REPLACE(UPPER(column_type), ' (SIGNED|UNSIGNED|ZEROFILL)', '') AS column_type,
+    REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
     IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
     IF(is_nullable LIKE 'YES', 'NO', 'YES') as NN,
     IF(column_type LIKE '%UNSIGNED%', 'YES', 'NO') as UN,
