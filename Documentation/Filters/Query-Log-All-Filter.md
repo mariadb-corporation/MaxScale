@@ -104,10 +104,12 @@ options are enabled.
 | total_reply_time  | Duration from client query to last server reply (v6.2) |
 | query             | Query                                                  |
 | default_db        | The default (current) database                         |
-| num_rows          | Number of rows in the result set                       |
-| reply_size        | Number of bytes received from the server               |
-| num_warnings      | Number of warnings in the server reply                 |
-| error_msg         | Error message from the server (if any)                 |
+| num_rows          | Number of rows in the result set (v6.2)                |
+| reply_size        | Number of bytes received from the server (v6.2)        |
+| transaction       | BEGIN, COMMIT and ROLLBACK (v6.2)                      |
+| transaction_time  | The duration of a transaction (v6.2)                   |
+| num_warnings      | Number of warnings in the server reply (v6.2)          |
+| error_msg         | Error message from the server (if any) (v6.2)          |
 
 ```
 log_data=date, user, query, total_reply_time
