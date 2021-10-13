@@ -1139,17 +1139,39 @@ void MariaDBMonitor::update_cluster_lock_status()
         // operations for a while so that the other monitor(s) have time to detect the new situation.
         if (have_lock_majority != had_lock_majority)
         {
+            bool cluster_ops_on = cluster_ops_configured();
             if (have_lock_majority)
             {
-                MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
-                           "Automatic cluster manipulation operations such as failover will be enabled "
-                           "in %i monitor ticks.", name(), m_settings.failcount);
+                if (cluster_ops_on)
+                {
+                    MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
+                               "Configured automatic cluster manipulation operations (e.g. failover) can be "
+                               "performed in %i monitor ticks.", name(), m_settings.failcount);
+                }
+                else
+                {
+                    MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
+                               "Manual cluster manipulation operations (e.g. failover) can be performed.",
+                               name());
+                }
+                // Delay automatic operations regardless of if they are configured, as the configuration
+                // could change on any tick.
                 delay_auto_cluster_ops(Log::OFF);
             }
             else
             {
-                MXS_WARNING("'%s' lost the exclusive lock on the majority of its servers. "
-                            "Cluster manipulation operations such as failover are disabled.", name());
+                if (cluster_ops_on)
+                {
+                    MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
+                                "Configured automatic cluster manipulation operations (e.g. failover) "
+                                "can not be performed.", name());
+                }
+                else
+                {
+                    MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
+                                "Manual cluster manipulation operations (e.g. failover) "
+                                "can not be performed.", name());
+                }
             }
         }
 

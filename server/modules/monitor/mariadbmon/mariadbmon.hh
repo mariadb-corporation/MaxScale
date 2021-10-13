@@ -451,6 +451,7 @@ private:
 
     void delay_auto_cluster_ops(Log log = Log::ON);
     bool can_perform_cluster_ops();
+    bool cluster_ops_configured() const;
     bool cluster_operations_disabled_short() const;
     bool lock_status_is_ok() const;
 
