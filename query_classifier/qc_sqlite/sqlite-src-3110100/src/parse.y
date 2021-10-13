@@ -124,7 +124,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse*, SrcList*);
-extern void maxscaleKill(Parse*, Token*);
+extern void maxscaleKill(Parse*, MxsKill*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
@@ -3566,20 +3566,31 @@ cmd ::= kill(X). {
     maxscaleKill(pParse, &X);
 }
 
-kill_hardness_opt ::= .
-kill_hardness_opt ::= HARD.
-kill_hardness_opt ::= SOFT.
+%type kill {MxsKill}
 
-kill_type_opt ::= .
-kill_type_opt ::= CONNECTION.
-kill_type_opt ::= QUERY.
-kill_type_opt ::= QUERY ID.
+%type kill_hardness_opt {int}
+kill_hardness_opt(A) ::= .     {A = 0;}
+kill_hardness_opt(A) ::= HARD. {A = 0;}
+kill_hardness_opt(A) ::= SOFT. {A = 1;}
 
-kill_id(A) ::= INTEGER(X). { A = X; }
-kill_id(A) ::= USER STRING(X). {A = X; }
+%type kill_type_opt {mxs_kill_type_t}
+kill_type_opt(A) ::= .           {A = MXS_KILL_TYPE_CONNECTION;}
+kill_type_opt(A) ::= CONNECTION. {A = MXS_KILL_TYPE_CONNECTION;}
+kill_type_opt(A) ::= QUERY.      {A = MXS_KILL_TYPE_QUERY;}
+kill_type_opt(A) ::= QUERY ID.   {A = MXS_KILL_TYPE_QUERY_ID;}
 
-kill(A) ::= KILL kill_hardness_opt kill_type_opt kill_id(Y). {
-    A = Y;
+kill(A) ::= KILL kill_hardness_opt(X) kill_type_opt(Y) INTEGER(Z). {
+    A.user = 0;
+    A.soft = X;
+    A.type = Y;
+    A.pTarget = &Z;
+}
+
+kill(A) ::= KILL kill_hardness_opt(X) kill_type_opt(Y) USER STRING(Z). {
+    A.user = 1;
+    A.soft = X;
+    A.type = Y;
+    A.pTarget = &Z;
 }
 
 //////////////////////// ORACLE Assignment ////////////////////////////////////

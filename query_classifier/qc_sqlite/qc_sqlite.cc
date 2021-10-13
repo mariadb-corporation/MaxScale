@@ -411,6 +411,19 @@ public:
         return rv;
     }
 
+    bool get_kill_info(QC_KILL* pKill) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pKill = m_kill;
+            rv = true;
+        }
+
+        return rv;
+    }
+
     bool get_prepare_name(char** pzPrepare_name) const
     {
         bool rv = false;
@@ -2531,12 +2544,33 @@ public:
         }
     }
 
-    void maxscaleKill(Parse* pParse, Token* pToken)
+    void maxscaleKill(Parse* pParse, MxsKill* pKill)
     {
         mxb_assert(this_thread.initialized);
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
         m_operation = QUERY_OP_KILL;
+        m_kill.soft = pKill->soft;
+        m_kill.user = pKill->user;
+
+        switch (pKill->type)
+        {
+        case MXS_KILL_TYPE_CONNECTION:
+            m_kill.type = QC_KILL_CONNECTION;
+            break;
+
+        case MXS_KILL_TYPE_QUERY:
+            m_kill.type = QC_KILL_QUERY;
+            break;
+
+        case MXS_KILL_TYPE_QUERY_ID:
+            m_kill.type = QC_KILL_QUERY_ID;
+            break;
+        }
+
+        m_kill.target.assign(pKill->pTarget->z, pKill->pTarget->n);
+        exposed_sqlite3Dequote(&m_kill.target[0]);
+        m_kill.target.resize(strlen(m_kill.target.c_str()));
     }
 
     int maxscaleTranslateKeyword(int token)
@@ -3547,6 +3581,7 @@ public:
     size_t           m_function_infos_capacity;             // The capacity of the function_infos array.
     qc_sql_mode_t    m_sql_mode;                            // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
+    QC_KILL          m_kill;
 };
 
 extern "C"
@@ -3609,7 +3644,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse* pParse, SrcList*);
-extern void maxscaleKill(Parse* pParse, Token* pToken);
+extern void maxscaleKill(Parse* pParse, MxsKill* pKill);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
@@ -4600,14 +4635,14 @@ void maxscaleOptimize(Parse* pParse, SrcList* pTables)
     QC_EXCEPTION_GUARD(pInfo->maxscaleOptimize(pParse, pTables));
 }
 
-void maxscaleKill(Parse* pParse, Token* pToken)
+void maxscaleKill(Parse* pParse, MxsKill* pKill)
 {
     QC_TRACE();
 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     mxb_assert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->maxscaleKill(pParse, pToken));
+    QC_EXCEPTION_GUARD(pInfo->maxscaleKill(pParse, pKill));
 }
 
 void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
@@ -5241,6 +5276,34 @@ static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::strin
     return rv;
 }
 
+static int32_t qc_sqlite_get_kill_info(GWBUF* pStmt, QC_KILL* pKill)
+{
+    QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
+    mxb_assert(this_unit.initialized);
+    mxb_assert(this_thread.initialized);
+
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
+
+    if (pInfo)
+    {
+        if (pInfo->get_kill_info(pKill))
+        {
+            rv = QC_RESULT_OK;
+        }
+        else if (mxb_log_should_log(LOG_INFO))
+        {
+            log_invalid_data(pStmt, "cannot report KILL information");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+
+    return rv;
+}
+
 static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, char** pzPrepare_name)
 {
     QC_TRACE();
@@ -5495,6 +5558,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_table_names,
         qc_sqlite_query_has_clause,
         qc_sqlite_get_database_names,
+        qc_sqlite_get_kill_info,
         qc_sqlite_get_prepare_name,
         qc_sqlite_get_field_info,
         qc_sqlite_get_function_info,

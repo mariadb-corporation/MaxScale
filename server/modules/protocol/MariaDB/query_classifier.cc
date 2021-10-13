@@ -752,6 +752,19 @@ std::vector<std::string> qc_get_database_names(GWBUF* query)
     return names;
 }
 
+QC_KILL qc_get_kill_info(GWBUF* query)
+{
+    QC_TRACE();
+    mxb_assert(this_unit.classifier);
+
+    QC_KILL rval;
+
+    QCInfoCacheScope scope(query);
+    this_unit.classifier->qc_get_kill_info(query, &rval);
+
+    return rval;
+}
+
 char* qc_get_prepare_name(GWBUF* query)
 {
     QC_TRACE();
@@ -793,6 +806,25 @@ const char* qc_result_to_string(qc_parse_result_t result)
 
     case QC_QUERY_PARSED:
         return "QC_QUERY_PARSED";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown";
+    }
+}
+
+const char* qc_kill_type_to_string(qc_kill_type_t type)
+{
+    switch (type)
+    {
+    case QC_KILL_CONNECTION:
+        return "QC_KILL_CONNECTION";
+
+    case QC_KILL_QUERY:
+        return "QC_KILL_QUERY";
+
+    case QC_KILL_QUERY_ID:
+        return "QC_KILL_QUERY_ID";
 
     default:
         mxb_assert(!true);

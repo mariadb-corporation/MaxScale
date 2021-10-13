@@ -4149,6 +4149,21 @@ typedef struct MxsShow
     Token* pDatabase;
 } MxsShow;
 
+typedef enum mxs_kill_type
+{
+    MXS_KILL_TYPE_CONNECTION,
+    MXS_KILL_TYPE_QUERY,
+    MXS_KILL_TYPE_QUERY_ID,
+} mxs_kill_type_t;
+
+typedef struct MxsKill
+{
+    u8 user;
+    u8 soft;
+    mxs_kill_type_t type;
+    Token* pTarget;
+} MxsKill;
+
 typedef enum mxs_alter
 {
     MXS_ALTER_DISABLE_KEYS,

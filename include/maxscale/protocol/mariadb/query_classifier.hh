@@ -188,6 +188,24 @@ struct QC_STMT_RESULT
     qc_query_op_t     op;
 };
 
+enum qc_kill_type_t
+{
+    QC_KILL_CONNECTION,
+    QC_KILL_QUERY,
+    QC_KILL_QUERY_ID
+};
+
+/**
+ * Contains the information about a KILL command.
+ */
+struct QC_KILL
+{
+    std::string    target;                      // The string form target of the KILL
+    bool           user = false;                // If true, the the value in `target` is the name of a user.
+    bool           soft = false;                // If true, the SOFT option was used
+    qc_kill_type_t type = QC_KILL_CONNECTION;   // Type of the KILL command
+};
+
 /**
  * Parses the statement in the provided buffer and returns a value specifying
  * to what extent the statement could be parsed.
@@ -268,6 +286,15 @@ char* qc_get_created_table_name(GWBUF* stmt);
  * @return Vector of strings
  */
 std::vector<std::string> qc_get_database_names(GWBUF* stmt);
+
+/**
+ * Returns the information associated with a KILL command.
+ *
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return The information for the KILL command
+ */
+QC_KILL qc_get_kill_info(GWBUF* stmt);
 
 /**
  * Returns the operation of the statement.
@@ -513,6 +540,15 @@ uint64_t qc_get_server_version();
  * @return The corresponding string.
  */
 const char* qc_result_to_string(qc_parse_result_t result);
+
+/**
+ * String represenation for the kill type.
+ *
+ * @param type A kill type.
+ *
+ * @return The corresponding string.
+ */
+const char* qc_kill_type_to_string(qc_kill_type_t type);
 
 /**
  * Classify statement

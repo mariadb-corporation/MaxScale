@@ -2097,6 +2097,12 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, std::vector<std::string>* p
     return QC_RESULT_OK;
 }
 
+int32_t qc_mysql_get_kill_info(GWBUF* querybuf, QC_KILL* pKill)
+{
+    // TODO: Implement this
+    return QC_RESULT_ERROR;
+}
+
 int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 {
     *operation = QUERY_OP_UNDEFINED;
@@ -3918,6 +3924,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_table_names,
         qc_mysql_query_has_clause,
         qc_mysql_get_database_names,
+        qc_mysql_get_kill_info,
         qc_mysql_get_prepare_name,
         qc_mysql_get_field_info,
         qc_mysql_get_function_info,

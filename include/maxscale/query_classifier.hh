@@ -171,6 +171,16 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string>* names);
 
     /**
+     * Reports KILL information.
+     *
+     * @param stmt    A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param pKill   Pointer where the KILL information is stored.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource exhaustion or equivalent.
+     */
+    int32_t (* qc_get_kill_info)(GWBUF* stmt, QC_KILL* pKill);
+
+    /**
      * Reports the prepare name.
      *
      * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
