@@ -558,6 +558,12 @@ public:
         *ppBuffer += packet_len();
     }
 
+    explicit ComPacket(uint8_t** ppBuffer, size_t nBuffer)
+        : ComPacket(*ppBuffer, nBuffer)
+    {
+        *ppBuffer += packet_len();
+    }
+
     ComPacket(uint8_t* pBuffer, uint32_t nBuffer)
         : m_pBuffer(pBuffer)
         , m_nBuffer(nBuffer)
@@ -640,6 +646,14 @@ public:
 
     explicit ComResponse(uint8_t* pBuffer)
         : ComPacket(pBuffer)
+        , m_type(*m_pData)
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(uint8_t* pBuffer, size_t nBuffer)
+        : ComPacket(pBuffer, nBuffer)
         , m_type(*m_pData)
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
@@ -1400,6 +1414,15 @@ public:
     {
     }
 
+    CQRResultsetRow(uint8_t** ppBuffer,
+                    size_t nBuffer,
+                    const std::vector<enum_field_types>& types)
+        : ComPacket(ppBuffer, nBuffer)
+        , m_types(types)
+    {
+        *ppBuffer = m_pBuffer + flatten();
+    }
+
     CQRResultsetRow(GWBUF* pPacket,
                     const std::vector<enum_field_types>& types)
         : ComPacket(pPacket)
@@ -1426,6 +1449,43 @@ public:
     }
 
 private:
+    uint32_t flatten()
+    {
+        uint32_t packet_len = 0;
+
+        if (m_payload_len == MAX_PAYLOAD_LEN)
+        {
+            int32_t nPayload = m_payload_len;
+
+            uint8_t* pData = m_pBuffer + MYSQL_HEADER_LEN + nPayload;
+            uint8_t* pPacket = pData;
+            uint8_t* end = m_pBuffer + m_nBuffer;
+
+            do
+            {
+                mxb_assert(pPacket < end);
+
+                nPayload = MYSQL_GET_PAYLOAD_LEN(pPacket);
+
+                memmove(pData, pPacket + MYSQL_HEADER_LEN, nPayload);
+
+                pData += nPayload;
+                pPacket += MYSQL_HEADER_LEN + nPayload;
+
+                m_payload_len += nPayload;
+            }
+            while (nPayload == MAX_PAYLOAD_LEN);
+
+            packet_len = (pPacket - m_pBuffer);
+        }
+        else
+        {
+            packet_len = MYSQL_HEADER_LEN + m_payload_len;
+        }
+
+        return packet_len;
+    }
+
     const std::vector<enum_field_types>& m_types;
 };
 
