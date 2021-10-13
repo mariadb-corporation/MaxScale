@@ -17,7 +17,7 @@
 #include "mariadbmon.hh"
 
 #include <future>
-#include <inttypes.h>
+#include <cinttypes>
 #include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
@@ -47,7 +47,6 @@ static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
-static const char CN_DETECT_STANDALONE_MASTER[] = "detect_standalone_master";
 static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
 static const char CN_ASSUME_UNIQUE_HOSTNAMES[] = "assume_unique_hostnames";
 
@@ -62,8 +61,6 @@ static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
 
 namespace
 {
-const char DETECT_STALE_MASTER[] = "detect_stale_master";
-const char DETECT_STALE_SLAVE[] = "detect_stale_slave";
 const char ENFORCE_WRITABLE_MASTER[] = "enforce_writable_master";
 const char failover_cmd[] = "failover";
 const char switchover_cmd[] = "switchover";
@@ -279,7 +276,6 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         return false;
     }
 
-    m_settings.ignore_external_masters = params->get_bool("ignore_external_masters");
     m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
     m_settings.failcount = params->get_integer(CN_FAILCOUNT);
     m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
@@ -373,47 +369,6 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         }
     }
 
-    // Check if conflicting settings are in use.
-    auto check_if_both_set = [&params, &settings_ok](bool s1_modified, const string& s1, const string& s2) {
-            if (params->contains(s2))
-            {
-                if (s1_modified)
-                {
-                    MXB_ERROR("'%s' and '%s' cannot both be defined.", s1.c_str(), s2.c_str());
-                    settings_ok = false;
-                }
-                else
-                {
-                    MXB_WARNING("'%s' is deprecated and should not be used. Use '%s' instead.",
-                                s2.c_str(), s1.c_str());
-                }
-            }
-        };
-
-    bool master_conds_modified = (m_settings.master_conds != (int64_t)master_conds_def.enum_value);
-    check_if_both_set(master_conds_modified, MASTER_CONDITIONS, CN_DETECT_STANDALONE_MASTER);
-    check_if_both_set(master_conds_modified, MASTER_CONDITIONS, DETECT_STALE_MASTER);
-    bool slave_conds_modified = (m_settings.slave_conds != (int64_t)slave_conds_def.enum_value);
-    check_if_both_set(slave_conds_modified, SLAVE_CONDITIONS, DETECT_STALE_SLAVE);
-
-    if (settings_ok)
-    {
-        // If any of the settings 'detect_standalone_master' or 'detect_stale_master/slave' are set,
-        // add the equivalent master/slave conditions.
-        if (params->contains(CN_DETECT_STANDALONE_MASTER)
-            && params->get_bool(CN_DETECT_STANDALONE_MASTER) == false)
-        {
-            m_settings.master_conds |= MasterConds::MCOND_CONNECTING_S;
-        }
-        if (params->contains(DETECT_STALE_MASTER) && params->get_bool(DETECT_STALE_MASTER) == false)
-        {
-            m_settings.master_conds |= MasterConds::MCOND_RUNNING_S;
-        }
-        if (params->contains(DETECT_STALE_SLAVE) && params->get_bool(DETECT_STALE_SLAVE) == false)
-        {
-            m_settings.slave_conds |= SlaveConds::SCOND_LINKED_M;
-        }
-    }
     return settings_ok;
 }
 
@@ -431,9 +386,7 @@ json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
     if (auto server = get_server(srv))
     {
         result = server->to_json();
-
-        json_object_set_new(result, "state_details",
-                            !m_settings.ignore_external_masters && !server->m_node.external_masters.empty() ?
+        json_object_set_new(result, "state_details", !server->m_node.external_masters.empty() ?
                             json_string("Slave of External Server") : json_null());
     }
 
@@ -1468,29 +1421,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.5.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<MariaDBMonitor>::s_api,
-        NULL,                                       /* Process init. */
-        NULL,                                       /* Process finish. */
-        NULL,                                       /* Thread init. */
-        NULL,                                       /* Thread finish. */
+        nullptr,                                    /* Process init. */
+        nullptr,                                    /* Process finish. */
+        nullptr,                                    /* Thread init. */
+        nullptr,                                    /* Thread finish. */
         {
             {
-                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,      "false",
-                MXS_MODULE_OPT_DEPRECATED
-            },
-            {
-                DETECT_STALE_MASTER,                 MXS_MODULE_PARAM_BOOL,      nullptr
-            },
-            {
-                DETECT_STALE_SLAVE,                  MXS_MODULE_PARAM_BOOL,      nullptr
-            },
-            {
-                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      nullptr
-            },
-            {
                 CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"
-            },
-            {
-                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,      "false"

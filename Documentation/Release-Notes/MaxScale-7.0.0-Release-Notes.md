@@ -12,6 +12,11 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Dropped Features
 
+MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
+`detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
+have been removed. The first two were ineffective, the latter three are
+replaced by `master_conditions` and `slave_conditions`.
+
 ## Deprecated Features
 
 ## New Features

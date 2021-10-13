@@ -4,6 +4,10 @@
 
 For more details, please refer to:
 * [MariaDB MaxScale 7.0.0 Release Notes](Release-Notes/MaxScale-7.0.0-Release-Notes.md)
+* MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
+  `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
+  have been removed. The first two were ineffective, the latter three are
+  replaced by `master_conditions` and `slave_conditions`.
 
 ## MariaDB MaxScale 6
 

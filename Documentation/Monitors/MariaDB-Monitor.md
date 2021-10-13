@@ -168,24 +168,6 @@ has not been established. MaxScale will only trust the value if the monitor has
 seen the slave connection IO thread connected at least once. If this is not the
 case, the slave connection is ignored.
 
-### `detect_stale_master`
-
-Boolean, default: ON. Deprecated. If set to OFF, *running_slave* is added to
-[master_conditions](#master_conditions). Both settings may not be defined
-simultaneously.
-
-### `detect_stale_slave`
-
-Boolean, default: ON. Deprecated. If set to OFF, *linked_master* is added to
-[slave_conditions](#slave_conditions). Both settings may not be defined
-simultaneously.
-
-### `detect_standalone_master`
-
-Boolean, default: ON. Deprecated. If set to OFF, *connecting_slave* is added to
-[master_conditions](#master_conditions). Both settings may not be defined
-simultaneously.
-
 ### `master_conditions`
 
 Enum, default: *primary_monitor_master*. Designate additional conditions for
@@ -257,15 +239,6 @@ and writable for any servers to have *Slave*-status, set
 ```
 slave_conditions=running_master,writable_master
 ```
-
-### `ignore_external_masters`
-
-Boolean, default: OFF. Ignore any servers that are not monitored by this monitor
-but are a part of the replication topology.
-
-An external server is a server not monitored by this monitor. If a server is
-replicating from an external server, it typically gains the *Slave of External
-Server*-status. If this setting is enabled, the status is not set.
 
 ### `failcount`
 
