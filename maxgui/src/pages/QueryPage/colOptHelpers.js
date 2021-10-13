@@ -11,13 +11,15 @@
  * Public License.
  */
 const typesSupportCharset = [
+    'CHAR',
+    'NATIONAL CHAR',
+    'VARCHAR',
+    'NATIONAL VARCHAR',
     'TINYTEXT',
     'TEXT',
     'MEDIUMTEXT',
     'LONGTEXT',
-    'CHAR',
     'ENUM',
-    'VARCHAR',
     'SET',
 ]
 const typesSupport_AI = ['TINYINT', 'SMALLINT', 'MEDIUMINT', 'INT', 'BIGINT']

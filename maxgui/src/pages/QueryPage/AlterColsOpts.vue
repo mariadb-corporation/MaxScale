@@ -71,6 +71,7 @@
                     :height="30"
                     :defTblCharset="defTblCharset"
                     :defTblCollation="defTblCollation"
+                    :dataTypes="dataTypes"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
                     @on-change-charset="onChangeCharset"
@@ -94,6 +95,7 @@ import { mapState } from 'vuex'
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
@@ -147,6 +149,14 @@ export default {
         },
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
+        },
+        dataTypes() {
+            let items = []
+            column_types.forEach(item => {
+                // place header first, then all its types and add a divider
+                items = [...items, { header: item.header }, ...item.types, { divider: true }]
+            })
+            return items
         },
         idxOfCollation() {
             return this.findHeaderIdx('collation')

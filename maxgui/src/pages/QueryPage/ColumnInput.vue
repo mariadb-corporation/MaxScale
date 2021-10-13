@@ -92,7 +92,7 @@
  * Event for normal cell
  * on-change: (cell)
  */
-import column_types from './column_types'
+
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -108,6 +108,7 @@ export default {
         // for data type supports charset/collation
         defTblCharset: { type: String, default: '' },
         defTblCollation: { type: String, default: '' },
+        dataTypes: { type: Array, default: () => [] },
     },
     data() {
         return {
@@ -169,7 +170,7 @@ export default {
                     break
                 case 'column_type':
                     input.type = 'column_type'
-                    input.enum_values = column_types
+                    input.enum_values = this.dataTypes
                     break
                 case 'PK':
                 case 'NN':
