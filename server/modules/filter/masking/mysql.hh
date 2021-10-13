@@ -1414,13 +1414,29 @@ public:
     {
     }
 
+    /**
+     * Constructor for the case that the buffer contains a resultset
+     * that may consist of multiple packets. If so, the packets belonging
+     * to the resultset will be "flattened", that is, the header of each
+     * subsequent packet is removed and the data moved, so that the resultset
+     * data is in one contiguous chunk.
+     *
+     * @param ppBuffer  Pointer to pointer to the first packet. On return,
+     *                  the pointer will point to the first packet following
+     *                  the resultset.
+     * @param pnBuffer  Pointer to size of the buffer. On return, the value
+     *                  will be what it unconsumed from the buffer.
+     */
     CQRResultsetRow(uint8_t** ppBuffer,
-                    size_t nBuffer,
+                    size_t* pnBuffer,
                     const std::vector<enum_field_types>& types)
-        : ComPacket(ppBuffer, nBuffer)
+        : ComPacket(ppBuffer, *pnBuffer)
         , m_types(types)
     {
-        *ppBuffer = m_pBuffer + flatten();
+        auto packet_len = flatten();
+
+        *ppBuffer = m_pBuffer + packet_len;
+        *pnBuffer -= packet_len;
     }
 
     CQRResultsetRow(GWBUF* pPacket,

@@ -258,6 +258,7 @@ NoSQLCursor::NoSQLCursor(const std::string& ns,
     , m_extractions(std::move(extractions))
     , m_mariadb_response(mariadb_response)
     , m_pBuffer(gwbuf_link_data(m_mariadb_response.get()))
+    , m_nBuffer(gwbuf_link_length(m_mariadb_response.get()))
 {
     initialize();
 }
@@ -428,19 +429,24 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     mxb_assert(!m_exhausted);
 
     ArrayBuilder batch;
+    size_t total_size = 0;
 
     int64_t id = 0;
 
     if (m_pBuffer)
     {
-        if (create_batch([&batch](bsoncxx::document::value&& doc)
+        if (create_batch([&batch, &total_size](bsoncxx::document::value&& doc)
                          {
-                             if (batch.view().length() + doc.view().length() > protocol::MAX_BSON_OBJECT_SIZE)
+                             size_t size = doc.view().length();
+
+                             if (total_size + size > protocol::MAX_BSON_OBJECT_SIZE)
                              {
                                  return false;
                              }
                              else
                              {
+                                 total_size += size;
+
                                  batch.append(doc);
                                  return true;
                              }
@@ -476,12 +482,15 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
                                               int32_t nBatch)
 {
     int n = 0;
-    while (n < nBatch && ComResponse(m_pBuffer).type() != ComResponse::EOF_PACKET) // m_pBuffer not advanced
+
+    while (n < nBatch && ComResponse(m_pBuffer, m_nBuffer).type() != ComResponse::EOF_PACKET)
     {
+         // m_pBuffer was not advanced above.
         ++n;
         // m_pBuffer cannot be advanced before we know whether the object will fit.
         auto pBuffer = m_pBuffer;
-        CQRTextResultsetRow row(&pBuffer, m_types); // Advances pBuffer
+        size_t nBuffer = m_nBuffer;
+        CQRTextResultsetRow row(&pBuffer, &nBuffer, m_types); // Advances pBuffer
 
         auto it = row.begin();
 
@@ -530,6 +539,7 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
                 break;
             }
 
+            m_nBuffer = nBuffer;
             m_pBuffer = pBuffer;
         }
         catch (const std::exception& x)
