@@ -80,7 +80,7 @@ public:
      *
      * @param dir The default for the plugin directory
      */
-    static void set_default_plugin_dir(const std::string& dir);
+    static void set_default_plugin_dir(std::string&& dir);
 
     /**
      * Open a new database connection.

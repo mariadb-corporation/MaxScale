@@ -1864,7 +1864,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    // Set the default location for plugins
+    // Set the default location for plugins. Path-related settings have been read by now.
     mxq::MariaDB::set_default_plugin_dir(mxs::connector_plugindir());
 
     if (mxb_log_inited())

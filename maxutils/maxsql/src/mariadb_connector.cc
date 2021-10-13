@@ -37,16 +37,24 @@ const char multiq_elem_failed[] = "Multiquery element '%s' failed. Error %li: %s
 const char no_data[] = "Query '%s' did not return any results.";
 const char multiq_elem_no_data[] = "Multiquery element '%s' did not return any results.";
 
-static std::string default_plugin_dir = "/usr/lib/mysql/plugin/";
+/**
+ * Default plugin directory. Used by the MariaDB-class if a plugin directory is not given in connection
+ * settings. If the default is left empty, Connector-C will search its build directory. This is fine for
+ * system tests as they are ran from the build directory.
+ *
+ * If plugins are required in an installed program, then it should set the default directory before using
+ * the class.
+ */
+std::string default_plugin_dir;
 }
 
 namespace maxsql
 {
 
 // static
-void MariaDB::set_default_plugin_dir(const std::string& dir)
+void MariaDB::set_default_plugin_dir(std::string&& dir)
 {
-    default_plugin_dir = dir;
+    default_plugin_dir = move(dir);
 }
 
 MariaDB::~MariaDB()
@@ -78,8 +86,12 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     }
 
-    const std::string& dir = m_settings.plugin_dir.empty() ? default_plugin_dir : m_settings.plugin_dir;
-    mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, dir.c_str());
+    const string& eff_plugin_dir = m_settings.plugin_dir.empty() ? default_plugin_dir :
+        m_settings.plugin_dir;
+    if (!eff_plugin_dir.empty())
+    {
+        mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, eff_plugin_dir.c_str());
+    }
 
     bool ssl_enabled = m_settings.ssl.enabled;
     if (ssl_enabled)
