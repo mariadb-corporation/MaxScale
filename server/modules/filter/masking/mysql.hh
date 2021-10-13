@@ -561,13 +561,11 @@ public:
     ComPacket(uint8_t* pBuffer, uint32_t nBuffer)
         : m_pBuffer(pBuffer)
         , m_nBuffer(nBuffer)
-        , m_pData(pBuffer)
-        , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pData))
-        , m_packet_no(MYSQL_GET_PACKET_NO(m_pData))
+        , m_pData(pBuffer + MYSQL_HEADER_LEN)
+        , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pBuffer))
+        , m_packet_no(MYSQL_GET_PACKET_NO(m_pBuffer))
     {
-        mxb_assert(nBuffer == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer));
-
-        m_pData += MYSQL_HEADER_LEN;
+        mxb_assert(nBuffer >= MYSQL_HEADER_LEN + m_payload_len);
     }
 
     ComPacket(mxs::Buffer& buffer)
@@ -580,8 +578,12 @@ public:
     {
     }
 
-    ComPacket(const ComPacket& packet)
-        : ComPacket(packet.m_pBuffer, packet.m_nBuffer)
+    ComPacket(const ComPacket& that)
+        : m_pBuffer(that.m_pBuffer)
+        , m_nBuffer(that.m_nBuffer)
+        , m_pData(m_pBuffer + MYSQL_HEADER_LEN)
+        , m_payload_len(that.m_payload_len)
+        , m_packet_no(that.m_packet_no)
     {
     }
 
@@ -615,7 +617,6 @@ protected:
     uint32_t m_nBuffer;
     uint8_t* m_pData;
 
-private:
     uint32_t m_payload_len;
     uint8_t  m_packet_no;
 };
@@ -774,7 +775,7 @@ public:
 
     std::string message() const
     {
-        return std::string(m_pData + 5, m_pBuffer + m_nBuffer);
+        return std::string(m_pData + 5, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
 private:
@@ -798,10 +799,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
+        , m_info(&m_pData, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
+        mxb_assert(m_pData <= m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
     ComOK(const ComResponse& response)
@@ -810,10 +811,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
+        , m_info(&m_pData, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
+        mxb_assert(m_pData <= m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
     uint64_t affected_rows() const
@@ -1404,7 +1405,7 @@ public:
 
     iterator end()
     {
-        uint8_t* pEnd = m_pBuffer + m_nBuffer;
+        uint8_t* pEnd = m_pBuffer + MYSQL_HEADER_LEN + m_payload_len;
         return iterator(pEnd);
     }
 
