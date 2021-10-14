@@ -119,7 +119,7 @@
                         <div
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
-                            class="td px-3 d-flex align-center"
+                            class="td px-3"
                             :class="{
                                 'cursor--grab no-userSelect': h.draggable,
                                 'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
@@ -136,23 +136,25 @@
                                     : null
                             "
                         >
-                            <slot
-                                :name="h.text"
-                                :data="{
-                                    rowData: row,
-                                    cell: row[i],
-                                    header: h,
-                                    maxWidth: cellMaxWidth(i),
-                                    rowIdx: rowIdx,
-                                    colIdx: i,
-                                }"
-                            >
-                                <truncate-string
-                                    :text="`${row[i]}`"
-                                    :maxWidth="cellMaxWidth(i)"
-                                    :disabled="isDragging"
-                                />
-                            </slot>
+                            <div class="cell-content--vert-center">
+                                <slot
+                                    :name="h.text"
+                                    :data="{
+                                        rowData: row,
+                                        cell: row[i],
+                                        header: h,
+                                        maxWidth: cellMaxWidth(i),
+                                        rowIdx: rowIdx,
+                                        colIdx: i,
+                                    }"
+                                >
+                                    <truncate-string
+                                        :text="`${row[i]}`"
+                                        :maxWidth="cellMaxWidth(i)"
+                                        :disabled="isDragging"
+                                    />
+                                </slot>
+                            </div>
                         </div>
                     </template>
                     <div
@@ -505,11 +507,17 @@ export default {
                 border-bottom: thin solid $table-border;
                 border-right: thin solid $table-border;
                 background: $background;
+                display: table-cell;
+                vertical-align: middle;
                 &:first-of-type {
                     border-left: thin solid $table-border;
                 }
                 &--last-cell {
                     border-right: none;
+                }
+                .cell-content--vert-center {
+                    width: 100%;
+                    display: inline-block;
                 }
             }
             &:hover {
