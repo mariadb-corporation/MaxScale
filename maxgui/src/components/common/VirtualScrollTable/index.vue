@@ -39,7 +39,7 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
-                    :isXOverflowed="isXOverflowed"
+                    :isYOverflowed="isYOverflowed"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <template
@@ -156,7 +156,7 @@
                         </div>
                     </template>
                     <div
-                        v-if="!isXOverflowed"
+                        v-if="!isYOverflowed"
                         :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
                         class="dummy-cell color border-right-table-border border-bottom-table-border"
                     />
@@ -255,7 +255,7 @@ export default {
                 ? `${this.itemHeight * this.visHeaders.length}px`
                 : this.itemHeight
         },
-        isXOverflowed() {
+        isYOverflowed() {
             const rowHeight = Number(`${this.rowHeight}`.replace(/px/g, ''))
             return this.currRows.length * rowHeight > this.tbodyHeight
         },

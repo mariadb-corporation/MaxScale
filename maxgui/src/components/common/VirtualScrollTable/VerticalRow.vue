@@ -29,7 +29,7 @@
                     <slot :name="h.text" :data="{ cell: row[i], header: h, colIdx: i }" />
                 </div>
                 <div
-                    v-if="!isXOverflowed"
+                    v-if="!isYOverflowed"
                     :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
                     class="dummy-cell color border-right-table-border"
                 />
@@ -65,7 +65,7 @@ export default {
         },
         lineHeight: { type: String, required: true },
         headerWidthMap: { type: Object, required: true },
-        isXOverflowed: { type: Boolean, required: true },
+        isYOverflowed: { type: Boolean, required: true },
     },
 }
 </script>
