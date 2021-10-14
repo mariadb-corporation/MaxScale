@@ -167,6 +167,7 @@ export default {
                     case 'PK':
                     case 'NN':
                     case 'UN':
+                    case 'UQ':
                     case 'ZF':
                     case 'AI':
                         h.width = 50
