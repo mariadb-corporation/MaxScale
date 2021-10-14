@@ -114,6 +114,7 @@ private:
         // Check that the master->pinloki->slave replication works
         ninserts = insert(ninserts, 10);
         sync_all();
+        sync(maxscale, slave2);     // sync pinloki => slave2
         auto master_row_count = std::stoi(master.field("SELECT COUNT(*) FROM test.data"));
         auto slave_row_count = std::stoi(slave.field("SELECT COUNT(*) FROM test.data"));
         auto slave2_row_count = std::stoi(slave2.field("SELECT COUNT(*) FROM test.data"));

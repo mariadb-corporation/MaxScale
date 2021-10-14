@@ -63,6 +63,14 @@ struct TEST_CASE
         "'A,B, ORACLE'",
         P::ORACLE
     },
+    {
+        "'A, ORACLE, B'",
+        P::ORACLE
+    },
+    {
+        "'ORACLE,ANSI_QUOTES'",
+        P::ORACLE
+    },
 };
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
