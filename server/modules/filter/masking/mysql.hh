@@ -641,12 +641,13 @@ public:
         OK_PACKET           = MYSQL_REPLY_OK,           // 0x00
         EOF_PACKET          = MYSQL_REPLY_EOF,          // 0xfe
         ERR_PACKET          = MYSQL_REPLY_ERR,          // 0xff
-        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE  // 0xfb
+        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE, // 0xfb
+        UNKNOWN_PACKET      = 42
     };
 
     explicit ComResponse(uint8_t* pBuffer)
         : ComPacket(pBuffer)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -654,7 +655,7 @@ public:
 
     explicit ComResponse(uint8_t* pBuffer, size_t nBuffer)
         : ComPacket(pBuffer, nBuffer)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -662,7 +663,7 @@ public:
 
     explicit ComResponse(uint8_t** ppBuffer)
         : ComPacket(ppBuffer)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -670,7 +671,7 @@ public:
 
     explicit ComResponse(GWBUF* pPacket)
         : ComPacket(pPacket)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -678,7 +679,7 @@ public:
 
     ComResponse(mxs::Buffer& buffer)
         : ComPacket(buffer)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -686,7 +687,7 @@ public:
 
     ComResponse(const ComPacket& packet)
         : ComPacket(packet)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -721,6 +722,29 @@ public:
     }
 
 protected:
+    uint8_t get_type()
+    {
+        uint8_t type = *m_pData;
+
+        switch (type)
+        {
+        case OK_PACKET:
+        case ERR_PACKET:
+        case LOCAL_INFILE_PACKET:
+        case EOF_PACKET:
+            if (m_payload_len == MAX_PAYLOAD_LEN)
+            {
+                type = UNKNOWN_PACKET;
+            }
+            break;
+
+        default:
+            type = UNKNOWN_PACKET;
+        }
+
+        return type;
+    }
+
     uint8_t m_type;
 };
 
