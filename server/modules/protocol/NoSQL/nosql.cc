@@ -3681,59 +3681,82 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
 
     auto it = doc.begin();
     auto end = doc.end();
-    for (; it != end; ++it)
+
+    if (it == end)
     {
-        auto element = *it;
-
-        if (!condition.empty())
+        bool first = true;
+        for (const auto& p : m_paths)
         {
-            condition += " AND ";
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                condition += " OR ";
+            }
+
+            condition += "(JSON_EXTRACT(doc, '$." + p.path() + "') = JSON_OBJECT() OR ";
+            condition += "(JSON_TYPE(JSON_EXTRACT(doc, '$." + p.path() + "')) = 'ARRAY' AND ";
+            condition += "JSON_CONTAINS(JSON_EXTRACT(doc, '$." + p.path() + "'), JSON_OBJECT())))";
         }
-
-        const auto nosql_op = static_cast<string>(element.key());
-
-        if (nosql_op == "$not")
+    }
+    else
+    {
+        for (; it != end; ++it)
         {
-            if (element.type() != bsoncxx::type::k_document)
-            {
-                ostringstream ss;
-                ss << "$not needs a document (regex not yet supported)";
+            auto element = *it;
 
-                throw SoftError(ss.str(), error::BAD_VALUE);
+            if (!condition.empty())
+            {
+                condition += " AND ";
             }
 
-            condition += "(NOT ";
+            const auto nosql_op = static_cast<string>(element.key());
 
-            if (m_paths.size() > 1)
+            if (nosql_op == "$not")
             {
-                condition += "(";
-            }
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    ostringstream ss;
+                    ss << "$not needs a document (regex not yet supported)";
 
-            bool first = true;
-            for (const auto& p : m_paths)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    condition += " OR ";
+                    throw SoftError(ss.str(), error::BAD_VALUE);
                 }
 
-                condition += "(" + p.get_comparison_condition(element.get_document()) + ")";
-            }
+                condition += "(NOT ";
 
-            if (m_paths.size() > 1)
-            {
+                if (m_paths.size() > 1)
+                {
+                    condition += "(";
+                }
+
+                bool first = true;
+                for (const auto& p : m_paths)
+                {
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        condition += " OR ";
+                    }
+
+                    condition += "(" + p.get_comparison_condition(element.get_document()) + ")";
+                }
+
+                if (m_paths.size() > 1)
+                {
+                    condition += ")";
+                }
+
                 condition += ")";
             }
-
-            condition += ")";
-        }
-        else
-        {
-            condition += get_element_condition(element);
+            else
+            {
+                condition += get_element_condition(element);
+            }
         }
     }
 
