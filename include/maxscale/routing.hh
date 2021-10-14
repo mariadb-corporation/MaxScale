@@ -137,6 +137,14 @@ enum mxs_routing_capability_t
      * Binary: 0b0000000100000000
      */
     RCAP_TYPE_SESCMD_HISTORY = (1 << 8),
+
+    /**
+     * Disables all new protocol extensions. This currently includes the metadata caching extension that was
+     * added to MariaDB in 10.6.
+     *
+     * Binary: 0b0000001000000000
+     */
+    RCAP_TYPE_OLD_PROTOCOL = (1 << 9),
 };
 
 #define RCAP_TYPE_NONE 0

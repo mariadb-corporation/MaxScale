@@ -65,12 +65,19 @@ private:
 
 LUT lut;
 
-inline bool has_special_prefix(const char* pSql, const char* pEnd)
+// Return true if the string starts with case insensitive "USE", "KIL" or "SET"
+inline bool has_special_prefix(const char* a, const char* pEnd)
 {
-    auto len = pEnd - pSql;
-    bool match = ((len >= 3) & !strncasecmp("USE", pSql, 3))
-        || ((len >= 4) & !strncasecmp("KILL", pSql, 4))
-        || ((len >= 8) & !strncasecmp("SET ROLE", pSql, 8));
+    auto len = pEnd - a;
+    const char* b = a + 1;
+    const char* c = a + 2;
+    bool match = (len >= 3)
+        && ((((*a == 'u') || (*a == 'U')) && ((*b == 's') || (*b == 'S')) && ((*c == 'e') || (*c == 'E')))
+            ||
+            (((*a == 'k') || (*a == 'K')) && ((*b == 'i') || (*b == 'I')) && ((*c == 'l') || (*c == 'L')))
+            ||
+            (((*a == 's') || (*a == 'S')) && ((*b == 'e') || (*b == 'E')) && ((*c == 't') || (*c == 'T')))
+            );
 
     return match;
 }

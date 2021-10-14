@@ -2126,8 +2126,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
         if (m_num_coldefs == 0)
         {
-            set_reply_state(ReplyState::RSET_COLDEF_EOF);
-            // Skip this state when DEPRECATE_EOF capability is supported
+            set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
         break;
 
@@ -2146,6 +2145,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
     case ReplyState::RSET_ROWS:
         if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
         {
+            // Genuine EOF packet
             set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
 
             ++it;
@@ -2153,6 +2153,11 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             warnings |= *it << 8;
 
             m_reply.set_num_warnings(warnings);
+        }
+        else if (cmd == MYSQL_REPLY_EOF && len < 0xffffff - MYSQL_HEADER_LEN)
+        {
+            // OK packet pretending to be an EOF packet
+            process_ok_packet(it, end);
         }
         else if (cmd == MYSQL_REPLY_ERR)
         {
@@ -2167,7 +2172,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         break;
 
     case ReplyState::PREPARE:
-        if (cmd == MYSQL_REPLY_EOF)
+        if (use_deprecate_eof() || cmd == MYSQL_REPLY_EOF)
         {
             if (--m_ps_packets == 0)
             {
@@ -2320,18 +2325,33 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
     // NOTE: The binary protocol is broken as it allows the column and parameter counts to overflow. This
     // means we can't rely on them if there ever is a query that has a column or parameter count that exceeds
-    // the capacity of the 16-bit unsigned integer use to store it.
+    // the capacity of the 16-bit unsigned integer use to store it. If the client uses the DEPRECATE_EOF
+    // capability, we have to count the individual packets instead of relying on the EOF packets.
 
     if (columns)
     {
-        // Server will send the column definition packets followed by an EOF packet
-        ++m_ps_packets;
+        if (use_deprecate_eof())
+        {
+            m_ps_packets += columns;
+        }
+        else
+        {
+            // Server will send the column definition packets followed by an EOF packet.
+            ++m_ps_packets;
+        }
     }
 
     if (params)
     {
-        // Server will send the parameter definition packets followed by an EOF packet
-        ++m_ps_packets;
+        if (use_deprecate_eof())
+        {
+            m_ps_packets += params;
+        }
+        else
+        {
+            // Server will send the parameter definition packets followed by an EOF packet
+            ++m_ps_packets;
+        }
     }
 
     set_reply_state(m_ps_packets == 0 ? ReplyState::DONE : ReplyState::PREPARE);
@@ -2411,7 +2431,15 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         // Start of a result set
         m_num_coldefs = get_encoded_int(it);
         m_reply.add_field_count(m_num_coldefs);
-        set_reply_state(ReplyState::RSET_COLDEF);
+
+        if ((mysql_session()->extra_capabilitites() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
+        {
+            set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
+        }
+        else
+        {
+            set_reply_state(ReplyState::RSET_COLDEF);
+        }
         break;
     }
 }

@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/protocol/mariadb/client_connection.hh>
-
+#include "../detect_special_query.hh"
 #include <inttypes.h>
 #include <string>
 #include <maxbase/alloc.h>
@@ -36,10 +36,16 @@ struct test_t
 
 int test_one_query(const test_t& test)
 {
-    auto& sql = test.query;
-    auto len = sql.length();
+    MariaDBClientConnection::SpecialQueryDesc query_desc;
 
-    auto query_desc = MariaDBClientConnection::parse_special_query(sql.c_str(), len);
+    const char* pSql = test.query.data();
+    const char* pEnd = pSql + test.query.size();
+    bool is_special = detect_special_query(&pSql, pEnd);
+    if (is_special)
+    {
+        query_desc = MariaDBClientConnection::parse_special_query(pSql, pEnd - pSql);
+    }
+
     auto found_type = query_desc.type;
     auto found_kt = query_desc.kill_options;
     auto found_id = query_desc.kill_id;
@@ -69,7 +75,7 @@ int test_one_query(const test_t& test)
     }
     else
     {
-        printf("Result wrong on query: '%s': %s.\n", sql.c_str(), errmsg.c_str());
+        printf("Result wrong on query: '%s': %s.\n", test.query.c_str(), errmsg.c_str());
         return 1;
     }
 }
@@ -116,7 +122,7 @@ int main(int argc, char** argv)
          KILL,  123,       },
         {"#line-comment\nkill  SOFT ConNectioN 123",
          KILL,  123,       KT_CONNECTION | KT_SOFT},
-        {"--line comment USE test;\n #set role my_role\n   kill  HARD 123",
+        {"-- line comment USE test;\n #set role my_role\n   kill  HARD 123",
          KILL,  123,       KT_HARD                },
         {" kill  SOFT 123",                       KILL, 123,       KT_SOFT                },
         {"KIll soft query 21 ",                   KILL, 21,        KT_QUERY | KT_SOFT     },

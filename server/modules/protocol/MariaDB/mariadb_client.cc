@@ -511,6 +511,15 @@ bool MariaDBClientConnection::send_server_handshake()
         caps |= MXS_EXTRA_CAPS_SERVER64;
     }
 
+    if (service->capabilities() & RCAP_TYPE_OLD_PROTOCOL)
+    {
+        // Some module requires that only the base protocol is used, most likely due to the fact
+        // that it processes the contents of the resultset.
+        caps &= ~((MXS_MARIA_CAP_CACHE_METADATA << 32) | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
+        mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32));
+        mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
+    }
+
     if (cap_types == CapTypes::XPAND)
     {
         // XPand doesn't support SESSION_TRACK

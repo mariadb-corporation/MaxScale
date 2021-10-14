@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include <queue>
 
@@ -178,9 +179,14 @@ private:
     const MariaDBUserCache* user_account_cache();
 
     // Helper for getting the shared session data
-    MYSQL_session* mysql_session()
+    MYSQL_session* mysql_session() const
     {
         return static_cast<MYSQL_session*>(m_session->protocol_data());
+    }
+
+    bool use_deprecate_eof() const
+    {
+        return mysql_session()->client_capabilities() & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
     }
 
     // Contains the necessary information required to track queries
