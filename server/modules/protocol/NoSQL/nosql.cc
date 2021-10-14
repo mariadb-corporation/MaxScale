@@ -1660,7 +1660,7 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
     }
     else
     {
-        ss << value_to_string(element, ValueFor::JSON, nosql_op);
+        ss << value_to_string(element, ValueFor::SQL, nosql_op);
     }
 
     ss << "))";
