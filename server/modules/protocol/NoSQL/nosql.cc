@@ -2605,7 +2605,8 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
                     // TODO: Change this into operator->function map.
                     if (name.compare("$set") != 0
                         && name.compare("$unset") != 0
-                        && name.compare("$inc") != 0)
+                        && name.compare("$inc") != 0
+                        && name.compare("$mul") != 0)
                     {
                         // TODO: This will now terminate the whole processing,
                         // TODO: but this should actually be returned as a write
@@ -2614,7 +2615,8 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
                         ss << "Unknown modifier: " << name
                            << ". Expected a valid update modifier or "
                            << "pipeline-style update specified as an array. "
-                           << "Currently the only supported update operators are $set, $unset and $inc.";
+                           << "Currently the only supported update operators are "
+                           << "$inc, $mul, $set and $unset.";
 
                         throw SoftError(ss.str(), error::COMMAND_FAILED);
                     }
@@ -2687,7 +2689,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         }
 
         bool add_value = true;
-        bool inc_value = false;
+        string op;
 
         if (element.key().compare("$set") == 0)
         {
@@ -2701,7 +2703,12 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         else if (element.key().compare("$inc") == 0)
         {
             rv += "JSON_SET(doc, ";
-            inc_value = true;
+            op = " + ";
+        }
+        else if (element.key().compare("$mul") == 0)
+        {
+            rv += "JSON_SET(doc, ";
+            op = " * ";
         }
         else
         {
@@ -2730,7 +2737,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             if (add_value)
             {
                 s += ", ";
-                if (inc_value)
+                if (!op.empty())
                 {
                     double inc;
                     if (element_as(field, Conversion::RELAXED, &inc))
@@ -2738,7 +2745,7 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
                         auto d = double_to_string(inc);
 
                         s += "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, ";
-                        s += "JSON_VALUE(doc, '$." + key + "') + " + d + ", ";
+                        s += "JSON_VALUE(doc, '$." + key + "')" + op + d + ", ";
                         s += d;
                         s += ")";
                     }
