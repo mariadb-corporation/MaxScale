@@ -1044,6 +1044,16 @@ protected:
 
     string convert_document_data(const bsoncxx::document::view& doc)
     {
+        if (doc.length() > protocol::MAX_BSON_OBJECT_SIZE)
+        {
+            ostringstream ss;
+            ss << "object to insert too large. size in bytes: " << doc.length()
+               << ", max size: " << protocol::MAX_BSON_OBJECT_SIZE;
+
+            // TODO: Should be returned as a write error for this particular document.
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         ostringstream sql;
 
         string json;

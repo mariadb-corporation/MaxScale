@@ -2779,6 +2779,13 @@ void update_specification_to_set_value(UpdateKind kind,
     {
     case UpdateKind::REPLACEMENT_DOCUMENT:
         {
+            if (update_specification.length() > protocol::MAX_BSON_OBJECT_SIZE)
+            {
+                ostringstream ss;
+                ss << "Document to upsert is larger than " << protocol::MAX_BSON_OBJECT_SIZE;
+                throw SoftError(ss.str(), error::LOCATION17420);
+            }
+
             auto json = bsoncxx::to_json(update_specification);
             json = escape_essential_chars(std::move(json));
 
@@ -2787,7 +2794,21 @@ void update_specification_to_set_value(UpdateKind kind,
         break;
 
     case UpdateKind::UPDATE_OPERATORS:
-        sql << convert_update_operations(update_specification);
+        {
+            // TODO: With update operators the correct behavior is not
+            // TODO: obtained with protocol::MAX_BSON_OBJECT_SIZE, but
+            // TODO: with slightly less.
+            const int max_bson_object_size = 16777210;
+
+            if (update_specification.length() > max_bson_object_size)
+            {
+                ostringstream ss;
+                ss << "Document to upsert is larger than " << protocol::MAX_BSON_OBJECT_SIZE;
+                throw SoftError(ss.str(), error::LOCATION17419);
+            }
+
+            sql << convert_update_operations(update_specification);
+        }
         break;
 
     default:
