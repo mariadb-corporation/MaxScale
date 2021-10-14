@@ -15,6 +15,7 @@
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
+            :lastVisHeader="lastVisHeader"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
@@ -22,7 +23,7 @@
             @toggle-select-all="handleSelectAll"
         />
         <v-virtual-scroll
-            v-if="rowsLength && tableHeaders.length"
+            v-if="rowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
             :items="currRows"
@@ -121,7 +122,7 @@
                             class="td px-3 d-flex align-center"
                             :class="{
                                 'cursor--grab no-userSelect': h.draggable,
-                                'td--last-cell': i === visHeaders.length - 1,
+                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
                             }"
                             :style="{
                                 height: lineHeight,
@@ -162,11 +163,7 @@
                 </div>
             </template>
         </v-virtual-scroll>
-        <div
-            v-else-if="!rowsLength"
-            class="tr"
-            :style="{ lineHeight, height: `${height - itemHeight}px` }"
-        >
+        <div v-else class="tr" :style="{ lineHeight, height: `${height - itemHeight}px` }">
             <div class="td px-3 d-flex justify-center flex-grow-1">
                 {{ $t('$vuetify.noDataText') }}
             </div>
@@ -249,6 +246,10 @@ export default {
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
         },
+        lastVisHeader() {
+            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
+            return {}
+        },
         rowHeight() {
             return this.isVertTable
                 ? `${this.itemHeight * this.visHeaders.length}px`
@@ -259,7 +260,7 @@ export default {
             return this.currRows.length * rowHeight > this.tbodyHeight
         },
         rowsLength() {
-            return this.rows.length
+            return this.currRows.length
         },
         tableRows() {
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
