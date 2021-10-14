@@ -1625,12 +1625,22 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
+    auto type = element.type();
+
+    if (type == bsoncxx::type::k_regex && nosql_op != "$eq")
+    {
+        ostringstream ss;
+        ss << "Can't have regex as arg to " << nosql_op;
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
      // TODO: This is true with array anywhere, so p.is_parent_array() is probably needed.
     auto expects_array = p.has_array_demand();
 
     const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
 
-    bool is_date = (element.type() == bsoncxx::type::k_date);
+    bool is_date = (type == bsoncxx::type::k_date);
 
     // A date is stored as a document containing a field "$date" with the value.
     string f = is_date ? p.path() + ".$date" : p.path();
@@ -1640,7 +1650,7 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
     ss << "(" << zGet << "(doc, '$." << f << "') IS NOT NULL "
        << "AND (" << zGet << "(doc, '$." + f + "') " << mariadb_op << " ";
 
-    bool is_array = element.type() == bsoncxx::type::k_array;
+    bool is_array = type == bsoncxx::type::k_array;
 
     if (expects_array && !is_array)
     {
@@ -1976,66 +1986,73 @@ string array_op_to_condition(const Path::Incarnation& p,
                     ss << " OR ";
                 }
 
-                bool is_null = (one_element.type() == bsoncxx::type::k_null);
+                auto type = one_element.type();
 
-                if (is_null)
+                switch (type)
                 {
+                case bsoncxx::type::k_null:
                     ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
-                }
-                else
-                {
-                    if (is_scoped)
+                    break;
+
+                case bsoncxx::type::k_regex:
+                    ss << "(false)";
+                    break;
+
+                default:
                     {
-                        string path;
-                        path = field.substr(0, i);
-                        path += "[*].";
-                        path += field.substr(i + 1);
-
-                        ss << "(";
-                        bool add_or = false;
-                        for (auto p : { field, path })
+                        if (is_scoped)
                         {
-                            if (add_or)
-                            {
-                                ss << " OR ";
-                            }
-                            else
-                            {
-                                add_or = true;
-                            }
+                            string path;
+                            path = field.substr(0, i);
+                            path += "[*].";
+                            path += field.substr(i + 1);
 
-                            if (one_element.type() != bsoncxx::type::k_regex)
+                            ss << "(";
+                            bool add_or = false;
+                            for (auto p : { field, path })
                             {
-                                ss << "(JSON_CONTAINS(";
-                                ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                   << element_to_value(one_element, ValueFor::JSON, zDescription)
-                                   << ")) = 1)";
+                                if (add_or)
+                                {
+                                    ss << " OR ";
+                                }
+                                else
+                                {
+                                    add_or = true;
+                                }
+
+                                if (one_element.type() != bsoncxx::type::k_regex)
+                                {
+                                    ss << "(JSON_CONTAINS(";
+                                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
+                                       << element_to_value(one_element, ValueFor::JSON, zDescription)
+                                       << ")) = 1)";
+                                }
+                                else
+                                {
+                                    ss << "false";
+                                }
+
+                                if (one_element.type() != bsoncxx::type::k_document)
+                                {
+                                    ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                                       << element_to_value(one_element, ValueFor::SQL, zDescription)
+                                       << ")";
+                                }
                             }
-                            else
-                            {
-                                ss << "false";
-                            }
+                            ss << ")";
+                        }
+                        else
+                        {
+                            ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
+                               << element_to_value(one_element, ValueFor::JSON, zDescription)
+                               << "), '$." << field << "') = 1)";
 
                             if (one_element.type() != bsoncxx::type::k_document)
                             {
-                                ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                                ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
                                    << element_to_value(one_element, ValueFor::SQL, zDescription)
                                    << ")";
                             }
-                        }
-                        ss << ")";
-                    }
-                    else
-                    {
-                        ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                           << element_to_value(one_element, ValueFor::JSON, zDescription)
-                           << "), '$." << field << "') = 1)";
-
-                        if (one_element.type() != bsoncxx::type::k_document)
-                        {
-                            ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                               << element_to_value(one_element, ValueFor::SQL, zDescription)
-                               << ")";
                         }
                     }
                 }
