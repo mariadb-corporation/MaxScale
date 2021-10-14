@@ -1,5 +1,5 @@
 <template>
-    <v-select
+    <v-combobox
         v-model="charset"
         :items="charsets"
         outlined
@@ -12,6 +12,7 @@
         dense
         :height="height"
         hide-details="auto"
+        :disabled="disabled"
         @change="$emit('on-change', $event)"
     >
         <template v-slot:item="{ item, on, attrs }">
@@ -24,7 +25,7 @@
                 {{ item === defCharset ? `(${$t('defCharset')})` : '' }}
             </div>
         </template>
-    </v-select>
+    </v-combobox>
 </template>
 
 <script>
@@ -47,6 +48,7 @@ export default {
         value: { type: String },
         defCharset: { type: String, required: true },
         height: { type: Number, default: 32 },
+        disabled: { type: Boolean, default: false },
     },
     computed: {
         ...mapState({

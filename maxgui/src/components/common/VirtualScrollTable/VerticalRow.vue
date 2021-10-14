@@ -26,16 +26,7 @@
                         minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
                     }"
                 >
-                    <slot
-                        :name="h.text"
-                        :data="{
-                            cell: row[i],
-                            header: h,
-                            maxWidth: cellMaxWidth(1),
-                        }"
-                    >
-                        <truncate-string :text="`${row[i]}`" :maxWidth="cellMaxWidth(1)" />
-                    </slot>
+                    <slot :name="h.text" :data="{ cell: row[i], header: h, colIdx: i }" />
                 </div>
                 <div
                     v-if="!isXOverflowed"
@@ -63,7 +54,7 @@
 export default {
     name: 'vertical-row',
     props: {
-        row: { type: [Array, Object], required: true },
+        row: { type: Array, required: true },
         tableHeaders: {
             type: Array,
             validator: arr => {
@@ -74,7 +65,6 @@ export default {
         },
         lineHeight: { type: String, required: true },
         headerWidthMap: { type: Object, required: true },
-        cellMaxWidth: { type: Function, required: true },
         isXOverflowed: { type: Boolean, required: true },
     },
 }

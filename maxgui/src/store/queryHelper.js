@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-09-20
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import { immutableUpdate } from 'utils/helpers'
 
 // private functions
@@ -136,8 +148,22 @@ WHERE table_schema = "${db}" AND table_name = "${tblName}";`
  * @returns {Object} - returns object data contains `data` and `fields`
  */
 async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
+    const schemas = nodeId.split('.')
+    const db = schemas[0]
+    const tblName = schemas[1]
+    //TODO: Add more columns .i.e UQ, BIN, G
+    const cols = `column_name,
+    REGEXP_REPLACE(UPPER(column_type), ' (SIGNED|UNSIGNED|ZEROFILL)', '') AS column_type,
+    IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
+    IF(is_nullable LIKE 'YES', 'NO', 'YES') as NN,
+    IF(column_type LIKE '%UNSIGNED%', 'YES', 'NO') as UN,
+    IF(column_type LIKE '%ZEROFILL%', 'YES', 'NO') as ZF,
+    IF(extra LIKE '%auto_increment%', 'YES', 'NO') as AI,
+    character_set_name as charset, collation_name as collation, column_comment as comment,
+    column_default as 'default'`
     const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-        sql: `DESCRIBE ${vue.$help.escapeIdentifiers(nodeId)}`,
+        sql: `SELECT ${cols} FROM information_schema.columns where table_schema='${db}'
+        AND table_name='${tblName}'`,
     })
     return colsOptsRes.data.data.attributes.results[0]
 }
