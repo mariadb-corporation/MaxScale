@@ -196,3 +196,39 @@ bool hint_exists(HINT** p_hint,
     }
     return succp;
 }
+
+const char* STRHINTTYPE(HINT_TYPE t)
+{
+    const char* rval = "UNKNOWN HINT TYPE";
+    switch (t)
+    {
+    case HINT_ROUTE_TO_MASTER:
+        rval = "HINT_ROUTE_TO_MASTER";
+        break;
+
+    case HINT_ROUTE_TO_SLAVE:
+        rval = "HINT_ROUTE_TO_SLAVE";
+        break;
+
+    case HINT_ROUTE_TO_NAMED_SERVER:
+        rval = "HINT_ROUTE_TO_NAMED_SERVER";
+        break;
+
+    case HINT_ROUTE_TO_UPTODATE_SERVER:
+        rval = "HINT_ROUTE_TO_UPTODATE_SERVER";
+        break;
+
+    case HINT_ROUTE_TO_ALL:
+        rval = "HINT_ROUTE_TO_ALL";
+        break;
+
+    case HINT_ROUTE_TO_LAST_USED:
+        rval = "HINT_ROUTE_TO_LAST_USED";
+        break;
+
+    case HINT_PARAMETER:
+        rval = "HINT_PARAMETER";
+        break;
+    }
+    return rval;
+}
