@@ -3731,6 +3731,13 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
                     throw SoftError(ss.str(), error::BAD_VALUE);
                 }
 
+                bsoncxx::document::view doc = element.get_document();
+
+                if (doc.begin() == doc.end())
+                {
+                    throw SoftError("$not cannot be empty", error::BAD_VALUE);
+                }
+
                 condition += "(NOT ";
 
                 if (m_paths.size() > 1)
@@ -3750,7 +3757,7 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
                         condition += " OR ";
                     }
 
-                    condition += "(" + p.get_comparison_condition(element.get_document()) + ")";
+                    condition += "(" + p.get_comparison_condition(doc) + ")";
                 }
 
                 if (m_paths.size() > 1)
