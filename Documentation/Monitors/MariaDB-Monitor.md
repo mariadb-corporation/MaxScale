@@ -260,8 +260,8 @@ slave_conditions=running_master,writable_master
 
 ### `ignore_external_masters`
 
-Boolean, default: OFF. Ignore any servers that are not monitored by this monitor
-but are a part of the replication topology.
+Boolean, default: OFF. Deprecated. Ignore any servers that are not monitored by
+this monitor but are a part of the replication topology.
 
 An external server is a server not monitored by this monitor. If a server is
 replicating from an external server, it typically gains the *Slave of External
