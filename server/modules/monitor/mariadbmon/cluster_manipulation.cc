@@ -1964,8 +1964,7 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
 
 void MariaDBMonitor::delay_auto_cluster_ops(Log log)
 {
-    if (log == Log::ON && (m_settings.auto_failover || m_settings.auto_rejoin
-                           || m_settings.enforce_read_only_slaves || m_settings.switchover_on_low_disk_space))
+    if (log == Log::ON && cluster_ops_configured())
     {
         const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
         MXS_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
