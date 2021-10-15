@@ -21,7 +21,6 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/paths.hh>

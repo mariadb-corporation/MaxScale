@@ -75,79 +75,6 @@ MainWorker* MainWorker::get()
     return this_unit.pMain;
 }
 
-void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
-{
-    execute([=]() {
-                mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), "%s", name.c_str());
-
-                Task task(name.c_str(), func, pData, frequency);
-
-                auto p = m_tasks_by_name.insert(std::make_pair(name, task));
-                Task& inserted_task = (*p.first).second;
-
-                inserted_task.id = delayed_call(frequency * 1000,
-                                                &MainWorker::call_task,
-                                                this,
-                                                &inserted_task);
-            },
-            EXECUTE_AUTO);
-}
-
-void MainWorker::remove_task(const std::string& name)
-{
-
-    call([this, name]() {
-             auto it = m_tasks_by_name.find(name);
-             mxb_assert(it != m_tasks_by_name.end());
-
-             if (it != m_tasks_by_name.end())
-             {
-                 MXB_AT_DEBUG(bool cancelled = ) cancel_delayed_call(it->second.id);
-                 mxb_assert(cancelled);
-
-                 m_tasks_by_name.erase(it);
-             }
-         },
-         EXECUTE_AUTO);
-}
-
-json_t* MainWorker::tasks_to_json(const char* zHost) const
-{
-    json_t* pResult = json_array();
-
-    // TODO: Make call() const.
-    MainWorker* pThis = const_cast<MainWorker*>(this);
-    pThis->call([this, zHost, pResult]() {
-                    for (auto it = m_tasks_by_name.begin(); it != m_tasks_by_name.end(); ++it)
-                    {
-                        const Task& task = it->second;
-
-                        struct tm tm;
-                        char buf[40];
-                        localtime_r(&task.nextdue, &tm);
-                        asctime_r(&tm, buf);
-                        char* nl = strchr(buf, '\n');
-                        mxb_assert(nl);
-                        *nl = '\0';
-
-                        json_t* pObject = json_object();
-
-                        json_object_set_new(pObject, CN_ID, json_string(task.name.c_str()));
-                        json_object_set_new(pObject, CN_TYPE, json_string("tasks"));
-
-                        json_t* pAttrs = json_object();
-                        json_object_set_new(pAttrs, "frequency", json_integer(task.frequency));
-                        json_object_set_new(pAttrs, "next_execution", json_string(buf));
-
-                        json_object_set_new(pObject, CN_ATTRIBUTES, pAttrs);
-                        json_array_append_new(pResult, pObject);
-                    }
-                },
-                EXECUTE_AUTO);
-
-    return pResult;
-}
-
 // static
 int64_t MainWorker::ticks()
 {
@@ -216,34 +143,6 @@ void MainWorker::post_run()
 
     qc_thread_end(QC_INIT_SELF);
     modules_thread_finish();
-}
-
-bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTask)
-{
-    bool call_again = false;
-
-    if (action == Worker::Call::EXECUTE)
-    {
-        mxb_assert(m_tasks_by_name.find(pTask->name) != m_tasks_by_name.end());
-
-        call_again = pTask->func(pTask->pData);
-
-        if (call_again)
-        {
-            pTask->nextdue = time(0) + pTask->frequency;
-        }
-        else
-        {
-            auto it = m_tasks_by_name.find(pTask->name);
-
-            if (it != m_tasks_by_name.end())    // Not found, if task function removes task.
-            {
-                m_tasks_by_name.erase(it);
-            }
-        }
-    }
-
-    return call_again;
 }
 
 // static
@@ -348,21 +247,6 @@ bool MainWorker::wait_for_shutdown(Call::action_t action)
 
 extern "C"
 {
-
-void hktask_add(const char* zName, TASKFN func, void* pData, int frequency)
-{
-    mxs::MainWorker::get()->add_task(zName, func, pData, frequency);
-}
-
-void hktask_remove(const char* zName)
-{
-    mxs::MainWorker::get()->remove_task(zName);
-}
-
-json_t* hk_tasks_json(const char* zHost)
-{
-    return mxs::MainWorker::get()->tasks_to_json(zHost);
-}
 
 int64_t mxs_clock()
 {

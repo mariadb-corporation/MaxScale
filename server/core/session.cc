@@ -32,7 +32,6 @@
 #include <maxscale/clock.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>

@@ -54,7 +54,6 @@
 #include <maxbase/alloc.h>
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>

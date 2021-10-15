@@ -272,27 +272,6 @@ message is ignored.
 
 `Status: 204 No Content`
 
-## Get task schedule
-
-```
-GET /v1/maxscale/tasks
-```
-
-Retrieve all pending tasks that are queued for execution.
-
-#### Response
-
-`Status: 200 OK`
-
-```javascript
-{
-    "links": {
-        "self": "http://localhost:8989/v1/maxscale/tasks/"
-    },
-    "data": [] // No tasks active
-}
-```
-
 ## Get a loaded module
 
 ```

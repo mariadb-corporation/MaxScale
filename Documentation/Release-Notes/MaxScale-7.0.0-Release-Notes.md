@@ -17,6 +17,8 @@ MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
 have been removed. The first two were ineffective, the latter three are
 replaced by `master_conditions` and `slave_conditions`.
 
+The `/v1/maxscale/tasks/` endpoint has been removed from the REST-API.
+
 ## Deprecated Features
 
 ## New Features

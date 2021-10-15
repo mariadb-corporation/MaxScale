@@ -19,7 +19,6 @@
 #include <maxbase/alloc.h>
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/jansson.hh>
@@ -967,12 +966,6 @@ HttpResponse cb_thread(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_to_json(request.host(), id));
 }
 
-HttpResponse cb_tasks(const HttpRequest& request)
-{
-    auto host = request.host();
-    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(host, MXS_JSON_API_TASKS, hk_tasks_json(host)));
-}
-
 HttpResponse cb_all_modules(const HttpRequest& request)
 {
     static bool all_modules_loaded = false;
@@ -1361,7 +1354,6 @@ public:
         m_get.emplace_back(cb_logs, "maxscale", "logs");
         m_get.emplace_back(cb_log_data, "maxscale", "logs", "data");
         m_get.emplace_back(cb_log_stream, "maxscale", "logs", "stream");
-        m_get.emplace_back(cb_tasks, "maxscale", "tasks");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");
 

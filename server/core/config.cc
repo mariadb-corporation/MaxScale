@@ -44,7 +44,6 @@
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/clock.h>
-#include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/limits.h>

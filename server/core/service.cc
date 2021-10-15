@@ -53,7 +53,6 @@
 #include <maxscale/version.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/config2.hh>
 

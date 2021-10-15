@@ -16,7 +16,6 @@
 #include <unordered_set>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/watchedworker.hh>
-#include <maxscale/housekeeper.h>
 #include <maxscale/indexedstorage.hh>
 
 namespace maxscale
@@ -54,11 +53,6 @@ public:
      * @return The main worker.
      */
     static MainWorker* get();
-
-    void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
-    void remove_task(const std::string& name);
-
-    json_t* tasks_to_json(const char* zhost) const;
 
     static int64_t ticks();
 
@@ -113,28 +107,6 @@ private:
     bool pre_run() override;
     void post_run() override;
 
-    struct Task
-    {
-    public:
-        Task(const char* zName, TASKFN func, void* pData, int frequency)
-            : name(zName)
-            , func(func)
-            , pData(pData)
-            , frequency(frequency)
-            , nextdue(time(0) + frequency)
-            , id(0)
-        {
-        }
-
-        std::string name;
-        TASKFN      func;
-        void*       pData;
-        int         frequency;
-        time_t      nextdue;
-        uint32_t    id;
-    };
-
-    bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
     bool balance_workers_dc(Worker::Call::action_t action);
@@ -143,9 +115,8 @@ private:
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown(Worker::Call::action_t action);
 
-    std::map<std::string, Task> m_tasks_by_name;
-    IndexedStorage              m_storage;
-    uint32_t                    m_rebalancing_dc {0};
-    mxb::TimePoint              m_last_rebalancing;
+    IndexedStorage m_storage;
+    uint32_t       m_rebalancing_dc {0};
+    mxb::TimePoint m_last_rebalancing;
 };
 }
