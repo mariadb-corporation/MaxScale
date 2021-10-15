@@ -164,6 +164,7 @@ runtime and can only be defined in a configuration file:
 * `query_classifier`
 * `query_retries`
 * `sql_mode`
+* `sharedir`
 * `substitute_variables`
 * `threads`
 
@@ -702,6 +703,16 @@ is `/usr/lib64/maxscale/`. For Debian and Ubuntu it is
 ```
 libdir=/usr/lib64/maxscale/
 ```
+
+### `sharedir`
+
+Sets the directory where static data assets are loaded.
+
+The MaxScale GUI static files are located in the `gui/` subdirectory. If the GUI
+files have been manually moved somewhere else, this path must be configured to
+point to the parent directory of the `gui/` subdirectory.
+
+The default value is `/usr/share/maxscale/`.
 
 ### `cachedir`
 

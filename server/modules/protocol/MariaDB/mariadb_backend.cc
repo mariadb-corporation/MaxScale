@@ -115,12 +115,22 @@ void skip_encoded_str(Iter& it)
     it.advance(len);
 }
 
-bool is_last_eof(Iter it)
+inline bool check_eof_status(Iter it, uint16_t flag)
 {
     std::advance(it, 3);    // Skip the command byte and warning count
     uint16_t status = *it++;
     status |= (*it++) << 8;
-    return (status & SERVER_MORE_RESULTS_EXIST) == 0;
+    return status & flag;
+}
+
+inline bool is_last_eof(Iter it)
+{
+    return !check_eof_status(it, SERVER_MORE_RESULTS_EXIST);
+}
+
+inline bool cursor_exists(Iter it)
+{
+    return check_eof_status(it, SERVER_STATUS_CURSOR_EXISTS);
 }
 
 struct AddressInfo
@@ -2030,8 +2040,13 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         if (m_opening_cursor)
         {
             m_opening_cursor = false;
-            MXS_INFO("Cursor successfully opened");
-            set_reply_state(ReplyState::DONE);
+
+            // The cursor does not exist if the result contains only one row
+            if (cursor_exists(it))
+            {
+                MXS_INFO("Cursor successfully opened");
+                set_reply_state(ReplyState::DONE);
+            }
         }
         break;
 
