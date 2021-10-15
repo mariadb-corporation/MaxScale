@@ -336,26 +336,20 @@ export default {
          * @returns {Object} - returns new colsOptsData
          */
         handleSetDefCharset({ colsOptsData, item }) {
-            if (check_charset_support(item.value))
-                return this.$help.immutableUpdate(colsOptsData, {
-                    data: {
-                        [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: this.defTblCharset },
-                            [this.idxOfCollation]: { $set: this.defTblCollation },
-                            [item.colIdx]: { $set: item.value },
-                        },
+            let charset = null,
+                collation = null
+            if (check_charset_support(item.value)) {
+                charset = this.defTblCharset
+                collation = this.defTblCollation
+            }
+            return this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [this.idxOfCharset]: { $set: charset },
+                        [this.idxOfCollation]: { $set: collation },
                     },
-                })
-            else
-                return this.$help.immutableUpdate(colsOptsData, {
-                    data: {
-                        [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: null },
-                            [this.idxOfCollation]: { $set: null },
-                            [item.colIdx]: { $set: item.value },
-                        },
-                    },
-                })
+                },
+            })
         },
         /**
          * This handles SERIAL type
@@ -387,14 +381,20 @@ export default {
          * @param {Object} item - column_type cell data
          */
         onChangeColumnType(item) {
-            let colsOptsData = this.colsOptsData
+            // first update column_type cell
+            let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                    },
+                },
+            })
             colsOptsData = this.handleSetDefCharset({ colsOptsData, item })
             colsOptsData = this.handleUncheck_UN_ZF_AI({ colsOptsData, item })
             colsOptsData = this.handleNationalType({ colsOptsData, item })
             colsOptsData = this.handleSerialType({ colsOptsData, item })
             this.colsOptsData = colsOptsData
         },
-
         /**
          * This unchecks the other auto_increment as there
          * can be one table column has this.
