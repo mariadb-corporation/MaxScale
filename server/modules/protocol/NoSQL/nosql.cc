@@ -1387,7 +1387,7 @@ string element_to_array(const bsoncxx::document::element& element,
         {
             const auto& item = *it;
 
-            string value = element_to_value(item, ValueFor::JSON, op);
+            string value = element_to_value(item, ValueFor::SQL, op);
             mxb_assert(!value.empty());
 
             values.push_back(value);
@@ -1675,7 +1675,7 @@ string field_and_value_to_nin_comparison(const Path::Incarnation& p,
                                          ElementValueToString value_to_string)
 {
     string rv;
-    string s = value_to_string(element, ValueFor::JSON, nosql_op);
+    string s = value_to_string(element, ValueFor::SQL, nosql_op);
 
     if (!s.empty())
     {
