@@ -28,6 +28,7 @@
         "chartjs-plugin-streaming": "^1.9.0",
         "chartjs-plugin-trendline": "^0.2.2",
         "core-js": "^3.16.2",
+        "deep-diff": "^1.0.2",
         "deepmerge": "^4.2.2",
         "eslint": "^6.8.0",
         "eslint-plugin-prettier": "^3.4.0",
