@@ -528,27 +528,17 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
             json_decref(pJson);
         }
 
-        try
-        {
-            auto doc = bsoncxx::from_json(json);
+        auto doc = nosql::bson_from_json(json);
 
-            if (!append(std::move(doc)))
-            {
-                // TODO: Don't discard the converted doc, but store it somewhere for
-                // TODO: the next batch.
-                break;
-            }
-
-            m_nBuffer = nBuffer;
-            m_pBuffer = pBuffer;
-        }
-        catch (const std::exception& x)
+        if (!append(std::move(doc)))
         {
-            ostringstream ss;
-            ss << "Could not convert assumed JSON data to BSON: " << x.what();
-            MXB_ERROR("%s. Data: %s", ss.str().c_str(), json.c_str());
-            throw SoftError(ss.str(), error::COMMAND_FAILED);
+            // TODO: Don't discard the converted doc, but store it somewhere for
+            // TODO: the next batch.
+            break;
         }
+
+        m_nBuffer = nBuffer;
+        m_pBuffer = pBuffer;
     }
 
     bool at_end = (ComResponse(m_pBuffer).type() == ComResponse::EOF_PACKET);
