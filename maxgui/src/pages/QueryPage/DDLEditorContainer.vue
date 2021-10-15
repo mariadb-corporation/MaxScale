@@ -230,10 +230,11 @@ export default {
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
-        handleAddDelimiter({ sql, isLastKey }) {
-            return `${sql}${isLastKey ? ';' : ', '}`
+        handleAddComma(isLast) {
+            return isLast ? '' : ', '
         },
         buildTblOptSql({ sql, dbName }) {
+            //TODO: replace objectDiff with deep-diff
             const { escapeIdentifiers: escape, objectDiff } = this.$help
             //Diff of table_opts_data
             const diff = objectDiff({
@@ -241,7 +242,9 @@ export default {
                 object: this.formData.table_opts_data,
             })
             const keys = Object.keys(diff)
+            const lastIdx = keys.length - 1
             keys.forEach((key, i) => {
+                let isLast = i === lastIdx
                 switch (key) {
                     case 'table_name':
                         sql += `RENAME TO ${escape(dbName)}.${escape(diff[key])}`
@@ -259,8 +262,34 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql = this.handleAddDelimiter({ sql, isLastKey: i === keys.length - 1 })
+                sql += this.handleAddComma(isLast)
             })
+            return sql
+        },
+        buildDropColSql({ removedCols, sql }) {
+            const { escapeIdentifiers: escape } = this.$help
+            const lastIdx = removedCols.length - 1
+            removedCols.forEach((row, i) => {
+                let isLast = i === lastIdx
+                sql += `DROP COLUMN ${escape(row.column_name)}`
+                sql += this.handleAddComma(isLast)
+            })
+            return sql
+        },
+        buildColsOptsSql(sql) {
+            const { arrOfObjsDiff, getObjectRows } = this.$help
+            const base = getObjectRows({
+                columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
+            })
+            const newData = getObjectRows({
+                columns: this.$typy(this.formData, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.formData, 'cols_opts_data.data').safeArray,
+            })
+            const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
+            const removedCols = diff.get('removed')
+            if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
+            //TODO: handle diff.added and diff.updated
             return sql
         },
         applyChanges() {
@@ -268,8 +297,8 @@ export default {
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
             sql = this.buildTblOptSql({ sql, dbName })
-            // TODO: build alter column sql
-            this.sql = sql
+            sql = this.buildColsOptsSql(sql)
+            this.sql = `${sql};`
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false
             this.$refs.confirmAlterDialog.open()
