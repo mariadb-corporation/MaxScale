@@ -77,20 +77,24 @@ struct SHARED_BUF
  * flexible data pointers is designed to minimise the need for data to
  * be copied within the gateway.
  */
-struct GWBUF
+class GWBUF
 {
-    GWBUF*      next;           /*< Next buffer in a linked chain of buffers */
-    GWBUF*      tail;           /*< Last buffer in a linked chain of buffers */
-    void*       start;          /*< Start of the valid data */
-    void*       end;            /*< First byte after the valid data */
-    SHARED_BUF* sbuf;           /*< The shared buffer with the real data */
-    HINT*       hint;           /*< Hint data for this buffer */
-    SERVER*     server;         /*< The target server where the buffer is executed */
-    uint32_t    gwbuf_type;     /*< buffer's data type information */
-    uint32_t    id;             /*< Unique ID for this buffer, 0 if no ID is assigned */
+public:
+    GWBUF*      next {nullptr};                     /*< Next buffer in a linked chain of buffers */
+    GWBUF*      tail {nullptr};                     /*< Last buffer in a linked chain of buffers */
+    void*       start {nullptr};                    /*< Start of the valid data */
+    void*       end {nullptr};                      /*< First byte after the valid data */
+    SHARED_BUF* sbuf {nullptr};                     /*< The shared buffer with the real data */
+    HINT*       hint {nullptr};                     /*< Hint data for this buffer */
+    SERVER*     server {nullptr};                   /*< The target server where the buffer is executed */
+    uint32_t    gwbuf_type {GWBUF_TYPE_UNDEFINED};  /*< buffer's data type information */
+    uint32_t    id {0};                             /*< Unique ID for this buffer, 0 if no ID is assigned */
 #ifdef SS_DEBUG
-    int owner;      /*< Owner of the thread, only for debugging */
+    int owner {-1};     /*< Owner of the thread, only for debugging */
 #endif
+
+    GWBUF(uint64_t size, SHARED_BUF* shared_buf);
+    ~GWBUF();
 };
 
 inline bool gwbuf_is_type_undefined(const GWBUF* b)

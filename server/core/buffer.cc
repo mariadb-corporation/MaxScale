@@ -127,35 +127,33 @@ inline bool validate_buffer(const GWBUF* head)
 GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
-    size_t sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
-    GWBUF* rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
-    SHARED_BUF* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
-
-    if (rval == NULL || sbuf == NULL)
+    size_t sbuf_size = sizeof(SHARED_BUF) + (size - 1);
+    auto* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
+    GWBUF* rval = nullptr;
+    if (sbuf)
     {
-        MXS_FREE(rval);
-        MXS_FREE(sbuf);
-        return NULL;
+        rval = new GWBUF(size, sbuf);
     }
-
-    sbuf->refcount = 1;
-    sbuf->info = GWBUF_INFO_NONE;
-    sbuf->bufobj = NULL;
-
-#ifdef SS_DEBUG
-    rval->owner = RoutingWorker::get_current_id();
-#endif
-    rval->start = &sbuf->data;
-    rval->end = (void*)((char*)rval->start + size);
-    rval->sbuf = sbuf;
-    rval->next = NULL;
-    rval->tail = rval;
-    rval->hint = NULL;
-    rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-    rval->server = NULL;
-    rval->id = 0;
-
     return rval;
+}
+
+GWBUF::GWBUF(uint64_t size, SHARED_BUF* shared_buf)
+{
+#ifdef SS_DEBUG
+    owner = RoutingWorker::get_current_id();
+#endif
+    tail = this;
+
+    if (shared_buf)
+    {
+        shared_buf->refcount = 1;
+        shared_buf->info = GWBUF_INFO_NONE;
+        shared_buf->bufobj = nullptr;
+        sbuf = shared_buf;
+
+        start = &sbuf->data;
+        end = (void*)((char*)start + size);
+    }
 }
 
 /**
@@ -219,15 +217,18 @@ static void gwbuf_free_one(GWBUF* buf)
         MXS_FREE(buf->sbuf);
     }
 
+    delete buf;
+}
+
+GWBUF::~GWBUF()
+{
     /** Release the hint */
-    while (buf->hint)
+    while (hint)
     {
-        HINT* h = buf->hint;
-        buf->hint = buf->hint->next;
+        HINT* h = hint;
+        hint = hint->next;
         hint_free(h);
     }
-
-    MXS_FREE(buf);
 }
 
 /**
@@ -242,28 +243,17 @@ static void gwbuf_free_one(GWBUF* buf)
  */
 static GWBUF* gwbuf_clone_one(GWBUF* buf)
 {
-    GWBUF* rval = (GWBUF*)MXS_CALLOC(1, sizeof(GWBUF));
-
-    if (rval == NULL)
-    {
-        return NULL;
-    }
-
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
     ++buf->sbuf->refcount;
-#ifdef SS_DEBUG
-    rval->owner = RoutingWorker::get_current_id();
-#endif
+
+    auto* rval = new GWBUF(0, nullptr);
     rval->server = buf->server;
     rval->sbuf = buf->sbuf;
     rval->start = buf->start;
     rval->end = buf->end;
     rval->gwbuf_type = buf->gwbuf_type;
-    rval->tail = rval;
     rval->hint = hint_dup(buf->hint);
-    rval->next = NULL;
     rval->id = buf->id;
-
     return rval;
 }
 
