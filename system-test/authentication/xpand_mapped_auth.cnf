@@ -34,3 +34,18 @@ port=4006
 authenticator=PAMAuth,mysqlauth
 authenticator_options=pam_backend_mapping=mariadb,pam_mapped_pw_file=/tmp/xpand_mapped_auth_pwds.json
 
+[RWSplit-RouterManualMap]
+type=service
+router=readwritesplit
+cluster=Xpand-Monitor
+user=maxservice
+password=maxservice
+user_accounts_file=/tmp/xpand_mapped_auth_users_manual.json
+user_accounts_file_usage=file_only_always
+
+[RWSplit-ListenerManualMap]
+type=listener
+service=RWSplit-RouterManualMap
+port=4007
+authenticator=PAMAuth,mysqlauth
+user_mapping_file=/tmp/xpand_mapped_auth_user_map.json

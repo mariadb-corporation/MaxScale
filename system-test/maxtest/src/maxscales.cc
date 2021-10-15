@@ -568,6 +568,13 @@ MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(const string& user, con
 MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(MaxScale::SslMode ssl, const string& user,
                                                          const std::string& pass, const string& db)
 {
+    return try_open_connection(ssl, rwsplit_port, user, pass, db);
+}
+
+MaxScale::SMariaDB
+MaxScale::try_open_connection(MaxScale::SslMode ssl, int port, const string& user, const string& pass,
+                              const string& db)
+{
     auto conn = std::make_unique<mxt::MariaDB>(log());
     auto& sett = conn->connection_settings();
     sett.user = user;
@@ -580,8 +587,14 @@ MaxScale::SMariaDB MaxScale::try_open_rwsplit_connection(MaxScale::SslMode ssl, 
         sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
     }
 
-    conn->try_open(ip(), rwsplit_port, db);
+    conn->try_open(ip(), port, db);
     return conn;
+}
+
+MaxScale::SMariaDB
+MaxScale::try_open_connection(int port, const string& user, const string& pass, const string& db)
+{
+    return try_open_connection(SslMode::AUTO, port, user, pass, db);
 }
 
 std::unique_ptr<mxt::MariaDB> MaxScale::open_rwsplit_connection2(const string& db)

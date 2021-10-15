@@ -542,6 +542,29 @@ mxt::CmdResult VMNode::run_cmd_output_sudof(const char* format, ...)
     va_end(args);
     return run_cmd_output_sudo(cmd);
 }
+
+void VMNode::add_linux_group(const string& grp_name, const std::vector<std::string>& members)
+{
+    auto res = run_cmd_output_sudof("groupadd %s", grp_name.c_str());
+    if (res.rc == 0)
+    {
+        for (const auto& mem : members)
+        {
+            res = run_cmd_output_sudof("groupmems -a %s -g %s", mem.c_str(), grp_name.c_str());
+            log().expect(res.rc == 0, "Failed to add user to group: %s", res.output.c_str());
+        }
+    }
+    else
+    {
+        log().add_failure("Failed to add group '%s' to %s: %s", grp_name.c_str(), name(), res.output.c_str());
+    }
+}
+
+void VMNode::remove_linux_group(const std::string& grp_name)
+{
+    auto res = run_cmd_output_sudof("groupdel %s", grp_name.c_str());
+    log().expect(res.rc == 0, "Group delete failed: %s", res.output.c_str());
+}
 }
 
 mxt::CmdResult Nodes::ssh_output(const std::string& cmd, int node, bool sudo)

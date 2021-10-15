@@ -375,7 +375,6 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
     sett.password = mxs::decrypt_password(conn_pw);
     sett.clear_sql_mode = true;
     sett.charset = "latin1";
-    sett.plugin_dir = mxs::connector_plugindir();
 
     mxs::Config& glob_config = mxs::Config::get();
     sett.timeout = glob_config.auth_conn_timeout.get().count();

@@ -339,7 +339,7 @@ bool XpandCluster::create_xpand_users(int node)
 
     // Xpand service-user requires special grants.
     mxt::MariaDBUserDef service_user = {"maxservice", "%", "maxservice"};
-    service_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl"};
+    service_user.grants = {"SELECT ON system.users", "SELECT ON system.user_acl", "SHOW DATABASES ON *.*"};
 
     auto be = backend(node);
     bool sr = supports_require();

@@ -58,7 +58,7 @@ public:
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv = CmdPriv::NORMAL);
 
     mxt::CmdResult run_cmd_output_sudo(const std::string& cmd);
-    mxt::CmdResult run_cmd_output_sudof(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));;
+    mxt::CmdResult run_cmd_output_sudof(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
 
     /**
      * Run an sql-query on the node through ssh and mysql-client.
@@ -118,6 +118,9 @@ public:
 
     void add_linux_user(const std::string& name, const std::string& pw);
     void remove_linux_user(const std::string& name);
+
+    void add_linux_group(const std::string& grp_name, const std::vector<std::string>& members);
+    void remove_linux_group(const std::string& grp_name);
 
     const std::string m_name;       /**< E.g. "node_001" */
 

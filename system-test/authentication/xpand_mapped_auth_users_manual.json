@@ -1,0 +1,31 @@
+{
+    "user": [
+        {
+            "user": "",
+            "host": "%",
+            "global_db_priv": true,
+            "proxy_priv": true,
+            "plugin": "pam",
+            "authentication_string": "passwd"
+        },
+        {
+            "user": "alpha",
+            "host": "%",
+            "password": "*30EF4FAEBCFEA81DB86BD25D9E55988F33F60BDA",
+            "plugin": "mysql_native_password"
+        },
+        {
+            "user": "beta",
+            "host": "%",
+            "password": "*5D46E34B04712ED477344ACE383E4AF875BE6280",
+            "plugin": "mysql_native_password"
+        },
+        {
+            "user": "gamma",
+            "host": "%",
+            "plugin": "pam",
+            "authentication_string": "passwd"
+        }
+    ]
+}
+

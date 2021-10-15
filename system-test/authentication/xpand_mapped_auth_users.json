@@ -12,7 +12,32 @@
             "user": "batman",
             "host": "%",
             "password": "*7260406B38A4DBB2DBB4D58F3371928C2365359B",
-            "plugin": "mysql_native_password"
+            "plugin": "mysql_native_password",
+            "default_role": "superhero"
+        },
+        {
+            "user": "superhero",
+            "host": "",
+            "is_role": true
+        }
+    ],
+    "db": [
+        {
+            "user": "dummy",
+            "host": "%",
+            "db": "test1"
+        },
+        {
+            "user": "superhero",
+            "host": "",
+            "db": "test2"
+        }
+    ],
+    "roles_mapping": [
+        {
+            "user": "batman",
+            "host": "%",
+            "role": "superhero"
         }
     ]
 }
