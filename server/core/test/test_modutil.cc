@@ -49,8 +49,6 @@ static int test1()
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
     mxb_assert_message(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
     fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
-    mxb_assert_message(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual),
-                       "Default buffer should fail");
     fprintf(stderr, "\t..done\nReplace SQL in buffer");
     mxb_assert_message(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
                        "Default buffer should fail");
