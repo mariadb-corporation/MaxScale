@@ -31,7 +31,7 @@ const typesSupportCharset = [
     'LONGTEXT',
     ...column_types_map.get('Set'),
 ]
-const typesSupport_AI = column_types_map.get('Integer')
+const typesSupport_AI = [...column_types_map.get('Integer'), 'SERIAL']
 
 const typesSupport_UN_ZF = [
     ...typesSupport_AI,

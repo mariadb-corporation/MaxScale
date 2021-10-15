@@ -87,6 +87,7 @@
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
             >
                 <column-input
+                    :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
                     :key="h.text"
                     :data="{
                         field: h.text,
@@ -196,6 +197,9 @@ export default {
         },
         idxOfAI() {
             return this.findHeaderIdx('AI')
+        },
+        idxOfUN() {
+            return this.findHeaderIdx('UN')
         },
         hasValidAI() {
             let count = 0
@@ -312,15 +316,13 @@ export default {
          */
         handleUncheck_UN_ZF_AI({ colsOptsData, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
-                const idxOfUN = this.findHeaderIdx('UN')
                 const idxOfZF = this.findHeaderIdx('ZF')
-                const idxOfAI = this.findHeaderIdx('AI')
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [idxOfUN]: { $set: 'NO' },
+                            [this.idxOfUN]: { $set: 'NO' },
                             [idxOfZF]: { $set: 'NO' },
-                            [idxOfAI]: { $set: 'NO' },
+                            [this.idxOfAI]: { $set: 'NO' },
                         },
                     },
                 })
@@ -356,6 +358,32 @@ export default {
                 })
         },
         /**
+         * This handles SERIAL type
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Object} payload.item - cell item
+         * @returns {Object} - returns new colsOptsData
+         */
+        handleSerialType({ colsOptsData, item }) {
+            if (item.value === 'SERIAL') {
+                const idxOfNN = this.findHeaderIdx('NN')
+                const idxOfUQ = this.findHeaderIdx('UQ')
+                const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
+                return this.$help.immutableUpdate(colsOptsData, {
+                    data: {
+                        [item.rowIdx]: {
+                            [this.idxOfUN]: { $set: 'YES' },
+                            [idxOfNN]: { $set: 'YES' },
+                            [this.idxOfAI]: { $set: 'YES' },
+                            [idxOfUQ]: {
+                                $set: columnInput.uniqueIdxName,
+                            },
+                        },
+                    },
+                })
+            }
+            return colsOptsData
+        },
+        /**
          * @param {Object} item - column_type cell data
          */
         onChangeColumnType(item) {
@@ -363,7 +391,7 @@ export default {
             colsOptsData = this.handleSetDefCharset({ colsOptsData, item })
             colsOptsData = this.handleUncheck_UN_ZF_AI({ colsOptsData, item })
             colsOptsData = this.handleNationalType({ colsOptsData, item })
-            // TODO: handle SERIAL type
+            colsOptsData = this.handleSerialType({ colsOptsData, item })
             this.colsOptsData = colsOptsData
         },
 
