@@ -162,6 +162,13 @@ The protocol commands that the routing hints are applied to are:
 * COM_STMT_FETCH
 * COM_STMT_RESET
 
+### Limitations
+
+* The hintfilter does not support direct execution of prepared statements. For
+  example the MariaDB Connector-C uses direct execution when
+  `mariadb_stmt_execute_direct` is used. To avoid this, prepare and execute the
+  statement separately.
+
 ## Text Protocol
 
 Text protocol prepared statements (i.e. the `PREPARE` and `EXECUTE` SQL

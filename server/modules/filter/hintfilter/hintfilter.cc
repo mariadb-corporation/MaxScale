@@ -77,9 +77,13 @@ bool HintSession::routeQuery(GWBUF* queue)
 
 bool HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    if (reply.is_complete() && reply.error() && m_current_id)
+    if (reply.is_complete() && m_current_id)
     {
-        m_ps.erase(m_current_id);
+        if (reply.error())
+        {
+            m_ps.erase(m_current_id);
+        }
+
         m_current_id = 0;
     }
 

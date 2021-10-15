@@ -391,7 +391,7 @@ bool RCRSession::routeQuery(GWBUF* queue)
     m_query_timer.start_interval();
 
     m_session_stats.inc_total();
-    if (m_bitvalue & SERVER_MASTER)
+    if ((m_bitvalue & (SERVER_MASTER | SERVER_SLAVE)) == SERVER_MASTER)
     {
         // not necessarily a write, but explicitely routed to a master
         m_session_stats.inc_write();
