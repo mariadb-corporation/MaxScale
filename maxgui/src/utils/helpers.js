@@ -12,7 +12,7 @@
  */
 import Vue from 'vue'
 import update from 'immutability-helper'
-
+import { v1 as uuidv1 } from 'uuid'
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
@@ -785,6 +785,7 @@ Object.defineProperties(Vue.prototype, {
                 addDaysToNow,
                 daysDiff,
                 objectDiff,
+                uuidv1,
             }
         },
     },

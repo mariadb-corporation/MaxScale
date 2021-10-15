@@ -161,7 +161,9 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
      * Notice: UQ column returns UNIQUE INDEX name.
      *
      */
-    const cols = `a.column_name,
+    const cols = `
+    UUID() AS id,
+    a.column_name,
     REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
     IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
     IF(is_nullable LIKE 'YES', 'NO', 'YES') as NN,
