@@ -3880,3 +3880,220 @@ std::string nosql::escape_essential_chars(std::string&& from)
 
     return to;
 }
+
+namespace
+{
+
+bool get_object_id(json_t* pObject, const char** pzOid, size_t* pLen)
+{
+    mxb_assert(json_typeof(pObject) == JSON_OBJECT);
+
+    bool rv = false;
+
+    if (json_object_size(pObject) == 1)
+    {
+        json_t* pOid = json_object_get(pObject, "$oid");
+
+        if (pOid && json_typeof(pOid) == JSON_STRING)
+        {
+            *pzOid = json_string_value(pOid);
+            *pLen = strlen(*pzOid);
+
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
+bool append_objectid(ArrayBuilder& array, json_t* pObject)
+{
+    bool rv = false;
+
+    const char* zOid;
+    size_t len;
+
+    if (get_object_id(pObject, &zOid, &len))
+    {
+        try
+        {
+            // bxoncxx::oid would also take directly "zOid, len", but
+            // with that constructor the conversion fails.
+            array.append(bsoncxx::oid(string_view(zOid, len)));
+            rv = true;
+        }
+        catch (const std::exception&)
+        {
+            // Ignored, this just means that the value of $oid was not valid.
+        }
+    }
+
+    return rv;
+}
+
+bool append_objectid(DocumentBuilder& doc, const string_view& key, json_t* pObject)
+{
+    bool rv = false;
+
+    const char* zOid;
+    size_t len;
+
+    if (get_object_id(pObject, &zOid, &len))
+    {
+        try
+        {
+            doc.append(kvp(key, bsoncxx::oid(string_view(zOid, len))));
+            rv = true;
+        }
+        catch (const std::exception&)
+        {
+            // Ignored, this just means that the value of $oid was not valid.
+        }
+    }
+
+    return rv;
+}
+
+}
+
+bsoncxx::array::value nosql::bson_from_json_array(json_t* pArray)
+{
+    mxb_assert(json_typeof(pArray) == JSON_ARRAY);
+
+    ArrayBuilder array;
+
+    size_t index;
+    json_t* pValue;
+    json_array_foreach(pArray, index, pValue)
+    {
+        switch (json_typeof(pValue))
+        {
+        case JSON_OBJECT:
+            if (!append_objectid(array, pValue))
+            {
+                array.append(bson_from_json(pValue));
+            }
+            break;
+
+        case JSON_ARRAY:
+            array.append(bson_from_json_array(pValue));
+            break;
+
+        case JSON_STRING:
+            array.append(json_string_value(pValue));
+            break;
+
+        case JSON_INTEGER:
+            array.append((int64_t)json_integer_value(pValue));
+            break;
+
+        case JSON_REAL:
+            array.append(json_number_value(pValue));
+            break;
+
+        case JSON_TRUE:
+            array.append(true);
+            break;
+
+        case JSON_FALSE:
+            array.append(false);
+            break;
+
+        case JSON_NULL:
+            array.append(bsoncxx::types::b_null());
+            break;
+        }
+    }
+
+    return array.extract();
+}
+
+bsoncxx::document::value nosql::bson_from_json(json_t* pObject)
+{
+    mxb_assert(json_typeof(pObject) == JSON_OBJECT);
+
+    DocumentBuilder doc;
+
+    const char* zKey;
+    json_t* pValue;
+    json_object_foreach(pObject, zKey, pValue)
+    {
+        string_view key(zKey);
+
+        switch (json_typeof(pValue))
+        {
+        case JSON_OBJECT:
+            if (!append_objectid(doc, key, pValue))
+            {
+                doc.append(kvp(key, bson_from_json(pValue)));
+            }
+            break;
+
+        case JSON_ARRAY:
+            doc.append(kvp(key, bson_from_json_array(pValue)));
+            break;
+
+        case JSON_STRING:
+            doc.append(kvp(key, json_string_value(pValue)));
+            break;
+
+        case JSON_INTEGER:
+            doc.append(kvp(key, (int64_t)json_integer_value(pValue)));
+            break;
+
+        case JSON_REAL:
+            doc.append(kvp(key, json_number_value(pValue)));
+            break;
+
+        case JSON_TRUE:
+            doc.append(kvp(key, true));
+            break;
+
+        case JSON_FALSE:
+            doc.append(kvp(key, false));
+            break;
+
+        case JSON_NULL:
+            doc.append(kvp(key, bsoncxx::types::b_null()));
+            break;
+        }
+    }
+
+    return doc.extract();
+}
+
+bsoncxx::document::value nosql::bson_from_json(const string& json)
+{
+    // A bsoncxx::document::value cannot be default constructed, so we just have
+    // to return from many places.
+
+    try
+    {
+        return bsoncxx::from_json(json);
+    }
+    catch (const std::exception& x)
+    {
+        MXB_WARNING("Could not default convert JSON to BSON: %s. JSON: %s",
+                    x.what(), json.c_str());
+    }
+
+    // Ok, so the default JSON->BSON conversion failed. Probably due to there being JSON
+    // sub-object that "by convention" should be converted into a particular BSON object,
+    // but cannot be due to it not containing everything that is needed.
+
+    mxb::Json j;
+
+    if (j.load_string(json))
+    {
+        return bson_from_json(j.get_json());
+    }
+    else
+    {
+        MXB_ERROR("Could not load JSON data, returning empty document: %s. JSON: %s",
+                  j.error_msg().c_str(), json.c_str());
+    }
+
+    DocumentBuilder doc;
+    return doc.extract();
+}
+

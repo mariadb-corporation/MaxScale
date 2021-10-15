@@ -1589,4 +1589,31 @@ std::string table_create_statement(const std::string& table_name,
  */
 std::string escape_essential_chars(std::string&& from);
 
+/**
+ * Converts a JSON array into the equivalent BSON array.
+ *
+ * @param pArray  The JSON array.
+ *
+ * @return The corresponding BSON array.
+ */
+bsoncxx::array::value bson_from_json_array(json_t* pArray);
+
+/**
+ * Converts a JSON object into the equivalent BSON object.
+ *
+ * @param pObject  The JSON object.
+ *
+ * @return The corresponding BSON object.
+ */
+bsoncxx::document::value bson_from_json(json_t* pObject);
+
+/**
+ * Converts a JSON string into the equivalent BSON object.
+ *
+ * @param json  Valid JSON.
+ *
+ * @return The corresponding BSON object.
+ */
+bsoncxx::document::value bson_from_json(const std::string& json);
+
 }
