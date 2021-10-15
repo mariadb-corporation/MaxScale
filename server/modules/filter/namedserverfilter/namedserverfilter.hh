@@ -23,7 +23,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/workerlocal.hh>
 
 class RegexHintFilter;

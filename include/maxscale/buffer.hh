@@ -20,7 +20,7 @@
 #include <cstring>
 #include <vector>
 #include <maxbase/assert.h>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 
 class SERVER;
 

@@ -38,7 +38,7 @@
 #include <vector>
 
 #include <maxbase/alloc.h>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>

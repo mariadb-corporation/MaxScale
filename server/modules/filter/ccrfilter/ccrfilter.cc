@@ -20,7 +20,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/pcre2.hh>

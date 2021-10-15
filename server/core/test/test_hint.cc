@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include <maxbase/assert.h>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxbase/alloc.h>
 
 /**

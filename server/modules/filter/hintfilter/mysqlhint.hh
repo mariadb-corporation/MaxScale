@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/config2.hh>
 

@@ -26,7 +26,7 @@
 #include <maxbase/log.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
 #define GWBUF_DATA_CHAR(b, byte) (gwbuf_link_length(b) < ((byte) + 1) ? -1 : * (((char*)(b)->start) + 4))

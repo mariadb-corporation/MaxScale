@@ -19,7 +19,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxscale/config.hh>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 

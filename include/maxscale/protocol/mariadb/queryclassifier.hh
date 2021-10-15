@@ -17,7 +17,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <maxscale/hint.h>
+#include <maxscale/hint.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
