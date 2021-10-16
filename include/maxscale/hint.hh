@@ -16,17 +16,18 @@
  * @file hint.h The generic hint data that may be attached to buffers
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
 enum HINT_TYPE
 {
-    HINT_ROUTE_TO_MASTER = 1,
+    HINT_NONE = 0,
+    HINT_ROUTE_TO_MASTER,
     HINT_ROUTE_TO_SLAVE,
     HINT_ROUTE_TO_NAMED_SERVER,
     HINT_ROUTE_TO_UPTODATE_SERVER,  /**< not supported by RWSplit and HintRouter */
     HINT_ROUTE_TO_ALL,              /**< not supported by RWSplit, supported by HintRouter */
     HINT_ROUTE_TO_LAST_USED,
-    HINT_PARAMETER
+    HINT_PARAMETER,
 };
 
 const char* STRHINTTYPE(HINT_TYPE t);
@@ -40,10 +41,10 @@ const char* STRHINTTYPE(HINT_TYPE t);
  */
 struct HINT
 {
-    HINT_TYPE    type;      /*< The Type of hint */
-    void*        data;      /*< Type specific data */
-    void*        value;     /*< Parameter value for hint */
-    struct HINT* next;      /*< Another hint for this buffer */
+    HINT_TYPE type {HINT_NONE}; /*< The Type of hint */
+    void*     data {nullptr};   /*< Type specific data */
+    void*     value {nullptr};  /*< Parameter value for hint */
+    HINT*     next {nullptr};   /*< Another hint for this buffer */
 };
 
 HINT* hint_create_parameter(HINT*, const char*, const char*);

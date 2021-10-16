@@ -458,6 +458,11 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
             case HINT_ROUTE_TO_SLAVE:
                 *target = TARGET_SLAVE;
                 MXS_DEBUG("Hint: route to slave.");
+                break;
+
+            case HINT_NONE:
+                mxb_assert(!true);
+                break;
             }
         }
 

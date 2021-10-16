@@ -45,10 +45,7 @@ HINT* hint_dup(const HINT* hint)
 
     while (ptr1)
     {
-        if ((ptr2 = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
-        {
-            return nlhead;
-        }
+        ptr2 = new HINT();
         ptr2->type = ptr1->type;
         if (ptr1->data)
         {
@@ -92,12 +89,7 @@ HINT* hint_dup(const HINT* hint)
  */
 HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
 {
-    HINT* hint;
-
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
-    {
-        return head;
-    }
+    auto* hint = new HINT();
     hint->next = head;
     hint->type = type;
     if (data)
@@ -147,12 +139,7 @@ HINT* hint_splice(HINT* head, HINT* list)
  */
 HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
 {
-    HINT* hint;
-
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
-    {
-        return head;
-    }
+    auto* hint = new HINT();
     hint->next = head;
     hint->type = HINT_PARAMETER;
     hint->data = MXS_STRDUP_A(pname);
@@ -177,12 +164,11 @@ void hint_free(HINT* hint)
         {
             MXS_FREE(hint->value);
         }
-        MXS_FREE(hint);
+        delete hint;
     }
 }
 
-bool hint_exists(HINT** p_hint,
-                 HINT_TYPE type)
+bool hint_exists(HINT** p_hint, HINT_TYPE type)
 {
     bool succp = false;
 
@@ -199,9 +185,13 @@ bool hint_exists(HINT** p_hint,
 
 const char* STRHINTTYPE(HINT_TYPE t)
 {
-    const char* rval = "UNKNOWN HINT TYPE";
+    const char* rval = nullptr;
     switch (t)
     {
+    case HINT_NONE:
+        rval = "UNKNOWN HINT TYPE";
+        break;
+
     case HINT_ROUTE_TO_MASTER:
         rval = "HINT_ROUTE_TO_MASTER";
         break;
