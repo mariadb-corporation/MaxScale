@@ -130,6 +130,8 @@ cfg::ParamEnumMask<int64_t> s_log_data(
         {QlaInstance::LOG_DATA_DEFAULT_DB, "default_db"},
         {QlaInstance::LOG_DATA_NUM_ROWS, "num_rows"},
         {QlaInstance::LOG_DATA_REPLY_SIZE, "reply_size"},
+        {QlaInstance::LOG_DATA_TRANSACTION, "transaction"},
+        {QlaInstance::LOG_DATA_TRANSACTION_DUR, "transaction_time"},
         {QlaInstance::LOG_DATA_NUM_WARNINGS, "num_warnings"},
         {QlaInstance::LOG_DATA_ERR_MSG, "error_msg"},
     },
@@ -467,6 +469,8 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         const uint32_t data_flags = m_log->settings().log_file_data_flags;
 
         m_first_reply = true;
+        m_qc_type_mask = 0;     // only set if needed
+
         m_sql.assign(query, query_len);
         if (m_log->settings().use_canonical_form)
         {
@@ -474,6 +478,16 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         }
 
         m_begin_time = m_pSession->worker()->epoll_tick_now();
+
+        if (data_flags & (QlaInstance::LOG_DATA_TRANSACTION | QlaInstance::LOG_DATA_TRANSACTION_DUR))
+        {
+            m_qc_type_mask = qc_get_type_mask(queue);
+
+            if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
+            {
+                m_trx_begin_time = m_begin_time;
+            }
+        }
 
         if (data_flags & QlaInstance::LOG_DATA_DATE)
         {
@@ -583,6 +597,8 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     const char REPLY_SIZE[] = "Reply_size";
     const char NUM_WARNINGS[] = "Num_warnings";
     const char ERR_MSG[] = "Error_msg";
+    const char TRANSACTION[] = "Transaction";
+    const char TRANSACTION_DUR[] = "Transaction_time";
 
     std::stringstream header;
     string curr_sep;    // Use empty string as the first separator
@@ -636,6 +652,16 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
         header << curr_sep << REPLY_SIZE;
         curr_sep = real_sep;
     }
+    if (data_flags & LOG_DATA_TRANSACTION)
+    {
+        header << curr_sep << TRANSACTION;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_TRANSACTION_DUR)
+    {
+        header << curr_sep << TRANSACTION_DUR;
+        curr_sep = real_sep;
+    }
     if (data_flags & LOG_DATA_NUM_WARNINGS)
     {
         header << curr_sep << NUM_WARNINGS;
@@ -650,7 +676,7 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     return header.str();
 }
 
-string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventElems& elems) const
+string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventElems& elems)
 {
     /* Printing to the file in parts would likely cause garbled printing if several threads write
      * simultaneously, so we have to first print to a string. */
@@ -722,6 +748,33 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
     if (data_flags & QlaInstance::LOG_DATA_REPLY_SIZE)
     {
         output << curr_sep << elems.reply.size();
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_TRANSACTION)
+    {
+        output << curr_sep;
+        if (m_qc_type_mask & QUERY_TYPE_BEGIN_TRX)
+        {
+            output << "BEGIN";
+        }
+        else if (m_qc_type_mask & QUERY_TYPE_COMMIT)
+        {
+            output << "COMMIT";
+        }
+        else if (m_qc_type_mask & QUERY_TYPE_ROLLBACK)
+        {
+            output << "ROLLBACK";
+        }
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_TRANSACTION_DUR)
+    {
+        output << curr_sep;
+        if (m_qc_type_mask & QUERY_TYPE_COMMIT)
+        {
+            auto secs = mxb::to_secs(elems.last_response_time - m_trx_begin_time);
+            output << int(m_log->settings().duration_multiplier * secs + 0.5);
+        }
         curr_sep = real_sep;
     }
     if (data_flags & QlaInstance::LOG_DATA_NUM_WARNINGS)

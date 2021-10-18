@@ -64,6 +64,8 @@ public:
     static const int64_t LOG_DATA_REPLY_SIZE = (1 << 9);
     static const int64_t LOG_DATA_NUM_WARNINGS = (1 << 10);
     static const int64_t LOG_DATA_ERR_MSG = (1 << 11);
+    static const int64_t LOG_DATA_TRANSACTION = (1 << 12);
+    static const int64_t LOG_DATA_TRANSACTION_DUR = (1 << 13);
 
     enum DurationMultiplier
     {
@@ -129,7 +131,7 @@ public:
             bool        flush_writes {false};   /* Flush log file after every write? */
             bool        append {true};          /* Open files in append-mode? */
             std::string query_newline;          /* Character(s) used to replace a newline within a query */
-            std::string separator;              /*  Character(s) used to separate elements */
+            std::string separator;              /* Character(s) used to separate elements */
             std::string user_name;              /* The user name to filter on */
             std::string source;                 /* The source of the client connection to filter on */
 
@@ -238,17 +240,19 @@ private:
     bool  m_write_error_logged {false}; /* Has write error been logged */
 
     bool                 m_first_reply;
-    std::string          m_sql;             // Sql, in canonical form if asked for
-    mxb::TimePoint       m_begin_time;      // Timer value at the moment of receiving query.
+    std::string          m_sql;                 // Sql, in canonical form if asked for
+    mxb::TimePoint       m_begin_time;          // Timer value at the moment of receiving query.
+    mxb::TimePoint       m_trx_begin_time{};    // Timer value when the last transactions started.
+    uint32_t             m_qc_type_mask = 0;
     mxb::TimePoint       m_first_response_time;
-    std::string          m_wall_time_str;   // Wall time as a string when query began
+    std::string          m_wall_time_str;       // Wall time as a string when query began
     std::chrono::seconds m_last_wall_second;
 
     maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
 
     void        write_log_entries(const LogEventElems& elems);
     void        write_session_log_entry(const std::string& entry);
-    std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems) const;
+    std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems);
 };
 
 /**

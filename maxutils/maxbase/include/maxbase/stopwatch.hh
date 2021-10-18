@@ -29,6 +29,12 @@ using SteadyClock = std::chrono::steady_clock;
 using Duration = SteadyClock::duration;
 using TimePoint = SteadyClock::time_point;
 
+/**
+ *  There is no SteadyClock::time_point::zero().
+ *  This can be used instead, e.g. fct(TimePoint tp = EPOCH);
+ */
+const TimePoint EPOCH = TimePoint{};
+
 inline Duration from_secs(double secs)
 {
     return Duration {Duration::rep(secs * Duration::period::den / Duration::period::num)};
@@ -229,6 +235,12 @@ namespace wall_time
 using Clock = std::chrono::system_clock;
 using Duration = Clock::duration;
 using TimePoint = Clock::time_point;
+
+/**
+ *  There is no system_clock::time_point::zero().
+ *  This can be used instead, e.g. fct(TimePoint tp = EPOCH);
+ */
+const TimePoint EPOCH = TimePoint{};
 
 /** system_clock::timepoint to string, formatted using strftime formats */
 std::string to_string(TimePoint tp, const std::string& fmt = "%F %T");
