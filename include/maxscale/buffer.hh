@@ -16,8 +16,8 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 #include <vector>
 #include <maxbase/assert.h>
 #include <maxscale/hint.h>
@@ -32,11 +32,9 @@ class Buffer;
 enum gwbuf_type_t
 {
     GWBUF_TYPE_UNDEFINED      = 0,
-    GWBUF_TYPE_HTTP           = (1 << 0),
-    GWBUF_TYPE_COLLECT_RESULT = (1 << 1),
-    GWBUF_TYPE_REPLY_OK       = (1 << 2),
-    GWBUF_TYPE_REPLAYED       = (1 << 3),
-    GWBUF_TYPE_TRACK_STATE    = (1 << 4),
+    GWBUF_TYPE_COLLECT_RESULT = (1 << 0),
+    GWBUF_TYPE_REPLAYED       = (1 << 1),
+    GWBUF_TYPE_TRACK_STATE    = (1 << 2),
 };
 
 enum  gwbuf_info_t
@@ -103,11 +101,6 @@ inline bool gwbuf_is_type_undefined(const GWBUF* b)
 inline bool gwbuf_should_collect_result(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT;
-}
-
-inline bool gwbuf_is_reply_ok(const GWBUF* b)
-{
-    return b->gwbuf_type & GWBUF_TYPE_REPLY_OK;
 }
 
 // True if the query is not initiated by the client but an internal replaying mechanism
@@ -194,11 +187,6 @@ inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
 inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
 {
     gwbuf_link_rtrim(b, bytes);
-}
-
-inline uint32_t gwbuf_type(const GWBUF* b)
-{
-    return b->gwbuf_type;
 }
 
 /*<

@@ -13,8 +13,7 @@
 
 #include <maxscale/buffer.hh>
 
-#include <errno.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <sstream>
 
 #include <maxbase/alloc.h>
@@ -332,38 +331,6 @@ GWBUF* gwbuf_deep_clone(const GWBUF* buf)
 {
     validate_buffer(buf);
     return gwbuf_deep_clone_portion(buf, gwbuf_length(buf));
-}
-
-static GWBUF* gwbuf_clone_portion(GWBUF* buf,
-                                  size_t start_offset,
-                                  size_t length)
-{
-    ensure_owned(buf);
-    mxb_assert(start_offset + length <= gwbuf_link_length(buf));
-
-    GWBUF* clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
-
-    if (clonebuf == NULL)
-    {
-        return NULL;
-    }
-
-    ++buf->sbuf->refcount;
-#ifdef SS_DEBUG
-    clonebuf->owner = RoutingWorker::get_current_id();
-#endif
-    clonebuf->server = buf->server;
-    clonebuf->sbuf = buf->sbuf;
-    clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone info bits too */
-    clonebuf->start = (void*)((char*)buf->start + start_offset);
-    clonebuf->end = (void*)((char*)clonebuf->start + length);
-    clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone the type for now */
-    clonebuf->hint = NULL;
-    clonebuf->next = NULL;
-    clonebuf->tail = clonebuf;
-    clonebuf->id = buf->id;
-
-    return clonebuf;
 }
 
 GWBUF* gwbuf_split(GWBUF** buf, size_t length)
