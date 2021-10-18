@@ -207,7 +207,7 @@ export default {
         hasValidAI() {
             let count = 0
             this.rows.forEach(row => {
-                if (row[this.idxOfAI] === 'YES') count++
+                if (row[this.idxOfAI] === 'AUTO_INCREMENT') count++
             })
             return count === 1
         },
@@ -235,20 +235,14 @@ export default {
                     case 'id':
                         row.push(this.$help.uuidv1())
                         break
-                    case 'column_name':
-                    case 'column_type':
-                    case 'comment':
-                        row.push('')
+                    case 'NN':
+                        row.push('NULL')
                         break
                     case 'PK':
-                    case 'NN':
-                    case 'UN':
-                    case 'ZF':
-                    case 'AI':
                         row.push('NO')
                         break
                     default:
-                        row.push(null)
+                        row.push('')
                         break
                 }
             })
@@ -326,9 +320,9 @@ export default {
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [this.idxOfUN]: { $set: 'NO' },
-                            [idxOfZF]: { $set: 'NO' },
-                            [this.idxOfAI]: { $set: 'NO' },
+                            [this.idxOfUN]: { $set: '' },
+                            [idxOfZF]: { $set: '' },
+                            [this.idxOfAI]: { $set: '' },
                         },
                     },
                 })
@@ -371,9 +365,9 @@ export default {
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [this.idxOfUN]: { $set: 'YES' },
-                            [idxOfNN]: { $set: 'YES' },
-                            [this.idxOfAI]: { $set: 'YES' },
+                            [this.idxOfUN]: { $set: 'UNSIGNED' },
+                            [idxOfNN]: { $set: 'NOT NULL' },
+                            [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
                             [idxOfUQ]: {
                                 $set: columnInput.uniqueIdxName,
                             },
@@ -409,7 +403,7 @@ export default {
         uncheckOtherAI(rowIdx) {
             let idx
             for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] === 'YES' && i !== rowIdx) {
+                if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== rowIdx) {
                     idx = i
                     break
                 }
@@ -418,7 +412,7 @@ export default {
                 this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                     data: {
                         [idx]: {
-                            [this.idxOfAI]: { $set: 'No' },
+                            [this.idxOfAI]: { $set: '' },
                         },
                     },
                 })

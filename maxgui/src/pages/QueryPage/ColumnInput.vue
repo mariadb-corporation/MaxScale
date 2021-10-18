@@ -190,17 +190,29 @@ export default {
                     input.type = 'column_type'
                     input.enum_values = this.dataTypes
                     break
-                case 'PK':
                 case 'NN':
+                    input.type = 'bool'
+                    input.value = input.value === 'NOT NULL'
+                    break
                 case 'UN':
+                    input.type = 'bool'
+                    input.value = input.value === 'UNSIGNED'
+                    break
                 case 'ZF':
+                    input.type = 'bool'
+                    input.value = input.value === 'ZEROFILL'
+                    break
                 case 'AI':
+                    input.type = 'bool'
+                    input.value = input.value === 'AUTO_INCREMENT'
+                    break
+                case 'PK':
                     input.type = 'bool'
                     input.value = input.value === 'YES'
                     break
                 case 'UQ':
                     input.type = 'bool'
-                    input.value = input.value !== null
+                    input.value = Boolean(input.value)
                     break
                 case 'charset':
                 case 'collation':
@@ -232,11 +244,19 @@ export default {
                     case 'bool': {
                         const field = newInput.field
                         switch (field) {
-                            case 'PK':
                             case 'NN':
+                                newInput.value = newInput.value ? 'NOT NULL' : 'NULL'
+                                break
                             case 'UN':
+                                newInput.value = newInput.value ? 'UNSIGNED' : 'SIGNED'
+                                break
                             case 'ZF':
+                                newInput.value = newInput.value ? 'ZEROFILL' : ''
+                                break
                             case 'AI':
+                                newInput.value = newInput.value ? 'AUTO_INCREMENT' : ''
+                                break
+                            case 'PK':
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
                             case 'UQ':
