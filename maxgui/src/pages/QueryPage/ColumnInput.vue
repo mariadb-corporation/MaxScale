@@ -257,7 +257,7 @@ export default {
                                 newInput.value = newInput.value ? 'NOT NULL' : 'NULL'
                                 break
                             case 'UN':
-                                newInput.value = newInput.value ? 'UNSIGNED' : 'SIGNED'
+                                newInput.value = newInput.value ? 'UNSIGNED' : ''
                                 break
                             case 'ZF':
                                 newInput.value = newInput.value ? 'ZEROFILL' : ''

@@ -80,12 +80,14 @@
                     >
                         <query-editor
                             v-if="sql"
+                            ref="queryEditor"
                             v-model="sql"
                             :class="`fill-height`"
                             :cmplList="getDbCmplList"
                             :options="{
                                 fontSize: 10,
                                 contextmenu: false,
+                                wordWrap: 'on',
                             }"
                         />
                     </div>
@@ -284,6 +286,51 @@ export default {
             })
             return sql
         },
+        buildColsChangeSQL({ updatedCols, sql }) {
+            const { escapeIdentifiers: escape } = this.$help
+            const lastIdx = updatedCols.length - 1
+            updatedCols.forEach((col, i) => {
+                let hasTypeRelatedChanges = false
+                col.diff.forEach(d => {
+                    if (d.kind === 'E')
+                        switch (d.path[0]) {
+                            case 'PK':
+                            case 'UQ':
+                                // TODO: Handle PK, UQ
+                                break
+                            default:
+                                hasTypeRelatedChanges = true
+                                break
+                        }
+                })
+                if (hasTypeRelatedChanges) {
+                    const { column_name: oldName } = col.oriObj
+                    const {
+                        column_name: newName,
+                        column_type: newColType,
+                        UN,
+                        ZF,
+                        NN,
+                        AI,
+                        charset,
+                        collation,
+                        default: def,
+                        comment,
+                    } = col.newObj
+                    sql += `CHANGE COLUMN ${escape(oldName)} ${escape(newName)}`
+                    sql += ` ${newColType}`
+                    if (UN) sql += ` ${UN}`
+                    if (ZF) sql += ` ${ZF}`
+                    if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
+                    sql += ` ${NN}`
+                    if (AI) sql += ` ${AI}`
+                    if (def) sql += ` DEFAULT ${def}`
+                    if (comment) sql += ` COMMENT '${comment}'`
+                }
+                sql += this.handleAddComma({ isLast: i === lastIdx })
+            })
+            return sql
+        },
         buildColsOptsSql(sql) {
             const { arrOfObjsDiff, getObjectRows } = this.$help
             const base = getObjectRows({
@@ -296,20 +343,25 @@ export default {
             })
             const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
             const removedCols = diff.get('removed')
+            const updatedCols = diff.get('updated')
             if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
-            //TODO: handle diff.added and diff.updated
+            if (updatedCols.length) {
+                if (removedCols.length) sql += this.handleAddComma({ isLast: false })
+                sql = this.buildColsChangeSQL({ updatedCols, sql })
+            }
+            //TODO: handle diff.added
             return sql
         },
         applyChanges() {
-            const { escapeIdentifiers: escape } = this.$help
+            const { escapeIdentifiers: escape, formatSQL } = this.$help
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
-            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
+            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
             if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
             if (this.isColsOptsChanged) {
                 if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
                 sql = this.buildColsOptsSql(sql)
             }
-            this.sql = `${sql};`
+            this.sql = formatSQL(`${sql};`)
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false
             this.$refs.confirmAlterDialog.open()
