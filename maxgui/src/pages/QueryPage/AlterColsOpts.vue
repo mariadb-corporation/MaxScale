@@ -204,7 +204,10 @@ export default {
         idxOfUN() {
             return this.findHeaderIdx('UN')
         },
-        hasValidAI() {
+        idxOfNN() {
+            return this.findHeaderIdx('NN')
+        },
+        hasAI() {
             let count = 0
             this.rows.forEach(row => {
                 if (row[this.idxOfAI] === 'AUTO_INCREMENT') count++
@@ -359,14 +362,13 @@ export default {
          */
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
-                const idxOfNN = this.findHeaderIdx('NN')
                 const idxOfUQ = this.findHeaderIdx('UQ')
                 const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
                             [this.idxOfUN]: { $set: 'UNSIGNED' },
-                            [idxOfNN]: { $set: 'NOT NULL' },
+                            [this.idxOfNN]: { $set: 'NOT NULL' },
                             [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
                             [idxOfUQ]: {
                                 $set: columnInput.uniqueIdxName,
@@ -398,9 +400,11 @@ export default {
         /**
          * This unchecks the other auto_increment as there
          * can be one table column has this.
-         * @param {Number} rowIdx - rowIdx to be excluded
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Number} payload.rowIdx - rowIdx to be excluded
+         * @returns {Object} - returns new colsOptsData
          */
-        uncheckOtherAI(rowIdx) {
+        uncheckOtherAI({ colsOptsData, rowIdx }) {
             let idx
             for (const [i, row] of this.rows.entries())
                 if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== rowIdx) {
@@ -409,20 +413,30 @@ export default {
                 }
 
             if (idx >= 0)
-                this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                return (colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [idx]: {
                             [this.idxOfAI]: { $set: '' },
                         },
                     },
-                })
+                }))
+            return colsOptsData
         },
         /**
          * @param {Object} item - AI cell data
          */
         onChangeAI(item) {
-            if (!this.hasValidAI) this.uncheckOtherAI(item.rowIdx)
-            this.updateCell(item)
+            let colsOptsData = this.colsOptsData
+            if (this.hasAI)
+                colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
+            this.colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfNN]: { $set: 'NOT NULL' },
+                    },
+                },
+            })
         },
         /**
          * @param {Object} item - charset cell data

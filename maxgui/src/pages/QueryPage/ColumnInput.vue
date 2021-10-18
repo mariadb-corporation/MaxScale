@@ -136,6 +136,9 @@ export default {
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
+        isAI() {
+            return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
+        },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
             const uqIdxName = this.$typy(this.initialCellData, `['${this.data.colIdx}']`).safeString
@@ -153,6 +156,8 @@ export default {
                     return !check_UN_ZF_support(this.columnType)
                 case 'AI':
                     return !check_AI_support(this.columnType)
+                case 'NN':
+                    return this.isAI // implies NOT NULL so must be disabled
                 default:
                     return false
             }
