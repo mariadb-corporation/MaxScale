@@ -102,6 +102,7 @@
                     :dataTypes="dataTypes"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
+                    @on-change-PK="onChangePK"
                     @on-change-AI="onChangeAI"
                     @on-change-charset="onChangeCharset"
                 />
@@ -446,6 +447,20 @@ export default {
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,
                 charset: item.value,
+            })
+        },
+
+        /**
+         * @param {Object} item - PK cell data
+         */
+        onChangePK(item) {
+            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfNN]: { $set: 'NOT NULL' },
+                    },
+                },
             })
         },
     },

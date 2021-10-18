@@ -90,6 +90,7 @@
  * on-change-column_type: (cell)
  * on-change-charset: (cell)
  * on-change-AI: (cell)
+ * on-change-PK: (cell)
  * Event for normal cell
  * on-change: (cell)
  */
@@ -136,6 +137,9 @@ export default {
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
+        isPK() {
+            return this.$typy(this.input, 'rowObj.PK').safeString === 'YES'
+        },
         isAI() {
             return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
         },
@@ -157,7 +161,7 @@ export default {
                 case 'AI':
                     return !check_AI_support(this.columnType)
                 case 'NN':
-                    return this.isAI // implies NOT NULL so must be disabled
+                    return this.isAI || this.isPK // implies NOT NULL so must be disabled
                 default:
                     return false
             }
@@ -268,6 +272,7 @@ export default {
                                 newInput.value = newInput.value ? this.uniqueIdxName : null
                         }
                         if (field === 'AI') this.$emit('on-change-AI', newInput)
+                        else if (field === 'PK') this.$emit('on-change-PK', newInput)
                         else this.$emit('on-change', newInput)
                         break
                     }
