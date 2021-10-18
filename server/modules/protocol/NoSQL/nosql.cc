@@ -2274,6 +2274,49 @@ string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::ele
     return ss.str();
 }
 
+string regex_to_condition(const Path::Incarnation& p,
+                          const bsoncxx::document::element& regex,
+                          const bsoncxx::document::element& options)
+{
+    if (options && !regex)
+    {
+        throw SoftError("$options needs a $regex", error::BAD_VALUE);
+    }
+
+    if (regex.type() != bsoncxx::type::k_utf8)
+    {
+        throw SoftError("$regex has to be a string", error::BAD_VALUE);
+    }
+
+    string o;
+    if (options)
+    {
+        if (options.type() != bsoncxx::type::k_utf8)
+        {
+            throw SoftError("$options has to be a string", error::BAD_VALUE);
+        }
+
+        string_view sv = options.get_utf8();
+
+        if (sv.length() != 0)
+        {
+            ostringstream oss;
+            oss << "(?" << sv << ")";
+
+            o = oss.str();
+        }
+    }
+
+    string_view sv = regex.get_utf8();
+    string r(sv.data(), sv.length());
+
+    ostringstream ss;
+    ss << "(JSON_VALUE(doc, '$." << p.path() << "') REGEXP '" << o
+       << escape_essential_chars(std::move(r)) << "')";
+
+    return ss.str();
+}
+
 namespace
 {
 
@@ -3311,17 +3354,28 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
 {
     string rv;
 
+    // TODO: The fact that $regex and $options are not independent but used together,
+    // TODO: means that, although that is handled here, it will, due to how things are
+    // TODO: handled at an upper level lead to the same condition being generated twice.
+    // TODO: It seems that all arguments should be investigated first, and only then should
+    // TODO: SQL be generated.
+    bool ignore_options = false;
+    bool ignore_regex = false;
+
     auto it = doc.begin();
     auto end = doc.end();
     for (; it != end; ++it)
     {
+        string condition;
+        string separator;
+
         if (rv.empty())
         {
             rv += "(";
         }
         else
         {
-            rv += " AND ";
+            separator = " AND ";
         }
 
         const auto& element = *it;
@@ -3334,8 +3388,8 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
             const auto& mariadb_op = jt->second.mariadb_op;
             const auto& value_to_string = jt->second.value_to_string;
 
-            rv += jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
-                                                           nosql_op, value_to_string);
+            condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
+                                                                 nosql_op, value_to_string);
         }
         else if (nosql_op == "$not")
         {
@@ -3349,36 +3403,80 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
 
             auto doc = element.get_document();
 
-            rv += "(NOT " + get_comparison_condition(doc) + ")";
+            condition = "(NOT " + get_comparison_condition(doc) + ")";
         }
         else if (nosql_op == "$elemMatch")
         {
-            rv += elemMatch_to_condition(*this, element);
+            condition = elemMatch_to_condition(*this, element);
         }
         else if (nosql_op == "$exists")
         {
-            rv += exists_to_condition(*this, element);
+            condition = exists_to_condition(*this, element);
         }
         else if (nosql_op == "$size")
         {
-            rv += "(JSON_LENGTH(doc, '$." + path() + "') = " +
+            condition = "(JSON_LENGTH(doc, '$." + path() + "') = " +
                 element_to_value(element, ValueFor::SQL, nosql_op) + ")";
         }
         else if (nosql_op == "$all")
         {
-            rv += array_op_to_condition(*this, element, ArrayOp::AND);
+            condition = array_op_to_condition(*this, element, ArrayOp::AND);
         }
         else if (nosql_op == "$in")
         {
-            rv += array_op_to_condition(*this, element, ArrayOp::OR);
+            condition = array_op_to_condition(*this, element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
-            rv += type_to_condition(*this, element);
+            condition = type_to_condition(*this, element);
         }
         else if (nosql_op == "$mod")
         {
-            rv += mod_to_condition(*this, element);
+            condition = mod_to_condition(*this, element);
+        }
+        else if (nosql_op == "$regex")
+        {
+            if (!ignore_regex)
+            {
+                bsoncxx::document::element options;
+
+                auto jt = it;
+                ++jt;
+                while (jt != end)
+                {
+                    if (jt->key().compare("$options") == 0)
+                    {
+                        ignore_options = true;
+                        options = *jt;
+                        break;
+                    }
+                    ++jt;
+                }
+
+                condition = regex_to_condition(*this, element, options);
+            }
+        }
+        else if (nosql_op == "$options")
+        {
+            if (!ignore_options)
+            {
+                bsoncxx::document::element regex;
+
+                auto jt = it;
+                ++jt;
+                while (jt != end)
+                {
+                    if (jt->key().compare("$regex") == 0)
+                    {
+                        ignore_regex = true;
+                        regex = *jt;
+                        break;
+                    }
+                    ++jt;
+                }
+
+                condition = regex_to_condition(*this, regex, element);
+            }
         }
         else if (nosql_op.front() == '$')
         {
@@ -3390,6 +3488,11 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         else
         {
             break;
+        }
+
+        if (!condition.empty())
+        {
+            rv += separator + condition;
         }
     }
 
