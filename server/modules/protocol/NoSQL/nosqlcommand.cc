@@ -1636,11 +1636,23 @@ const string& OpMsgCommand::table(Quoted quoted) const
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        auto utf8 = element.get_utf8();
-        string table(utf8.value.data(), utf8.value.size());
+        string_view table = element.get_utf8();
 
-        m_quoted_table = "`" + m_database.name() + "`.`" + table + "`";
-        m_unquoted_table = m_database.name() + "." + table;
+        if (table.length() == 0)
+        {
+            ostringstream ss;
+            ss << "Invalid namespace specified '" << m_database.name() << ".'";
+            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+        }
+
+        ostringstream ss1;
+        ss1 << "`" << m_database.name() << "`.`" <<  table << "`";
+
+        ostringstream ss2;
+        ss2 << m_database.name() << "." << table;
+
+        m_quoted_table = ss1.str();
+        m_unquoted_table = ss2.str();
     }
 
     return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;
