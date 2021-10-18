@@ -169,7 +169,18 @@ export default {
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
-
+        isTblOptsChanged() {
+            return !this.$help.lodash.isEqual(
+                this.$typy(this.initialData, 'table_opts_data').safeObject,
+                this.$typy(this.formData, 'table_opts_data').safeObject
+            )
+        },
+        isColsOptsChanged() {
+            return !this.$help.lodash.isEqual(
+                this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
+                this.$typy(this.formData, 'cols_opts_data.data').safeArray
+            )
+        },
         notAlteredYet() {
             return Boolean(this.$typy(this.getAlteringTableResultMap).isEmptyObject)
         },
@@ -231,9 +242,7 @@ export default {
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
-        handleAddComma(isLast) {
-            return isLast ? '' : ', '
-        },
+        handleAddComma: ({ isLast }) => (isLast ? '' : ', '),
         buildTblOptSql({ sql, dbName }) {
             //TODO: replace objectDiff with deep-diff
             const { escapeIdentifiers: escape, objectDiff } = this.$help
@@ -245,7 +254,6 @@ export default {
             const keys = Object.keys(diff)
             const lastIdx = keys.length - 1
             keys.forEach((key, i) => {
-                let isLast = i === lastIdx
                 switch (key) {
                     case 'table_name':
                         sql += `RENAME TO ${escape(dbName)}.${escape(diff[key])}`
@@ -263,7 +271,7 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql += this.handleAddComma(isLast)
+                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
@@ -271,9 +279,8 @@ export default {
             const { escapeIdentifiers: escape } = this.$help
             const lastIdx = removedCols.length - 1
             removedCols.forEach((row, i) => {
-                let isLast = i === lastIdx
                 sql += `DROP COLUMN ${escape(row.column_name)}`
-                sql += this.handleAddComma(isLast)
+                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
@@ -297,8 +304,11 @@ export default {
             const { escapeIdentifiers: escape } = this.$help
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
-            sql = this.buildTblOptSql({ sql, dbName })
-            sql = this.buildColsOptsSql(sql)
+            if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
+            if (this.isColsOptsChanged) {
+                if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
+                sql = this.buildColsOptsSql(sql)
+            }
             this.sql = `${sql};`
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false
