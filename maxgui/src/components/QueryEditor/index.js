@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { format } from 'sql-formatter'
 import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.css'
 export default {
@@ -93,14 +92,6 @@ export default {
         if (this.isKeptAlive && !this.readOnly) this.handleDisposeCompletionProvider()
     },
     methods: {
-        codeFormatter(v) {
-            return format(v, {
-                language: this.language,
-                indent: '   ',
-                uppercase: true,
-                linesBetweenQueries: 2,
-            })
-        },
         initMonaco(monaco) {
             // Register a new language
             monaco.languages.register({ id: this.language })
@@ -151,7 +142,7 @@ export default {
             })
 
             this.editor = monaco.editor.create(this.$el, {
-                value: this.codeFormatter(this.value),
+                value: this.$help.formatSQL(this.value),
                 theme: 'mariadb-theme',
                 language: this.language,
                 automaticLayout: true,
@@ -181,7 +172,7 @@ export default {
                 provideDocumentFormattingEdits: model => [
                     {
                         range: model.getFullModelRange(),
-                        text: scope.codeFormatter(model.getValue()),
+                        text: scope.$help.formatSQL(model.getValue()),
                     },
                 ],
             })

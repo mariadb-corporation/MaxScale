@@ -14,6 +14,7 @@ import Vue from 'vue'
 import update from 'immutability-helper'
 import { v1 as uuidv1 } from 'uuid'
 import deepDiff from 'deep-diff'
+import { format as sqlFormatter } from 'sql-formatter'
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
@@ -742,7 +743,7 @@ export function objectDiff({ base, object }) {
  * @param {String} payload.idField - key name of unique value in each object in array
  * @returns {Map} - returns  Map { unchanged: [{}], added: [{}], updated:[{}], removed:[{}] }
  */
-export default function arrOfObjsDiff({ base, newArr, idField }) {
+export function arrOfObjsDiff({ base, newArr, idField }) {
     // stored ids of two arrays to get removed objects
     const baseIds = []
     const newArrIds = []
@@ -774,6 +775,15 @@ export default function arrOfObjsDiff({ base, newArr, idField }) {
     const removed = removedIds.map(id => baseMap.get(id))
     resultMap.set('removed', removed)
     return resultMap
+}
+
+export function formatSQL(v) {
+    return sqlFormatter(v, {
+        language: 'mariadb',
+        indent: '   ',
+        uppercase: true,
+        linesBetweenQueries: 2,
+    })
 }
 
 Object.defineProperties(Vue.prototype, {
@@ -831,6 +841,7 @@ Object.defineProperties(Vue.prototype, {
                 objectDiff,
                 uuidv1,
                 arrOfObjsDiff,
+                formatSQL,
             }
         },
     },
