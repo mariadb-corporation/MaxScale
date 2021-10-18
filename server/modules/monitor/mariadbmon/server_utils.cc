@@ -87,6 +87,17 @@ json_t* SlaveStatus::to_json() const
     return result;
 }
 
+bool SlaveStatus::equal(const SlaveStatus& rhs) const
+{
+    // Strictly speaking, the following should depend on the 'assume_unique_hostnames',
+    // but the situations it would make a difference are so rare they can be ignored.
+    return slave_io_running == rhs.slave_io_running
+           && slave_sql_running == rhs.slave_sql_running
+           && settings.master_endpoint == rhs.settings.master_endpoint
+           && settings.name == rhs.settings.name
+           && master_server_id == rhs.master_server_id;
+}
+
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)
 {
     slave_io_running_t rval = SLAVE_IO_NO;

@@ -107,9 +107,10 @@ public:
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
 protected:
-    void pre_loop() override;
-    void tick() override;
-    void process_state_changes() override;
+    void        pre_loop() override;
+    void        tick() override;
+    void        process_state_changes() override;
+    std::string annotate_state_change(mxs::MonitorServer* server) override final;
 
 private:
     // Some methods need a log on/off setting.

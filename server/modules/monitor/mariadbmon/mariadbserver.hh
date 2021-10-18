@@ -136,6 +136,7 @@ public:
     GtidList         m_gtid_current_pos;    /* Gtid of latest event. */
     GtidList         m_gtid_binlog_pos;     /* Gtid of latest event written to binlog. */
     SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
+    SlaveStatusArray m_old_slave_status;    /* Data from the previous loop */
     NodeData         m_node;                /* Replication topology data */
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
@@ -168,6 +169,8 @@ public:
      * @return Diagnostics string
      */
     std::string diagnostics() const;
+
+    std::string print_changed_slave_connections();
 
     void update_server(bool time_to_update_disk_space,
                        const mxs::MonitorServer::ConnectionSettings& conn_settings);
