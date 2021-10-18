@@ -8,61 +8,65 @@
 
 #include <maxtest/testconnections.hh>
 #include <iostream>
+#include <maxtest/mariadb_connector.hh>
+#include <maxbase/format.hh>
 
-using std::cout;
-using IdSet = std::set<int>;
+using std::string;
+using IdSet = std::set<int64_t>;
 
-bool check_server_id(MYSQL* conn, const IdSet& allowed_ids);
+void check_server_id(TestConnections& test, mxt::MariaDB* conn, const IdSet& allowed_ids);
+void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
 {
-    TestConnections test(argc, argv);
-    test.repl->connect();
-    int server_count = test.repl->N;
-    if (server_count < 4)
-    {
-        test.expect(false, "Too few servers.");
-        return test.global_result;
-    }
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    int server_ids[server_count];
-    cout << "Server id:s are:";
-    for (int i = 0; i < server_count; i++)
-    {
-        server_ids[i] = test.repl->get_server_id(i);
-        cout << " " << server_ids[i];
-    }
-    cout << ".\n";
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+    const int iterations = 7;
 
-    auto maxconn = test.maxscale->open_rwsplit_connection();
-    test.try_query(maxconn, "SELECT 1;");
+    auto srv_info = mxs.get_servers();
+    srv_info.check_servers_status(mxt::ServersInfo::default_repl_states());
+
     if (test.ok())
     {
-        const char wrong_server[] = "Query went to wrong server.";
-        cout << "Testing with all servers on. Select-queries should go to servers " << server_ids[1]
-             << " and " << server_ids[2] << ".\n";
-        IdSet allowed = {server_ids[1], server_ids[2]};
+        auto maxconn = mxs.open_rwsplit_connection2_nodb();
+        test.tprintf("Testing with all servers on. Select-queries should go to %s and %s.",
+                     srv_info.get(1).name.c_str(),  srv_info.get(2).name.c_str());
         // With all servers on, the query should go to either 2 or 3. Test several times.
-        for (int i = 0; i < 5 && test.ok(); i++)
-        {
-            test.expect(check_server_id(maxconn, allowed), wrong_server);
-        }
 
+        IdSet allowed = {srv_info.get(1).server_id, srv_info.get(2).server_id};
+        for (int i = 0; i < iterations && test.ok(); i++)
+        {
+            check_server_id(test, maxconn.get(), allowed);
+        }
+    }
+
+    if (test.ok())
+    {
         auto test_server_down = [&](int node_to_stop, int allowed_node) {
-                test.repl->stop_node(node_to_stop);
-                test.maxscale->wait_for_monitor(1);
-                int stopped_id = server_ids[node_to_stop];
-                int allowed_id = server_ids[allowed_node];
-                cout << "Stopped server " << stopped_id << ".\n";
-                cout << "Select-queries should go to server " << allowed_id << " only.\n";
-                IdSet allowed_set = {allowed_id};
+                repl.stop_node(node_to_stop);
+                mxs.wait_for_monitor(1);
+                auto& srv_stopped = srv_info.get(node_to_stop);
+                auto& srv_expected = srv_info.get(allowed_node);
+
+                test.tprintf("Stopped  %s.", srv_stopped.name.c_str());
+                test.tprintf("Select-queries should go to %s.", srv_expected.name.c_str());
+                IdSet allowed_set = {srv_expected.server_id};
+                auto maxconn = mxs.open_rwsplit_connection2_nodb();
+
                 // Test that queries only go to the correct server.
-                for (int i = 0; i < 5 && test.ok(); i++)
+                for (int i = 0; i < iterations && test.ok(); i++)
                 {
-                    test.expect(check_server_id(maxconn, allowed_set), "%s", wrong_server);
+                    check_server_id(test, maxconn.get(), allowed_set);
                 }
-                test.repl->start_node(node_to_stop, "");
-                cout << "Restarted server " << stopped_id << ".\n";
+
+                repl.start_node(node_to_stop);
+                test.tprintf("Restarted %s.", srv_stopped.name.c_str());
             };
 
         if (test.ok())
@@ -76,37 +80,34 @@ int main(int argc, char** argv)
         if (test.ok())
         {
             test.check_maxctrl("alter filter namedserverfilter target01 server1");
-            mysql_close(maxconn);
-            maxconn = test.maxscale->open_rwsplit_connection();
             test_server_down(3, 0);
         }
-    }
-    mysql_close(maxconn);
 
-    test.repl->disconnect();
-    return test.global_result;
+        // TODO: Test ->master, ->slave and ->all tags
+    }
 }
 
-bool check_server_id(MYSQL* conn, const IdSet& allowed_ids)
+void check_server_id(TestConnections& test, mxt::MariaDB* conn, const IdSet& allowed_ids)
 {
-    bool id_ok = false;
-    char str[100];
-    if (find_field(conn, "SELECT @@server_id", "@@server_id", str))
+    const string q = "SELECT @@server_id;";
+    auto res = conn->query(q);
+    if (res && res->get_col_count() > 0 && res->next_row())
     {
-        cout << "Failed to query for @@server_id: " << mysql_error(conn) << ".\n";
+        auto found_id = res->get_int(0);
+        if (allowed_ids.count(found_id) == 0)
+        {
+            std::vector<string> allowed;
+            for (auto& id : allowed_ids)
+            {
+                allowed.emplace_back(mxb::string_printf("%li", id));
+            }
+            string all_allowed = mxb::create_list_string(allowed, ", ", " or ");
+            test.add_failure("Query '%s' returned %li when %s was expected.",
+                             q.c_str(), found_id, all_allowed.c_str());
+        }
     }
     else
     {
-        int queried_id = atoi(str);
-        if (allowed_ids.count(queried_id))
-        {
-            cout << "Query went to server " << queried_id << ".\n";
-            id_ok = true;
-        }
-        else
-        {
-            cout << "Queried unexpected server id " << queried_id << ".\n";
-        }
+        test.add_failure("Query '%s' failed or returned invalid data.", q.c_str());
     }
-    return id_ok;
 }
