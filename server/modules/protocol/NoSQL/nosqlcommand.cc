@@ -275,7 +275,7 @@ GWBUF* create_packet(const char* zSql, size_t sql_len, uint8_t seq_no)
 
     GWBUF* pPacket = gwbuf_alloc(MYSQL_HEADER_LEN + payload_len);
 
-    uint8_t* p = (uint8_t*)pPacket->start;
+    uint8_t* p = pPacket->start;
     *p++ = payload_len;
     *p++ = (payload_len >> 8);
     *p++ = (payload_len >> 16);

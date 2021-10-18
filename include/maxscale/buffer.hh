@@ -66,7 +66,7 @@ struct SHARED_BUF
     buffer_object_t* bufobj;    /*< List of objects referred to by GWBUF */
     int32_t          refcount;  /*< Reference count on the buffer */
     uint32_t         info;      /*< Info bits */
-    unsigned char    data[1];   /*< Actual memory that was allocated */
+    uint8_t          data[1];   /*< Actual memory that was allocated */
 };
 
 /**
@@ -82,8 +82,8 @@ class GWBUF
 public:
     GWBUF*      next {nullptr};                     /*< Next buffer in a linked chain of buffers */
     GWBUF*      tail {nullptr};                     /*< Last buffer in a linked chain of buffers */
-    void*       start {nullptr};                    /*< Start of the valid data */
-    void*       end {nullptr};                      /*< First byte after the valid data */
+    uint8_t*    start {nullptr};                    /*< Start of the valid data */
+    uint8_t*    end {nullptr};                      /*< First byte after the valid data */
     SHARED_BUF* sbuf {nullptr};                     /*< The shared buffer with the real data */
     HINT*       hint {nullptr};                     /*< Hint data for this buffer */
     SERVER*     server {nullptr};                   /*< The target server where the buffer is executed */
@@ -130,12 +130,12 @@ inline bool gwbuf_is_parsed(const GWBUF* b)
 /*< First valid, unconsumed byte in the buffer */
 inline uint8_t* gwbuf_link_data(GWBUF* b)
 {
-    return static_cast<uint8_t*>(b->start);
+    return b->start;
 }
 
 inline const uint8_t* gwbuf_link_data(const GWBUF* b)
 {
-    return static_cast<uint8_t*>(b->start);
+    return b->start;
 }
 
 inline uint8_t* GWBUF_DATA(GWBUF* b)
@@ -151,7 +151,7 @@ inline const uint8_t* GWBUF_DATA(const GWBUF* b)
 /*< Number of bytes in the individual buffer */
 inline size_t gwbuf_link_length(const GWBUF* b)
 {
-    return (size_t)((char*)b->end - (char*)b->start);
+    return b->end - b->start;
 }
 
 /*< Check whether the buffer is contiguous*/
@@ -164,7 +164,7 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
 /*< True if all bytes in the buffer have been consumed */
 inline bool gwbuf_link_empty(const GWBUF* b)
 {
-    return (char*)b->start >= (char*)b->end;
+    return b->start >= b->end;
 }
 
 inline bool GWBUF_EMPTY(const GWBUF* b)
@@ -175,7 +175,7 @@ inline bool GWBUF_EMPTY(const GWBUF* b)
 /*< Consume a number of bytes in the buffer */
 inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
 {
-    b->start = bytes > ((char*)b->end - (char*)b->start) ? b->end : (void*)((char*)b->start + bytes);
+    b->start = bytes > (b->end - b->start) ? b->end : (b->start + bytes);
 }
 
 inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
@@ -185,7 +185,7 @@ inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
 
 inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
 {
-    b->end = bytes > ((char*)b->end - (char*)b->start) ? b->start : (void*)((char*)b->end - bytes);
+    b->end = bytes > (b->end - b->start) ? b->start : (b->end - bytes);
 }
 
 inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)

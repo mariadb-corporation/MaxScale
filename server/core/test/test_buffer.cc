@@ -286,13 +286,13 @@ void test_consume()
     mxb_assert_message(buffer->next, "Buffer should have next pointer set");
     mxb_assert_message(gwbuf_link_length(buffer->next) == 5, "Next buffer should be 5 bytes long");
     mxb_assert_message(gwbuf_length(buffer) == 9, "Buffer should be 9 bytes after consuming 1 bytes");
-    mxb_assert_message(*((uint8_t*)buffer->start) == 2, "First byte should be 2");
+    mxb_assert_message(*(buffer->start) == 2, "First byte should be 2");
 
     buffer = gwbuf_consume(buffer, 5);
     mxb_assert_message(buffer->next == NULL, "Buffer should not have the next pointer set");
     mxb_assert_message(gwbuf_link_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
     mxb_assert_message(gwbuf_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
-    mxb_assert_message(*((uint8_t*)buffer->start) == 7, "First byte should be 7");
+    mxb_assert_message(*(buffer->start) == 7, "First byte should be 7");
     mxb_assert_message(gwbuf_consume(buffer, 4) == NULL, "Consuming all bytes should return NULL");
 
     buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),

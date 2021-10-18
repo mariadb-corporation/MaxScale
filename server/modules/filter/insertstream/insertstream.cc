@@ -46,7 +46,7 @@ static const char load_data_template[] =
 /**
  * Extract inserted values
  */
-char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* destlen)
+char* get_value(const char* data, uint32_t datalen, char** dest, uint32_t* destlen)
 {
     char* value_start = mxb::strnchr_esc_mariadb(data, '(', datalen);
 
@@ -77,14 +77,14 @@ char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* destlen)
 GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 {
     /** Remove the INSERT INTO ... from the buffer */
-    char* dataptr = (char*)GWBUF_DATA(buffer);
+    char* dataptr = reinterpret_cast<char*>(GWBUF_DATA(buffer));
     char* modptr = mxb::strnchr_esc_mariadb(dataptr + MYSQL_HEADER_LEN + 1, '(', gwbuf_link_length(buffer));
 
     /** Leave some space for the header so we don't have to allocate a new one */
     buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
-    char* header_start = (char*)GWBUF_DATA(buffer);
+    char* header_start = reinterpret_cast<char*>(GWBUF_DATA(buffer));
     char* store_end = dataptr = header_start + MYSQL_HEADER_LEN;
-    char* end = static_cast<char*>(buffer->end);
+    char* end = reinterpret_cast<char*>(buffer->end);
     char* value;
     uint32_t valuesize;
 
@@ -99,7 +99,7 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
         *store_end++ = '\n';
     }
 
-    gwbuf_rtrim(buffer, (char*)buffer->end - store_end);
+    gwbuf_rtrim(buffer, buffer->end - reinterpret_cast<uint8_t*>(store_end));
     uint32_t len = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
 
     *header_start++ = len;
@@ -120,7 +120,7 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 bool only_implicit_values(GWBUF* buffer)
 {
     bool rval = false;
-    char* data = (char*)GWBUF_DATA(buffer);
+    char* data = reinterpret_cast<char*>(GWBUF_DATA(buffer));
     char* ptr = mxb::strnchr_esc_mariadb(data + MYSQL_HEADER_LEN + 1, '(', gwbuf_link_length(buffer));
 
     if (ptr && (ptr = mxb::strnchr_esc_mariadb(ptr, ')', gwbuf_link_length(buffer) - (ptr - data))))
@@ -128,12 +128,12 @@ bool only_implicit_values(GWBUF* buffer)
         /** Skip the closing parenthesis and any whitespace */
         ptr++;
 
-        while (ptr < (char*)buffer->end && isspace(*ptr))
+        while (ptr < reinterpret_cast<char*>(buffer->end) && isspace(*ptr))
         {
             ptr++;
         }
 
-        if (ptr >= (char*)buffer->end || !isalnum(*ptr))
+        if (ptr >= reinterpret_cast<char*>(buffer->end) || !isalnum(*ptr))
         {
             /**
              * The first pair of parentheses was followed by a non-alphanumeric

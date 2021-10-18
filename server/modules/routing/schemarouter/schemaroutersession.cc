@@ -1119,7 +1119,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
     }
     int n_eof = 0;
 
-    uint8_t* ptr = (uint8_t*) buf->start;
+    uint8_t* ptr = buf->start;
 
     if (PTR_IS_ERR(ptr))
     {
@@ -1131,12 +1131,12 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
     if (n_eof == 0)
     {
         /** Skip column definitions */
-        while (ptr < (uint8_t*) buf->end && !PTR_IS_EOF(ptr))
+        while (ptr < buf->end && !PTR_IS_EOF(ptr))
         {
             ptr += gw_mysql_get_byte3(ptr) + 4;
         }
 
-        if (ptr >= (uint8_t*) buf->end)
+        if (ptr >= buf->end)
         {
             MXS_INFO("Malformed packet for mapping query.");
             gwbuf_free(buf);
@@ -1148,7 +1148,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
         ptr += gw_mysql_get_byte3(ptr) + 4;
     }
 
-    while (ptr < (uint8_t*) buf->end && !PTR_IS_EOF(ptr))
+    while (ptr < buf->end && !PTR_IS_EOF(ptr))
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
         int packetlen = payloadlen + 4;
@@ -1177,7 +1177,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
         ptr += packetlen;
     }
 
-    if (ptr < (unsigned char*) buf->end && PTR_IS_EOF(ptr) && n_eof == 1)
+    if (ptr < buf->end && PTR_IS_EOF(ptr) && n_eof == 1)
     {
         n_eof++;
         MXS_INFO("SHOW DATABASES fully received from %s.", bref->name());

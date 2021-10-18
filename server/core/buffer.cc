@@ -151,8 +151,8 @@ GWBUF::GWBUF(uint64_t size, SHARED_BUF* shared_buf)
         shared_buf->bufobj = nullptr;
         sbuf = shared_buf;
 
-        start = &sbuf->data;
-        end = (void*)((char*)start + size);
+        start = &sbuf->data[0];
+        end = start + size;
     }
 }
 

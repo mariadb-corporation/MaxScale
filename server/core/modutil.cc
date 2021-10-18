@@ -415,7 +415,7 @@ GWBUF* modutil_create_query(const char* query)
 
     if (rval)
     {
-        uint8_t* ptr = (uint8_t*)rval->start;
+        uint8_t* ptr = rval->start;
         *ptr++ = (len);
         *ptr++ = (len) >> 8;
         *ptr++ = (len) >> 16;
@@ -456,9 +456,9 @@ GWBUF* modutil_create_eof(uint8_t seq)
  */
 int modutil_count_statements(GWBUF* buffer)
 {
-    char* start = ((char*)(buffer)->start + 5);
+    char* start = reinterpret_cast<char*>(buffer->start + 5);
     char* ptr = start;
-    char* end = ((char*)(buffer)->end);
+    char* end = reinterpret_cast<char*>(buffer->end);
     int num = 1;
 
     while (ptr < end && (ptr = mxb::strnchr_esc(ptr, ';', end - ptr)))
