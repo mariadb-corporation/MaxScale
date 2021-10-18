@@ -80,7 +80,7 @@ add_test_executable_ex(NAME mysqlmon_failover_stress SOURCE mysqlmon_failover_st
 add_test_executable_ex(NAME mysqlmon_switchover_stress SOURCE mysqlmon_switchover_stress.cpp
         CONFIG mysqlmon_switchover_stress.cnf VMS repl_backend LABELS mysqlmon)
 
-# Check monitoring and failover when ignore_external_masters is enabled
+# Check monitoring and failover with an external master
 add_test_executable_ex(NAME mysqlmon_external_master SOURCE mysqlmon_external_master.cpp
         CONFIG mysqlmon_external_master.cnf VMS repl_backend LABELS mysqlmon)
 

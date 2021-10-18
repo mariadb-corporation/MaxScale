@@ -1,5 +1,5 @@
 /**
- * Test monitoring and failover with ignore_external_masters=true
+ * Test monitoring and failover with an external master
  */
 #include <maxtest/testconnections.hh>
 #include <atomic>
@@ -63,10 +63,8 @@ void test_main(TestConnections& test)
     mxs.check_print_servers_status({down, master, slave});
 
     test.tprintf("Configure master-master replication between server2 and the external server");
-    // Comment away next line since failover already created the external connection. Failover/switchover
-    // does not respect 'ignore_external_master' when copying slave connections. Whether it should do it
-    // is questionable.
-    // TODO: Think about what to do with this test and the setting in general.
+    // Comment away next line since failover already created the external connection.
+    // TODO: Think about what to do with this test.
     //    test.repl->replicate_from(1, 3);
     test.repl->replicate_from(3, 1);
     test.maxscale->wait_for_monitor(1);

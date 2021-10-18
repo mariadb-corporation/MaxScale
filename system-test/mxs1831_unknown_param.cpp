@@ -14,7 +14,7 @@ int main(int argc, char** argv)
                                        "maxctrl alter monitor MySQL-Monitor not_a_parameter not_a_value|grep Error");
     test.expect(rc == 0, "Altering unknown parameter should cause an error");
     rc = test.maxscale->ssh_node_f(true,
-                                   "maxctrl alter monitor MySQL-Monitor ignore_external_masters on_sunday_afternoons|grep Error");
+                                   "maxctrl alter monitor MySQL-Monitor auto_rejoin on_sunday_afternoons|grep Error");
     test.expect(rc == 0, "Invalid parameter value should cause an error");
 
     return test.global_result;

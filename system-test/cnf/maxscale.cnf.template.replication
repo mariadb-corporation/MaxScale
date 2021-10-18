@@ -9,7 +9,6 @@ servers=###server_line###
 user=maxskysql
 password=skysql
 monitor_interval=1000
-detect_standalone_master=false
 
 [RW-Split-Router]
 type=service
