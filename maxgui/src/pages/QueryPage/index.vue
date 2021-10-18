@@ -10,7 +10,7 @@
             'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
         }"
         class="fill-height"
-        @shortkey="handleShortkey"
+        @shortkey="isTxtEditor ? handleShortkey($event) : null"
     >
         <div
             ref="paneContainer"
@@ -72,6 +72,7 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
@@ -79,7 +80,11 @@ export default {
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
             getActiveWke: 'query/getActiveWke',
+            getCurrEditorMode: 'query/getCurrEditorMode',
         }),
+        isTxtEditor() {
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
+        },
     },
     watch: {
         is_fullscreen() {
