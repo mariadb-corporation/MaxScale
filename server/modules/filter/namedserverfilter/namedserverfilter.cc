@@ -322,6 +322,10 @@ RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, Reg
 RegexHintFSession::~RegexHintFSession()
 {
     pcre2_match_data_free(m_match_data);
+    for (auto& elem : m_ps_id_to_hints)
+    {
+        free_hint_list(&elem.second);
+    }
 }
 
 /**
@@ -334,31 +338,121 @@ RegexHintFSession::~RegexHintFSession()
  */
 bool RegexHintFSession::routeQuery(GWBUF* queue)
 {
-    char* sql = NULL;
-    int sql_len = 0;
-
-    if (modutil_is_SQL(queue) && m_active)
+    if (m_active)
     {
+        char* sql = nullptr;
+        int sql_len = 0;
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
+            // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
-            if (reg_serv)
+            auto cmd = MYSQL_GET_COMMAND(gwbuf_link_data(queue));
+            switch (cmd)
             {
-                /* Add the servers in the list to the buffer routing hints */
-                for (const auto& target : reg_serv->m_targets)
+            case MXS_COM_QUERY:
+                // A normal query. If a mapping was found, add hints to the buffer.
+                if (reg_serv)
                 {
-                    queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                    for (const auto& target : reg_serv->m_targets)
+                    {
+                        queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                    }
+                    m_n_diverted++;
+                    m_fil_inst.m_total_diverted++;
                 }
-                m_n_diverted++;
-                m_fil_inst.m_total_diverted++;
+                else
+                {
+                    m_n_undiverted++;
+                    m_fil_inst.m_total_undiverted++;
+                }
+
+                break;
+
+            case MXS_COM_STMT_PREPARE:
+                {
+                    // Not adding any hints to the prepare command itself as it should be routed normally.
+                    // Instead, save the id and hints so that execution of the PS can be properly hinted.
+                    if (reg_serv)
+                    {
+                        HINT* hlist = nullptr;
+                        for (const auto& target : reg_serv->m_targets)
+                        {
+                            hlist = hint_create_route(hlist, reg_serv->m_htype, target.c_str());
+                        }
+                        // The PS ID is the id of the buffer. This is set by client protocol and should be
+                        // used all over the routing chain.
+                        uint32_t ps_id = queue->id;
+                        // If the id was already hinted, remove it properly from the map.
+                        auto it = m_ps_id_to_hints.find(ps_id);
+                        if (it != m_ps_id_to_hints.end())
+                        {
+                            free_hint_list(&it->second);
+                            m_ps_id_to_hints.erase(it);
+                        }
+                        m_ps_id_to_hints.insert({ps_id, hlist});
+                        // So far we have assumed that the preparation will succeed. In case it won't, the map
+                        // entry will be removed in clientReply.
+                        m_current_prep_id = ps_id;
+                        m_last_prepare_id = ps_id;
+                    }
+                }
+                break;
+
+            default:
+                mxb_assert(!true);
             }
-            else
+        }
+        else if (gwbuf_length(queue) >= 9)
+        {
+            // Can be a PS command with ID.
+            auto cmd = MYSQL_GET_COMMAND(gwbuf_link_data(queue));
+            switch (cmd)
             {
-                m_n_undiverted++;
-                m_fil_inst.m_total_undiverted++;
+            case MXS_COM_STMT_EXECUTE:
+            case MXS_COM_STMT_BULK_EXECUTE:
+            case MXS_COM_STMT_SEND_LONG_DATA:
+                {
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                    // -1 means use the last prepared stmt.
+                    if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_last_prepare_id > 0)
+                    {
+                        ps_id = m_last_prepare_id;
+                    }
+
+                    auto it = m_ps_id_to_hints.find(ps_id);
+                    if (it != m_ps_id_to_hints.end())
+                    {
+                        HINT* dupped_hints = hint_dup(it->second);
+                        queue->hint = hint_splice(queue->hint, dupped_hints);
+                        m_n_diverted++;
+                        m_fil_inst.m_total_diverted++;
+                    }
+                    else
+                    {
+                        m_n_undiverted++;
+                        m_fil_inst.m_total_undiverted++;
+                    }
+                }
+                break;
+
+            case MXS_COM_STMT_CLOSE:
+                {
+                    uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
+                    auto it = m_ps_id_to_hints.find(ps_id);
+                    if (it != m_ps_id_to_hints.end())
+                    {
+                        free_hint_list(&it->second);
+                        m_ps_id_to_hints.erase(it);
+                    }
+                }
+                break;
+
+            default:
+                break;
             }
         }
     }
+
     return FilterSession::routeQuery(queue);
 }
 
@@ -472,6 +566,38 @@ json_t* RegexHintFSession::diagnostics() const
     json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
 
     return rval;
+}
+
+void RegexHintFSession::free_hint_list(HINT** hlist)
+{
+    auto pHint = *hlist;
+    while (pHint)
+    {
+        HINT* temp = pHint;
+        pHint = pHint->next;
+        hint_free(temp);
+    }
+    *hlist = nullptr;
+}
+
+bool RegexHintFSession::clientReply(GWBUF* packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    if (reply.is_complete() && m_current_prep_id > 0)
+    {
+        if (reply.error())
+        {
+            // Preparation failed, remove from map.
+            auto it = m_ps_id_to_hints.find(m_last_prepare_id);
+            if (it != m_ps_id_to_hints.end())
+            {
+                free_hint_list(&it->second);
+                m_ps_id_to_hints.erase(it);
+            }
+            m_last_prepare_id = 0;
+        }
+        m_current_prep_id = 0;
+    }
+    return mxs::FilterSession::clientReply(packet, down, reply);
 }
 
 /**

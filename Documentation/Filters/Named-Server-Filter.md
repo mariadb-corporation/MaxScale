@@ -140,6 +140,12 @@ ignored. This means the *match* - *target* pairs should be indexed in priority
 order, or, if priority is not a factor, in order of decreasing match
 probability.
 
+Binary-mode prepared statements (COM_STMT_PREPARE) are handled by matching
+the prepared sql against the *match*-parameters. If a match is found, the
+routing hints are attached to any execution of that prepared statement. Text-
+mode prepared statements are not supported in this way. To divert them, use
+regular expressions which match the specific "EXECUTE"-query.
+
 ## Examples
 
 ### Example 1 - Route queries targeting a specific table to a server

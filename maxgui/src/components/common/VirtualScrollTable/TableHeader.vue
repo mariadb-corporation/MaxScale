@@ -214,22 +214,20 @@ export default {
             this.headerWidthMap = headerWidthMap
         },
         assignHeaderWidthMap() {
-            if (this.$refs[`header__${0}`]) {
-                let headerWidthMap = {}
-                // get width of each header then use it to set same width of corresponding cells
-                for (const [i, header] of this.tableHeaders.entries()) {
-                    if (this.$typy(this.$refs, `header__${i}`).safeArray.length) {
-                        let headerWidth = this.$refs[`header__${i}`][0].clientWidth
-                        const minHeaderWidth = this.getMinHeaderWidth(header)
-                        if (headerWidth < minHeaderWidth) headerWidth = minHeaderWidth
-                        headerWidthMap = {
-                            ...headerWidthMap,
-                            [i]: headerWidth,
-                        }
+            let headerWidthMap = {}
+            // get width of each header then use it to set same width of corresponding cells
+            for (const [i, header] of this.tableHeaders.entries()) {
+                if (this.$typy(this.$refs, `header__${i}`).safeArray.length) {
+                    let headerWidth = this.$refs[`header__${i}`][0].clientWidth
+                    const minHeaderWidth = this.getMinHeaderWidth(header)
+                    if (headerWidth < minHeaderWidth) headerWidth = minHeaderWidth
+                    headerWidthMap = {
+                        ...headerWidthMap,
+                        [i]: headerWidth,
                     }
                 }
-                this.headerWidthMap = headerWidthMap
             }
+            this.headerWidthMap = { ...this.headerWidthMap, ...headerWidthMap }
         },
         recalculateWidth() {
             this.resetHeaderWidth()

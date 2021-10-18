@@ -127,18 +127,26 @@ public:
 
     json_t* diagnostics() const;
     bool    routeQuery(GWBUF* buffer) override;
+    bool    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
     RegexHintFilter&  m_fil_inst;
     pcre2_match_data* m_match_data {nullptr};
 
-    int m_n_diverted {0};       /* No. of statements diverted */
-    int m_n_undiverted {0};     /* No. of statements not diverted */
-    int m_active;               /* Is filter active? */
+    int  m_n_diverted {0};      /* No. of statements diverted */
+    int  m_n_undiverted {0};    /* No. of statements not diverted */
+    bool m_active {true};       /* Is filter active? */
+
+    /** Maps COM_STMT_PREPARE IDs to a list of hints. */
+    std::unordered_map<uint32_t, HINT*> m_ps_id_to_hints;
+
+    uint32_t m_current_prep_id {0};     /**< ID of the PS currently preparing on server */
+    uint32_t m_last_prepare_id {0};     /**< Last id prepared */
 
     std::shared_ptr<RegexHintFilter::Setup> m_setup;
 
     const RegexToServers* find_servers(char* sql, int sql_len);
+    void                  free_hint_list(HINT** hlist);
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct

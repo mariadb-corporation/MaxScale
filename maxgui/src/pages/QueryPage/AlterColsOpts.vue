@@ -174,6 +174,9 @@ export default {
                         h.width = 50
                         h.maxWidth = 50
                         break
+                    case 'id':
+                        h.hidden = true
+                        break
                 }
                 return h
             })
@@ -229,6 +232,9 @@ export default {
             let row = []
             this.headers.forEach(h => {
                 switch (h.text) {
+                    case 'id':
+                        row.push(this.$help.uuidv1())
+                        break
                     case 'column_name':
                     case 'column_type':
                     case 'comment':
