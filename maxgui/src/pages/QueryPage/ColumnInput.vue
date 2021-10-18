@@ -97,6 +97,7 @@
 import CharsetInput from './CharsetInput.vue'
 import CollationInput from './CollationInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
+import { mapGetters } from 'vuex'
 export default {
     name: 'column-input',
     components: {
@@ -117,6 +118,15 @@ export default {
         }
     },
     computed: {
+        ...mapGetters({
+            getTblCreationInfo: 'query/getTblCreationInfo',
+        }),
+        initialCellData() {
+            return this.$typy(
+                this.getTblCreationInfo,
+                `data.cols_opts_data.data['${this.data.rowIdx}']`
+            ).safeArray
+        },
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
         },
@@ -126,10 +136,17 @@ export default {
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
+        uniqueIdxName() {
+            // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
+            const uqIdxName = this.$typy(this.initialCellData, `['${this.data.colIdx}']`).safeString
+            if (uqIdxName) return uqIdxName
+            return `${this.$typy(this.data, 'rowObj.column_name').safeString}_UNIQUE`
+        },
         isDisabled() {
             switch (this.$typy(this.input, 'field').safeString) {
                 case 'charset':
                 case 'collation':
+                    if (this.columnCharset === 'utf8') return true
                     return !check_charset_support(this.columnType)
                 case 'UN':
                 case 'ZF':
@@ -181,6 +198,10 @@ export default {
                     input.type = 'bool'
                     input.value = input.value === 'YES'
                     break
+                case 'UQ':
+                    input.type = 'bool'
+                    input.value = input.value !== null
+                    break
                 case 'charset':
                 case 'collation':
                     input.type = input.field
@@ -218,6 +239,8 @@ export default {
                             case 'AI':
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
+                            case 'UQ':
+                                newInput.value = newInput.value ? this.uniqueIdxName : null
                         }
                         if (field === 'AI') this.$emit('on-change-AI', newInput)
                         else this.$emit('on-change', newInput)

@@ -10,6 +10,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import column_types from './column_types'
+
+const column_types_map = new Map()
+column_types.forEach(category =>
+    column_types_map.set(
+        category.header,
+        //Remove round brackets
+        category.types.map(type => type.value.replace(/\([^)]*\)/g, ''))
+    )
+)
 const typesSupportCharset = [
     'CHAR',
     'NATIONAL CHAR',
@@ -19,11 +29,15 @@ const typesSupportCharset = [
     'TEXT',
     'MEDIUMTEXT',
     'LONGTEXT',
-    'ENUM',
-    'SET',
+    ...column_types_map.get('Set'),
 ]
-const typesSupport_AI = ['TINYINT', 'SMALLINT', 'MEDIUMINT', 'INT', 'BIGINT']
-const typesSupport_UN_ZF = [...typesSupport_AI, 'DECIMAL', 'FLOAT', 'DOUBLE']
+const typesSupport_AI = [...column_types_map.get('Integer'), 'SERIAL']
+
+const typesSupport_UN_ZF = [
+    ...typesSupport_AI,
+    ...column_types_map.get('Float'),
+    ...column_types_map.get('Fixed Num'),
+]
 
 /**
  *

@@ -82,7 +82,7 @@
                             {{ $t('group') }}
                         </span>
                         <div
-                            v-if="i !== tableHeaders.length - 1"
+                            v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                             class="header__resizer d-inline-block fill-height"
                             @mousedown="e => resizerMouseDown(e, i)"
                         />
@@ -133,6 +133,7 @@ export default {
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
+        lastVisHeader: { type: Object, required: true },
     },
     data() {
         return {

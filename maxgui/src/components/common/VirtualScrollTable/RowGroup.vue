@@ -1,7 +1,7 @@
 <template>
     <div class="tr tr--group" :style="{ lineHeight }">
         <div
-            class="d-flex align-center td pl-1 pr-3 td-col-span"
+            class="d-flex align-center td pl-1 pr-3 color border-right-table-border"
             :style="{
                 height: lineHeight,
                 width: '100%',
@@ -108,8 +108,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.td-col-span {
-    border-right: none !important;
-}
-</style>

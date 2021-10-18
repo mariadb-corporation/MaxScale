@@ -151,19 +151,51 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
     const schemas = nodeId.split('.')
     const db = schemas[0]
     const tblName = schemas[1]
-    //TODO: Add more columns .i.e UQ, BIN, G
-    const cols = `column_name,
-    REGEXP_REPLACE(UPPER(column_type), ' (SIGNED|UNSIGNED|ZEROFILL)', '') AS column_type,
+    //TODO: Add G column
+    /**
+     * Exception for UQ column
+     * It needs to LEFT JOIN statistics and table_constraints tables to get accurate UNIQUE INDEX from constraint_name.
+     * LEFT JOIN statistics as it has column_name, index_name
+     * LEFT JOIN table_constraints as it has constraint_name. There is a sub-query in table_constraints to get
+     * get only rows having constraint_type = 'UNIQUE'.
+     * Notice: UQ column returns UNIQUE INDEX name.
+     *
+     */
+    const cols = `a.column_name,
+    REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
     IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
     IF(is_nullable LIKE 'YES', 'NO', 'YES') as NN,
     IF(column_type LIKE '%UNSIGNED%', 'YES', 'NO') as UN,
+    c.constraint_name AS UQ,
     IF(column_type LIKE '%ZEROFILL%', 'YES', 'NO') as ZF,
     IF(extra LIKE '%auto_increment%', 'YES', 'NO') as AI,
     character_set_name as charset, collation_name as collation, column_comment as comment,
     column_default as 'default'`
     const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-        sql: `SELECT ${cols} FROM information_schema.columns where table_schema='${db}'
-        AND table_name='${tblName}'`,
+        sql: `
+        SELECT ${cols} FROM information_schema.columns a
+            LEFT JOIN information_schema.statistics b ON (
+                a.table_schema = b.table_schema
+                AND a.table_name = b.table_name
+                AND a.column_name = b.column_name
+            )
+            LEFT JOIN (
+                SELECT
+                    table_name, table_schema, constraint_name
+                FROM
+                    information_schema.table_constraints
+                WHERE
+                    constraint_type = 'UNIQUE'
+            ) c ON (
+                a.table_name = c.table_name
+                AND a.table_schema = c.table_schema
+                AND b.index_name = c.constraint_name
+            )
+        WHERE
+            a.table_schema='${db}'
+            AND a.table_name='${tblName}'
+        GROUP BY a.column_name
+        ORDER BY a.ordinal_position;`,
     })
     return colsOptsRes.data.data.attributes.results[0]
 }

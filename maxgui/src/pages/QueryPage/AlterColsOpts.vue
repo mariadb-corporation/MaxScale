@@ -43,6 +43,32 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        x-small
+                        class="ml-2 pa-1"
+                        outlined
+                        depressed
+                        color="accent-dark"
+                        v-on="on"
+                        @click="isVertTable = !isVertTable"
+                    >
+                        <v-icon
+                            size="14"
+                            color="accent-dark"
+                            :class="{ 'rotate-icon__vert': !isVertTable }"
+                        >
+                            rotate_90_degrees_ccw
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
+            </v-tooltip>
         </div>
         <virtual-scroll-table
             :benched="0"
@@ -52,6 +78,7 @@
             :height="height - headerHeight"
             :boundingWidth="boundingWidth"
             showSelect
+            :isVertTable="isVertTable"
             v-on="$listeners"
             @item-selected="selectedItems = $event"
         >
@@ -60,6 +87,7 @@
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
             >
                 <column-input
+                    :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
                     :key="h.text"
                     :data="{
                         field: h.text,
@@ -115,6 +143,7 @@ export default {
         return {
             selectedItems: [],
             headerHeight: 0,
+            isVertTable: false,
         }
     },
     computed: {
@@ -139,6 +168,7 @@ export default {
                     case 'PK':
                     case 'NN':
                     case 'UN':
+                    case 'UQ':
                     case 'ZF':
                     case 'AI':
                         h.width = 50
@@ -167,6 +197,9 @@ export default {
         },
         idxOfAI() {
             return this.findHeaderIdx('AI')
+        },
+        idxOfUN() {
+            return this.findHeaderIdx('UN')
         },
         hasValidAI() {
             let count = 0
@@ -271,7 +304,7 @@ export default {
                 return this.patchCharsetCollation({
                     colsOptsData,
                     rowIdx: item.rowIdx,
-                    charset: 'utf8mb3',
+                    charset: 'utf8',
                 })
             return colsOptsData
         },
@@ -283,15 +316,13 @@ export default {
          */
         handleUncheck_UN_ZF_AI({ colsOptsData, item }) {
             if (!check_UN_ZF_support(item.value) || !check_AI_support(item.value)) {
-                const idxOfUN = this.findHeaderIdx('UN')
                 const idxOfZF = this.findHeaderIdx('ZF')
-                const idxOfAI = this.findHeaderIdx('AI')
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [idxOfUN]: { $set: 'NO' },
+                            [this.idxOfUN]: { $set: 'NO' },
                             [idxOfZF]: { $set: 'NO' },
-                            [idxOfAI]: { $set: 'NO' },
+                            [this.idxOfAI]: { $set: 'NO' },
                         },
                     },
                 })
@@ -305,39 +336,65 @@ export default {
          * @returns {Object} - returns new colsOptsData
          */
         handleSetDefCharset({ colsOptsData, item }) {
-            if (check_charset_support(item.value))
+            let charset = null,
+                collation = null
+            if (check_charset_support(item.value)) {
+                charset = this.defTblCharset
+                collation = this.defTblCollation
+            }
+            return this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [this.idxOfCharset]: { $set: charset },
+                        [this.idxOfCollation]: { $set: collation },
+                    },
+                },
+            })
+        },
+        /**
+         * This handles SERIAL type
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Object} payload.item - cell item
+         * @returns {Object} - returns new colsOptsData
+         */
+        handleSerialType({ colsOptsData, item }) {
+            if (item.value === 'SERIAL') {
+                const idxOfNN = this.findHeaderIdx('NN')
+                const idxOfUQ = this.findHeaderIdx('UQ')
+                const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: this.defTblCharset },
-                            [this.idxOfCollation]: { $set: this.defTblCollation },
-                            [item.colIdx]: { $set: item.value },
+                            [this.idxOfUN]: { $set: 'YES' },
+                            [idxOfNN]: { $set: 'YES' },
+                            [this.idxOfAI]: { $set: 'YES' },
+                            [idxOfUQ]: {
+                                $set: columnInput.uniqueIdxName,
+                            },
                         },
                     },
                 })
-            else
-                return this.$help.immutableUpdate(colsOptsData, {
-                    data: {
-                        [item.rowIdx]: {
-                            [this.idxOfCharset]: { $set: null },
-                            [this.idxOfCollation]: { $set: null },
-                            [item.colIdx]: { $set: item.value },
-                        },
-                    },
-                })
+            }
+            return colsOptsData
         },
         /**
          * @param {Object} item - column_type cell data
          */
         onChangeColumnType(item) {
-            let colsOptsData = this.colsOptsData
+            // first update column_type cell
+            let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                    },
+                },
+            })
             colsOptsData = this.handleSetDefCharset({ colsOptsData, item })
             colsOptsData = this.handleUncheck_UN_ZF_AI({ colsOptsData, item })
             colsOptsData = this.handleNationalType({ colsOptsData, item })
-            // TODO: handle SERIAL type
+            colsOptsData = this.handleSerialType({ colsOptsData, item })
             this.colsOptsData = colsOptsData
         },
-
         /**
          * This unchecks the other auto_increment as there
          * can be one table column has this.

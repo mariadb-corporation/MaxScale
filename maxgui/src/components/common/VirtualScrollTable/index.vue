@@ -15,6 +15,7 @@
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
+            :lastVisHeader="lastVisHeader"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @on-sorting="onSorting"
@@ -22,7 +23,7 @@
             @toggle-select-all="handleSelectAll"
         />
         <v-virtual-scroll
-            v-if="rowsLength && tableHeaders.length"
+            v-if="rowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : benched"
             :items="currRows"
@@ -38,7 +39,7 @@
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
-                    :isXOverflowed="isXOverflowed"
+                    :isYOverflowed="isYOverflowed"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <template
@@ -118,10 +119,10 @@
                         <div
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
-                            class="td px-3 d-flex align-center"
+                            class="td px-3"
                             :class="{
                                 'cursor--grab no-userSelect': h.draggable,
-                                'td--last-cell': i === visHeaders.length - 1,
+                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
                             }"
                             :style="{
                                 height: lineHeight,
@@ -135,38 +136,36 @@
                                     : null
                             "
                         >
-                            <slot
-                                :name="h.text"
-                                :data="{
-                                    rowData: row,
-                                    cell: row[i],
-                                    header: h,
-                                    maxWidth: cellMaxWidth(i),
-                                    rowIdx: rowIdx,
-                                    colIdx: i,
-                                }"
-                            >
-                                <truncate-string
-                                    :text="`${row[i]}`"
-                                    :maxWidth="cellMaxWidth(i)"
-                                    :disabled="isDragging"
-                                />
-                            </slot>
+                            <div class="cell-content--vert-center">
+                                <slot
+                                    :name="h.text"
+                                    :data="{
+                                        rowData: row,
+                                        cell: row[i],
+                                        header: h,
+                                        maxWidth: cellMaxWidth(i),
+                                        rowIdx: rowIdx,
+                                        colIdx: i,
+                                    }"
+                                >
+                                    <truncate-string
+                                        :text="`${row[i]}`"
+                                        :maxWidth="cellMaxWidth(i)"
+                                        :disabled="isDragging"
+                                    />
+                                </slot>
+                            </div>
                         </div>
                     </template>
                     <div
-                        v-if="!isXOverflowed"
+                        v-if="!isYOverflowed"
                         :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
                         class="dummy-cell color border-right-table-border border-bottom-table-border"
                     />
                 </div>
             </template>
         </v-virtual-scroll>
-        <div
-            v-else-if="!rowsLength"
-            class="tr"
-            :style="{ lineHeight, height: `${height - itemHeight}px` }"
-        >
+        <div v-else class="tr" :style="{ lineHeight, height: `${height - itemHeight}px` }">
             <div class="td px-3 d-flex justify-center flex-grow-1">
                 {{ $t('$vuetify.noDataText') }}
             </div>
@@ -249,17 +248,21 @@ export default {
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
         },
+        lastVisHeader() {
+            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
+            return {}
+        },
         rowHeight() {
             return this.isVertTable
                 ? `${this.itemHeight * this.visHeaders.length}px`
                 : this.itemHeight
         },
-        isXOverflowed() {
+        isYOverflowed() {
             const rowHeight = Number(`${this.rowHeight}`.replace(/px/g, ''))
             return this.currRows.length * rowHeight > this.tbodyHeight
         },
         rowsLength() {
-            return this.rows.length
+            return this.currRows.length
         },
         tableRows() {
             /* Use JSON.stringify as it's faster comparing to lodash cloneDeep
@@ -504,11 +507,17 @@ export default {
                 border-bottom: thin solid $table-border;
                 border-right: thin solid $table-border;
                 background: $background;
+                display: table-cell;
+                vertical-align: middle;
                 &:first-of-type {
                     border-left: thin solid $table-border;
                 }
                 &--last-cell {
                     border-right: none;
+                }
+                .cell-content--vert-center {
+                    width: 100%;
+                    display: inline-block;
                 }
             }
             &:hover {
