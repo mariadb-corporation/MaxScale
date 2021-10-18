@@ -9,6 +9,7 @@
         :minBodyWidth="minBodyWidth"
         :closeImmediate="closeImmediate"
         :hasSavingErr="hasSavingErr"
+        :allowEnterToSubmit="allowEnterToSubmit"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
@@ -80,6 +81,7 @@ export default {
         minBodyWidth: { type: String, default: '466px' },
         closeImmediate: { type: Boolean, default: false },
         hasSavingErr: { type: Boolean, default: false },
+        allowEnterToSubmit: { type: Boolean, default: true },
     },
     data() {
         return {

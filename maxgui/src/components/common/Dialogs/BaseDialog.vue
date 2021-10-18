@@ -8,7 +8,7 @@
         persistent
         :scrollable="scrollable"
         eager
-        @keydown.enter="keydownHandler"
+        @keydown.enter="allowEnterToSubmit ? keydownHandler($event) : null"
         @input="$emit('input', $event)"
     >
         <v-card
@@ -111,6 +111,7 @@ export default {
          * Limitation: form needs to be cleared manually on parent component
          */
         closeImmediate: { type: Boolean, default: false },
+        allowEnterToSubmit: { type: Boolean, default: true },
     },
     data() {
         return {

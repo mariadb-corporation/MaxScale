@@ -53,6 +53,7 @@
                 :hasSavingErr="isAlterFailed"
                 :onCancel="clearAlterResult"
                 :onClose="clearAlterResult"
+                :allowEnterToSubmit="false"
             >
                 <template v-slot:body-prepend>
                     <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
