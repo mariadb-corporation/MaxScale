@@ -859,6 +859,9 @@ add_test_executable(mxs3617_lost_packets.cc mxs3617_lost_packets replication LAB
 # MXS-3623: Race condition in COM_CHANGE_USER handling
 add_test_executable(mxs3623_persistent_change_user.cc mxs3623_persistent_change_user mxs3623_persistent_change_user LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3782: session_track_trx_state causes incorrect routing of SELECT
+add_test_executable(mxs3782_session_track_trx_state.cc mxs3782_session_track_trx_state mxs3782_session_track_trx_state LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
