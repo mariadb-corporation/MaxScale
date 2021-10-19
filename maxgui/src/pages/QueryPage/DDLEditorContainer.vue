@@ -244,7 +244,11 @@ export default {
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
-        handleAddComma: ({ isLast }) => (isLast ? '' : ', '),
+        /**
+         * @param {Boolean} payload.ignore - ignore adding comma
+         * @returns {String} - return ', ' or ''
+         */
+        handleAddComma: ({ ignore = false } = {}) => (ignore ? '' : ', '),
         /**
          * This builds table_options SQL
          * @param {String} payload.sql - current alter sql statement
@@ -279,7 +283,7 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql += this.handleAddComma({ isLast: i === lastIdx })
+                sql += this.handleAddComma({ ignore: i === lastIdx })
             })
             return sql
         },
@@ -294,7 +298,7 @@ export default {
             const lastIdx = removedCols.length - 1
             removedCols.forEach((row, i) => {
                 sql += `DROP COLUMN ${escape(row.column_name)}`
-                sql += this.handleAddComma({ isLast: i === lastIdx })
+                sql += this.handleAddComma({ ignore: i === lastIdx })
             })
             return sql
         },
@@ -337,7 +341,7 @@ export default {
                     if (AI) sql += ` ${AI}`
                     if (def) sql += ` DEFAULT ${def}`
                     if (comment) sql += ` COMMENT '${comment}'`
-                    sql += this.handleAddComma({ isLast: i === lastIdx })
+                    sql += this.handleAddComma({ ignore: i === lastIdx })
                 }
             })
             return sql
@@ -373,7 +377,7 @@ export default {
             const updatedCols = diff.get('updated')
             if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
             if (updatedCols.length) {
-                if (removedCols.length) sql += this.handleAddComma({ isLast: false })
+                if (removedCols.length) sql += this.handleAddComma()
                 sql = this.buildChangeColSQL({ updatedCols, sql })
             }
             //TODO: handle diff.added
@@ -385,7 +389,7 @@ export default {
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
             if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
             if (this.isColsOptsChanged) {
-                if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
+                if (this.isTblOptsChanged) sql += this.handleAddComma()
                 sql = this.buildColsAlterSQL(sql)
             }
             this.sql = formatSQL(`${sql};`)
