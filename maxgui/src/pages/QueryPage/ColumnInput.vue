@@ -90,6 +90,7 @@
  * on-change-column_type: (cell)
  * on-change-charset: (cell)
  * on-change-AI: (cell)
+ * on-change-PK: (cell)
  * Event for normal cell
  * on-change: (cell)
  */
@@ -136,6 +137,12 @@ export default {
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
+        isPK() {
+            return this.$typy(this.input, 'rowObj.PK').safeString === 'YES'
+        },
+        isAI() {
+            return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
+        },
         uniqueIdxName() {
             // If there's name already, use it otherwise generate one with this pattern `columnName_UNIQUE`
             const uqIdxName = this.$typy(this.initialCellData, `['${this.data.colIdx}']`).safeString
@@ -153,6 +160,8 @@ export default {
                     return !check_UN_ZF_support(this.columnType)
                 case 'AI':
                     return !check_AI_support(this.columnType)
+                case 'NN':
+                    return this.isAI || this.isPK // implies NOT NULL so must be disabled
                 default:
                     return false
             }
@@ -190,17 +199,29 @@ export default {
                     input.type = 'column_type'
                     input.enum_values = this.dataTypes
                     break
-                case 'PK':
                 case 'NN':
+                    input.type = 'bool'
+                    input.value = input.value === 'NOT NULL'
+                    break
                 case 'UN':
+                    input.type = 'bool'
+                    input.value = input.value === 'UNSIGNED'
+                    break
                 case 'ZF':
+                    input.type = 'bool'
+                    input.value = input.value === 'ZEROFILL'
+                    break
                 case 'AI':
+                    input.type = 'bool'
+                    input.value = input.value === 'AUTO_INCREMENT'
+                    break
+                case 'PK':
                     input.type = 'bool'
                     input.value = input.value === 'YES'
                     break
                 case 'UQ':
                     input.type = 'bool'
-                    input.value = input.value !== null
+                    input.value = Boolean(input.value)
                     break
                 case 'charset':
                 case 'collation':
@@ -232,17 +253,26 @@ export default {
                     case 'bool': {
                         const field = newInput.field
                         switch (field) {
-                            case 'PK':
                             case 'NN':
+                                newInput.value = newInput.value ? 'NOT NULL' : 'NULL'
+                                break
                             case 'UN':
+                                newInput.value = newInput.value ? 'UNSIGNED' : ''
+                                break
                             case 'ZF':
+                                newInput.value = newInput.value ? 'ZEROFILL' : ''
+                                break
                             case 'AI':
+                                newInput.value = newInput.value ? 'AUTO_INCREMENT' : ''
+                                break
+                            case 'PK':
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
                             case 'UQ':
                                 newInput.value = newInput.value ? this.uniqueIdxName : null
                         }
                         if (field === 'AI') this.$emit('on-change-AI', newInput)
+                        else if (field === 'PK') this.$emit('on-change-PK', newInput)
                         else this.$emit('on-change', newInput)
                         break
                     }

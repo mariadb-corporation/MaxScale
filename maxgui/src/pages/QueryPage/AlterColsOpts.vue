@@ -102,6 +102,7 @@
                     :dataTypes="dataTypes"
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
+                    @on-change-PK="onChangePK"
                     @on-change-AI="onChangeAI"
                     @on-change-charset="onChangeCharset"
                 />
@@ -204,10 +205,13 @@ export default {
         idxOfUN() {
             return this.findHeaderIdx('UN')
         },
-        hasValidAI() {
+        idxOfNN() {
+            return this.findHeaderIdx('NN')
+        },
+        hasAI() {
             let count = 0
             this.rows.forEach(row => {
-                if (row[this.idxOfAI] === 'YES') count++
+                if (row[this.idxOfAI] === 'AUTO_INCREMENT') count++
             })
             return count === 1
         },
@@ -235,20 +239,14 @@ export default {
                     case 'id':
                         row.push(this.$help.uuidv1())
                         break
-                    case 'column_name':
-                    case 'column_type':
-                    case 'comment':
-                        row.push('')
+                    case 'NN':
+                        row.push('NULL')
                         break
                     case 'PK':
-                    case 'NN':
-                    case 'UN':
-                    case 'ZF':
-                    case 'AI':
                         row.push('NO')
                         break
                     default:
-                        row.push(null)
+                        row.push('')
                         break
                 }
             })
@@ -326,9 +324,9 @@ export default {
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [this.idxOfUN]: { $set: 'NO' },
-                            [idxOfZF]: { $set: 'NO' },
-                            [this.idxOfAI]: { $set: 'NO' },
+                            [this.idxOfUN]: { $set: '' },
+                            [idxOfZF]: { $set: '' },
+                            [this.idxOfAI]: { $set: '' },
                         },
                     },
                 })
@@ -365,15 +363,14 @@ export default {
          */
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
-                const idxOfNN = this.findHeaderIdx('NN')
                 const idxOfUQ = this.findHeaderIdx('UQ')
                 const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
-                            [this.idxOfUN]: { $set: 'YES' },
-                            [idxOfNN]: { $set: 'YES' },
-                            [this.idxOfAI]: { $set: 'YES' },
+                            [this.idxOfUN]: { $set: 'UNSIGNED' },
+                            [this.idxOfNN]: { $set: 'NOT NULL' },
+                            [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
                             [idxOfUQ]: {
                                 $set: columnInput.uniqueIdxName,
                             },
@@ -404,31 +401,43 @@ export default {
         /**
          * This unchecks the other auto_increment as there
          * can be one table column has this.
-         * @param {Number} rowIdx - rowIdx to be excluded
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Number} payload.rowIdx - rowIdx to be excluded
+         * @returns {Object} - returns new colsOptsData
          */
-        uncheckOtherAI(rowIdx) {
+        uncheckOtherAI({ colsOptsData, rowIdx }) {
             let idx
             for (const [i, row] of this.rows.entries())
-                if (row[this.idxOfAI] === 'YES' && i !== rowIdx) {
+                if (row[this.idxOfAI] === 'AUTO_INCREMENT' && i !== rowIdx) {
                     idx = i
                     break
                 }
 
             if (idx >= 0)
-                this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                return (colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [idx]: {
-                            [this.idxOfAI]: { $set: 'No' },
+                            [this.idxOfAI]: { $set: '' },
                         },
                     },
-                })
+                }))
+            return colsOptsData
         },
         /**
          * @param {Object} item - AI cell data
          */
         onChangeAI(item) {
-            if (!this.hasValidAI) this.uncheckOtherAI(item.rowIdx)
-            this.updateCell(item)
+            let colsOptsData = this.colsOptsData
+            if (this.hasAI)
+                colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
+            this.colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfNN]: { $set: 'NOT NULL' },
+                    },
+                },
+            })
         },
         /**
          * @param {Object} item - charset cell data
@@ -438,6 +447,20 @@ export default {
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,
                 charset: item.value,
+            })
+        },
+
+        /**
+         * @param {Object} item - PK cell data
+         */
+        onChangePK(item) {
+            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfNN]: { $set: 'NOT NULL' },
+                    },
+                },
             })
         },
     },

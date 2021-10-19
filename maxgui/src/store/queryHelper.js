@@ -166,13 +166,15 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
     a.column_name,
     REGEXP_SUBSTR(UPPER(column_type), '[^)]*[)]?') AS column_type,
     IF(column_key LIKE '%PRI%', 'YES', 'NO') as PK,
-    IF(is_nullable LIKE 'YES', 'NO', 'YES') as NN,
-    IF(column_type LIKE '%UNSIGNED%', 'YES', 'NO') as UN,
-    c.constraint_name AS UQ,
-    IF(column_type LIKE '%ZEROFILL%', 'YES', 'NO') as ZF,
-    IF(extra LIKE '%auto_increment%', 'YES', 'NO') as AI,
-    character_set_name as charset, collation_name as collation, column_comment as comment,
-    column_default as 'default'`
+    IF(is_nullable LIKE 'YES', 'NULL', 'NOT NULL') as NN,
+    IF(column_type LIKE '%UNSIGNED%', 'UNSIGNED', '') as UN,
+    IF(c.constraint_name IS NULL, '', c.constraint_name) as UQ,
+    IF(column_type LIKE '%ZEROFILL%', 'ZEROFILL', '') as ZF,
+    IF(extra LIKE '%AUTO_INCREMENT%', 'AUTO_INCREMENT', '') as AI,
+    IF(character_set_name IS NULL, '', character_set_name) as charset,
+    IF(collation_name IS NULL, '', collation_name) as collation,
+    column_comment as comment,
+    IF(column_default IS NULL, '', column_default) as 'default'`
     const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
         sql: `
         SELECT ${cols} FROM information_schema.columns a

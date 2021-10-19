@@ -53,6 +53,7 @@
                 :hasSavingErr="isAlterFailed"
                 :onCancel="clearAlterResult"
                 :onClose="clearAlterResult"
+                :allowEnterToSubmit="false"
             >
                 <template v-slot:body-prepend>
                     <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
@@ -79,12 +80,14 @@
                     >
                         <query-editor
                             v-if="sql"
+                            ref="queryEditor"
                             v-model="sql"
                             :class="`fill-height`"
                             :cmplList="getDbCmplList"
                             :options="{
                                 fontSize: 10,
                                 contextmenu: false,
+                                wordWrap: 'on',
                             }"
                         />
                     </div>
@@ -168,7 +171,18 @@ export default {
         hasValidChanges() {
             return this.isFormValid && this.hasChanged
         },
-
+        isTblOptsChanged() {
+            return !this.$help.lodash.isEqual(
+                this.$typy(this.initialData, 'table_opts_data').safeObject,
+                this.$typy(this.formData, 'table_opts_data').safeObject
+            )
+        },
+        isColsOptsChanged() {
+            return !this.$help.lodash.isEqual(
+                this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
+                this.$typy(this.formData, 'cols_opts_data.data').safeArray
+            )
+        },
         notAlteredYet() {
             return Boolean(this.$typy(this.getAlteringTableResultMap).isEmptyObject)
         },
@@ -230,10 +244,9 @@ export default {
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
-        handleAddDelimiter({ sql, isLastKey }) {
-            return `${sql}${isLastKey ? ';' : ', '}`
-        },
+        handleAddComma: ({ isLast }) => (isLast ? '' : ', '),
         buildTblOptSql({ sql, dbName }) {
+            //TODO: replace objectDiff with deep-diff
             const { escapeIdentifiers: escape, objectDiff } = this.$help
             //Diff of table_opts_data
             const diff = objectDiff({
@@ -241,6 +254,7 @@ export default {
                 object: this.formData.table_opts_data,
             })
             const keys = Object.keys(diff)
+            const lastIdx = keys.length - 1
             keys.forEach((key, i) => {
                 switch (key) {
                     case 'table_name':
@@ -259,17 +273,95 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql = this.handleAddDelimiter({ sql, isLastKey: i === keys.length - 1 })
+                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
-        applyChanges() {
+        buildDropColSql({ removedCols, sql }) {
             const { escapeIdentifiers: escape } = this.$help
+            const lastIdx = removedCols.length - 1
+            removedCols.forEach((row, i) => {
+                sql += `DROP COLUMN ${escape(row.column_name)}`
+                sql += this.handleAddComma({ isLast: i === lastIdx })
+            })
+            return sql
+        },
+        buildColsChangeSQL({ updatedCols, sql }) {
+            const { escapeIdentifiers: escape } = this.$help
+            const lastIdx = updatedCols.length - 1
+            updatedCols.forEach((col, i) => {
+                let hasTypeRelatedChanges = false
+                col.diff.forEach(d => {
+                    if (d.kind === 'E')
+                        switch (d.path[0]) {
+                            case 'PK':
+                            case 'UQ':
+                                // TODO: Handle PK, UQ
+                                break
+                            default:
+                                hasTypeRelatedChanges = true
+                                break
+                        }
+                })
+                if (hasTypeRelatedChanges) {
+                    const { column_name: oldName } = col.oriObj
+                    const {
+                        column_name: newName,
+                        column_type: newColType,
+                        UN,
+                        ZF,
+                        NN,
+                        AI,
+                        charset,
+                        collation,
+                        default: def,
+                        comment,
+                    } = col.newObj
+                    sql += `CHANGE COLUMN ${escape(oldName)} ${escape(newName)}`
+                    sql += ` ${newColType}`
+                    if (UN) sql += ` ${UN}`
+                    if (ZF) sql += ` ${ZF}`
+                    if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
+                    sql += ` ${NN}`
+                    if (AI) sql += ` ${AI}`
+                    if (def) sql += ` DEFAULT ${def}`
+                    if (comment) sql += ` COMMENT '${comment}'`
+                }
+                sql += this.handleAddComma({ isLast: i === lastIdx })
+            })
+            return sql
+        },
+        buildColsOptsSql(sql) {
+            const { arrOfObjsDiff, getObjectRows } = this.$help
+            const base = getObjectRows({
+                columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
+            })
+            const newData = getObjectRows({
+                columns: this.$typy(this.formData, 'cols_opts_data.fields').safeArray,
+                rows: this.$typy(this.formData, 'cols_opts_data.data').safeArray,
+            })
+            const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
+            const removedCols = diff.get('removed')
+            const updatedCols = diff.get('updated')
+            if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
+            if (updatedCols.length) {
+                if (removedCols.length) sql += this.handleAddComma({ isLast: false })
+                sql = this.buildColsChangeSQL({ updatedCols, sql })
+            }
+            //TODO: handle diff.added
+            return sql
+        },
+        applyChanges() {
+            const { escapeIdentifiers: escape, formatSQL } = this.$help
             const { dbName, table_name: initialTblName } = this.initialData.table_opts_data
-            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}\n`
-            sql = this.buildTblOptSql({ sql, dbName })
-            // TODO: build alter column sql
-            this.sql = sql
+            let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
+            if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
+            if (this.isColsOptsChanged) {
+                if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
+                sql = this.buildColsOptsSql(sql)
+            }
+            this.sql = formatSQL(`${sql};`)
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false
             this.$refs.confirmAlterDialog.open()

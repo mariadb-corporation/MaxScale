@@ -13,6 +13,8 @@
 import Vue from 'vue'
 import update from 'immutability-helper'
 import { v1 as uuidv1 } from 'uuid'
+import deepDiff from 'deep-diff'
+import { format as sqlFormatter } from 'sql-formatter'
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
@@ -702,6 +704,7 @@ export function daysDiff(timestamp) {
     return Vue.moment.duration(end.diff(now)).asDays()
 }
 
+//TODO: Remove this. Replace with deep-diff which gives more details about diff
 /**
  * Deep diff between two objects
  * @param  {Object} base - Base object
@@ -732,6 +735,57 @@ export function objectDiff({ base, object }) {
     walkObject(base, object)
     return changes
 }
+
+//TODO: objects Re-order in array diff
+/**
+ * @param {Array} payload.base - initial base array
+ * @param {Array} payload.newArr - new array
+ * @param {String} payload.idField - key name of unique value in each object in array
+ * @returns {Map} - returns  Map { unchanged: [{}], added: [{}], updated:[{}], removed:[{}] }
+ */
+export function arrOfObjsDiff({ base, newArr, idField }) {
+    // stored ids of two arrays to get removed objects
+    const baseIds = []
+    const newArrIds = []
+    const baseMap = new Map()
+    base.forEach(o => {
+        baseIds.push(o[idField])
+        baseMap.set(o[idField], o)
+    })
+
+    const resultMap = new Map()
+    resultMap.set('unchanged', [])
+    resultMap.set('added', [])
+    resultMap.set('removed', [])
+    resultMap.set('updated', [])
+
+    newArr.forEach(obj2 => {
+        newArrIds.push(obj2[idField])
+        const obj1 = baseMap.get(obj2[idField])
+        if (!obj1) resultMap.set('added', [...resultMap.get('added'), obj2])
+        else if (isEqual(obj1, obj2))
+            resultMap.set('unchanged', [...resultMap.get('unchanged'), obj2])
+        else {
+            const diff = deepDiff(obj1, obj2)
+            const objDiff = { oriObj: obj1, newObj: obj2, diff }
+            resultMap.set('updated', [...resultMap.get('updated'), objDiff])
+        }
+    })
+    const removedIds = baseIds.filter(id => !newArrIds.includes(id))
+    const removed = removedIds.map(id => baseMap.get(id))
+    resultMap.set('removed', removed)
+    return resultMap
+}
+
+export function formatSQL(v) {
+    return sqlFormatter(v, {
+        language: 'mariadb',
+        indent: '   ',
+        uppercase: true,
+        linesBetweenQueries: 2,
+    })
+}
+
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -786,6 +840,8 @@ Object.defineProperties(Vue.prototype, {
                 daysDiff,
                 objectDiff,
                 uuidv1,
+                arrOfObjsDiff,
+                formatSQL,
             }
         },
     },
