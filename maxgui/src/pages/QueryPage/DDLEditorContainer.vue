@@ -245,6 +245,12 @@ export default {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
         handleAddComma: ({ isLast }) => (isLast ? '' : ', '),
+        /**
+         * This builds table_options SQL
+         * @param {String} payload.sql - current alter sql statement
+         * @param {String} payload.dbName - db name
+         * @returns {String} - return new alter sql statement
+         */
         buildTblOptSql({ sql, dbName }) {
             //TODO: replace objectDiff with deep-diff
             const { escapeIdentifiers: escape, objectDiff } = this.$help
@@ -277,6 +283,12 @@ export default {
             })
             return sql
         },
+        /**
+         * This builds DROP column SQL
+         * @param {Array} payload.removedCols - columns need to be dropped
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
         buildDropColSql({ removedCols, sql }) {
             const { escapeIdentifiers: escape } = this.$help
             const lastIdx = removedCols.length - 1
@@ -286,24 +298,23 @@ export default {
             })
             return sql
         },
-        buildColsChangeSQL({ updatedCols, sql }) {
-            const { escapeIdentifiers: escape } = this.$help
+        /**
+         * This builds column definition SQL
+         * @param {Array} payload.updatedCols - columns need to be altered
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        handleBuildColDfnSQL({ updatedCols, sql }) {
             const lastIdx = updatedCols.length - 1
             updatedCols.forEach((col, i) => {
-                let hasTypeRelatedChanges = false
+                let hasColDfnChanged = false
+                // iterates through all diff of a column
                 col.diff.forEach(d => {
-                    if (d.kind === 'E')
-                        switch (d.path[0]) {
-                            case 'PK':
-                            case 'UQ':
-                                // TODO: Handle PK, UQ
-                                break
-                            default:
-                                hasTypeRelatedChanges = true
-                                break
-                        }
+                    if (d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ')
+                        hasColDfnChanged = true
                 })
-                if (hasTypeRelatedChanges) {
+                if (hasColDfnChanged) {
+                    const { escapeIdentifiers: escape } = this.$help
                     const { column_name: oldName } = col.oriObj
                     const {
                         column_name: newName,
@@ -326,12 +337,28 @@ export default {
                     if (AI) sql += ` ${AI}`
                     if (def) sql += ` DEFAULT ${def}`
                     if (comment) sql += ` COMMENT '${comment}'`
+                    sql += this.handleAddComma({ isLast: i === lastIdx })
                 }
-                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
-        buildColsOptsSql(sql) {
+        /**
+         * This handles build column definition and column constraints SQL
+         * @param {Array} payload.updatedCols - columns need to be changed
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        buildChangeColSQL({ updatedCols, sql }) {
+            sql = this.handleBuildColDfnSQL({ updatedCols, sql })
+            //TODO: column constraints SQL. i.e PK && UQ
+            return sql
+        },
+        /**
+         * This handles build ADD, DROP, CHANGE COLUMN SQL
+         * @param {String} sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        buildColsAlterSQL(sql) {
             const { arrOfObjsDiff, getObjectRows } = this.$help
             const base = getObjectRows({
                 columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
@@ -347,7 +374,7 @@ export default {
             if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
             if (updatedCols.length) {
                 if (removedCols.length) sql += this.handleAddComma({ isLast: false })
-                sql = this.buildColsChangeSQL({ updatedCols, sql })
+                sql = this.buildChangeColSQL({ updatedCols, sql })
             }
             //TODO: handle diff.added
             return sql
@@ -359,7 +386,7 @@ export default {
             if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
             if (this.isColsOptsChanged) {
                 if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
-                sql = this.buildColsOptsSql(sql)
+                sql = this.buildColsAlterSQL(sql)
             }
             this.sql = formatSQL(`${sql};`)
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
