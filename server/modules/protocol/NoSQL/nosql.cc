@@ -2275,6 +2275,32 @@ string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::ele
 }
 
 string regex_to_condition(const Path::Incarnation& p,
+                          const string_view& regex,
+                          const string_view& options)
+{
+    ostringstream ss1;
+
+    ss1 << "(JSON_VALUE(doc, '$." << p.path() << "') ";
+
+    ostringstream ss2;
+    if (options.length() != 0)
+    {
+        ss2 << "(?" << options << ")";
+    }
+
+    ss2 << regex;
+
+    ss1 << "REGEXP '" << escape_essential_chars(ss2.str()) << "')";
+
+    return ss1.str();
+}
+
+string regex_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_regex& regex)
+{
+    return regex_to_condition(p, regex.regex, regex.options);
+}
+
+string regex_to_condition(const Path::Incarnation& p,
                           const bsoncxx::document::element& regex,
                           const bsoncxx::document::element& options)
 {
@@ -2288,7 +2314,7 @@ string regex_to_condition(const Path::Incarnation& p,
         throw SoftError("$regex has to be a string", error::BAD_VALUE);
     }
 
-    string o;
+    string_view o;
     if (options)
     {
         if (options.type() != bsoncxx::type::k_utf8)
@@ -2296,25 +2322,10 @@ string regex_to_condition(const Path::Incarnation& p,
             throw SoftError("$options has to be a string", error::BAD_VALUE);
         }
 
-        string_view sv = options.get_utf8();
-
-        if (sv.length() != 0)
-        {
-            ostringstream oss;
-            oss << "(?" << sv << ")";
-
-            o = oss.str();
-        }
+        o = options.get_utf8();
     }
 
-    string_view sv = regex.get_utf8();
-    string r(sv.data(), sv.length());
-
-    ostringstream ss;
-    ss << "(JSON_VALUE(doc, '$." << p.path() << "') REGEXP '" << o
-       << escape_essential_chars(std::move(r)) << "')";
-
-    return ss.str();
+    return regex_to_condition(p, regex.get_utf8(), o);
 }
 
 namespace
@@ -3304,8 +3315,7 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
         break;
 
     case bsoncxx::type::k_regex:
-        condition = "(JSON_VALUE(doc, '$." + field + "') " +
-            element_to_value(element, ValueFor::SQL) + ")";
+        condition = regex_to_condition(*this, element.get_regex());
         break;
 
     case bsoncxx::type::k_null:
