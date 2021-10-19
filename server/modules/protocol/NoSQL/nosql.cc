@@ -2338,6 +2338,19 @@ string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::ele
     return ss.str();
 }
 
+string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
+{
+    ostringstream ss;
+
+    string field = "$." + p.path();
+
+    ss << "(JSON_QUERY(doc, '" << field << ".$timestamp') IS NOT NULL AND "
+       << "JSON_VALUE(doc, '" << field << ".$timestamp.t') = " << timestamp.timestamp << " AND "
+       << "JSON_VALUE(doc, '" << field << ".$timestamp.i') = " << timestamp.increment << ")";
+
+    return ss.str();
+}
+
 string regex_to_condition(const Path::Incarnation& p,
                           const string_view& regex,
                           const string_view& options)
@@ -3406,6 +3419,10 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
     case bsoncxx::type::k_date:
         condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
             + element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        condition = timestamp_to_condition(*this, element.get_timestamp());
         break;
 
     case bsoncxx::type::k_array:
