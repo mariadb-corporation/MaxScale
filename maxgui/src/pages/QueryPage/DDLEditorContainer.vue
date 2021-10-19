@@ -196,6 +196,18 @@ export default {
         alterSql() {
             return this.$typy(this.getAlteringTableResultMap, 'data.sql').safeString
         },
+        currColsData() {
+            return this.$typy(this.formData, 'cols_opts_data.data').safeArray
+        },
+        initialColsData() {
+            return this.$typy(this.initialData, 'cols_opts_data.data').safeArray
+        },
+        currPkCols() {
+            return this.getPKCols(this.currColsData)
+        },
+        initialPkCols() {
+            return this.getPKCols(this.initialColsData)
+        },
     },
     activated() {
         this.addInitialDataWatcher()
@@ -243,6 +255,16 @@ export default {
         },
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
+        },
+        getPKCols(colsData) {
+            const headers = this.$typy(this.formData, 'cols_opts_data.fields').safeArray
+            let cols = []
+            const idxOfPk = headers.findIndex(h => h === 'PK')
+            const idxOfColumnName = headers.findIndex(h => h === 'column_name')
+            colsData.forEach(row => {
+                if (row[idxOfPk] === 'YES') cols.push(row[idxOfColumnName])
+            })
+            return cols
         },
         /**
          * @param {Boolean} payload.ignore - ignore adding comma
@@ -341,6 +363,21 @@ export default {
             })
             return sql
         },
+        buildPKSQL(sql) {
+            const { escapeIdentifiers: escape } = this.$help
+            const dropPKSQL = 'DROP PRIMARY KEY'
+            const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
+            const isAddingPK = this.currPkCols.length > 0
+            if (isDroppingPK) {
+                sql += dropPKSQL
+            } else if (isAddingPK) {
+                const keys = this.currPkCols.map(col => escape(col)).join(', ')
+                const addPKsql = `ADD PRIMARY KEY (${keys})`
+                if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
+                else sql += addPKsql
+            }
+            return sql
+        },
         /**
          * This handles build column definition and column constraints SQL
          * @param {Array} payload.updatedCols - columns need to be changed
@@ -348,8 +385,13 @@ export default {
          * @returns {String} - return new alter sql statement
          */
         buildChangeColSQL({ updatedCols, sql }) {
+            let initialSql = sql
             sql = this.handleBuildColDfnSQL({ updatedCols, sql })
-            //TODO: column constraints SQL. i.e PK && UQ
+            if (!this.$help.lodash.isEqual(this.initialPkCols, this.currPkCols)) {
+                sql += this.handleAddComma({ ignore: initialSql === sql })
+                sql = this.buildPKSQL(sql)
+            }
+            //TODO: column UQ constraints SQL
             return sql
         },
         /**
