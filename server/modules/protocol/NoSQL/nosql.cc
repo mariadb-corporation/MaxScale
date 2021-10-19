@@ -57,7 +57,7 @@ const std::unordered_map<string, int32_t> alias_type_mapping =
     { alias::DB_POINTER,       type::DB_POINTER },
     { alias::JAVASCRIPT,       type::JAVASCRIPT },
     { alias::SYMBOL,           type::SYMBOL },
-    { alias::JAVASCRIPT_SCOPE, type::JAVASCRIPT },
+    { alias::JAVASCRIPT_SCOPE, type::JAVASCRIPT_SCOPE },
     { alias::INT32,            type::INT32 },
     { alias::TIMESTAMP,        type::TIMESTAMP },
     { alias::INT64,            type::INT64 },
@@ -2169,36 +2169,47 @@ string protocol_type_to_mariadb_type(int32_t number)
     return nullptr;
 }
 
-string type_to_condition_from_value(const Path::Incarnation& p, int32_t number)
+string type_to_condition_from_number(const Path::Incarnation& p, int32_t number)
 {
     ostringstream ss;
 
-    ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = "
-       << protocol_type_to_mariadb_type(number)
-       << ")";
+    switch (number)
+    {
+    case protocol::type::BIN_DATA:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$binary')) = 'STRING' AND "
+           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$type')) = 'STRING')";
+        break;
+
+    case protocol::type::DATE:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$date')) = 'INTEGER')";
+        break;
+
+    case protocol::type::JAVASCRIPT:
+    case protocol::type::JAVASCRIPT_SCOPE:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$code')) = 'STRING')";
+        break;
+
+    case protocol::type::REGEX:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$regex')) = 'STRING' AND "
+           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$options')) = 'STRING')";
+        break;
+
+    case protocol::type::TIMESTAMP:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$timestamp.t')) = 'INTEGER' AND "
+           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$timestamp.i')) = 'INTEGER')";
+        break;
+
+    case protocol::type::UNDEFINED:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << ".$undefined')) = 'BOOLEAN')";
+        break;
+
+    default:
+        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = "
+           << protocol_type_to_mariadb_type(number)
+           << ")";
+    }
 
     return ss.str();
-}
-
-string type_to_condition_from_value(const Path::Incarnation& p, const bsoncxx::stdx::string_view& alias)
-{
-    string rv;
-
-    if (alias.compare("number") == 0)
-    {
-        ostringstream ss;
-
-        ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'DOUBLE' OR "
-           << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'INTEGER')";
-
-        rv = ss.str();
-    }
-    else
-    {
-        rv = type_to_condition_from_value(p, protocol::alias::to_type(alias));
-    }
-
-    return rv;
 }
 
 template<class document_or_array_element>
@@ -2206,38 +2217,59 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
 {
     string rv;
 
+    int32_t type = -1;
+
     switch (element.type())
     {
     case bsoncxx::type::k_utf8:
-        rv = type_to_condition_from_value(p, (bsoncxx::stdx::string_view)element.get_utf8());
+        {
+            string_view alias = element.get_utf8();
+
+            if (alias.compare("number") == 0)
+            {
+                ostringstream ss;
+
+                ss << "(JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'DOUBLE' OR "
+                   << "JSON_TYPE(JSON_EXTRACT(doc, '$." << p.path() << "')) = 'INTEGER')";
+
+                rv = ss.str();
+            }
+            else
+            {
+                type = protocol::alias::to_type(string(alias.data(), alias.length()));
+            }
+        }
         break;
 
     case bsoncxx::type::k_double:
         {
             double d = element.get_double();
-            int32_t i = d;
+            type = d;
 
-            if (d != (double)i)
+            if (d != (double)type)
             {
                 ostringstream ss;
                 ss << "Invalid numerical type code: " << d;
                 throw SoftError(ss.str(), error::BAD_VALUE);
             }
-
-            rv = type_to_condition_from_value(p, i);
         };
         break;
 
     case bsoncxx::type::k_int32:
-        rv = type_to_condition_from_value(p, (int32_t)element.get_int32());
+        type = element.get_int32();
         break;
 
     case bsoncxx::type::k_int64:
-        rv = type_to_condition_from_value(p, (int32_t)(int64_t)element.get_int64());
+        type = element.get_int32();
         break;
 
     default:
         throw SoftError("type must be represented as a number or a string", error::TYPE_MISMATCH);
+    }
+
+    if (rv.empty())
+    {
+        rv = type_to_condition_from_number(p, type);
     }
 
     return rv;
@@ -2617,11 +2649,17 @@ string element_to_string(const document_element_or_array_item& x)
         }
         break;
 
+    case bsoncxx::type::k_minkey:
+        ss << "{\"$minKey\":1}";
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        ss << "{\"$maxKey\":1}";
+        break;
+
     case bsoncxx::type::k_binary:
     case bsoncxx::type::k_codewscope:
     case bsoncxx::type::k_dbpointer:
-    case bsoncxx::type::k_maxkey:
-    case bsoncxx::type::k_minkey:
     case bsoncxx::type::k_timestamp:
     case bsoncxx::type::k_undefined:
         {
