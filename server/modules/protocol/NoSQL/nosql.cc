@@ -2069,6 +2069,8 @@ string array_op_to_condition(const Path::Incarnation& p,
 
 string protocol_type_to_mariadb_type(int32_t number)
 {
+    const char* zAlias = nullptr;
+
     switch (number)
     {
     case protocol::type::DOUBLE:
@@ -2086,8 +2088,64 @@ string protocol_type_to_mariadb_type(int32_t number)
     case protocol::type::BOOL:
         return "'BOOLEAN'";
 
+    case protocol::type::NULL_TYPE:
+        return "'NULL'";
+
     case protocol::type::INT32:
+    case protocol::type::INT64:
         return "'INTEGER'";
+
+    case protocol::type::BINARY:
+        zAlias = "binData";
+        break;
+
+    case protocol::type::UNDEFINED:
+        zAlias = "undefined";
+        break;
+
+    case protocol::type::OBJECT_ID:
+        zAlias = "objectId";
+        break;
+
+    case protocol::type::DATE:
+        zAlias = "date";
+        break;
+
+    case protocol::type::REGEX:
+        zAlias = "regex";
+        break;
+
+    case protocol::type::DB_POINTER:
+        zAlias = "dbPointer";
+        break;
+
+    case protocol::type::JAVA_SCRIPT:
+        zAlias = "javascript";
+        break;
+
+    case protocol::type::SYMBOL:
+        zAlias = "symbol";
+        break;
+
+    case protocol::type::JAVA_SCRIPT_SCOPE:
+        zAlias = "javascriptWithScope";
+        break;
+
+    case protocol::type::TIMESTAMP:
+        zAlias = "timestamp";
+        break;
+
+    case protocol::type::DECIMAL128:
+        zAlias = "decimal";
+        break;
+
+    case protocol::type::MIN_KEY:
+        zAlias = "minKey";
+        break;
+
+    case protocol::type::MAX_KEY:
+        zAlias = "maxKey";
+        break;
 
     default:
         {
@@ -2096,6 +2154,12 @@ string protocol_type_to_mariadb_type(int32_t number)
             throw SoftError(ss.str(), error::BAD_VALUE);
         };
     }
+
+    mxb_assert(zAlias);
+
+    ostringstream ss;
+    ss << "Unsupported type code: " << number << " (\"" << zAlias << "\")";
+    throw SoftError(ss.str(), error::BAD_VALUE);
 
     return nullptr;
 }

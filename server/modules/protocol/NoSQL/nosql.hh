@@ -53,13 +53,27 @@ namespace protocol
 
 namespace type
 {
-// These are the one we recognize, but there are more.
 const int32_t DOUBLE = 1;
 const int32_t STRING = 2;
 const int32_t OBJECT = 3;
 const int32_t ARRAY = 4;
+const int32_t BINARY = 5;
+const int32_t UNDEFINED = 6;
+const int32_t OBJECT_ID = 7;
 const int32_t BOOL = 8;
+const int32_t DATE = 9;
+const int32_t NULL_TYPE = 10;
+const int32_t REGEX = 11;
+const int32_t DB_POINTER = 12;
+const int32_t JAVA_SCRIPT = 13;
+const int32_t SYMBOL = 14;
+const int32_t JAVA_SCRIPT_SCOPE = 15;
 const int32_t INT32 = 16;
+const int32_t TIMESTAMP = 17;
+const int32_t INT64 = 18;
+const int32_t DECIMAL128 = 19;
+const int32_t MIN_KEY = -1;
+const int32_t MAX_KEY = 127;
 };
 
 namespace alias
