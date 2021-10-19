@@ -264,8 +264,8 @@ export default {
                 object: this.formData.table_opts_data,
             })
             const keys = Object.keys(diff)
-            const lastIdx = keys.length - 1
             keys.forEach((key, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
                 switch (key) {
                     case 'table_name':
                         sql += `RENAME TO ${escape(dbName)}.${escape(diff[key])}`
@@ -283,7 +283,6 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql += this.handleAddComma({ ignore: i === lastIdx })
             })
             return sql
         },
@@ -295,10 +294,9 @@ export default {
          */
         buildDropColSql({ removedCols, sql }) {
             const { escapeIdentifiers: escape } = this.$help
-            const lastIdx = removedCols.length - 1
             removedCols.forEach((row, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
                 sql += `DROP COLUMN ${escape(row.column_name)}`
-                sql += this.handleAddComma({ ignore: i === lastIdx })
             })
             return sql
         },
@@ -309,15 +307,13 @@ export default {
          * @returns {String} - return new alter sql statement
          */
         handleBuildColDfnSQL({ updatedCols, sql }) {
-            const lastIdx = updatedCols.length - 1
             updatedCols.forEach((col, i) => {
-                let hasColDfnChanged = false
-                // iterates through all diff of a column
-                col.diff.forEach(d => {
-                    if (d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ')
-                        hasColDfnChanged = true
-                })
+                // iterates through all diff of a column to check if col definition has changed
+                const hasColDfnChanged = col.diff.some(
+                    d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
+                )
                 if (hasColDfnChanged) {
+                    sql += this.handleAddComma({ ignore: i === 0 })
                     const { escapeIdentifiers: escape } = this.$help
                     const { column_name: oldName } = col.oriObj
                     const {
@@ -341,7 +337,6 @@ export default {
                     if (AI) sql += ` ${AI}`
                     if (def) sql += ` DEFAULT ${def}`
                     if (comment) sql += ` COMMENT '${comment}'`
-                    sql += this.handleAddComma({ ignore: i === lastIdx })
                 }
             })
             return sql
