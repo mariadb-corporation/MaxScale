@@ -266,6 +266,16 @@ bool ClientConnection::setup_session()
     m_session_data.client_caps.ext_capabilities = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
     auth_data.collation = 33;       // UTF8
 
+    // The statement is injected into the session history before the session
+    // is started. That way it will be executed on all servers, irrespective
+    // of when a connection to a particular server is created.
+    uint32_t id = 1;
+    GWBUF* pStmt = modutil_create_query("set names utf8mb4 collate utf8mb4_bin");
+    gwbuf_set_id(pStmt, id);
+
+    m_session_data.history.push_back(mxs::Buffer(pStmt));
+    m_session_data.history_responses.insert(std::make_pair(id, true));
+
     return m_session.start();
 }
 
