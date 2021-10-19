@@ -91,6 +91,7 @@
  * on-change-charset: (cell)
  * on-change-AI: (cell)
  * on-change-PK: (cell)
+ * on-change-NN: (cell)
  * Event for normal cell
  * on-change: (cell)
  */
@@ -273,6 +274,7 @@ export default {
                         }
                         if (field === 'AI') this.$emit('on-change-AI', newInput)
                         else if (field === 'PK') this.$emit('on-change-PK', newInput)
+                        else if (field === 'NN') this.$emit('on-change-NN', newInput)
                         else this.$emit('on-change', newInput)
                         break
                     }
