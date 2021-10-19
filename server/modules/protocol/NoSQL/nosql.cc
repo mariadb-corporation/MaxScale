@@ -38,31 +38,77 @@ namespace nosql
 namespace protocol
 {
 
-namespace alias
-{
-
-const char* DOUBLE = "double";
-const char* STRING = "string";
-const char* OBJECT = "object";
-const char* ARRAY  = "array";
-const char* BOOL   = "bool";
-const char* INT32  = "int";
-
-}
-
 namespace
 {
 
 const std::unordered_map<string, int32_t> alias_type_mapping =
 {
-    { alias::DOUBLE, type::DOUBLE },
-    { alias::STRING, type::STRING },
-    { alias::OBJECT, type::OBJECT },
-    { alias::ARRAY,  type::ARRAY },
-    { alias::BOOL,   type::BOOL },
-    { alias::INT32,  type::INT32 },
+    { alias::DOUBLE,           type::DOUBLE },
+    { alias::STRING,           type::STRING },
+    { alias::OBJECT,           type::OBJECT },
+    { alias::ARRAY,            type::ARRAY },
+    { alias::BIN_DATA,         type::BIN_DATA },
+    { alias::UNDEFINED,        type::UNDEFINED },
+    { alias::OBJECT_ID,        type::OBJECT_ID },
+    { alias::BOOL,             type::BOOL },
+    { alias::DATE,             type::DATE },
+    { alias::NULL_ALIAS,       type::NULL_TYPE },
+    { alias::REGEX,            type::REGEX },
+    { alias::DB_POINTER,       type::DB_POINTER },
+    { alias::JAVASCRIPT,       type::JAVASCRIPT },
+    { alias::SYMBOL,           type::SYMBOL },
+    { alias::JAVASCRIPT_SCOPE, type::JAVASCRIPT },
+    { alias::INT32,            type::INT32 },
+    { alias::TIMESTAMP,        type::TIMESTAMP },
+    { alias::INT64,            type::INT64 },
+    { alias::DECIMAL128,       type::DECIMAL128 },
+    { alias::MIN_KEY,          type::MIN_KEY },
+    { alias::MAX_KEY,          type::MAX_KEY },
 };
 
+}
+
+namespace alias
+{
+
+const char* DOUBLE           = "double";
+const char* STRING           = "string";
+const char* OBJECT           = "object";
+const char* ARRAY            = "array";
+const char* BIN_DATA         = "binData";
+const char* UNDEFINED        = "undefined";
+const char* OBJECT_ID        = "objectId";
+const char* BOOL             = "bool";
+const char* DATE             = "date";
+const char* NULL_ALIAS       = "date";
+const char* REGEX            = "regex";
+const char* DB_POINTER       = "dbPointer";
+const char* JAVASCRIPT       = "javacript";
+const char* SYMBOL           = "symbol";
+const char* JAVASCRIPT_SCOPE = "javacriptWithScope";
+const char* INT32            = "int";
+const char* TIMESTAMP        = "timestamp";
+const char* INT64            = "long";
+const char* DECIMAL128       = "decimal";
+const char* MIN_KEY          = "minKey";
+const char* MAX_KEY          = "maxKey";
+
+}
+
+string type::to_alias(int32_t type)
+{
+    // Slow, but only needed during error reporting.
+
+    for (const auto& kv : alias_type_mapping)
+    {
+        if (kv.second == type)
+        {
+            return kv.first;
+        }
+    }
+
+    mxb_assert(!true);
+    return "unknown";
 }
 
 int32_t alias::to_type(const string& alias)
@@ -2069,8 +2115,6 @@ string array_op_to_condition(const Path::Incarnation& p,
 
 string protocol_type_to_mariadb_type(int32_t number)
 {
-    const char* zAlias = nullptr;
-
     switch (number)
     {
     case protocol::type::DOUBLE:
@@ -2095,56 +2139,19 @@ string protocol_type_to_mariadb_type(int32_t number)
     case protocol::type::INT64:
         return "'INTEGER'";
 
-    case protocol::type::BINARY:
-        zAlias = "binData";
-        break;
-
+    case protocol::type::BIN_DATA:
     case protocol::type::UNDEFINED:
-        zAlias = "undefined";
-        break;
-
     case protocol::type::OBJECT_ID:
-        zAlias = "objectId";
-        break;
-
     case protocol::type::DATE:
-        zAlias = "date";
-        break;
-
     case protocol::type::REGEX:
-        zAlias = "regex";
-        break;
-
     case protocol::type::DB_POINTER:
-        zAlias = "dbPointer";
-        break;
-
-    case protocol::type::JAVA_SCRIPT:
-        zAlias = "javascript";
-        break;
-
+    case protocol::type::JAVASCRIPT:
     case protocol::type::SYMBOL:
-        zAlias = "symbol";
-        break;
-
-    case protocol::type::JAVA_SCRIPT_SCOPE:
-        zAlias = "javascriptWithScope";
-        break;
-
+    case protocol::type::JAVASCRIPT_SCOPE:
     case protocol::type::TIMESTAMP:
-        zAlias = "timestamp";
-        break;
-
     case protocol::type::DECIMAL128:
-        zAlias = "decimal";
-        break;
-
     case protocol::type::MIN_KEY:
-        zAlias = "minKey";
-        break;
-
     case protocol::type::MAX_KEY:
-        zAlias = "maxKey";
         break;
 
     default:
@@ -2155,10 +2162,8 @@ string protocol_type_to_mariadb_type(int32_t number)
         };
     }
 
-    mxb_assert(zAlias);
-
     ostringstream ss;
-    ss << "Unsupported type code: " << number << " (\"" << zAlias << "\")";
+    ss << "Unsupported type code: " << number << " (\"" << protocol::type::to_alias(number) << "\")";
     throw SoftError(ss.str(), error::BAD_VALUE);
 
     return nullptr;

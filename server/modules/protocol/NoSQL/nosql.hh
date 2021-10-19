@@ -57,7 +57,7 @@ const int32_t DOUBLE = 1;
 const int32_t STRING = 2;
 const int32_t OBJECT = 3;
 const int32_t ARRAY = 4;
-const int32_t BINARY = 5;
+const int32_t BIN_DATA = 5;
 const int32_t UNDEFINED = 6;
 const int32_t OBJECT_ID = 7;
 const int32_t BOOL = 8;
@@ -65,15 +65,18 @@ const int32_t DATE = 9;
 const int32_t NULL_TYPE = 10;
 const int32_t REGEX = 11;
 const int32_t DB_POINTER = 12;
-const int32_t JAVA_SCRIPT = 13;
+const int32_t JAVASCRIPT = 13;
 const int32_t SYMBOL = 14;
-const int32_t JAVA_SCRIPT_SCOPE = 15;
+const int32_t JAVASCRIPT_SCOPE = 15;
 const int32_t INT32 = 16;
 const int32_t TIMESTAMP = 17;
 const int32_t INT64 = 18;
 const int32_t DECIMAL128 = 19;
 const int32_t MIN_KEY = -1;
 const int32_t MAX_KEY = 127;
+
+std::string to_alias(int32_t type);
+
 };
 
 namespace alias
@@ -82,8 +85,23 @@ extern const char* DOUBLE;
 extern const char* STRING;
 extern const char* OBJECT;
 extern const char* ARRAY;
+extern const char* BIN_DATA;
+extern const char* UNDEFINED;
+extern const char* OBJECT_ID;
 extern const char* BOOL;
+extern const char* DATE;
+extern const char* NULL_ALIAS;
+extern const char* REGEX;
+extern const char* DB_POINTER;
+extern const char* JAVASCRIPT;
+extern const char* SYMBOL;
+extern const char* JAVASCRIPT_SCOPE;
 extern const char* INT32;
+extern const char* TIMESTAMP;
+extern const char* INT64;
+extern const char* DECIMAL128;
+extern const char* MIN_KEY;
+extern const char* MAX_KEY;
 
 int32_t to_type(const std::string& alias);
 
