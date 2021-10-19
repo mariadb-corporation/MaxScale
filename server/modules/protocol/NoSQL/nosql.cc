@@ -2290,7 +2290,10 @@ string regex_to_condition(const Path::Incarnation& p,
 
     ss2 << regex;
 
-    ss1 << "REGEXP '" << escape_essential_chars(ss2.str()) << "')";
+    ss1 << "REGEXP '" << escape_essential_chars(ss2.str()) << "' OR ";
+
+    ss1 << "JSON_COMPACT(JSON_QUERY(doc, '$." << p.path() << "')) = "
+        << "JSON_COMPACT(JSON_OBJECT(\"$regex\", \"" << regex << "\", \"$options\", \"" << options <<"\")))";
 
     return ss1.str();
 }
