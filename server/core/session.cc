@@ -1453,6 +1453,30 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
 // SESSION_TRACK_TRANSACTION_CHARACTERISTICS to track transaction state.
 void Session::parse_and_set_trx_state(const mxs::Reply& reply)
 {
+    // TODO: Remove these in 6 when this code is moved into mariadb_client.cc and
+    // the real declaractions become visible.
+    const uint16_t SERVER_STATUS_IN_TRANS = 1;
+    const uint16_t SERVER_STATUS_AUTOCOMMIT = 2;
+    const uint16_t SERVER_STATUS_IN_TRANS_READONLY = 8192;
+
+    uint16_t status = reply.server_status();
+    bool in_trx = status & (SERVER_STATUS_IN_TRANS | SERVER_STATUS_IN_TRANS_READONLY);
+    bool is_autocommit = status & SERVER_STATUS_AUTOCOMMIT;
+    uint32_t trx_type = SESSION_TRX_INACTIVE;
+
+    if (!is_autocommit || in_trx)
+    {
+        trx_type = SESSION_TRX_ACTIVE;
+
+        if (status & SERVER_STATUS_IN_TRANS_READONLY)
+        {
+            trx_type |= SESSION_TRX_READ_ONLY;
+        }
+    }
+
+    set_autocommit(is_autocommit);
+    set_trx_state(trx_type);
+
     auto autocommit = reply.get_variable("autocommit");
 
     if (!autocommit.empty())

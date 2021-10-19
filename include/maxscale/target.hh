@@ -585,6 +585,11 @@ public:
     uint16_t num_warnings() const;
 
     /**
+     * The latest status of the server, read from OK and EOF packets
+     */
+    uint16_t server_status() const;
+
+    /**
      * Number of bytes received
      */
     uint64_t size() const;
@@ -637,6 +642,8 @@ public:
 
     void set_num_warnings(uint16_t warnings);
 
+    void set_server_status(uint16_t status);
+
     void clear();
 
     template<typename ... Args>
@@ -654,6 +661,7 @@ private:
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
     uint16_t              m_num_warnings {0};
+    uint16_t              m_server_status {0};
     bool                  m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
 
