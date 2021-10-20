@@ -98,7 +98,7 @@ template<class ConcreteCommand>
 unique_ptr<OpMsgCommand> create_default_command(const string& name,
                                                 Database* pDatabase,
                                                 GWBUF* pRequest,
-                                                Msg&& msg)
+                                                packet::Msg&& msg)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -111,7 +111,7 @@ template<class ConcreteCommand>
 unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
                                                  Database* pDatabase,
                                                  GWBUF* pRequest,
-                                                 Msg&& msg,
+                                                 packet::Msg&& msg,
                                                  const bsoncxx::document::view& doc,
                                                  const OpMsgCommand::DocumentArguments& arguments)
 {
@@ -125,12 +125,12 @@ unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
 using CreateDefaultFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                            Database* pDatabase,
                                                            GWBUF* pRequest,
-                                                           Msg&& msg);
+                                                           packet::Msg&& msg);
 
 using CreateDiagnoseFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                             Database* pDatabase,
                                                             GWBUF* pRequest,
-                                                            Msg&& msg,
+                                                            packet::Msg&& msg,
                                                             const bsoncxx::document::view& doc,
                                                             const OpMsgCommand::DocumentArguments& arguments);
 
@@ -499,7 +499,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     if (append_checksum)
     {
-        flag_bits |= Msg::CHECKSUM_PRESENT;
+        flag_bits |= packet::Msg::CHECKSUM_PRESENT;
         response_size += sizeof(uint32_t); // sizeof checksum
     }
 
@@ -1467,7 +1467,7 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           nosql::Msg&& msg)
+                                           packet::Msg&& msg)
 {
     auto p = get_info(msg.document());
 
@@ -1480,7 +1480,7 @@ unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           nosql::Msg&& msg,
+                                           packet::Msg&& msg,
                                            const bsoncxx::document::view& doc,
                                            const DocumentArguments& arguments)
 {

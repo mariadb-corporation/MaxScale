@@ -658,6 +658,8 @@ std::string update_specification_to_set_value(const bsoncxx::document::view& upd
 
 std::string update_specification_to_set_value(const bsoncxx::document::view& update_specification);
 
+namespace packet
+{
 
 class Packet
 {
@@ -1298,6 +1300,8 @@ private:
     DocumentArguments       m_arguments;
 };
 
+}
+
 class Database;
 
 class NoSQL
@@ -1420,13 +1424,13 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    State handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse);
-    State handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse);
-    State handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse);
-    State handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse);
-    State handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse);
-    State handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse);
-    State handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse);
+    State handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse);
+    State handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse);
+    State handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse);
+    State handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse);
+    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse);
+    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse);
+    State handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse);
 
     State              m_state { State::READY };
     Context            m_context;

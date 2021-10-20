@@ -2831,6 +2831,12 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
 namespace nosql
 {
 
+//
+// nosql::packet
+//
+namespace packet
+{
+
 Insert::Insert(const Packet& packet)
     : Packet(packet)
 {
@@ -3116,6 +3122,8 @@ Msg::Msg(const Packet& packet)
         ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
         throw std::runtime_error(ss.str());
     }
+}
+
 }
 
 //
@@ -4098,7 +4106,7 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
         try
         {
             // If no database operation is in progress, we proceed.
-            nosql::Packet req(pRequest);
+            packet::Packet req(pRequest);
 
             mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
 
@@ -4114,31 +4122,31 @@ State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
                 break;
 
             case MONGOC_OPCODE_GET_MORE:
-                state = handle_get_more(pRequest, nosql::GetMore(req), &pResponse);
+                state = handle_get_more(pRequest, packet::GetMore(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_KILL_CURSORS:
-                state = handle_kill_cursors(pRequest, nosql::KillCursors(req), &pResponse);
+                state = handle_kill_cursors(pRequest, packet::KillCursors(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_DELETE:
-                state = handle_delete(pRequest, nosql::Delete(req), &pResponse);
+                state = handle_delete(pRequest, packet::Delete(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_INSERT:
-                state = handle_insert(pRequest, nosql::Insert(req), &pResponse);
+                state = handle_insert(pRequest, packet::Insert(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_MSG:
-                state = handle_msg(pRequest, nosql::Msg(req), &pResponse);
+                state = handle_msg(pRequest, packet::Msg(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                state = handle_query(pRequest, nosql::Query(req), &pResponse);
+                state = handle_query(pRequest, packet::Query(req), &pResponse);
                 break;
 
             case MONGOC_OPCODE_UPDATE:
-                state = handle_update(pRequest, nosql::Update(req), &pResponse);
+                state = handle_update(pRequest, packet::Update(req), &pResponse);
                 break;
 
             default:
@@ -4224,7 +4232,7 @@ void NoSQL::kill_client()
     m_context.client_connection().dcb()->session()->kill();
 }
 
-State NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
+State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
 
@@ -4241,7 +4249,7 @@ State NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppRespo
     return state;
 }
 
-State NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
+State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
 
@@ -4258,7 +4266,7 @@ State NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppRespo
     return state;
 }
 
-State NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
+State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
 
@@ -4275,7 +4283,7 @@ State NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppRespo
     return state;
 }
 
-State NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
+State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
 
@@ -4292,7 +4300,7 @@ State NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppRespons
     return state;
 }
 
-State NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
+State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
 
@@ -4309,7 +4317,7 @@ State NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppRe
     return state;
 }
 
-State NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
+State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
 
@@ -4326,7 +4334,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBU
     return state;
 }
 
-State NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
+State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(MSG): %s", req.to_string().c_str());
 

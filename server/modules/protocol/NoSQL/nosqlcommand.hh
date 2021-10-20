@@ -195,13 +195,13 @@ protected:
 //
 // OpDeleteCommand
 //
-class OpDeleteCommand : public PacketCommand<nosql::Delete>
+class OpDeleteCommand : public PacketCommand<packet::Delete>
 {
 public:
     OpDeleteCommand(Database* pDatabase,
                     GWBUF* pRequest,
-                    nosql::Delete&& req)
-        : PacketCommand<nosql::Delete>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+                    packet::Delete&& req)
+        : PacketCommand<packet::Delete>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -215,7 +215,7 @@ public:
 //
 // OpInsertCommand
 //
-class OpInsertCommand : public PacketCommand<nosql::Insert>
+class OpInsertCommand : public PacketCommand<packet::Insert>
 {
 public:
     enum Action
@@ -227,8 +227,8 @@ public:
 
     OpInsertCommand(Database* pDatabase,
                     GWBUF* pRequest,
-                    nosql::Insert&& req)
-        : PacketCommand<nosql::Insert>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+                    packet::Insert&& req)
+        : PacketCommand<packet::Insert>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
         , m_action(INSERTING_DATA)
     {
         mxb_assert(m_req.documents().size() == 1);
@@ -252,13 +252,13 @@ private:
 //
 // OpUpdateCommand
 //
-class OpUpdateCommand : public PacketCommand<nosql::Update>
+class OpUpdateCommand : public PacketCommand<packet::Update>
 {
 public:
     OpUpdateCommand(Database* pDatabase,
                     GWBUF* pRequest,
-                    nosql::Update&& req)
-        : PacketCommand<nosql::Update>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+                    packet::Update&& req)
+        : PacketCommand<packet::Update>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -296,13 +296,13 @@ private:
 //
 // OpQueryCommand
 //
-class OpQueryCommand : public PacketCommand<nosql::Query>
+class OpQueryCommand : public PacketCommand<packet::Query>
 {
 public:
     OpQueryCommand(Database* pDatabase,
                    GWBUF* pRequest,
-                   nosql::Query&& req)
-        : PacketCommand<nosql::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
+                   packet::Query&& req)
+        : PacketCommand<packet::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
     {
     }
 
@@ -325,13 +325,13 @@ private:
 //
 // OpGetMoreCommand
 //
-class OpGetMoreCommand : public PacketCommand<nosql::GetMore>
+class OpGetMoreCommand : public PacketCommand<packet::GetMore>
 {
 public:
     OpGetMoreCommand(Database* pDatabase,
                      GWBUF* pRequest,
-                     nosql::GetMore&& req)
-        : PacketCommand<nosql::GetMore>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
+                     packet::GetMore&& req)
+        : PacketCommand<packet::GetMore>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
     {
     }
 
@@ -345,13 +345,13 @@ public:
 //
 // OpKillCursorsCommand
 //
-class OpKillCursorsCommand : public PacketCommand<nosql::KillCursors>
+class OpKillCursorsCommand : public PacketCommand<packet::KillCursors>
 {
 public:
     OpKillCursorsCommand(Database* pDatabase,
                          GWBUF* pRequest,
-                         nosql::KillCursors&& req)
-        : PacketCommand<nosql::KillCursors>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+                         packet::KillCursors&& req)
+        : PacketCommand<packet::KillCursors>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -374,7 +374,7 @@ public:
     OpMsgCommand(const std::string& name,
                  Database* pDatabase,
                  GWBUF* pRequest,
-                 nosql::Msg&& req)
+                 packet::Msg&& req)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
         , m_name(name)
         , m_req(std::move(req))
@@ -386,7 +386,7 @@ public:
     OpMsgCommand(const std::string& name,
                  Database* pDatabase,
                  GWBUF* pRequest,
-                 nosql::Msg&& req,
+                 packet::Msg&& req,
                  const bsoncxx::document::view& doc,
                  const DocumentArguments& arguments)
         : Command(pDatabase, pRequest, req.request_id(), response_kind(req))
@@ -397,13 +397,13 @@ public:
     {
     }
 
-    static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
+    static std::unique_ptr<OpMsgCommand> get(Database* pDatabase,
                                              GWBUF* pRequest,
-                                             nosql::Msg&& req);
+                                             packet::Msg&& req);
 
-    static std::unique_ptr<OpMsgCommand> get(nosql::Database* pDatabase,
+    static std::unique_ptr<OpMsgCommand> get(Database* pDatabase,
                                              GWBUF* pRequest,
-                                             nosql::Msg&& req,
+                                             packet::Msg&& req,
                                              const bsoncxx::document::view& doc,
                                              const DocumentArguments& arguments);
 
@@ -540,12 +540,12 @@ protected:
     virtual void interpret_error(bsoncxx::builder::basic::document& error, const ComERR& err, int index);
 
     const std::string              m_name;
-    const nosql::Msg               m_req;
+    const packet::Msg              m_req;
     const bsoncxx::document::view& m_doc;
     const DocumentArguments&       m_arguments;
 
 private:
-    ResponseKind response_kind(const Msg& req)
+    ResponseKind response_kind(const packet::Msg& req)
     {
         return req.checksum_present() ? ResponseKind::MSG_WITH_CHECKSUM : ResponseKind::MSG;
     }
