@@ -60,42 +60,6 @@ inline bool modutil_is_SQL_prepare(GWBUF* buf)
     return ptr[4] == 0x16;          // COM_STMT_PREPARE
 }
 
-/**
- * Extract the SQL portion of a COM_QUERY packet
- *
- * NB This sets *sql to point into the packet and does not
- * allocate any new storage. The string pointed to by *sql is
- * not NULL terminated.
- *
- * This routine is very simplistic and does not deal with SQL text
- * that spans multiple buffers.
- *
- * The length returned is the complete length of the SQL, which may
- * be larger than the amount of data in this packet.
- *
- * @param       buf     The packet buffer
- * @param       sql     Pointer that is set to point at the SQL data
- * @param       length  Length of the SQL query data
- * @return      True if the packet is a COM_QUERY packet
- */
-inline bool modutil_extract_SQL(GWBUF* buf, char** sql, int* length)
-{
-    unsigned char* ptr;
-
-    if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
-    {
-        return 0;
-    }
-    ptr = GWBUF_DATA(buf);
-    *length = *ptr++;
-    *length += (*ptr++ << 8);
-    *length += (*ptr++ << 16);
-    ptr += 2;   // Skip sequence id  and COM_QUERY byte
-    *length = *length - 1;
-    *sql = (char*)ptr;
-    return 1;
-}
-
 extern char*  modutil_get_SQL(GWBUF*);
 extern GWBUF* modutil_replace_SQL(GWBUF*, const char*);
 
@@ -148,6 +112,7 @@ std::string        extract_sql_real(const GWBUF* pBuf, size_t len = -1);
 const std::string& extract_sql(const GWBUF* pBuf, size_t len = -1);
 const std::string& extract_sql(const mxs::Buffer& buffer, size_t len = -1);
 
+
 /**
  * Extract error messages from buffers
  *
@@ -166,4 +131,32 @@ std::string extract_error(GWBUF* buffer);
  * @return A buffer with at most `ptk` packets in it
  */
 GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
+}
+
+/**
+ * Extract the SQL portion of a COM_QUERY packet
+ *
+ * NB This sets *sql to point into the packet and does not
+ * allocate any new storage. The string pointed to by *sql is
+ * not NULL terminated.
+ *
+ * This routine is very simplistic and does not deal with SQL text
+ * that spans multiple buffers.
+ *
+ * The length returned is the complete length of the SQL, which may
+ * be larger than the amount of data in this packet.
+ *
+ * @param       buf     The packet buffer
+ * @param       sql     Pointer that is set to point at the SQL data
+ * @param       length  Length of the SQL query data
+ * @return      True if the packet is a COM_QUERY packet
+ */
+inline bool modutil_extract_SQL(GWBUF* buf, char** pSql, int* length)
+{
+    const auto& sql = maxscale::extract_sql(buf);
+
+    *pSql = const_cast<char*>(sql.c_str());
+    *length = sql.length();
+
+    return 1;   // TODO is this used? Not returning what is advertised
 }
