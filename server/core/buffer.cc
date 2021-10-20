@@ -236,7 +236,6 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     ++buf->sbuf->refcount;
 
     auto* rval = new GWBUF(0, nullptr);
-    rval->server = buf->server;
     rval->sbuf = buf->sbuf;
     rval->start = buf->start;
     rval->end = buf->end;

@@ -88,7 +88,6 @@ public:
     uint8_t*    end {nullptr};                      /*< First byte after the valid data */
     SHARED_BUF* sbuf {nullptr};                     /*< The shared buffer with the real data */
     HintVector  hints;                              /*< Hint data for this buffer */
-    SERVER*     server {nullptr};                   /*< The target server where the buffer is executed */
     uint32_t    gwbuf_type {GWBUF_TYPE_UNDEFINED};  /*< buffer's data type information */
     uint32_t    id {0};                             /*< Unique ID for this buffer, 0 if no ID is assigned */
 #ifdef SS_DEBUG
