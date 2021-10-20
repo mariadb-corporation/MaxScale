@@ -1579,70 +1579,6 @@ string elemMatch_to_json_contains(const Path::Incarnation& p, const bsoncxx::doc
 
 }
 
-string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
-{
-    string condition;
-
-    if (element.type() != bsoncxx::type::k_document)
-    {
-        throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
-    }
-
-    bsoncxx::document::view doc = element.get_document();
-
-    if (doc.empty())
-    {
-        condition = "true";
-    }
-    else
-    {
-        condition = elemMatch_to_json_contains(*this, doc);
-    }
-
-    return condition;
-}
-
-string Path::Incarnation::exists_to_condition(const bsoncxx::document::element& element) const
-{
-    string rv("(");
-
-    bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
-
-    if (b)
-    {
-        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NOT NULL";
-    }
-    else
-    {
-        bool close = false;
-        if (!has_array_demand())
-        {
-            if (has_parent())
-            {
-                rv += "JSON_QUERY(doc, '$." + parent_path() + "') IS NULL OR "
-                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent_path() + "')) = 'OBJECT'"
-                    " AND ";
-                close = true;
-            }
-        }
-        else
-        {
-            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + array_path() + "')) = 'ARRAY' AND ";
-        }
-
-        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NULL";
-
-        if (close)
-        {
-            rv += ")";
-        }
-    }
-
-    rv += ")";
-
-    return rv;
-}
-
 namespace
 {
 
@@ -1953,166 +1889,6 @@ void add_element_array(ostream& ss,
 
 }
 
-string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element& element,
-                                                ArrayOp array_op) const
-{
-    const char* zDescription = to_description(array_op);
-
-    if (element.type() != bsoncxx::type::k_array)
-    {
-        ostringstream ss;
-        ss << zDescription << " needs an array";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-
-    ostringstream ss;
-
-    bsoncxx::array::view all_elements = element.get_array();
-
-    if (all_elements.empty())
-    {
-        ss << "(true = false)";
-    }
-    else
-    {
-        // TODO: We have this information higher up already.
-        string field = path();
-        auto i = field.find_last_of('.');
-        bool is_scoped = (i != string::npos);
-
-        ss << "(";
-
-        if (array_op == ArrayOp::AND)
-        {
-            if (is_scoped)
-            {
-                string path;
-                path = field.substr(0, i);
-                path += "[*].";
-                path += field.substr(i + 1);
-
-                ss << "(";
-                bool add_or = false;
-                for (auto f : { field, path })
-                {
-                    if (add_or)
-                    {
-                        ss << " OR ";
-                    }
-                    else
-                    {
-                        add_or = true;
-                    }
-
-                    add_element_array(ss, is_scoped, f, zDescription, all_elements);
-                };
-                ss << ")";
-            }
-            else
-            {
-                add_element_array(ss, is_scoped, field, zDescription, all_elements);
-            }
-        }
-        else
-        {
-            mxb_assert(array_op == ArrayOp::OR);
-
-            ss << "(";
-
-            bool first_element = true;
-            for (const auto& one_element : all_elements)
-            {
-                if (first_element)
-                {
-                    first_element = false;
-                }
-                else
-                {
-                    ss << " OR ";
-                }
-
-                auto type = one_element.type();
-
-                switch (type)
-                {
-                case bsoncxx::type::k_null:
-                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
-                    break;
-
-                case bsoncxx::type::k_regex:
-                    ss << "(false)";
-                    break;
-
-                default:
-                    {
-                        if (is_scoped)
-                        {
-                            string path;
-                            path = field.substr(0, i);
-                            path += "[*].";
-                            path += field.substr(i + 1);
-
-                            ss << "(";
-                            bool add_or = false;
-                            for (auto p : { field, path })
-                            {
-                                if (add_or)
-                                {
-                                    ss << " OR ";
-                                }
-                                else
-                                {
-                                    add_or = true;
-                                }
-
-                                if (one_element.type() != bsoncxx::type::k_regex)
-                                {
-                                    ss << "(JSON_CONTAINS(";
-                                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                       << element_to_value(one_element, ValueFor::JSON, zDescription)
-                                       << ")) = 1)";
-                                }
-                                else
-                                {
-                                    ss << "false";
-                                }
-
-                                if (one_element.type() != bsoncxx::type::k_document)
-                                {
-                                    ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
-                                       << element_to_value(one_element, ValueFor::SQL, zDescription)
-                                       << ")";
-                                }
-                            }
-                            ss << ")";
-                        }
-                        else
-                        {
-                            ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                               << element_to_value(one_element, ValueFor::JSON, zDescription)
-                               << "), '$." << field << "') = 1)";
-
-                            if (one_element.type() != bsoncxx::type::k_document)
-                            {
-                                ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
-                                   << element_to_value(one_element, ValueFor::SQL, zDescription)
-                                   << ")";
-                            }
-                        }
-                    }
-                }
-            }
-
-            ss << ")";
-        }
-
-        ss << ")";
-    }
-
-    return ss.str();
-}
-
 namespace
 {
 
@@ -2278,106 +2054,6 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
     return rv;
 }
 
-}
-
-string Path::Incarnation::type_to_condition(const bsoncxx::document::element& element) const
-{
-    string rv;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view all_elements = element.get_array();
-
-        if (all_elements.empty())
-        {
-            // Yes, this is what MongoDB returns.
-            throw SoftError("a must match at least one type", error::FAILED_TO_PARSE);
-        }
-
-        ostringstream ss;
-        ss << "(";
-
-        bool first = true;
-        for (const auto& one_element : all_elements)
-        {
-            if (first)
-            {
-                first = false;
-            }
-            else
-            {
-                ss << " OR ";
-            }
-
-            ss << type_to_condition_from_value(*this, one_element);
-        }
-
-        ss << ")";
-
-        rv = ss.str();
-    }
-    else
-    {
-        rv = type_to_condition_from_value(*this, element);
-    }
-
-    return rv;
-}
-
-string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& element) const
-{
-    if (element.type() != bsoncxx::type::k_array)
-    {
-        throw SoftError("malformed mod, needs to be an array", error::BAD_VALUE);
-    }
-
-    bsoncxx::array::view arguments = element.get_array();
-
-    auto n = std::distance(arguments.begin(), arguments.end());
-
-    const char* zMessage = nullptr;
-    switch (n)
-    {
-    case 0:
-    case 1:
-        zMessage = "malformed mod, not enough elements";
-        break;
-
-    case 2:
-        break;
-
-    default:
-        zMessage = "malformed mod, too many elements";
-    }
-
-    if (zMessage)
-    {
-        throw SoftError(zMessage, error::BAD_VALUE);
-    }
-
-    int64_t divisor;
-    if (!get_number_as_integer(arguments[0], &divisor))
-    {
-        throw SoftError("malformed mod, divisor is not a number", error::BAD_VALUE);
-    }
-
-    if (divisor == 0)
-    {
-        throw SoftError("divisor cannot be 0", error::BAD_VALUE);
-    }
-
-    int64_t remainder;
-    if (!get_number_as_integer(arguments[1], &remainder))
-    {
-        throw SoftError("malformed mod, remainder is not a number", error::BAD_VALUE);
-    }
-
-    ostringstream ss;
-    ss << "((JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'INTEGER' || "
-       << "JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'DOUBLE') AND "
-       << "(MOD(JSON_VALUE(doc, '$." << path() << "'), " << divisor << ") = " << remainder << "))";
-
-    return ss.str();
 }
 
 namespace
@@ -3434,597 +3110,6 @@ State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& re
     return state;
 }
 
-string Path::Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
-{
-    string field = path();
-    string condition;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_document:
-        condition = get_comparison_condition(element.get_document());
-        break;
-
-    case bsoncxx::type::k_regex:
-        condition = regex_to_condition(*this, element.get_regex());
-        break;
-
-    case bsoncxx::type::k_null:
-        {
-            if (has_array_demand())
-            {
-                condition = "(JSON_TYPE(JSON_QUERY(doc, '$." + m_array_path + "')) = 'ARRAY' AND ";
-            }
-
-            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
-                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
-                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
-
-            if (has_array_demand())
-            {
-                condition += ")";
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_date:
-        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
-            + element_to_value(element, ValueFor::SQL) + ")";
-        break;
-
-    case bsoncxx::type::k_timestamp:
-        condition = timestamp_to_condition(*this, element.get_timestamp());
-        break;
-
-    case bsoncxx::type::k_array:
-        // TODO: This probably needs to be dealt with explicitly.
-    default:
-        {
-            condition
-                // Without the explicit check for NULL, this does not work when NOT due to $nor
-                // is stashed in front of the whole thing.
-                = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
-                + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
-                + element_to_value(element, ValueFor::JSON) + ") = 1)"
-                + " OR "
-                + "(JSON_VALUE(doc, '$." + field + "') = "
-                + element_to_value(element, ValueFor::SQL) + "))";
-        }
-    }
-
-    return condition;
-}
-
-string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view& doc) const
-{
-    string rv;
-
-    // TODO: The fact that $regex and $options are not independent but used together,
-    // TODO: means that, although that is handled here, it will, due to how things are
-    // TODO: handled at an upper level lead to the same condition being generated twice.
-    // TODO: It seems that all arguments should be investigated first, and only then should
-    // TODO: SQL be generated.
-    bool ignore_options = false;
-    bool ignore_regex = false;
-
-    auto it = doc.begin();
-    auto end = doc.end();
-    for (; it != end; ++it)
-    {
-        string condition;
-        string separator;
-
-        if (rv.empty())
-        {
-            rv += "(";
-        }
-        else
-        {
-            separator = " AND ";
-        }
-
-        const auto& element = *it;
-        const auto nosql_op = static_cast<string>(element.key());
-
-        auto jt = converters.find(nosql_op);
-
-        if (jt != converters.end())
-        {
-            const auto& mariadb_op = jt->second.mariadb_op;
-            const auto& value_to_string = jt->second.value_to_string;
-
-            condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
-                                                                 nosql_op, value_to_string);
-        }
-        else if (nosql_op == "$not")
-        {
-            if (element.type() != bsoncxx::type::k_document)
-            {
-                ostringstream ss;
-                ss << "$not needs a document (regex not yet supported)";
-
-                throw SoftError(ss.str(), error::BAD_VALUE);
-            }
-
-            auto doc = element.get_document();
-
-            condition = "(NOT " + get_comparison_condition(doc) + ")";
-        }
-        else if (nosql_op == "$elemMatch")
-        {
-            condition = elemMatch_to_condition(element);
-        }
-        else if (nosql_op == "$exists")
-        {
-            condition = exists_to_condition(element);
-        }
-        else if (nosql_op == "$size")
-        {
-            condition = "(JSON_LENGTH(doc, '$." + path() + "') = " +
-                element_to_value(element, ValueFor::SQL, nosql_op) + ")";
-        }
-        else if (nosql_op == "$all")
-        {
-            condition = array_op_to_condition(element, ArrayOp::AND);
-        }
-        else if (nosql_op == "$in")
-        {
-            condition = array_op_to_condition(element, ArrayOp::OR);
-        }
-        else if (nosql_op == "$type")
-        {
-            condition = type_to_condition(element);
-        }
-        else if (nosql_op == "$mod")
-        {
-            condition = mod_to_condition(element);
-        }
-        else if (nosql_op == "$regex")
-        {
-            if (!ignore_regex)
-            {
-                bsoncxx::document::element options;
-
-                auto jt = it;
-                ++jt;
-                while (jt != end)
-                {
-                    if (jt->key().compare("$options") == 0)
-                    {
-                        ignore_options = true;
-                        options = *jt;
-                        break;
-                    }
-                    ++jt;
-                }
-
-                condition = regex_to_condition(*this, element, options);
-            }
-        }
-        else if (nosql_op == "$options")
-        {
-            if (!ignore_options)
-            {
-                bsoncxx::document::element regex;
-
-                auto jt = it;
-                ++jt;
-                while (jt != end)
-                {
-                    if (jt->key().compare("$regex") == 0)
-                    {
-                        ignore_regex = true;
-                        regex = *jt;
-                        break;
-                    }
-                    ++jt;
-                }
-
-                condition = regex_to_condition(*this, regex, element);
-            }
-        }
-        else if (nosql_op.front() == '$')
-        {
-            ostringstream ss;
-            ss << "unknown operator: " << nosql_op;
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-        else
-        {
-            break;
-        }
-
-        if (!condition.empty())
-        {
-            rv += separator + condition;
-        }
-    }
-
-    if (it == end)
-    {
-        rv += ")";
-    }
-    else
-    {
-        // We are simply looking for an object.
-        // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
-        // TODO: a query like '{"a": {x: 1}}' will return them both, although MongoDB
-        // TODO: returns just the former.
-
-        ostringstream ss;
-        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << path() << "'), JSON_OBJECT(";
-
-        while (it != end)
-        {
-            auto element = *it;
-
-            ss << "\"" << element.key() << "\", ";
-            ss << element_to_value(element, ValueFor::JSON_NESTED);
-
-            if (++it != end)
-            {
-                ss << ", ";
-            }
-        }
-
-        ss << "))";
-
-        rv = ss.str();
-    }
-
-    return rv;
-}
-
-Path::Path(const bsoncxx::document::element& element)
-    : m_element(element)
-    , m_paths(get_incarnations(static_cast<string>(element.key())))
-{
-}
-
-// https://docs.mongodb.com/manual/reference/operator/query/#comparison
-string Path::get_comparison_condition() const
-{
-    string condition;
-
-    if (m_element.type() == bsoncxx::type::k_document)
-    {
-        condition = get_document_condition(m_element.get_document());
-    }
-    else
-    {
-        condition = get_element_condition(m_element);
-    }
-
-    return condition;
-}
-
-string Path::Part::name() const
-{
-    string rv;
-
-    switch (m_kind)
-    {
-    case Part::ELEMENT:
-        if (m_pParent)
-        {
-            rv = m_pParent->path() + ".";
-        }
-        rv += m_name;
-        break;
-
-    case Part::ARRAY:
-        if (m_pParent)
-        {
-            rv = m_pParent->path() + ".";
-        }
-        rv += m_name;
-        break;
-
-    case INDEXED_ELEMENT:
-        if (m_pParent)
-        {
-            rv = m_pParent->path();
-        }
-        rv += "[" + m_name + "]";
-        break;
-    }
-
-    return rv;
-}
-
-string Path::Part::path() const
-{
-    string rv;
-
-    switch (m_kind)
-    {
-    case Part::ELEMENT:
-        if (m_pParent)
-        {
-            rv = m_pParent->path() + ".";
-        }
-        rv += m_name;
-        break;
-
-    case Part::ARRAY:
-        if (m_pParent)
-        {
-            rv = m_pParent->path() + ".";
-        }
-        rv += m_name + "[*]";
-        break;
-
-    case INDEXED_ELEMENT:
-        if (m_pParent)
-        {
-            rv = m_pParent->path();
-        }
-        rv += "[" + m_name + "]";
-        break;
-    }
-
-    return rv;
-}
-
-//static
-vector<Path::Part*> Path::Part::get_leafs(const string& path, vector<std::unique_ptr<Part>>& parts)
-{
-    string::size_type i = 0;
-    string::size_type j = path.find_first_of('.', i);
-
-    vector<Part*> leafs;
-
-    while (j != string::npos)
-    {
-        string part = path.substr(i, j - i);
-
-        i = j + 1;
-        j = path.find_first_of('.', i);
-
-        add_part(part, false, leafs, parts);
-    }
-
-    add_part(path.substr(i, j), true, leafs, parts);
-
-    return leafs;
-}
-
-//static
-void Path::Part::add_leaf(const string& part,
-                          bool last,
-                          bool is_number,
-                          Part* pParent,
-                          vector<Part*>& leafs,
-                          vector<std::unique_ptr<Part>>& parts)
-{
-    parts.push_back(std::make_unique<Part>(Part::ELEMENT, part, pParent));
-    leafs.push_back(parts.back().get());
-
-    if (!last)
-    {
-        parts.push_back(std::make_unique<Part>(Part::ARRAY, part, pParent));
-        leafs.push_back(parts.back().get());
-    }
-
-    if (is_number && pParent && pParent->is_element())
-    {
-        parts.push_back(std::make_unique<Part>(Part::INDEXED_ELEMENT, part, pParent));
-        leafs.push_back(parts.back().get());
-    }
-}
-
-//static
-void Path::Part::add_part(const string& part,
-                          bool last,
-                          vector<Part*>& leafs,
-                          vector<std::unique_ptr<Part>>& parts)
-{
-    bool is_number = false;
-
-    char* zEnd;
-    auto l = strtol(part.c_str(), &zEnd, 10);
-
-    // Is the part a number?
-    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
-    {
-        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
-        // or the n'th element (e.g. { a: [ ... ] }).
-        is_number = true;
-    }
-
-    vector<Part*> tmp;
-
-    if (leafs.empty())
-    {
-        add_leaf(part, last, is_number, nullptr, tmp, parts);
-    }
-    else
-    {
-        for (auto& pLeaf : leafs)
-        {
-            add_leaf(part, last, is_number, pLeaf, tmp, parts);
-        }
-    }
-
-    tmp.swap(leafs);
-}
-
-//static
-std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
-{
-    vector<Incarnation> rv;
-    vector<std::unique_ptr<Part>> parts;
-    vector<Part*> leafs = Part::get_leafs(path, parts);
-
-    for (const Part* pLeaf : leafs)
-    {
-        string path = pLeaf->path();
-        Part* pParent = pLeaf->parent();
-
-        string parent_path;
-        string array_path;
-
-        if (pParent)
-        {
-            parent_path = pParent->name();
-
-            while (pLeaf && array_path.empty())
-            {
-                if (pLeaf->is_indexed_element() || (pParent && pParent->is_array()))
-                {
-                    array_path = pParent->name();
-                }
-                else if (pLeaf->is_element() && (pParent && pParent->is_indexed_element()))
-                {
-                    auto* pGramps = pParent->parent();
-                    if (pGramps)
-                    {
-                        array_path = pGramps->name();
-                    }
-                }
-
-                pLeaf = pParent;
-                if (pParent)
-                {
-                    pParent = pParent->parent();
-                }
-            }
-        }
-
-        rv.push_back(Incarnation(std::move(path), std::move(parent_path), std::move(array_path)));
-    }
-
-    return rv;
-}
-
-string Path::get_element_condition(const bsoncxx::document::element& element) const
-{
-    string condition;
-
-    if (m_paths.size() > 1)
-    {
-        condition += "(";
-    }
-
-    bool first = true;
-    for (const auto& p : m_paths)
-    {
-        if (first)
-        {
-            first = false;
-        }
-        else
-        {
-            condition += " OR ";
-        }
-
-        condition += "(" + p.get_comparison_condition(m_element) + ")";
-    }
-
-    if (m_paths.size() > 1)
-    {
-        condition += ")";
-    }
-
-    return condition;
-}
-
-string Path::get_document_condition(const bsoncxx::document::view& doc) const
-{
-    string condition;
-
-    auto it = doc.begin();
-    auto end = doc.end();
-
-    if (it == end)
-    {
-        bool first = true;
-        for (const auto& p : m_paths)
-        {
-            if (first)
-            {
-                first = false;
-            }
-            else
-            {
-                condition += " OR ";
-            }
-
-            condition += "(JSON_EXTRACT(doc, '$." + p.path() + "') = JSON_OBJECT() OR ";
-            condition += "(JSON_TYPE(JSON_EXTRACT(doc, '$." + p.path() + "')) = 'ARRAY' AND ";
-            condition += "JSON_CONTAINS(JSON_EXTRACT(doc, '$." + p.path() + "'), JSON_OBJECT())))";
-        }
-    }
-    else
-    {
-        for (; it != end; ++it)
-        {
-            auto element = *it;
-
-            if (!condition.empty())
-            {
-                condition += " AND ";
-            }
-
-            const auto nosql_op = static_cast<string>(element.key());
-
-            if (nosql_op == "$not")
-            {
-                if (element.type() != bsoncxx::type::k_document)
-                {
-                    ostringstream ss;
-                    ss << "$not needs a document (regex not yet supported)";
-
-                    throw SoftError(ss.str(), error::BAD_VALUE);
-                }
-
-                bsoncxx::document::view doc = element.get_document();
-
-                if (doc.begin() == doc.end())
-                {
-                    throw SoftError("$not cannot be empty", error::BAD_VALUE);
-                }
-
-                condition += "(NOT ";
-
-                if (m_paths.size() > 1)
-                {
-                    condition += "(";
-                }
-
-                bool first = true;
-                for (const auto& p : m_paths)
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        condition += " OR ";
-                    }
-
-                    condition += "(" + p.get_comparison_condition(doc) + ")";
-                }
-
-                if (m_paths.size() > 1)
-                {
-                    condition += ")";
-                }
-
-                condition += ")";
-            }
-            else
-            {
-                condition += get_element_condition(element);
-            }
-        }
-    }
-
-    return "(" + condition + ")";
-}
-
 State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
 {
     MXB_INFO("Request(MSG): %s", req.to_string().c_str());
@@ -4352,3 +3437,931 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
     return doc.extract();
 }
 
+namespace nosql
+{
+
+//
+// Path::Incarnation
+//
+string Path::Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
+{
+    string field = path();
+    string condition;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_document:
+        condition = get_comparison_condition(element.get_document());
+        break;
+
+    case bsoncxx::type::k_regex:
+        condition = regex_to_condition(*this, element.get_regex());
+        break;
+
+    case bsoncxx::type::k_null:
+        {
+            if (has_array_demand())
+            {
+                condition = "(JSON_TYPE(JSON_QUERY(doc, '$." + m_array_path + "')) = 'ARRAY' AND ";
+            }
+
+            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
+                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
+                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+
+            if (has_array_demand())
+            {
+                condition += ")";
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_date:
+        condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
+            + element_to_value(element, ValueFor::SQL) + ")";
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        condition = timestamp_to_condition(*this, element.get_timestamp());
+        break;
+
+    case bsoncxx::type::k_array:
+        // TODO: This probably needs to be dealt with explicitly.
+    default:
+        {
+            condition
+                // Without the explicit check for NULL, this does not work when NOT due to $nor
+                // is stashed in front of the whole thing.
+                = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
+                + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
+                + element_to_value(element, ValueFor::JSON) + ") = 1)"
+                + " OR "
+                + "(JSON_VALUE(doc, '$." + field + "') = "
+                + element_to_value(element, ValueFor::SQL) + "))";
+        }
+    }
+
+    return condition;
+}
+
+string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view& doc) const
+{
+    string rv;
+
+    // TODO: The fact that $regex and $options are not independent but used together,
+    // TODO: means that, although that is handled here, it will, due to how things are
+    // TODO: handled at an upper level lead to the same condition being generated twice.
+    // TODO: It seems that all arguments should be investigated first, and only then should
+    // TODO: SQL be generated.
+    bool ignore_options = false;
+    bool ignore_regex = false;
+
+    auto it = doc.begin();
+    auto end = doc.end();
+    for (; it != end; ++it)
+    {
+        string condition;
+        string separator;
+
+        if (rv.empty())
+        {
+            rv += "(";
+        }
+        else
+        {
+            separator = " AND ";
+        }
+
+        const auto& element = *it;
+        const auto nosql_op = static_cast<string>(element.key());
+
+        auto jt = converters.find(nosql_op);
+
+        if (jt != converters.end())
+        {
+            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto& value_to_string = jt->second.value_to_string;
+
+            condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
+                                                                 nosql_op, value_to_string);
+        }
+        else if (nosql_op == "$not")
+        {
+            if (element.type() != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "$not needs a document (regex not yet supported)";
+
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            auto doc = element.get_document();
+
+            condition = "(NOT " + get_comparison_condition(doc) + ")";
+        }
+        else if (nosql_op == "$elemMatch")
+        {
+            condition = elemMatch_to_condition(element);
+        }
+        else if (nosql_op == "$exists")
+        {
+            condition = exists_to_condition(element);
+        }
+        else if (nosql_op == "$size")
+        {
+            condition = "(JSON_LENGTH(doc, '$." + path() + "') = " +
+                element_to_value(element, ValueFor::SQL, nosql_op) + ")";
+        }
+        else if (nosql_op == "$all")
+        {
+            condition = array_op_to_condition(element, ArrayOp::AND);
+        }
+        else if (nosql_op == "$in")
+        {
+            condition = array_op_to_condition(element, ArrayOp::OR);
+        }
+        else if (nosql_op == "$type")
+        {
+            condition = type_to_condition(element);
+        }
+        else if (nosql_op == "$mod")
+        {
+            condition = mod_to_condition(element);
+        }
+        else if (nosql_op == "$regex")
+        {
+            if (!ignore_regex)
+            {
+                bsoncxx::document::element options;
+
+                auto jt = it;
+                ++jt;
+                while (jt != end)
+                {
+                    if (jt->key().compare("$options") == 0)
+                    {
+                        ignore_options = true;
+                        options = *jt;
+                        break;
+                    }
+                    ++jt;
+                }
+
+                condition = regex_to_condition(*this, element, options);
+            }
+        }
+        else if (nosql_op == "$options")
+        {
+            if (!ignore_options)
+            {
+                bsoncxx::document::element regex;
+
+                auto jt = it;
+                ++jt;
+                while (jt != end)
+                {
+                    if (jt->key().compare("$regex") == 0)
+                    {
+                        ignore_regex = true;
+                        regex = *jt;
+                        break;
+                    }
+                    ++jt;
+                }
+
+                condition = regex_to_condition(*this, regex, element);
+            }
+        }
+        else if (nosql_op.front() == '$')
+        {
+            ostringstream ss;
+            ss << "unknown operator: " << nosql_op;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        else
+        {
+            break;
+        }
+
+        if (!condition.empty())
+        {
+            rv += separator + condition;
+        }
+    }
+
+    if (it == end)
+    {
+        rv += ")";
+    }
+    else
+    {
+        // We are simply looking for an object.
+        // TODO: Given two objects '{"a": [{"x": 1}]}' and '{"a": [{"x": 1, "y": 2}]}'
+        // TODO: a query like '{"a": {x: 1}}' will return them both, although MongoDB
+        // TODO: returns just the former.
+
+        ostringstream ss;
+        ss << "JSON_CONTAINS(JSON_QUERY(doc, '$." << path() << "'), JSON_OBJECT(";
+
+        while (it != end)
+        {
+            auto element = *it;
+
+            ss << "\"" << element.key() << "\", ";
+            ss << element_to_value(element, ValueFor::JSON_NESTED);
+
+            if (++it != end)
+            {
+                ss << ", ";
+            }
+        }
+
+        ss << "))";
+
+        rv = ss.str();
+    }
+
+    return rv;
+}
+
+string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element& element,
+                                                ArrayOp array_op) const
+{
+    const char* zDescription = to_description(array_op);
+
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        ostringstream ss;
+        ss << zDescription << " needs an array";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    ostringstream ss;
+
+    bsoncxx::array::view all_elements = element.get_array();
+
+    if (all_elements.empty())
+    {
+        ss << "(true = false)";
+    }
+    else
+    {
+        // TODO: We have this information higher up already.
+        string field = path();
+        auto i = field.find_last_of('.');
+        bool is_scoped = (i != string::npos);
+
+        ss << "(";
+
+        if (array_op == ArrayOp::AND)
+        {
+            if (is_scoped)
+            {
+                string path;
+                path = field.substr(0, i);
+                path += "[*].";
+                path += field.substr(i + 1);
+
+                ss << "(";
+                bool add_or = false;
+                for (auto f : { field, path })
+                {
+                    if (add_or)
+                    {
+                        ss << " OR ";
+                    }
+                    else
+                    {
+                        add_or = true;
+                    }
+
+                    add_element_array(ss, is_scoped, f, zDescription, all_elements);
+                };
+                ss << ")";
+            }
+            else
+            {
+                add_element_array(ss, is_scoped, field, zDescription, all_elements);
+            }
+        }
+        else
+        {
+            mxb_assert(array_op == ArrayOp::OR);
+
+            ss << "(";
+
+            bool first_element = true;
+            for (const auto& one_element : all_elements)
+            {
+                if (first_element)
+                {
+                    first_element = false;
+                }
+                else
+                {
+                    ss << " OR ";
+                }
+
+                auto type = one_element.type();
+
+                switch (type)
+                {
+                case bsoncxx::type::k_null:
+                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    break;
+
+                case bsoncxx::type::k_regex:
+                    ss << "(false)";
+                    break;
+
+                default:
+                    {
+                        if (is_scoped)
+                        {
+                            string path;
+                            path = field.substr(0, i);
+                            path += "[*].";
+                            path += field.substr(i + 1);
+
+                            ss << "(";
+                            bool add_or = false;
+                            for (auto p : { field, path })
+                            {
+                                if (add_or)
+                                {
+                                    ss << " OR ";
+                                }
+                                else
+                                {
+                                    add_or = true;
+                                }
+
+                                if (one_element.type() != bsoncxx::type::k_regex)
+                                {
+                                    ss << "(JSON_CONTAINS(";
+                                    ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
+                                       << element_to_value(one_element, ValueFor::JSON, zDescription)
+                                       << ")) = 1)";
+                                }
+                                else
+                                {
+                                    ss << "false";
+                                }
+
+                                if (one_element.type() != bsoncxx::type::k_document)
+                                {
+                                    ss << " OR (JSON_VALUE(doc, '$." << p << "') = "
+                                       << element_to_value(one_element, ValueFor::SQL, zDescription)
+                                       << ")";
+                                }
+                            }
+                            ss << ")";
+                        }
+                        else
+                        {
+                            ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
+                               << element_to_value(one_element, ValueFor::JSON, zDescription)
+                               << "), '$." << field << "') = 1)";
+
+                            if (one_element.type() != bsoncxx::type::k_document)
+                            {
+                                ss << " OR (JSON_VALUE(doc, '$." << field << "') = "
+                                   << element_to_value(one_element, ValueFor::SQL, zDescription)
+                                   << ")";
+                            }
+                        }
+                    }
+                }
+            }
+
+            ss << ")";
+        }
+
+        ss << ")";
+    }
+
+    return ss.str();
+}
+
+string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
+{
+    string condition;
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
+    }
+
+    bsoncxx::document::view doc = element.get_document();
+
+    if (doc.empty())
+    {
+        condition = "true";
+    }
+    else
+    {
+        condition = elemMatch_to_json_contains(*this, doc);
+    }
+
+    return condition;
+}
+
+string Path::Incarnation::exists_to_condition(const bsoncxx::document::element& element) const
+{
+    string rv("(");
+
+    bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
+
+    if (b)
+    {
+        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NOT NULL";
+    }
+    else
+    {
+        bool close = false;
+        if (!has_array_demand())
+        {
+            if (has_parent())
+            {
+                rv += "JSON_QUERY(doc, '$." + parent_path() + "') IS NULL OR "
+                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent_path() + "')) = 'OBJECT'"
+                    " AND ";
+                close = true;
+            }
+        }
+        else
+        {
+            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + array_path() + "')) = 'ARRAY' AND ";
+        }
+
+        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NULL";
+
+        if (close)
+        {
+            rv += ")";
+        }
+    }
+
+    rv += ")";
+
+    return rv;
+}
+
+string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& element) const
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("malformed mod, needs to be an array", error::BAD_VALUE);
+    }
+
+    bsoncxx::array::view arguments = element.get_array();
+
+    auto n = std::distance(arguments.begin(), arguments.end());
+
+    const char* zMessage = nullptr;
+    switch (n)
+    {
+    case 0:
+    case 1:
+        zMessage = "malformed mod, not enough elements";
+        break;
+
+    case 2:
+        break;
+
+    default:
+        zMessage = "malformed mod, too many elements";
+    }
+
+    if (zMessage)
+    {
+        throw SoftError(zMessage, error::BAD_VALUE);
+    }
+
+    int64_t divisor;
+    if (!get_number_as_integer(arguments[0], &divisor))
+    {
+        throw SoftError("malformed mod, divisor is not a number", error::BAD_VALUE);
+    }
+
+    if (divisor == 0)
+    {
+        throw SoftError("divisor cannot be 0", error::BAD_VALUE);
+    }
+
+    int64_t remainder;
+    if (!get_number_as_integer(arguments[1], &remainder))
+    {
+        throw SoftError("malformed mod, remainder is not a number", error::BAD_VALUE);
+    }
+
+    ostringstream ss;
+    ss << "((JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'INTEGER' || "
+       << "JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'DOUBLE') AND "
+       << "(MOD(JSON_VALUE(doc, '$." << path() << "'), " << divisor << ") = " << remainder << "))";
+
+    return ss.str();
+}
+
+string Path::Incarnation::type_to_condition(const bsoncxx::document::element& element) const
+{
+    string rv;
+
+    if (element.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view all_elements = element.get_array();
+
+        if (all_elements.empty())
+        {
+            // Yes, this is what MongoDB returns.
+            throw SoftError("a must match at least one type", error::FAILED_TO_PARSE);
+        }
+
+        ostringstream ss;
+        ss << "(";
+
+        bool first = true;
+        for (const auto& one_element : all_elements)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                ss << " OR ";
+            }
+
+            ss << type_to_condition_from_value(*this, one_element);
+        }
+
+        ss << ")";
+
+        rv = ss.str();
+    }
+    else
+    {
+        rv = type_to_condition_from_value(*this, element);
+    }
+
+    return rv;
+}
+
+//
+// Path::Part
+//
+string Path::Part::name() const
+{
+    string rv;
+
+    switch (m_kind)
+    {
+    case Part::ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case Part::ARRAY:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case INDEXED_ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path();
+        }
+        rv += "[" + m_name + "]";
+        break;
+    }
+
+    return rv;
+}
+
+string Path::Part::path() const
+{
+    string rv;
+
+    switch (m_kind)
+    {
+    case Part::ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name;
+        break;
+
+    case Part::ARRAY:
+        if (m_pParent)
+        {
+            rv = m_pParent->path() + ".";
+        }
+        rv += m_name + "[*]";
+        break;
+
+    case INDEXED_ELEMENT:
+        if (m_pParent)
+        {
+            rv = m_pParent->path();
+        }
+        rv += "[" + m_name + "]";
+        break;
+    }
+
+    return rv;
+}
+
+//static
+vector<Path::Part*> Path::Part::get_leafs(const string& path, vector<std::unique_ptr<Part>>& parts)
+{
+    string::size_type i = 0;
+    string::size_type j = path.find_first_of('.', i);
+
+    vector<Part*> leafs;
+
+    while (j != string::npos)
+    {
+        string part = path.substr(i, j - i);
+
+        i = j + 1;
+        j = path.find_first_of('.', i);
+
+        add_part(part, false, leafs, parts);
+    }
+
+    add_part(path.substr(i, j), true, leafs, parts);
+
+    return leafs;
+}
+
+//static
+void Path::Part::add_leaf(const string& part,
+                          bool last,
+                          bool is_number,
+                          Part* pParent,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    parts.push_back(std::make_unique<Part>(Part::ELEMENT, part, pParent));
+    leafs.push_back(parts.back().get());
+
+    if (!last)
+    {
+        parts.push_back(std::make_unique<Part>(Part::ARRAY, part, pParent));
+        leafs.push_back(parts.back().get());
+    }
+
+    if (is_number && pParent && pParent->is_element())
+    {
+        parts.push_back(std::make_unique<Part>(Part::INDEXED_ELEMENT, part, pParent));
+        leafs.push_back(parts.back().get());
+    }
+}
+
+//static
+void Path::Part::add_part(const string& part,
+                          bool last,
+                          vector<Part*>& leafs,
+                          vector<std::unique_ptr<Part>>& parts)
+{
+    bool is_number = false;
+
+    char* zEnd;
+    auto l = strtol(part.c_str(), &zEnd, 10);
+
+    // Is the part a number?
+    if (*zEnd == 0 && l >= 0 && l != LONG_MAX)
+    {
+        // Yes, so this may refer to a field whose name is a number (e.g. { a.2: 42 })
+        // or the n'th element (e.g. { a: [ ... ] }).
+        is_number = true;
+    }
+
+    vector<Part*> tmp;
+
+    if (leafs.empty())
+    {
+        add_leaf(part, last, is_number, nullptr, tmp, parts);
+    }
+    else
+    {
+        for (auto& pLeaf : leafs)
+        {
+            add_leaf(part, last, is_number, pLeaf, tmp, parts);
+        }
+    }
+
+    tmp.swap(leafs);
+}
+
+//
+// Path
+//
+Path::Path(const bsoncxx::document::element& element)
+    : m_element(element)
+    , m_paths(get_incarnations(static_cast<string>(element.key())))
+{
+}
+
+// https://docs.mongodb.com/manual/reference/operator/query/#comparison
+string Path::get_comparison_condition() const
+{
+    string condition;
+
+    if (m_element.type() == bsoncxx::type::k_document)
+    {
+        condition = get_document_condition(m_element.get_document());
+    }
+    else
+    {
+        condition = get_element_condition(m_element);
+    }
+
+    return condition;
+}
+
+//static
+std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
+{
+    vector<Incarnation> rv;
+    vector<std::unique_ptr<Part>> parts;
+    vector<Part*> leafs = Part::get_leafs(path, parts);
+
+    for (const Part* pLeaf : leafs)
+    {
+        string path = pLeaf->path();
+        Part* pParent = pLeaf->parent();
+
+        string parent_path;
+        string array_path;
+
+        if (pParent)
+        {
+            parent_path = pParent->name();
+
+            while (pLeaf && array_path.empty())
+            {
+                if (pLeaf->is_indexed_element() || (pParent && pParent->is_array()))
+                {
+                    array_path = pParent->name();
+                }
+                else if (pLeaf->is_element() && (pParent && pParent->is_indexed_element()))
+                {
+                    auto* pGramps = pParent->parent();
+                    if (pGramps)
+                    {
+                        array_path = pGramps->name();
+                    }
+                }
+
+                pLeaf = pParent;
+                if (pParent)
+                {
+                    pParent = pParent->parent();
+                }
+            }
+        }
+
+        rv.push_back(Incarnation(std::move(path), std::move(parent_path), std::move(array_path)));
+    }
+
+    return rv;
+}
+
+string Path::get_element_condition(const bsoncxx::document::element& element) const
+{
+    string condition;
+
+    if (m_paths.size() > 1)
+    {
+        condition += "(";
+    }
+
+    bool first = true;
+    for (const auto& p : m_paths)
+    {
+        if (first)
+        {
+            first = false;
+        }
+        else
+        {
+            condition += " OR ";
+        }
+
+        condition += "(" + p.get_comparison_condition(m_element) + ")";
+    }
+
+    if (m_paths.size() > 1)
+    {
+        condition += ")";
+    }
+
+    return condition;
+}
+
+string Path::get_document_condition(const bsoncxx::document::view& doc) const
+{
+    string condition;
+
+    auto it = doc.begin();
+    auto end = doc.end();
+
+    if (it == end)
+    {
+        bool first = true;
+        for (const auto& p : m_paths)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                condition += " OR ";
+            }
+
+            condition += "(JSON_EXTRACT(doc, '$." + p.path() + "') = JSON_OBJECT() OR ";
+            condition += "(JSON_TYPE(JSON_EXTRACT(doc, '$." + p.path() + "')) = 'ARRAY' AND ";
+            condition += "JSON_CONTAINS(JSON_EXTRACT(doc, '$." + p.path() + "'), JSON_OBJECT())))";
+        }
+    }
+    else
+    {
+        for (; it != end; ++it)
+        {
+            auto element = *it;
+
+            if (!condition.empty())
+            {
+                condition += " AND ";
+            }
+
+            const auto nosql_op = static_cast<string>(element.key());
+
+            if (nosql_op == "$not")
+            {
+                if (element.type() != bsoncxx::type::k_document)
+                {
+                    ostringstream ss;
+                    ss << "$not needs a document (regex not yet supported)";
+
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
+
+                bsoncxx::document::view doc = element.get_document();
+
+                if (doc.begin() == doc.end())
+                {
+                    throw SoftError("$not cannot be empty", error::BAD_VALUE);
+                }
+
+                condition += "(NOT ";
+
+                if (m_paths.size() > 1)
+                {
+                    condition += "(";
+                }
+
+                bool first = true;
+                for (const auto& p : m_paths)
+                {
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        condition += " OR ";
+                    }
+
+                    condition += "(" + p.get_comparison_condition(doc) + ")";
+                }
+
+                if (m_paths.size() > 1)
+                {
+                    condition += ")";
+                }
+
+                condition += ")";
+            }
+            else
+            {
+                condition += get_element_condition(element);
+            }
+        }
+    }
+
+    return "(" + condition + ")";
+}
+
+}
