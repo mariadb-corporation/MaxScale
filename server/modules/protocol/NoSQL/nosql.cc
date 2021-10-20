@@ -32,455 +32,6 @@ uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
 }
 
-namespace nosql
-{
-
-void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element)
-{
-    // bsoncxx should simply allow the addition of an element, and do this internally.
-    switch (element.type())
-    {
-    case bsoncxx::type::k_array:
-        doc.append(kvp(key, element.get_array()));
-        break;
-
-    case bsoncxx::type::k_binary:
-        doc.append(kvp(key, element.get_binary()));
-        break;
-
-    case bsoncxx::type::k_bool:
-        doc.append(kvp(key, element.get_bool()));
-        break;
-
-    case bsoncxx::type::k_code:
-        doc.append(kvp(key, element.get_code()));
-        break;
-
-    case bsoncxx::type::k_codewscope:
-        doc.append(kvp(key, element.get_codewscope()));
-        break;
-
-    case bsoncxx::type::k_date:
-        doc.append(kvp(key, element.get_date()));
-        break;
-
-    case bsoncxx::type::k_dbpointer:
-        doc.append(kvp(key, element.get_dbpointer()));
-        break;
-
-    case bsoncxx::type::k_decimal128:
-        doc.append(kvp(key, element.get_decimal128()));
-        break;
-
-    case bsoncxx::type::k_document:
-        doc.append(kvp(key, element.get_document()));
-        break;
-
-    case bsoncxx::type::k_double:
-        doc.append(kvp(key, element.get_double()));
-        break;
-
-    case bsoncxx::type::k_int32:
-        doc.append(kvp(key, element.get_int32()));
-        break;
-
-    case bsoncxx::type::k_int64:
-        doc.append(kvp(key, element.get_int64()));
-        break;
-
-    case bsoncxx::type::k_maxkey:
-        doc.append(kvp(key, element.get_maxkey()));
-        break;
-
-    case bsoncxx::type::k_minkey:
-        doc.append(kvp(key, element.get_minkey()));
-        break;
-
-    case bsoncxx::type::k_null:
-        doc.append(kvp(key, element.get_null()));
-        break;
-
-    case bsoncxx::type::k_oid:
-        doc.append(kvp(key, element.get_oid()));
-        break;
-
-    case bsoncxx::type::k_regex:
-        doc.append(kvp(key, element.get_regex()));
-        break;
-
-    case bsoncxx::type::k_symbol:
-        doc.append(kvp(key, element.get_symbol()));
-        break;
-
-    case bsoncxx::type::k_timestamp:
-        doc.append(kvp(key, element.get_timestamp()));
-        break;
-
-    case bsoncxx::type::k_undefined:
-        doc.append(kvp(key, element.get_undefined()));
-        break;
-
-    case bsoncxx::type::k_utf8:
-        doc.append(kvp(key, element.get_utf8()));
-        break;
-    }
-}
-
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                double* pT)
-{
-    bool rv = true;
-
-    auto type = element.type();
-
-    if (conversion == Conversion::STRICT && type != bsoncxx::type::k_double)
-    {
-        rv = false;
-    }
-    else
-    {
-        switch (type)
-        {
-        case bsoncxx::type::k_int32:
-            *pT = element.get_int32();
-            break;
-
-        case bsoncxx::type::k_int64:
-            *pT = element.get_int64();
-            break;
-
-        case bsoncxx::type::k_double:
-            *pT = element.get_double();
-            break;
-
-        default:
-            rv = false;
-        }
-    }
-
-    return rv;
-}
-
-template<>
-bsoncxx::document::view element_as<bsoncxx::document::view>(const string& command,
-                                                            const char* zKey,
-                                                            const bsoncxx::document::element& element,
-                                                            Conversion conversion)
-{
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'object'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    bsoncxx::document::view doc;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_document:
-        doc = element.get_document();
-        break;
-
-    case bsoncxx::type::k_null:
-        break;
-
-    default:
-        {
-            ostringstream ss;
-            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
-
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-    }
-
-    return doc;
-}
-
-template<>
-bsoncxx::array::view element_as<bsoncxx::array::view>(const string& command,
-                                                      const char* zKey,
-                                                      const bsoncxx::document::element& element,
-                                                      Conversion)
-{
-    if (element.type() != bsoncxx::type::k_array)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'array'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    return element.get_array();
-}
-
-template<>
-string element_as<string>(const string& command,
-                          const char* zKey,
-                          const bsoncxx::document::element& element,
-                          Conversion)
-{
-    if (element.type() != bsoncxx::type::k_utf8)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    const auto& utf8 = element.get_utf8();
-    return string(utf8.value.data(), utf8.value.size());
-}
-
-template<>
-int64_t element_as<int64_t>(const string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            Conversion conversion)
-{
-    int64_t rv;
-
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int64)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        rv = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        rv = element.get_int64();
-        break;
-
-    case bsoncxx::type::k_double:
-        rv = element.get_double();
-        break;
-
-    default:
-        {
-            ostringstream ss;
-            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected a number";
-
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-    }
-
-    return rv;
-}
-
-template<>
-int32_t element_as<int32_t>(const string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            Conversion conversion)
-{
-    int32_t rv;
-
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int32)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'int32'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        rv = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        rv = element.get_int64();
-        break;
-
-    case bsoncxx::type::k_double:
-        rv = element.get_double();
-        break;
-
-    default:
-        {
-            ostringstream ss;
-            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected a number";
-
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-    }
-
-    return rv;
-}
-
-template<>
-bool element_as<bool>(const string& command,
-                      const char* zKey,
-                      const bsoncxx::document::element& element,
-                      Conversion conversion)
-{
-    bool rv = true;
-
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
-    {
-        ostringstream ss;
-        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
-
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-    }
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_bool:
-        rv = element.get_bool();
-        break;
-
-    case bsoncxx::type::k_int32:
-        rv = element.get_int32() != 0;
-        break;
-
-    case bsoncxx::type::k_int64:
-        rv = element.get_int64() != 0;
-        break;
-
-    case bsoncxx::type::k_double:
-        rv = element.get_double() != 0;
-        break;
-
-    case bsoncxx::type::k_null:
-        rv = false;
-        break;
-
-    default:
-        rv = true;
-    }
-
-    return rv;
-}
-
-}
-
-const char* nosql::opcode_to_string(int code)
-{
-    switch (code)
-    {
-    case MONGOC_OPCODE_REPLY:
-        return "MONGOC_OPCODE_REPLY";
-
-    case MONGOC_OPCODE_UPDATE:
-        return "MONGOC_OPCODE_UPDATE";
-
-    case MONGOC_OPCODE_INSERT:
-        return "MONGOC_OPCODE_INSERT";
-
-    case MONGOC_OPCODE_QUERY:
-        return "MONGOC_OPCODE_QUERY";
-
-    case MONGOC_OPCODE_GET_MORE:
-        return "MONGOC_OPCODE_GET_MORE";
-
-    case MONGOC_OPCODE_DELETE:
-        return "MONGOC_OPCODE_DELETE";
-
-    case MONGOC_OPCODE_KILL_CURSORS:
-        return "MONGOC_OPCODE_KILL_CURSORS";
-
-    case MONGOC_OPCODE_COMPRESSED:
-        return "MONGOC_OPCODE_COMPRESSED";
-
-    case MONGOC_OPCODE_MSG:
-        return "MONGOC_OPCODE_MSG";
-
-    default:
-        mxb_assert(!true);
-        return "MONGOC_OPCODE_UNKNOWN";
-    }
-}
-
-vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& projection)
-{
-    vector<string> extractions;
-
-    auto it = projection.begin();
-    auto end = projection.end();
-
-    if (it != end)
-    {
-        bool id_seen = false;
-
-        for (; it != end; ++it)
-        {
-            const auto& element = *it;
-            const auto& key = element.key();
-
-            if (key.size() == 0)
-            {
-                continue;
-            }
-
-            if (key.compare("_id") == 0)
-            {
-                id_seen = true;
-
-                bool include_id = false;
-
-                switch (element.type())
-                {
-                case bsoncxx::type::k_int32:
-                    include_id = static_cast<int32_t>(element.get_int32());
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    include_id = static_cast<int64_t>(element.get_int64());
-                    break;
-
-                case bsoncxx::type::k_bool:
-                    include_id = static_cast<bool>(element.get_bool());
-                    break;
-
-                case bsoncxx::type::k_double:
-                    include_id = static_cast<double>(element.get_double());
-                    break;
-
-                default:
-                    ;
-                }
-
-                if (!include_id)
-                {
-                    continue;
-                }
-            }
-
-            auto extraction = escape_essential_chars(static_cast<string>(key));
-
-            extractions.push_back(static_cast<string>(key));
-        }
-
-        if (!id_seen)
-        {
-            extractions.push_back("_id");
-        }
-    }
-
-    return extractions;
-}
-
 namespace
 {
 
@@ -1017,14 +568,6 @@ string elemMatch_to_json_contains(const Path::Incarnation& p, const bsoncxx::doc
     return condition;
 }
 
-}
-
-namespace
-{
-
-namespace
-{
-
 bool is_scalar_value(const bsoncxx::document::element& element)
 {
     bool rv;
@@ -1042,8 +585,6 @@ bool is_scalar_value(const bsoncxx::document::element& element)
     }
 
     return rv;
-}
-
 }
 
 string default_field_and_value_to_comparison(const Path::Incarnation& p,
@@ -1327,11 +868,6 @@ void add_element_array(ostream& ss,
     }
 }
 
-}
-
-namespace
-{
-
 string protocol_type_to_mariadb_type(int32_t number)
 {
     switch (number)
@@ -1494,11 +1030,6 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
     return rv;
 }
 
-}
-
-namespace
-{
-
 string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
 {
     ostringstream ss;
@@ -1569,9 +1100,6 @@ string regex_to_condition(const Path::Incarnation& p,
     return regex_to_condition(p, regex.get_utf8(), o);
 }
 
-namespace
-{
-
 bool is_hex(const string& s)
 {
     auto isxdigit = [](char c)
@@ -1580,8 +1108,6 @@ bool is_hex(const string& s)
     };
 
     return std::all_of(s.begin(), s.end(), isxdigit);
-}
-
 }
 
 // https://docs.mongodb.com/manual/reference/operator/query/#comparison
@@ -1684,8 +1210,6 @@ string get_condition(const bsoncxx::document::view& doc)
     }
 
     return where;
-}
-
 }
 
 template<class document_element_or_array_item>
@@ -1795,85 +1319,6 @@ string element_to_string(const document_element_or_array_item& x)
 
     return ss.str();
 }
-
-string nosql::to_string(const bsoncxx::document::element& element)
-{
-    return element_to_string(element);
-}
-
-string nosql::query_to_where_condition(const bsoncxx::document::view& query)
-{
-    return get_condition(query);
-}
-
-string nosql::query_to_where_clause(const bsoncxx::document::view& query)
-{
-    string clause;
-    string condition = query_to_where_condition(query);
-
-    if (!condition.empty())
-    {
-        clause += "WHERE ";
-        clause += condition;
-        clause += " ";
-    }
-
-    return clause;
-}
-
-
-// https://docs.mongodb.com/manual/reference/method/cursor.sort/
-string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
-{
-    string order_by;
-
-    for (auto it = sort.begin(); it != sort.end(); ++it)
-    {
-        const auto& element = *it;
-        const auto& key = element.key();
-
-        if (key.size() == 0)
-        {
-            throw nosql::SoftError("FieldPath cannot be constructed with empty string",
-                                   nosql::error::LOCATION40352);
-        }
-
-        int64_t value = 0;
-
-        if (!nosql::get_number_as_integer(element, &value))
-        {
-            ostringstream ss;
-            // TODO: Should actually be the value itself, and not its type.
-            ss << "Illegal key in $sort specification: "
-               << element.key() << ": " << bsoncxx::to_string(element.type());
-
-            throw nosql::SoftError(ss.str(), nosql::error::LOCATION15974);
-        }
-
-        if (value != 1 && value != -1)
-        {
-            throw nosql::SoftError("$sort key ordering must be 1 (for ascending) or -1 (for descending)",
-                                   nosql::error::LOCATION15975);
-        }
-
-        if (!order_by.empty())
-        {
-            order_by += ", ";
-        }
-
-        order_by += "JSON_EXTRACT(doc, '$." + static_cast<string>(element.key()) + "')";
-
-        if (value == -1)
-        {
-            order_by += " DESC";
-        }
-    }
-
-    return order_by;
-}
-
-namespace
-{
 
 enum class UpdateKind
 {
@@ -2124,95 +1569,6 @@ void update_specification_to_set_value(UpdateKind kind,
     }
 }
 
-}
-
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
-                                                const bsoncxx::document::element& update_specification)
-{
-    ostringstream sql;
-
-    auto kind = get_update_kind(update_specification);
-
-    switch (kind)
-    {
-    case UpdateKind::AGGREGATION_PIPELINE:
-        {
-            string message("Aggregation pipeline not supported: '");
-            message += bsoncxx::to_json(update_command);
-            message += "'.";
-
-            MXB_ERROR("%s", message.c_str());
-            throw HardError(message, error::COMMAND_FAILED);
-        }
-        break;
-
-    default:
-        update_specification_to_set_value(kind, update_specification.get_document(), sql);
-    }
-
-    return sql.str();
-}
-
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
-{
-    ostringstream sql;
-
-    auto kind = get_update_kind(update_specification);
-
-    update_specification_to_set_value(kind, update_specification, sql);
-
-    return sql.str();
-}
-
-bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
-{
-    bool rv = true;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        *pInt = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        *pInt = element.get_int64();
-        break;
-
-    default:
-        rv = false;
-    }
-
-    return rv;
-}
-
-bool nosql::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
-{
-    bool rv = true;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        *pDouble = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        *pDouble = element.get_int64();
-        break;
-
-    case bsoncxx::type::k_double:
-        *pDouble = element.get_double();
-        break;
-
-    default:
-        rv = false;
-    }
-
-    return rv;
-}
-
-namespace
-{
-
 string extract_database(const string& collection)
 {
     auto i = collection.find('.');
@@ -2224,77 +1580,6 @@ string extract_database(const string& collection)
 
     return collection.substr(0, i);
 }
-
-}
-
-string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
-{
-    ostringstream ss;
-    ss << "CREATE TABLE " << table_name << " ("
-       << "id VARCHAR(" << id_length << ") "
-       << "AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) UNIQUE KEY, "
-       << "doc JSON, "
-       << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
-
-    return ss.str();
-}
-
-std::string nosql::escape_essential_chars(std::string&& from)
-{
-    auto it = from.begin();
-    auto end = from.end();
-
-    while (it != end && *it != '\'' && *it != '\\')
-    {
-        ++it;
-    }
-
-    if (it == end)
-    {
-        return from;
-    }
-
-    string to(from.begin(), it);
-
-    if (*it == '\'')
-    {
-        to.push_back('\'');
-    }
-    else
-    {
-        to.push_back('\\');
-    }
-
-    to.push_back(*it++);
-
-    while (it != end)
-    {
-        auto c = *it;
-
-        switch (c)
-        {
-        case '\\':
-            to.push_back('\\');
-            break;
-
-        case '\'':
-            to.push_back('\'');
-            break;
-
-        default:
-            break;
-        }
-
-        to.push_back(c);
-
-        ++it;
-    }
-
-    return to;
-}
-
-namespace
-{
 
 bool get_object_id(json_t* pObject, const char** pzOid, size_t* pLen)
 {
@@ -2366,147 +1651,6 @@ bool append_objectid(DocumentBuilder& doc, const string_view& key, json_t* pObje
     return rv;
 }
 
-}
-
-bsoncxx::array::value nosql::bson_from_json_array(json_t* pArray)
-{
-    mxb_assert(json_typeof(pArray) == JSON_ARRAY);
-
-    ArrayBuilder array;
-
-    size_t index;
-    json_t* pValue;
-    json_array_foreach(pArray, index, pValue)
-    {
-        switch (json_typeof(pValue))
-        {
-        case JSON_OBJECT:
-            if (!append_objectid(array, pValue))
-            {
-                array.append(bson_from_json(pValue));
-            }
-            break;
-
-        case JSON_ARRAY:
-            array.append(bson_from_json_array(pValue));
-            break;
-
-        case JSON_STRING:
-            array.append(json_string_value(pValue));
-            break;
-
-        case JSON_INTEGER:
-            array.append((int64_t)json_integer_value(pValue));
-            break;
-
-        case JSON_REAL:
-            array.append(json_number_value(pValue));
-            break;
-
-        case JSON_TRUE:
-            array.append(true);
-            break;
-
-        case JSON_FALSE:
-            array.append(false);
-            break;
-
-        case JSON_NULL:
-            array.append(bsoncxx::types::b_null());
-            break;
-        }
-    }
-
-    return array.extract();
-}
-
-bsoncxx::document::value nosql::bson_from_json(json_t* pObject)
-{
-    mxb_assert(json_typeof(pObject) == JSON_OBJECT);
-
-    DocumentBuilder doc;
-
-    const char* zKey;
-    json_t* pValue;
-    json_object_foreach(pObject, zKey, pValue)
-    {
-        string_view key(zKey);
-
-        switch (json_typeof(pValue))
-        {
-        case JSON_OBJECT:
-            if (!append_objectid(doc, key, pValue))
-            {
-                doc.append(kvp(key, bson_from_json(pValue)));
-            }
-            break;
-
-        case JSON_ARRAY:
-            doc.append(kvp(key, bson_from_json_array(pValue)));
-            break;
-
-        case JSON_STRING:
-            doc.append(kvp(key, json_string_value(pValue)));
-            break;
-
-        case JSON_INTEGER:
-            doc.append(kvp(key, (int64_t)json_integer_value(pValue)));
-            break;
-
-        case JSON_REAL:
-            doc.append(kvp(key, json_number_value(pValue)));
-            break;
-
-        case JSON_TRUE:
-            doc.append(kvp(key, true));
-            break;
-
-        case JSON_FALSE:
-            doc.append(kvp(key, false));
-            break;
-
-        case JSON_NULL:
-            doc.append(kvp(key, bsoncxx::types::b_null()));
-            break;
-        }
-    }
-
-    return doc.extract();
-}
-
-bsoncxx::document::value nosql::bson_from_json(const string& json)
-{
-    // A bsoncxx::document::value cannot be default constructed, so we just have
-    // to return from many places.
-
-    try
-    {
-        return bsoncxx::from_json(json);
-    }
-    catch (const std::exception& x)
-    {
-        MXB_WARNING("Could not default convert JSON to BSON: %s. JSON: %s",
-                    x.what(), json.c_str());
-    }
-
-    // Ok, so the default JSON->BSON conversion failed. Probably due to there being JSON
-    // sub-object that "by convention" should be converted into a particular BSON object,
-    // but cannot be due to it not containing everything that is needed.
-
-    mxb::Json j;
-
-    if (j.load_string(json))
-    {
-        return bson_from_json(j.get_json());
-    }
-    else
-    {
-        MXB_ERROR("Could not load JSON data, returning empty document: %s. JSON: %s",
-                  j.error_msg().c_str(), json.c_str());
-    }
-
-    DocumentBuilder doc;
-    return doc.extract();
 }
 
 namespace nosql
@@ -4384,4 +3528,820 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
     return state;
 }
 
+}
+
+//
+// nosql free functions
+//
+void nosql::append(DocumentBuilder& doc,
+                   const core::string_view& key,
+                   const bsoncxx::document::element& element)
+{
+    // bsoncxx should simply allow the addition of an element, and do this internally.
+    switch (element.type())
+    {
+    case bsoncxx::type::k_array:
+        doc.append(kvp(key, element.get_array()));
+        break;
+
+    case bsoncxx::type::k_binary:
+        doc.append(kvp(key, element.get_binary()));
+        break;
+
+    case bsoncxx::type::k_bool:
+        doc.append(kvp(key, element.get_bool()));
+        break;
+
+    case bsoncxx::type::k_code:
+        doc.append(kvp(key, element.get_code()));
+        break;
+
+    case bsoncxx::type::k_codewscope:
+        doc.append(kvp(key, element.get_codewscope()));
+        break;
+
+    case bsoncxx::type::k_date:
+        doc.append(kvp(key, element.get_date()));
+        break;
+
+    case bsoncxx::type::k_dbpointer:
+        doc.append(kvp(key, element.get_dbpointer()));
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        doc.append(kvp(key, element.get_decimal128()));
+        break;
+
+    case bsoncxx::type::k_document:
+        doc.append(kvp(key, element.get_document()));
+        break;
+
+    case bsoncxx::type::k_double:
+        doc.append(kvp(key, element.get_double()));
+        break;
+
+    case bsoncxx::type::k_int32:
+        doc.append(kvp(key, element.get_int32()));
+        break;
+
+    case bsoncxx::type::k_int64:
+        doc.append(kvp(key, element.get_int64()));
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        doc.append(kvp(key, element.get_maxkey()));
+        break;
+
+    case bsoncxx::type::k_minkey:
+        doc.append(kvp(key, element.get_minkey()));
+        break;
+
+    case bsoncxx::type::k_null:
+        doc.append(kvp(key, element.get_null()));
+        break;
+
+    case bsoncxx::type::k_oid:
+        doc.append(kvp(key, element.get_oid()));
+        break;
+
+    case bsoncxx::type::k_regex:
+        doc.append(kvp(key, element.get_regex()));
+        break;
+
+    case bsoncxx::type::k_symbol:
+        doc.append(kvp(key, element.get_symbol()));
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        doc.append(kvp(key, element.get_timestamp()));
+        break;
+
+    case bsoncxx::type::k_undefined:
+        doc.append(kvp(key, element.get_undefined()));
+        break;
+
+    case bsoncxx::type::k_utf8:
+        doc.append(kvp(key, element.get_utf8()));
+        break;
+    }
+}
+
+template<>
+bool nosql::element_as(const bsoncxx::document::element& element,
+                       Conversion conversion,
+                       double* pT)
+{
+    bool rv = true;
+
+    auto type = element.type();
+
+    if (conversion == Conversion::STRICT && type != bsoncxx::type::k_double)
+    {
+        rv = false;
+    }
+    else
+    {
+        switch (type)
+        {
+        case bsoncxx::type::k_int32:
+            *pT = element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            *pT = element.get_int64();
+            break;
+
+        case bsoncxx::type::k_double:
+            *pT = element.get_double();
+            break;
+
+        default:
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+template<>
+bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string& command,
+                                                                   const char* zKey,
+                                                                   const bsoncxx::document::element& element,
+                                                                   Conversion conversion)
+{
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'object'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    bsoncxx::document::view doc;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_document:
+        doc = element.get_document();
+        break;
+
+    case bsoncxx::type::k_null:
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return doc;
+}
+
+template<>
+bsoncxx::array::view nosql::element_as<bsoncxx::array::view>(const string& command,
+                                                             const char* zKey,
+                                                             const bsoncxx::document::element& element,
+                                                             Conversion)
+{
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'array'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    return element.get_array();
+}
+
+template<>
+string nosql::element_as<string>(const string& command,
+                                 const char* zKey,
+                                 const bsoncxx::document::element& element,
+                                 Conversion)
+{
+    if (element.type() != bsoncxx::type::k_utf8)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    const auto& utf8 = element.get_utf8();
+    return string(utf8.value.data(), utf8.value.size());
+}
+
+template<>
+int64_t nosql::element_as<int64_t>(const string& command,
+                                   const char* zKey,
+                                   const bsoncxx::document::element& element,
+                                   Conversion conversion)
+{
+    int64_t rv;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int64)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double();
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected a number";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return rv;
+}
+
+template<>
+int32_t nosql::element_as<int32_t>(const string& command,
+                                   const char* zKey,
+                                   const bsoncxx::document::element& element,
+                                   Conversion conversion)
+{
+    int32_t rv;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int32)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'int32'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double();
+        break;
+
+    default:
+        {
+            ostringstream ss;
+            ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+               << bsoncxx::to_string(element.type()) << "', expected a number";
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    return rv;
+}
+
+template<>
+bool nosql::element_as<bool>(const string& command,
+                             const char* zKey,
+                             const bsoncxx::document::element& element,
+                             Conversion conversion)
+{
+    bool rv = true;
+
+    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_bool:
+        rv = element.get_bool();
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = element.get_int32() != 0;
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = element.get_int64() != 0;
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = element.get_double() != 0;
+        break;
+
+    case bsoncxx::type::k_null:
+        rv = false;
+        break;
+
+    default:
+        rv = true;
+    }
+
+    return rv;
+}
+
+const char* nosql::opcode_to_string(int code)
+{
+    switch (code)
+    {
+    case MONGOC_OPCODE_REPLY:
+        return "MONGOC_OPCODE_REPLY";
+
+    case MONGOC_OPCODE_UPDATE:
+        return "MONGOC_OPCODE_UPDATE";
+
+    case MONGOC_OPCODE_INSERT:
+        return "MONGOC_OPCODE_INSERT";
+
+    case MONGOC_OPCODE_QUERY:
+        return "MONGOC_OPCODE_QUERY";
+
+    case MONGOC_OPCODE_GET_MORE:
+        return "MONGOC_OPCODE_GET_MORE";
+
+    case MONGOC_OPCODE_DELETE:
+        return "MONGOC_OPCODE_DELETE";
+
+    case MONGOC_OPCODE_KILL_CURSORS:
+        return "MONGOC_OPCODE_KILL_CURSORS";
+
+    case MONGOC_OPCODE_COMPRESSED:
+        return "MONGOC_OPCODE_COMPRESSED";
+
+    case MONGOC_OPCODE_MSG:
+        return "MONGOC_OPCODE_MSG";
+
+    default:
+        mxb_assert(!true);
+        return "MONGOC_OPCODE_UNKNOWN";
+    }
+}
+
+vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& projection)
+{
+    vector<string> extractions;
+
+    auto it = projection.begin();
+    auto end = projection.end();
+
+    if (it != end)
+    {
+        bool id_seen = false;
+
+        for (; it != end; ++it)
+        {
+            const auto& element = *it;
+            const auto& key = element.key();
+
+            if (key.size() == 0)
+            {
+                continue;
+            }
+
+            if (key.compare("_id") == 0)
+            {
+                id_seen = true;
+
+                bool include_id = false;
+
+                switch (element.type())
+                {
+                case bsoncxx::type::k_int32:
+                    include_id = static_cast<int32_t>(element.get_int32());
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    include_id = static_cast<int64_t>(element.get_int64());
+                    break;
+
+                case bsoncxx::type::k_bool:
+                    include_id = static_cast<bool>(element.get_bool());
+                    break;
+
+                case bsoncxx::type::k_double:
+                    include_id = static_cast<double>(element.get_double());
+                    break;
+
+                default:
+                    ;
+                }
+
+                if (!include_id)
+                {
+                    continue;
+                }
+            }
+
+            auto extraction = escape_essential_chars(static_cast<string>(key));
+
+            extractions.push_back(static_cast<string>(key));
+        }
+
+        if (!id_seen)
+        {
+            extractions.push_back("_id");
+        }
+    }
+
+    return extractions;
+}
+
+string nosql::to_string(const bsoncxx::document::element& element)
+{
+    return element_to_string(element);
+}
+
+string nosql::query_to_where_condition(const bsoncxx::document::view& query)
+{
+    return get_condition(query);
+}
+
+string nosql::query_to_where_clause(const bsoncxx::document::view& query)
+{
+    string clause;
+    string condition = query_to_where_condition(query);
+
+    if (!condition.empty())
+    {
+        clause += "WHERE ";
+        clause += condition;
+        clause += " ";
+    }
+
+    return clause;
+}
+
+
+// https://docs.mongodb.com/manual/reference/method/cursor.sort/
+string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
+{
+    string order_by;
+
+    for (auto it = sort.begin(); it != sort.end(); ++it)
+    {
+        const auto& element = *it;
+        const auto& key = element.key();
+
+        if (key.size() == 0)
+        {
+            throw nosql::SoftError("FieldPath cannot be constructed with empty string",
+                                   nosql::error::LOCATION40352);
+        }
+
+        int64_t value = 0;
+
+        if (!nosql::get_number_as_integer(element, &value))
+        {
+            ostringstream ss;
+            // TODO: Should actually be the value itself, and not its type.
+            ss << "Illegal key in $sort specification: "
+               << element.key() << ": " << bsoncxx::to_string(element.type());
+
+            throw nosql::SoftError(ss.str(), nosql::error::LOCATION15974);
+        }
+
+        if (value != 1 && value != -1)
+        {
+            throw nosql::SoftError("$sort key ordering must be 1 (for ascending) or -1 (for descending)",
+                                   nosql::error::LOCATION15975);
+        }
+
+        if (!order_by.empty())
+        {
+            order_by += ", ";
+        }
+
+        order_by += "JSON_EXTRACT(doc, '$." + static_cast<string>(element.key()) + "')";
+
+        if (value == -1)
+        {
+            order_by += " DESC";
+        }
+    }
+
+    return order_by;
+}
+
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
+                                                const bsoncxx::document::element& update_specification)
+{
+    ostringstream sql;
+
+    auto kind = get_update_kind(update_specification);
+
+    switch (kind)
+    {
+    case UpdateKind::AGGREGATION_PIPELINE:
+        {
+            string message("Aggregation pipeline not supported: '");
+            message += bsoncxx::to_json(update_command);
+            message += "'.";
+
+            MXB_ERROR("%s", message.c_str());
+            throw HardError(message, error::COMMAND_FAILED);
+        }
+        break;
+
+    default:
+        update_specification_to_set_value(kind, update_specification.get_document(), sql);
+    }
+
+    return sql.str();
+}
+
+string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
+{
+    ostringstream sql;
+
+    auto kind = get_update_kind(update_specification);
+
+    update_specification_to_set_value(kind, update_specification, sql);
+
+    return sql.str();
+}
+
+bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pInt = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pInt = element.get_int64();
+        break;
+
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
+
+bool nosql::get_number_as_double(const bsoncxx::document::element& element, double_t* pDouble)
+{
+    bool rv = true;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_int32:
+        *pDouble = element.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        *pDouble = element.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        *pDouble = element.get_double();
+        break;
+
+    default:
+        rv = false;
+    }
+
+    return rv;
+}
+
+string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
+{
+    ostringstream ss;
+    ss << "CREATE TABLE " << table_name << " ("
+       << "id VARCHAR(" << id_length << ") "
+       << "AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) UNIQUE KEY, "
+       << "doc JSON, "
+       << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
+
+    return ss.str();
+}
+
+std::string nosql::escape_essential_chars(std::string&& from)
+{
+    auto it = from.begin();
+    auto end = from.end();
+
+    while (it != end && *it != '\'' && *it != '\\')
+    {
+        ++it;
+    }
+
+    if (it == end)
+    {
+        return from;
+    }
+
+    string to(from.begin(), it);
+
+    if (*it == '\'')
+    {
+        to.push_back('\'');
+    }
+    else
+    {
+        to.push_back('\\');
+    }
+
+    to.push_back(*it++);
+
+    while (it != end)
+    {
+        auto c = *it;
+
+        switch (c)
+        {
+        case '\\':
+            to.push_back('\\');
+            break;
+
+        case '\'':
+            to.push_back('\'');
+            break;
+
+        default:
+            break;
+        }
+
+        to.push_back(c);
+
+        ++it;
+    }
+
+    return to;
+}
+
+bsoncxx::array::value nosql::bson_from_json_array(json_t* pArray)
+{
+    mxb_assert(json_typeof(pArray) == JSON_ARRAY);
+
+    ArrayBuilder array;
+
+    size_t index;
+    json_t* pValue;
+    json_array_foreach(pArray, index, pValue)
+    {
+        switch (json_typeof(pValue))
+        {
+        case JSON_OBJECT:
+            if (!append_objectid(array, pValue))
+            {
+                array.append(bson_from_json(pValue));
+            }
+            break;
+
+        case JSON_ARRAY:
+            array.append(bson_from_json_array(pValue));
+            break;
+
+        case JSON_STRING:
+            array.append(json_string_value(pValue));
+            break;
+
+        case JSON_INTEGER:
+            array.append((int64_t)json_integer_value(pValue));
+            break;
+
+        case JSON_REAL:
+            array.append(json_number_value(pValue));
+            break;
+
+        case JSON_TRUE:
+            array.append(true);
+            break;
+
+        case JSON_FALSE:
+            array.append(false);
+            break;
+
+        case JSON_NULL:
+            array.append(bsoncxx::types::b_null());
+            break;
+        }
+    }
+
+    return array.extract();
+}
+
+bsoncxx::document::value nosql::bson_from_json(json_t* pObject)
+{
+    mxb_assert(json_typeof(pObject) == JSON_OBJECT);
+
+    DocumentBuilder doc;
+
+    const char* zKey;
+    json_t* pValue;
+    json_object_foreach(pObject, zKey, pValue)
+    {
+        string_view key(zKey);
+
+        switch (json_typeof(pValue))
+        {
+        case JSON_OBJECT:
+            if (!append_objectid(doc, key, pValue))
+            {
+                doc.append(kvp(key, bson_from_json(pValue)));
+            }
+            break;
+
+        case JSON_ARRAY:
+            doc.append(kvp(key, bson_from_json_array(pValue)));
+            break;
+
+        case JSON_STRING:
+            doc.append(kvp(key, json_string_value(pValue)));
+            break;
+
+        case JSON_INTEGER:
+            doc.append(kvp(key, (int64_t)json_integer_value(pValue)));
+            break;
+
+        case JSON_REAL:
+            doc.append(kvp(key, json_number_value(pValue)));
+            break;
+
+        case JSON_TRUE:
+            doc.append(kvp(key, true));
+            break;
+
+        case JSON_FALSE:
+            doc.append(kvp(key, false));
+            break;
+
+        case JSON_NULL:
+            doc.append(kvp(key, bsoncxx::types::b_null()));
+            break;
+        }
+    }
+
+    return doc.extract();
+}
+
+bsoncxx::document::value nosql::bson_from_json(const string& json)
+{
+    // A bsoncxx::document::value cannot be default constructed, so we just have
+    // to return from many places.
+
+    try
+    {
+        return bsoncxx::from_json(json);
+    }
+    catch (const std::exception& x)
+    {
+        MXB_WARNING("Could not default convert JSON to BSON: %s. JSON: %s",
+                    x.what(), json.c_str());
+    }
+
+    // Ok, so the default JSON->BSON conversion failed. Probably due to there being JSON
+    // sub-object that "by convention" should be converted into a particular BSON object,
+    // but cannot be due to it not containing everything that is needed.
+
+    mxb::Json j;
+
+    if (j.load_string(json))
+    {
+        return bson_from_json(j.get_json());
+    }
+    else
+    {
+        MXB_ERROR("Could not load JSON data, returning empty document: %s. JSON: %s",
+                  j.error_msg().c_str(), json.c_str());
+    }
+
+    DocumentBuilder doc;
+    return doc.extract();
 }
