@@ -378,18 +378,48 @@ export default {
             return sql
         },
         /**
+         * This builds DROP/ADD UNIQUE INDEX SQL
+         * @param {Array} payload.uqColsChanged - columns have UQ value changed
+         * @returns {String} - returns DROP/ADD UNIQUE INDEX SQL
+         */
+        buildUQSQL({ uqColsChanged }) {
+            let sql = ''
+            const { escapeIdentifiers: escape } = this.$help
+            uqColsChanged.forEach((col, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
+                const { column_name } = col.newObj
+                col.diff.forEach(d => {
+                    if (!d.lhs)
+                        sql += `ADD UNIQUE INDEX ${escape(d.rhs)} (${escape(
+                            column_name
+                        )} ASC) VISIBLE`
+                    else if (!d.rhs) sql += `DROP INDEX ${escape(d.lhs)}`
+                })
+            })
+            return sql
+        },
+        /**
          * This handles build column definition and column constraints SQL
          * @param {Array} payload.updatedCols - columns need to be changed
          * @returns {String} - returns CHANGE COLUMN sql
          */
         buildChangeColSQL({ updatedCols }) {
+            const {
+                lodash: { isEqual },
+            } = this.$help
             let sql = '',
                 colDfnSQL = '',
+                uqSQL = '',
                 pkSQL = ''
             /**
-             * iterates through all updatedCols and keep cols having column definition changed
+             * iterates through all updatedCols and keep cols having column definition, UQ changed
              * This also filters diff
              */
+            const uqColsChanged = updatedCols.reduce((arr, col) => {
+                const uqColDiff = col.diff.filter(d => d.kind === 'E' && d.path[0] === 'UQ')
+                if (uqColDiff.length) arr.push({ ...col, diff: uqColDiff })
+                return arr
+            }, [])
             const dfnColsChanged = updatedCols.reduce((arr, col) => {
                 const dfnColDiff = col.diff.filter(
                     d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
@@ -398,16 +428,18 @@ export default {
                 return arr
             }, [])
             // build sql
-            if (dfnColsChanged.length) {
-                colDfnSQL = this.buildColDfnSQL({ dfnColsChanged })
-            }
-            if (!this.$help.lodash.isEqual(this.initialPkCols, this.currPkCols)) {
-                pkSQL = this.buildPKSQL()
-            }
+            if (dfnColsChanged.length) colDfnSQL = this.buildColDfnSQL({ dfnColsChanged })
+            if (uqColsChanged.length) uqSQL = this.buildUQSQL({ uqColsChanged })
+            if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
+
             // handle assign sql
             sql += colDfnSQL
-            if (pkSQL) {
+            if (uqSQL) {
                 if (colDfnSQL) sql += this.handleAddComma()
+                sql += uqSQL
+            }
+            if (pkSQL) {
+                if (colDfnSQL || uqSQL) sql += this.handleAddComma()
                 sql += pkSQL
             }
             return sql
