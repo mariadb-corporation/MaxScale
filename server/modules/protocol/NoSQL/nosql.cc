@@ -497,293 +497,6 @@ bool element_as<bool>(const string& command,
 
 }
 
-nosql::Insert::Insert(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_INSERT);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    pData += protocol::get_byte4(pData, &m_flags);
-    pData += protocol::get_zstring(pData, &m_zCollection);
-
-    while (pData < m_pEnd)
-    {
-        if (m_pEnd - pData < 4)
-        {
-            mxb_assert(!true);
-            std::ostringstream ss;
-            ss << "Malformed packet, expecting document, but not even document length received.";
-
-            throw std::runtime_error(ss.str());
-        }
-
-        uint32_t size;
-        protocol::get_byte4(pData, &size);
-
-        if (pData + size > m_pEnd)
-        {
-            mxb_assert(!true);
-            std::ostringstream ss;
-            ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
-               << m_pEnd - pData << " available.";
-
-            throw std::runtime_error(ss.str());
-        }
-
-        auto view = bsoncxx::document::view { pData, size };
-        m_documents.push_back(view);
-
-        pData += size;
-    }
-}
-
-nosql::Delete::Delete(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_DELETE);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    pData += 4; // ZERO int32
-    pData += protocol::get_zstring(pData, &m_zCollection);
-    pData += protocol::get_byte4(pData, &m_flags);
-    pData += protocol::get_document(pData, m_pEnd, &m_selector);
-
-    mxb_assert(pData == m_pEnd);
-}
-
-nosql::Update::Update(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_UPDATE);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    pData += 4; // ZERO int32
-    pData += protocol::get_zstring(pData, &m_zCollection);
-    pData += protocol::get_byte4(pData, &m_flags);
-    pData += protocol::get_document(pData, m_pEnd, &m_selector);
-    pData += protocol::get_document(pData, m_pEnd, &m_update);
-
-    mxb_assert(pData == m_pEnd);
-}
-
-nosql::Query::Query(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    pData += protocol::get_byte4(pData, &m_flags);
-    pData += protocol::get_zstring(pData, &m_zCollection);
-    pData += protocol::get_byte4(pData, &m_nSkip);
-    pData += protocol::get_byte4(pData, &m_nReturn);
-
-    uint32_t size;
-    protocol::get_byte4(pData, &size);
-    m_query = bsoncxx::document::view { pData, size };
-    pData += size;
-
-    if (pData < m_pEnd)
-    {
-        protocol::get_byte4(pData, &size);
-        if (m_pEnd - pData != size)
-        {
-            mxb_assert(!true);
-            std::ostringstream ss;
-            ss << "Malformed packet, expected " << size << " bytes for document, "
-               << m_pEnd - pData << " found.";
-
-            throw std::runtime_error(ss.str());
-        }
-        m_fields = bsoncxx::document::view { pData, size };
-        pData += size;
-    }
-
-    if (pData != m_pEnd)
-    {
-        mxb_assert(!true);
-        std::ostringstream ss;
-        ss << "Malformed packet, " << m_pEnd - pData << " trailing bytes found.";
-
-        throw std::runtime_error(ss.str());
-    }
-}
-
-nosql::GetMore::GetMore(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_GET_MORE);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    int32_t zero;
-    pData += protocol::get_byte4(pData, &zero);
-    pData += protocol::get_zstring(pData, &m_zCollection);
-    pData += protocol::get_byte4(pData, &m_nReturn);
-    pData += protocol::get_byte8(pData, &m_cursor_id);
-
-    if (m_nReturn == 0)
-    {
-        m_nReturn = DEFAULT_CURSOR_RETURN;
-    }
-}
-
-nosql::KillCursors::KillCursors(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_KILL_CURSORS);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    int32_t zero;
-    pData += protocol::get_byte4(pData, &zero);
-    int32_t nCursors;
-    pData += protocol::get_byte4(pData, &nCursors);
-
-    for (int32_t i = 0; i < nCursors; ++i)
-    {
-        int64_t cursor_id;
-        pData += protocol::get_byte8(pData, &cursor_id);
-        m_cursor_ids.push_back(cursor_id);
-    }
-}
-
-nosql::Msg::Msg(const Packet& packet)
-    : Packet(packet)
-{
-    mxb_assert(opcode() == MONGOC_OPCODE_MSG);
-
-    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
-
-    pData += protocol::get_byte4(pData, &m_flags);
-
-    if (checksum_present())
-    {
-        const uint8_t* p = reinterpret_cast<const uint8_t*>(m_pHeader);
-
-        uint32_t checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
-
-        p += (m_pHeader->msg_len - sizeof(uint32_t));
-        const uint32_t* pChecksum = reinterpret_cast<const uint32_t*>(p);
-
-        if (checksum != *pChecksum)
-        {
-            std::ostringstream ss;
-            ss << "Invalid checksum, expected " << checksum << ", got " << *pChecksum << ".";
-            throw std::runtime_error(ss.str());
-        }
-    }
-
-    const uint8_t* pSections_end = m_pEnd - (checksum_present() ? sizeof(uint32_t) : 0);
-    size_t sections_size = pSections_end - pData;
-
-    while (pData < pSections_end)
-    {
-        uint8_t kind;
-        pData += protocol::get_byte1(pData, &kind);
-
-        switch (kind)
-        {
-        case 0:
-            // Body section encoded as a single BSON object.
-            {
-                mxb_assert(m_document.empty());
-                uint32_t size;
-                protocol::get_byte4(pData, &size);
-
-                if (pData + size > pSections_end)
-                {
-                    std::ostringstream ss;
-                    ss << "Malformed packet, section(0) size " << size << " larger "
-                       << "than available amount " << pSections_end - pData << " of data.";
-                    throw std::runtime_error(ss.str());
-                }
-
-                m_document = bsoncxx::document::view { pData, size };
-                pData += size;
-            }
-            break;
-
-        case 1:
-            {
-                uint32_t total_size;
-                protocol::get_byte4(pData, &total_size);
-
-                if (pData + total_size > pSections_end)
-                {
-                    std::ostringstream ss;
-                    ss << "Malformed packet, section(1) size " << total_size << " larger "
-                       << "than available amount " << pSections_end - pData << " of data.";
-                    throw std::runtime_error(ss.str());
-                }
-
-                auto* pEnd = pData + total_size;
-                pData += 4;
-
-                const char* zIdentifier = reinterpret_cast<const char*>(pData); // NULL-terminated
-                while (*pData && pData != pEnd)
-                {
-                    ++pData;
-                }
-
-                if (pData != pEnd)
-                {
-                    ++pData; // NULL-terminator
-
-                    auto& documents = m_arguments[zIdentifier];
-
-                    // And now there are documents all the way down...
-                    while (pData < pEnd)
-                    {
-                        uint32_t size;
-                        protocol::get_byte4(pData, &size);
-                        if (pData + size <= pEnd)
-                        {
-                            bsoncxx::document::view doc { pData, size };
-                            MXB_INFO("DOC: %s", bsoncxx::to_json(doc).c_str());
-                            documents.push_back(doc);
-                            pData += size;
-                        }
-                        else
-                        {
-                            mxb_assert(!true);
-                            std::ostringstream ss;
-                            ss << "Malformed packet, expected " << size << " bytes for document, "
-                               << pEnd - pData << " found.";
-                            throw std::runtime_error(ss.str());
-                        }
-                    }
-                }
-                else
-                {
-                    mxb_assert(!true);
-                    throw std::runtime_error("Malformed packet, 'identifier' not NULL-terminated.");
-                }
-            }
-            break;
-
-        default:
-            {
-                mxb_assert(!true);
-                std::ostringstream ss;
-                ss << "Malformed packet, expected a 'kind' of 0 or 1, received " << kind << ".";
-                throw std::runtime_error(ss.str());
-            }
-        }
-    }
-
-    if (pData != pSections_end)
-    {
-        mxb_assert(!true);
-        std::ostringstream ss;
-        ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
-        throw std::runtime_error(ss.str());
-    }
-}
-
 const char* nosql::opcode_to_string(int code)
 {
     switch (code)
@@ -3117,6 +2830,293 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
 
 namespace nosql
 {
+
+Insert::Insert(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_INSERT);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+
+    while (pData < m_pEnd)
+    {
+        if (m_pEnd - pData < 4)
+        {
+            mxb_assert(!true);
+            std::ostringstream ss;
+            ss << "Malformed packet, expecting document, but not even document length received.";
+
+            throw std::runtime_error(ss.str());
+        }
+
+        uint32_t size;
+        protocol::get_byte4(pData, &size);
+
+        if (pData + size > m_pEnd)
+        {
+            mxb_assert(!true);
+            std::ostringstream ss;
+            ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
+               << m_pEnd - pData << " available.";
+
+            throw std::runtime_error(ss.str());
+        }
+
+        auto view = bsoncxx::document::view { pData, size };
+        m_documents.push_back(view);
+
+        pData += size;
+    }
+}
+
+Delete::Delete(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_DELETE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+
+    mxb_assert(pData == m_pEnd);
+}
+
+Update::Update(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_UPDATE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += 4; // ZERO int32
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_document(pData, m_pEnd, &m_selector);
+    pData += protocol::get_document(pData, m_pEnd, &m_update);
+
+    mxb_assert(pData == m_pEnd);
+}
+
+Query::Query(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_QUERY);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += protocol::get_byte4(pData, &m_flags);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_nSkip);
+    pData += protocol::get_byte4(pData, &m_nReturn);
+
+    uint32_t size;
+    protocol::get_byte4(pData, &size);
+    m_query = bsoncxx::document::view { pData, size };
+    pData += size;
+
+    if (pData < m_pEnd)
+    {
+        protocol::get_byte4(pData, &size);
+        if (m_pEnd - pData != size)
+        {
+            mxb_assert(!true);
+            std::ostringstream ss;
+            ss << "Malformed packet, expected " << size << " bytes for document, "
+               << m_pEnd - pData << " found.";
+
+            throw std::runtime_error(ss.str());
+        }
+        m_fields = bsoncxx::document::view { pData, size };
+        pData += size;
+    }
+
+    if (pData != m_pEnd)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, " << m_pEnd - pData << " trailing bytes found.";
+
+        throw std::runtime_error(ss.str());
+    }
+}
+
+GetMore::GetMore(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_GET_MORE);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    int32_t zero;
+    pData += protocol::get_byte4(pData, &zero);
+    pData += protocol::get_zstring(pData, &m_zCollection);
+    pData += protocol::get_byte4(pData, &m_nReturn);
+    pData += protocol::get_byte8(pData, &m_cursor_id);
+
+    if (m_nReturn == 0)
+    {
+        m_nReturn = DEFAULT_CURSOR_RETURN;
+    }
+}
+
+KillCursors::KillCursors(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_KILL_CURSORS);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    int32_t zero;
+    pData += protocol::get_byte4(pData, &zero);
+    int32_t nCursors;
+    pData += protocol::get_byte4(pData, &nCursors);
+
+    for (int32_t i = 0; i < nCursors; ++i)
+    {
+        int64_t cursor_id;
+        pData += protocol::get_byte8(pData, &cursor_id);
+        m_cursor_ids.push_back(cursor_id);
+    }
+}
+
+Msg::Msg(const Packet& packet)
+    : Packet(packet)
+{
+    mxb_assert(opcode() == MONGOC_OPCODE_MSG);
+
+    const uint8_t* pData = reinterpret_cast<const uint8_t*>(m_pHeader) + sizeof(protocol::HEADER);
+
+    pData += protocol::get_byte4(pData, &m_flags);
+
+    if (checksum_present())
+    {
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(m_pHeader);
+
+        uint32_t checksum = crc32_func(p, m_pHeader->msg_len - sizeof(uint32_t));
+
+        p += (m_pHeader->msg_len - sizeof(uint32_t));
+        const uint32_t* pChecksum = reinterpret_cast<const uint32_t*>(p);
+
+        if (checksum != *pChecksum)
+        {
+            std::ostringstream ss;
+            ss << "Invalid checksum, expected " << checksum << ", got " << *pChecksum << ".";
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    const uint8_t* pSections_end = m_pEnd - (checksum_present() ? sizeof(uint32_t) : 0);
+    size_t sections_size = pSections_end - pData;
+
+    while (pData < pSections_end)
+    {
+        uint8_t kind;
+        pData += protocol::get_byte1(pData, &kind);
+
+        switch (kind)
+        {
+        case 0:
+            // Body section encoded as a single BSON object.
+            {
+                mxb_assert(m_document.empty());
+                uint32_t size;
+                protocol::get_byte4(pData, &size);
+
+                if (pData + size > pSections_end)
+                {
+                    std::ostringstream ss;
+                    ss << "Malformed packet, section(0) size " << size << " larger "
+                       << "than available amount " << pSections_end - pData << " of data.";
+                    throw std::runtime_error(ss.str());
+                }
+
+                m_document = bsoncxx::document::view { pData, size };
+                pData += size;
+            }
+            break;
+
+        case 1:
+            {
+                uint32_t total_size;
+                protocol::get_byte4(pData, &total_size);
+
+                if (pData + total_size > pSections_end)
+                {
+                    std::ostringstream ss;
+                    ss << "Malformed packet, section(1) size " << total_size << " larger "
+                       << "than available amount " << pSections_end - pData << " of data.";
+                    throw std::runtime_error(ss.str());
+                }
+
+                auto* pEnd = pData + total_size;
+                pData += 4;
+
+                const char* zIdentifier = reinterpret_cast<const char*>(pData); // NULL-terminated
+                while (*pData && pData != pEnd)
+                {
+                    ++pData;
+                }
+
+                if (pData != pEnd)
+                {
+                    ++pData; // NULL-terminator
+
+                    auto& documents = m_arguments[zIdentifier];
+
+                    // And now there are documents all the way down...
+                    while (pData < pEnd)
+                    {
+                        uint32_t size;
+                        protocol::get_byte4(pData, &size);
+                        if (pData + size <= pEnd)
+                        {
+                            bsoncxx::document::view doc { pData, size };
+                            MXB_INFO("DOC: %s", bsoncxx::to_json(doc).c_str());
+                            documents.push_back(doc);
+                            pData += size;
+                        }
+                        else
+                        {
+                            mxb_assert(!true);
+                            std::ostringstream ss;
+                            ss << "Malformed packet, expected " << size << " bytes for document, "
+                               << pEnd - pData << " found.";
+                            throw std::runtime_error(ss.str());
+                        }
+                    }
+                }
+                else
+                {
+                    mxb_assert(!true);
+                    throw std::runtime_error("Malformed packet, 'identifier' not NULL-terminated.");
+                }
+            }
+            break;
+
+        default:
+            {
+                mxb_assert(!true);
+                std::ostringstream ss;
+                ss << "Malformed packet, expected a 'kind' of 0 or 1, received " << kind << ".";
+                throw std::runtime_error(ss.str());
+            }
+        }
+    }
+
+    if (pData != pSections_end)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, " << pSections_end - pData << " trailing bytes found.";
+        throw std::runtime_error(ss.str());
+    }
+}
 
 //
 // Path::Incarnation
