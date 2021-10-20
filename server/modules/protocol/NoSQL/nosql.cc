@@ -2770,7 +2770,6 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
     return rv;
 }
 
-std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
 nosql::NoError::NoError(int32_t n)
     : m_n(n)
@@ -2817,180 +2816,6 @@ void nosql::NoError::populate(nosql::DocumentBuilder& doc)
     doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
-nosql::NoSQL::Context::Context(MXS_SESSION* pSession,
-                               mxs::ClientConnection* pClient_connection,
-                               mxs::Component* pDownstream)
-    : m_session(*pSession)
-    , m_client_connection(*pClient_connection)
-    , m_downstream(*pDownstream)
-    , m_connection_id(++s_connection_id)
-    , m_sLast_error(std::make_unique<NoError>())
-{
-}
-
-void nosql::NoSQL::Context::get_last_error(DocumentBuilder& doc)
-{
-    int32_t connection_id = m_connection_id; // MongoDB returns this as a 32-bit integer.
-
-    doc.append(kvp(key::CONNECTION_ID, connection_id));
-    m_sLast_error->populate(doc);
-    doc.append(kvp(key::OK, 1));
-}
-
-void nosql::NoSQL::Context::reset_error(int32_t n)
-{
-    m_sLast_error = std::make_unique<NoError>(n);
-}
-
-nosql::NoSQL::NoSQL(MXS_SESSION* pSession,
-                    mxs::ClientConnection* pClient_connection,
-                    mxs::Component* pDownstream,
-                    Config* pConfig)
-    : m_context(pSession, pClient_connection, pDownstream)
-    , m_config(*pConfig)
-{
-}
-
-nosql::NoSQL::~NoSQL()
-{
-}
-
-State nosql::NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
-{
-    State state = State::READY;
-    GWBUF* pResponse = nullptr;
-
-    if (!m_sDatabase)
-    {
-        try
-        {
-            // If no database operation is in progress, we proceed.
-            nosql::Packet req(pRequest);
-
-            mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
-
-            switch (req.opcode())
-            {
-            case MONGOC_OPCODE_COMPRESSED:
-            case MONGOC_OPCODE_REPLY:
-                {
-                    ostringstream ss;
-                    ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
-                    throw std::runtime_error(ss.str());
-                }
-                break;
-
-            case MONGOC_OPCODE_GET_MORE:
-                state = handle_get_more(pRequest, nosql::GetMore(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_KILL_CURSORS:
-                state = handle_kill_cursors(pRequest, nosql::KillCursors(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_DELETE:
-                state = handle_delete(pRequest, nosql::Delete(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_INSERT:
-                state = handle_insert(pRequest, nosql::Insert(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_MSG:
-                state = handle_msg(pRequest, nosql::Msg(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_QUERY:
-                state = handle_query(pRequest, nosql::Query(req), &pResponse);
-                break;
-
-            case MONGOC_OPCODE_UPDATE:
-                state = handle_update(pRequest, nosql::Update(req), &pResponse);
-                break;
-
-            default:
-                {
-                    mxb_assert(!true);
-                    ostringstream ss;
-                    ss << "Unknown packet " << req.opcode() << " received.";
-                    throw std::runtime_error(ss.str());
-                }
-            }
-        }
-        catch (const std::exception& x)
-        {
-            MXB_ERROR("Closing client connection: %s", x.what());
-            kill_client();
-        }
-
-        gwbuf_free(pRequest);
-    }
-    else
-    {
-        // Otherwise we push it on the request queue.
-        m_requests.push_back(pRequest);
-    }
-
-    *ppResponse = pResponse;
-    return state;
-}
-
-int32_t nosql::NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
-{
-    mxb_assert(m_sDatabase.get());
-
-    // TODO: Remove need for making resultset contiguous.
-    pMariadb_response = gwbuf_make_contiguous(pMariadb_response);
-
-    mxs::Buffer mariadb_response(pMariadb_response);
-    GWBUF* pProtocol_response = m_sDatabase->translate(std::move(mariadb_response));
-
-    if (m_sDatabase->is_ready())
-    {
-        m_sDatabase.reset();
-
-        if (pProtocol_response)
-        {
-            pDcb->writeq_append(pProtocol_response);
-        }
-
-        if (!m_requests.empty())
-        {
-            // Loop as long as responses to requests can be generated immediately.
-            // If it can't then we'll continue once clientReply() is called anew.
-            State state = State::READY;
-            do
-            {
-                mxb_assert(!m_sDatabase.get());
-
-                GWBUF* pRequest = m_requests.front();
-                m_requests.pop_front();
-
-                state = handle_request(pRequest, &pProtocol_response);
-
-                if (pProtocol_response)
-                {
-                    // The response could be generated immediately, just send it.
-                    pDcb->writeq_append(pProtocol_response);
-                }
-            }
-            while (state == State::READY && !m_requests.empty());
-        }
-    }
-    else
-    {
-        // If the database is not ready, there cannot be a response.
-        mxb_assert(pProtocol_response == nullptr);
-    }
-
-    return 0;
-}
-
-void nosql::NoSQL::kill_client()
-{
-    m_context.client_connection().dcb()->session()->kill();
-}
-
 namespace
 {
 
@@ -3006,153 +2831,6 @@ string extract_database(const string& collection)
     return collection.substr(0, i);
 }
 
-}
-
-State nosql::NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
-
-    State state = m_sDatabase->handle_delete(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
-
-    State state = m_sDatabase->handle_insert(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
-
-    State state = m_sDatabase->handle_update(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
-
-    State state = m_sDatabase->handle_query(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
-
-    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
-
-    mxb_assert(!m_sDatabase.get());
-    m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
-
-    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), ppResponse);
-
-    if (state == State::READY)
-    {
-        m_sDatabase.reset();
-    }
-
-    return state;
-}
-
-State nosql::NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
-{
-    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
-
-    State state = State::READY;
-
-    const auto& doc = req.document();
-
-    auto element = doc["$db"];
-
-    if (element)
-    {
-        if (element.type() == bsoncxx::type::k_utf8)
-        {
-            auto utf8 = element.get_utf8();
-
-            string name(utf8.value.data(), utf8.value.size());
-
-            mxb_assert(!m_sDatabase.get());
-            m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
-
-            state = m_sDatabase->handle_msg(pRequest, std::move(req), ppResponse);
-
-            if (state == State::READY)
-            {
-                m_sDatabase.reset();
-            }
-        }
-        else
-        {
-            MXB_ERROR("Closing client connection; key '$db' found, but value is not utf8.");
-            kill_client();
-        }
-    }
-    else
-    {
-        MXB_ERROR("Closing client connection; document did not "
-                  "contain the expected key '$db': %s",
-                  req.to_string().c_str());
-        kill_client();
-    }
-
-    return state;
 }
 
 string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
@@ -4362,6 +4040,335 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
     }
 
     return "(" + condition + ")";
+}
+
+//
+// NoSQL::Context
+//
+std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
+
+NoSQL::Context::Context(MXS_SESSION* pSession,
+                        mxs::ClientConnection* pClient_connection,
+                        mxs::Component* pDownstream)
+    : m_session(*pSession)
+    , m_client_connection(*pClient_connection)
+    , m_downstream(*pDownstream)
+    , m_connection_id(++s_connection_id)
+    , m_sLast_error(std::make_unique<NoError>())
+{
+}
+
+void NoSQL::Context::get_last_error(DocumentBuilder& doc)
+{
+    int32_t connection_id = m_connection_id; // MongoDB returns this as a 32-bit integer.
+
+    doc.append(kvp(key::CONNECTION_ID, connection_id));
+    m_sLast_error->populate(doc);
+    doc.append(kvp(key::OK, 1));
+}
+
+void NoSQL::Context::reset_error(int32_t n)
+{
+    m_sLast_error = std::make_unique<NoError>(n);
+}
+
+//
+// NoSQL
+//
+NoSQL::NoSQL(MXS_SESSION* pSession,
+             mxs::ClientConnection* pClient_connection,
+             mxs::Component* pDownstream,
+             Config* pConfig)
+    : m_context(pSession, pClient_connection, pDownstream)
+    , m_config(*pConfig)
+{
+}
+
+NoSQL::~NoSQL()
+{
+}
+
+State NoSQL::handle_request(GWBUF* pRequest, GWBUF** ppResponse)
+{
+    State state = State::READY;
+    GWBUF* pResponse = nullptr;
+
+    if (!m_sDatabase)
+    {
+        try
+        {
+            // If no database operation is in progress, we proceed.
+            nosql::Packet req(pRequest);
+
+            mxb_assert(req.msg_len() == (int)gwbuf_length(pRequest));
+
+            switch (req.opcode())
+            {
+            case MONGOC_OPCODE_COMPRESSED:
+            case MONGOC_OPCODE_REPLY:
+                {
+                    ostringstream ss;
+                    ss << "Unsupported packet " << nosql::opcode_to_string(req.opcode()) << " received.";
+                    throw std::runtime_error(ss.str());
+                }
+                break;
+
+            case MONGOC_OPCODE_GET_MORE:
+                state = handle_get_more(pRequest, nosql::GetMore(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_KILL_CURSORS:
+                state = handle_kill_cursors(pRequest, nosql::KillCursors(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_DELETE:
+                state = handle_delete(pRequest, nosql::Delete(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_INSERT:
+                state = handle_insert(pRequest, nosql::Insert(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_MSG:
+                state = handle_msg(pRequest, nosql::Msg(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_QUERY:
+                state = handle_query(pRequest, nosql::Query(req), &pResponse);
+                break;
+
+            case MONGOC_OPCODE_UPDATE:
+                state = handle_update(pRequest, nosql::Update(req), &pResponse);
+                break;
+
+            default:
+                {
+                    mxb_assert(!true);
+                    ostringstream ss;
+                    ss << "Unknown packet " << req.opcode() << " received.";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+        catch (const std::exception& x)
+        {
+            MXB_ERROR("Closing client connection: %s", x.what());
+            kill_client();
+        }
+
+        gwbuf_free(pRequest);
+    }
+    else
+    {
+        // Otherwise we push it on the request queue.
+        m_requests.push_back(pRequest);
+    }
+
+    *ppResponse = pResponse;
+    return state;
+}
+
+int32_t NoSQL::clientReply(GWBUF* pMariadb_response, DCB* pDcb)
+{
+    mxb_assert(m_sDatabase.get());
+
+    // TODO: Remove need for making resultset contiguous.
+    pMariadb_response = gwbuf_make_contiguous(pMariadb_response);
+
+    mxs::Buffer mariadb_response(pMariadb_response);
+    GWBUF* pProtocol_response = m_sDatabase->translate(std::move(mariadb_response));
+
+    if (m_sDatabase->is_ready())
+    {
+        m_sDatabase.reset();
+
+        if (pProtocol_response)
+        {
+            pDcb->writeq_append(pProtocol_response);
+        }
+
+        if (!m_requests.empty())
+        {
+            // Loop as long as responses to requests can be generated immediately.
+            // If it can't then we'll continue once clientReply() is called anew.
+            State state = State::READY;
+            do
+            {
+                mxb_assert(!m_sDatabase.get());
+
+                GWBUF* pRequest = m_requests.front();
+                m_requests.pop_front();
+
+                state = handle_request(pRequest, &pProtocol_response);
+
+                if (pProtocol_response)
+                {
+                    // The response could be generated immediately, just send it.
+                    pDcb->writeq_append(pProtocol_response);
+                }
+            }
+            while (state == State::READY && !m_requests.empty());
+        }
+    }
+    else
+    {
+        // If the database is not ready, there cannot be a response.
+        mxb_assert(pProtocol_response == nullptr);
+    }
+
+    return 0;
+}
+
+void NoSQL::kill_client()
+{
+    m_context.client_connection().dcb()->session()->kill();
+}
+
+State NoSQL::handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    State state = m_sDatabase->handle_delete(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    State state = m_sDatabase->handle_insert(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    State state = m_sDatabase->handle_update(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    State state = m_sDatabase->handle_query(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
+
+    State state = m_sDatabase->handle_get_more(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
+
+    mxb_assert(!m_sDatabase.get());
+    m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
+
+    State state = m_sDatabase->handle_kill_cursors(pRequest, std::move(req), ppResponse);
+
+    if (state == State::READY)
+    {
+        m_sDatabase.reset();
+    }
+
+    return state;
+}
+
+State NoSQL::handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse)
+{
+    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
+
+    State state = State::READY;
+
+    const auto& doc = req.document();
+
+    auto element = doc["$db"];
+
+    if (element)
+    {
+        if (element.type() == bsoncxx::type::k_utf8)
+        {
+            auto utf8 = element.get_utf8();
+
+            string name(utf8.value.data(), utf8.value.size());
+
+            mxb_assert(!m_sDatabase.get());
+            m_sDatabase = std::move(Database::create(name, &m_context, &m_config));
+
+            state = m_sDatabase->handle_msg(pRequest, std::move(req), ppResponse);
+
+            if (state == State::READY)
+            {
+                m_sDatabase.reset();
+            }
+        }
+        else
+        {
+            MXB_ERROR("Closing client connection; key '$db' found, but value is not utf8.");
+            kill_client();
+        }
+    }
+    else
+    {
+        MXB_ERROR("Closing client connection; document did not "
+                  "contain the expected key '$db': %s",
+                  req.to_string().c_str());
+        kill_client();
+    }
+
+    return state;
 }
 
 }
