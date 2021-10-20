@@ -22,6 +22,7 @@
 #include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
+#include <maxscale/modutil.hh>
 
 using mxs::RoutingWorker;
 
@@ -135,6 +136,16 @@ GWBUF* gwbuf_alloc(unsigned int size)
         rval = new GWBUF(size, sbuf);
     }
     return rval;
+}
+
+const std::string& GWBUF::get_sql() const
+{
+    if (m_sql.empty())
+    {
+        m_sql = maxscale::extract_sql_real(this);
+    }
+
+    return m_sql;
 }
 
 GWBUF::GWBUF(uint64_t size, SHARED_BUF* shared_buf)

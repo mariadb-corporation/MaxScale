@@ -94,7 +94,11 @@ public:
     int owner {-1};     /*< Owner of the thread, only for debugging */
 #endif
 
+    const std::string& get_sql() const;
+
     GWBUF(uint64_t size, SHARED_BUF* shared_buf);
+private:
+    mutable std::string m_sql;
 };
 
 inline bool gwbuf_is_type_undefined(const GWBUF* b)

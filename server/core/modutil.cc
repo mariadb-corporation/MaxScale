@@ -782,7 +782,7 @@ const char* STRPACKETTYPE(int p)
 namespace maxscale
 {
 
-std::string extract_sql(const GWBUF* pBuf, size_t len)
+std::string extract_sql_real(const GWBUF* pBuf, size_t len)
 {
     mxb_assert(pBuf != nullptr);
 
@@ -825,9 +825,14 @@ std::string extract_sql(const GWBUF* pBuf, size_t len)
     return rval;
 }
 
+std::string extract_sql(const GWBUF* pBuf, size_t len)
+{
+    return pBuf->get_sql();
+}
+
 std::string extract_sql(const mxs::Buffer& buffer, size_t len)
 {
-    return extract_sql(buffer.get());
+    return buffer.get()->get_sql();
 }
 
 /**
