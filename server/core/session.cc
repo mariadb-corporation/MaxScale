@@ -678,44 +678,17 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
     *ppStmt = nullptr;
     *pLen = 0;
 
-    bool deallocate = false;
-    int len = gwbuf_length(pBuffer);
+    const auto& sql = extract_sql(pBuffer);
 
-    if (len > MYSQL_HEADER_LEN)
+    if (!sql.empty())
     {
-        uint8_t header[MYSQL_HEADER_LEN + 1];
-        uint8_t* pHeader = NULL;
-
-        if (gwbuf_link_length(pBuffer) > MYSQL_HEADER_LEN)
-        {
-            pHeader = GWBUF_DATA(pBuffer);
-        }
-        else
-        {
-            gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
-            pHeader = header;
-        }
-
-        int cmd = MYSQL_GET_COMMAND(pHeader);
-
+        auto cmd = mxs_mysql_get_command(pBuffer);
         *ppCmd = STRPACKETTYPE(cmd);
-
-        if (cmd == MXS_COM_QUERY)
-        {
-            if (gwbuf_is_contiguous(pBuffer))
-            {
-                modutil_extract_SQL(pBuffer, ppStmt, pLen);
-            }
-            else
-            {
-                *ppStmt = modutil_get_SQL(pBuffer);
-                *pLen = strlen(*ppStmt);
-                deallocate = true;
-            }
-        }
+        *ppStmt = const_cast<char*>(sql.c_str());
+        *pLen = sql.length();
     }
 
-    return deallocate;
+    return false;
 }
 }
 
