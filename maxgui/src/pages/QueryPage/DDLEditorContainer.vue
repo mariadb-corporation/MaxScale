@@ -324,18 +324,14 @@ export default {
         },
         /**
          * This builds column definition SQL
-         * @param {Array} payload.updatedCols - columns need to be altered
+         * @param {Array} payload.dfnColsChanged - cols having column definition changed
          * @returns {String} - returns column definition SQL
          */
-        handleBuildColDfnSQL({ updatedCols }) {
+        buildColDfnSQL({ dfnColsChanged }) {
             let sql = ''
-            // iterates through all updatedCols and keep cols having column definition changed
-            const dfnColsChanged = updatedCols.filter(col =>
-                col.diff.some(d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ')
-            )
+            const { escapeIdentifiers: escape } = this.$help
             dfnColsChanged.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
-                const { escapeIdentifiers: escape } = this.$help
                 const { column_name: oldName } = col.oriObj
                 const {
                     column_name: newName,
@@ -359,7 +355,6 @@ export default {
                 if (def) sql += ` DEFAULT ${def}`
                 if (comment) sql += ` COMMENT '${comment}'`
             })
-
             return sql
         },
         /**
@@ -389,16 +384,32 @@ export default {
          */
         buildChangeColSQL({ updatedCols }) {
             let sql = '',
+                colDfnSQL = '',
                 pkSQL = ''
-            const colDfnSQL = this.handleBuildColDfnSQL({ updatedCols })
-            if (!this.$help.lodash.isEqual(this.initialPkCols, this.currPkCols))
+            /**
+             * iterates through all updatedCols and keep cols having column definition changed
+             * This also filters diff
+             */
+            const dfnColsChanged = updatedCols.reduce((arr, col) => {
+                const dfnColDiff = col.diff.filter(
+                    d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
+                )
+                if (dfnColDiff.length) arr.push({ ...col, diff: dfnColDiff })
+                return arr
+            }, [])
+            // build sql
+            if (dfnColsChanged.length) {
+                colDfnSQL = this.buildColDfnSQL({ dfnColsChanged })
+            }
+            if (!this.$help.lodash.isEqual(this.initialPkCols, this.currPkCols)) {
                 pkSQL = this.buildPKSQL()
+            }
+            // handle assign sql
             sql += colDfnSQL
             if (pkSQL) {
                 if (colDfnSQL) sql += this.handleAddComma()
                 sql += pkSQL
             }
-            //TODO: column UQ constraints SQL
             return sql
         },
         /**
