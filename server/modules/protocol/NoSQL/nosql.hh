@@ -1500,6 +1500,19 @@ public:
         std::string get_comparison_condition(const bsoncxx::document::element& element) const;
         std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
 
+        enum class ArrayOp
+        {
+            AND,
+            OR
+        };
+
+    private:
+        std::string array_op_to_condition(const bsoncxx::document::element& element, ArrayOp op) const;
+        std::string elemMatch_to_condition(const bsoncxx::document::element& element) const;
+        std::string exists_to_condition(const bsoncxx::document::element& element) const;
+        std::string mod_to_condition(const bsoncxx::document::element& element) const;
+        std::string type_to_condition(const bsoncxx::document::element& element) const;
+
     private:
         std::string m_path;
         std::string m_parent_path;

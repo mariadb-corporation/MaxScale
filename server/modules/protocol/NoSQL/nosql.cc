@@ -1577,7 +1577,9 @@ string elemMatch_to_json_contains(const Path::Incarnation& p, const bsoncxx::doc
     return condition;
 }
 
-string elemMatch_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
+}
+
+string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
 {
     string condition;
 
@@ -1594,13 +1596,13 @@ string elemMatch_to_condition(const Path::Incarnation& p, const bsoncxx::documen
     }
     else
     {
-        condition = elemMatch_to_json_contains(p, doc);
+        condition = elemMatch_to_json_contains(*this, doc);
     }
 
     return condition;
 }
 
-string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
+string Path::Incarnation::exists_to_condition(const bsoncxx::document::element& element) const
 {
     string rv("(");
 
@@ -1608,27 +1610,27 @@ string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::
 
     if (b)
     {
-        rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NOT NULL";
+        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NOT NULL";
     }
     else
     {
         bool close = false;
-        if (!p.has_array_demand())
+        if (!has_array_demand())
         {
-            if (p.has_parent())
+            if (has_parent())
             {
-                rv += "JSON_QUERY(doc, '$." + p.parent_path() + "') IS NULL OR "
-                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + p.parent_path() + "')) = 'OBJECT'"
+                rv += "JSON_QUERY(doc, '$." + parent_path() + "') IS NULL OR "
+                    "(JSON_TYPE(JSON_EXTRACT(doc, '$." + parent_path() + "')) = 'OBJECT'"
                     " AND ";
                 close = true;
             }
         }
         else
         {
-            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + p.array_path() + "')) = 'ARRAY' AND ";
+            rv += "JSON_TYPE(JSON_QUERY(doc, '$." + array_path() + "')) = 'ARRAY' AND ";
         }
 
-        rv += "JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL";
+        rv += "JSON_EXTRACT(doc, '$." + path() + "') IS NULL";
 
         if (close)
         {
@@ -1640,6 +1642,9 @@ string exists_to_condition(const Path::Incarnation& p, const bsoncxx::document::
 
     return rv;
 }
+
+namespace
+{
 
 namespace
 {
@@ -1777,20 +1782,14 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
 };
 
-enum class ArrayOp
-{
-    AND,
-    OR
-};
-
-inline const char* to_description(ArrayOp op)
+inline const char* to_description(Path::Incarnation::ArrayOp op)
 {
     switch (op)
     {
-    case ArrayOp::AND:
+    case Path::Incarnation::ArrayOp::AND:
         return "$and";
 
-    case ArrayOp::OR:
+    case Path::Incarnation::ArrayOp::OR:
         return "$or";
     }
 
@@ -1798,14 +1797,14 @@ inline const char* to_description(ArrayOp op)
     return nullptr;
 }
 
-inline const char* to_logical_operator(ArrayOp op)
+inline const char* to_logical_operator(Path::Incarnation::ArrayOp op)
 {
     switch (op)
     {
-    case ArrayOp::AND:
+    case Path::Incarnation::ArrayOp::AND:
         return " AND ";
 
-    case ArrayOp::OR:
+    case Path::Incarnation::ArrayOp::OR:
         return " OR ";
     }
 
@@ -1952,9 +1951,10 @@ void add_element_array(ostream& ss,
     }
 }
 
-string array_op_to_condition(const Path::Incarnation& p,
-                             const bsoncxx::document::element& element,
-                             ArrayOp array_op)
+}
+
+string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element& element,
+                                                ArrayOp array_op) const
 {
     const char* zDescription = to_description(array_op);
 
@@ -1977,7 +1977,7 @@ string array_op_to_condition(const Path::Incarnation& p,
     else
     {
         // TODO: We have this information higher up already.
-        string field = p.path();
+        string field = path();
         auto i = field.find_last_of('.');
         bool is_scoped = (i != string::npos);
 
@@ -2112,6 +2112,9 @@ string array_op_to_condition(const Path::Incarnation& p,
 
     return ss.str();
 }
+
+namespace
+{
 
 string protocol_type_to_mariadb_type(int32_t number)
 {
@@ -2275,7 +2278,9 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
     return rv;
 }
 
-string type_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
+}
+
+string Path::Incarnation::type_to_condition(const bsoncxx::document::element& element) const
 {
     string rv;
 
@@ -2304,7 +2309,7 @@ string type_to_condition(const Path::Incarnation& p, const bsoncxx::document::el
                 ss << " OR ";
             }
 
-            ss << type_to_condition_from_value(p, one_element);
+            ss << type_to_condition_from_value(*this, one_element);
         }
 
         ss << ")";
@@ -2313,13 +2318,13 @@ string type_to_condition(const Path::Incarnation& p, const bsoncxx::document::el
     }
     else
     {
-        rv = type_to_condition_from_value(p, element);
+        rv = type_to_condition_from_value(*this, element);
     }
 
     return rv;
 }
 
-string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::element& element)
+string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& element) const
 {
     if (element.type() != bsoncxx::type::k_array)
     {
@@ -2368,12 +2373,15 @@ string mod_to_condition(const Path::Incarnation& p, const bsoncxx::document::ele
     }
 
     ostringstream ss;
-    ss << "((JSON_TYPE(JSON_VALUE(doc, '$." << p.path() << "')) = 'INTEGER' || "
-       << "JSON_TYPE(JSON_VALUE(doc, '$." << p.path() << "')) = 'DOUBLE') AND "
-       << "(MOD(JSON_VALUE(doc, '$." << p.path() << "'), " << divisor << ") = " << remainder << "))";
+    ss << "((JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'INTEGER' || "
+       << "JSON_TYPE(JSON_VALUE(doc, '$." << path() << "')) = 'DOUBLE') AND "
+       << "(MOD(JSON_VALUE(doc, '$." << path() << "'), " << divisor << ") = " << remainder << "))";
 
     return ss.str();
 }
+
+namespace
+{
 
 string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
 {
@@ -3544,11 +3552,11 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         }
         else if (nosql_op == "$elemMatch")
         {
-            condition = elemMatch_to_condition(*this, element);
+            condition = elemMatch_to_condition(element);
         }
         else if (nosql_op == "$exists")
         {
-            condition = exists_to_condition(*this, element);
+            condition = exists_to_condition(element);
         }
         else if (nosql_op == "$size")
         {
@@ -3557,19 +3565,19 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         }
         else if (nosql_op == "$all")
         {
-            condition = array_op_to_condition(*this, element, ArrayOp::AND);
+            condition = array_op_to_condition(element, ArrayOp::AND);
         }
         else if (nosql_op == "$in")
         {
-            condition = array_op_to_condition(*this, element, ArrayOp::OR);
+            condition = array_op_to_condition(element, ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
-            condition = type_to_condition(*this, element);
+            condition = type_to_condition(element);
         }
         else if (nosql_op == "$mod")
         {
-            condition = mod_to_condition(*this, element);
+            condition = mod_to_condition(element);
         }
         else if (nosql_op == "$regex")
         {
