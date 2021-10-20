@@ -102,18 +102,13 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
     if (!success)
     {
         HR_DEBUG("No hints or hint-based routing failed, falling back to default action.");
-        HINT default_hint = {};
+        HINT default_hint;
         default_hint.type = m_router->get_default_action();
         if (default_hint.type == HINT_ROUTE_TO_NAMED_SERVER)
         {
-            default_hint.data = MXS_STRDUP(m_router->get_default_server().c_str());
-            // Ignore allocation error, it will just result in an error later on
+            default_hint.data = m_router->get_default_server();
         }
         success = route_by_hint(pPacket, &default_hint, true);
-        if (default_hint.type == HINT_ROUTE_TO_NAMED_SERVER)
-        {
-            MXS_FREE(default_hint.data);
-        }
     }
 
     if (!success)
@@ -206,7 +201,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
 
     case HINT_ROUTE_TO_NAMED_SERVER:
         {
-            string backend_name((hint->data) ? (const char*)(hint->data) : "");
+            const string& backend_name = hint->data;
             BackendMap::const_iterator iter = m_backends.find(backend_name);
             if (iter != m_backends.end())
             {

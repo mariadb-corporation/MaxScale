@@ -1278,7 +1278,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
     {
         for (const auto& b : m_backends)
         {
-            if (strcasecmp(b->name(), (char*)buffer->hint->data) == 0)
+            if (strcasecmp(b->name(), buffer->hint->data.c_str()) == 0)
             {
                 rval = b->target();
                 MXS_INFO("Routing hint found (%s)", rval->name());

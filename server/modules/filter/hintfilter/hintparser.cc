@@ -249,22 +249,22 @@ HINT* HintParser::process_definition()
 
             if (t == TOK_MASTER)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_MASTER, nullptr);
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_MASTER);
             }
             else if (t == TOK_SLAVE)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_SLAVE, nullptr);
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_SLAVE);
             }
             else if (t == TOK_LAST)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_LAST_USED, nullptr);
+                rval = hint_create_route(nullptr, HINT_ROUTE_TO_LAST_USED);
             }
             else if (t == TOK_SERVER)
             {
                 if (next_token() == TOK_STRING)
                 {
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = hint_create_route(nullptr, HINT_ROUTE_TO_NAMED_SERVER, value.c_str());
+                    rval = hint_create_route(nullptr, HINT_ROUTE_TO_NAMED_SERVER, value);
                 }
             }
         }
@@ -278,7 +278,7 @@ HINT* HintParser::process_definition()
         if (eq == TOK_EQUAL && val == TOK_STRING)
         {
             std::string value(m_tok_begin, m_tok_end);
-            rval = hint_create_parameter(nullptr, key.c_str(), value.c_str());
+            rval = hint_create_parameter(nullptr, key, value);
         }
     }
 
@@ -329,7 +329,7 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                 {
                     // A key=value hint
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = hint_create_parameter(nullptr, key.c_str(), value.c_str());
+                    rval = hint_create_parameter(nullptr, key, value);
                 }
             }
             else if (t == TOK_PREPARE)

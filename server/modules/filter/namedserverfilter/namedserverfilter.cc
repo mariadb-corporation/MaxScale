@@ -355,7 +355,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                 {
                     for (const auto& target : reg_serv->m_targets)
                     {
-                        queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                        queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target);
                     }
                     m_n_diverted++;
                     m_fil_inst.m_total_diverted++;
@@ -377,7 +377,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                         HINT* hlist = nullptr;
                         for (const auto& target : reg_serv->m_targets)
                         {
-                            hlist = hint_create_route(hlist, reg_serv->m_htype, target.c_str());
+                            hlist = hint_create_route(hlist, reg_serv->m_htype, target);
                         }
                         // The PS ID is the id of the buffer. This is set by client protocol and should be
                         // used all over the routing chain.

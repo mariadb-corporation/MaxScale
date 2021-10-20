@@ -343,7 +343,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
         }
         else if (m_hints_left > 0)
         {
-            queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
+            queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
             MXS_INFO("%d queries left", m_hints_left);
@@ -355,7 +355,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
 
             if (dt < m_time.count())
             {
-                queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
+                queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
                 MXS_INFO("%.0f seconds left", m_time.count() - dt);
             }
@@ -382,20 +382,21 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
 
     while (hint && !found_ccr)
     {
-        if (hint->type == HINT_PARAMETER && strcasecmp(static_cast<char*>(hint->data), CCR) == 0)
+        if (hint->type == HINT_PARAMETER && strcasecmp(hint->data.c_str(), CCR) == 0)
         {
             found_ccr = true;
-            if (strcasecmp(static_cast<char*>(hint->value), "match") == 0)
+            auto val = hint->value.c_str();
+            if (strcasecmp(val, "match") == 0)
             {
                 rval = CCR_HINT_MATCH;
             }
-            else if (strcasecmp(static_cast<char*>(hint->value), "ignore") == 0)
+            else if (strcasecmp(val, "ignore") == 0)
             {
                 rval = CCR_HINT_IGNORE;
             }
             else
             {
-                MXS_ERROR("Unknown value for hint parameter %s: '%s'.", CCR, (char*)hint->value);
+                MXS_ERROR("Unknown value for hint parameter %s: '%s'.", CCR, val);
             }
         }
         else

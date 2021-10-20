@@ -404,8 +404,9 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
 
 void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
 {
-    HINT* pHint = pHints;
+    const char max_rlag[] = "max_slave_replication_lag";
 
+    HINT* pHint = pHints;
     while (pHint)
     {
         if (m_pHandler->supports_hint(pHint->type))
@@ -422,7 +423,7 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
             case HINT_ROUTE_TO_NAMED_SERVER:
                 // The router is expected to look up the named server.
                 *target |= TARGET_NAMED_SERVER;
-                MXS_DEBUG("Hint: route to named server: %s", (char*)pHint->data);
+                MXS_DEBUG("Hint: route to named server: %s", pHint->data.c_str());
                 break;
 
             case HINT_ROUTE_TO_UPTODATE_SERVER:
@@ -441,17 +442,14 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
                 break;
 
             case HINT_PARAMETER:
-                if (strncasecmp((char*)pHint->data,
-                                "max_slave_replication_lag",
-                                strlen("max_slave_replication_lag")) == 0)
+                if (strncasecmp(pHint->data.c_str(), max_rlag, sizeof(max_rlag) - 1) == 0)
                 {
                     *target |= TARGET_RLAG_MAX;
                 }
                 else
                 {
-                    MXS_ERROR("Unknown hint parameter '%s' when "
-                              "'max_slave_replication_lag' was expected.",
-                              (char*)pHint->data);
+                    MXS_ERROR("Unknown hint parameter '%s' when '%s' was expected.",
+                              pHint->data.c_str(), max_rlag);
                 }
                 break;
 

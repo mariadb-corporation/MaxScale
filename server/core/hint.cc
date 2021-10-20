@@ -47,22 +47,9 @@ HINT* hint_dup(const HINT* hint)
     {
         ptr2 = new HINT();
         ptr2->type = ptr1->type;
-        if (ptr1->data)
-        {
-            ptr2->data = MXS_STRDUP_A((const char*)ptr1->data);
-        }
-        else
-        {
-            ptr2->data = NULL;
-        }
-        if (ptr1->value)
-        {
-            ptr2->value = MXS_STRDUP_A((const char*)ptr1->value);
-        }
-        else
-        {
-            ptr2->value = NULL;
-        }
+        ptr2->data = ptr1->data;
+        ptr2->value = ptr1->value;
+
         ptr2->next = NULL;
         if (nltail)
         {
@@ -84,23 +71,15 @@ HINT* hint_dup(const HINT* hint)
  *
  * @param head  The current hint list
  * @param type  The HINT_TYPE
- * @param data  Data may be NULL or the name of a server to route to
+ * @param data  Name of a server to route to. Can be empty.
  * @return The result hint list
  */
-HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
+HINT* hint_create_route(HINT* head, HINT_TYPE type, const std::string& data)
 {
     auto* hint = new HINT();
     hint->next = head;
     hint->type = type;
-    if (data)
-    {
-        hint->data = MXS_STRDUP_A(data);
-    }
-    else
-    {
-        hint->data = NULL;
-    }
-    hint->value = NULL;
+    hint->data = data;
     return hint;
 }
 
@@ -137,13 +116,13 @@ HINT* hint_splice(HINT* head, HINT* list)
  * @param value The parameter value
  * @return The result hint list
  */
-HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
+HINT* hint_create_parameter(HINT* head, const std::string& pname, const std::string& value)
 {
     auto* hint = new HINT();
     hint->next = head;
     hint->type = HINT_PARAMETER;
-    hint->data = MXS_STRDUP_A(pname);
-    hint->value = MXS_STRDUP_A(value);
+    hint->data = pname;
+    hint->value = value;
     return hint;
 }
 
@@ -156,14 +135,6 @@ void hint_free(HINT* hint)
 {
     if (hint)
     {
-        if (hint->data)
-        {
-            MXS_FREE(hint->data);
-        }
-        if (hint->value)
-        {
-            MXS_FREE(hint->value);
-        }
         delete hint;
     }
 }

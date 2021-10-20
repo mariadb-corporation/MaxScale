@@ -18,13 +18,12 @@
 #if defined (NDEBUG)
 #undef NDEBUG
 #endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <maxbase/assert.h>
 #include <maxscale/hint.hh>
-#include <maxbase/alloc.h>
 
 /**
  * test1    Allocate table of users and mess around with it
@@ -37,11 +36,9 @@ static int test1()
     /* Hint tests */
     fprintf(stderr,
             "testhint : Add a parameter hint to a null list");
-    char* name = MXS_STRDUP_A("name");
-    hint = hint_create_parameter(NULL, name, "value");
-    MXS_FREE(name);
+    hint = hint_create_parameter(nullptr, "name", "value");
     mxb_assert_message(NULL != hint, "New hint list should not be null");
-    mxb_assert_message(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
+    mxb_assert_message(0 == strcmp("value", hint->value.c_str()), "Hint value should be correct");
     mxb_assert_message(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
     fprintf(stderr, "\t..done\nFree hints.");
     if (NULL != hint)

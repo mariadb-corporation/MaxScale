@@ -41,14 +41,14 @@ const char* STRHINTTYPE(HINT_TYPE t);
  */
 struct HINT
 {
-    HINT_TYPE type {HINT_NONE}; /*< The Type of hint */
-    void*     data {nullptr};   /*< Type specific data */
-    void*     value {nullptr};  /*< Parameter value for hint */
-    HINT*     next {nullptr};   /*< Another hint for this buffer */
+    HINT_TYPE   type {HINT_NONE};   /**< The Type of hint */
+    std::string data;               /**< Data or parameter name */
+    std::string value;              /**< Parameter value */
+    HINT*       next {nullptr};     /**< Another hint for this buffer */
 };
 
-HINT* hint_create_parameter(HINT*, const char*, const char*);
-HINT* hint_create_route(HINT*, HINT_TYPE, const char*);
+HINT* hint_create_parameter(HINT*, const std::string& pname, const std::string& value);
+HINT* hint_create_route(HINT*, HINT_TYPE, const std::string& data = "");
 HINT* hint_splice(HINT* head, HINT* list);
 void  hint_free(HINT*);
 HINT* hint_dup(const HINT*);
