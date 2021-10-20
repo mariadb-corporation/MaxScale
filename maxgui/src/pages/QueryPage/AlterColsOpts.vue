@@ -437,12 +437,14 @@ export default {
          * @param {Object} payload.colsOptsData - current colsOptsData
          * @param {Number} payload.rowIdx - rowIdx to be updated
          * @param {String} payload.valOfNN - value of NN
+         * @param {String} payload.valueOfDefault - value of default cell
          * @returns {Object} - returns new colsOptsData
          */
-        notNullSideEffect({ colsOptsData, rowIdx, valOfNN }) {
+        notNullSideEffect({ colsOptsData, rowIdx, valOfNN, valueOfDefault = null }) {
             let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefault}']`)
                 .safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
+            if (valueOfDefault !== null) defaultVal = valueOfDefault
             return this.$help.immutableUpdate(colsOptsData, {
                 data: {
                     [rowIdx]: {
@@ -471,6 +473,8 @@ export default {
                 colsOptsData,
                 rowIdx: item.rowIdx,
                 valOfNN: 'NOT NULL',
+                // set to empty string when AI value is AUTO_INCREMENT
+                valueOfDefault: item.value ? '' : null,
             })
         },
         /**
