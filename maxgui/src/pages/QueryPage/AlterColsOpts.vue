@@ -209,6 +209,9 @@ export default {
         idxOfNN() {
             return this.findHeaderIdx('NN')
         },
+        idxOfUQ() {
+            return this.findHeaderIdx('UQ')
+        },
         idxOfDefault() {
             return this.findHeaderIdx('default')
         },
@@ -367,15 +370,16 @@ export default {
          */
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
-                const idxOfUQ = this.findHeaderIdx('UQ')
-                const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
+                const columnInput = this.$refs[
+                    `columnInput-row${item.rowIdx}-col-${this.idxOfUQ}`
+                ][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
                             [this.idxOfUN]: { $set: 'UNSIGNED' },
                             [this.idxOfNN]: { $set: 'NOT NULL' },
                             [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
-                            [idxOfUQ]: {
+                            [this.idxOfUQ]: {
                                 $set: columnInput.uniqueIdxName,
                             },
                         },
@@ -483,11 +487,12 @@ export default {
          * @param {Object} item - PK cell data
          */
         onChangePK(item) {
-            // update PK value
+            // update PK and UQ value
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.rowIdx]: {
                         [item.colIdx]: { $set: item.value },
+                        [this.idxOfUQ]: { $set: '' },
                     },
                 },
             })

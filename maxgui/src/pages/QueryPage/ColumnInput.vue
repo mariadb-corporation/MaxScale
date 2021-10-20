@@ -163,6 +163,8 @@ export default {
                     return !check_AI_support(this.columnType)
                 case 'NN':
                     return this.isAI || this.isPK // implies NOT NULL so must be disabled
+                case 'UQ':
+                    return this.isPK // implies UNIQUE already so UQ must be disabled
                 default:
                     return false
             }
@@ -270,7 +272,7 @@ export default {
                                 newInput.value = newInput.value ? 'YES' : 'NO'
                                 break
                             case 'UQ':
-                                newInput.value = newInput.value ? this.uniqueIdxName : null
+                                newInput.value = newInput.value ? this.uniqueIdxName : ''
                         }
                         if (field === 'AI') this.$emit('on-change-AI', newInput)
                         else if (field === 'PK') this.$emit('on-change-PK', newInput)
