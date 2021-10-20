@@ -35,128 +35,6 @@ uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 namespace nosql
 {
 
-namespace protocol
-{
-
-namespace
-{
-
-const std::unordered_map<string, int32_t> alias_type_mapping =
-{
-    { alias::DOUBLE,           type::DOUBLE },
-    { alias::STRING,           type::STRING },
-    { alias::OBJECT,           type::OBJECT },
-    { alias::ARRAY,            type::ARRAY },
-    { alias::BIN_DATA,         type::BIN_DATA },
-    { alias::UNDEFINED,        type::UNDEFINED },
-    { alias::OBJECT_ID,        type::OBJECT_ID },
-    { alias::BOOL,             type::BOOL },
-    { alias::DATE,             type::DATE },
-    { alias::NULL_ALIAS,       type::NULL_TYPE },
-    { alias::REGEX,            type::REGEX },
-    { alias::DB_POINTER,       type::DB_POINTER },
-    { alias::JAVASCRIPT,       type::JAVASCRIPT },
-    { alias::SYMBOL,           type::SYMBOL },
-    { alias::JAVASCRIPT_SCOPE, type::JAVASCRIPT_SCOPE },
-    { alias::INT32,            type::INT32 },
-    { alias::TIMESTAMP,        type::TIMESTAMP },
-    { alias::INT64,            type::INT64 },
-    { alias::DECIMAL128,       type::DECIMAL128 },
-    { alias::MIN_KEY,          type::MIN_KEY },
-    { alias::MAX_KEY,          type::MAX_KEY },
-};
-
-}
-
-namespace alias
-{
-
-const char* DOUBLE           = "double";
-const char* STRING           = "string";
-const char* OBJECT           = "object";
-const char* ARRAY            = "array";
-const char* BIN_DATA         = "binData";
-const char* UNDEFINED        = "undefined";
-const char* OBJECT_ID        = "objectId";
-const char* BOOL             = "bool";
-const char* DATE             = "date";
-const char* NULL_ALIAS       = "date";
-const char* REGEX            = "regex";
-const char* DB_POINTER       = "dbPointer";
-const char* JAVASCRIPT       = "javacript";
-const char* SYMBOL           = "symbol";
-const char* JAVASCRIPT_SCOPE = "javacriptWithScope";
-const char* INT32            = "int";
-const char* TIMESTAMP        = "timestamp";
-const char* INT64            = "long";
-const char* DECIMAL128       = "decimal";
-const char* MIN_KEY          = "minKey";
-const char* MAX_KEY          = "maxKey";
-
-}
-
-string type::to_alias(int32_t type)
-{
-    // Slow, but only needed during error reporting.
-
-    for (const auto& kv : alias_type_mapping)
-    {
-        if (kv.second == type)
-        {
-            return kv.first;
-        }
-    }
-
-    mxb_assert(!true);
-    return "unknown";
-}
-
-int32_t alias::to_type(const string& alias)
-{
-    auto it = alias_type_mapping.find(alias);
-
-    if (it == alias_type_mapping.end())
-    {
-        ostringstream ss;
-        ss << "Unknown type name alias: " << alias;
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-
-    return it->second;
-}
-
-int32_t get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView)
-{
-    if (pEnd - pData < 4)
-    {
-        mxb_assert(!true);
-        std::ostringstream ss;
-        ss << "Malformed packet, expecting document, but not even document length received.";
-
-        throw std::runtime_error(ss.str());
-    }
-
-    uint32_t size;
-    get_byte4(pData, &size);
-
-    if (pData + size > pEnd)
-    {
-        mxb_assert(!true);
-        std::ostringstream ss;
-        ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
-           << pEnd - pData << " available.";
-
-        throw std::runtime_error(ss.str());
-    }
-
-    *pView = bsoncxx::document::view(pData, size);
-
-    return size;
-}
-
-}
-
 void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element)
 {
     // bsoncxx should simply allow the addition of an element, and do this internally.
@@ -2830,6 +2708,131 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
 
 namespace nosql
 {
+
+//
+// nosql::protocol
+//
+namespace protocol
+{
+
+namespace
+{
+
+const std::unordered_map<string, int32_t> alias_type_mapping =
+{
+    { alias::DOUBLE,           type::DOUBLE },
+    { alias::STRING,           type::STRING },
+    { alias::OBJECT,           type::OBJECT },
+    { alias::ARRAY,            type::ARRAY },
+    { alias::BIN_DATA,         type::BIN_DATA },
+    { alias::UNDEFINED,        type::UNDEFINED },
+    { alias::OBJECT_ID,        type::OBJECT_ID },
+    { alias::BOOL,             type::BOOL },
+    { alias::DATE,             type::DATE },
+    { alias::NULL_ALIAS,       type::NULL_TYPE },
+    { alias::REGEX,            type::REGEX },
+    { alias::DB_POINTER,       type::DB_POINTER },
+    { alias::JAVASCRIPT,       type::JAVASCRIPT },
+    { alias::SYMBOL,           type::SYMBOL },
+    { alias::JAVASCRIPT_SCOPE, type::JAVASCRIPT_SCOPE },
+    { alias::INT32,            type::INT32 },
+    { alias::TIMESTAMP,        type::TIMESTAMP },
+    { alias::INT64,            type::INT64 },
+    { alias::DECIMAL128,       type::DECIMAL128 },
+    { alias::MIN_KEY,          type::MIN_KEY },
+    { alias::MAX_KEY,          type::MAX_KEY },
+};
+
+}
+
+namespace alias
+{
+
+const char* DOUBLE           = "double";
+const char* STRING           = "string";
+const char* OBJECT           = "object";
+const char* ARRAY            = "array";
+const char* BIN_DATA         = "binData";
+const char* UNDEFINED        = "undefined";
+const char* OBJECT_ID        = "objectId";
+const char* BOOL             = "bool";
+const char* DATE             = "date";
+const char* NULL_ALIAS       = "date";
+const char* REGEX            = "regex";
+const char* DB_POINTER       = "dbPointer";
+const char* JAVASCRIPT       = "javacript";
+const char* SYMBOL           = "symbol";
+const char* JAVASCRIPT_SCOPE = "javacriptWithScope";
+const char* INT32            = "int";
+const char* TIMESTAMP        = "timestamp";
+const char* INT64            = "long";
+const char* DECIMAL128       = "decimal";
+const char* MIN_KEY          = "minKey";
+const char* MAX_KEY          = "maxKey";
+
+}
+
+string type::to_alias(int32_t type)
+{
+    // Slow, but only needed during error reporting.
+
+    for (const auto& kv : alias_type_mapping)
+    {
+        if (kv.second == type)
+        {
+            return kv.first;
+        }
+    }
+
+    mxb_assert(!true);
+    return "unknown";
+}
+
+int32_t alias::to_type(const string& alias)
+{
+    auto it = alias_type_mapping.find(alias);
+
+    if (it == alias_type_mapping.end())
+    {
+        ostringstream ss;
+        ss << "Unknown type name alias: " << alias;
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    return it->second;
+}
+
+}
+
+int32_t protocol::get_document(const uint8_t* pData, const uint8_t* pEnd, bsoncxx::document::view* pView)
+{
+    if (pEnd - pData < 4)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, expecting document, but not even document length received.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    uint32_t size;
+    get_byte4(pData, &size);
+
+    if (pData + size > pEnd)
+    {
+        mxb_assert(!true);
+        std::ostringstream ss;
+        ss << "Malformed packet, document claimed to be " << size << " bytes, but only "
+           << pEnd - pData << " available.";
+
+        throw std::runtime_error(ss.str());
+    }
+
+    *pView = bsoncxx::document::view(pData, size);
+
+    return size;
+}
 
 //
 // nosql::packet
