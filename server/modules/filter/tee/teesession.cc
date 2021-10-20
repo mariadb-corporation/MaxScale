@@ -134,7 +134,7 @@ bool TeeSession::query_matches(GWBUF* buffer)
 
     if (m_match || m_exclude)
     {
-        std::string sql = mxs::extract_sql(buffer);
+        const auto& sql = mxs::extract_sql(buffer);
 
         if (!sql.empty())
         {

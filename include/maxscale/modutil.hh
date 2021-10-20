@@ -144,9 +144,9 @@ namespace maxscale
  *
  * @return The SQL statement. If the buffer does not contain a SQL statement, an empty string is returned.
  */
-std::string extract_sql_real(const GWBUF* pBuf, size_t len = -1);
-std::string extract_sql(const GWBUF* pBuf, size_t len = -1);
-std::string extract_sql(const mxs::Buffer& buffer, size_t len = -1);
+std::string        extract_sql_real(const GWBUF* pBuf, size_t len = -1);
+const std::string& extract_sql(const GWBUF* pBuf, size_t len = -1);
+const std::string& extract_sql(const mxs::Buffer& buffer, size_t len = -1);
 
 /**
  * Extract error messages from buffers

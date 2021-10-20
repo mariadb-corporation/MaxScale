@@ -521,7 +521,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         if (m_current_query.get() && !backend->should_ignore_response())
         {
-            std::string current_sql = mxs::extract_sql(m_current_query);
+            const auto& current_sql = mxs::extract_sql(m_current_query);
             m_ps_cache[current_sql].append(gwbuf_clone(writebuf));
         }
     }

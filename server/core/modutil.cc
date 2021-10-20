@@ -825,12 +825,12 @@ std::string extract_sql_real(const GWBUF* pBuf, size_t len)
     return rval;
 }
 
-std::string extract_sql(const GWBUF* pBuf, size_t len)
+const std::string& extract_sql(const GWBUF* pBuf, size_t len)
 {
     return pBuf->get_sql();
 }
 
-std::string extract_sql(const mxs::Buffer& buffer, size_t len)
+const std::string& extract_sql(const mxs::Buffer& buffer, size_t len)
 {
     return buffer.get()->get_sql();
 }

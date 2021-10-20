@@ -267,7 +267,7 @@ bool TopSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {
-        auto sql = mxs::extract_sql(queue);
+        const auto& sql = mxs::extract_sql(queue);
 
         if (!sql.empty()
             && (!m_config.match || m_config.match.match(sql))
