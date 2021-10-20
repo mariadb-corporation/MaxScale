@@ -329,38 +329,37 @@ export default {
          */
         handleBuildColDfnSQL({ updatedCols }) {
             let sql = ''
-            updatedCols.forEach((col, i) => {
-                // iterates through all diff of a column to check if col definition has changed
-                const hasColDfnChanged = col.diff.some(
-                    d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
-                )
-                if (hasColDfnChanged) {
-                    sql += this.handleAddComma({ ignore: i === 0 })
-                    const { escapeIdentifiers: escape } = this.$help
-                    const { column_name: oldName } = col.oriObj
-                    const {
-                        column_name: newName,
-                        column_type: newColType,
-                        UN,
-                        ZF,
-                        NN,
-                        AI,
-                        charset,
-                        collation,
-                        default: def,
-                        comment,
-                    } = col.newObj
-                    sql += `CHANGE COLUMN ${escape(oldName)} ${escape(newName)}`
-                    sql += ` ${newColType}`
-                    if (UN) sql += ` ${UN}`
-                    if (ZF) sql += ` ${ZF}`
-                    if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
-                    sql += ` ${NN}`
-                    if (AI) sql += ` ${AI}`
-                    if (def) sql += ` DEFAULT ${def}`
-                    if (comment) sql += ` COMMENT '${comment}'`
-                }
+            // iterates through all updatedCols and keep cols having column definition changed
+            const dfnColsChanged = updatedCols.filter(col =>
+                col.diff.some(d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ')
+            )
+            dfnColsChanged.forEach((col, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
+                const { escapeIdentifiers: escape } = this.$help
+                const { column_name: oldName } = col.oriObj
+                const {
+                    column_name: newName,
+                    column_type: newColType,
+                    UN,
+                    ZF,
+                    NN,
+                    AI,
+                    charset,
+                    collation,
+                    default: def,
+                    comment,
+                } = col.newObj
+                sql += `CHANGE COLUMN ${escape(oldName)} ${escape(newName)}`
+                sql += ` ${newColType}`
+                if (UN) sql += ` ${UN}`
+                if (ZF) sql += ` ${ZF}`
+                if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
+                sql += ` ${NN}`
+                if (AI) sql += ` ${AI}`
+                if (def) sql += ` DEFAULT ${def}`
+                if (comment) sql += ` COMMENT '${comment}'`
             })
+
             return sql
         },
         /**
