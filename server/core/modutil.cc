@@ -782,38 +782,52 @@ const char* STRPACKETTYPE(int p)
 namespace maxscale
 {
 
-std::string extract_sql(const mxs::Buffer& buffer, size_t len)
+std::string extract_sql(const GWBUF* pBuf, size_t len)
 {
+    mxb_assert(pBuf != nullptr);
+
     std::string rval;
-    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+    uint8_t cmd = mxs_mysql_get_command(pBuf);
 
     if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
     {
         // Skip the packet header and the command byte
         size_t header_len = MYSQL_HEADER_LEN + 1;
-        size_t total_len = std::min(buffer.length() - header_len, len);
-        rval.resize(total_len);
+        size_t length = std::min(gwbuf_length(pBuf) - header_len, len);
+        rval.resize(length);
+        char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
+        char* pCopy_to = &rval.front();
 
-        if (gwbuf_is_contiguous(buffer.get()))
+        if (gwbuf_is_contiguous(pBuf))
         {
-            const char* pBegin = (const char*) GWBUF_DATA(buffer.get()) + header_len;
-            memcpy((void*)rval.data(), (void*)pBegin, total_len);
+            memcpy(pCopy_to, pCopy_from, length);
         }
         else
         {
-            std::copy_n(std::next(buffer.begin(), header_len), total_len, std::back_inserter(rval));
+            size_t cp_len = gwbuf_link_length(pBuf) - header_len;
+            while (pBuf && length)
+            {
+                memcpy(pCopy_to, pCopy_from, cp_len);
+                length -= cp_len;
+                pCopy_to += cp_len;
+                pBuf = pBuf->next;
+                if (pBuf)
+                {
+                    pCopy_from = (char*)GWBUF_DATA(pBuf);
+                    cp_len = gwbuf_link_length(pBuf);
+                }
+            }
+
+            mxb_assert(length==0);
         }
     }
 
     return rval;
 }
 
-std::string extract_sql(GWBUF* buffer, size_t len)
+std::string extract_sql(const mxs::Buffer& buffer, size_t len)
 {
-    mxs::Buffer buf(buffer);
-    std::string rval = extract_sql(buf, len);
-    buf.release();
-    return rval;
+    return extract_sql(buffer.get());
 }
 
 /**
