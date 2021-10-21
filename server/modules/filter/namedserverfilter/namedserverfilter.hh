@@ -138,7 +138,7 @@ private:
     bool m_active {true};       /* Is filter active? */
 
     /** Maps COM_STMT_PREPARE IDs to a list of hints. */
-    std::unordered_map<uint32_t, HINT*> m_ps_id_to_hints;
+    std::unordered_map<uint32_t, std::vector<HINT>> m_ps_id_to_hints;
 
     uint32_t m_current_prep_id {0};     /**< ID of the PS currently preparing on server */
     uint32_t m_last_prepare_id {0};     /**< Last id prepared */
@@ -146,7 +146,6 @@ private:
     std::shared_ptr<RegexHintFilter::Setup> m_setup;
 
     const RegexToServers* find_servers(char* sql, int sql_len);
-    void                  free_hint_list(HINT** hlist);
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct

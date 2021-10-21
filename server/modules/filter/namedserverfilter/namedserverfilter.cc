@@ -322,10 +322,6 @@ RegexHintFSession::RegexHintFSession(MXS_SESSION* session, SERVICE* service, Reg
 RegexHintFSession::~RegexHintFSession()
 {
     pcre2_match_data_free(m_match_data);
-    for (auto& elem : m_ps_id_to_hints)
-    {
-        free_hint_list(&elem.second);
-    }
 }
 
 /**
@@ -374,22 +370,22 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                     // Instead, save the id and hints so that execution of the PS can be properly hinted.
                     if (reg_serv)
                     {
-                        HINT* hlist = nullptr;
-                        for (const auto& target : reg_serv->m_targets)
-                        {
-                            hlist = hint_create_route(hlist, reg_serv->m_htype, target);
-                        }
                         // The PS ID is the id of the buffer. This is set by client protocol and should be
                         // used all over the routing chain.
                         uint32_t ps_id = queue->id;
-                        // If the id was already hinted, remove it properly from the map.
-                        auto it = m_ps_id_to_hints.find(ps_id);
-                        if (it != m_ps_id_to_hints.end())
+                        // Replacing an existing hint list is ok, although this should not happen as long
+                        // as the PS IDs are unique.
+                        auto& hints = m_ps_id_to_hints[ps_id];
+                        hints.clear();
+
+                        HINT_TYPE htype = reg_serv->m_htype;
+                        const auto& targets = reg_serv->m_targets;
+                        hints.reserve(targets.size());
+                        for (const auto& target : targets)
                         {
-                            free_hint_list(&it->second);
-                            m_ps_id_to_hints.erase(it);
+                            hints.emplace_back(htype, target);
                         }
-                        m_ps_id_to_hints.insert({ps_id, hlist});
+
                         // So far we have assumed that the preparation will succeed. In case it won't, the map
                         // entry will be removed in clientReply.
                         m_current_prep_id = ps_id;
@@ -422,13 +418,8 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                     auto it = m_ps_id_to_hints.find(ps_id);
                     if (it != m_ps_id_to_hints.end())
                     {
-                        // TODO: Store vector in ps->hint mapping.
-                        auto hint_list = it->second;
-                        while (hint_list)
-                        {
-                            queue->hints.push_back(*hint_list);
-                            hint_list = hint_list->next;
-                        }
+                        const auto& new_hints = it->second;
+                        queue->hints.insert(queue->hints.end(), new_hints.begin(), new_hints.end());
 
                         m_n_diverted++;
                         m_fil_inst.m_total_diverted++;
@@ -444,12 +435,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
             case MXS_COM_STMT_CLOSE:
                 {
                     uint32_t ps_id = mxs_mysql_extract_ps_id(queue);
-                    auto it = m_ps_id_to_hints.find(ps_id);
-                    if (it != m_ps_id_to_hints.end())
-                    {
-                        free_hint_list(&it->second);
-                        m_ps_id_to_hints.erase(it);
-                    }
+                    m_ps_id_to_hints.erase(ps_id);
                 }
                 break;
 
@@ -574,18 +560,6 @@ json_t* RegexHintFSession::diagnostics() const
     return rval;
 }
 
-void RegexHintFSession::free_hint_list(HINT** hlist)
-{
-    auto pHint = *hlist;
-    while (pHint)
-    {
-        HINT* temp = pHint;
-        pHint = pHint->next;
-        hint_free(temp);
-    }
-    *hlist = nullptr;
-}
-
 bool RegexHintFSession::clientReply(GWBUF* packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     if (reply.is_complete() && m_current_prep_id > 0)
@@ -593,12 +567,7 @@ bool RegexHintFSession::clientReply(GWBUF* packet, const mxs::ReplyRoute& down, 
         if (reply.error())
         {
             // Preparation failed, remove from map.
-            auto it = m_ps_id_to_hints.find(m_last_prepare_id);
-            if (it != m_ps_id_to_hints.end())
-            {
-                free_hint_list(&it->second);
-                m_ps_id_to_hints.erase(it);
-            }
+            m_ps_id_to_hints.erase(m_current_prep_id);
             m_last_prepare_id = 0;
         }
         m_current_prep_id = 0;
