@@ -54,7 +54,7 @@ public:
         mxb_assert_message(buf, "Trx::add_stmt: Buffer must not be empty");
         mxb_assert(target);
 
-        MXS_INFO("Adding to trx: %s", mxs::extract_sql(buf, 512).c_str());
+        MXS_INFO("Adding to trx: %s", maxbase::show_some(buf->get_sql(), 512).c_str());
 
         m_size += gwbuf_length(buf);
         m_log.emplace_back(buf);

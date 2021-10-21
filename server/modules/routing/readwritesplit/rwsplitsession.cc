@@ -108,7 +108,7 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
     {
         MXS_INFO("New %s received while transaction replay is active: %s",
                  STRPACKETTYPE(buffer.data()[4]),
-                 mxs::extract_sql(buffer).c_str());
+                 buffer.get_sql().c_str());
         m_query_queue.emplace_back(std::move(buffer));
         return 1;
     }
@@ -133,7 +133,7 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
         MXS_INFO("Storing query (len: %lu cmd: %0x), expecting %d replies to current command: %s. "
                  "Would route %s to '%s'.",
                  buffer.length(), buffer.data()[4], m_expected_responses,
-                 mxs::extract_sql(buffer, 1024).c_str(),
+                 maxbase::show_some(buffer.get_sql(), 1024).c_str(),
                  route_target_to_string(res.route_target),
                  res.target ? res.target->name() : "<no target>");
 
@@ -244,7 +244,7 @@ void RWSplitSession::trx_replay_next_stmt()
     {
         // More statements to replay, pop the oldest one and execute it
         GWBUF* buf = m_replayed_trx.pop_stmt();
-        MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
+        MXS_INFO("Replaying: %s", maxbase::show_some(buf->get_sql(), 1024).c_str());
         retry_query(buf, 0);
     }
     else
@@ -266,7 +266,7 @@ void RWSplitSession::trx_replay_next_stmt()
 
                 if (m_interrupted_query.get())
                 {
-                    MXS_INFO("Resuming execution: %s", mxs::extract_sql(m_interrupted_query.get()).c_str());
+                    MXS_INFO("Resuming execution: %s", m_interrupted_query.get_sql().c_str());
                     retry_query(m_interrupted_query.release(), 0);
                 }
                 else if (!m_query_queue.empty())
@@ -521,7 +521,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         if (m_current_query.get() && !backend->should_ignore_response())
         {
-            const auto& current_sql = mxs::extract_sql(m_current_query);
+            const auto& current_sql = m_current_query.get_sql();
             m_ps_cache[current_sql].append(gwbuf_clone(writebuf));
         }
     }
@@ -721,7 +721,7 @@ bool RWSplitSession::start_trx_replay()
             {
                 // Pop the first statement and start replaying the transaction
                 GWBUF* buf = m_replayed_trx.pop_stmt();
-                MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
+                MXS_INFO("Replaying: %s", maxbase::show_some(buf->get_sql(), 1024).c_str());
                 retry_query(buf, 1);
             }
             else
@@ -737,7 +737,7 @@ bool RWSplitSession::start_trx_replay()
                                    "or autocommit should be disabled");
 
                 MXS_INFO("Retrying interrupted query: %s",
-                         mxs::extract_sql(m_interrupted_query.get()).c_str());
+                         m_interrupted_query.get_sql().c_str());
                 retry_query(m_interrupted_query.release(), 1);
             }
         }

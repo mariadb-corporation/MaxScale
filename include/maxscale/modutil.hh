@@ -108,9 +108,9 @@ namespace maxscale
  *
  * @return The SQL statement. If the buffer does not contain a SQL statement, an empty string is returned.
  */
-std::string        extract_sql_real(const GWBUF* pBuf, size_t len = -1);
-const std::string& extract_sql(const GWBUF* pBuf, size_t len = -1);
-const std::string& extract_sql(const mxs::Buffer& buffer, size_t len = -1);
+std::string        extract_sql_real(const GWBUF* pBuf);
+const std::string& extract_sql(const GWBUF* pBuf);
+const std::string& extract_sql(const mxs::Buffer& buffer);
 
 
 /**
@@ -153,7 +153,7 @@ GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
  */
 inline bool modutil_extract_SQL(GWBUF* buf, char** pSql, int* length)
 {
-    const auto& sql = maxscale::extract_sql(buf);
+    const auto& sql = buf->get_sql();
 
     *pSql = const_cast<char*>(sql.c_str());
     *length = sql.length();

@@ -492,8 +492,7 @@ private:
     RouteInfo    m_route_info;
     RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
 
-    std::vector<const char*> m_markers; // for simd
-    std::string              m_sql;     // keep it around for performance
+    std::vector<const char*> m_markers;     // for simd
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/

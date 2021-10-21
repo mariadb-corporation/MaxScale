@@ -47,7 +47,7 @@ bool CommentFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (modutil_is_SQL(pPacket))
     {
-        const auto& sql = mxs::extract_sql(pPacket);
+        const auto& sql = pPacket->get_sql();
         string comment = parseComment(m_inject);
         string newsql = string("/* ").append(comment).append(" */").append(sql);
         pPacket = modutil_replace_SQL(pPacket, (char*)newsql.c_str());

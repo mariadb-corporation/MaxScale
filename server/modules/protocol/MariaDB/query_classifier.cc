@@ -390,15 +390,11 @@ public:
     QCInfoCacheScope(GWBUF* pStmt)
         : m_pStmt(pStmt)
     {
-        if (use_cached_result() && has_not_been_parsed(m_pStmt))
+        if (has_not_been_parsed(m_pStmt) && use_cached_result())
         {
             mxb_assert(gwbuf_is_contiguous(m_pStmt));
 
-            char* psql;
-            int length;
-            modutil_extract_SQL(pStmt, &psql, &length);
-            m_canonical.resize(length);
-            std::memcpy((void*)m_canonical.data(), psql, length);
+            m_canonical = m_pStmt->get_sql();
 
             maxsimd::get_canonical(&m_canonical, &this_thread.markers);
 
@@ -436,7 +432,6 @@ private:
     std::string m_canonical;
 };
 }
-
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,

@@ -111,7 +111,7 @@ void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
     if (m_branch_replies + m_main_replies == 0 && !m_queue.empty())
     {
         MXS_INFO("Both replies received, routing queued query: %s",
-                 mxs::extract_sql(m_queue.front()).c_str());
+                 m_queue.front().get_sql().c_str());
         session_delay_routing(m_pSession, this, m_queue.front().release(), 0);
         m_queue.pop_front();
     }
@@ -134,7 +134,7 @@ bool TeeSession::query_matches(GWBUF* buffer)
 
     if (m_match || m_exclude)
     {
-        const auto& sql = mxs::extract_sql(buffer);
+        const auto& sql = buffer->get_sql();
 
         if (!sql.empty())
         {

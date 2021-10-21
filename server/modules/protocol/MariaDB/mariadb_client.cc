@@ -1270,7 +1270,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
     {
         MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
                  STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
-                 mxs::extract_sql(m_pending_cmd, 200).c_str(),
+                 maxbase::show_some(m_pending_cmd.get_sql(), 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
 
         if (reply.command() == MXS_COM_STMT_PREPARE)

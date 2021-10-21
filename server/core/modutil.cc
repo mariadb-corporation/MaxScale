@@ -782,7 +782,7 @@ const char* STRPACKETTYPE(int p)
 namespace maxscale
 {
 
-std::string extract_sql_real(const GWBUF* pBuf, size_t len)
+std::string extract_sql_real(const GWBUF* pBuf)
 {
     mxb_assert(pBuf != nullptr);
 
@@ -793,7 +793,7 @@ std::string extract_sql_real(const GWBUF* pBuf, size_t len)
     {
         // Skip the packet header and the command byte
         size_t header_len = MYSQL_HEADER_LEN + 1;
-        size_t length = std::min(gwbuf_length(pBuf) - header_len, len);
+        size_t length = gwbuf_length(pBuf) - header_len;
         rval.resize(length);
         char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
         char* pCopy_to = &rval.front();
@@ -825,12 +825,12 @@ std::string extract_sql_real(const GWBUF* pBuf, size_t len)
     return rval;
 }
 
-const std::string& extract_sql(const GWBUF* pBuf, size_t len)
+const std::string& extract_sql(const GWBUF* pBuf)
 {
     return pBuf->get_sql();
 }
 
-const std::string& extract_sql(const mxs::Buffer& buffer, size_t len)
+const std::string& extract_sql(const mxs::Buffer& buffer)
 {
     return buffer.get()->get_sql();
 }

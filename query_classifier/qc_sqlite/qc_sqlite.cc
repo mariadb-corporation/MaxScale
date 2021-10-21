@@ -3953,17 +3953,18 @@ static void log_invalid_data(GWBUF* query, const char* message)
 
     if (gwbuf_link_length(query) >= MYSQL_HEADER_LEN + 1)
     {
-        char* sql;
-        int length;
+        const auto& sql = query->get_sql();
 
-        if (modutil_extract_SQL(query, &sql, &length))
+        if (!sql.empty())
         {
+            int length = sql.length();
+
             if (length > (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1)
             {
                 length = (int)gwbuf_link_length(query) - MYSQL_HEADER_LEN - 1;
             }
 
-            MXS_INFO("Parsing the query failed, %s: %.*s", message, length, sql);
+            MXS_INFO("Parsing the query failed, %s: %.*s", message, length, sql.c_str());
         }
     }
 }

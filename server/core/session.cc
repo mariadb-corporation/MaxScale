@@ -678,7 +678,7 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
     *ppStmt = nullptr;
     *pLen = 0;
 
-    const auto& sql = extract_sql(pBuffer);
+    const auto& sql = pBuffer->get_sql();
 
     if (!sql.empty())
     {

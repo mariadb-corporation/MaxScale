@@ -54,7 +54,7 @@ bool MirrorSession::routeQuery(GWBUF* pPacket)
     }
     else
     {
-        m_query = mxs::extract_sql(pPacket);
+        m_query = pPacket->get_sql();
         m_command = GWBUF_DATA(pPacket)[4];
         bool expecting_response = mxs_mysql_command_will_respond(m_command);
 

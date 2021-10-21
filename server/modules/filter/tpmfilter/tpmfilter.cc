@@ -287,7 +287,7 @@ bool TpmSession::routeQuery(GWBUF* queue)
 {
     if (m_active && mxs_mysql_get_command(queue) == MXS_COM_QUERY)
     {
-        const auto& sql = mxs::extract_sql(queue);
+        const auto& sql = queue->get_sql();
 
         if (!sql.empty())
         {

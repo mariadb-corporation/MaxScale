@@ -108,7 +108,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
     {
         auto route_info = m_qc.update_route_info(mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
         // TODO the canonical has already been gotten once
-        std::string canonical = maxscale::extract_sql(pBuf);
+        std::string canonical = pBuf->get_sql();
         maxsimd::get_canonical(&canonical, &m_markers);
 
         m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};

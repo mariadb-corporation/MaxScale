@@ -137,7 +137,7 @@ static int lua_get_canonical(lua_State* state)
 
     if (buf)
     {
-        std::string sql = mxs::extract_sql(buf);
+        std::string sql = buf->get_sql();
         maxsimd::Markers markers;
         maxsimd::get_canonical(&sql, &markers);
         lua_pushstring(state, sql.c_str());

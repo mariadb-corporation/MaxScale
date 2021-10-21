@@ -175,7 +175,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
-        MXS_INFO("Delaying routing: %s", mxs::extract_sql(buffer.get()).c_str());
+        MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
         retry_query(buffer.release());
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
@@ -197,7 +197,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
     {
         MXS_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
                   route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
-                  mxs::extract_sql(buffer.get()).c_str(), get_verbose_status().c_str());
+                  buffer.get_sql().c_str(), get_verbose_status().c_str());
         ok = false;
     }
 
@@ -241,7 +241,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
         // Conflicting routing targets. Return an error to the client.
         MXS_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
                   "supported with `use_sql_variables_in=all`.",
-                  STRPACKETTYPE(info.command()), mxs::extract_sql(querybuf).c_str());
+                  STRPACKETTYPE(info.command()), querybuf->get_sql().c_str());
 
         err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
                                            "Routing query to backend failed. "
@@ -263,7 +263,7 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
 
     if (info.command() == MXS_COM_STMT_PREPARE)
     {
-        auto it = m_ps_cache.find(mxs::extract_sql(buffer));
+        auto it = m_ps_cache.find(buffer.get_sql());
 
         if (it != m_ps_cache.end())
         {
@@ -583,13 +583,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         else
         {
             MXS_ERROR("Could not route session command `%s`. Connection status: %s",
-                      mxs::extract_sql(buffer).c_str(), get_verbose_status().c_str());
+                      buffer.get_sql().c_str(), get_verbose_status().c_str());
         }
     }
     else
     {
         MXS_ERROR("No valid candidates for session command `%s`. Connection status: %s",
-                  mxs::extract_sql(buffer).c_str(), get_verbose_status().c_str());
+                  buffer.get_sql().c_str(), get_verbose_status().c_str());
     }
 
     return ok;

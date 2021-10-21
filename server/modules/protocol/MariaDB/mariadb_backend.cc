@@ -772,7 +772,7 @@ void MariaDBBackendConnection::send_history()
             }
 
             MXS_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
-                     m_server.name(), mxs::extract_sql(buffer).c_str());
+                     m_server.name(), buffer.get_sql().c_str());
 
             m_dcb->writeq_append(buffer.release());
             m_history_responses.push_back(a.id());
@@ -1233,7 +1233,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             else
             {
                 MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
-                         to_string(m_state).c_str(), mxs::extract_sql(queue).c_str());
+                         to_string(m_state).c_str(), queue->get_sql().c_str());
                 m_delayed_packets.emplace_back(queue);
                 rc = 1;
             }
@@ -1243,7 +1243,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
     default:
         {
             MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
-                     to_string(m_state).c_str(), mxs::extract_sql(queue).c_str());
+                     to_string(m_state).c_str(), queue->get_sql().c_str());
             m_delayed_packets.emplace_back(queue);
             rc = 1;
         }

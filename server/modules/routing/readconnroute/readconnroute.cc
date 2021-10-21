@@ -386,7 +386,7 @@ bool RCRSession::routeQuery(GWBUF* queue)
     MXS_INFO("Routed [%s] to '%s' %s",
              STRPACKETTYPE(mysql_command),
              m_backend->target()->name(),
-             mxs::extract_sql(queue).c_str());
+             queue->get_sql().c_str());
 
     m_query_timer.start_interval();
 
