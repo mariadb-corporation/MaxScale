@@ -2822,6 +2822,27 @@ void MariaDBClientConnection::parse_and_set_trx_state(const mxs::Reply& reply)
 {
     auto& ses_trx_state = m_session_data->trx_state;
 
+    // These are defined somewhere in the connector-c headers but including the header directly doesn't work.
+    // For the sake of simplicity, just declare them here.
+    const uint16_t STATUS_IN_TRX = 1;
+    const uint16_t STATUS_AUTOCOMMIT = 2;
+    const uint16_t STATUS_IN_RO_TRX = 8192;
+
+    uint16_t status = reply.server_status();
+    bool in_trx = status & (STATUS_IN_TRX | STATUS_IN_RO_TRX);
+    m_session_data->is_autocommit = status & STATUS_AUTOCOMMIT;
+    ses_trx_state = TrxState::TRX_INACTIVE;
+
+    if (!m_session_data->is_autocommit || in_trx)
+    {
+        ses_trx_state = TrxState::TRX_ACTIVE;
+
+        if (status & STATUS_IN_RO_TRX)
+        {
+            ses_trx_state |= TrxState::TRX_READ_ONLY;
+        }
+    }
+
     auto autocommit = reply.get_variable("autocommit");
     if (!autocommit.empty())
     {

@@ -365,6 +365,11 @@ uint16_t Reply::num_warnings() const
     return m_num_warnings;
 }
 
+uint16_t Reply::server_status() const
+{
+    return m_server_status;
+}
+
 uint64_t Reply::size() const
 {
     return m_size;
@@ -439,6 +444,11 @@ void Reply::set_variable(const std::string& key, const std::string& value)
 void Reply::set_num_warnings(uint16_t warnings)
 {
     m_num_warnings = warnings;
+}
+
+void Reply::set_server_status(uint16_t status)
+{
+    m_server_status = status;
 }
 
 void Reply::clear()

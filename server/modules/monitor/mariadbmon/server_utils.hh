@@ -263,6 +263,8 @@ public:
     std::string to_string() const;
     json_t*     to_json() const;
 
+    bool equal(const SlaveStatus& rhs) const;
+
     static slave_io_running_t slave_io_from_string(const std::string& str);
     static std::string        slave_io_to_string(slave_io_running_t slave_io);
     bool                      should_be_copied(std::string* ignore_reason_out) const;
