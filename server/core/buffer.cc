@@ -220,17 +220,6 @@ static void gwbuf_free_one(GWBUF* buf)
     delete buf;
 }
 
-GWBUF::~GWBUF()
-{
-    /** Release the hint */
-    while (hint)
-    {
-        HINT* h = hint;
-        hint = hint->next;
-        hint_free(h);
-    }
-}
-
 /**
  * Increment the usage count of a gateway buffer. This gets a new
  * GWBUF structure that shares the actual data with the existing
@@ -252,7 +241,7 @@ static GWBUF* gwbuf_clone_one(GWBUF* buf)
     rval->start = buf->start;
     rval->end = buf->end;
     rval->gwbuf_type = buf->gwbuf_type;
-    rval->hint = hint_dup(buf->hint);
+    rval->hints = buf->hints;
     rval->id = buf->id;
     return rval;
 }
@@ -670,7 +659,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
     MXS_ABORT_IF_NULL(newbuf);
 
     newbuf->gwbuf_type = orig->gwbuf_type;
-    newbuf->hint = hint_dup(orig->hint);
+    newbuf->hints = orig->hints;
     newbuf->id = orig->id;
     uint8_t* ptr = GWBUF_DATA(newbuf);
 

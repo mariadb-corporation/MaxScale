@@ -639,8 +639,8 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         const char* transaction = mariases->is_trx_active() ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
         const char* querytype = qtypestr == NULL ? "N/A" : qtypestr;
-        const char* hint = querybuf->hint == NULL ? "" : ", Hint:";
-        const char* hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
+        const char* hint = querybuf->hints.empty() ? "" : ", Hint:";
+        const char* hint_type = querybuf->hints.empty() ? "" : STRHINTTYPE(querybuf->hints[0].type);
 
         MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                  autocommit,
@@ -1025,7 +1025,9 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
         }
 
-        process_routing_hints(pBuffer->hint, &route_target);
+        // TODO: not a real hint list, should pass the vector.
+        HINT* hint_list = pBuffer->hints.empty() ? nullptr : &pBuffer->hints[0];
+        process_routing_hints(hint_list, &route_target);
 
         if (protocol_data->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {

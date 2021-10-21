@@ -83,20 +83,13 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
 
     bool success = false;
 
-    if (pPacket->hint)
+    const auto& hints = pPacket->hints;
+    for (auto it = hints.begin(); !success && it != hints.end(); it++)
     {
-        /* At least one hint => look for match. Only use the later hints if the
-         * first is unsuccessful. */
-        HINT* current_hint = pPacket->hint;
-        HR_DEBUG("Hint, looking for match.");
-        while (!success && current_hint)
-        {
-            success = route_by_hint(pPacket, current_hint, false);
-            if (!success)
-            {
-                current_hint = current_hint->next;
-            }
-        }
+        // Look for matching hint.
+        // TODO: Remove the cast.
+        HINT* current_hint = const_cast<HINT*>(&*it);
+        success = route_by_hint(pPacket, current_hint, false);
     }
 
     if (!success)

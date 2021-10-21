@@ -10,12 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <maxbase/assert.h>
 #include <maxscale/hint.hh>
-#include <maxbase/alloc.h>
 
 /**
  * @file hint.c generic support routines for hints.
@@ -192,4 +190,15 @@ const char* STRHINTTYPE(HINT_TYPE t)
         break;
     }
     return rval;
+}
+
+HINT::HINT(HINT_TYPE type)
+    : type(type)
+{
+}
+
+HINT::HINT(HINT_TYPE type, std::string data)
+    : type(type)
+    , data(std::move(data))
+{
 }

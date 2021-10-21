@@ -343,7 +343,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
         }
         else if (m_hints_left > 0)
         {
-            queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER);
+            queue->hints.emplace_back(HINT_ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
             MXS_INFO("%d queries left", m_hints_left);
@@ -355,7 +355,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
 
             if (dt < m_time.count())
             {
-                queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER);
+                queue->hints.emplace_back(HINT_ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
                 MXS_INFO("%.0f seconds left", m_time.count() - dt);
             }
@@ -377,15 +377,16 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
     const char CCR[] = "ccr";
     CcrHintValue rval = CCR_HINT_NONE;
     bool found_ccr = false;
-    HINT** prev_ptr = &buffer->hint;
-    HINT* hint = buffer->hint;
+    auto it = buffer->hints.begin();
+    auto end = buffer->hints.end();
 
-    while (hint && !found_ccr)
+    while (it != end && !found_ccr)
     {
-        if (hint->type == HINT_PARAMETER && strcasecmp(hint->data.c_str(), CCR) == 0)
+        const auto& hint = *it;
+        if (hint.type == HINT_PARAMETER && strcasecmp(hint.data.c_str(), CCR) == 0)
         {
             found_ccr = true;
-            auto val = hint->value.c_str();
+            auto val = hint.value.c_str();
             if (strcasecmp(val, "match") == 0)
             {
                 rval = CCR_HINT_MATCH;
@@ -401,15 +402,14 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
         }
         else
         {
-            prev_ptr = &hint->next;
-            hint = hint->next;
+            it++;
         }
     }
-    // Remove the ccr-hint from the hint chain. Otherwise rwsplit will complain.
+
+    // Remove the ccr-hint from the hint chain. Otherwise, rwsplit will complain.
     if (found_ccr)
     {
-        *prev_ptr = hint->next;
-        hint_free(hint);
+        buffer->hints.erase(it);
     }
     return rval;
 }

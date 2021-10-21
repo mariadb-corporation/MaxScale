@@ -41,6 +41,10 @@ const char* STRHINTTYPE(HINT_TYPE t);
  */
 struct HINT
 {
+    HINT() = default;
+    explicit HINT(HINT_TYPE type);
+    HINT(HINT_TYPE type, std::string data);
+
     HINT_TYPE   type {HINT_NONE};   /**< The Type of hint */
     std::string data;               /**< Data or parameter name */
     std::string value;              /**< Parameter value */

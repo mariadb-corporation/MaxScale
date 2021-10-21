@@ -179,8 +179,8 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
                  STRPACKETTYPE(*command),
                  rc ? sql_len : 0,
                  rc ? sql : "",
-                 (pPacket->hint == NULL ? "" : ", Hint:"),
-                 (pPacket->hint == NULL ? "" : STRHINTTYPE(pPacket->hint->type)));
+                 (pPacket->hints.empty() ? "" : ", Hint:"),
+                 (pPacket->hints.empty() ? "" : STRHINTTYPE(pPacket->hints[0].type)));
 
         MXS_FREE(qtypestr);
     }
@@ -1274,11 +1274,13 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
         rval = get_ps_target(buffer, qtype, op);
     }
 
-    if (buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+    if (!buffer->hints.empty() && buffer->hints[0].type == HINT_ROUTE_TO_NAMED_SERVER)
     {
+        const char* hinted_server = buffer->hints[0].data.c_str();
         for (const auto& b : m_backends)
         {
-            if (strcasecmp(b->name(), buffer->hint->data.c_str()) == 0)
+            // TODO: What if multiple servers have same name when case-compared?
+            if (strcasecmp(b->name(), hinted_server) == 0)
             {
                 rval = b->target();
                 MXS_INFO("Routing hint found (%s)", rval->name());

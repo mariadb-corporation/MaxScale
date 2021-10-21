@@ -69,7 +69,8 @@ bool HintSession::routeQuery(GWBUF* queue)
 {
     if (HINT* hint = process_hints(queue))
     {
-        queue->hint = hint_splice(queue->hint, hint);
+        queue->hints.push_back(*hint);
+        hint_free(hint);
     }
 
     return mxs::FilterSession::routeQuery(queue);

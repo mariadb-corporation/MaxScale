@@ -355,7 +355,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                 {
                     for (const auto& target : reg_serv->m_targets)
                     {
-                        queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target);
+                        queue->hints.emplace_back(reg_serv->m_htype, target);
                     }
                     m_n_diverted++;
                     m_fil_inst.m_total_diverted++;
@@ -422,8 +422,14 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                     auto it = m_ps_id_to_hints.find(ps_id);
                     if (it != m_ps_id_to_hints.end())
                     {
-                        HINT* dupped_hints = hint_dup(it->second);
-                        queue->hint = hint_splice(queue->hint, dupped_hints);
+                        // TODO: Store vector in ps->hint mapping.
+                        auto hint_list = it->second;
+                        while (hint_list)
+                        {
+                            queue->hints.push_back(*hint_list);
+                            hint_list = hint_list->next;
+                        }
+
                         m_n_diverted++;
                         m_fil_inst.m_total_diverted++;
                     }
