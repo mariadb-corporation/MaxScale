@@ -86,27 +86,28 @@
                 v-for="h in headers"
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
             >
-                <column-input
-                    :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
-                    :key="h.text"
-                    :data="{
-                        field: h.text,
-                        value: cell,
-                        rowIdx,
-                        colIdx,
-                        rowObj: rowDataToObj(rowData),
-                    }"
-                    :height="30"
-                    :defTblCharset="defTblCharset"
-                    :defTblCollation="defTblCollation"
-                    :dataTypes="dataTypes"
-                    @on-change="updateCell"
-                    @on-change-column_type="onChangeColumnType"
-                    @on-change-PK="onChangePK"
-                    @on-change-NN="onChangeNN"
-                    @on-change-AI="onChangeAI"
-                    @on-change-charset="onChangeCharset"
-                />
+                <div :key="h.text" class="fill-height d-flex align-center">
+                    <column-input
+                        :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
+                        :data="{
+                            field: h.text,
+                            value: cell,
+                            rowIdx,
+                            colIdx,
+                            rowObj: rowDataToObj(rowData),
+                        }"
+                        :height="30"
+                        :defTblCharset="defTblCharset"
+                        :defTblCollation="defTblCollation"
+                        :dataTypes="dataTypes"
+                        @on-change="updateCell"
+                        @on-change-column_type="onChangeColumnType"
+                        @on-change-PK="onChangePK"
+                        @on-change-NN="onChangeNN"
+                        @on-change-AI="onChangeAI"
+                        @on-change-charset="onChangeCharset"
+                    />
+                </div>
             </template>
         </virtual-scroll-table>
     </div>
