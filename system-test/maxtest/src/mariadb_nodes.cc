@@ -458,7 +458,6 @@ bool MariaDBCluster::fix_replication()
         }
     }
 
-    // close_active_connections(); TODO: readd
     bool need_fixing = true;
     if (dbs_running)
     {

@@ -1160,14 +1160,14 @@ void MonitorServer::log_connect_error(ConnectResult rval)
               m_latest_error.c_str());
 }
 
-void MonitorServer::log_state_change()
+void MonitorServer::log_state_change(const std::string& reason)
 {
     string prev = Target::status_to_string(mon_prev_status, server->stats().n_current);
     string next = server->status_string();
-    MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
+    MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
                server->name(), server->address(), server->port(),
-               get_event_name(),
-               prev.c_str(), next.c_str());
+               get_event_name(), prev.c_str(), next.c_str(),
+               reason.empty() ? "" : ": ", reason.c_str());
 }
 
 void Monitor::hangup_failed_servers()
@@ -1221,7 +1221,7 @@ void Monitor::detect_handle_state_changes()
             mxs_monitor_event_t event = ptr->get_event_type();
             ptr->last_event = event;
             ptr->triggered_at = time(nullptr);
-            ptr->log_state_change();
+            ptr->log_state_change(annotate_state_change(ptr));
 
             if (standard_events_enabled && (event & m_settings.events))
             {
@@ -1230,7 +1230,7 @@ void Monitor::detect_handle_state_changes()
         }
         else if (ptr->auth_status_changed())
         {
-            ptr->log_state_change();
+            ptr->log_state_change("");
         }
 
 

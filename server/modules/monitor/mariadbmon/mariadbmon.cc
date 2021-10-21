@@ -709,6 +709,19 @@ void MariaDBMonitor::process_state_changes()
     m_state = State::MONITOR;
 }
 
+std::string MariaDBMonitor::annotate_state_change(MonitorServer* server)
+{
+    std::string rval;
+
+    if (server->get_event_type() == LOST_SLAVE_EVENT)
+    {
+        MariaDBServer* srv = get_server(server);
+        rval = srv->print_changed_slave_connections();
+    }
+
+    return rval;
+}
+
 /**
  * Save info on the master server's multimaster group, if any. This is required when checking for changes
  * in the topology.
