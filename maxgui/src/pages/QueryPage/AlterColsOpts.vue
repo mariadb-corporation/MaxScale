@@ -103,6 +103,7 @@
                     @on-change="updateCell"
                     @on-change-column_type="onChangeColumnType"
                     @on-change-PK="onChangePK"
+                    @on-change-NN="onChangeNN"
                     @on-change-AI="onChangeAI"
                     @on-change-charset="onChangeCharset"
                 />
@@ -112,7 +113,6 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -125,6 +125,7 @@ import { mapState } from 'vuex'
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -207,6 +208,12 @@ export default {
         },
         idxOfNN() {
             return this.findHeaderIdx('NN')
+        },
+        idxOfUQ() {
+            return this.findHeaderIdx('UQ')
+        },
+        idxOfDefault() {
+            return this.findHeaderIdx('default')
         },
         hasAI() {
             let count = 0
@@ -363,15 +370,16 @@ export default {
          */
         handleSerialType({ colsOptsData, item }) {
             if (item.value === 'SERIAL') {
-                const idxOfUQ = this.findHeaderIdx('UQ')
-                const columnInput = this.$refs[`columnInput-row${item.rowIdx}-col-${idxOfUQ}`][0]
+                const columnInput = this.$refs[
+                    `columnInput-row${item.rowIdx}-col-${this.idxOfUQ}`
+                ][0]
                 return this.$help.immutableUpdate(colsOptsData, {
                     data: {
                         [item.rowIdx]: {
                             [this.idxOfUN]: { $set: 'UNSIGNED' },
                             [this.idxOfNN]: { $set: 'NOT NULL' },
                             [this.idxOfAI]: { $set: 'AUTO_INCREMENT' },
-                            [idxOfUQ]: {
+                            [this.idxOfUQ]: {
                                 $set: columnInput.uniqueIdxName,
                             },
                         },
@@ -423,6 +431,27 @@ export default {
                 }))
             return colsOptsData
         },
+
+        /**
+         * This updates NN cell and `default` cell.
+         * @param {Object} payload.colsOptsData - current colsOptsData
+         * @param {Number} payload.rowIdx - rowIdx to be updated
+         * @param {String} payload.valOfNN - value of NN
+         * @returns {Object} - returns new colsOptsData
+         */
+        notNullSideEffect({ colsOptsData, rowIdx, valOfNN }) {
+            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefault}']`)
+                .safeString
+            if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
+            return this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [rowIdx]: {
+                        [this.idxOfNN]: { $set: valOfNN },
+                        [this.idxOfDefault]: { $set: defaultVal },
+                    },
+                },
+            })
+        },
         /**
          * @param {Object} item - AI cell data
          */
@@ -430,13 +459,18 @@ export default {
             let colsOptsData = this.colsOptsData
             if (this.hasAI)
                 colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
-            this.colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+            // update AI value
+            colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                 data: {
                     [item.rowIdx]: {
                         [item.colIdx]: { $set: item.value },
-                        [this.idxOfNN]: { $set: 'NOT NULL' },
                     },
                 },
+            })
+            this.colsOptsData = this.notNullSideEffect({
+                colsOptsData,
+                rowIdx: item.rowIdx,
+                valOfNN: 'NOT NULL',
             })
         },
         /**
@@ -449,18 +483,33 @@ export default {
                 charset: item.value,
             })
         },
-
         /**
          * @param {Object} item - PK cell data
          */
         onChangePK(item) {
-            this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
+            // update PK and UQ value
+            let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.rowIdx]: {
                         [item.colIdx]: { $set: item.value },
-                        [this.idxOfNN]: { $set: 'NOT NULL' },
+                        [this.idxOfUQ]: { $set: '' },
                     },
                 },
+            })
+            this.colsOptsData = this.notNullSideEffect({
+                colsOptsData,
+                rowIdx: item.rowIdx,
+                valOfNN: 'NOT NULL',
+            })
+        },
+        /**
+         * @param {Object} item - NN cell data
+         */
+        onChangeNN(item) {
+            this.colsOptsData = this.notNullSideEffect({
+                colsOptsData: this.colsOptsData,
+                rowIdx: item.rowIdx,
+                valOfNN: item.value,
             })
         },
     },

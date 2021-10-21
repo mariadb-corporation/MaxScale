@@ -196,6 +196,18 @@ export default {
         alterSql() {
             return this.$typy(this.getAlteringTableResultMap, 'data.sql').safeString
         },
+        currColsData() {
+            return this.$typy(this.formData, 'cols_opts_data.data').safeArray
+        },
+        initialColsData() {
+            return this.$typy(this.initialData, 'cols_opts_data.data').safeArray
+        },
+        currPkCols() {
+            return this.getPKCols(this.currColsData)
+        },
+        initialPkCols() {
+            return this.getPKCols(this.initialColsData)
+        },
     },
     activated() {
         this.addInitialDataWatcher()
@@ -244,7 +256,27 @@ export default {
         revertChanges() {
             this.formData = this.$help.lodash.cloneDeep(this.initialData)
         },
-        handleAddComma: ({ isLast }) => (isLast ? '' : ', '),
+        getPKCols(colsData) {
+            const headers = this.$typy(this.formData, 'cols_opts_data.fields').safeArray
+            let cols = []
+            const idxOfPk = headers.findIndex(h => h === 'PK')
+            const idxOfColumnName = headers.findIndex(h => h === 'column_name')
+            colsData.forEach(row => {
+                if (row[idxOfPk] === 'YES') cols.push(row[idxOfColumnName])
+            })
+            return cols
+        },
+        /**
+         * @param {Boolean} payload.ignore - ignore adding comma
+         * @returns {String} - return ', ' or ''
+         */
+        handleAddComma: ({ ignore = false } = {}) => (ignore ? '' : ', '),
+        /**
+         * This builds table_options SQL
+         * @param {String} payload.sql - current alter sql statement
+         * @param {String} payload.dbName - db name
+         * @returns {String} - return new alter sql statement
+         */
         buildTblOptSql({ sql, dbName }) {
             //TODO: replace objectDiff with deep-diff
             const { escapeIdentifiers: escape, objectDiff } = this.$help
@@ -254,8 +286,8 @@ export default {
                 object: this.formData.table_opts_data,
             })
             const keys = Object.keys(diff)
-            const lastIdx = keys.length - 1
             keys.forEach((key, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
                 switch (key) {
                     case 'table_name':
                         sql += `RENAME TO ${escape(dbName)}.${escape(diff[key])}`
@@ -273,37 +305,38 @@ export default {
                         sql += `COMMENT = '${diff[key]}'`
                         break
                 }
-                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
+        /**
+         * This builds DROP column SQL
+         * @param {Array} payload.removedCols - columns need to be dropped
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
         buildDropColSql({ removedCols, sql }) {
             const { escapeIdentifiers: escape } = this.$help
-            const lastIdx = removedCols.length - 1
             removedCols.forEach((row, i) => {
+                sql += this.handleAddComma({ ignore: i === 0 })
                 sql += `DROP COLUMN ${escape(row.column_name)}`
-                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
-        buildColsChangeSQL({ updatedCols, sql }) {
-            const { escapeIdentifiers: escape } = this.$help
-            const lastIdx = updatedCols.length - 1
+        /**
+         * This builds column definition SQL
+         * @param {Array} payload.updatedCols - columns need to be altered
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        handleBuildColDfnSQL({ updatedCols, sql }) {
             updatedCols.forEach((col, i) => {
-                let hasTypeRelatedChanges = false
-                col.diff.forEach(d => {
-                    if (d.kind === 'E')
-                        switch (d.path[0]) {
-                            case 'PK':
-                            case 'UQ':
-                                // TODO: Handle PK, UQ
-                                break
-                            default:
-                                hasTypeRelatedChanges = true
-                                break
-                        }
-                })
-                if (hasTypeRelatedChanges) {
+                // iterates through all diff of a column to check if col definition has changed
+                const hasColDfnChanged = col.diff.some(
+                    d => d.kind === 'E' && d.path[0] !== 'PK' && d.path[0] !== 'UQ'
+                )
+                if (hasColDfnChanged) {
+                    sql += this.handleAddComma({ ignore: i === 0 })
+                    const { escapeIdentifiers: escape } = this.$help
                     const { column_name: oldName } = col.oriObj
                     const {
                         column_name: newName,
@@ -327,11 +360,46 @@ export default {
                     if (def) sql += ` DEFAULT ${def}`
                     if (comment) sql += ` COMMENT '${comment}'`
                 }
-                sql += this.handleAddComma({ isLast: i === lastIdx })
             })
             return sql
         },
-        buildColsOptsSql(sql) {
+        buildPKSQL(sql) {
+            const { escapeIdentifiers: escape } = this.$help
+            const dropPKSQL = 'DROP PRIMARY KEY'
+            const isDroppingPK = this.initialPkCols.length > 0 && this.currPkCols.length === 0
+            const isAddingPK = this.currPkCols.length > 0
+            if (isDroppingPK) {
+                sql += dropPKSQL
+            } else if (isAddingPK) {
+                const keys = this.currPkCols.map(col => escape(col)).join(', ')
+                const addPKsql = `ADD PRIMARY KEY (${keys})`
+                if (this.initialPkCols.length > 0) sql += `${dropPKSQL}, ${addPKsql}`
+                else sql += addPKsql
+            }
+            return sql
+        },
+        /**
+         * This handles build column definition and column constraints SQL
+         * @param {Array} payload.updatedCols - columns need to be changed
+         * @param {String} payload.sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        buildChangeColSQL({ updatedCols, sql }) {
+            let initialSql = sql
+            sql = this.handleBuildColDfnSQL({ updatedCols, sql })
+            if (!this.$help.lodash.isEqual(this.initialPkCols, this.currPkCols)) {
+                sql += this.handleAddComma({ ignore: initialSql === sql })
+                sql = this.buildPKSQL(sql)
+            }
+            //TODO: column UQ constraints SQL
+            return sql
+        },
+        /**
+         * This handles build ADD, DROP, CHANGE COLUMN SQL
+         * @param {String} sql - current alter sql statement
+         * @returns {String} - return new alter sql statement
+         */
+        buildColsAlterSQL(sql) {
             const { arrOfObjsDiff, getObjectRows } = this.$help
             const base = getObjectRows({
                 columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
@@ -346,8 +414,8 @@ export default {
             const updatedCols = diff.get('updated')
             if (removedCols.length) sql = this.buildDropColSql({ removedCols, sql })
             if (updatedCols.length) {
-                if (removedCols.length) sql += this.handleAddComma({ isLast: false })
-                sql = this.buildColsChangeSQL({ updatedCols, sql })
+                if (removedCols.length) sql += this.handleAddComma()
+                sql = this.buildChangeColSQL({ updatedCols, sql })
             }
             //TODO: handle diff.added
             return sql
@@ -358,8 +426,8 @@ export default {
             let sql = `ALTER TABLE ${escape(dbName)}.${escape(initialTblName)}`
             if (this.isTblOptsChanged) sql = this.buildTblOptSql({ sql, dbName })
             if (this.isColsOptsChanged) {
-                if (this.isTblOptsChanged) sql += this.handleAddComma({ isLast: false })
-                sql = this.buildColsOptsSql(sql)
+                if (this.isTblOptsChanged) sql += this.handleAddComma()
+                sql = this.buildColsAlterSQL(sql)
             }
             this.sql = formatSQL(`${sql};`)
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown

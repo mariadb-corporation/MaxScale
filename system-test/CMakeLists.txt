@@ -49,6 +49,7 @@ add_subdirectory(mariadbmonitor)
 add_subdirectory(pinloki)
 add_subdirectory(config_sync)
 add_subdirectory(schemarouter)
+add_subdirectory(filters)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
@@ -563,9 +564,6 @@ add_test_executable(mxs1896_load_data_infile.cpp mxs1896_load_data_infile replic
 # MXS-1899: generated [maxscale] section causes errors
 # https://jira.mariadb.org/browse/MXS-1899
 add_test_executable(mxs1899_generated_cnf.cpp mxs1899_generated_cnf replication LABELS REPL_BACKEND)
-
-# 'namedserverfilter' test
-add_test_executable(namedserverfilter.cpp namedserverfilter_test namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
 # Authentication error testing
 add_test_executable(no_password.cpp no_password replication LABELS MySQLAuth LIGHT REPL_BACKEND)
