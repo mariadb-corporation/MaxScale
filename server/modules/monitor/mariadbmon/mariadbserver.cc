@@ -407,6 +407,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         // Always write to m_slave_status. Even if the new status is equal by topology,
         // gtid:s etc may have changed.
         Guard guard(m_arraylock);
+        m_old_slave_status = std::move(m_slave_status);
         m_slave_status = std::move(slave_status_new);
     }
 
@@ -685,6 +686,40 @@ bool MariaDBServer::is_read_only() const
 const char* MariaDBServer::name() const
 {
     return server->name();
+}
+
+std::string MariaDBServer::print_changed_slave_connections()
+{
+    std::stringstream ss;
+    const char* separator = "";
+
+    for (size_t i = 0; i < m_old_slave_status.size(); i++)
+    {
+        const auto& old_row = m_old_slave_status[i];
+        const auto* new_row = sstatus_find_previous_row(old_row, i);
+
+        if (new_row && !new_row->equal(old_row))
+        {
+            ss << "Host: " << new_row->settings.master_endpoint.to_string()
+               << ", IO Running: " << SlaveStatus::slave_io_to_string(new_row->slave_io_running)
+               << ", SQL Running: " << (new_row->slave_sql_running ? "Yes" : "No");
+
+            if (!new_row->last_io_error.empty())
+            {
+                ss << ", IO Error: " << new_row->last_io_error;
+            }
+
+            if (!new_row->last_sql_error.empty())
+            {
+                ss << ", SQL Error: " << new_row->last_io_error;
+            }
+
+            ss << separator;
+            separator = "; ";
+        }
+    }
+
+    return ss.str();
 }
 
 json_t* MariaDBServer::to_json() const
@@ -970,13 +1005,8 @@ bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_sla
         {
             const auto new_row = new_slave_status[i];
             const auto old_row = old_slave_status[i];
-            // Strictly speaking, the following should depend on the 'assume_unique_hostnames',
-            // but the situations it would make a difference are so rare they can be ignored.
-            if (new_row.slave_io_running != old_row.slave_io_running
-                || new_row.slave_sql_running != old_row.slave_sql_running
-                || new_row.settings.master_endpoint != old_row.settings.master_endpoint
-                || new_row.settings.name != old_row.settings.name
-                || new_row.master_server_id != old_row.master_server_id)
+
+            if (!new_row.equal(old_row))
             {
                 rval = false;
                 break;

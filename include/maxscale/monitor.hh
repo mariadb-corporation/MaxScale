@@ -247,7 +247,7 @@ public:
      */
     mxs_monitor_event_t get_event_type() const;
 
-    void log_state_change();
+    void log_state_change(const std::string& reason);
 
     /**
      * Is this server ok to update disk space status. Only checks if the server knows of valid disk space
@@ -562,6 +562,19 @@ protected:
     bool check_disk_space_this_tick();
 
     bool server_status_request_waiting() const;
+
+    /**
+     * Returns the human-readable reason why the server changed state
+     *
+     * @param server The server that changed state
+     *
+     * @return The human-readable reason why the state change occurred or
+     *         an empty string if no information is available
+     */
+    virtual std::string annotate_state_change(mxs::MonitorServer* server)
+    {
+        return "";
+    }
 
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
