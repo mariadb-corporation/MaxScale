@@ -128,7 +128,7 @@ inline bool validate_buffer(const GWBUF* head)
 GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
-    return new GWBUF(size, new SHARED_BUF(size));
+    return new GWBUF(size);
 }
 
 const std::string& GWBUF::get_sql() const
@@ -141,24 +141,30 @@ const std::string& GWBUF::get_sql() const
     return m_sql;
 }
 
-GWBUF::GWBUF(uint64_t size, SHARED_BUF* shared_buf)
+GWBUF::GWBUF(uint64_t size)
+    : sbuf(std::make_shared<SHARED_BUF>(size))
 {
 #ifdef SS_DEBUG
     owner = RoutingWorker::get_current_id();
 #endif
     tail = this;
-
-    if (shared_buf)
-    {
-        shared_buf->refcount = 1;
-        shared_buf->info = GWBUF_INFO_NONE;
-        shared_buf->bufobj = nullptr;
-        sbuf = shared_buf;
-
-        start = &shared_buf->data.front();
-        end = start + size;
-    }
+    start = &sbuf->data.front();
+    end = start + size;
 }
+
+GWBUF::GWBUF(const GWBUF& rhs)
+    : start(rhs.start)
+    , end(rhs.end)
+    , sbuf(rhs.sbuf)
+    , hints(rhs.hints)
+    , gwbuf_type(rhs.gwbuf_type)
+    , id(rhs.id)
+{
+#ifdef SS_DEBUG
+    owner = RoutingWorker::get_current_id();
+#endif
+}
+
 
 /**
  * Allocate a new gateway buffer structure of size bytes and load with data.
@@ -207,21 +213,20 @@ static void gwbuf_free_one(GWBUF* buf)
 {
     ensure_owned(buf);
 
-    --buf->sbuf->refcount;
-
-    if (buf->sbuf->refcount == 0)
-    {
-        buffer_object_t* bo = buf->sbuf->bufobj;
-
-        while (bo != NULL)
-        {
-            bo = gwbuf_remove_buffer_object(buf, bo);
-        }
-
-        delete buf->sbuf;
-    }
-
     delete buf;
+}
+
+SHARED_BUF::~SHARED_BUF()
+{
+    buffer_object_t* bo = bufobj;
+
+    while (bo != NULL)
+    {
+        auto next = bo->bo_next;
+        bo->bo_donefun_fp(bufobj->bo_data);
+        MXS_FREE(bo);
+        bo = next;
+    }
 }
 
 /**
@@ -237,16 +242,7 @@ static void gwbuf_free_one(GWBUF* buf)
 static GWBUF* gwbuf_clone_one(GWBUF* buf)
 {
     mxb_assert(buf->owner == RoutingWorker::get_current_id());
-    ++buf->sbuf->refcount;
-
-    auto* rval = new GWBUF(0, nullptr);
-    rval->sbuf = buf->sbuf;
-    rval->start = buf->start;
-    rval->end = buf->end;
-    rval->gwbuf_type = buf->gwbuf_type;
-    rval->hints = buf->hints;
-    rval->id = buf->id;
-    return rval;
+    return new GWBUF(*buf);
 }
 
 GWBUF* gwbuf_clone(GWBUF* buf)
@@ -635,18 +631,18 @@ uint32_t gwbuf_get_id(GWBUF* buffer)
     return buffer->id;
 }
 
-/**
- * @return pointer to next buffer object or NULL
- */
-static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj)
-{
-    ensure_owned(buf);
-    buffer_object_t* next = bufobj->bo_next;
-    /** Call corresponding clean-up function to clean buffer object's data */
-    bufobj->bo_donefun_fp(bufobj->bo_data);
-    MXS_FREE(bufobj);
-    return next;
-}
+///**
+// * @return pointer to next buffer object or NULL
+// */
+// static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj)
+// {
+//    ensure_owned(buf);
+//    buffer_object_t* next = bufobj->bo_next;
+//    /** Call corresponding clean-up function to clean buffer object's data */
+//    bufobj->bo_donefun_fp(bufobj->bo_data);
+//    MXS_FREE(bufobj);
+//    return next;
+// }
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {

@@ -68,10 +68,11 @@ public:
         : data(len)
     {
     }
-    buffer_object_t*     bufobj = nullptr;  /*< List of objects referred to by GWBUF */
-    int32_t              refcount = 0;      /*< Reference count on the buffer */
-    uint32_t             info = 0;          /*< Info bits */
-    std::vector<uint8_t> data;              /*< Actual memory that was allocated */
+    buffer_object_t*     bufobj = nullptr;      /*< List of objects referred to by GWBUF */
+    uint32_t             info = GWBUF_INFO_NONE;/*< Info bits */
+    std::vector<uint8_t> data;                  /*< Actual memory that was allocated */
+
+    ~SHARED_BUF();
 };
 
 /**
@@ -87,21 +88,27 @@ class GWBUF
 public:
     using HintVector = std::vector<Hint>;
 
-    GWBUF*      next {nullptr};                     /*< Next buffer in a linked chain of buffers */
-    GWBUF*      tail {nullptr};                     /*< Last buffer in a linked chain of buffers */
-    uint8_t*    start {nullptr};                    /*< Start of the valid data */
-    uint8_t*    end {nullptr};                      /*< First byte after the valid data */
-    SHARED_BUF* sbuf {nullptr};                     /*< The shared buffer with the real data */
-    HintVector  hints;                              /*< Hint data for this buffer */
-    uint32_t    gwbuf_type {GWBUF_TYPE_UNDEFINED};  /*< buffer's data type information */
-    uint32_t    id {0};                             /*< Unique ID for this buffer, 0 if no ID is assigned */
+    GWBUF*   next {nullptr};    /*< Next buffer in a linked chain of buffers */
+    GWBUF*   tail {nullptr};    /*< Last buffer in a linked chain of buffers */
+    uint8_t* start {nullptr};   /*< Start of the valid data */
+    uint8_t* end {nullptr};     /*< First byte after the valid data */
+
+    std::shared_ptr<SHARED_BUF> sbuf;   /*< The shared buffer with the real data */
+
+    HintVector hints;                               /*< Hint data for this buffer */
+    uint32_t   gwbuf_type {GWBUF_TYPE_UNDEFINED};   /*< buffer's data type information */
+    uint32_t   id {0};                              /*< Unique ID for this buffer, 0 if no ID
+                                                     * is assigned */
 #ifdef SS_DEBUG
     int owner {-1};     /*< Owner of the thread, only for debugging */
 #endif
 
     const std::string& get_sql() const;
 
-    GWBUF(uint64_t size, SHARED_BUF* shared_buf);
+    explicit GWBUF(uint64_t size);
+    explicit GWBUF(const GWBUF& rhs);
+
+    GWBUF(GWBUF&&) = delete;
 private:
     mutable std::string m_sql;
 };
