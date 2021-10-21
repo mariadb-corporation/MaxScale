@@ -15,9 +15,9 @@
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
-            :lastVisHeader="lastVisHeader"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
+            @last-vis-header="lastVisHeader = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
@@ -216,6 +216,7 @@ export default {
     data() {
         return {
             headerWidthMap: {},
+            lastVisHeader: {},
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
@@ -239,10 +240,6 @@ export default {
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
-        },
-        lastVisHeader() {
-            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
-            return {}
         },
         rowHeight() {
             return this.isVertTable

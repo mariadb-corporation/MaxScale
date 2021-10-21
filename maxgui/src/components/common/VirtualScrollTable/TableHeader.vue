@@ -84,7 +84,12 @@
                         <div
                             v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                             class="header__resizer d-inline-block fill-height"
-                            @mousedown="e => resizerMouseDown(e, i)"
+                            :class="{ 'header__resizer--not-resizable': header.text === '#' }"
+                            v-on="
+                                header.text !== '#'
+                                    ? { mousedown: e => resizerMouseDown(e, i) }
+                                    : null
+                            "
                         />
                     </div>
                 </template>
@@ -133,7 +138,6 @@ export default {
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
-        lastVisHeader: { type: Object, required: true },
     },
     data() {
         return {
@@ -162,6 +166,13 @@ export default {
                   ]
                 : this.headers
         },
+        visHeaders() {
+            return this.tableHeaders.filter(h => !h.hidden)
+        },
+        lastVisHeader() {
+            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
+            return {}
+        },
         enableSorting() {
             return this.rowsLength <= 10000 && !this.isVertTable
         },
@@ -187,6 +198,9 @@ export default {
         },
         isResizing(v) {
             this.$emit('is-resizing', v)
+        },
+        lastVisHeader(v) {
+            this.$emit('last-vis-header', v)
         },
     },
     created() {
@@ -247,7 +261,7 @@ export default {
                 const diffX = e.pageX - this.currPageX
                 if (
                     this.currColWidth + diffX >=
-                    this.getMinHeaderWidth(this.headers[this.currColIndex])
+                    this.getMinHeaderWidth(this.tableHeaders[this.currColIndex])
                 ) {
                     const newCurrColW = `${this.currColWidth + diffX}px`
                     this.currCol.style.maxWidth = newCurrColW
@@ -255,7 +269,7 @@ export default {
                     if (
                         this.nxtCol &&
                         this.nxtColWidth - diffX >=
-                            this.getMinHeaderWidth(this.headers[this.currColIndex])
+                            this.getMinHeaderWidth(this.tableHeaders[this.currColIndex])
                     ) {
                         const newNxtColW = `${this.nxtColWidth - diffX}px`
                         this.nxtCol.style.maxWidth == newNxtColW
@@ -379,6 +393,13 @@ export default {
                 &--hovered,
                 &:hover {
                     border-right: 3px solid $background;
+                }
+                &--not-resizable {
+                    cursor: initial;
+                    &--hovered,
+                    &:hover {
+                        border-right: 1px solid $background;
+                    }
                 }
             }
         }
