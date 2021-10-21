@@ -119,11 +119,13 @@
                         <div
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
-                            class="td px-3"
-                            :class="{
-                                'cursor--grab no-userSelect': h.draggable,
-                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
-                            }"
+                            class="td"
+                            :class="[
+                                h.draggable ? 'cursor--grab no-userSelect' : '',
+                                h.text === $typy(lastVisHeader, 'text').safeString
+                                    ? `td--last-cell ${!isYOverflowed ? 'pl-3 pr-0' : 'px-3'}`
+                                    : 'px-3',
+                            ]"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
