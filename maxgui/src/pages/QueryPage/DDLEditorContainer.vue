@@ -410,13 +410,9 @@ export default {
          * @returns {String} - returns CHANGE COLUMN sql
          */
         buildChangeColSQL({ updatedCols }) {
-            const {
-                lodash: { isEqual },
-            } = this.$help
             let sql = '',
                 colDfnSQL = '',
-                uqSQL = '',
-                pkSQL = ''
+                uqSQL = ''
             /**
              * iterates through all updatedCols and keep cols having column definition, UQ changed
              * This also filters diff
@@ -437,17 +433,12 @@ export default {
             if (dfnColsChanged.length)
                 colDfnSQL = this.buildColsDfnSQL({ cols: dfnColsChanged, isChanging: true })
             if (uqColsChanged.length) uqSQL = this.buildUQSQL({ uqColsChanged })
-            if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
 
             // handle assign sql
             sql += colDfnSQL
             if (uqSQL) {
                 if (colDfnSQL) sql += this.handleAddComma()
                 sql += uqSQL
-            }
-            if (pkSQL) {
-                if (colDfnSQL || uqSQL) sql += this.handleAddComma()
-                sql += pkSQL
             }
             return sql
         },
@@ -456,8 +447,13 @@ export default {
          * @returns {String} - returns column alter sql
          */
         buildColsAlterSQL() {
-            let sql = ''
-            const { arrOfObjsDiff, getObjectRows } = this.$help
+            let sql = '',
+                pkSQL = ''
+            const {
+                arrOfObjsDiff,
+                getObjectRows,
+                lodash: { isEqual },
+            } = this.$help
             const base = getObjectRows({
                 columns: this.$typy(this.initialData, 'cols_opts_data.fields').safeArray,
                 rows: this.$typy(this.initialData, 'cols_opts_data.data').safeArray,
@@ -474,12 +470,18 @@ export default {
                 changeColSql = ''
             if (removedCols.length) dropColSql = this.buildDropColSql({ removedCols })
             if (updatedCols.length) changeColSql = this.buildChangeColSQL({ updatedCols })
+            //TODO: handle diff.added to buildAddColSQL
+            if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
             sql += dropColSql
             if (changeColSql) {
                 if (dropColSql) sql += this.handleAddComma()
                 sql += changeColSql
             }
-            //TODO: handle diff.added
+            if (pkSQL) {
+                if (changeColSql || dropColSql) sql += this.handleAddComma()
+                sql += pkSQL
+            }
+
             return sql
         },
         applyChanges() {
