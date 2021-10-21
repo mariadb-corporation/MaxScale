@@ -323,19 +323,20 @@ export default {
             return sql
         },
         /**
-         * This builds column definition SQL
-         * @param {Array} payload.dfnColsChanged - cols having column definition changed
+         * This builds column definition SQL. Either CHANGE COLUMN or ADD COLUMN
+         * @param {Array} payload.cols - cols: either diff cols from arrOfObjsDiff or new cols
+         * @param {Boolean} payload.isChanging - is changing column
          * @returns {String} - returns column definition SQL
          */
-        buildColDfnSQL({ dfnColsChanged }) {
+        buildColsDfnSQL({ cols, isChanging }) {
             let sql = ''
             const { escapeIdentifiers: escape } = this.$help
-            dfnColsChanged.forEach((col, i) => {
+            cols.forEach((col, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
-                const { column_name: oldName } = col.oriObj
+                const colObj = isChanging ? this.$typy(col, 'newObj').safeObject : col
                 const {
-                    column_name: newName,
-                    column_type: newColType,
+                    column_name,
+                    column_type,
                     UN,
                     ZF,
                     NN,
@@ -344,9 +345,14 @@ export default {
                     collation,
                     default: def,
                     comment,
-                } = col.newObj
-                sql += `CHANGE COLUMN ${escape(oldName)} ${escape(newName)}`
-                sql += ` ${newColType}`
+                } = colObj
+                if (isChanging) {
+                    const old_column_name = this.$typy(col, 'oriObj.column_name').safeString
+                    sql += `CHANGE COLUMN ${escape(old_column_name)} `
+                } else sql += 'ADD COLUMN '
+
+                sql += `${escape(column_name)}`
+                sql += ` ${column_type}`
                 if (UN) sql += ` ${UN}`
                 if (ZF) sql += ` ${ZF}`
                 if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
@@ -428,7 +434,8 @@ export default {
                 return arr
             }, [])
             // build sql
-            if (dfnColsChanged.length) colDfnSQL = this.buildColDfnSQL({ dfnColsChanged })
+            if (dfnColsChanged.length)
+                colDfnSQL = this.buildColsDfnSQL({ cols: dfnColsChanged, isChanging: true })
             if (uqColsChanged.length) uqSQL = this.buildUQSQL({ uqColsChanged })
             if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
 
