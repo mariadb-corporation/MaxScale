@@ -128,14 +128,7 @@ inline bool validate_buffer(const GWBUF* head)
 GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
-    size_t sbuf_size = sizeof(SHARED_BUF) + (size - 1);
-    auto* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
-    GWBUF* rval = nullptr;
-    if (sbuf)
-    {
-        rval = new GWBUF(size, sbuf);
-    }
-    return rval;
+    return new GWBUF(size, new SHARED_BUF(size));
 }
 
 const std::string& GWBUF::get_sql() const
@@ -162,7 +155,7 @@ GWBUF::GWBUF(uint64_t size, SHARED_BUF* shared_buf)
         shared_buf->bufobj = nullptr;
         sbuf = shared_buf;
 
-        start = &sbuf->data[0];
+        start = &shared_buf->data.front();
         end = start + size;
     }
 }
@@ -225,7 +218,7 @@ static void gwbuf_free_one(GWBUF* buf)
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
-        MXS_FREE(buf->sbuf);
+        delete buf->sbuf;
     }
 
     delete buf;

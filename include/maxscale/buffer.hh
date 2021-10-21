@@ -61,12 +61,17 @@ struct buffer_object_t;
  * shared between multiple GWBUF's without the need to make multiple copies
  * but still maintain separate data pointers.
  */
-struct SHARED_BUF
+class SHARED_BUF
 {
-    buffer_object_t* bufobj;    /*< List of objects referred to by GWBUF */
-    int32_t          refcount;  /*< Reference count on the buffer */
-    uint32_t         info;      /*< Info bits */
-    uint8_t          data[1];   /*< Actual memory that was allocated */
+public:
+    explicit SHARED_BUF(size_t len)
+        : data(len)
+    {
+    }
+    buffer_object_t*     bufobj = nullptr;  /*< List of objects referred to by GWBUF */
+    int32_t              refcount = 0;      /*< Reference count on the buffer */
+    uint32_t             info = 0;          /*< Info bits */
+    std::vector<uint8_t> data;              /*< Actual memory that was allocated */
 };
 
 /**
