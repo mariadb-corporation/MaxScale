@@ -2240,10 +2240,12 @@ empty, which disables the feature.
 ```
 user_mapping_file=/home/root/mapping.json
 ```
-Should not be used together with `pam_backend_mapping` or `pam_mapped_pw_file`,
-as these may overwrite the mapped credentials. Is most powerful when combined
-with service setting `user_accounts_file`, as then MaxScale can accept users
-that do not exist on backends and map them to backend users.
+Should not be used together with
+[PAM Authenticator](../Authenticators/PAM-Authenticator.md)
+settings `pam_backend_mapping` or `pam_mapped_pw_file`, as these may overwrite
+the mapped credentials. Is most powerful when combined with service setting
+`user_accounts_file`, as then MaxScale can accept users that do not exist on
+backends and map them to backend users.
 
 This file functions very similar to
 [PAM-based mapping](https://mariadb.com/kb/en/user-and-group-mapping-with-pam/).

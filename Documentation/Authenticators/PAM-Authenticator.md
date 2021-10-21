@@ -90,11 +90,17 @@ authenticator_options=pam_backend_mapping=mariadb
 
 If set to "mariadb", MaxScale will authenticate clients to backends using
 standard MariaDB authentication. Authentication to MaxScale itself still uses
-PAM. MaxScale also asks the local PAM system if the client username was mapped
+PAM. MaxScale asks the local PAM system if the client username was mapped
 to another username during authentication, and use the mapped username when
-logging in to backends. MaxScale does not know the MariaDB-password of the
-mapped user, so no password is sent. Because of this, normal PAM users and
-mapped users cannot be used on the same listener.
+logging in to backends. Passwords for the mapped users can be given in a file,
+see `pam_mapped_pw_file` below. If passwords are not given, MaxScale will try to
+authenticate without a password. Because of this, normal PAM users and mapped
+users cannot be used on the same listener.
+
+Because the client still needs to authenticate to MaxScale normally, an
+anonymous user may be required. If the backends do not allow such a user, one
+can be manually added using the service setting
+[user_accounts_file](../Getting-Started/Configuration-Guide.md#user_accounts_file).
 
 To map usernames, the PAM service needs to use a module such as
 *pam_user_map.so*. This module is not a standard Linux component and needs to be
@@ -104,6 +110,46 @@ also be compiled from source. See
 for more information on how to configure the module. If the goal is to only map
 users from PAM to MariaDB in MaxScale, then configuring user mapping
 on just the machine running MaxScale is enough.
+
+Instead of using `pam_backend_mapping`, consider using the listener setting
+[user_mapping_file](../Getting-Started/Configuration-Guide.md#user_mapping_file),
+as it is easier to configure. `pam_backend_mapping` should only be used when
+the user mapping needs to be defined by pam.
+
+### `pam_mapped_pw_file`
+
+Path to a json-text file with user passwords. Default value is empty, which
+disables the feature.
+```
+authenticator_options=pam_mapped_pw_file=/home/root/passwords.json,pam_backend_mapping=mariadb
+```
+This feature only works together with `pam_backend_mapping=mariadb`. The file is
+only read during listener creation (typically MaxScale start) or when a listener
+is modified during runtime. The file should contain passwords for the mapped
+users. When a client is authenticating, MaxScale searches the password data for a
+matching username. If one is found, MaxScale uses the supplied password when
+logging in to backends. Otherwise, MaxScale tries to authenticate without a
+password.
+
+One array, "users_and_passwords", is read from the file. Each array element in the array must define the following fields:
+- "user": String. Mapped client username.
+- "password": String. Backend server password. Can be encrypted with *maxpasswd*.
+
+An example file is below.
+```
+{
+    "users_and_passwords": [
+        {
+            "user": "my_mapped_user1",
+            "password": "my_mapped_pw1"
+        },
+        {
+            "user": "my_mapped_user2",
+            "password": "A6D4C53619FFFF4DF252A0E595EDB0A12CA44E16AF154D0ED08F687E81604BFF42218B4EBA9F3EF8D907CF35E74ABDAA"
+        }
+    ]
+}
+```
 
 ## Anonymous user mapping
 
