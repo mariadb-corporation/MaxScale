@@ -701,7 +701,7 @@ export function addDaysToNow(days) {
 export function daysDiff(timestamp) {
     const now = Vue.moment().startOf('day')
     const end = Vue.moment(timestamp).startOf('day')
-    return Vue.moment.duration(end.diff(now)).asDays()
+    return end.diff(now, 'days')
 }
 
 //TODO: Remove this. Replace with deep-diff which gives more details about diff

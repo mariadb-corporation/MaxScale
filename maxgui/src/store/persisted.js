@@ -102,8 +102,10 @@ export default {
             }
         },
         handleAutoClearQueryHistory({ state, commit }) {
-            if (this.vue.$help.daysDiff(state.query_history_expired_time) === 0)
+            if (this.vue.$help.daysDiff(state.query_history_expired_time) === 0) {
                 commit('SET_QUERY_HISTORY', [])
+                commit('SET_QUERY_HISTORY_EXPIRED_TIME', addDaysToNow(30))
+            }
         },
     },
 }
