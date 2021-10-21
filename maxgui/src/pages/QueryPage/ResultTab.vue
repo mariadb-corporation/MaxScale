@@ -90,6 +90,7 @@
                                 :headers="resSet.fields.map(field => ({ text: field }))"
                                 :rows="resSet.data"
                                 showGroupBy
+                                v-on="$listeners"
                             />
                             <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
                                 <template v-for="(v, key) in resSet">

@@ -90,6 +90,7 @@
                         "
                         :rows="$typy(getPrvwDataRes(activeView), 'data').safeArray"
                         showGroupBy
+                        v-on="$listeners"
                     />
                 </keep-alive>
             </template>

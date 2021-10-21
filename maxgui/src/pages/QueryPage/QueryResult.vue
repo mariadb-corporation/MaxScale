@@ -32,6 +32,7 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    v-on="$listeners"
                 />
                 <preview-data-tab
                     v-else-if="
@@ -43,6 +44,7 @@
                     }"
                     :class="tabItemClass"
                     :dynDim="componentDynDim"
+                    v-on="$listeners"
                 />
                 <history-and-favorite
                     v-else
