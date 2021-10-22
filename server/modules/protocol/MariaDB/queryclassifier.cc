@@ -402,28 +402,29 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
     return rval;
 }
 
-void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
+void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint32_t* target)
 {
     const char max_rlag[] = "max_slave_replication_lag";
 
-    HINT* pHint = pHints;
-    while (pHint)
+    bool check_more = true;
+    for (auto it = hints.begin(); check_more && it != hints.end(); it++)
     {
-        if (m_pHandler->supports_hint(pHint->type))
+        const HINT& hint = *it;
+        if (m_pHandler->supports_hint(hint.type))
         {
-            switch (pHint->type)
+            switch (hint.type)
             {
             case HINT_ROUTE_TO_MASTER:
                 // This means override, so we bail out immediately.
                 *target = TARGET_MASTER;
                 MXS_DEBUG("Hint: route to master");
-                pHint = NULL;
+                check_more = false;
                 break;
 
             case HINT_ROUTE_TO_NAMED_SERVER:
                 // The router is expected to look up the named server.
                 *target |= TARGET_NAMED_SERVER;
-                MXS_DEBUG("Hint: route to named server: %s", pHint->data.c_str());
+                MXS_DEBUG("Hint: route to named server: %s", hint.data.c_str());
                 break;
 
             case HINT_ROUTE_TO_UPTODATE_SERVER:
@@ -442,14 +443,14 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
                 break;
 
             case HINT_PARAMETER:
-                if (strncasecmp(pHint->data.c_str(), max_rlag, sizeof(max_rlag) - 1) == 0)
+                if (strncasecmp(hint.data.c_str(), max_rlag, sizeof(max_rlag) - 1) == 0)
                 {
                     *target |= TARGET_RLAG_MAX;
                 }
                 else
                 {
                     MXS_ERROR("Unknown hint parameter '%s' when '%s' was expected.",
-                              pHint->data.c_str(), max_rlag);
+                              hint.data.c_str(), max_rlag);
                 }
                 break;
 
@@ -462,11 +463,6 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
                 mxb_assert(!true);
                 break;
             }
-        }
-
-        if (pHint)
-        {
-            pHint = pHint->next;
         }
     }
 }
@@ -1025,9 +1021,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
             }
         }
 
-        // TODO: not a real hint list, should pass the vector.
-        HINT* hint_list = pBuffer->hints.empty() ? nullptr : &pBuffer->hints[0];
-        process_routing_hints(hint_list, &route_target);
+        process_routing_hints(pBuffer->hints, &route_target);
 
         if (protocol_data->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
