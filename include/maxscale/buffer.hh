@@ -1271,6 +1271,13 @@ public:
         return gwbuf_get_id(m_pBuffer);
     }
 
+    /** Get the sql of the buffer (if any)
+     */
+    const std::string& get_sql() const
+    {
+        return m_pBuffer->get_sql();
+    }
+
     /**
      * Debug function for dumping buffer contents to log
      *
