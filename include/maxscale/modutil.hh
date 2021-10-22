@@ -123,15 +123,8 @@ GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
 /**
  * Extract the SQL portion of a COM_QUERY packet
  *
- * NB This sets *sql to point into the packet and does not
- * allocate any new storage. The string pointed to by *sql is
- * not NULL terminated.
- *
- * This routine is very simplistic and does not deal with SQL text
- * that spans multiple buffers.
- *
- * The length returned is the complete length of the SQL, which may
- * be larger than the amount of data in this packet.
+ * This function is a wrapper around GWBUF::get_sql().
+ * No data is copied.
  *
  * @param       buf     The packet buffer
  * @param       sql     Pointer that is set to point at the SQL data
