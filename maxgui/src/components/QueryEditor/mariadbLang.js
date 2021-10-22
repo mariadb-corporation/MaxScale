@@ -14,8 +14,7 @@
 import reservedWords from './reservedWords.js'
 import builtinFunctions from './builtinFunctions.js'
 
-//reservedWords includes builtinFunctions, so it needs to be filtered to get only keywords
-const keywords = reservedWords.filter(s => !builtinFunctions.includes(s.toLowerCase()))
+const keywords = reservedWords
 
 export const languageConfiguration = {
     comments: {
@@ -46,7 +45,7 @@ export const languageConfiguration = {
 export const languageTokens = {
     defaultToken: '',
     tokenPostfix: '.mariadb',
-    ignoreCase: true,
+    ignoreCase: false,
     brackets: [
         { open: '[', close: ']', token: 'delimiter.square' },
         { open: '(', close: ')', token: 'delimiter.parenthesis' },
