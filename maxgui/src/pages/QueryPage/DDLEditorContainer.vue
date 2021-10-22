@@ -364,6 +364,22 @@ export default {
             return sql
         },
         /**
+         * This builds ADD COLUMN SQL
+         * @param {Array} payload.addedCols - columns need to be added
+         * @returns {String} - returns ADD COLUMN sql
+         */
+        buildAddColSQL({ addedCols }) {
+            const { escapeIdentifiers: escape } = this.$help
+            let sql = ''
+            sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
+            addedCols.forEach(({ UQ, column_name }) => {
+                sql += this.handleAddComma()
+                sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+            })
+            return sql
+        },
+
+        /**
          * This builds DROP/ADD PK SQL
          * @returns {String} - returns DROP/ADD PK SQL
          */
@@ -395,10 +411,7 @@ export default {
                 sql += this.handleAddComma({ ignore: i === 0 })
                 const { column_name } = col.newObj
                 col.diff.forEach(d => {
-                    if (!d.lhs)
-                        sql += `ADD UNIQUE INDEX ${escape(d.rhs)} (${escape(
-                            column_name
-                        )} ASC) VISIBLE`
+                    if (!d.lhs) sql += `ADD UNIQUE INDEX ${escape(d.rhs)} (${escape(column_name)})`
                     else if (!d.rhs) sql += `DROP INDEX ${escape(d.lhs)}`
                 })
             })
@@ -465,20 +478,26 @@ export default {
             const diff = arrOfObjsDiff({ base, newArr: newData, idField: 'id' })
             const removedCols = diff.get('removed')
             const updatedCols = diff.get('updated')
+            const addedCols = diff.get('added')
             // Build sql for different diff types
             let dropColSql = '',
-                changeColSql = ''
+                changeColSql = '',
+                addedColSql = ''
             if (removedCols.length) dropColSql = this.buildDropColSql({ removedCols })
             if (updatedCols.length) changeColSql = this.buildChangeColSQL({ updatedCols })
-            //TODO: handle diff.added to buildAddColSQL
+            if (addedCols.length) addedColSql = this.buildAddColSQL({ addedCols })
             if (!isEqual(this.initialPkCols, this.currPkCols)) pkSQL = this.buildPKSQL()
             sql += dropColSql
             if (changeColSql) {
                 if (dropColSql) sql += this.handleAddComma()
                 sql += changeColSql
             }
+            if (addedColSql) {
+                if (dropColSql || changeColSql) sql += this.handleAddComma()
+                sql += addedColSql
+            }
             if (pkSQL) {
-                if (changeColSql || dropColSql) sql += this.handleAddComma()
+                if (dropColSql || changeColSql || addedColSql) sql += this.handleAddComma()
                 sql += pkSQL
             }
 
