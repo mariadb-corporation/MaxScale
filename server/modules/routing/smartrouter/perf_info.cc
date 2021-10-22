@@ -13,19 +13,6 @@
 
 #include "perf_info.hh"
 
-std::string show_some(const std::string& str, int nchars)
-{
-    int sz = str.length();
-    if (sz > nchars)
-    {
-        return str.substr(0, nchars) + "...";
-    }
-    else
-    {
-        return str;
-    }
-}
-
 // These are TODOs for the GA version. The Beta version will not have persistence.
 // 1. Read the file once at startup. There might also be a need to do cleanup
 //    of the file if the configuration has changed.

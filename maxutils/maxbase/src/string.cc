@@ -318,4 +318,17 @@ char* strnchr_esc_mariadb(const char* ptr, char c, int len)
     }
     return NULL;
 }
+
+std::string show_some(const std::string& str, int nchars)
+{
+    int sz = str.length();
+    if (sz > nchars)
+    {
+        return str.substr(0, nchars) + "...";
+    }
+    else
+    {
+        return str;
+    }
+}
 }

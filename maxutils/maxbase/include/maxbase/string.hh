@@ -437,6 +437,9 @@ char* strnchr_esc(char* ptr, char c, int len);
  */
 char* strnchr_esc_mariadb(const char* ptr, char c, int len);
 
+/** For debug and logging. Shortens str to nchars and adds "..." */
+std::string show_some(const std::string& str, int nchars = 70);
+
 /**
  * @brief consume_comment - Starting at read_ptr skip sql comment, if it is a comment,
  *                          and return ptr to one past end of comment.

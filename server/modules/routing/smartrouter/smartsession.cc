@@ -130,7 +130,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
             if (perf.is_valid())
             {
                 MXS_SDEBUG("Smart route to " << perf.target()->name()
-                                             << ", canonical = " << show_some(canonical));
+                                             << ", canonical = " << maxbase::show_some(canonical));
                 ret = write_to_target(perf.target(), pBuf);
             }
             else if (modutil_is_SQL(pBuf))

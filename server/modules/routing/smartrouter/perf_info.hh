@@ -69,9 +69,6 @@ struct PerformanceInfoUpdate
 using PerformanceInfoContainer = std::unordered_map<std::string, PerformanceInfo>;
 using SharedPerformanceInfo = maxbase::SharedData<PerformanceInfoContainer, PerformanceInfoUpdate>;
 
-// For logging. Shortens str to nchars and adds "..." TODO move somewhere more appropriate
-std::string show_some(const std::string& str, int nchars = 70);
-
 // implementation details below
 inline PerformanceInfo::PerformanceInfo(mxs::Target* t, maxbase::Duration d)
     : m_target(t)
