@@ -44,7 +44,8 @@ MaxScale.
                 "ssl_verify_peer_certificate": false,
                 "ssl_verify_peer_host": false,
                 "ssl_version": "MAX",
-                "type": "listener"
+                "type": "listener",
+                "user_mapping_file": null
             },
             "state": "Running"
         },
@@ -108,7 +109,8 @@ Get all listeners.
                     "ssl_verify_peer_certificate": false,
                     "ssl_verify_peer_host": false,
                     "ssl_version": "MAX",
-                    "type": "listener"
+                    "type": "listener",
+                    "user_mapping_file": null
                 },
                 "state": "Running"
             },
@@ -151,7 +153,8 @@ Get all listeners.
                     "ssl_verify_peer_certificate": false,
                     "ssl_verify_peer_host": false,
                     "ssl_version": "MAX",
-                    "type": "listener"
+                    "type": "listener",
+                    "user_mapping_file": null
                 },
                 "state": "Running"
             },
