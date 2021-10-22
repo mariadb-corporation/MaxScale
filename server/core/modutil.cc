@@ -782,59 +782,6 @@ const char* STRPACKETTYPE(int p)
 namespace maxscale
 {
 
-std::string extract_sql_real(const GWBUF* pBuf)
-{
-    mxb_assert(pBuf != nullptr);
-
-    std::string rval;
-    uint8_t cmd = mxs_mysql_get_command(pBuf);
-
-    if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
-    {
-        // Skip the packet header and the command byte
-        size_t header_len = MYSQL_HEADER_LEN + 1;
-        size_t length = gwbuf_length(pBuf) - header_len;
-        rval.resize(length);
-        char* pCopy_from = (char*) GWBUF_DATA(pBuf) + header_len;
-        char* pCopy_to = &rval.front();
-
-        if (gwbuf_is_contiguous(pBuf))
-        {
-            memcpy(pCopy_to, pCopy_from, length);
-        }
-        else
-        {
-            size_t cp_len = gwbuf_link_length(pBuf) - header_len;
-            while (pBuf && length)
-            {
-                memcpy(pCopy_to, pCopy_from, cp_len);
-                length -= cp_len;
-                pCopy_to += cp_len;
-                pBuf = pBuf->next;
-                if (pBuf)
-                {
-                    pCopy_from = (char*)GWBUF_DATA(pBuf);
-                    cp_len = gwbuf_link_length(pBuf);
-                }
-            }
-
-            mxb_assert(length==0);
-        }
-    }
-
-    return rval;
-}
-
-const std::string& extract_sql(const GWBUF* pBuf)
-{
-    return pBuf->get_sql();
-}
-
-const std::string& extract_sql(const mxs::Buffer& buffer)
-{
-    return buffer.get()->get_sql();
-}
-
 /**
  * Extract the SQL state from an error packet.
  *
