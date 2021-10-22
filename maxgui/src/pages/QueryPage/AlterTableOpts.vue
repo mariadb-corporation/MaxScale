@@ -47,7 +47,7 @@
                 <charset-input
                     v-model="tableOptsData.table_charset"
                     :defCharset="defDbCharset"
-                    @on-change="onChangeCharset"
+                    @on-input="onInputCharset"
                 />
             </v-col>
             <v-col cols="12" md="6" class="py-0 px-1">
@@ -139,7 +139,7 @@ export default {
         },
     },
     methods: {
-        onChangeCharset() {
+        onInputCharset() {
             // Use default collation of selected charset
             this.tableOptsData.table_collation = this.defCollation
         },

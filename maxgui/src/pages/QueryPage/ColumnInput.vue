@@ -18,7 +18,7 @@
         :height="height"
         hide-details="auto"
         :return-object="false"
-        @change="handleChange"
+        @input="onInput"
     />
     <v-checkbox
         v-else-if="input.type === 'bool'"
@@ -28,7 +28,7 @@
         primary
         hide-details
         :disabled="isDisabled"
-        @change="handleChange"
+        @change="onInput"
     />
     <charset-input
         v-else-if="input.type === 'charset'"
@@ -36,7 +36,7 @@
         :defCharset="defTblCharset"
         :height="height"
         :disabled="isDisabled"
-        @on-change="handleChange"
+        @on-input="onInput"
     />
     <collation-input
         v-else-if="input.type === 'collation'"
@@ -45,7 +45,7 @@
         :defCollation="defTblCollation"
         :charset="columnCharset"
         :disabled="isDisabled"
-        @on-change="handleChange"
+        @on-input="onInput"
     />
     <v-text-field
         v-else
@@ -57,7 +57,7 @@
         dense
         :height="height"
         hide-details="auto"
-        @change="handleChange"
+        @input="onInput"
     />
 </template>
 
@@ -84,16 +84,16 @@
  * Events
  * Below events are used to handle "coupled case",
  * e.g. When column_type changes its value to a data type
- * that supports charset/collation, `on-change-column_type`
+ * that supports charset/collation, `on-input-column_type`
  * will be used to update charset/collation input to fill
  * data with default table charset/collation.
- * on-change-column_type: (cell)
- * on-change-charset: (cell)
- * on-change-AI: (cell)
- * on-change-PK: (cell)
- * on-change-NN: (cell)
+ * on-input-column_type: (cell)
+ * on-input-charset: (cell)
+ * on-input-AI: (cell)
+ * on-input-PK: (cell)
+ * on-input-NN: (cell)
  * Event for normal cell
- * on-change: (cell)
+ * on-input: (cell)
  */
 
 import CharsetInput from './CharsetInput.vue'
@@ -243,15 +243,15 @@ export default {
             delete newInput.enum_values
             return newInput
         },
-        handleChange() {
+        onInput() {
             if (this.hasChanged) {
                 let newInput = this.handleRemoveType()
                 switch (this.input.type) {
                     case 'column_type':
-                        this.$emit('on-change-column_type', newInput)
+                        this.$emit('on-input-column_type', newInput)
                         break
                     case 'charset':
-                        this.$emit('on-change-charset', newInput)
+                        this.$emit('on-input-charset', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
@@ -274,14 +274,14 @@ export default {
                             case 'UQ':
                                 newInput.value = newInput.value ? this.uniqueIdxName : ''
                         }
-                        if (field === 'AI') this.$emit('on-change-AI', newInput)
-                        else if (field === 'PK') this.$emit('on-change-PK', newInput)
-                        else if (field === 'NN') this.$emit('on-change-NN', newInput)
-                        else this.$emit('on-change', newInput)
+                        if (field === 'AI') this.$emit('on-input-AI', newInput)
+                        else if (field === 'PK') this.$emit('on-input-PK', newInput)
+                        else if (field === 'NN') this.$emit('on-input-NN', newInput)
+                        else this.$emit('on-input', newInput)
                         break
                     }
                     default:
-                        this.$emit('on-change', newInput)
+                        this.$emit('on-input', newInput)
                         break
                 }
             }

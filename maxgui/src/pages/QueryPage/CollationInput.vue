@@ -13,7 +13,7 @@
         :height="height"
         hide-details="auto"
         :disabled="disabled"
-        @change="$emit('on-change', $event)"
+        @input="$emit('on-input', $event)"
     >
         <template v-slot:item="{ item, on, attrs }">
             <div

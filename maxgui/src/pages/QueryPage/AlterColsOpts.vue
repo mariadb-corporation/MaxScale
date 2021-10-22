@@ -100,12 +100,12 @@
                         :defTblCharset="defTblCharset"
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
-                        @on-change="updateCell"
-                        @on-change-column_type="onChangeColumnType"
-                        @on-change-PK="onChangePK"
-                        @on-change-NN="onChangeNN"
-                        @on-change-AI="onChangeAI"
-                        @on-change-charset="onChangeCharset"
+                        @on-input="onCellInput"
+                        @on-input-column_type="onInputColumnType"
+                        @on-input-PK="onInputPK"
+                        @on-input-NN="onInputNN"
+                        @on-input-AI="onInputAI"
+                        @on-input-charset="onInputCharset"
                     />
                 </div>
             </template>
@@ -274,7 +274,7 @@ export default {
         /**
          * @param {Object} item - cell data
          */
-        updateCell(item) {
+        onCellInput(item) {
             this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.rowIdx]: {
@@ -392,7 +392,7 @@ export default {
         /**
          * @param {Object} item - column_type cell data
          */
-        onChangeColumnType(item) {
+        onInputColumnType(item) {
             // first update column_type cell
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
@@ -458,7 +458,7 @@ export default {
         /**
          * @param {Object} item - AI cell data
          */
-        onChangeAI(item) {
+        onInputAI(item) {
             let colsOptsData = this.colsOptsData
             if (this.hasAI)
                 colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
@@ -481,7 +481,7 @@ export default {
         /**
          * @param {Object} item - charset cell data
          */
-        onChangeCharset(item) {
+        onInputCharset(item) {
             this.colsOptsData = this.patchCharsetCollation({
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,
@@ -491,7 +491,7 @@ export default {
         /**
          * @param {Object} item - PK cell data
          */
-        onChangePK(item) {
+        onInputPK(item) {
             // update PK and UQ value
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
@@ -510,7 +510,7 @@ export default {
         /**
          * @param {Object} item - NN cell data
          */
-        onChangeNN(item) {
+        onInputNN(item) {
             this.colsOptsData = this.notNullSideEffect({
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,
