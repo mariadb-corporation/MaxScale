@@ -109,6 +109,13 @@
                     />
                 </div>
             </template>
+            <!-- Add :key so that truncate-string rerender to evaluate truncation  -->
+            <template v-slot:header-column_name="{ data: { maxWidth } }">
+                <truncate-string :key="maxWidth" text="Column Name" :maxWidth="maxWidth" />
+            </template>
+            <template v-slot:header-column_type="{ data: { maxWidth } }">
+                <truncate-string :key="maxWidth" text="Column Type" :maxWidth="maxWidth" />
+            </template>
             <template
                 v-for="(value, key) in abbreviatedHeaders"
                 v-slot:[abbrHeaderSlotName(key)]="{ data: { header, maxWidth } }"
@@ -189,6 +196,7 @@ export default {
                 let h = {
                     text: field,
                     sortable: false,
+                    capitalize: true,
                 }
                 switch (field) {
                     case 'PK':

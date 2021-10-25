@@ -39,6 +39,7 @@
                         :class="{
                             pointer: enableSorting && header.sortable !== false,
                             [`sort--active ${sortOrder}`]: activeSort === header.text,
+                            'text-capitalize': header.capitalize,
                         }"
                         @click="
                             () =>
@@ -124,6 +125,7 @@
  headers: {
   width?: string | number, default width when header is rendered
   maxWidth?: string | number,
+  capitalize?: boolean, capitalize first letter of the header
   groupable?: boolean
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
   hidden?: boolean, hidden the column
