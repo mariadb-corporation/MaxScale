@@ -109,6 +109,29 @@
                     />
                 </div>
             </template>
+            <template
+                v-for="(value, key) in abbreviatedHeaders"
+                v-slot:[abbrHeaderSlotName(key)]="{ data: { header, maxWidth } }"
+            >
+                <v-tooltip
+                    :key="key"
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                    :disabled="isVertTable"
+                >
+                    <template v-slot:activator="{ on }">
+                        <div
+                            class="d-inline-block text-truncate"
+                            :style="{ maxWidth: `${maxWidth}px` }"
+                            v-on="on"
+                        >
+                            {{ isVertTable ? value : header.text }}
+                        </div>
+                    </template>
+                    <span>{{ value }}</span>
+                </v-tooltip>
+            </template>
         </virtual-scroll-table>
     </div>
 </template>
@@ -184,6 +207,17 @@ export default {
                 return h
             })
         },
+        abbreviatedHeaders() {
+            return {
+                PK: 'PRIMARY KEY',
+                NN: 'NOT NULL',
+                UN: 'UNSIGNED',
+                UQ: 'UNIQUE INDEX',
+                ZF: 'ZEROFILL',
+                AI: 'AUTO_INCREMENT',
+            }
+        },
+
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
         },
@@ -230,6 +264,10 @@ export default {
         },
     },
     methods: {
+        abbrHeaderSlotName(h) {
+            if (this.isVertTable) return `vertical-header-${h}`
+            return `header-${h}`
+        },
         setHeaderHeight() {
             if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
