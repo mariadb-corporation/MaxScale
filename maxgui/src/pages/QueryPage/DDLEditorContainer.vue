@@ -373,8 +373,10 @@ export default {
             let sql = ''
             sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
             addedCols.forEach(({ UQ, column_name }) => {
-                sql += this.handleAddComma()
-                sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+                if (UQ) {
+                    sql += this.handleAddComma()
+                    sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+                }
             })
             return sql
         },
