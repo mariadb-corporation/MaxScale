@@ -1061,7 +1061,6 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
 
     case HINT_ROUTE_TO_UPTODATE_SERVER:
     case HINT_ROUTE_TO_ALL:
-        mxb_assert(!true);
         rv = false;
         break;
 

@@ -234,9 +234,11 @@ std::string get_filename(const HttpRequest& request)
     }
 
     char pathbuf[PATH_MAX + 1] = "";
+    char sharebuf[PATH_MAX + 1] = "";
 
     if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0
-        && strncmp(pathbuf, sharedir.c_str(), sharedir.length()) == 0)
+        && realpath(sharedir.c_str(), sharebuf)
+        && strncmp(pathbuf, sharebuf, strlen(sharebuf)) == 0)
     {
         // A valid file that's stored in the GUI directory
         path.assign(pathbuf);
