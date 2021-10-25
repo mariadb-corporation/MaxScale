@@ -21,7 +21,11 @@
             @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
-        />
+        >
+            <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
+                <slot :name="`header-${h.text}`" :data="data" />
+            </template>
+        </table-header>
         <v-virtual-scroll
             v-if="rowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
@@ -59,6 +63,12 @@
                         >
                             <truncate-string :text="`${cell}`" :maxWidth="cellMaxWidth(1)" />
                         </slot>
+                    </template>
+                    <template
+                        v-for="h in tableHeaders"
+                        v-slot:[`vertical-header-${h.text}`]="{ data }"
+                    >
+                        <slot :name="`vertical-header-${h.text}`" :data="data" />
                     </template>
                 </vertical-row>
                 <row-group

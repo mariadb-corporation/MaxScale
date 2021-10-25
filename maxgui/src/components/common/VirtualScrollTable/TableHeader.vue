@@ -47,21 +47,26 @@
                                     : null
                         "
                     >
-                        <span v-if="header.text === '#'">
-                            {{ header.text }}
-                        </span>
-                        <!-- maxWidth: minus padding and sort-icon -->
-                        <truncate-string
+                        <template v-if="header.text === '#'">
+                            <span> {{ header.text }}</span>
+                            <span class="ml-1 color text-field-text"> ({{ rowsLength }}) </span>
+                        </template>
+                        <slot
                             v-else
-                            :text="`${header.text}`"
-                            :maxWidth="
-                                $typy(headerWidthMap[i]).safeNumber -
-                                    (enableSorting && header.sortable !== false ? 46 : 0)
-                            "
-                        />
-                        <span v-if="header.text === '#'" class="ml-1 color text-field-text">
-                            ({{ rowsLength }})
-                        </span>
+                            :name="`header-${header.text}`"
+                            :data="{
+                                header,
+                                // maxWidth: minus padding and sort-icon
+                                maxWidth: headerMaxWidth({ header, i }),
+                                colIdx: i,
+                            }"
+                        >
+                            <truncate-string
+                                :text="`${header.text}`"
+                                :maxWidth="headerMaxWidth({ header, i })"
+                            />
+                        </slot>
+
                         <v-icon
                             v-if="enableSorting && header.sortable !== false"
                             size="14"
@@ -212,6 +217,14 @@ export default {
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
     methods: {
+        headerMaxWidth({ header, i }) {
+            return (
+                this.$typy(this.headerWidthMap[i]).safeNumber -
+                (this.enableSorting && header.sortable !== false ? 22 : 0) -
+                (this.enableGrouping && this.$typy(header, 'groupable').safeBoolean ? 38 : 0) -
+                24 // padding
+            )
+        },
         //threshold, user cannot resize header smaller than this
         getMinHeaderWidth(header) {
             if (header.maxWidth) return header.maxWidth
