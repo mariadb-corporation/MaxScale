@@ -84,9 +84,9 @@ export default {
 </script>
 <style lang="scss" scoped>
 .tr-vertical-group {
-    .tr {
-        &:last-of-type {
-            border-bottom: thin solid $table-border;
+    .tr:last-of-type {
+        .td {
+            border-bottom: thin solid $separator !important;
         }
     }
 }
