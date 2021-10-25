@@ -433,7 +433,7 @@ add_test_executable(cache_distributed.cpp cache_distributed cache_distributed LA
 add_test_executable(cache_mxs3694.cpp cache_mxs3694 cache_mxs3694 LABELS cachefilter REPL_BACKEND)
 
 # Test of Cache bug MXS-3778
-add_test_executable(cache_mxs3778.cpp cache_mxs3778 cache_mxs3778 LABELS cachefilter REPL_BACKEND)
+add_test_executable(mxs3778_cache.cpp mxs3778_cache mxs3778_cache LABELS cachefilter REPL_BACKEND)
 
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)

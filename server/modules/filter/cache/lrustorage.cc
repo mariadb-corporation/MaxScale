@@ -163,18 +163,7 @@ public:
 
     void remove_note(LRUStorage::Node* pNode) override final
     {
-        const vector<string>& words = pNode->invalidation_words();
-
-        for (auto& word : words)
-        {
-            mxb_assert(!word.empty());
-
-            Nodes& nodes = m_nodes_by_word[word];
-            auto it = nodes.find(pNode);
-            mxb_assert(it != nodes.end());
-
-            nodes.erase(it);
-        }
+        remove_note(pNode, pNode->invalidation_words());
     }
 
     bool invalidate(const vector<string>& words) override
@@ -202,8 +191,26 @@ public:
 
                     if (invalidated.count(pNode) == 0)
                     {
+                        auto node_words = pNode->invalidation_words();
+
                         if (invalidate_node(pNode))
                         {
+                            if (node_words.size() > 1)
+                            {
+                                // If there are multiple invalidation words associated with
+                                // the node, then the node must be removed from the bookeeping
+                                // of those words as well. Otherwise we have the following:
+                                // SELECT * FROM t1 UNION SELECT * FROM t2 => Node stored to t1 and t2.
+                                // DELETE * FROM t1                        => Node removed from t1 and deleted
+                                // DELETE * FROM t2                        => Crash as node still in t2.
+                                auto jt = std::find(node_words.begin(), node_words.end(), word);
+                                mxb_assert(jt != node_words.end());
+
+                                node_words.erase(jt);
+
+                                remove_note(pNode, node_words);
+                            }
+
                             invalidated.insert(pNode);
                             mxb_assert(nodes.count(pNode) == 1);
                         }
@@ -234,6 +241,20 @@ protected:
     }
 
     virtual bool invalidate_node(Node* pNode) = 0;
+
+    void remove_note(Node* pNode, const vector<string>& words)
+    {
+        for (auto& word : words)
+        {
+            mxb_assert(!word.empty());
+
+            Nodes& nodes = m_nodes_by_word[word];
+            auto it = nodes.find(pNode);
+            mxb_assert(it != nodes.end());
+
+            nodes.erase(it);
+        }
+    }
 
 private:
     using Nodes       = unordered_set<Node*>;
