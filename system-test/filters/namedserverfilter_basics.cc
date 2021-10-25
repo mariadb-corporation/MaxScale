@@ -20,6 +20,8 @@ using IdSet = std::set<int64_t>;
 
 void test_query_target(TestConnections& test, mxt::MariaDB* conn, const IdSet& allowed_ids,
                        const string& query_part);
+void exec_get_res(TestConnections& test, MYSQL_STMT* stmt, long expected, bool direct);
+
 void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
@@ -110,6 +112,57 @@ void test_main(TestConnections& test)
             // The following two do not really test routing change, as the query goes to slave anyway.
             test_with_all({1, 2, 3}, "slave server");
             test_with_all({0, 1, 2, 3}, "all servers");
+
+            if (test.ok())
+            {
+                test.tprintf("Test prepared statements.");
+                mxs.connect_rwsplit("");
+                auto* conn = mxs.conn_rwsplit[0];
+
+                auto* stmt_s2 = mysql_stmt_init(conn);
+                string query_s2 = "SELECT @@server_id, 'second server';";
+                int rc_s2 = mysql_stmt_prepare(stmt_s2, query_s2.c_str(), query_s2.length());
+
+                auto* stmt_s3 = mysql_stmt_init(conn);
+                string query_s3 = "SELECT @@server_id, 'third server';";
+                int rc_s3 = mysql_stmt_prepare(stmt_s3, query_s3.c_str(), query_s3.length());
+
+                auto* stmt_s4 = mysql_stmt_init(conn);
+                string query_s4 = "SELECT @@server_id, 'fourth server';";
+                int rc_s4 = mysql_stmt_prepare(stmt_s4, query_s4.c_str(), query_s4.length());
+
+                test.expect(rc_s2 == 0 && rc_s3 == 0 && rc_s4 == 0, "PS preparation failed.");
+                if (test.ok())
+                {
+                    test.tprintf("Checking result of '%s'", query_s2.c_str());
+                    exec_get_res(test, stmt_s2, srv_info.get(1).server_id, false);
+
+                    test.tprintf("Checking result of '%s'", query_s3.c_str());
+                    exec_get_res(test, stmt_s3, srv_info.get(2).server_id, false);
+
+                    test.tprintf("Checking result of '%s'", query_s4.c_str());
+                    exec_get_res(test, stmt_s4, srv_info.get(3).server_id, false);
+                }
+
+                mysql_stmt_close(stmt_s2);
+                mysql_stmt_close(stmt_s3);
+                mysql_stmt_close(stmt_s4);
+
+                if (test.ok())
+                {
+                    test.tprintf("Checking result of '%s' when executed directly.", query_s4.c_str());
+                    stmt_s4 = mysql_stmt_init(conn);
+                    if (mariadb_stmt_execute_direct(stmt_s4, query_s4.c_str(), query_s4.length()) == 0)
+                    {
+                        exec_get_res(test, stmt_s4, srv_info.get(3).server_id, true);
+                    }
+                    else
+                    {
+                        test.add_failure("Direct exec failed. Error: %s", mysql_stmt_error(stmt_s4));
+                    }
+                    mysql_stmt_close(stmt_s4);
+                }
+            }
         }
     }
 }
@@ -141,5 +194,46 @@ void test_query_target(TestConnections& test, mxt::MariaDB* conn, const IdSet& a
     else
     {
         test.add_failure("Query '%s' failed or returned invalid data.", q.c_str());
+    }
+}
+
+void exec_get_res(TestConnections& test, MYSQL_STMT* stmt, long expected, bool direct)
+{
+    if (direct || mysql_stmt_execute(stmt) == 0)
+    {
+        MYSQL_BIND results[2] {};
+        long server_id = -1;
+        char dummy[100] {};
+        auto& res0 = results[0];
+        res0.buffer_type = MYSQL_TYPE_LONGLONG;
+        res0.buffer = &server_id;
+        auto& res1 = results[1];
+        res1.buffer_type = MYSQL_TYPE_STRING;
+        res1.buffer = dummy;
+        res1.buffer_length = sizeof(dummy);
+
+        if (mysql_stmt_bind_result(stmt, results) == 0
+            && mysql_stmt_store_result(stmt) == 0
+            && mysql_stmt_fetch(stmt) == 0)
+        {
+            if (server_id == expected)
+            {
+                test.tprintf("Query returned %li, as it should.", server_id);
+            }
+            else
+            {
+                test.add_failure("Query returned %li, when %li was expected.",
+                                 server_id, expected);
+            }
+        }
+        else
+        {
+            test.add_failure("PS result bind/store/fetch failed. Error: %s",
+                             mysql_stmt_error(stmt));
+        }
+    }
+    else
+    {
+        test.add_failure("PS exec failed. Error: %s", mysql_stmt_error(stmt));
     }
 }
