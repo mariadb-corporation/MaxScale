@@ -2022,11 +2022,11 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
             ++it;
             uint16_t warnings = *it++;
-            warnings |= *it << 8;
+            warnings |= *it++ << 8;
 
             m_reply.set_num_warnings(warnings);
 
-            int16_t status = *it++;
+            uint16_t status = *it++;
             status |= *it << 8;
 
             m_reply.set_server_status(status);
@@ -2050,11 +2050,11 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             ++it;
             uint16_t warnings = *it++;
-            warnings |= *it << 8;
+            warnings |= *it++ << 8;
 
             m_reply.set_num_warnings(warnings);
 
-            int16_t status = *it++;
+            uint16_t status = *it++;
             status |= *it << 8;
 
             m_reply.set_server_status(status);

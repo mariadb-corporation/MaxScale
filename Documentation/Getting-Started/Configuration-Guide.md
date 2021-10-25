@@ -712,6 +712,13 @@ The MaxScale GUI static files are located in the `gui/` subdirectory. If the GUI
 files have been manually moved somewhere else, this path must be configured to
 point to the parent directory of the `gui/` subdirectory.
 
+The MaxScale REST API only serves files for the GUI that are located in the
+`gui/` subdirectory of the configured `sharedir`. Any files whose real path
+resolves to outside of this directory are not served by the MaxScale GUI: this
+is done to prevent other files from being accessible via the MaxScale REST
+API. This means that path to the GUI source directory can contain symbolic links
+but all parts after the `/gui/` directory must reside inside it.
+
 The default value is `/usr/share/maxscale/`.
 
 ### `cachedir`
