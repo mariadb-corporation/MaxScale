@@ -172,11 +172,16 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     if (m_check_nodes)
     {
-        // The replication cluster has extra backends if too many are configured due to a previously
-        // ran big test. Hide the extra ones.
         if (repl)
         {
+            // The replication cluster has extra backends if too many are configured due to a previously
+            // ran big test. Hide the extra ones.
             repl->remove_extra_backends();
+
+            // Remove stale connections to the database. These sometimes appear when the connection to the
+            // database is blocked. Extra connections cause connection count calculations to be off which
+            // currently causes problems.
+            repl->close_active_connections();
         }
 
         auto check_node = [&rc](MariaDBCluster* cluster) {

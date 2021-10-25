@@ -86,27 +86,28 @@
                 v-for="h in headers"
                 v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
             >
-                <column-input
-                    :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
-                    :key="h.text"
-                    :data="{
-                        field: h.text,
-                        value: cell,
-                        rowIdx,
-                        colIdx,
-                        rowObj: rowDataToObj(rowData),
-                    }"
-                    :height="30"
-                    :defTblCharset="defTblCharset"
-                    :defTblCollation="defTblCollation"
-                    :dataTypes="dataTypes"
-                    @on-change="updateCell"
-                    @on-change-column_type="onChangeColumnType"
-                    @on-change-PK="onChangePK"
-                    @on-change-NN="onChangeNN"
-                    @on-change-AI="onChangeAI"
-                    @on-change-charset="onChangeCharset"
-                />
+                <div :key="h.text" class="fill-height d-flex align-center">
+                    <column-input
+                        :ref="`columnInput-row${rowIdx}-col-${colIdx}`"
+                        :data="{
+                            field: h.text,
+                            value: cell,
+                            rowIdx,
+                            colIdx,
+                            rowObj: rowDataToObj(rowData),
+                        }"
+                        :height="30"
+                        :defTblCharset="defTblCharset"
+                        :defTblCollation="defTblCollation"
+                        :dataTypes="dataTypes"
+                        @on-change="updateCell"
+                        @on-change-column_type="onChangeColumnType"
+                        @on-change-PK="onChangePK"
+                        @on-change-NN="onChangeNN"
+                        @on-change-AI="onChangeAI"
+                        @on-change-charset="onChangeCharset"
+                    />
+                </div>
             </template>
         </virtual-scroll-table>
     </div>
@@ -437,12 +438,14 @@ export default {
          * @param {Object} payload.colsOptsData - current colsOptsData
          * @param {Number} payload.rowIdx - rowIdx to be updated
          * @param {String} payload.valOfNN - value of NN
+         * @param {String} payload.valueOfDefault - value of default cell
          * @returns {Object} - returns new colsOptsData
          */
-        notNullSideEffect({ colsOptsData, rowIdx, valOfNN }) {
+        notNullSideEffect({ colsOptsData, rowIdx, valOfNN, valueOfDefault = null }) {
             let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefault}']`)
                 .safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
+            if (valueOfDefault !== null) defaultVal = valueOfDefault
             return this.$help.immutableUpdate(colsOptsData, {
                 data: {
                     [rowIdx]: {
@@ -471,6 +474,8 @@ export default {
                 colsOptsData,
                 rowIdx: item.rowIdx,
                 valOfNN: 'NOT NULL',
+                // set to empty string when AI value is AUTO_INCREMENT
+                valueOfDefault: item.value ? '' : null,
             })
         },
         /**

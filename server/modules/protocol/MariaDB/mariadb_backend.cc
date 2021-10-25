@@ -115,24 +115,6 @@ void skip_encoded_str(Iter& it)
     it.advance(len);
 }
 
-inline bool check_eof_status(Iter it, uint16_t flag)
-{
-    std::advance(it, 3);    // Skip the command byte and warning count
-    uint16_t status = *it++;
-    status |= (*it++) << 8;
-    return status & flag;
-}
-
-inline bool is_last_eof(Iter it)
-{
-    return !check_eof_status(it, SERVER_MORE_RESULTS_EXIST);
-}
-
-inline bool cursor_exists(Iter it)
-{
-    return check_eof_status(it, SERVER_STATUS_CURSOR_EXISTS);
-}
-
 struct AddressInfo
 {
     bool        success {false};
@@ -2141,18 +2123,31 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         break;
 
     case ReplyState::RSET_COLDEF_EOF:
-        mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
-        set_reply_state(ReplyState::RSET_ROWS);
-
-        if (m_opening_cursor)
         {
-            m_opening_cursor = false;
+            mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
+            set_reply_state(ReplyState::RSET_ROWS);
 
-            // The cursor does not exist if the result contains only one row
-            if (cursor_exists(it))
+            ++it;
+            uint16_t warnings = *it++;
+            warnings |= *it << 8;
+
+            m_reply.set_num_warnings(warnings);
+
+            int16_t status = *it++;
+            status |= *it << 8;
+
+            m_reply.set_server_status(status);
+
+            if (m_opening_cursor)
             {
-                MXS_INFO("Cursor successfully opened");
-                set_reply_state(ReplyState::DONE);
+                m_opening_cursor = false;
+
+                // The cursor does not exist if the result contains only one row
+                if (status & SERVER_STATUS_CURSOR_EXISTS)
+                {
+                    MXS_INFO("Cursor successfully opened");
+                    set_reply_state(ReplyState::DONE);
+                }
             }
         }
         break;
@@ -2161,13 +2156,17 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
         {
             // Genuine EOF packet
-            set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
-
             ++it;
             uint16_t warnings = *it++;
             warnings |= *it << 8;
 
             m_reply.set_num_warnings(warnings);
+
+            int16_t status = *it++;
+            status |= *it << 8;
+
+            m_reply.set_server_status(status);
+            set_reply_state((status & SERVER_MORE_RESULTS_EXIST) == 0 ? ReplyState::DONE : ReplyState::START);
         }
         else if (cmd == MYSQL_REPLY_EOF && len < 0xffffff - MYSQL_HEADER_LEN)
         {
@@ -2205,6 +2204,8 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     skip_encoded_int(it);   // Last insert ID
     uint16_t status = *it++;
     status |= (*it++) << 8;
+
+    m_reply.set_server_status(status);
 
     if ((status & SERVER_MORE_RESULTS_EXIST) == 0)
     {

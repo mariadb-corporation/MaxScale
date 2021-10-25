@@ -9,9 +9,11 @@
             >
                 <div
                     :key="`${h.text}_${headerWidthMap[0]}_0`"
-                    class="td fill-height d-flex align-center border-bottom-none px-3"
+                    class="td border-bottom-none px-3"
                     :style="{
                         minWidth: $help.handleAddPxUnit(headerWidthMap[0]),
+                        lineHeight,
+                        height: lineHeight,
                     }"
                 >
                     <truncate-string
@@ -21,9 +23,11 @@
                 </div>
                 <div
                     :key="`${h.text}_${headerWidthMap[1]}_1`"
-                    class="td fill-height d-flex align-center no-border px-3"
+                    class="td no-border px-3"
                     :style="{
                         minWidth: $help.handleAddPxUnit(headerWidthMap[1]),
+                        lineHeight,
+                        height: lineHeight,
                     }"
                 >
                     <slot :name="h.text" :data="{ cell: row[i], header: h, colIdx: i }" />

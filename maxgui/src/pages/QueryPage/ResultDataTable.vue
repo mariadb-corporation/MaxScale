@@ -102,6 +102,7 @@
                 </template>
             </virtual-scroll-table>
         </keep-alive>
+        <!-- TODO: Add context menu to copy cell value to clipboard, place cell value in editor -->
     </div>
 </template>
 
@@ -165,8 +166,8 @@ export default {
                     { text: '#', maxWidth: 'max-content' },
                     ...this.headers.map(h =>
                         this.showGroupBy && !this.$typy(h, 'groupable').isDefined
-                            ? { ...h, groupable: true }
-                            : h
+                            ? { ...h, groupable: true, draggable: true }
+                            : { ...h, draggable: true }
                     ),
                 ]
 

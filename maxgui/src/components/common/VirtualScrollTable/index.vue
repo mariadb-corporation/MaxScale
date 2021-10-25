@@ -15,9 +15,9 @@
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
-            :lastVisHeader="lastVisHeader"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
+            @last-vis-header="lastVisHeader = $event"
             @on-sorting="onSorting"
             @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
@@ -103,7 +103,7 @@
                         <v-checkbox
                             :input-value="isRowSelected(row)"
                             dense
-                            class="checkbox--scale-reduce ma-0"
+                            class="checkbox--scale-reduce ma-0 pa-0"
                             primary
                             hide-details
                             @change="
@@ -119,42 +119,36 @@
                         <div
                             v-if="!h.hidden"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
-                            class="td px-3"
-                            :class="{
-                                'cursor--grab no-userSelect': h.draggable,
-                                'td--last-cell': h.text === $typy(lastVisHeader, 'text').safeString,
-                            }"
+                            class="td"
+                            :class="[
+                                h.draggable ? 'cursor--grab no-userSelect' : '',
+                                h.text === $typy(lastVisHeader, 'text').safeString
+                                    ? `td--last-cell ${!isYOverflowed ? 'pl-3 pr-0' : 'px-3'}`
+                                    : 'px-3',
+                            ]"
                             :style="{
                                 height: lineHeight,
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
-                            v-on="
-                                h.draggable
-                                    ? {
-                                          mousedown: e => onCellDragStart(e),
-                                      }
-                                    : null
-                            "
+                            v-on="h.draggable ? { mousedown: e => onCellDragStart(e) } : null"
                         >
-                            <div class="cell-content--vert-center">
-                                <slot
-                                    :name="h.text"
-                                    :data="{
-                                        rowData: row,
-                                        cell: row[i],
-                                        header: h,
-                                        maxWidth: cellMaxWidth(i),
-                                        rowIdx: rowIdx,
-                                        colIdx: i,
-                                    }"
-                                >
-                                    <truncate-string
-                                        :text="`${row[i]}`"
-                                        :maxWidth="cellMaxWidth(i)"
-                                        :disabled="isDragging"
-                                    />
-                                </slot>
-                            </div>
+                            <slot
+                                :name="h.text"
+                                :data="{
+                                    rowData: row,
+                                    cell: row[i],
+                                    header: h,
+                                    maxWidth: cellMaxWidth(i),
+                                    rowIdx: rowIdx,
+                                    colIdx: i,
+                                }"
+                            >
+                                <truncate-string
+                                    :text="`${row[i]}`"
+                                    :maxWidth="cellMaxWidth(i)"
+                                    :disabled="isDragging"
+                                />
+                            </slot>
                         </div>
                     </template>
                     <div
@@ -224,6 +218,7 @@ export default {
     data() {
         return {
             headerWidthMap: {},
+            lastVisHeader: {},
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
@@ -247,10 +242,6 @@ export default {
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
-        },
-        lastVisHeader() {
-            if (this.visHeaders.length) return this.visHeaders[this.visHeaders.length - 1]
-            return {}
         },
         rowHeight() {
             return this.isVertTable
@@ -507,17 +498,11 @@ export default {
                 border-bottom: thin solid $table-border;
                 border-right: thin solid $table-border;
                 background: $background;
-                display: table-cell;
-                vertical-align: middle;
                 &:first-of-type {
                     border-left: thin solid $table-border;
                 }
                 &--last-cell {
                     border-right: none;
-                }
-                .cell-content--vert-center {
-                    width: 100%;
-                    display: inline-block;
                 }
             }
             &:hover {
