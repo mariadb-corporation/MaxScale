@@ -29,6 +29,7 @@ GET /v1/filters/:name
             "module": "qlafilter",
             "parameters": {
                 "append": false,
+                "duration_unit": "ms",
                 "exclude": null,
                 "filebase": "/tmp/qla.log",
                 "flush": true,
@@ -40,6 +41,7 @@ GET /v1/filters/:name
                 "options": "",
                 "separator": ",",
                 "source": null,
+                "use_canonical_form": false,
                 "user": null
             }
         },
@@ -90,6 +92,7 @@ GET /v1/filters
                 "module": "qlafilter",
                 "parameters": {
                     "append": false,
+                    "duration_unit": "ms",
                     "exclude": null,
                     "filebase": "/tmp/qla.log",
                     "flush": true,
@@ -101,6 +104,7 @@ GET /v1/filters
                     "options": "",
                     "separator": ",",
                     "source": null,
+                    "use_canonical_form": false,
                     "user": null
                 }
             },

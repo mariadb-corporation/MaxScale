@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Sun, 18 Jul 2021 01:50:52 GMT",
-            "commit": "a3fc3eadf0e55a4982fae68305d5105a1c1ca5fd",
+            "activated_at": "Fri, 22 Oct 2021 10:23:41 GMT",
+            "commit": "425c0f20df64848e60f3fa7e08c15d8ee344def7",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -50,7 +50,7 @@ file locations, configuration options and version information.
                 "config_sync_password": "*****",
                 "config_sync_timeout": "10000ms",
                 "config_sync_user": null,
-                "connector_plugindir": "/tmp/build/lib64/mysql/plugin",
+                "connector_plugindir": "/tmp/build/lib64/maxscale/plugin",
                 "datadir": "/tmp/build/lib/maxscale",
                 "debug": null,
                 "dump_last_statements": "never",
@@ -96,10 +96,10 @@ file locations, configuration options and version information.
                 "writeq_high_water": 16777216,
                 "writeq_low_water": 8192
             },
-            "process_datadir": "/tmp/build/lib/maxscale/data1500540",
-            "started_at": "Sun, 18 Jul 2021 01:50:52 GMT",
-            "uptime": 5,
-            "version": "2.5.14"
+            "process_datadir": "/tmp/build/lib/maxscale/data1705670",
+            "started_at": "Fri, 22 Oct 2021 10:23:41 GMT",
+            "uptime": 1,
+            "version": "6.2.0"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -1004,13 +1004,6 @@ parameters it accepts as a module.
                     "type": "bool"
                 },
                 {
-                    "description": "The cluster of servers to use",
-                    "mandatory": false,
-                    "modifiable": true,
-                    "name": "cluster",
-                    "type": "string"
-                },
-                {
                     "default_value": "300000ms",
                     "description": "How ofted idle connections are pinged",
                     "mandatory": false,
@@ -1043,14 +1036,6 @@ parameters it accepts as a module.
                     "modifiable": true,
                     "name": "enable_root_user",
                     "type": "bool"
-                },
-                {
-                    "default_value": [],
-                    "description": "List of filters to use",
-                    "mandatory": false,
-                    "modifiable": true,
-                    "name": "filters",
-                    "type": "stringlist"
                 },
                 {
                     "default_value": "-1000ms",
@@ -1138,21 +1123,6 @@ parameters it accepts as a module.
                     "type": "int"
                 },
                 {
-                    "description": "The router to use",
-                    "mandatory": true,
-                    "modifiable": false,
-                    "name": "router",
-                    "type": "module"
-                },
-                {
-                    "default_value": [],
-                    "description": "List of servers to use",
-                    "mandatory": false,
-                    "modifiable": true,
-                    "name": "servers",
-                    "type": "stringlist"
-                },
-                {
                     "default_value": false,
                     "description": "Enable session tracing for this service",
                     "mandatory": false,
@@ -1177,27 +1147,30 @@ parameters it accepts as a module.
                     "type": "bool"
                 },
                 {
-                    "default_value": [],
-                    "description": "List of targets to use",
-                    "mandatory": false,
-                    "modifiable": true,
-                    "name": "targets",
-                    "type": "stringlist"
-                },
-                {
-                    "default_value": "service",
-                    "description": "The type of the object",
-                    "mandatory": false,
-                    "modifiable": false,
-                    "name": "type",
-                    "type": "string"
-                },
-                {
                     "description": "Username used to retrieve database users",
                     "mandatory": true,
                     "modifiable": true,
                     "name": "user",
                     "type": "string"
+                },
+                {
+                    "description": "Load additional users from a file",
+                    "mandatory": false,
+                    "modifiable": false,
+                    "name": "user_accounts_file",
+                    "type": "path"
+                },
+                {
+                    "default_value": "add_when_load_ok",
+                    "description": "When and how the user accounts file is used",
+                    "enum_values": [
+                        "add_when_load_ok",
+                        "file_only_always"
+                    ],
+                    "mandatory": false,
+                    "modifiable": false,
+                    "name": "user_accounts_file_usage",
+                    "type": "enum"
                 },
                 {
                     "description": "Custom version string to use",
@@ -1690,7 +1663,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "2.5.14"
+                "version": "6.2.0"
             },
             "id": "maxscale",
             "links": {
@@ -1899,7 +1872,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "2.5.14"
+                "version": "6.2.0"
             },
             "id": "servers",
             "links": {
@@ -1914,23 +1887,7 @@ one to see the parameters of a module before the object is created.
                 "description": "A hint parsing filter",
                 "maturity": "Alpha",
                 "module_type": "Filter",
-                "parameters": [
-                    {
-                        "description": "The filter module to use",
-                        "mandatory": true,
-                        "modifiable": false,
-                        "name": "module",
-                        "type": "module"
-                    },
-                    {
-                        "default_value": "filter",
-                        "description": "The type of the object",
-                        "mandatory": false,
-                        "modifiable": false,
-                        "name": "type",
-                        "type": "string"
-                    }
-                ],
+                "parameters": [],
                 "version": "V1.0.0"
             },
             "id": "hintfilter",
@@ -2609,12 +2566,11 @@ one to see the parameters of a module before the object is created.
                         "type": "enum"
                     },
                     {
-                        "default_value": "listener",
-                        "description": "Object type",
+                        "description": "Path to user and group mapping file",
                         "mandatory": false,
-                        "modifiable": false,
-                        "name": "type",
-                        "type": "string"
+                        "modifiable": true,
+                        "name": "user_mapping_file",
+                        "type": "path"
                     }
                 ],
                 "version": "V1.1.0"
@@ -2681,24 +2637,38 @@ one to see the parameters of a module before the object is created.
                 "module_type": "Filter",
                 "parameters": [
                     {
-                        "default_value": false,
+                        "default_value": true,
                         "description": "Append new entries to log files instead of overwriting them",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "append",
                         "type": "bool"
                     },
                     {
+                        "default_value": "ms",
+                        "description": "Duration in milliseconds (ms) or microseconds (us)",
+                        "enum_values": [
+                            "ms",
+                            "milliseconds",
+                            "us",
+                            "microseconds"
+                        ],
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "duration_unit",
+                        "type": "enum"
+                    },
+                    {
                         "description": "Exclude queries matching this pattern from the log",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "exclude",
                         "type": "regex"
                     },
                     {
                         "description": "The basename of the output file",
                         "mandatory": true,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "filebase",
                         "type": "string"
                     },
@@ -2706,7 +2676,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": false,
                         "description": "Flush log files after every write",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "flush",
                         "type": "bool"
                     },
@@ -2720,10 +2690,17 @@ one to see the parameters of a module before the object is created.
                             "user",
                             "query",
                             "reply_time",
-                            "default_db"
+                            "total_reply_time",
+                            "default_db",
+                            "num_rows",
+                            "reply_size",
+                            "transaction",
+                            "transaction_time",
+                            "num_warnings",
+                            "error_msg"
                         ],
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "log_data",
                         "type": "enum_mask"
                     },
@@ -2736,14 +2713,14 @@ one to see the parameters of a module before the object is created.
                             "stdout"
                         ],
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "log_type",
-                        "type": "enum"
+                        "type": "enum_mask"
                     },
                     {
                         "description": "Only log queries matching this pattern",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "match",
                         "type": "regex"
                     },
@@ -2751,7 +2728,7 @@ one to see the parameters of a module before the object is created.
                         "default_value": " ",
                         "description": "Value used to replace newlines",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "newline_replacement",
                         "type": "string"
                     },
@@ -2764,7 +2741,7 @@ one to see the parameters of a module before the object is created.
                             "extended"
                         ],
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "options",
                         "type": "enum_mask"
                     },
@@ -2772,37 +2749,30 @@ one to see the parameters of a module before the object is created.
                         "default_value": ",",
                         "description": "Defines the separator between elements of a log entry",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "separator",
                         "type": "string"
                     },
                     {
                         "description": "Log queries only from this network address",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "source",
                         "type": "string"
                     },
                     {
+                        "default_value": false,
+                        "description": "Write queries in canonical form",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "use_canonical_form",
+                        "type": "bool"
+                    },
+                    {
                         "description": "Log queries only from this user",
                         "mandatory": false,
-                        "modifiable": false,
+                        "modifiable": true,
                         "name": "user",
-                        "type": "string"
-                    },
-                    {
-                        "description": "The filter module to use",
-                        "mandatory": true,
-                        "modifiable": false,
-                        "name": "module",
-                        "type": "module"
-                    },
-                    {
-                        "default_value": "filter",
-                        "description": "The type of the object",
-                        "mandatory": false,
-                        "modifiable": false,
-                        "name": "type",
                         "type": "string"
                     }
                 ],
@@ -2862,13 +2832,6 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "description": "The cluster of servers to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "cluster",
-                        "type": "string"
-                    },
-                    {
                         "default_value": "300000ms",
                         "description": "How ofted idle connections are pinged",
                         "mandatory": false,
@@ -2901,14 +2864,6 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "enable_root_user",
                         "type": "bool"
-                    },
-                    {
-                        "default_value": [],
-                        "description": "List of filters to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "filters",
-                        "type": "stringlist"
                     },
                     {
                         "default_value": "-1000ms",
@@ -2996,21 +2951,6 @@ one to see the parameters of a module before the object is created.
                         "type": "int"
                     },
                     {
-                        "description": "The router to use",
-                        "mandatory": true,
-                        "modifiable": false,
-                        "name": "router",
-                        "type": "module"
-                    },
-                    {
-                        "default_value": [],
-                        "description": "List of servers to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "servers",
-                        "type": "stringlist"
-                    },
-                    {
                         "default_value": false,
                         "description": "Enable session tracing for this service",
                         "mandatory": false,
@@ -3035,27 +2975,30 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": [],
-                        "description": "List of targets to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "targets",
-                        "type": "stringlist"
-                    },
-                    {
-                        "default_value": "service",
-                        "description": "The type of the object",
-                        "mandatory": false,
-                        "modifiable": false,
-                        "name": "type",
-                        "type": "string"
-                    },
-                    {
                         "description": "Username used to retrieve database users",
                         "mandatory": true,
                         "modifiable": true,
                         "name": "user",
                         "type": "string"
+                    },
+                    {
+                        "description": "Load additional users from a file",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "user_accounts_file",
+                        "type": "path"
+                    },
+                    {
+                        "default_value": "add_when_load_ok",
+                        "description": "When and how the user accounts file is used",
+                        "enum_values": [
+                            "add_when_load_ok",
+                            "file_only_always"
+                        ],
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "user_accounts_file_usage",
+                        "type": "enum"
                     },
                     {
                         "description": "Custom version string to use",
@@ -3297,13 +3240,6 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "description": "The cluster of servers to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "cluster",
-                        "type": "string"
-                    },
-                    {
                         "default_value": "300000ms",
                         "description": "How ofted idle connections are pinged",
                         "mandatory": false,
@@ -3336,14 +3272,6 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "enable_root_user",
                         "type": "bool"
-                    },
-                    {
-                        "default_value": [],
-                        "description": "List of filters to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "filters",
-                        "type": "stringlist"
                     },
                     {
                         "default_value": "-1000ms",
@@ -3431,21 +3359,6 @@ one to see the parameters of a module before the object is created.
                         "type": "int"
                     },
                     {
-                        "description": "The router to use",
-                        "mandatory": true,
-                        "modifiable": false,
-                        "name": "router",
-                        "type": "module"
-                    },
-                    {
-                        "default_value": [],
-                        "description": "List of servers to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "servers",
-                        "type": "stringlist"
-                    },
-                    {
                         "default_value": false,
                         "description": "Enable session tracing for this service",
                         "mandatory": false,
@@ -3470,27 +3383,30 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": [],
-                        "description": "List of targets to use",
-                        "mandatory": false,
-                        "modifiable": true,
-                        "name": "targets",
-                        "type": "stringlist"
-                    },
-                    {
-                        "default_value": "service",
-                        "description": "The type of the object",
-                        "mandatory": false,
-                        "modifiable": false,
-                        "name": "type",
-                        "type": "string"
-                    },
-                    {
                         "description": "Username used to retrieve database users",
                         "mandatory": true,
                         "modifiable": true,
                         "name": "user",
                         "type": "string"
+                    },
+                    {
+                        "description": "Load additional users from a file",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "user_accounts_file",
+                        "type": "path"
+                    },
+                    {
+                        "default_value": "add_when_load_ok",
+                        "description": "When and how the user accounts file is used",
+                        "enum_values": [
+                            "add_when_load_ok",
+                            "file_only_always"
+                        ],
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "user_accounts_file_usage",
+                        "type": "enum"
                     },
                     {
                         "description": "Custom version string to use",
