@@ -26,6 +26,7 @@ namespace HttpSql
 {
 
 HttpResponse connect(const HttpRequest& request);
+HttpResponse reconnect(const HttpRequest& request);
 HttpResponse show_connection(const HttpRequest& request);
 HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);

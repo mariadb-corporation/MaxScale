@@ -415,6 +415,45 @@ HttpResponse connect(const HttpRequest& request)
         });
 }
 
+HttpResponse reconnect(const HttpRequest& request)
+{
+    string err;
+    int64_t id;
+    std::tie(id, err) = get_connection_id(request, request.uri_part(1));
+
+    if (!id)
+    {
+        return create_error(err);
+    }
+
+    auto cb = [id, host = string(request.host())]() {
+            HttpResponse response;
+
+            if (auto managed_conn = this_unit.manager.get_connection(id))
+            {
+                if (managed_conn->conn.reconnect())
+                {
+                    response = HttpResponse(MHD_HTTP_NO_CONTENT);
+                }
+                else
+                {
+                    response = create_error(managed_conn->conn.error(), MHD_HTTP_SERVICE_UNAVAILABLE);
+                }
+
+                managed_conn->release();
+            }
+            else
+            {
+                response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
+                                        MHD_HTTP_SERVICE_UNAVAILABLE);
+            }
+
+            return response;
+        };
+
+    return HttpResponse(cb);
+}
+
 // static
 HttpResponse show_connection(const HttpRequest& request)
 {
