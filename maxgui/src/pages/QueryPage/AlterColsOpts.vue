@@ -106,7 +106,6 @@
                         @on-input-NN="onInputNN"
                         @on-input-AI="onInputAI"
                         @on-input-generated="onInputGenerated"
-                        @on-input-charset="onInputCharset"
                     />
                 </div>
             </template>
@@ -141,6 +140,8 @@
                 </v-tooltip>
             </template>
         </virtual-scroll-table>
+        <!-- TODO: Component to select column name to reveal additional
+             inputs .i.e. charset, collation and comment inputs -->
     </div>
 </template>
 
@@ -220,6 +221,11 @@ export default {
                         h.maxWidth = 144
                         break
                     case 'id':
+                        h.hidden = true
+                        break
+                    case 'charset':
+                    case 'collation':
+                    case 'comment':
                         h.hidden = true
                         break
                 }

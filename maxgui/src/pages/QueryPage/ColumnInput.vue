@@ -49,23 +49,7 @@
         :disabled="isDisabled"
         @change="onInput"
     />
-    <charset-input
-        v-else-if="input.type === 'charset'"
-        v-model="input.value"
-        :defCharset="defTblCharset"
-        :height="height"
-        :disabled="isDisabled"
-        @on-input="onInput"
-    />
-    <collation-input
-        v-else-if="input.type === 'collation'"
-        v-model="input.value"
-        :height="height"
-        :defCollation="defTblCollation"
-        :charset="columnCharset"
-        :disabled="isDisabled"
-        @on-input="onInput"
-    />
+
     <v-text-field
         v-else
         v-model="input.value"
@@ -107,7 +91,6 @@
  * will be used to update charset/collation input to fill
  * data with default table charset/collation.
  * on-input-column_type: (cell)
- * on-input-charset: (cell)
  * on-input-AI: (cell)
  * on-input-PK: (cell)
  * on-input-NN: (cell)
@@ -116,16 +99,10 @@
  * on-input: (cell)
  */
 
-import CharsetInput from './CharsetInput.vue'
-import CollationInput from './CollationInput.vue'
-import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
+import { check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 import { mapGetters } from 'vuex'
 export default {
     name: 'column-input',
-    components: {
-        'charset-input': CharsetInput,
-        'collation-input': CollationInput,
-    },
     props: {
         data: { type: Object, required: true },
         height: { type: Number, required: true },
@@ -152,9 +129,6 @@ export default {
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
         },
-        columnCharset() {
-            return this.$typy(this.input, 'rowObj.charset').safeString
-        },
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
@@ -175,10 +149,6 @@ export default {
         },
         isDisabled() {
             switch (this.$typy(this.input, 'field').safeString) {
-                case 'charset':
-                case 'collation':
-                    if (this.columnCharset === 'utf8') return true
-                    return !check_charset_support(this.columnType)
                 case 'PK':
                     //disable if column is generated
                     return this.isGenerated
@@ -261,10 +231,6 @@ export default {
                     input.type = 'bool'
                     input.value = Boolean(input.value)
                     break
-                case 'charset':
-                case 'collation':
-                    input.type = input.field
-                    break
             }
             return input
         },
@@ -284,9 +250,6 @@ export default {
                 switch (this.input.type) {
                     case 'column_type':
                         this.$emit('on-input-column_type', newInput)
-                        break
-                    case 'charset':
-                        this.$emit('on-input-charset', newInput)
                         break
                     case 'enum':
                         if (newInput.field === 'generated')
