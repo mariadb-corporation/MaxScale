@@ -78,26 +78,24 @@ void test_parse(const std::string& input, int expected_type)
 {
     mxs::Buffer buffer(input.c_str(), input.size());
     HintParser parser;
-    HINT* hint = parser.parse(buffer.begin(), buffer.end());
+    auto hints = parser.parse(buffer.begin(), buffer.end());
 
-    if (!hint && expected_type != 0)
+    if (hints.empty() && expected_type != 0)
     {
         std::cout << "Expected hint but didn't get one: " << input << std::endl;
         errors++;
     }
-    else if (hint && expected_type == 0)
+    else if (!hints.empty() && expected_type == 0)
     {
         std::cout << "Expected no hint but got one: " << input << std::endl;
         errors++;
     }
-    else if (hint && hint->type != expected_type)
+    else if (!hints.empty() && hints[0].type != expected_type)
     {
         std::cout << "Expected hint of type " << expected_type << " but got type "
-                  << (int)hint->type << ": " << input << std::endl;
+                  << (int)hints[0].type << ": " << input << std::endl;
         errors++;
     }
-
-    hint_free(hint);
 }
 
 void count_hints(const std::string& input, int num_expected)
@@ -105,20 +103,13 @@ void count_hints(const std::string& input, int num_expected)
     mxs::Buffer buffer(input.c_str(), input.size());
     HintParser parser;
     int n = 0;
-    HINT* hint = parser.parse(buffer.begin(), buffer.end());
+    auto hints = parser.parse(buffer.begin(), buffer.end());
 
-    for (; hint; hint = hint->next)
-    {
-        n++;
-    }
-
-    if (n != num_expected)
+    if (hints.size() != (size_t)num_expected)
     {
         std::cout << "Expected " << num_expected << " hints but have " << n << ":" << input << std::endl;
         errors++;
     }
-
-    hint_free(hint);
 }
 
 int main(int argc, char** argv)

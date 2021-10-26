@@ -42,8 +42,25 @@ const char* STRHINTTYPE(HINT_TYPE t);
 struct HINT
 {
     HINT() = default;
+
     explicit HINT(HINT_TYPE type);
+
     HINT(HINT_TYPE type, std::string data);
+
+    /**
+     * Create a parameter-type hint.
+     *
+     * @param param_name Parameter name
+     * @param param_value Parameter value
+     */
+    HINT(std::string param_name, std::string param_value);
+
+    /**
+     * Is the hint valid?
+     *
+     * @return True if hint type is valid, i.e not "NONE".
+     */
+    explicit operator bool() const;
 
     HINT_TYPE   type {HINT_NONE};   /**< The Type of hint */
     std::string data;               /**< Data or parameter name */

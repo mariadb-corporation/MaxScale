@@ -202,3 +202,15 @@ HINT::HINT(HINT_TYPE type, std::string data)
     , data(std::move(data))
 {
 }
+
+HINT::HINT(std::string param_name, std::string param_value)
+    : type(HINT_PARAMETER)
+    , data(std::move(param_name))
+    , value(std::move(param_value))
+{
+}
+
+HINT::operator bool() const
+{
+    return type != HINT_NONE;
+}

@@ -67,10 +67,11 @@ HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
 
 bool HintSession::routeQuery(GWBUF* queue)
 {
-    if (HINT* hint = process_hints(queue))
+    auto hints = process_hints(queue);
+    if (!hints.empty())
     {
-        queue->hints.push_back(*hint);
-        hint_free(hint);
+        auto& dest = queue->hints;
+        dest.insert(dest.end(), hints.begin(), hints.end());
     }
 
     return mxs::FilterSession::routeQuery(queue);

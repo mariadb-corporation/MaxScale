@@ -17,18 +17,6 @@
 #include <maxscale/filter.hh>
 #include <maxscale/config2.hh>
 
-namespace std
-{
-template<>
-struct default_delete<HINT>
-{
-    void operator()(HINT* pHint)
-    {
-        hint_free(pHint);
-    }
-};
-}
-
 class HintSession;
 
 class HintInstance : public mxs::Filter
@@ -65,34 +53,12 @@ enum TOKEN_VALUE
     TOK_END
 };
 
-// A simple C++ wrapper for a routing hint
-class Hint
-{
-public:
-    Hint(HINT* hint)
-        : m_hint(hint)
-    {
-    }
-
-    ~Hint()
-    {
-        hint_free(m_hint);
-    }
-
-    HINT* dup()
-    {
-        return hint_dup(m_hint);
-    }
-
-private:
-    HINT* m_hint {nullptr};
-};
-
 // Class that parses text into MaxScale hints
 class HintParser
 {
 public:
     using InputIter = mxs::Buffer::iterator;
+    using HintVector = std::vector<HINT>;
 
     /**
      * Parse text into a hint
@@ -102,7 +68,7 @@ public:
      *
      * @return The parsed hint if a valid one was found
      */
-    HINT* parse(InputIter begin, InputIter end);
+    HintVector parse(InputIter begin, InputIter end);
 
 private:
 
@@ -111,12 +77,12 @@ private:
     InputIter m_tok_begin;
     InputIter m_tok_end;
 
-    std::vector<std::unique_ptr<HINT>>                     m_stack;
-    std::unordered_map<std::string, std::unique_ptr<HINT>> m_named_hints;
+    std::vector<HINT>                     m_stack;
+    std::unordered_map<std::string, HINT> m_named_hints;
 
     TOKEN_VALUE next_token();
-    HINT*       process_definition();
-    HINT*       parse_one(InputIter begin, InputIter end);
+    HINT        process_definition();
+    HINT        parse_one(InputIter begin, InputIter end);
 };
 
 class HintSession : public mxs::FilterSession
@@ -142,8 +108,8 @@ private:
     uint32_t m_prev_id {0};
 
     // A mapping of prepared statement IDs to the hints that they contain
-    std::unordered_map<uint32_t, Hint> m_ps;
+    std::unordered_map<uint32_t, std::vector<HINT>> m_ps;
 
-    HINT*    process_hints(GWBUF* data);
-    uint32_t get_id(GWBUF* buffer) const;
+    std::vector<HINT> process_hints(GWBUF* data);
+    uint32_t          get_id(GWBUF* buffer) const;
 };

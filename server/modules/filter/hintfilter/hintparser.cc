@@ -234,11 +234,11 @@ TOKEN_VALUE HintParser::next_token()
  * @param it  Start iterator
  * @param end End iterator
  *
- * @return The processed hint or NULL on invalid input
+ * @return The processed hint or HINT_NONE on invalid input
  */
-HINT* HintParser::process_definition()
+HINT HintParser::process_definition()
 {
-    HINT* rval = nullptr;
+    HINT rval;
     auto t = next_token();
 
     if (t == TOK_ROUTE)
@@ -249,22 +249,22 @@ HINT* HintParser::process_definition()
 
             if (t == TOK_MASTER)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_MASTER);
+                rval = HINT(HINT_ROUTE_TO_MASTER);
             }
             else if (t == TOK_SLAVE)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_SLAVE);
+                rval = HINT(HINT_ROUTE_TO_SLAVE);
             }
             else if (t == TOK_LAST)
             {
-                rval = hint_create_route(nullptr, HINT_ROUTE_TO_LAST_USED);
+                rval = HINT(HINT_ROUTE_TO_LAST_USED);
             }
             else if (t == TOK_SERVER)
             {
                 if (next_token() == TOK_STRING)
                 {
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = hint_create_route(nullptr, HINT_ROUTE_TO_NAMED_SERVER, value);
+                    rval = HINT(HINT_ROUTE_TO_NAMED_SERVER, value);
                 }
             }
         }
@@ -278,25 +278,24 @@ HINT* HintParser::process_definition()
         if (eq == TOK_EQUAL && val == TOK_STRING)
         {
             std::string value(m_tok_begin, m_tok_end);
-            rval = hint_create_parameter(nullptr, key, value);
+            rval = HINT(key, value);
         }
     }
 
     if (rval && next_token() != TOK_END)
     {
         // Unexpected input after hint definition, treat it as an error and remove the hint
-        hint_free(rval);
-        rval = nullptr;
+        rval = HINT();
     }
 
     return rval;
 }
 
-HINT* HintParser::parse_one(InputIter it, InputIter end)
+HINT HintParser::parse_one(InputIter it, InputIter end)
 {
     m_it = it;
     m_end = end;
-    HINT* rval = nullptr;
+    HINT rval;
 
     if (next_token() == TOK_MAXSCALE)
     {
@@ -308,7 +307,7 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
         {
             if ((rval = process_definition()))
             {
-                m_stack.emplace_back(hint_dup(rval));
+                m_stack.push_back(rval);
             }
         }
         else if (t == TOK_STOP)
@@ -329,17 +328,16 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                 {
                     // A key=value hint
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = hint_create_parameter(nullptr, key, value);
+                    rval = HINT(key, value);
                 }
             }
             else if (t == TOK_PREPARE)
             {
-                HINT* hint = process_definition();
-
+                HINT hint = process_definition();
                 if (hint)
                 {
                     // Preparation of a named hint
-                    m_named_hints[key] = std::unique_ptr<HINT>(hint);
+                    m_named_hints[key] = hint;
                 }
             }
             else if (t == TOK_START)
@@ -349,19 +347,19 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
                     if (m_named_hints.count(key) == 0)
                     {
                         // New hint defined, push it on to the stack
-                        m_named_hints[key] = std::unique_ptr<HINT>(hint_dup(rval));
-                        m_stack.emplace_back(hint_dup(rval));
+                        m_named_hints[key] = rval;
+                        m_stack.push_back(rval);
                     }
                 }
                 else if (next_token() == TOK_END)
                 {
-                    auto it = m_named_hints.find(key);
+                    auto it2 = m_named_hints.find(key);
 
-                    if (it != m_named_hints.end())
+                    if (it2 != m_named_hints.end())
                     {
                         // We're starting an already define named hint
-                        m_stack.emplace_back(hint_dup(it->second.get()));
-                        rval = hint_dup(it->second.get());
+                        m_stack.push_back(it2->second);
+                        rval = it2->second;
                     }
                 }
             }
@@ -377,23 +375,22 @@ HINT* HintParser::parse_one(InputIter it, InputIter end)
     return rval;
 }
 
-HINT* HintParser::parse(InputIter it, InputIter end)
+HintParser::HintVector HintParser::parse(InputIter it, InputIter end)
 {
-    HINT* rval = nullptr;
+    HintVector rval;
 
     for (const auto& comment : get_all_comments(it, end))
     {
-        HINT* hint = parse_one(comment.first, comment.second);
-
+        HINT hint = parse_one(comment.first, comment.second);
         if (hint)
         {
-            rval = hint_splice(rval, hint);
+            rval.push_back(std::move(hint));
         }
     }
 
-    if (!rval && !m_stack.empty())
+    if (rval.empty() && !m_stack.empty())
     {
-        rval = hint_dup(m_stack.back().get());
+        rval.push_back(m_stack.back());
     }
 
     return rval;
@@ -411,19 +408,20 @@ uint32_t HintSession::get_id(GWBUF* buffer) const
     return ps_id;
 }
 
-HINT* HintSession::process_hints(GWBUF* data)
+std::vector<HINT> HintSession::process_hints(GWBUF* data)
 {
-    HINT* hint = nullptr;
+    HintParser::HintVector hints;
     mxs::Buffer buffer(data);
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
     if (cmd == MXS_COM_QUERY)
     {
-        hint = m_parser.parse(std::next(buffer.begin(), 5), buffer.end());
+        hints = m_parser.parse(std::next(buffer.begin(), 5), buffer.end());
     }
     else if (cmd == MXS_COM_STMT_PREPARE)
     {
-        if (HINT* tmp = m_parser.parse(std::next(buffer.begin(), 5), buffer.end()))
+        auto tmp = m_parser.parse(std::next(buffer.begin(), 5), buffer.end());
+        if (!tmp.empty())
         {
             uint32_t id = buffer.id();
             mxb_assert(id != 0);
@@ -432,7 +430,7 @@ HINT* HintSession::process_hints(GWBUF* data)
             // We optimistically assume that the prepared statement will be successful and store it in the
             // map. If it doesn't, we'll erase it when we get the error. The client protocol guarantees that
             // only one binary protocol prepared statement is executed at a time.
-            m_ps.emplace(id, tmp);
+            m_ps.emplace(id, std::move(tmp));
             m_current_id = id;
             m_prev_id = id;
         }
@@ -447,11 +445,10 @@ HINT* HintSession::process_hints(GWBUF* data)
 
         if (it != m_ps.end())
         {
-            hint = it->second.dup();
+            hints = it->second;
         }
     }
 
     buffer.release();
-
-    return hint;
+    return hints;
 }
