@@ -233,13 +233,13 @@ using ElementValueToString = string (*)(const bsoncxx::document::element& elemen
                                         const string& op);
 using FieldAndElementValueToComparison = string (*) (const Path::Incarnation& p,
                                                      const bsoncxx::document::element& element,
-                                                     const string& mariadb_op,
+                                                     mariadb::Op mariadb_op,
                                                      const string& nosql_op,
                                                      ElementValueToString value_to_string);
 
 struct ElementValueInfo
 {
-    const string                     mariadb_op;
+    mariadb::Op                      mariadb_op;
     ElementValueToString             value_to_string;
     FieldAndElementValueToComparison field_and_value_to_comparison;
 };
@@ -589,7 +589,7 @@ bool is_scalar_value(const bsoncxx::document::element& element)
 
 string default_field_and_value_to_comparison(const Path::Incarnation& p,
                                              const bsoncxx::document::element& element,
-                                             const string& mariadb_op,
+                                             mariadb::Op mariadb_op,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
@@ -638,7 +638,7 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
 
 string field_and_value_to_nin_comparison(const Path::Incarnation& p,
                                          const bsoncxx::document::element& element,
-                                         const string& mariadb_op,
+                                         mariadb::Op mariadb_op,
                                          const string& nosql_op,
                                          ElementValueToString value_to_string)
 {
@@ -647,7 +647,7 @@ string field_and_value_to_nin_comparison(const Path::Incarnation& p,
 
     if (!s.empty())
     {
-        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb_op + " " + s + ")";
+        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb::to_string(mariadb_op) + " " + s + ")";
     }
     else
     {
@@ -659,7 +659,7 @@ string field_and_value_to_nin_comparison(const Path::Incarnation& p,
 
 string field_and_value_to_eq_comparison(const Path::Incarnation& p,
                                         const bsoncxx::document::element& element,
-                                        const string& mariadb_op,
+                                        mariadb::Op mariadb_op,
                                         const string& nosql_op,
                                         ElementValueToString value_to_string)
 {
@@ -690,13 +690,13 @@ string field_and_value_to_eq_comparison(const Path::Incarnation& p,
 
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value, field_and_value_to_eq_comparison } },
-    { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$ne",     { "!=",     &element_to_value, field_and_value_to_eq_comparison } },
-    { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
+    { "$eq",     { mariadb::Op::EQ,  &element_to_value, field_and_value_to_eq_comparison } },
+    { "$gt",     { mariadb::Op::GT,  &element_to_value, default_field_and_value_to_comparison } },
+    { "$gte",    { mariadb::Op::GTE, &element_to_value, default_field_and_value_to_comparison } },
+    { "$lt",     { mariadb::Op::LT,  &element_to_value, default_field_and_value_to_comparison } },
+    { "$lte",    { mariadb::Op::LTE, &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { mariadb::Op::NE,  &element_to_value, field_and_value_to_eq_comparison } },
+    { "$nin",    { mariadb::Op::NIN, &element_to_array, field_and_value_to_nin_comparison } },
 };
 
 inline const char* to_description(Path::Incarnation::ArrayOp op)
@@ -1653,6 +1653,41 @@ bool append_objectid(DocumentBuilder& doc, const string_view& key, json_t* pObje
 
 }
 
+namespace mariadb
+{
+
+const char* to_string(Op op)
+{
+    switch (op)
+    {
+    case Op::EQ:
+        return "=";
+
+    case Op::GT:
+        return ">";
+
+    case Op::GTE:
+        return ">=";
+
+    case Op::LT:
+        return "<";
+
+    case Op::LTE:
+        return "<=";
+
+    case Op::NE:
+        return "!=";
+
+    case Op::NIN:
+        return "NOT IN";
+    };
+
+    mxb_assert(!true);
+    return "unknown";
+}
+
+}
+
 namespace nosql
 {
 
@@ -2374,7 +2409,7 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
 
         if (jt != converters.end())
         {
-            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto mariadb_op = jt->second.mariadb_op;
             const auto& value_to_string = jt->second.value_to_string;
 
             condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
