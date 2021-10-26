@@ -240,7 +240,7 @@ export default {
         },
         isOpened(v) {
             // reset to initial state and bind this context
-            if (!v) Object.assign(this.$data, this.$options.data.apply(this))
+            if (!v) this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
         },
     },
     methods: {
