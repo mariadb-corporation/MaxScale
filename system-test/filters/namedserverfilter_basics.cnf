@@ -26,10 +26,17 @@ target06=->slave
 match07=all servers
 target07=->all
 
+[NamedFilterWC]
+type=filter
+module=namedserverfilter
+source=127.%.%.%
+match01=^SELECT
+target01=server1
+
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
-servers=server1,server2,server3,server4
+servers=###server_line###
 user=mariadbmon
 password=mariadbmon
 monitor_interval=1000
@@ -46,5 +53,18 @@ filters=NamedFilter
 type=listener
 service=RW-Split-Router
 port=4006
+
+[RW-Split-RouterWC]
+type=service
+router=readwritesplit
+servers=###server_line###
+user=maxservice
+password=maxservice
+filters=NamedFilterWC
+
+[RW-Split-ListenerWC]
+type=listener
+service=RW-Split-RouterWC
+port=4007
 
 ###server###

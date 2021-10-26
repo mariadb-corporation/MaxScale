@@ -165,6 +165,28 @@ void test_main(TestConnections& test)
             }
         }
     }
+
+    if (test.ok())
+    {
+        /**
+         * MXS-2037 Check that listener with "source"-parameter containing wildcard characters works.
+         * This test only tests that ip addresses with wildcards are accepted by
+         * NamedServerFilter. The actual matching functionality is not tested
+         * because the client IPs can change with the different test environments
+         * and that would make it complicated to check if the matching is correct.
+         */
+        test.tprintf("Test second listener.");
+        auto conn = mxs.try_open_connection(4007, "maxuser", "maxuser");
+        auto res = conn->simple_query("select 1;");
+        if (conn->is_open() && res == "1")
+        {
+            test.tprintf("Second listener works");
+        }
+        else
+        {
+            test.add_failure("Connection/query to second listener failed.");
+        }
+    }
 }
 
 void test_query_target(TestConnections& test, mxt::MariaDB* conn, const IdSet& allowed_ids,
