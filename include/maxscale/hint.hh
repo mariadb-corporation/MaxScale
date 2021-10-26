@@ -12,10 +12,6 @@
  */
 #pragma once
 
-/**
- * @file hint.h The generic hint data that may be attached to buffers
- */
-
 #include <maxscale/ccdefs.hh>
 
 enum HINT_TYPE
@@ -33,11 +29,7 @@ enum HINT_TYPE
 const char* STRHINTTYPE(HINT_TYPE t);
 
 /**
- * A generic hint.
- *
- * A hint has a type associated with it and may optionally have hint
- * specific data.
- * Multiple hints may be attached to a single buffer.
+ * A routing hint has a type and may optionally have hint-specific data.
  */
 struct HINT
 {
@@ -45,6 +37,12 @@ struct HINT
 
     explicit HINT(HINT_TYPE type);
 
+    /**
+     * Create a hint with data. Typically used for ROUTE_TO_NAMED_SERVER-hints.
+     *
+     * @param type Hint type
+     * @param data Data
+     */
     HINT(HINT_TYPE type, std::string data);
 
     /**
@@ -62,15 +60,7 @@ struct HINT
      */
     explicit operator bool() const;
 
-    HINT_TYPE   type {HINT_NONE};   /**< The Type of hint */
+    HINT_TYPE   type {HINT_NONE};   /**< The type of hint */
     std::string data;               /**< Data or parameter name */
     std::string value;              /**< Parameter value */
-    HINT*       next {nullptr};     /**< Another hint for this buffer */
 };
-
-HINT* hint_create_parameter(HINT*, const std::string& pname, const std::string& value);
-HINT* hint_create_route(HINT*, HINT_TYPE, const std::string& data = "");
-HINT* hint_splice(HINT* head, HINT* list);
-void  hint_free(HINT*);
-HINT* hint_dup(const HINT*);
-bool hint_exists(HINT * *, HINT_TYPE);
