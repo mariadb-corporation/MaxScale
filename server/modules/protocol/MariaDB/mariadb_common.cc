@@ -118,6 +118,55 @@ GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t 
     return errbuf;
 }
 
+// TODO: Collect all the protocol related utility functions in the same place, now they are
+// spread out in multiple places.
+size_t leint_prefix_bytes(size_t len)
+{
+    if (len < 251)
+    {
+        return 1;
+    }
+    else if (len < 0xffff)
+    {
+        return 3;
+    }
+    else if (len < 0xffffff)
+    {
+        return 4;
+    }
+
+    return 9;
+}
+
+void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
+{
+    switch (prefix_size)
+    {
+    case 1:
+        *ptr = value;
+        break;
+
+    case 3:
+        *ptr++ = 0xfc;
+        mariadb::set_byte2(ptr, value);
+        break;
+
+    case 4:
+        *ptr++ = 0xfd;
+        mariadb::set_byte3(ptr, value);
+        break;
+
+    case 9:
+        *ptr++ = 0xfe;
+        mariadb::set_byte8(ptr, value);
+        break;
+
+    default:
+        mxb_assert(!true);
+        break;
+    }
+}
+
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message)
 {
     uint8_t* outbuf = NULL;
@@ -138,9 +187,14 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
         + sizeof(mysql_server_status)
         + sizeof(mysql_warning_counter);
 
-    if (message != NULL)
+    size_t msglen = 0;
+    size_t prefix_size = 0;
+
+    if (message)
     {
-        mysql_payload_size += strlen(message);
+        msglen = strlen(message);
+        prefix_size = leint_prefix_bytes(msglen);
+        mysql_payload_size += msglen + prefix_size;
     }
 
     // allocate memory for packet header + payload
@@ -180,9 +234,11 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
     memcpy(mysql_payload, mysql_warning_counter, sizeof(mysql_warning_counter));
     mysql_payload = mysql_payload + sizeof(mysql_warning_counter);
 
-    if (message != NULL)
+    if (message)
     {
-        memcpy(mysql_payload, message, strlen(message));
+        encode_leint(mysql_payload, prefix_size, msglen);
+        mysql_payload += prefix_size;
+        memcpy(mysql_payload, message, msglen);
     }
 
     return buf;
