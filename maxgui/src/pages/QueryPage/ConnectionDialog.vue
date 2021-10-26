@@ -201,7 +201,7 @@ export default {
                 user: '',
                 password: '',
                 db: '',
-                timeout: 10,
+                timeout: 300,
             },
             rules: {
                 user: [val => !!val || this.$t('errors.requiredInput', { inputName: 'Username' })],
