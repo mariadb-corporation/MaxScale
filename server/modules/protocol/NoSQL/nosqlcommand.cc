@@ -98,7 +98,7 @@ template<class ConcreteCommand>
 unique_ptr<OpMsgCommand> create_default_command(const string& name,
                                                 Database* pDatabase,
                                                 GWBUF* pRequest,
-                                                Msg&& msg)
+                                                packet::Msg&& msg)
 {
     unique_ptr<ConcreteCommand> sCommand;
 
@@ -111,7 +111,7 @@ template<class ConcreteCommand>
 unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
                                                  Database* pDatabase,
                                                  GWBUF* pRequest,
-                                                 Msg&& msg,
+                                                 packet::Msg&& msg,
                                                  const bsoncxx::document::view& doc,
                                                  const OpMsgCommand::DocumentArguments& arguments)
 {
@@ -125,12 +125,12 @@ unique_ptr<OpMsgCommand> create_diagnose_command(const string& name,
 using CreateDefaultFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                            Database* pDatabase,
                                                            GWBUF* pRequest,
-                                                           Msg&& msg);
+                                                           packet::Msg&& msg);
 
 using CreateDiagnoseFunction = unique_ptr<OpMsgCommand> (*)(const string& name,
                                                             Database* pDatabase,
                                                             GWBUF* pRequest,
-                                                            Msg&& msg,
+                                                            packet::Msg&& msg,
                                                             const bsoncxx::document::view& doc,
                                                             const OpMsgCommand::DocumentArguments& arguments);
 
@@ -499,7 +499,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     if (append_checksum)
     {
-        flag_bits |= Msg::CHECKSUM_PRESENT;
+        flag_bits |= packet::Msg::CHECKSUM_PRESENT;
         response_size += sizeof(uint32_t); // sizeof checksum
     }
 
@@ -1467,7 +1467,7 @@ pair<string, CommandInfo> get_info(const bsoncxx::document::view& doc)
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           nosql::Msg&& msg)
+                                           packet::Msg&& msg)
 {
     auto p = get_info(msg.document());
 
@@ -1480,7 +1480,7 @@ unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
 //static
 unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
                                            GWBUF* pRequest,
-                                           nosql::Msg&& msg,
+                                           packet::Msg&& msg,
                                            const bsoncxx::document::view& doc,
                                            const DocumentArguments& arguments)
 {
@@ -1636,11 +1636,23 @@ const string& OpMsgCommand::table(Quoted quoted) const
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        auto utf8 = element.get_utf8();
-        string table(utf8.value.data(), utf8.value.size());
+        string_view table = element.get_utf8();
 
-        m_quoted_table = "`" + m_database.name() + "`.`" + table + "`";
-        m_unquoted_table = m_database.name() + "." + table;
+        if (table.length() == 0)
+        {
+            ostringstream ss;
+            ss << "Invalid namespace specified '" << m_database.name() << ".'";
+            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+        }
+
+        ostringstream ss1;
+        ss1 << "`" << m_database.name() << "`.`" <<  table << "`";
+
+        ostringstream ss2;
+        ss2 << m_database.name() << "." << table;
+
+        m_quoted_table = ss1.str();
+        m_unquoted_table = ss2.str();
     }
 
     return quoted == Quoted::YES ? m_quoted_table : m_unquoted_table;

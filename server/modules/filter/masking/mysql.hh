@@ -547,13 +547,19 @@ public:
         MAX_PAYLOAD_LEN = 0xffffff
     };
 
-    ComPacket(uint8_t* pBuffer)
+    explicit ComPacket(uint8_t* pBuffer)
         : ComPacket(pBuffer, packet_len(pBuffer))
     {
     }
 
-    ComPacket(uint8_t** ppBuffer)
+    explicit ComPacket(uint8_t** ppBuffer)
         : ComPacket(*ppBuffer)
+    {
+        *ppBuffer += packet_len();
+    }
+
+    explicit ComPacket(uint8_t** ppBuffer, size_t nBuffer)
+        : ComPacket(*ppBuffer, nBuffer)
     {
         *ppBuffer += packet_len();
     }
@@ -561,13 +567,11 @@ public:
     ComPacket(uint8_t* pBuffer, uint32_t nBuffer)
         : m_pBuffer(pBuffer)
         , m_nBuffer(nBuffer)
-        , m_pData(pBuffer)
-        , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pData))
-        , m_packet_no(MYSQL_GET_PACKET_NO(m_pData))
+        , m_pData(pBuffer + MYSQL_HEADER_LEN)
+        , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pBuffer))
+        , m_packet_no(MYSQL_GET_PACKET_NO(m_pBuffer))
     {
-        mxb_assert(nBuffer == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer));
-
-        m_pData += MYSQL_HEADER_LEN;
+        mxb_assert(nBuffer >= MYSQL_HEADER_LEN + m_payload_len);
     }
 
     ComPacket(mxs::Buffer& buffer)
@@ -575,13 +579,17 @@ public:
     {
     }
 
-    ComPacket(GWBUF* pPacket)
+    explicit ComPacket(GWBUF* pPacket)
         : ComPacket(GWBUF_DATA(pPacket), gwbuf_link_length(pPacket))
     {
     }
 
-    ComPacket(const ComPacket& packet)
-        : ComPacket(packet.m_pBuffer, packet.m_nBuffer)
+    ComPacket(const ComPacket& that)
+        : m_pBuffer(that.m_pBuffer)
+        , m_nBuffer(that.m_nBuffer)
+        , m_pData(m_pBuffer + MYSQL_HEADER_LEN)
+        , m_payload_len(that.m_payload_len)
+        , m_packet_no(that.m_packet_no)
     {
     }
 
@@ -615,7 +623,6 @@ protected:
     uint32_t m_nBuffer;
     uint8_t* m_pData;
 
-private:
     uint32_t m_payload_len;
     uint8_t  m_packet_no;
 };
@@ -634,12 +641,37 @@ public:
         OK_PACKET           = MYSQL_REPLY_OK,           // 0x00
         EOF_PACKET          = MYSQL_REPLY_EOF,          // 0xfe
         ERR_PACKET          = MYSQL_REPLY_ERR,          // 0xff
-        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE  // 0xfb
+        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE, // 0xfb
+        UNKNOWN_PACKET      = 42
     };
 
-    ComResponse(GWBUF* pPacket)
+    explicit ComResponse(uint8_t* pBuffer)
+        : ComPacket(pBuffer)
+        , m_type(get_type())
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(uint8_t* pBuffer, size_t nBuffer)
+        : ComPacket(pBuffer, nBuffer)
+        , m_type(get_type())
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(uint8_t** ppBuffer)
+        : ComPacket(ppBuffer)
+        , m_type(get_type())
+    {
+        mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
+
+    explicit ComResponse(GWBUF* pPacket)
         : ComPacket(pPacket)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -647,7 +679,7 @@ public:
 
     ComResponse(mxs::Buffer& buffer)
         : ComPacket(buffer)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -655,7 +687,7 @@ public:
 
     ComResponse(const ComPacket& packet)
         : ComPacket(packet)
-        , m_type(*m_pData)
+        , m_type(get_type())
     {
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
@@ -690,6 +722,29 @@ public:
     }
 
 protected:
+    uint8_t get_type()
+    {
+        uint8_t type = *m_pData;
+
+        switch (type)
+        {
+        case OK_PACKET:
+        case ERR_PACKET:
+        case LOCAL_INFILE_PACKET:
+        case EOF_PACKET:
+            if (m_payload_len == MAX_PAYLOAD_LEN)
+            {
+                type = UNKNOWN_PACKET;
+            }
+            break;
+
+        default:
+            type = UNKNOWN_PACKET;
+        }
+
+        return type;
+    }
+
     uint8_t m_type;
 };
 
@@ -774,7 +829,7 @@ public:
 
     std::string message() const
     {
-        return std::string(m_pData + 5, m_pBuffer + m_nBuffer);
+        return std::string(m_pData + 5, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
 private:
@@ -798,10 +853,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
+        , m_info(&m_pData, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
+        mxb_assert(m_pData <= m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
     ComOK(const ComResponse& response)
@@ -810,10 +865,10 @@ public:
         , m_last_insert_id(&m_pData)
         , m_status(mariadb::consume_byte2(&m_pData))
         , m_warnings(mariadb::consume_byte2(&m_pData))
-        , m_info(&m_pData, m_pBuffer + m_nBuffer - m_pData)
+        , m_info(&m_pData, m_pBuffer + MYSQL_HEADER_LEN + m_payload_len - m_pData)
     {
         mxb_assert(m_type == OK_PACKET);
-        mxb_assert(m_pData <= m_pBuffer + m_nBuffer);
+        mxb_assert(m_pData <= m_pBuffer + MYSQL_HEADER_LEN + m_payload_len);
     }
 
     uint64_t affected_rows() const
@@ -1383,6 +1438,31 @@ public:
     {
     }
 
+    /**
+     * Constructor for the case that the buffer contains a resultset
+     * that may consist of multiple packets. If so, the packets belonging
+     * to the resultset will be "flattened", that is, the header of each
+     * subsequent packet is removed and the data moved, so that the resultset
+     * data is in one contiguous chunk.
+     *
+     * @param ppBuffer  Pointer to pointer to the first packet. On return,
+     *                  the pointer will point to the first packet following
+     *                  the resultset.
+     * @param pnBuffer  Pointer to size of the buffer. On return, the value
+     *                  will be what it unconsumed from the buffer.
+     */
+    CQRResultsetRow(uint8_t** ppBuffer,
+                    size_t* pnBuffer,
+                    const std::vector<enum_field_types>& types)
+        : ComPacket(ppBuffer, *pnBuffer)
+        , m_types(types)
+    {
+        auto packet_len = flatten();
+
+        *ppBuffer = m_pBuffer + packet_len;
+        *pnBuffer -= packet_len;
+    }
+
     CQRResultsetRow(GWBUF* pPacket,
                     const std::vector<enum_field_types>& types)
         : ComPacket(pPacket)
@@ -1404,11 +1484,48 @@ public:
 
     iterator end()
     {
-        uint8_t* pEnd = m_pBuffer + m_nBuffer;
+        uint8_t* pEnd = m_pBuffer + MYSQL_HEADER_LEN + m_payload_len;
         return iterator(pEnd);
     }
 
 private:
+    uint32_t flatten()
+    {
+        uint32_t packet_len = 0;
+
+        if (m_payload_len == MAX_PAYLOAD_LEN)
+        {
+            int32_t nPayload = m_payload_len;
+
+            uint8_t* pData = m_pBuffer + MYSQL_HEADER_LEN + nPayload;
+            uint8_t* pPacket = pData;
+            uint8_t* end = m_pBuffer + m_nBuffer;
+
+            do
+            {
+                mxb_assert(pPacket < end);
+
+                nPayload = MYSQL_GET_PAYLOAD_LEN(pPacket);
+
+                memmove(pData, pPacket + MYSQL_HEADER_LEN, nPayload);
+
+                pData += nPayload;
+                pPacket += MYSQL_HEADER_LEN + nPayload;
+
+                m_payload_len += nPayload;
+            }
+            while (nPayload == MAX_PAYLOAD_LEN);
+
+            packet_len = (pPacket - m_pBuffer);
+        }
+        else
+        {
+            packet_len = MYSQL_HEADER_LEN + m_payload_len;
+        }
+
+        return packet_len;
+    }
+
     const std::vector<enum_field_types>& m_types;
 };
 

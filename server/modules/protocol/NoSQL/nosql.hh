@@ -53,13 +53,30 @@ namespace protocol
 
 namespace type
 {
-// These are the one we recognize, but there are more.
 const int32_t DOUBLE = 1;
 const int32_t STRING = 2;
 const int32_t OBJECT = 3;
 const int32_t ARRAY = 4;
+const int32_t BIN_DATA = 5;
+const int32_t UNDEFINED = 6;
+const int32_t OBJECT_ID = 7;
 const int32_t BOOL = 8;
+const int32_t DATE = 9;
+const int32_t NULL_TYPE = 10;
+const int32_t REGEX = 11;
+const int32_t DB_POINTER = 12;
+const int32_t JAVASCRIPT = 13;
+const int32_t SYMBOL = 14;
+const int32_t JAVASCRIPT_SCOPE = 15;
 const int32_t INT32 = 16;
+const int32_t TIMESTAMP = 17;
+const int32_t INT64 = 18;
+const int32_t DECIMAL128 = 19;
+const int32_t MIN_KEY = -1;
+const int32_t MAX_KEY = 127;
+
+std::string to_alias(int32_t type);
+
 };
 
 namespace alias
@@ -68,8 +85,23 @@ extern const char* DOUBLE;
 extern const char* STRING;
 extern const char* OBJECT;
 extern const char* ARRAY;
+extern const char* BIN_DATA;
+extern const char* UNDEFINED;
+extern const char* OBJECT_ID;
 extern const char* BOOL;
+extern const char* DATE;
+extern const char* NULL_ALIAS;
+extern const char* REGEX;
+extern const char* DB_POINTER;
+extern const char* JAVASCRIPT;
+extern const char* SYMBOL;
+extern const char* JAVASCRIPT_SCOPE;
 extern const char* INT32;
+extern const char* TIMESTAMP;
+extern const char* INT64;
+extern const char* DECIMAL128;
+extern const char* MIN_KEY;
+extern const char* MAX_KEY;
 
 int32_t to_type(const std::string& alias);
 
@@ -626,6 +658,8 @@ std::string update_specification_to_set_value(const bsoncxx::document::view& upd
 
 std::string update_specification_to_set_value(const bsoncxx::document::view& update_specification);
 
+namespace packet
+{
 
 class Packet
 {
@@ -1266,6 +1300,8 @@ private:
     DocumentArguments       m_arguments;
 };
 
+}
+
 class Database;
 
 class NoSQL
@@ -1388,13 +1424,13 @@ private:
 
     using SDatabase = std::unique_ptr<Database>;
 
-    State handle_delete(GWBUF* pRequest, nosql::Delete&& req, GWBUF** ppResponse);
-    State handle_insert(GWBUF* pRequest, nosql::Insert&& req, GWBUF** ppResponse);
-    State handle_update(GWBUF* pRequest, nosql::Update&& req, GWBUF** ppResponse);
-    State handle_query(GWBUF* pRequest, nosql::Query&& req, GWBUF** ppResponse);
-    State handle_get_more(GWBUF* pRequest, nosql::GetMore&& req, GWBUF** ppResponse);
-    State handle_kill_cursors(GWBUF* pRequest, nosql::KillCursors&& req, GWBUF** ppResponse);
-    State handle_msg(GWBUF* pRequest, nosql::Msg&& req, GWBUF** ppResponse);
+    State handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse);
+    State handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse);
+    State handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse);
+    State handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse);
+    State handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse);
+    State handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse);
+    State handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse);
 
     State              m_state { State::READY };
     Context            m_context;
@@ -1467,6 +1503,19 @@ public:
 
         std::string get_comparison_condition(const bsoncxx::document::element& element) const;
         std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
+
+        enum class ArrayOp
+        {
+            AND,
+            OR
+        };
+
+    private:
+        std::string array_op_to_condition(const bsoncxx::document::element& element, ArrayOp op) const;
+        std::string elemMatch_to_condition(const bsoncxx::document::element& element) const;
+        std::string exists_to_condition(const bsoncxx::document::element& element) const;
+        std::string mod_to_condition(const bsoncxx::document::element& element) const;
+        std::string type_to_condition(const bsoncxx::document::element& element) const;
 
     private:
         std::string m_path;
@@ -1588,5 +1637,32 @@ std::string table_create_statement(const std::string& table_name,
  * @return The same string with \ and ' escaped.
  */
 std::string escape_essential_chars(std::string&& from);
+
+/**
+ * Converts a JSON array into the equivalent BSON array.
+ *
+ * @param pArray  The JSON array.
+ *
+ * @return The corresponding BSON array.
+ */
+bsoncxx::array::value bson_from_json_array(json_t* pArray);
+
+/**
+ * Converts a JSON object into the equivalent BSON object.
+ *
+ * @param pObject  The JSON object.
+ *
+ * @return The corresponding BSON object.
+ */
+bsoncxx::document::value bson_from_json(json_t* pObject);
+
+/**
+ * Converts a JSON string into the equivalent BSON object.
+ *
+ * @param json  Valid JSON.
+ *
+ * @return The corresponding BSON object.
+ */
+bsoncxx::document::value bson_from_json(const std::string& json);
 
 }

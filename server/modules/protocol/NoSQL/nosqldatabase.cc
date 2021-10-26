@@ -40,7 +40,7 @@ unique_ptr<Database> Database::create(const std::string& name, NoSQL::Context* p
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }
 
-State Database::handle_delete(GWBUF* pRequest, Delete&& packet, GWBUF** ppResponse)
+State Database::handle_delete(GWBUF* pRequest, packet::Delete&& packet, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -49,7 +49,7 @@ State Database::handle_delete(GWBUF* pRequest, Delete&& packet, GWBUF** ppRespon
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_insert(GWBUF* pRequest, Insert&& req, GWBUF** ppResponse)
+State Database::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -58,7 +58,7 @@ State Database::handle_insert(GWBUF* pRequest, Insert&& req, GWBUF** ppResponse)
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_query(GWBUF* pRequest, Query&& req, GWBUF** ppResponse)
+State Database::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -67,7 +67,7 @@ State Database::handle_query(GWBUF* pRequest, Query&& req, GWBUF** ppResponse)
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_update(GWBUF* pRequest, Update&& req, GWBUF** ppResponse)
+State Database::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -76,7 +76,7 @@ State Database::handle_update(GWBUF* pRequest, Update&& req, GWBUF** ppResponse)
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_get_more(GWBUF* pRequest, GetMore&& packet, GWBUF** ppResponse)
+State Database::handle_get_more(GWBUF* pRequest, packet::GetMore&& packet, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -85,7 +85,7 @@ State Database::handle_get_more(GWBUF* pRequest, GetMore&& packet, GWBUF** ppRes
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_kill_cursors(GWBUF* pRequest, KillCursors&& req, GWBUF** ppResponse)
+State Database::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 
@@ -94,7 +94,7 @@ State Database::handle_kill_cursors(GWBUF* pRequest, KillCursors&& req, GWBUF** 
     return execute_command(std::move(sCommand), ppResponse);
 }
 
-State Database::handle_msg(GWBUF* pRequest, Msg&& req, GWBUF** ppResponse)
+State Database::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
 {
     mxb_assert(is_ready());
 

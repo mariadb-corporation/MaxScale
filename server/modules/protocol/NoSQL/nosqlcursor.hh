@@ -125,6 +125,7 @@ private:
     std::vector<std::string>      m_extractions;
     mxs::Buffer                   m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
+    size_t                        m_nBuffer { 0 };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
     mxb::TimePoint                m_used;

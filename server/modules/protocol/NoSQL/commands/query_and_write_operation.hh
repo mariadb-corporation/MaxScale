@@ -33,7 +33,7 @@ public:
     OrderedCommand(const std::string& name,
                    Database* pDatabase,
                    GWBUF* pRequest,
-                   nosql::Msg&& req,
+                   packet::Msg&& req,
                    const std::string& array_key)
         : MultiCommand(name, pDatabase, pRequest, std::move(req))
         , m_key(array_key)
@@ -43,7 +43,7 @@ public:
     OrderedCommand(const std::string& name,
                    Database* pDatabase,
                    GWBUF* pRequest,
-                   nosql::Msg&& req,
+                   packet::Msg&& req,
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
@@ -520,7 +520,7 @@ public:
     Delete(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req)
+           packet::Msg&& req)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::DELETES)
     {
     }
@@ -528,7 +528,7 @@ public:
     Delete(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req,
+           packet::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::DELETES)
@@ -821,7 +821,7 @@ public:
     Insert(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req)
+           packet::Msg&& req)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::DOCUMENTS)
     {
     }
@@ -829,7 +829,7 @@ public:
     Insert(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req,
+           packet::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::DOCUMENTS)
@@ -1044,6 +1044,16 @@ protected:
 
     string convert_document_data(const bsoncxx::document::view& doc)
     {
+        if (doc.length() > protocol::MAX_BSON_OBJECT_SIZE)
+        {
+            ostringstream ss;
+            ss << "object to insert too large. size in bytes: " << doc.length()
+               << ", max size: " << protocol::MAX_BSON_OBJECT_SIZE;
+
+            // TODO: Should be returned as a write error for this particular document.
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         ostringstream sql;
 
         string json;
@@ -1295,7 +1305,7 @@ public:
     Update(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req)
+           packet::Msg&& req)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), key::UPDATES)
     {
     }
@@ -1303,7 +1313,7 @@ public:
     Update(const std::string& name,
            Database* pDatabase,
            GWBUF* pRequest,
-           nosql::Msg&& req,
+           packet::Msg&& req,
            const bsoncxx::document::view& doc,
            const DocumentArguments& arguments)
         : OrderedCommand(name, pDatabase, pRequest, std::move(req), doc, arguments, key::UPDATES)
