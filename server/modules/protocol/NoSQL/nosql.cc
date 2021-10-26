@@ -2173,6 +2173,16 @@ Msg::Msg(const Packet& packet)
 //
 // Error classes
 //
+void Exception::append_write_error(ArrayBuilder& write_errors, int index) const
+{
+    DocumentBuilder write_error;
+    write_error.append(kvp(key::INDEX, index));
+    write_error.append(kvp(key::CODE, m_code));
+    write_error.append(kvp(key::ERRMSG, what()));
+
+    write_errors.append(write_error.extract());
+}
+
 NoError::NoError(int32_t n)
     : m_n(n)
 {

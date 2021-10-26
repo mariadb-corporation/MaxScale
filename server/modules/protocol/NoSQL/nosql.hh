@@ -414,6 +414,7 @@ public:
 
     virtual GWBUF* create_response(const Command& command) const = 0;
     virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
+    void append_write_error(ArrayBuilder& write_errors, int index) const;
 
     virtual std::unique_ptr<LastError> create_last_error() const = 0;
 

@@ -17,6 +17,7 @@
 
 #include "defs.hh"
 #include <maxbase/worker.hh>
+#include <bsoncxx/exception/exception.hpp>
 #include "../nosqlcursor.hh"
 
 using mxb::Worker;
@@ -334,19 +335,107 @@ protected:
             }
         }
 
-        return generate_sql(m_documents);
+        ArrayBuilder write_errors;
+
+        Query rv = generate_sql(m_documents, write_errors);
+
+        if (!write_errors.view().empty())
+        {
+            // TODO: The whole thing should not be abandoned. Instead, the successfully
+            // TODO: converted documents should be executed and only then the whole
+            // TODO: response should be returned. But this is better than just letting
+            // TODO: the first error abort everything and returning the error at the
+            // TODO: top-level without a "writeErrors" array as it used to be.
+
+            class WriteErrors : public Exception
+            {
+            public:
+                WriteErrors(bsoncxx::array::value&& write_errors)
+                    : Exception("", error::OK)
+                    , m_write_errors(std::move(write_errors))
+                {
+                }
+
+                GWBUF* create_response(const Command& command) const override
+                {
+                    DocumentBuilder doc;
+                    create_response(command, doc);
+
+                    return command.create_response(doc.extract(), Command::IsError::NO);
+                }
+
+                void create_response(const Command& command, DocumentBuilder& doc) const override
+                {
+                    doc.append(kvp(key::OK, 1)); // Yes, the command succeeded.
+                    doc.append(kvp(key::N, 0));
+                    doc.append(kvp(key::WRITE_ERRORS, m_write_errors));
+                }
+
+                unique_ptr<LastError> create_last_error() const override
+                {
+                    return std::make_unique<ConcreteLastError>("No error", error::OK);
+                }
+
+            private:
+                bsoncxx::array::value m_write_errors;
+            };
+
+            throw WriteErrors(write_errors.extract());
+        }
+
+        return rv;
     }
 
-    virtual Query generate_sql(const vector<bsoncxx::document::view>& documents)
+    virtual Query generate_sql(const vector<bsoncxx::document::view>& documents, ArrayBuilder& write_errors)
     {
         vector<string> statements;
 
+        int i = 0;
         for (const auto& doc : documents)
         {
-            statements.push_back(convert_document(doc));
+            string statement = convert_document(doc, i++, write_errors);
+
+            if (!statement.empty())
+            {
+                statements.push_back(statement);
+            }
         }
 
         return Query(std::move(statements));
+    }
+
+    string convert_document(const bsoncxx::document::view& doc, int i, ArrayBuilder& write_errors)
+    {
+        string statement;
+
+        try
+        {
+            statement = convert_document(doc);
+        }
+        catch (const Exception& x)
+        {
+            x.append_write_error(write_errors, i);
+        }
+        catch (const bsoncxx::exception& x)
+        {
+            DocumentBuilder write_error;
+            write_error.append(kvp(key::INDEX, i));
+            write_error.append(kvp(key::CODE, (int)error::FAILED_TO_PARSE));
+            write_error.append(kvp(key::INDEX, x.what()));
+
+            write_errors.append(write_error.extract());
+        }
+        catch (const std::exception& x)
+        {
+            DocumentBuilder write_error;
+            write_error.append(kvp(key::INDEX, i));
+            write_error.append(kvp(key::CODE, (int)error::INTERNAL_ERROR));
+            write_error.append(kvp(key::INDEX, x.what()));
+
+            write_errors.append(write_error.extract());
+        }
+
+        return statement;
     }
 
     virtual string convert_document(const bsoncxx::document::view& doc) = 0;
@@ -939,7 +1028,7 @@ public:
     }
 
 protected:
-    Query generate_sql(const vector<bsoncxx::document::view>& documents) override
+    Query generate_sql(const vector<bsoncxx::document::view>& documents,  ArrayBuilder& write_errors) override
     {
         Query query;
 
@@ -961,11 +1050,16 @@ protected:
                    <<   "DECLARE EXIT HANDLER FOR SQLEXCEPTION COMMIT;"
                    <<   "START TRANSACTION;";
 
+                int i = 0;
                 for (const auto& doc : documents)
                 {
-                    ss << "INSERT INTO " << table() << " (doc) VALUES "
-                       << convert_document_data(doc) << ";";
-                    ++nStatements;
+                    string values = convert_document_data(doc, i, write_errors);
+
+                    if (!values.empty())
+                    {
+                        ss << "INSERT INTO " << table() << " (doc) VALUES " << values << ";";
+                        ++nStatements;
+                    }
                 }
 
                 ss <<   "COMMIT;"
@@ -1040,6 +1134,40 @@ protected:
         sql << "INSERT INTO " << table() << " (doc) VALUES " << convert_document_data(doc);
 
         return sql.str();
+    }
+
+    string convert_document_data(const bsoncxx::document::view& doc, int i, ArrayBuilder& write_errors)
+    {
+        string values;
+
+        try
+        {
+            values = convert_document_data(doc);
+        }
+        catch (const Exception& x)
+        {
+            x.append_write_error(write_errors, i);
+        }
+        catch (const bsoncxx::exception& x)
+        {
+            DocumentBuilder write_error;
+            write_error.append(kvp(key::INDEX, i));
+            write_error.append(kvp(key::CODE, (int)error::FAILED_TO_PARSE));
+            write_error.append(kvp(key::INDEX, x.what()));
+
+            write_errors.append(write_error.extract());
+        }
+        catch (const std::exception& x)
+        {
+            DocumentBuilder write_error;
+            write_error.append(kvp(key::INDEX, i));
+            write_error.append(kvp(key::CODE, (int)error::INTERNAL_ERROR));
+            write_error.append(kvp(key::INDEX, x.what()));
+
+            write_errors.append(write_error.extract());
+        }
+
+        return values;
     }
 
     string convert_document_data(const bsoncxx::document::view& doc)
