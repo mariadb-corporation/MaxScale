@@ -75,7 +75,7 @@
             :headers="headers"
             :rows="rows"
             :itemHeight="40"
-            :height="height - headerHeight"
+            :maxHeight="height - headerHeight"
             :boundingWidth="boundingWidth"
             showSelect
             :isVertTable="isVertTable"
@@ -255,11 +255,17 @@ export default {
             })
             return items
         },
+        idxOfColumnName() {
+            return this.findHeaderIdx('column_name')
+        },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
         },
         idxOfCharset() {
             return this.findHeaderIdx('charset')
+        },
+        idxOfComment() {
+            return this.findHeaderIdx('comment')
         },
         idxOfAI() {
             return this.findHeaderIdx('AI')

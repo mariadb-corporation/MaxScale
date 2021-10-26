@@ -84,7 +84,7 @@
                 :headers="visibleHeaders"
                 :rows="filteredRows"
                 :itemHeight="30"
-                :height="tableHeight"
+                :maxHeight="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
                 :showSelect="showSelect"

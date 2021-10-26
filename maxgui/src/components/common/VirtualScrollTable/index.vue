@@ -169,7 +169,7 @@
                 </div>
             </template>
         </v-virtual-scroll>
-        <div v-else class="tr" :style="{ lineHeight, height: `${height - itemHeight}px` }">
+        <div v-else class="tr" :style="{ lineHeight, height: `${maxTbodyHeight}px` }">
             <div class="td px-3 d-flex justify-center flex-grow-1">
                 {{ $t('$vuetify.noDataText') }}
             </div>
@@ -215,7 +215,7 @@ export default {
             required: true,
         },
         rows: { type: Array, required: true },
-        height: { type: Number, required: true },
+        maxHeight: { type: Number, required: true },
         itemHeight: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
         benched: { type: Number, required: true },
@@ -247,20 +247,23 @@ export default {
         lineHeight() {
             return `${this.itemHeight}px`
         },
-        tbodyHeight() {
-            return this.height - this.itemHeight
-        },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
         },
         rowHeight() {
-            return this.isVertTable
-                ? `${this.itemHeight * this.visHeaders.length}px`
-                : this.itemHeight
+            return this.isVertTable ? this.itemHeight * this.visHeaders.length : this.itemHeight
+        },
+        rowsHeight() {
+            return this.currRows.length * this.rowHeight
+        },
+        maxTbodyHeight() {
+            return this.maxHeight - 30 // header fixed height is 30px
+        },
+        tbodyHeight() {
+            return this.rowsHeight >= this.maxTbodyHeight ? this.maxTbodyHeight : this.rowsHeight
         },
         isYOverflowed() {
-            const rowHeight = Number(`${this.rowHeight}`.replace(/px/g, ''))
-            return this.currRows.length * rowHeight > this.tbodyHeight
+            return this.rowsHeight > this.tbodyHeight
         },
         rowsLength() {
             return this.currRows.length
