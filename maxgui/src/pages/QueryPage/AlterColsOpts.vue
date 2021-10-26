@@ -105,6 +105,7 @@
                         @on-input-PK="onInputPK"
                         @on-input-NN="onInputNN"
                         @on-input-AI="onInputAI"
+                        @on-input-generated="onInputGenerated"
                         @on-input-charset="onInputCharset"
                     />
                 </div>
@@ -156,7 +157,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -183,6 +184,9 @@ export default {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
+        ...mapGetters({
+            getTblCreationInfo: 'query/getTblCreationInfo',
+        }),
         colsOptsData: {
             get() {
                 return this.value
@@ -190,6 +194,9 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
+        },
+        initialColsOptsData() {
+            return this.$typy(this.getTblCreationInfo, `data.cols_opts_data.data`).safeArray
         },
         headers() {
             return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => {
@@ -208,6 +215,10 @@ export default {
                         h.width = 50
                         h.maxWidth = 50
                         break
+                    case 'generated':
+                        h.width = 144
+                        h.maxWidth = 144
+                        break
                     case 'id':
                         h.hidden = true
                         break
@@ -223,6 +234,7 @@ export default {
                 UQ: 'UNIQUE INDEX',
                 ZF: 'ZEROFILL',
                 AI: 'AUTO_INCREMENT',
+                generated: 'Generated column',
             }
         },
 
@@ -246,6 +258,9 @@ export default {
         idxOfAI() {
             return this.findHeaderIdx('AI')
         },
+        idxOfGenerated() {
+            return this.findHeaderIdx('generated')
+        },
         idxOfUN() {
             return this.findHeaderIdx('UN')
         },
@@ -255,8 +270,8 @@ export default {
         idxOfUQ() {
             return this.findHeaderIdx('UQ')
         },
-        idxOfDefault() {
-            return this.findHeaderIdx('default')
+        idxOfDefAndExp() {
+            return this.findHeaderIdx('default/expression')
         },
         hasAI() {
             let count = 0
@@ -488,7 +503,7 @@ export default {
          * @returns {Object} - returns new colsOptsData
          */
         notNullSideEffect({ colsOptsData, rowIdx, valOfNN, valueOfDefault = null }) {
-            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefault}']`)
+            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefAndExp}']`)
                 .safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
             if (valueOfDefault !== null) defaultVal = valueOfDefault
@@ -496,7 +511,7 @@ export default {
                 data: {
                     [rowIdx]: {
                         [this.idxOfNN]: { $set: valOfNN },
-                        [this.idxOfDefault]: { $set: defaultVal },
+                        [this.idxOfDefAndExp]: { $set: defaultVal },
                     },
                 },
             })
@@ -508,11 +523,12 @@ export default {
             let colsOptsData = this.colsOptsData
             if (this.hasAI)
                 colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
-            // update AI value
+            // update AI and generated cells
             colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                 data: {
                     [item.rowIdx]: {
                         [item.colIdx]: { $set: item.value },
+                        [this.idxOfGenerated]: { $set: '(none)' },
                     },
                 },
             })
@@ -523,6 +539,39 @@ export default {
                 // set to empty string when AI value is AUTO_INCREMENT
                 valueOfDefault: item.value ? '' : null,
             })
+        },
+        /**
+         * @param {Object} item - G cell data
+         */
+        onInputGenerated(item) {
+            let colsOptsData = this.colsOptsData
+            let defaultVal = ''
+            if (item.value === '(none)') {
+                const nnVal = this.$typy(colsOptsData, `data['${item.rowIdx}']['${this.idxOfNN}']`)
+                    .safeString
+                if (nnVal === 'NULL') defaultVal = 'NULL'
+                else if (nnVal === 'NOT NULL') defaultVal = ''
+            }
+            // use initial expression value or empty string
+            else {
+                defaultVal = this.$typy(
+                    this.initialColsOptsData,
+                    `['${item.rowIdx}']['${this.idxOfDefAndExp}']`
+                ).safeString
+            }
+
+            // update G and its dependencies cell value
+            colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfAI]: { $set: '' },
+                        [this.idxOfNN]: { $set: '' },
+                        [this.idxOfDefAndExp]: { $set: defaultVal },
+                    },
+                },
+            })
+            this.colsOptsData = colsOptsData
         },
         /**
          * @param {Object} item - charset cell data

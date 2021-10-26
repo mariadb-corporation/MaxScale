@@ -20,6 +20,25 @@
         :return-object="false"
         @input="onInput"
     />
+    <v-select
+        v-else-if="input.type === 'enum'"
+        v-model="input.value"
+        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="input.type"
+        :menu-props="{
+            contentClass: 'mariadb-select-v-menu',
+            bottom: true,
+            offsetY: true,
+            openOnClick: false,
+        }"
+        :items="input.enum_values"
+        outlined
+        dense
+        :height="height"
+        hide-details="auto"
+        :disabled="isDisabled"
+        @input="onInput"
+    />
     <v-checkbox
         v-else-if="input.type === 'bool'"
         v-model="input.value"
@@ -92,6 +111,7 @@
  * on-input-AI: (cell)
  * on-input-PK: (cell)
  * on-input-NN: (cell)
+ * on-input-generated: (cell)
  * Event for normal cell
  * on-input: (cell)
  */
@@ -141,6 +161,9 @@ export default {
         isPK() {
             return this.$typy(this.input, 'rowObj.PK').safeString === 'YES'
         },
+        isGenerated() {
+            return this.$typy(this.input, 'rowObj.generated').safeString !== '(none)'
+        },
         isAI() {
             return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
         },
@@ -156,15 +179,23 @@ export default {
                 case 'collation':
                     if (this.columnCharset === 'utf8') return true
                     return !check_charset_support(this.columnType)
+                case 'PK':
+                    //disable if column is generated
+                    return this.isGenerated
                 case 'UN':
                 case 'ZF':
                     return !check_UN_ZF_support(this.columnType)
                 case 'AI':
                     return !check_AI_support(this.columnType)
                 case 'NN':
-                    return this.isAI || this.isPK // implies NOT NULL so must be disabled
+                    //isAI or isPK implies NOT NULL so must be disabled
+                    // when column is generated, NN or NULL can not be defined
+                    return this.isAI || this.isPK || this.isGenerated
                 case 'UQ':
                     return this.isPK // implies UNIQUE already so UQ must be disabled
+                case 'generated':
+                    //disable if column is PK
+                    return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
                 default:
                     return false
             }
@@ -218,6 +249,10 @@ export default {
                     input.type = 'bool'
                     input.value = input.value === 'AUTO_INCREMENT'
                     break
+                case 'generated':
+                    input.type = 'enum'
+                    input.enum_values = ['(none)', 'VIRTUAL', 'STORED']
+                    break
                 case 'PK':
                     input.type = 'bool'
                     input.value = input.value === 'YES'
@@ -252,6 +287,11 @@ export default {
                         break
                     case 'charset':
                         this.$emit('on-input-charset', newInput)
+                        break
+                    case 'enum':
+                        if (newInput.field === 'generated')
+                            this.$emit('on-input-generated', newInput)
+                        else this.$emit('on-input', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
