@@ -430,7 +430,7 @@ add_test_executable(cache_users.cpp cache_users cache_users LABELS cachefilter R
 add_test_executable(cache_distributed.cpp cache_distributed cache_distributed LABELS cachefilter REPL_BACKEND)
 
 # Test of Cache bug MXS-3694
-add_test_executable(cache_mxs3694.cpp cache_mxs3694 cache_mxs3694 LABELS cachefilter REPL_BACKEND)
+add_test_executable(mxs3694_cache.cpp mxs3694_cache mxs3694_cache LABELS cachefilter REPL_BACKEND)
 
 # Test of Cache bug MXS-3778
 add_test_executable(mxs3778_cache.cpp mxs3778_cache mxs3778_cache LABELS cachefilter REPL_BACKEND)
