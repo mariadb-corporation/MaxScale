@@ -29,7 +29,7 @@
         <v-virtual-scroll
             v-if="rowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
-            :bench="isVertTable ? 1 : benched"
+            :bench="isVertTable ? 1 : bench"
             :items="currRows"
             :height="tbodyHeight"
             :item-height="rowHeight"
@@ -218,7 +218,7 @@ export default {
         maxHeight: { type: Number, required: true },
         itemHeight: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
-        benched: { type: Number, required: true },
+        bench: { type: Number, default: 10 },
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },

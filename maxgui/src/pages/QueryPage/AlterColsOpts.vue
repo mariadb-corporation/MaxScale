@@ -71,7 +71,6 @@
             </v-tooltip>
         </div>
         <virtual-scroll-table
-            :benched="0"
             :headers="headers"
             :rows="rows"
             :itemHeight="40"
