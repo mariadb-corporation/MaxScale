@@ -1639,7 +1639,6 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 
 void CacheFilterSession::ready_for_another_call()
 {
-    mxb_assert(m_processing);
     m_processing = false;
 
     if (!m_queued_packets.empty())
