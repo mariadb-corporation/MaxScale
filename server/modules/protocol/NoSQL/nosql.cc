@@ -304,6 +304,16 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
         ss << x.get_int64();
         break;
 
+    case bsoncxx::type::k_binary:
+        {
+            auto b = x.get_binary();
+
+            string_view s(reinterpret_cast<const char*>(b.bytes), b.size);
+
+            ss << "'" << s << "'";
+        }
+        break;
+
     case bsoncxx::type::k_bool:
         ss << x.get_bool();
         break;
@@ -398,6 +408,13 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
     case bsoncxx::type::k_maxkey:
         ss << std::numeric_limits<int64_t>::max();
         break;
+
+    case bsoncxx::type::k_code:
+        ss << "'" << x.get_code().code << "'";
+        break;
+
+    case bsoncxx::type::k_undefined:
+        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
 
     default:
         {
@@ -587,53 +604,108 @@ bool is_scalar_value(const bsoncxx::document::element& element)
     return rv;
 }
 
+string timestamp_to_condition(const Path::Incarnation& p,
+                              mariadb::Op op,
+                              const bsoncxx::types::b_timestamp& ts)
+{
+    ostringstream ss;
+
+    string f = "$." + p.path() + ".$timestamp";
+
+    ss << "(JSON_QUERY(doc, '" << f << "') IS NOT NULL AND ";
+
+    switch (op)
+    {
+    case mariadb::Op::EQ:
+    case mariadb::Op::NE:
+        ss << "JSON_VALUE(doc, '" << f << ".t') " << op << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') " << op << ts.increment;
+        break;
+
+    case mariadb::Op::LT:
+    case mariadb::Op::GT:
+        ss << "JSON_VALUE(doc, '" << f << ".t') " << op << ts.timestamp;
+        break;
+
+    case mariadb::Op::LTE:
+        ss << "(JSON_VALUE(doc, '" << f << ".t') < " << ts.timestamp << " OR "
+           << "(JSON_VALUE(doc, '" << f << ".t') = " << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') = " << ts.increment << "))";
+        break;
+
+    case mariadb::Op::GTE:
+        ss << "(JSON_VALUE(doc, '" << f << ".t') > " << ts.timestamp << " OR "
+           << "(JSON_VALUE(doc, '" << f << ".t') = " << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') = " << ts.increment << "))";
+        break;
+
+    case mariadb::Op::NIN:
+        // TODO: NIN should be removed altogether.
+        throw SoftError("$nin needs an array", error::BAD_VALUE);
+    }
+
+    ss << ")";
+
+    return ss.str();
+}
+
+string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
+{
+    return timestamp_to_condition(p, mariadb::Op::EQ, timestamp);
+}
+
 string default_field_and_value_to_comparison(const Path::Incarnation& p,
                                              const bsoncxx::document::element& element,
                                              mariadb::Op mariadb_op,
                                              const string& nosql_op,
                                              ElementValueToString value_to_string)
 {
-    auto type = element.type();
+    string rv;
+    string path;
 
-    if (type == bsoncxx::type::k_regex && nosql_op != "$eq")
+    switch (element.type())
+    {
+    case bsoncxx::type::k_binary:
+        path = p.path() + ".$binary";
+        break;
+
+    case bsoncxx::type::k_date:
+        path = p.path() + ".$date";
+        break;
+
+    case bsoncxx::type::k_code:
+        path = p.path() + ".$code";
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        rv = timestamp_to_condition(p, mariadb_op, element.get_timestamp());
+        break;
+
+    case bsoncxx::type::k_regex:
+        if (nosql_op != "$eq")
+        {
+            ostringstream ss;
+            ss << "Can't have regex as arg to " << nosql_op;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        // Fallthrough
+    default:
+        path = p.path();
+    }
+
+    if (rv.empty())
     {
         ostringstream ss;
-        ss << "Can't have regex as arg to " << nosql_op;
+        ss << "(JSON_EXTRACT(doc, '$." << path << "') IS NOT NULL AND "
+           << "(JSON_EXTRACT(doc, '$." << path << "') " << mariadb_op << " "
+           << value_to_string(element, ValueFor::SQL, nosql_op)
+           << "))";
 
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        rv = ss.str();
     }
 
-     // TODO: This is true with array anywhere, so p.is_parent_array() is probably needed.
-    auto expects_array = p.has_array_demand();
-
-    const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
-
-    bool is_date = (type == bsoncxx::type::k_date);
-
-    // A date is stored as a document containing a field "$date" with the value.
-    string f = is_date ? p.path() + ".$date" : p.path();
-
-    ostringstream ss;
-
-    ss << "(" << zGet << "(doc, '$." << f << "') IS NOT NULL "
-       << "AND (" << zGet << "(doc, '$." + f + "') " << mariadb_op << " ";
-
-    bool is_array = type == bsoncxx::type::k_array;
-
-    if (expects_array && !is_array)
-    {
-        ss << "JSON_ARRAY("
-           << value_to_string(element, ValueFor::JSON_NESTED, nosql_op)
-           << ")";
-    }
-    else
-    {
-        ss << value_to_string(element, ValueFor::SQL, nosql_op);
-    }
-
-    ss << "))";
-
-    return ss.str();
+    return rv;
 }
 
 string field_and_value_to_nin_comparison(const Path::Incarnation& p,
@@ -1028,19 +1100,6 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
     }
 
     return rv;
-}
-
-string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
-{
-    ostringstream ss;
-
-    string field = "$." + p.path();
-
-    ss << "(JSON_QUERY(doc, '" << field << ".$timestamp') IS NOT NULL AND "
-       << "JSON_VALUE(doc, '" << field << ".$timestamp.t') = " << timestamp.timestamp << " AND "
-       << "JSON_VALUE(doc, '" << field << ".$timestamp.i') = " << timestamp.increment << ")";
-
-    return ss.str();
 }
 
 string regex_to_condition(const Path::Incarnation& p,
