@@ -23,7 +23,7 @@ namespace maxsql
 
 namespace
 {
-bool is_connection_lost(uint mariadb_err)
+bool is_connection_lost(uint64_t mariadb_err)
 {
     return mariadb_err == 2006 || mariadb_err == 2013;
 }
@@ -99,7 +99,7 @@ MariaRplEvent Connection::get_rpl_msg()
 }
 
 
-uint Connection::mariadb_error()
+uint64_t Connection::mariadb_error()
 {
     return mysql_errno(m_conn);
 }
@@ -109,7 +109,7 @@ std::string Connection::mariadb_error_str()
     return mysql_error(m_conn);
 }
 
-uint Connection::ping()
+uint64_t Connection::ping()
 {
     mysql_ping(m_conn);
 
@@ -226,7 +226,7 @@ void Connection::connect()
                            m_details.user.c_str(),
                            m_details.password.c_str(),
                            m_details.database.c_str(),
-                           (uint) m_details.host.port(),
+                           m_details.host.port(),
                            nullptr, m_details.flags) == nullptr)
     {
         std::string error = mysql_error(m_conn);

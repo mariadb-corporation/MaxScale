@@ -62,6 +62,27 @@ maxsql::GtidList read_requested_rpl_state(const Config& config)
 
     return maxsql::GtidList::from_string(ret);
 }
+
+void save_gtid(const maxsql::GtidList& gtids, const std::string& filename)
+{
+    std::string tmp = filename + ".tmp";
+
+    if (auto ofs = std::ofstream(tmp))
+    {
+        ofs << gtids;
+        ofs.close();
+
+        if (rename(tmp.c_str(), filename.c_str()) != 0)
+        {
+            MXB_THROW(BinlogWriteError,
+                      "Could not rename to " << filename << ": " << errno << ", " << mxb_strerror(errno));
+        }
+    }
+    else
+    {
+        MXB_THROW(BinlogWriteError, "Could not open " << tmp << ": " << errno << ", " << mxb_strerror(errno));
+    }
+}
 }
 
 InventoryWriter::InventoryWriter(const Config& config)
@@ -122,14 +143,7 @@ std::vector<std::string> InventoryWriter::file_names() const
 
 void InventoryWriter::save_rpl_state(const maxsql::GtidList& gtids)
 {
-    if (auto ofs = std::ofstream(m_config.gtid_file_path()))
-    {
-        ofs << gtids;
-    }
-    else
-    {
-        MXB_THROW(BinlogWriteError, "Could not write to " << m_config.gtid_file_path());
-    }
+    save_gtid(gtids, m_config.gtid_file_path());
 }
 
 maxsql::GtidList InventoryWriter::rpl_state() const
@@ -139,14 +153,7 @@ maxsql::GtidList InventoryWriter::rpl_state() const
 
 void InventoryWriter::save_requested_rpl_state(const maxsql::GtidList& gtids)
 {
-    if (auto ofs = std::ofstream(m_config.requested_gtid_file_path()))
-    {
-        ofs << gtids;
-    }
-    else
-    {
-        MXB_THROW(BinlogWriteError, "Could not write to " << m_config.gtid_file_path());
-    }
+    save_gtid(gtids, m_config.requested_gtid_file_path());
 }
 
 void InventoryWriter::clear_requested_rpl_state() const
