@@ -106,7 +106,7 @@ describe("Query API ", function () {
       expect(result.sqlstate).to.equal("42000");
     });
 
-    it("executes multiple commands that a mix of results", async function () {
+    it("executes multiple commands that returns a mix of results", async function () {
       var query = "SET @a = 1; SELECT 1; SET SQL_MODE=''; SELECT SYNTAX_ERROR;";
       var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
       check_resultset(res.data, query);
@@ -129,6 +129,21 @@ describe("Query API ", function () {
       expect(result.errno).to.equal(1054);
       expect(result.message).to.include("Unknown column");
       expect(result.sqlstate).to.equal("42S22");
+    });
+
+    it("reconnects", async function () {
+      var query = "SELECT @@pseudo_thread_id";
+      var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
+      var first_id = res.data.data.attributes.results[0].data[0][0]
+      expect(first_id).to.be.a("number")
+
+      await c.post(conn.data.links.self + "reconnect/?token=" + conn.meta.token, { sql: query });
+
+      res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
+      var second_id = res.data.data.attributes.results[0].data[0][0]
+      expect(second_id).to.be.a("number")
+
+      expect(second_id).to.not.equal(first_id);
     });
 
     it("closes connection", async function () {

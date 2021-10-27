@@ -71,11 +71,10 @@
             </v-tooltip>
         </div>
         <virtual-scroll-table
-            :benched="0"
             :headers="headers"
             :rows="rows"
             :itemHeight="40"
-            :height="height - headerHeight"
+            :maxHeight="height - headerHeight"
             :boundingWidth="boundingWidth"
             showSelect
             :isVertTable="isVertTable"
@@ -100,16 +99,48 @@
                         :defTblCharset="defTblCharset"
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
-                        @on-change="updateCell"
-                        @on-change-column_type="onChangeColumnType"
-                        @on-change-PK="onChangePK"
-                        @on-change-NN="onChangeNN"
-                        @on-change-AI="onChangeAI"
-                        @on-change-charset="onChangeCharset"
+                        @on-input="onCellInput"
+                        @on-input-column_type="onInputColumnType"
+                        @on-input-PK="onInputPK"
+                        @on-input-NN="onInputNN"
+                        @on-input-AI="onInputAI"
+                        @on-input-generated="onInputGenerated"
                     />
                 </div>
             </template>
+            <!-- Add :key so that truncate-string rerender to evaluate truncation  -->
+            <template v-slot:header-column_name="{ data: { maxWidth } }">
+                <truncate-string :key="maxWidth" text="Column Name" :maxWidth="maxWidth" />
+            </template>
+            <template v-slot:header-column_type="{ data: { maxWidth } }">
+                <truncate-string :key="maxWidth" text="Column Type" :maxWidth="maxWidth" />
+            </template>
+            <template
+                v-for="(value, key) in abbreviatedHeaders"
+                v-slot:[abbrHeaderSlotName(key)]="{ data: { header, maxWidth } }"
+            >
+                <v-tooltip
+                    :key="key"
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                    :disabled="isVertTable"
+                >
+                    <template v-slot:activator="{ on }">
+                        <div
+                            class="d-inline-block text-truncate"
+                            :style="{ maxWidth: `${maxWidth}px` }"
+                            v-on="on"
+                        >
+                            {{ isVertTable ? value : header.text }}
+                        </div>
+                    </template>
+                    <span>{{ value }}</span>
+                </v-tooltip>
+            </template>
         </virtual-scroll-table>
+        <!-- TODO: Component to select column name to reveal additional
+             inputs .i.e. charset, collation and comment inputs -->
     </div>
 </template>
 
@@ -126,7 +157,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -153,6 +184,9 @@ export default {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
+        ...mapGetters({
+            getTblCreationInfo: 'query/getTblCreationInfo',
+        }),
         colsOptsData: {
             get() {
                 return this.value
@@ -161,11 +195,15 @@ export default {
                 this.$emit('input', value)
             },
         },
+        initialColsOptsData() {
+            return this.$typy(this.getTblCreationInfo, `data.cols_opts_data.data`).safeArray
+        },
         headers() {
             return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => {
                 let h = {
                     text: field,
                     sortable: false,
+                    capitalize: true,
                 }
                 switch (field) {
                     case 'PK':
@@ -177,13 +215,34 @@ export default {
                         h.width = 50
                         h.maxWidth = 50
                         break
+                    case 'generated':
+                        h.width = 144
+                        h.maxWidth = 144
+                        break
                     case 'id':
+                        h.hidden = true
+                        break
+                    case 'charset':
+                    case 'collation':
+                    case 'comment':
                         h.hidden = true
                         break
                 }
                 return h
             })
         },
+        abbreviatedHeaders() {
+            return {
+                PK: 'PRIMARY KEY',
+                NN: 'NOT NULL',
+                UN: 'UNSIGNED',
+                UQ: 'UNIQUE INDEX',
+                ZF: 'ZEROFILL',
+                AI: 'AUTO_INCREMENT',
+                generated: 'Generated column',
+            }
+        },
+
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
         },
@@ -195,14 +254,23 @@ export default {
             })
             return items
         },
+        idxOfColumnName() {
+            return this.findHeaderIdx('column_name')
+        },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
         },
         idxOfCharset() {
             return this.findHeaderIdx('charset')
         },
+        idxOfComment() {
+            return this.findHeaderIdx('comment')
+        },
         idxOfAI() {
             return this.findHeaderIdx('AI')
+        },
+        idxOfGenerated() {
+            return this.findHeaderIdx('generated')
         },
         idxOfUN() {
             return this.findHeaderIdx('UN')
@@ -213,8 +281,8 @@ export default {
         idxOfUQ() {
             return this.findHeaderIdx('UQ')
         },
-        idxOfDefault() {
-            return this.findHeaderIdx('default')
+        idxOfDefAndExp() {
+            return this.findHeaderIdx('default/expression')
         },
         hasAI() {
             let count = 0
@@ -230,6 +298,10 @@ export default {
         },
     },
     methods: {
+        abbrHeaderSlotName(h) {
+            if (this.isVertTable) return `vertical-header-${h}`
+            return `header-${h}`
+        },
         setHeaderHeight() {
             if (this.$refs.header) this.headerHeight = this.$refs.header.clientHeight
         },
@@ -274,7 +346,7 @@ export default {
         /**
          * @param {Object} item - cell data
          */
-        updateCell(item) {
+        onCellInput(item) {
             this.colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
                     [item.rowIdx]: {
@@ -392,7 +464,7 @@ export default {
         /**
          * @param {Object} item - column_type cell data
          */
-        onChangeColumnType(item) {
+        onInputColumnType(item) {
             // first update column_type cell
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
@@ -442,7 +514,7 @@ export default {
          * @returns {Object} - returns new colsOptsData
          */
         notNullSideEffect({ colsOptsData, rowIdx, valOfNN, valueOfDefault = null }) {
-            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefault}']`)
+            let defaultVal = this.$typy(colsOptsData, `data['${rowIdx}']['${this.idxOfDefAndExp}']`)
                 .safeString
             if (defaultVal === 'NULL' && valOfNN === 'NOT NULL') defaultVal = ''
             if (valueOfDefault !== null) defaultVal = valueOfDefault
@@ -450,7 +522,7 @@ export default {
                 data: {
                     [rowIdx]: {
                         [this.idxOfNN]: { $set: valOfNN },
-                        [this.idxOfDefault]: { $set: defaultVal },
+                        [this.idxOfDefAndExp]: { $set: defaultVal },
                     },
                 },
             })
@@ -458,15 +530,16 @@ export default {
         /**
          * @param {Object} item - AI cell data
          */
-        onChangeAI(item) {
+        onInputAI(item) {
             let colsOptsData = this.colsOptsData
             if (this.hasAI)
                 colsOptsData = this.uncheckOtherAI({ colsOptsData, rowIdx: item.rowIdx })
-            // update AI value
+            // update AI and generated cells
             colsOptsData = this.$help.immutableUpdate(colsOptsData, {
                 data: {
                     [item.rowIdx]: {
                         [item.colIdx]: { $set: item.value },
+                        [this.idxOfGenerated]: { $set: '(none)' },
                     },
                 },
             })
@@ -479,9 +552,42 @@ export default {
             })
         },
         /**
+         * @param {Object} item - G cell data
+         */
+        onInputGenerated(item) {
+            let colsOptsData = this.colsOptsData
+            let defaultVal = ''
+            if (item.value === '(none)') {
+                const nnVal = this.$typy(colsOptsData, `data['${item.rowIdx}']['${this.idxOfNN}']`)
+                    .safeString
+                if (nnVal === 'NULL') defaultVal = 'NULL'
+                else if (nnVal === 'NOT NULL') defaultVal = ''
+            }
+            // use initial expression value or empty string
+            else {
+                defaultVal = this.$typy(
+                    this.initialColsOptsData,
+                    `['${item.rowIdx}']['${this.idxOfDefAndExp}']`
+                ).safeString
+            }
+
+            // update G and its dependencies cell value
+            colsOptsData = this.$help.immutableUpdate(colsOptsData, {
+                data: {
+                    [item.rowIdx]: {
+                        [item.colIdx]: { $set: item.value },
+                        [this.idxOfAI]: { $set: '' },
+                        [this.idxOfNN]: { $set: '' },
+                        [this.idxOfDefAndExp]: { $set: defaultVal },
+                    },
+                },
+            })
+            this.colsOptsData = colsOptsData
+        },
+        /**
          * @param {Object} item - charset cell data
          */
-        onChangeCharset(item) {
+        onInputCharset(item) {
             this.colsOptsData = this.patchCharsetCollation({
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,
@@ -491,7 +597,7 @@ export default {
         /**
          * @param {Object} item - PK cell data
          */
-        onChangePK(item) {
+        onInputPK(item) {
             // update PK and UQ value
             let colsOptsData = this.$help.immutableUpdate(this.colsOptsData, {
                 data: {
@@ -510,7 +616,7 @@ export default {
         /**
          * @param {Object} item - NN cell data
          */
-        onChangeNN(item) {
+        onInputNN(item) {
             this.colsOptsData = this.notNullSideEffect({
                 colsOptsData: this.colsOptsData,
                 rowIdx: item.rowIdx,

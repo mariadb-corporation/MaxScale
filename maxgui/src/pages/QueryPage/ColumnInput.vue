@@ -18,7 +18,26 @@
         :height="height"
         hide-details="auto"
         :return-object="false"
-        @change="handleChange"
+        @input="onInput"
+    />
+    <v-select
+        v-else-if="input.type === 'enum'"
+        v-model="input.value"
+        class="std mariadb-select-input error--text__bottom error--text__bottom--no-margin"
+        :class="input.type"
+        :menu-props="{
+            contentClass: 'mariadb-select-v-menu',
+            bottom: true,
+            offsetY: true,
+            openOnClick: false,
+        }"
+        :items="input.enum_values"
+        outlined
+        dense
+        :height="height"
+        hide-details="auto"
+        :disabled="isDisabled"
+        @input="onInput"
     />
     <v-checkbox
         v-else-if="input.type === 'bool'"
@@ -28,25 +47,9 @@
         primary
         hide-details
         :disabled="isDisabled"
-        @change="handleChange"
+        @change="onInput"
     />
-    <charset-input
-        v-else-if="input.type === 'charset'"
-        v-model="input.value"
-        :defCharset="defTblCharset"
-        :height="height"
-        :disabled="isDisabled"
-        @on-change="handleChange"
-    />
-    <collation-input
-        v-else-if="input.type === 'collation'"
-        v-model="input.value"
-        :height="height"
-        :defCollation="defTblCollation"
-        :charset="columnCharset"
-        :disabled="isDisabled"
-        @on-change="handleChange"
-    />
+
     <v-text-field
         v-else
         v-model="input.value"
@@ -57,7 +60,7 @@
         dense
         :height="height"
         hide-details="auto"
-        @change="handleChange"
+        @input="onInput"
     />
 </template>
 
@@ -84,28 +87,22 @@
  * Events
  * Below events are used to handle "coupled case",
  * e.g. When column_type changes its value to a data type
- * that supports charset/collation, `on-change-column_type`
+ * that supports charset/collation, `on-input-column_type`
  * will be used to update charset/collation input to fill
  * data with default table charset/collation.
- * on-change-column_type: (cell)
- * on-change-charset: (cell)
- * on-change-AI: (cell)
- * on-change-PK: (cell)
- * on-change-NN: (cell)
+ * on-input-column_type: (cell)
+ * on-input-AI: (cell)
+ * on-input-PK: (cell)
+ * on-input-NN: (cell)
+ * on-input-generated: (cell)
  * Event for normal cell
- * on-change: (cell)
+ * on-input: (cell)
  */
 
-import CharsetInput from './CharsetInput.vue'
-import CollationInput from './CollationInput.vue'
-import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
+import { check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 import { mapGetters } from 'vuex'
 export default {
     name: 'column-input',
-    components: {
-        'charset-input': CharsetInput,
-        'collation-input': CollationInput,
-    },
     props: {
         data: { type: Object, required: true },
         height: { type: Number, required: true },
@@ -132,14 +129,14 @@ export default {
         hasChanged() {
             return !this.$help.lodash.isEqual(this.input, this.data)
         },
-        columnCharset() {
-            return this.$typy(this.input, 'rowObj.charset').safeString
-        },
         columnType() {
             return this.$typy(this.input, 'rowObj.column_type').safeString
         },
         isPK() {
             return this.$typy(this.input, 'rowObj.PK').safeString === 'YES'
+        },
+        isGenerated() {
+            return this.$typy(this.input, 'rowObj.generated').safeString !== '(none)'
         },
         isAI() {
             return this.$typy(this.input, 'rowObj.AI').safeString === 'AUTO_INCREMENT'
@@ -152,19 +149,23 @@ export default {
         },
         isDisabled() {
             switch (this.$typy(this.input, 'field').safeString) {
-                case 'charset':
-                case 'collation':
-                    if (this.columnCharset === 'utf8') return true
-                    return !check_charset_support(this.columnType)
+                case 'PK':
+                    //disable if column is generated
+                    return this.isGenerated
                 case 'UN':
                 case 'ZF':
                     return !check_UN_ZF_support(this.columnType)
                 case 'AI':
                     return !check_AI_support(this.columnType)
                 case 'NN':
-                    return this.isAI || this.isPK // implies NOT NULL so must be disabled
+                    //isAI or isPK implies NOT NULL so must be disabled
+                    // when column is generated, NN or NULL can not be defined
+                    return this.isAI || this.isPK || this.isGenerated
                 case 'UQ':
                     return this.isPK // implies UNIQUE already so UQ must be disabled
+                case 'generated':
+                    //disable if column is PK
+                    return this.isPK //https://mariadb.com/kb/en/generated-columns/#index-support
                 default:
                     return false
             }
@@ -218,6 +219,10 @@ export default {
                     input.type = 'bool'
                     input.value = input.value === 'AUTO_INCREMENT'
                     break
+                case 'generated':
+                    input.type = 'enum'
+                    input.enum_values = ['(none)', 'VIRTUAL', 'STORED']
+                    break
                 case 'PK':
                     input.type = 'bool'
                     input.value = input.value === 'YES'
@@ -225,10 +230,6 @@ export default {
                 case 'UQ':
                     input.type = 'bool'
                     input.value = Boolean(input.value)
-                    break
-                case 'charset':
-                case 'collation':
-                    input.type = input.field
                     break
             }
             return input
@@ -243,15 +244,17 @@ export default {
             delete newInput.enum_values
             return newInput
         },
-        handleChange() {
+        onInput() {
             if (this.hasChanged) {
                 let newInput = this.handleRemoveType()
                 switch (this.input.type) {
                     case 'column_type':
-                        this.$emit('on-change-column_type', newInput)
+                        this.$emit('on-input-column_type', newInput)
                         break
-                    case 'charset':
-                        this.$emit('on-change-charset', newInput)
+                    case 'enum':
+                        if (newInput.field === 'generated')
+                            this.$emit('on-input-generated', newInput)
+                        else this.$emit('on-input', newInput)
                         break
                     case 'bool': {
                         const field = newInput.field
@@ -274,14 +277,14 @@ export default {
                             case 'UQ':
                                 newInput.value = newInput.value ? this.uniqueIdxName : ''
                         }
-                        if (field === 'AI') this.$emit('on-change-AI', newInput)
-                        else if (field === 'PK') this.$emit('on-change-PK', newInput)
-                        else if (field === 'NN') this.$emit('on-change-NN', newInput)
-                        else this.$emit('on-change', newInput)
+                        if (field === 'AI') this.$emit('on-input-AI', newInput)
+                        else if (field === 'PK') this.$emit('on-input-PK', newInput)
+                        else if (field === 'NN') this.$emit('on-input-NN', newInput)
+                        else this.$emit('on-input', newInput)
                         break
                     }
                     default:
-                        this.$emit('on-change', newInput)
+                        this.$emit('on-input', newInput)
                         break
                 }
             }

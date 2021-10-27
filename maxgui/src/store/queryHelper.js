@@ -171,10 +171,16 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
     IF(c.constraint_name IS NULL, '', c.constraint_name) as UQ,
     IF(column_type LIKE '%ZEROFILL%', 'ZEROFILL', '') as ZF,
     IF(extra LIKE '%AUTO_INCREMENT%', 'AUTO_INCREMENT', '') as AI,
+    IF(
+        UPPER(extra) REGEXP 'VIRTUAL|STORED',
+        REGEXP_SUBSTR(UPPER(extra), 'VIRTUAL|STORED'),
+        '(none)'
+     ) AS generated,
     IF(character_set_name IS NULL, '', character_set_name) as charset,
     IF(collation_name IS NULL, '', collation_name) as collation,
-    column_comment as comment,
-    IF(column_default IS NULL, '', column_default) as 'default'`
+    COALESCE(generation_expression, column_default, '') as 'default/expression',
+    column_comment as comment
+    `
     const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
         sql: `
         SELECT ${cols} FROM information_schema.columns a

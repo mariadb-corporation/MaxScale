@@ -14,7 +14,7 @@ import Vue from 'vue'
 import update from 'immutability-helper'
 import { v1 as uuidv1 } from 'uuid'
 import deepDiff from 'deep-diff'
-import { format as sqlFormatter } from 'sql-formatter'
+import { format as sqlFormatter } from './sqlFormatter'
 export const isEmpty = require('lodash/isEmpty')
 export const cloneDeep = require('lodash/cloneDeep')
 export const isEqual = require('lodash/isEqual')
@@ -779,7 +779,6 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
 
 export function formatSQL(v) {
     return sqlFormatter(v, {
-        language: 'mariadb',
         indent: '   ',
         uppercase: true,
         linesBetweenQueries: 2,

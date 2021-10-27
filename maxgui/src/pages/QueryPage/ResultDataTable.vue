@@ -80,11 +80,10 @@
             <virtual-scroll-table
                 v-if="tableHeight > 0"
                 class="pb-2"
-                :benched="0"
                 :headers="visibleHeaders"
                 :rows="filteredRows"
                 :itemHeight="30"
-                :height="tableHeight"
+                :maxHeight="tableHeight"
                 :boundingWidth="width"
                 :isVertTable="isVertTable"
                 :showSelect="showSelect"

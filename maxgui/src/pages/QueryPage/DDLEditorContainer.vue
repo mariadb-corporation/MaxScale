@@ -341,9 +341,10 @@ export default {
                     ZF,
                     NN,
                     AI,
+                    generated,
                     charset,
                     collation,
-                    default: def,
+                    'default/expression': defOrExp,
                     comment,
                 } = colObj
                 if (isChanging) {
@@ -356,9 +357,11 @@ export default {
                 if (UN) sql += ` ${UN}`
                 if (ZF) sql += ` ${ZF}`
                 if (charset) sql += ` CHARACTER SET ${charset} COLLATE ${collation}`
-                sql += ` ${NN}`
+                // when column is generated, NN or NULL can not be defined
+                if (NN && generated === '(none)') sql += ` ${NN}`
                 if (AI) sql += ` ${AI}`
-                if (def) sql += ` DEFAULT ${def}`
+                if (generated === '(none)' && defOrExp) sql += ` DEFAULT ${defOrExp}`
+                else if (defOrExp) sql += ` AS (${defOrExp}) ${generated}`
                 if (comment) sql += ` COMMENT '${comment}'`
             })
             return sql
@@ -373,8 +376,10 @@ export default {
             let sql = ''
             sql += this.buildColsDfnSQL({ cols: addedCols, isChanging: false })
             addedCols.forEach(({ UQ, column_name }) => {
-                sql += this.handleAddComma()
-                sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+                if (UQ) {
+                    sql += this.handleAddComma()
+                    sql += `ADD UNIQUE INDEX ${escape(UQ)} (${escape(column_name)})`
+                }
             })
             return sql
         },

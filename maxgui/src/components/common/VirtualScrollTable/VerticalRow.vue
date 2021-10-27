@@ -16,10 +16,19 @@
                         height: lineHeight,
                     }"
                 >
-                    <truncate-string
-                        :text="`${h.text}`.toUpperCase()"
-                        :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
-                    />
+                    <slot
+                        :name="`vertical-header-${h.text}`"
+                        :data="{
+                            header: h,
+                            maxWidth: $typy(headerWidthMap[0]).safeNumber - 24,
+                            colIdx: i,
+                        }"
+                    >
+                        <truncate-string
+                            :text="`${h.text}`"
+                            :maxWidth="$typy(headerWidthMap[0]).safeNumber - 24"
+                        />
+                    </slot>
                 </div>
                 <div
                     :key="`${h.text}_${headerWidthMap[1]}_1`"
@@ -75,9 +84,9 @@ export default {
 </script>
 <style lang="scss" scoped>
 .tr-vertical-group {
-    .tr {
-        &:last-of-type {
-            border-bottom: thin solid $table-border;
+    .tr:last-of-type {
+        .td {
+            border-bottom: thin solid $separator !important;
         }
     }
 }
