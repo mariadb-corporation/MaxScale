@@ -106,9 +106,6 @@ export default {
     props: {
         data: { type: Object, required: true },
         height: { type: Number, required: true },
-        // for data type supports charset/collation
-        defTblCharset: { type: String, default: '' },
-        defTblCollation: { type: String, default: '' },
         dataTypes: { type: Array, default: () => [] },
     },
     data() {

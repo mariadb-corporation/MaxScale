@@ -96,8 +96,6 @@
                             rowObj: rowDataToObj(rowData),
                         }"
                         :height="30"
-                        :defTblCharset="defTblCharset"
-                        :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
                         @on-input="onCellInput"
                         @on-input-column_type="onInputColumnType"
@@ -108,12 +106,22 @@
                     />
                 </div>
             </template>
-            <!-- Add :key so that truncate-string rerender to evaluate truncation  -->
+            <!-- Add :key so that truncate-string rerender to evaluate truncation and fallback text-truncate class  -->
             <template v-slot:header-column_name="{ data: { maxWidth } }">
-                <truncate-string :key="maxWidth" text="Column Name" :maxWidth="maxWidth" />
+                <truncate-string
+                    :key="maxWidth"
+                    class="text-truncate"
+                    text="Column Name"
+                    :maxWidth="maxWidth"
+                />
             </template>
             <template v-slot:header-column_type="{ data: { maxWidth } }">
-                <truncate-string :key="maxWidth" text="Column Type" :maxWidth="maxWidth" />
+                <truncate-string
+                    :key="maxWidth"
+                    class="text-truncate"
+                    text="Column Type"
+                    :maxWidth="maxWidth"
+                />
             </template>
             <template
                 v-for="(value, key) in abbreviatedHeaders"
@@ -157,7 +165,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -168,6 +176,7 @@ export default {
     },
     props: {
         value: { type: Object, required: true },
+        initialData: { type: Object, required: true },
         height: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
         defTblCharset: { type: String, required: true },
@@ -184,9 +193,6 @@ export default {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
-        ...mapGetters({
-            getTblCreationInfo: 'query/getTblCreationInfo',
-        }),
         colsOptsData: {
             get() {
                 return this.value
@@ -194,9 +200,6 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
-        },
-        initialColsOptsData() {
-            return this.$typy(this.getTblCreationInfo, `data.cols_opts_data.data`).safeArray
         },
         headers() {
             return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => {
@@ -566,7 +569,7 @@ export default {
             // use initial expression value or empty string
             else {
                 defaultVal = this.$typy(
-                    this.initialColsOptsData,
+                    this.initialData.data,
                     `['${item.rowIdx}']['${this.idxOfDefAndExp}']`
                 ).safeString
             }

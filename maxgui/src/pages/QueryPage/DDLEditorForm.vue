@@ -27,6 +27,7 @@
                     <alter-cols-opts
                         v-if="activeColSpec === SQL_DDL_ALTER_SPECS.COLUMNS"
                         v-model="colsOptsData"
+                        :initialData="$typy(initialData, 'cols_opts_data').safeObjectOrEmpty"
                         :height="tabDim.height"
                         :boundingWidth="tabDim.width"
                         :defTblCharset="$typy(tableOptsData, 'table_charset').safeString"
