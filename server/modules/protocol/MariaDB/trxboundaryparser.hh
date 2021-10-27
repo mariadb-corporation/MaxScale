@@ -51,6 +51,7 @@ public:
         TK_COMMIT,
         TK_CONSISTENT,
         TK_DOT,
+        TK_END,
         TK_EQ,
         TK_FALSE,
         TK_GLOBAL,
@@ -69,6 +70,7 @@ public:
         TK_WITH,
         TK_WORK,
         TK_WRITE,
+        TK_XA,
         TK_ZERO,
 
         PARSER_UNKNOWN_TOKEN,
@@ -194,6 +196,10 @@ private:
 
         case TK_SET:
             type_mask = parse_set(0);
+            break;
+
+        case TK_XA:
+            type_mask = parse_xa(type_mask);
             break;
 
         default:
@@ -548,6 +554,31 @@ private:
         return type_mask;
     }
 
+    uint32_t parse_xa(uint32_t type_mask)
+    {
+        switch (next_token(TOKEN_REQUIRED))
+        {
+        case TK_START:
+        case TK_BEGIN:
+            type_mask |= QUERY_TYPE_BEGIN_TRX;
+            break;
+
+        case TK_END:
+            type_mask |= QUERY_TYPE_COMMIT;
+            break;
+
+        case PARSER_EXHAUSTED:
+            break;
+
+        default:
+            type_mask = 0;
+            log_unexpected();
+            break;
+        }
+
+        return type_mask;
+    }
+
     // Significantly faster than library version.
     static char toupper(char c)
     {
@@ -677,6 +708,11 @@ private:
                 token = TK_EQ;
                 break;
 
+            case 'e':
+            case 'E':
+                token = expect_token(TBP_EXPECT_TOKEN("END"), TK_END);
+                break;
+
             case 'f':
             case 'F':
                 token = expect_token(TBP_EXPECT_TOKEN("FALSE"), TK_FALSE);
@@ -781,6 +817,11 @@ private:
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("WRITE"), TK_WRITE);
                 }
+                break;
+
+            case 'x':
+            case 'X':
+                token = expect_token(TBP_EXPECT_TOKEN("XA"), TK_XA);
                 break;
 
             case '0':

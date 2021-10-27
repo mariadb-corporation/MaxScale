@@ -3517,6 +3517,34 @@ cmd ::= START TRANSACTION start_transaction_characteristics(X). {
   mxs_sqlite3BeginTransaction(pParse, TK_START, X);
 }
 
+//////////////////////// The XA statement ////////////////////////////////////
+//
+
+// The XA transaction ID consists of two strings and one integer with only the
+// first string being mandatory.
+xid ::= STRING.
+xid ::= STRING COMMA STRING.
+xid ::= STRING COMMA STRING COMMA INTEGER.
+
+xa_start_opt ::= .
+xa_start_opt ::= JOIN.
+xa_start_opt ::= RESUME.
+
+xa_start ::= START.
+xa_start ::= BEGIN.
+
+cmd ::= XA xa_start xid xa_start_opt. {
+  mxs_sqlite3BeginTransaction(pParse, TK_START, 0);
+}
+
+xa_end_opt ::= .
+xa_end_opt ::= SUSPEND.
+xa_end_opt ::= SUSPEND FOR MIGRATE.
+
+cmd ::= XA END xid xa_end_opt. {
+  mxs_sqlite3CommitTransaction(pParse);
+}
+
 //////////////////////// The TRUNCATE statement ////////////////////////////////////
 //
 

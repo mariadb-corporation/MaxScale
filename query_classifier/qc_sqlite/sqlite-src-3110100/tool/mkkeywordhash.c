@@ -356,6 +356,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "MASTER",           "TK_MASTER",       ALWAYS                 },
   { "MERGE",            "TK_MERGE",        ALWAYS                 },
+  { "MIGRATE",          "TK_MIGRATE",      ALWAYS                 },
   { "MOD",              "TK_MOD",          ALWAYS                 },
   { "MODE",             "TK_MODE",         ALWAYS                 },
   { "NAMES",            "TK_NAMES",        ALWAYS                 },
@@ -433,6 +434,7 @@ static Keyword aKeywordTable[] = {
 #endif
   { "RESTRICT",         "TK_RESTRICT",     FKEY                   },
 #ifdef MAXSCALE
+  { "RESUME",           "TK_RESUME",       ALWAYS                 },
   { "REVOKE",           "TK_REVOKE",       ALWAYS                 },
 #endif
   { "RIGHT",            "TK_JOIN_KW",      ALWAYS                 },
@@ -467,6 +469,7 @@ static Keyword aKeywordTable[] = {
   { "SQL_NO_CACHE",     "TK_SELECT_OPTIONS_KW", ALWAYS            },
   { "SQL_SMALL_RESULT", "TK_SELECT_OPTIONS_KW", ALWAYS            },
   { "SOFT",             "TK_SOFT",              ALWAYS            },
+  { "SUSPEND",          "TK_SUSPEND",      ALWAYS                 },
 #endif
   { "SET",              "TK_SET",          ALWAYS                 },
 #ifdef MAXSCALE
