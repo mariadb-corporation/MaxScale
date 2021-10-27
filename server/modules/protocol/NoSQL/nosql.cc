@@ -1482,6 +1482,118 @@ UpdateKind get_update_kind(const bsoncxx::document::element& update_specificatio
     return kind;
 }
 
+string convert_update_operator_set(const bsoncxx::document::element& element, const string& doc)
+{
+    mxb_assert(element.key().compare("$set") == 0);
+
+    ostringstream ss;
+
+    ss << "JSON_SET(" << doc;
+
+    auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+    for (auto field : fields)
+    {
+        ss << ", ";
+
+        string_view key = field.key();
+
+        ss << "'$." << escape_essential_chars(string(key.data(), key.length())) << "', "
+           << element_to_value(field, ValueFor::JSON_NESTED);
+    }
+
+    ss << ")";
+
+    return ss.str();
+}
+
+string convert_update_operator_unset(const bsoncxx::document::element& element, const string& doc)
+{
+    mxb_assert(element.key().compare("$unset") == 0);
+
+    ostringstream ss;
+
+    ss << "JSON_REMOVE(" << doc;
+
+    auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+    for (auto field : fields)
+    {
+        ss << ", ";
+
+        string_view key = field.key();
+
+        ss << "'$." << escape_essential_chars(string(key.data(), key.length())) << "'";
+    }
+
+    ss << ")";
+
+    return ss.str();
+}
+
+string convert_update_operator_op(const bsoncxx::document::element& element,
+                                  const string& doc,
+                                  const char* zOperation,
+                                  const char* zOp)
+{
+
+    ostringstream ss;
+
+    ss << "JSON_SET(" << doc;
+
+    auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+    for (auto field : fields)
+    {
+        ss << ", ";
+
+        string_view sv = field.key();
+        string key = escape_essential_chars(string(sv.data(), sv.length()));
+
+        ss << "'$." << key << "', ";
+
+        double d;
+        if (element_as(field, Conversion::RELAXED, &d))
+        {
+            auto value = double_to_string(d);
+
+            ss << "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, "
+               << "JSON_VALUE(doc, '$." + key + "')" << zOp << value << ", "
+               << value
+               << ")";
+        }
+        else
+        {
+            DocumentBuilder value;
+            append(value, key, field);
+
+            ostringstream ss;
+            ss << "Cannot " << zOperation << " with non-numeric argument: "
+               << bsoncxx::to_json(value.view());
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+
+    ss << ")";
+
+    return ss.str();
+}
+
+string convert_update_operator_inc(const bsoncxx::document::element& element, const string& doc)
+{
+    mxb_assert(element.key().compare("$inc") == 0);
+
+    return convert_update_operator_op(element, doc, "increment", " + ");
+}
+
+string convert_update_operator_mul(const bsoncxx::document::element& element, const string& doc)
+{
+    mxb_assert(element.key().compare("$mul") == 0);
+
+    return convert_update_operator_op(element, doc, "multiply", " * ");
+}
+
 string convert_update_operations(const bsoncxx::document::view& update_operations)
 {
     string rv;
@@ -1493,89 +1605,28 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             rv += ", ";
         }
 
-        bool add_value = true;
-        string op;
-
         if (element.key().compare("$set") == 0)
         {
-            rv += "JSON_SET(doc, ";
+            rv += convert_update_operator_set(element, "doc");
         }
         else if (element.key().compare("$unset") == 0)
         {
-            rv += "JSON_REMOVE(doc, ";
-            add_value = false;
+            rv += convert_update_operator_unset(element, "doc");
         }
         else if (element.key().compare("$inc") == 0)
         {
-            rv += "JSON_SET(doc, ";
-            op = " + ";
+            rv += convert_update_operator_inc(element, "doc");
         }
         else if (element.key().compare("$mul") == 0)
         {
-            rv += "JSON_SET(doc, ";
-            op = " * ";
+            rv += convert_update_operator_mul(element, "doc");
         }
         else
         {
-            // In get_update_kind() it is established that it is either $set or $unset.
-            // This is to catch a changed there without a change here.
+            // In get_update_kind() it is established that it is one of the above.
+            // This is to catch a change there without a change here.
             mxb_assert(!true);
         }
-
-        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
-
-        string s;
-        for (auto field : fields)
-        {
-            if (!s.empty())
-            {
-                s += ", ";
-            }
-
-            string key = field.key().data();
-            key = escape_essential_chars(std::move(key));
-
-            s += "'$.";
-            s += key;
-            s += "'";
-
-            if (add_value)
-            {
-                s += ", ";
-                if (!op.empty())
-                {
-                    double inc;
-                    if (element_as(field, Conversion::RELAXED, &inc))
-                    {
-                        auto d = double_to_string(inc);
-
-                        s += "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, ";
-                        s += "JSON_VALUE(doc, '$." + key + "')" + op + d + ", ";
-                        s += d;
-                        s += ")";
-                    }
-                    else
-                    {
-                        DocumentBuilder value;
-                        append(value, key, field);
-
-                        ostringstream ss;
-                        ss << "Cannot increment with non-numeric argument: "
-                           << bsoncxx::to_json(value.view());
-
-                        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-                    }
-                }
-                else
-                {
-                    s += element_to_value(field, ValueFor::JSON_NESTED);
-                }
-            }
-        }
-
-        rv += s;
-
-        rv += ")";
     }
 
     rv += " ";
