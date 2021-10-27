@@ -1379,109 +1379,6 @@ string element_to_string(const document_element_or_array_item& x)
     return ss.str();
 }
 
-enum class UpdateKind
-{
-    AGGREGATION_PIPELINE, // Element is an array
-    REPLACEMENT_DOCUMENT, // Element is a document
-    UPDATE_OPERATORS,     // Element is a document
-    INVALID
-};
-
-UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
-{
-    UpdateKind kind = UpdateKind::INVALID;
-
-    if (update_specification.empty())
-    {
-        kind = UpdateKind::REPLACEMENT_DOCUMENT;
-    }
-    else
-    {
-        for (auto field : update_specification)
-        {
-            const char* pData = field.key().data(); // Not necessarily null-terminated.
-
-            string_view name(field.key().data(), field.key().length());
-
-            if (*pData == '$')
-            {
-                if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
-                {
-                    // TODO: Change this into operator->function map.
-                    if (name.compare("$set") != 0
-                        && name.compare("$unset") != 0
-                        && name.compare("$inc") != 0
-                        && name.compare("$mul") != 0)
-                    {
-                        // TODO: This will now terminate the whole processing,
-                        // TODO: but this should actually be returned as a write
-                        // TODO: error for the particular update object.
-                        ostringstream ss;
-                        ss << "Unknown modifier: " << name
-                           << ". Expected a valid update modifier or "
-                           << "pipeline-style update specified as an array. "
-                           << "Currently the only supported update operators are "
-                           << "$inc, $mul, $set and $unset.";
-
-                        throw SoftError(ss.str(), error::COMMAND_FAILED);
-                    }
-
-                    kind = UpdateKind::UPDATE_OPERATORS;
-                }
-                else
-                {
-                    // TODO: See above.
-                    ostringstream ss;
-                    ss << "The dollar ($) prefixed field '" << name << "' in '" << name << "' "
-                       << "is not valid for storage.";
-
-                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
-                }
-            }
-            else
-            {
-                if (kind == UpdateKind::INVALID)
-                {
-                    kind = UpdateKind::REPLACEMENT_DOCUMENT;
-                }
-                else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
-                {
-                    // TODO: See above.
-                    ostringstream ss;
-                    ss << "Unknown modifier: " << name
-                       << ". Expected  a valid update modifier or "
-                       << "pipeline-style update specified as an array";
-
-                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
-                }
-            }
-        }
-    }
-
-    mxb_assert(kind != UpdateKind::INVALID);
-
-    return kind;
-}
-
-UpdateKind get_update_kind(const bsoncxx::document::element& update_specification)
-{
-    UpdateKind kind = UpdateKind::INVALID;
-
-    switch (update_specification.type())
-    {
-    case bsoncxx::type::k_array:
-        kind = UpdateKind::AGGREGATION_PIPELINE;
-        break;
-
-    default:
-        kind = get_update_kind(update_specification.get_document());
-    }
-
-    mxb_assert(kind != UpdateKind::INVALID);
-
-    return kind;
-}
-
 string convert_update_operator_set(const bsoncxx::document::element& element, const string& doc)
 {
     mxb_assert(element.key().compare("$set") == 0);
@@ -1594,6 +1491,16 @@ string convert_update_operator_mul(const bsoncxx::document::element& element, co
     return convert_update_operator_op(element, doc, "multiply", " * ");
 }
 
+using UpdateOperatorConverter = string (*)(const bsoncxx::document::element& element, const string& doc);
+
+static std::unordered_map<string, UpdateOperatorConverter> update_operator_converters =
+{
+    { "$set",   convert_update_operator_set },
+    { "$unset", convert_update_operator_unset },
+    { "$inc",   convert_update_operator_inc },
+    { "$mul",   convert_update_operator_mul }
+};
+
 string convert_update_operations(const bsoncxx::document::view& update_operations)
 {
     string rv;
@@ -1605,33 +1512,119 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
             rv = "doc";
         }
 
-        if (element.key().compare("$set") == 0)
-        {
-            rv = convert_update_operator_set(element, rv);
-        }
-        else if (element.key().compare("$unset") == 0)
-        {
-            rv = convert_update_operator_unset(element, rv);
-        }
-        else if (element.key().compare("$inc") == 0)
-        {
-            rv = convert_update_operator_inc(element, rv);
-        }
-        else if (element.key().compare("$mul") == 0)
-        {
-            rv = convert_update_operator_mul(element, rv);
-        }
-        else
-        {
-            // In get_update_kind() it is established that it is one of the above.
-            // This is to catch a change there without a change here.
-            mxb_assert(!true);
-        }
+        auto key = element.key();
+        auto it = update_operator_converters.find(string(key.data(), key.length()));;
+        mxb_assert(it != update_operator_converters.end());
+
+        rv = it->second(element, rv);
     }
 
     rv += " ";
 
     return rv;
+}
+
+enum class UpdateKind
+{
+    AGGREGATION_PIPELINE, // Element is an array
+    REPLACEMENT_DOCUMENT, // Element is a document
+    UPDATE_OPERATORS,     // Element is a document
+    INVALID
+};
+
+UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    if (update_specification.empty())
+    {
+        kind = UpdateKind::REPLACEMENT_DOCUMENT;
+    }
+    else
+    {
+        for (auto field : update_specification)
+        {
+            auto key = field.key();
+            string name(key.data(), key.length());
+            char front = (name.empty() ? 0 : name.front());
+
+            if (front == '$')
+            {
+                if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
+                {
+                    if (update_operator_converters.find(name) == update_operator_converters.end())
+                    {
+                        ostringstream ss;
+                        ss << "Unknown modifier: " << name
+                           << ". Expected a valid update modifier or "
+                           << "pipeline-style update specified as an array. "
+                           << "Currently the only supported update operators are: ";
+
+                        vector<string> operators;
+                        for (auto kv: update_operator_converters)
+                        {
+                            operators.push_back(kv.first);
+                        }
+
+                        ss << mxb::join(operators);
+
+                        throw SoftError(ss.str(), error::COMMAND_FAILED);
+                    }
+
+                    kind = UpdateKind::UPDATE_OPERATORS;
+                }
+                else
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "The dollar ($) prefixed field '" << name << "' in '" << name << "' "
+                       << "is not valid for storage.";
+
+                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                }
+            }
+            else
+            {
+                if (kind == UpdateKind::INVALID)
+                {
+                    kind = UpdateKind::REPLACEMENT_DOCUMENT;
+                }
+                else if (kind != UpdateKind::REPLACEMENT_DOCUMENT)
+                {
+                    // TODO: See above.
+                    ostringstream ss;
+                    ss << "Unknown modifier: " << name
+                       << ". Expected  a valid update modifier or "
+                       << "pipeline-style update specified as an array";
+
+                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                }
+            }
+        }
+    }
+
+    mxb_assert(kind != UpdateKind::INVALID);
+
+    return kind;
+}
+
+UpdateKind get_update_kind(const bsoncxx::document::element& update_specification)
+{
+    UpdateKind kind = UpdateKind::INVALID;
+
+    switch (update_specification.type())
+    {
+    case bsoncxx::type::k_array:
+        kind = UpdateKind::AGGREGATION_PIPELINE;
+        break;
+
+    default:
+        kind = get_update_kind(update_specification.get_document());
+    }
+
+    mxb_assert(kind != UpdateKind::INVALID);
+
+    return kind;
 }
 
 void update_specification_to_set_value(UpdateKind kind,
