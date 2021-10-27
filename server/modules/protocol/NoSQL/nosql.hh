@@ -503,6 +503,7 @@ const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
 const char DOCUMENTS[]                       = "documents";
 const char DROPPED[]                         = "dropped";
+const char DROP_TARGET[]                     = "dropTarget";
 const char ELECTION_METRICS[]                = "electionMetrics";
 const char EMPTY[]                           = "empty";
 const char ERRMSG[]                          = "errmsg";
