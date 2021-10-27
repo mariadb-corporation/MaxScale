@@ -137,8 +137,13 @@ private:
     // in case it fails.
     uint32_t m_current_id {0};
 
+    // The previous PS ID, needed for direct PS execution where the COM_STMT_EXECUTE uses -1 to refer to the
+    // previous COM_STMT_PREPARE.
+    uint32_t m_prev_id {0};
+
     // A mapping of prepared statement IDs to the hints that they contain
     std::unordered_map<uint32_t, Hint> m_ps;
 
-    HINT* process_hints(GWBUF* data);
+    HINT*    process_hints(GWBUF* data);
+    uint32_t get_id(GWBUF* buffer) const;
 };

@@ -37,6 +37,30 @@ class DCB;
 class Config;
 class ComERR;
 
+namespace mariadb
+{
+
+enum class Op
+{
+    EQ,
+    GT,
+    GTE,
+    LT,
+    LTE,
+    NE,
+    NIN, // TO BE REMOVED
+};
+
+const char* to_string(Op op);
+
+}
+
+inline std::ostream& operator << (std::ostream& out, mariadb::Op op)
+{
+    out << mariadb::to_string(op);
+    return out;
+}
+
 namespace nosql
 {
 
@@ -390,6 +414,7 @@ public:
 
     virtual GWBUF* create_response(const Command& command) const = 0;
     virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
+    void append_write_error(ArrayBuilder& write_errors, int index) const;
 
     virtual std::unique_ptr<LastError> create_last_error() const = 0;
 

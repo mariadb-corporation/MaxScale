@@ -83,6 +83,7 @@ bool HintSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const
         if (reply.error())
         {
             m_ps.erase(m_current_id);
+            m_prev_id = 0;
         }
 
         m_current_id = 0;

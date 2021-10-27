@@ -399,6 +399,18 @@ HINT* HintParser::parse(InputIter it, InputIter end)
     return rval;
 }
 
+uint32_t HintSession::get_id(GWBUF* buffer) const
+{
+    auto ps_id = mxs_mysql_extract_ps_id(buffer);
+
+    if (ps_id == MARIADB_PS_DIRECT_EXEC_ID && m_prev_id)
+    {
+        ps_id = m_prev_id;
+    }
+
+    return ps_id;
+}
+
 HINT* HintSession::process_hints(GWBUF* data)
 {
     HINT* hint = nullptr;
@@ -422,15 +434,16 @@ HINT* HintSession::process_hints(GWBUF* data)
             // only one binary protocol prepared statement is executed at a time.
             m_ps.emplace(id, tmp);
             m_current_id = id;
+            m_prev_id = id;
         }
     }
     else if (cmd == MXS_COM_STMT_CLOSE)
     {
-        m_ps.erase(mxs_mysql_extract_ps_id(buffer.get()));
+        m_ps.erase(get_id(buffer.get()));
     }
     else if (mxs_mysql_is_ps_command(cmd))
     {
-        auto it = m_ps.find(mxs_mysql_extract_ps_id(buffer.get()));
+        auto it = m_ps.find(get_id(buffer.get()));
 
         if (it != m_ps.end())
         {

@@ -88,6 +88,42 @@ void test_unrelated_failure(TestConnections& test, const std::string& master_id)
     mysql_stmt_close(stmt);
 }
 
+void test_ps_execute_direct(TestConnections& test, const std::string& master_id)
+{
+    Connection conn = test.maxscale->rwsplit();
+    test.expect(conn.connect(), "Connection to MaxScale failed: %s", conn.error());
+
+    // Run the test multiple times to increase the probability that at least one slave server had enough time
+    // to complete the PS before the COM_STMT_EXECUTE arrives.
+    for (int i = 0; i < 100 && test.ok(); i++)
+    {
+        MYSQL_STMT* stmt = conn.stmt();
+        std::string query = "SELECT @@server_id -- maxscale route to master";
+
+        test.expect(mariadb_stmt_execute_direct(stmt, query.c_str(), query.size()) == 0,
+                    "execute_direct failed: %s %s", mysql_stmt_error(stmt), conn.error());
+
+        char buffer[100] = "";
+        my_bool err = false;
+        my_bool isnull = false;
+        MYSQL_BIND bind = {};
+
+        bind.buffer_length = sizeof(buffer);
+        bind.buffer = buffer;
+        bind.error = &err;
+        bind.is_null = &isnull;
+
+        test.expect(mysql_stmt_bind_result(stmt, &bind) == 0,
+                    "Failed to bind result: %s", mysql_stmt_error(stmt));
+        test.expect(mysql_stmt_fetch(stmt) == 0,
+                    "Failed to fetch result: %s", mysql_stmt_error(stmt));
+
+        test.expect(buffer == master_id, "Expected master's ID %s, got %s.", master_id.c_str(), buffer);
+
+        mysql_stmt_close(stmt);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -108,6 +144,9 @@ int main(int argc, char* argv[])
 
     // MXS-3812
     test_unrelated_failure(test, master_id);
+
+    // MXS-3813
+    test_ps_execute_direct(test, master_id);
 
     return test.global_result;
 }

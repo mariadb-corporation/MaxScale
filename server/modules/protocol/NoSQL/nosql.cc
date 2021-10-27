@@ -233,13 +233,13 @@ using ElementValueToString = string (*)(const bsoncxx::document::element& elemen
                                         const string& op);
 using FieldAndElementValueToComparison = string (*) (const Path::Incarnation& p,
                                                      const bsoncxx::document::element& element,
-                                                     const string& mariadb_op,
+                                                     mariadb::Op mariadb_op,
                                                      const string& nosql_op,
                                                      ElementValueToString value_to_string);
 
 struct ElementValueInfo
 {
-    const string                     mariadb_op;
+    mariadb::Op                      mariadb_op;
     ElementValueToString             value_to_string;
     FieldAndElementValueToComparison field_and_value_to_comparison;
 };
@@ -302,6 +302,16 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
 
     case bsoncxx::type::k_int64:
         ss << x.get_int64();
+        break;
+
+    case bsoncxx::type::k_binary:
+        {
+            auto b = x.get_binary();
+
+            string_view s(reinterpret_cast<const char*>(b.bytes), b.size);
+
+            ss << "'" << s << "'";
+        }
         break;
 
     case bsoncxx::type::k_bool:
@@ -398,6 +408,13 @@ string element_to_value(const document_element_or_array_item& x, ValueFor value_
     case bsoncxx::type::k_maxkey:
         ss << std::numeric_limits<int64_t>::max();
         break;
+
+    case bsoncxx::type::k_code:
+        ss << "'" << x.get_code().code << "'";
+        break;
+
+    case bsoncxx::type::k_undefined:
+        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
 
     default:
         {
@@ -587,58 +604,113 @@ bool is_scalar_value(const bsoncxx::document::element& element)
     return rv;
 }
 
-string default_field_and_value_to_comparison(const Path::Incarnation& p,
-                                             const bsoncxx::document::element& element,
-                                             const string& mariadb_op,
-                                             const string& nosql_op,
-                                             ElementValueToString value_to_string)
+string timestamp_to_condition(const Path::Incarnation& p,
+                              mariadb::Op op,
+                              const bsoncxx::types::b_timestamp& ts)
 {
-    auto type = element.type();
-
-    if (type == bsoncxx::type::k_regex && nosql_op != "$eq")
-    {
-        ostringstream ss;
-        ss << "Can't have regex as arg to " << nosql_op;
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-
-     // TODO: This is true with array anywhere, so p.is_parent_array() is probably needed.
-    auto expects_array = p.has_array_demand();
-
-    const char* zGet = expects_array || !is_scalar_value(element) ? "JSON_EXTRACT" : "JSON_VALUE";
-
-    bool is_date = (type == bsoncxx::type::k_date);
-
-    // A date is stored as a document containing a field "$date" with the value.
-    string f = is_date ? p.path() + ".$date" : p.path();
-
     ostringstream ss;
 
-    ss << "(" << zGet << "(doc, '$." << f << "') IS NOT NULL "
-       << "AND (" << zGet << "(doc, '$." + f + "') " << mariadb_op << " ";
+    string f = "$." + p.path() + ".$timestamp";
 
-    bool is_array = type == bsoncxx::type::k_array;
+    ss << "(JSON_QUERY(doc, '" << f << "') IS NOT NULL AND ";
 
-    if (expects_array && !is_array)
+    switch (op)
     {
-        ss << "JSON_ARRAY("
-           << value_to_string(element, ValueFor::JSON_NESTED, nosql_op)
-           << ")";
-    }
-    else
-    {
-        ss << value_to_string(element, ValueFor::SQL, nosql_op);
+    case mariadb::Op::EQ:
+    case mariadb::Op::NE:
+        ss << "JSON_VALUE(doc, '" << f << ".t') " << op << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') " << op << ts.increment;
+        break;
+
+    case mariadb::Op::LT:
+    case mariadb::Op::GT:
+        ss << "JSON_VALUE(doc, '" << f << ".t') " << op << ts.timestamp;
+        break;
+
+    case mariadb::Op::LTE:
+        ss << "(JSON_VALUE(doc, '" << f << ".t') < " << ts.timestamp << " OR "
+           << "(JSON_VALUE(doc, '" << f << ".t') = " << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') = " << ts.increment << "))";
+        break;
+
+    case mariadb::Op::GTE:
+        ss << "(JSON_VALUE(doc, '" << f << ".t') > " << ts.timestamp << " OR "
+           << "(JSON_VALUE(doc, '" << f << ".t') = " << ts.timestamp << " AND "
+           << "JSON_VALUE(doc, '" << f << ".i') = " << ts.increment << "))";
+        break;
+
+    case mariadb::Op::NIN:
+        // TODO: NIN should be removed altogether.
+        throw SoftError("$nin needs an array", error::BAD_VALUE);
     }
 
-    ss << "))";
+    ss << ")";
 
     return ss.str();
 }
 
+string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
+{
+    return timestamp_to_condition(p, mariadb::Op::EQ, timestamp);
+}
+
+string default_field_and_value_to_comparison(const Path::Incarnation& p,
+                                             const bsoncxx::document::element& element,
+                                             mariadb::Op mariadb_op,
+                                             const string& nosql_op,
+                                             ElementValueToString value_to_string)
+{
+    string rv;
+    string path;
+
+    switch (element.type())
+    {
+    case bsoncxx::type::k_binary:
+        path = p.path() + ".$binary";
+        break;
+
+    case bsoncxx::type::k_date:
+        path = p.path() + ".$date";
+        break;
+
+    case bsoncxx::type::k_code:
+        path = p.path() + ".$code";
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        rv = timestamp_to_condition(p, mariadb_op, element.get_timestamp());
+        break;
+
+    case bsoncxx::type::k_regex:
+        if (nosql_op != "$eq")
+        {
+            ostringstream ss;
+            ss << "Can't have regex as arg to " << nosql_op;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        // Fallthrough
+    default:
+        path = p.path();
+    }
+
+    if (rv.empty())
+    {
+        ostringstream ss;
+        ss << "(JSON_EXTRACT(doc, '$." << path << "') IS NOT NULL AND "
+           << "(JSON_EXTRACT(doc, '$." << path << "') " << mariadb_op << " "
+           << value_to_string(element, ValueFor::SQL, nosql_op)
+           << "))";
+
+        rv = ss.str();
+    }
+
+    return rv;
+}
+
 string field_and_value_to_nin_comparison(const Path::Incarnation& p,
                                          const bsoncxx::document::element& element,
-                                         const string& mariadb_op,
+                                         mariadb::Op mariadb_op,
                                          const string& nosql_op,
                                          ElementValueToString value_to_string)
 {
@@ -647,7 +719,7 @@ string field_and_value_to_nin_comparison(const Path::Incarnation& p,
 
     if (!s.empty())
     {
-        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb_op + " " + s + ")";
+        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb::to_string(mariadb_op) + " " + s + ")";
     }
     else
     {
@@ -659,7 +731,7 @@ string field_and_value_to_nin_comparison(const Path::Incarnation& p,
 
 string field_and_value_to_eq_comparison(const Path::Incarnation& p,
                                         const bsoncxx::document::element& element,
-                                        const string& mariadb_op,
+                                        mariadb::Op mariadb_op,
                                         const string& nosql_op,
                                         ElementValueToString value_to_string)
 {
@@ -690,13 +762,13 @@ string field_and_value_to_eq_comparison(const Path::Incarnation& p,
 
 const unordered_map<string, ElementValueInfo> converters =
 {
-    { "$eq",     { "=",      &element_to_value, field_and_value_to_eq_comparison } },
-    { "$gt",     { ">",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$gte",    { ">=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$lt",     { "<",      &element_to_value, default_field_and_value_to_comparison } },
-    { "$lte",    { "<=",     &element_to_value, default_field_and_value_to_comparison } },
-    { "$ne",     { "!=",     &element_to_value, field_and_value_to_eq_comparison } },
-    { "$nin",    { "NOT IN", &element_to_array, field_and_value_to_nin_comparison } },
+    { "$eq",     { mariadb::Op::EQ,  &element_to_value, field_and_value_to_eq_comparison } },
+    { "$gt",     { mariadb::Op::GT,  &element_to_value, default_field_and_value_to_comparison } },
+    { "$gte",    { mariadb::Op::GTE, &element_to_value, default_field_and_value_to_comparison } },
+    { "$lt",     { mariadb::Op::LT,  &element_to_value, default_field_and_value_to_comparison } },
+    { "$lte",    { mariadb::Op::LTE, &element_to_value, default_field_and_value_to_comparison } },
+    { "$ne",     { mariadb::Op::NE,  &element_to_value, field_and_value_to_eq_comparison } },
+    { "$nin",    { mariadb::Op::NIN, &element_to_array, field_and_value_to_nin_comparison } },
 };
 
 inline const char* to_description(Path::Incarnation::ArrayOp op)
@@ -1028,19 +1100,6 @@ string type_to_condition_from_value(const Path::Incarnation& p, const document_o
     }
 
     return rv;
-}
-
-string timestamp_to_condition(const Path::Incarnation& p, const bsoncxx::types::b_timestamp& timestamp)
-{
-    ostringstream ss;
-
-    string field = "$." + p.path();
-
-    ss << "(JSON_QUERY(doc, '" << field << ".$timestamp') IS NOT NULL AND "
-       << "JSON_VALUE(doc, '" << field << ".$timestamp.t') = " << timestamp.timestamp << " AND "
-       << "JSON_VALUE(doc, '" << field << ".$timestamp.i') = " << timestamp.increment << ")";
-
-    return ss.str();
 }
 
 string regex_to_condition(const Path::Incarnation& p,
@@ -1653,6 +1712,41 @@ bool append_objectid(DocumentBuilder& doc, const string_view& key, json_t* pObje
 
 }
 
+namespace mariadb
+{
+
+const char* to_string(Op op)
+{
+    switch (op)
+    {
+    case Op::EQ:
+        return "=";
+
+    case Op::GT:
+        return ">";
+
+    case Op::GTE:
+        return ">=";
+
+    case Op::LT:
+        return "<";
+
+    case Op::LTE:
+        return "<=";
+
+    case Op::NE:
+        return "!=";
+
+    case Op::NIN:
+        return "NOT IN";
+    };
+
+    mxb_assert(!true);
+    return "unknown";
+}
+
+}
+
 namespace nosql
 {
 
@@ -2079,6 +2173,16 @@ Msg::Msg(const Packet& packet)
 //
 // Error classes
 //
+void Exception::append_write_error(ArrayBuilder& write_errors, int index) const
+{
+    DocumentBuilder write_error;
+    write_error.append(kvp(key::INDEX, index));
+    write_error.append(kvp(key::CODE, m_code));
+    write_error.append(kvp(key::ERRMSG, what()));
+
+    write_errors.append(write_error.extract());
+}
+
 NoError::NoError(int32_t n)
     : m_n(n)
 {
@@ -2374,7 +2478,7 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
 
         if (jt != converters.end())
         {
-            const auto& mariadb_op = jt->second.mariadb_op;
+            const auto mariadb_op = jt->second.mariadb_op;
             const auto& value_to_string = jt->second.value_to_string;
 
             condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
@@ -2637,7 +2741,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
                                 {
                                     ss << "(JSON_CONTAINS(";
                                     ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                       << element_to_value(one_element, ValueFor::JSON, zDescription)
+                                       << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
                                        << ")) = 1)";
                                 }
                                 else
@@ -2657,7 +2761,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
                         else
                         {
                             ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                               << element_to_value(one_element, ValueFor::JSON, zDescription)
+                               << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
                                << "), '$." << field << "') = 1)";
 
                             if (one_element.type() != bsoncxx::type::k_document)
