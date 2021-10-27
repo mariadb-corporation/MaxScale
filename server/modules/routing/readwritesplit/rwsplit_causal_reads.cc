@@ -115,7 +115,7 @@ bool RWSplitSession::finish_causal_read()
         {
             // Retry the query on the master
             GWBUF* buf = m_current_query.release();
-            buf->hints.emplace_back(HINT_ROUTE_TO_MASTER);
+            buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
             retry_query(buf, 0);
             rval = false;
         }
@@ -196,7 +196,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
     // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
     // has to be retried.
     GWBUF* buf = m_current_query.release();
-    buf->hints.emplace_back(HINT_ROUTE_TO_MASTER);
+    buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
     m_current_query.reset(buf);
 
     int64_t timeout = m_config.causal_reads_timeout.count();

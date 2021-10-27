@@ -408,7 +408,7 @@ bool SmartRouterSession::is_locked_to_master() const
     return false;
 }
 
-bool SmartRouterSession::supports_hint(HINT_TYPE hint_type) const
+bool SmartRouterSession::supports_hint(Hint::Type hint_type) const
 {
     return false;
 }

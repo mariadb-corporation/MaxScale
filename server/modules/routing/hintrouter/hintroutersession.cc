@@ -88,16 +88,16 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
     {
         // Look for matching hint.
         // TODO: Remove the cast.
-        HINT* current_hint = const_cast<HINT*>(&*it);
+        Hint* current_hint = const_cast<Hint*>(&*it);
         success = route_by_hint(pPacket, current_hint, false);
     }
 
     if (!success)
     {
         HR_DEBUG("No hints or hint-based routing failed, falling back to default action.");
-        HINT default_hint;
+        Hint default_hint;
         default_hint.type = m_router->get_default_action();
-        if (default_hint.type == HINT_ROUTE_TO_NAMED_SERVER)
+        if (default_hint.type == Hint::Type::ROUTE_TO_NAMED_SERVER)
         {
             default_hint.data = m_router->get_default_server();
         }
@@ -146,12 +146,13 @@ bool HintRouterSession::handleError(mxs::ErrorType type,
     return false;
 }
 
-bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_errors)
+bool HintRouterSession::route_by_hint(GWBUF* pPacket, Hint* hint, bool print_errors)
 {
+    using Type = Hint::Type;
     bool success = false;
     switch (hint->type)
     {
-    case HINT_ROUTE_TO_MASTER:
+    case Type::ROUTE_TO_MASTER:
         {
             bool master_ok = false;
             // The master server should be already known, but may have changed
@@ -188,11 +189,11 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
         }
         break;
 
-    case HINT_ROUTE_TO_SLAVE:
+    case Type::ROUTE_TO_SLAVE:
         success = route_to_slave(pPacket, print_errors);
         break;
 
-    case HINT_ROUTE_TO_NAMED_SERVER:
+    case Type::ROUTE_TO_NAMED_SERVER:
         {
             const string& backend_name = hint->data;
             BackendMap::const_iterator iter = m_backends.find(backend_name);
@@ -220,7 +221,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
         }
         break;
 
-    case HINT_ROUTE_TO_ALL:
+    case Type::ROUTE_TO_ALL:
         {
             HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
             BackendMap::size_type n_writes =
@@ -250,7 +251,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
         break;
 
     default:
-        MXS_ERROR("Unsupported hint type '%d'", hint->type);
+        MXS_ERROR("Unsupported hint type '%d'", (int)hint->type);
         break;
     }
     return success;

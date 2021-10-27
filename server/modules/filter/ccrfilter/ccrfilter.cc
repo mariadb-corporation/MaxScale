@@ -343,7 +343,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
         }
         else if (m_hints_left > 0)
         {
-            queue->hints.emplace_back(HINT_ROUTE_TO_MASTER);
+            queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
             MXS_INFO("%d queries left", m_hints_left);
@@ -355,7 +355,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
 
             if (dt < m_time.count())
             {
-                queue->hints.emplace_back(HINT_ROUTE_TO_MASTER);
+                queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
                 MXS_INFO("%.0f seconds left", m_time.count() - dt);
             }
@@ -383,7 +383,7 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
     while (it != end && !found_ccr)
     {
         const auto& hint = *it;
-        if (hint.type == HINT_PARAMETER && strcasecmp(hint.data.c_str(), CCR) == 0)
+        if (hint.type == Hint::Type::PARAMETER && strcasecmp(hint.data.c_str(), CCR) == 0)
         {
             found_ccr = true;
             auto val = hint.value.c_str();

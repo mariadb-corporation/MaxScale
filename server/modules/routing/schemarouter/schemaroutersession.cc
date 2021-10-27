@@ -180,7 +180,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
                  rc ? sql_len : 0,
                  rc ? sql : "",
                  (pPacket->hints.empty() ? "" : ", Hint:"),
-                 (pPacket->hints.empty() ? "" : STRHINTTYPE(pPacket->hints[0].type)));
+                 (pPacket->hints.empty() ? "" : Hint::type_to_str(pPacket->hints[0].type)));
 
         MXS_FREE(qtypestr);
     }
@@ -1274,7 +1274,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
         rval = get_ps_target(buffer, qtype, op);
     }
 
-    if (!buffer->hints.empty() && buffer->hints[0].type == HINT_ROUTE_TO_NAMED_SERVER)
+    if (!buffer->hints.empty() && buffer->hints[0].type == Hint::Type::ROUTE_TO_NAMED_SERVER)
     {
         const char* hinted_server = buffer->hints[0].data.c_str();
         for (const auto& b : m_backends)

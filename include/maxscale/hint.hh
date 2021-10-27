@@ -14,28 +14,27 @@
 
 #include <maxscale/ccdefs.hh>
 
-enum HINT_TYPE
-{
-    HINT_NONE = 0,
-    HINT_ROUTE_TO_MASTER,
-    HINT_ROUTE_TO_SLAVE,
-    HINT_ROUTE_TO_NAMED_SERVER,
-    HINT_ROUTE_TO_UPTODATE_SERVER,  /**< not supported by RWSplit and HintRouter */
-    HINT_ROUTE_TO_ALL,              /**< not supported by RWSplit, supported by HintRouter */
-    HINT_ROUTE_TO_LAST_USED,
-    HINT_PARAMETER,
-};
-
-const char* STRHINTTYPE(HINT_TYPE t);
-
 /**
  * A routing hint has a type and may optionally have hint-specific data.
  */
-struct HINT
+struct Hint
 {
-    HINT() = default;
+    enum class Type
+    {
+        NONE,
+        ROUTE_TO_MASTER,
+        ROUTE_TO_SLAVE,
+        ROUTE_TO_NAMED_SERVER,
+        ROUTE_TO_UPTODATE_SERVER,   /**< not supported by RWSplit and HintRouter */
+        ROUTE_TO_ALL,               /**< not supported by RWSplit, supported by HintRouter */
+        ROUTE_TO_LAST_USED,
+        PARAMETER,
+    };
 
-    explicit HINT(HINT_TYPE type);
+    static const char* type_to_str(Type t);
+
+    Hint() = default;
+    explicit Hint(Type type);
 
     /**
      * Create a hint with data. Typically used for ROUTE_TO_NAMED_SERVER-hints.
@@ -43,7 +42,7 @@ struct HINT
      * @param type Hint type
      * @param data Data
      */
-    HINT(HINT_TYPE type, std::string data);
+    Hint(Type type, std::string data);
 
     /**
      * Create a parameter-type hint.
@@ -51,7 +50,7 @@ struct HINT
      * @param param_name Parameter name
      * @param param_value Parameter value
      */
-    HINT(std::string param_name, std::string param_value);
+    Hint(std::string param_name, std::string param_value);
 
     /**
      * Is the hint valid?
@@ -60,7 +59,7 @@ struct HINT
      */
     explicit operator bool() const;
 
-    HINT_TYPE   type {HINT_NONE};   /**< The type of hint */
+    Type        type {Type::NONE};  /**< The type of hint */
     std::string data;               /**< Data or parameter name */
     std::string value;              /**< Parameter value */
 };

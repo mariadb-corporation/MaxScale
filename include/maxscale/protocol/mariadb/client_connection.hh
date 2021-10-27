@@ -102,7 +102,7 @@ public:
         return false;
     }
 
-    bool supports_hint(HINT_TYPE hint_type) const override
+    bool supports_hint(Hint::Type hint_type) const override
     {
         return false;
     }

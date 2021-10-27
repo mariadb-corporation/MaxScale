@@ -1046,21 +1046,22 @@ bool RWSplitSession::is_locked_to_master() const
     return m_current_master && m_target_node == m_current_master;
 }
 
-bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
+bool RWSplitSession::supports_hint(Hint::Type hint_type) const
 {
+    using Type = Hint::Type;
     bool rv = true;
 
     switch (hint_type)
     {
-    case HINT_ROUTE_TO_MASTER:
-    case HINT_ROUTE_TO_SLAVE:
-    case HINT_ROUTE_TO_NAMED_SERVER:
-    case HINT_ROUTE_TO_LAST_USED:
-    case HINT_PARAMETER:
+    case Type::ROUTE_TO_MASTER:
+    case Type::ROUTE_TO_SLAVE:
+    case Type::ROUTE_TO_NAMED_SERVER:
+    case Type::ROUTE_TO_LAST_USED:
+    case Type::PARAMETER:
         break;
 
-    case HINT_ROUTE_TO_UPTODATE_SERVER:
-    case HINT_ROUTE_TO_ALL:
+    case Type::ROUTE_TO_UPTODATE_SERVER:
+    case Type::ROUTE_TO_ALL:
         rv = false;
         break;
 

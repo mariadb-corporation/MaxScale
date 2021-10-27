@@ -58,7 +58,7 @@ class HintParser
 {
 public:
     using InputIter = mxs::Buffer::iterator;
-    using HintVector = std::vector<HINT>;
+    using HintVector = std::vector<Hint>;
 
     /**
      * Parse text into a hint
@@ -77,12 +77,12 @@ private:
     InputIter m_tok_begin;
     InputIter m_tok_end;
 
-    std::vector<HINT>                     m_stack;
-    std::unordered_map<std::string, HINT> m_named_hints;
+    std::vector<Hint>                     m_stack;
+    std::unordered_map<std::string, Hint> m_named_hints;
 
     TOKEN_VALUE next_token();
-    HINT        process_definition();
-    HINT        parse_one(InputIter begin, InputIter end);
+    Hint        process_definition();
+    Hint        parse_one(InputIter begin, InputIter end);
 };
 
 class HintSession : public mxs::FilterSession
@@ -108,8 +108,8 @@ private:
     uint32_t m_prev_id {0};
 
     // A mapping of prepared statement IDs to the hints that they contain
-    std::unordered_map<uint32_t, std::vector<HINT>> m_ps;
+    std::unordered_map<uint32_t, std::vector<Hint>> m_ps;
 
-    std::vector<HINT> process_hints(GWBUF* data);
+    std::vector<Hint> process_hints(GWBUF* data);
     uint32_t          get_id(GWBUF* buffer) const;
 };

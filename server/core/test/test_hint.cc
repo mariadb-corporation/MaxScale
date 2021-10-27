@@ -18,13 +18,13 @@ int main(int argc, char** argv)
 {
     int result = 0;
     fprintf(stderr, "testhint : Create a parameter hint");
-    HINT hint("name", "value");
+    Hint hint("name", "value");
     if (hint.value != "value")
     {
         fprintf(stderr, "Hint value should be correct\n");
         result++;
     }
-    if (hint.type != HINT_PARAMETER)
+    if (hint.type != Hint::Type::PARAMETER)
     {
         fprintf(stderr, "Hint type should be 'parameter'\n");
         result++;

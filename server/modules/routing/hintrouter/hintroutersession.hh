@@ -50,7 +50,7 @@ private:
     HintRouterSession(const HintRouterSession&);            // denied
     HintRouterSession& operator=(const HintRouterSession&); // denied
 private:
-    bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
+    bool route_by_hint(GWBUF* pPacket, Hint* current_hint, bool ignore_errors);
     bool route_to_slave(GWBUF* pPacket, bool print_errors);
     void update_connections();
 

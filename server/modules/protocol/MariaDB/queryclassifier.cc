@@ -404,45 +404,46 @@ bool QueryClassifier::query_type_is_read_only(uint32_t qtype) const
 
 void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint32_t* target)
 {
+    using Type = Hint::Type;
     const char max_rlag[] = "max_slave_replication_lag";
 
     bool check_more = true;
     for (auto it = hints.begin(); check_more && it != hints.end(); it++)
     {
-        const HINT& hint = *it;
+        const Hint& hint = *it;
         if (m_pHandler->supports_hint(hint.type))
         {
             switch (hint.type)
             {
-            case HINT_ROUTE_TO_MASTER:
+            case Type::ROUTE_TO_MASTER:
                 // This means override, so we bail out immediately.
                 *target = TARGET_MASTER;
                 MXS_DEBUG("Hint: route to master");
                 check_more = false;
                 break;
 
-            case HINT_ROUTE_TO_NAMED_SERVER:
+            case Type::ROUTE_TO_NAMED_SERVER:
                 // The router is expected to look up the named server.
                 *target |= TARGET_NAMED_SERVER;
                 MXS_DEBUG("Hint: route to named server: %s", hint.data.c_str());
                 break;
 
-            case HINT_ROUTE_TO_UPTODATE_SERVER:
+            case Type::ROUTE_TO_UPTODATE_SERVER:
                 // TODO: Add generic target type, never to be seem by RWS.
                 mxb_assert(false);
                 break;
 
-            case HINT_ROUTE_TO_ALL:
+            case Type::ROUTE_TO_ALL:
                 // TODO: Add generic target type, never to be seem by RWS.
                 mxb_assert(false);
                 break;
 
-            case HINT_ROUTE_TO_LAST_USED:
+            case Type::ROUTE_TO_LAST_USED:
                 MXS_DEBUG("Hint: route to last used");
                 *target = TARGET_LAST_USED;
                 break;
 
-            case HINT_PARAMETER:
+            case Type::PARAMETER:
                 if (strncasecmp(hint.data.c_str(), max_rlag, sizeof(max_rlag) - 1) == 0)
                 {
                     *target |= TARGET_RLAG_MAX;
@@ -454,12 +455,12 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
                 }
                 break;
 
-            case HINT_ROUTE_TO_SLAVE:
+            case Type::ROUTE_TO_SLAVE:
                 *target = TARGET_SLAVE;
                 MXS_DEBUG("Hint: route to slave.");
                 break;
 
-            case HINT_NONE:
+            case Type::NONE:
                 mxb_assert(!true);
                 break;
             }
@@ -636,7 +637,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
         const char* querytype = qtypestr == NULL ? "N/A" : qtypestr;
         const char* hint = querybuf->hints.empty() ? "" : ", Hint:";
-        const char* hint_type = querybuf->hints.empty() ? "" : STRHINTTYPE(querybuf->hints[0].type);
+        const char* hint_type = querybuf->hints.empty() ? "" : Hint::type_to_str(querybuf->hints[0].type);
 
         MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                  autocommit,

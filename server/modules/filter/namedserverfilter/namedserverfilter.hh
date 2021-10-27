@@ -138,7 +138,7 @@ private:
     bool m_active {true};       /* Is filter active? */
 
     /** Maps COM_STMT_PREPARE IDs to a list of hints. */
-    std::unordered_map<uint32_t, std::vector<HINT>> m_ps_id_to_hints;
+    std::unordered_map<uint32_t, std::vector<Hint>> m_ps_id_to_hints;
 
     uint32_t m_current_prep_id {0};     /**< ID of the PS currently preparing on server */
     uint32_t m_last_prepare_id {0};     /**< Last id prepared */
@@ -155,10 +155,10 @@ struct RegexToServers
     RegexToServers(const RegexToServers&) = delete;
     RegexToServers& operator=(const RegexToServers&) = delete;
 
-    std::string  m_match;                               /* Regex in text form */
-    pcre2_code*  m_regex {nullptr};                     /* Compiled regex */
-    StringVector m_targets;                             /* List of target servers or a special tag. */
-    HINT_TYPE    m_htype {HINT_ROUTE_TO_NAMED_SERVER};  /* Hint type */
+    std::string  m_match;                                       /* Regex in text form */
+    pcre2_code*  m_regex {nullptr};                             /* Compiled regex */
+    StringVector m_targets;                                     /* List of target servers or a special tag. */
+    Hint::Type   m_htype {Hint::Type::ROUTE_TO_NAMED_SERVER};   /* Hint type */
 
     /* Has an error message about matching this regex been printed yet? */
     std::atomic_bool m_error_printed {false};

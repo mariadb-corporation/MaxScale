@@ -378,7 +378,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                         auto& hints = m_ps_id_to_hints[ps_id];
                         hints.clear();
 
-                        HINT_TYPE htype = reg_serv->m_htype;
+                        Hint::Type htype = reg_serv->m_htype;
                         const auto& targets = reg_serv->m_targets;
                         hints.reserve(targets.size());
                         for (const auto& target : targets)
@@ -670,17 +670,17 @@ bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
         else if (only_elem == "->master")
         {
             m_targets.push_back(only_elem);
-            m_htype = HINT_ROUTE_TO_MASTER;
+            m_htype = Hint::Type::ROUTE_TO_MASTER;
         }
         else if (only_elem == "->slave")
         {
             m_targets.push_back(only_elem);
-            m_htype = HINT_ROUTE_TO_SLAVE;
+            m_htype = Hint::Type::ROUTE_TO_SLAVE;
         }
         else if (only_elem == "->all")
         {
             m_targets.push_back(only_elem);
-            m_htype = HINT_ROUTE_TO_ALL;
+            m_htype = Hint::Type::ROUTE_TO_ALL;
         }
         else
         {

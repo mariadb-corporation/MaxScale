@@ -236,9 +236,9 @@ TOKEN_VALUE HintParser::next_token()
  *
  * @return The processed hint or HINT_NONE on invalid input
  */
-HINT HintParser::process_definition()
+Hint HintParser::process_definition()
 {
-    HINT rval;
+    Hint rval;
     auto t = next_token();
 
     if (t == TOK_ROUTE)
@@ -249,22 +249,22 @@ HINT HintParser::process_definition()
 
             if (t == TOK_MASTER)
             {
-                rval = HINT(HINT_ROUTE_TO_MASTER);
+                rval = Hint(Hint::Type::ROUTE_TO_MASTER);
             }
             else if (t == TOK_SLAVE)
             {
-                rval = HINT(HINT_ROUTE_TO_SLAVE);
+                rval = Hint(Hint::Type::ROUTE_TO_SLAVE);
             }
             else if (t == TOK_LAST)
             {
-                rval = HINT(HINT_ROUTE_TO_LAST_USED);
+                rval = Hint(Hint::Type::ROUTE_TO_LAST_USED);
             }
             else if (t == TOK_SERVER)
             {
                 if (next_token() == TOK_STRING)
                 {
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = HINT(HINT_ROUTE_TO_NAMED_SERVER, value);
+                    rval = Hint(Hint::Type::ROUTE_TO_NAMED_SERVER, value);
                 }
             }
         }
@@ -278,24 +278,24 @@ HINT HintParser::process_definition()
         if (eq == TOK_EQUAL && val == TOK_STRING)
         {
             std::string value(m_tok_begin, m_tok_end);
-            rval = HINT(key, value);
+            rval = Hint(key, value);
         }
     }
 
     if (rval && next_token() != TOK_END)
     {
         // Unexpected input after hint definition, treat it as an error and remove the hint
-        rval = HINT();
+        rval = Hint();
     }
 
     return rval;
 }
 
-HINT HintParser::parse_one(InputIter it, InputIter end)
+Hint HintParser::parse_one(InputIter it, InputIter end)
 {
     m_it = it;
     m_end = end;
-    HINT rval;
+    Hint rval;
 
     if (next_token() == TOK_MAXSCALE)
     {
@@ -328,12 +328,12 @@ HINT HintParser::parse_one(InputIter it, InputIter end)
                 {
                     // A key=value hint
                     std::string value(m_tok_begin, m_tok_end);
-                    rval = HINT(key, value);
+                    rval = Hint(key, value);
                 }
             }
             else if (t == TOK_PREPARE)
             {
-                HINT hint = process_definition();
+                Hint hint = process_definition();
                 if (hint)
                 {
                     // Preparation of a named hint
@@ -381,7 +381,7 @@ HintParser::HintVector HintParser::parse(InputIter it, InputIter end)
 
     for (const auto& comment : get_all_comments(it, end))
     {
-        HINT hint = parse_one(comment.first, comment.second);
+        Hint hint = parse_one(comment.first, comment.second);
         if (hint)
         {
             rval.push_back(std::move(hint));
@@ -408,7 +408,7 @@ uint32_t HintSession::get_id(GWBUF* buffer) const
     return ps_id;
 }
 
-std::vector<HINT> HintSession::process_hints(GWBUF* data)
+std::vector<Hint> HintSession::process_hints(GWBUF* data)
 {
     HintParser::HintVector hints;
     mxs::Buffer buffer(data);

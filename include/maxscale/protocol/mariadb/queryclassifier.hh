@@ -288,7 +288,7 @@ public:
         virtual bool lock_to_master() = 0;
         virtual bool is_locked_to_master() const = 0;
 
-        virtual bool supports_hint(HINT_TYPE hint_type) const = 0;
+        virtual bool supports_hint(Hint::Type hint_type) const = 0;
     };
 
     // NOTE: For the time being these must be exactly like the ones in readwritesplit.hh

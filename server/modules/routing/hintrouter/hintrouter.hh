@@ -26,7 +26,7 @@ public:
     {
         Config(const char* name);
 
-        HINT_TYPE   default_action;
+        Hint::Type  default_action;
         std::string default_server;
         int64_t     max_slaves;
     };
@@ -44,7 +44,7 @@ public:
         return m_config;
     }
 
-    HINT_TYPE get_default_action() const
+    Hint::Type get_default_action() const
     {
         return m_config.default_action;
     }

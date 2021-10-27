@@ -74,26 +74,26 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
 }
 
 
-void test_parse(const std::string& input, int expected_type)
+void test_parse(const std::string& input, Hint::Type expected_type)
 {
     mxs::Buffer buffer(input.c_str(), input.size());
     HintParser parser;
     auto hints = parser.parse(buffer.begin(), buffer.end());
 
-    if (hints.empty() && expected_type != 0)
+    if (hints.empty() && expected_type != Hint::Type::NONE)
     {
         std::cout << "Expected hint but didn't get one: " << input << std::endl;
         errors++;
     }
-    else if (!hints.empty() && expected_type == 0)
+    else if (!hints.empty() && expected_type == Hint::Type::NONE)
     {
         std::cout << "Expected no hint but got one: " << input << std::endl;
         errors++;
     }
     else if (!hints.empty() && hints[0].type != expected_type)
     {
-        std::cout << "Expected hint of type " << expected_type << " but got type "
-                  << (int)hints[0].type << ": " << input << std::endl;
+        std::cout << "Expected hint of type " << Hint::type_to_str(expected_type) << " but got type "
+                  << Hint::type_to_str(hints[0].type) << ": " << input << std::endl;
         errors++;
     }
 }
@@ -180,17 +180,18 @@ int main(int argc, char** argv)
     test("-- working comment\nselect 1; --bad comment", {"working comment"});
     test("select 1 -- working comment --bad comment", {"working comment --bad comment"});
 
-    test_parse("SELECT 1 /* maxscale route to master */", HINT_ROUTE_TO_MASTER);
-    test_parse("SELECT 1 /* maxscale route to slave */", HINT_ROUTE_TO_SLAVE);
-    test_parse("SELECT 1 /* maxscale route to last*/", HINT_ROUTE_TO_LAST_USED);
-    test_parse("SELECT 1 /* maxscale route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
-    test_parse("SELECT 1 /* maxscale test1 prepare route to server server1 */", 0);
-    test_parse("SELECT 1 /* maxscale test1 start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
-    test_parse("SELECT 1 /* maxscale start route to server server1 */", HINT_ROUTE_TO_NAMED_SERVER);
-    test_parse("SELECT 1 /* maxscale end*/", 0);
-    test_parse("SELECT 1 /* maxscale end*/", 0);
-    test_parse("SELECT 1 /* maxscale key=value */", HINT_PARAMETER);
-    test_parse("SELECT 1 /* maxscale max_slave_replication_lag=1*/", HINT_PARAMETER);
+    using Type = Hint::Type;
+    test_parse("SELECT 1 /* maxscale route to master */", Type::ROUTE_TO_MASTER);
+    test_parse("SELECT 1 /* maxscale route to slave */", Type::ROUTE_TO_SLAVE);
+    test_parse("SELECT 1 /* maxscale route to last*/", Type::ROUTE_TO_LAST_USED);
+    test_parse("SELECT 1 /* maxscale route to server server1 */", Type::ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale test1 prepare route to server server1 */", Type::NONE);
+    test_parse("SELECT 1 /* maxscale test1 start route to server server1 */", Type::ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale start route to server server1 */", Type::ROUTE_TO_NAMED_SERVER);
+    test_parse("SELECT 1 /* maxscale end*/", Type::NONE);
+    test_parse("SELECT 1 /* maxscale end*/", Type::NONE);
+    test_parse("SELECT 1 /* maxscale key=value */", Type::PARAMETER);
+    test_parse("SELECT 1 /* maxscale max_slave_replication_lag=1*/", Type::PARAMETER);
 
     // Process multiple comments  with hints in them
     // Note: How the hints are used depends on the router module

@@ -80,7 +80,7 @@ struct SHARED_BUF
 class GWBUF
 {
 public:
-    using HintVector = std::vector<HINT>;
+    using HintVector = std::vector<Hint>;
 
     GWBUF*      next {nullptr};                     /*< Next buffer in a linked chain of buffers */
     GWBUF*      tail {nullptr};                     /*< Last buffer in a linked chain of buffers */

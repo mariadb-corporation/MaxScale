@@ -25,14 +25,14 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
 
-cfg::ParamEnum<HINT_TYPE> s_default_action(
+cfg::ParamEnum<Hint::Type> s_default_action(
     &s_spec, "default_action", "Default action to take",
     {
-        {HINT_ROUTE_TO_MASTER, "master", },
-        {HINT_ROUTE_TO_SLAVE, "slave", },
-        {HINT_ROUTE_TO_NAMED_SERVER, "named", },
-        {HINT_ROUTE_TO_ALL, "all", },
-    }, HINT_ROUTE_TO_MASTER);
+        {Hint::Type::ROUTE_TO_MASTER, "master", },
+        {Hint::Type::ROUTE_TO_SLAVE, "slave", },
+        {Hint::Type::ROUTE_TO_NAMED_SERVER, "named", },
+        {Hint::Type::ROUTE_TO_ALL, "all", },
+    }, Hint::Type::ROUTE_TO_MASTER);
 
 cfg::ParamString s_default_server(
     &s_spec, "default_server", "Default server to use", "");
