@@ -1,7 +1,10 @@
 <template>
     <v-form v-model="isFormValid">
         <div ref="header">
-            <alter-table-opts v-model="tableOptsData" class="py-0 px-2 pb-4" />
+            <alter-table-opts
+                v-model="tableOptsData"
+                :initialData="$typy(initialData, 'table_opts_data').safeObjectOrEmpty"
+            />
         </div>
         <v-tabs
             v-if="!isEmptyFormData && activated"
@@ -18,7 +21,7 @@
                 <span> {{ $t(spec.toLowerCase()) }}</span>
             </v-tab>
         </v-tabs>
-        <div class="px-4 py-2">
+        <div class="px-3 py-2">
             <v-slide-x-transition>
                 <keep-alive>
                     <alter-cols-opts
@@ -48,7 +51,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState, mapGetters } from 'vuex'
 import AlterTableOpts from './AlterTableOpts.vue'
 import AlterColsOpts from './AlterColsOpts.vue'
 
@@ -78,6 +81,12 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
         }),
+        ...mapGetters({
+            getTblCreationInfo: 'query/getTblCreationInfo',
+        }),
+        initialData() {
+            return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
+        },
         tableOptsData: {
             get() {
                 return this.$typy(this.formData, 'table_opts_data').safeObjectOrEmpty
@@ -104,7 +113,7 @@ export default {
         },
         tabDim() {
             return {
-                width: this.dynDim.width - 32, // v-tab-item class px-4
+                width: this.dynDim.width - 24, // v-tab-item class px-3
                 // v-tab-item class py-2: 16 && v-tabs-bar: 24
                 height: this.dynDim.height - this.headerHeight - 24 - 16,
             }
