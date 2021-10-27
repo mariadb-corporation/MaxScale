@@ -2741,7 +2741,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
                                 {
                                     ss << "(JSON_CONTAINS(";
                                     ss << "JSON_EXTRACT(doc, '$." << p << "'), JSON_ARRAY("
-                                       << element_to_value(one_element, ValueFor::JSON, zDescription)
+                                       << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
                                        << ")) = 1)";
                                 }
                                 else
@@ -2761,7 +2761,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
                         else
                         {
                             ss << "(JSON_CONTAINS(doc, JSON_ARRAY("
-                               << element_to_value(one_element, ValueFor::JSON, zDescription)
+                               << element_to_value(one_element, ValueFor::JSON_NESTED, zDescription)
                                << "), '$." << field << "') = 1)";
 
                             if (one_element.type() != bsoncxx::type::k_document)
