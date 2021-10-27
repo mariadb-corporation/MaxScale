@@ -70,6 +70,7 @@
                 <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
         </div>
+
         <virtual-scroll-table
             :headers="headers"
             :rows="rows"
@@ -96,6 +97,8 @@
                             rowObj: rowDataToObj(rowData),
                         }"
                         :height="30"
+                        :defTblCharset="defTblCharset"
+                        :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"
                         @on-input="onCellInput"
                         @on-input-column_type="onInputColumnType"
@@ -103,6 +106,7 @@
                         @on-input-NN="onInputNN"
                         @on-input-AI="onInputAI"
                         @on-input-generated="onInputGenerated"
+                        @on-input-charset="onInputCharset"
                     />
                 </div>
             </template>
@@ -147,8 +151,6 @@
                 </v-tooltip>
             </template>
         </virtual-scroll-table>
-        <!-- TODO: Component to select column name to reveal additional
-             inputs .i.e. charset, collation and comment inputs -->
     </div>
 </template>
 
@@ -225,11 +227,6 @@ export default {
                     case 'id':
                         h.hidden = true
                         break
-                    case 'charset':
-                    case 'collation':
-                    case 'comment':
-                        h.hidden = true
-                        break
                 }
                 return h
             })
@@ -245,7 +242,6 @@ export default {
                 generated: 'Generated column',
             }
         },
-
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
         },
@@ -257,17 +253,11 @@ export default {
             })
             return items
         },
-        idxOfColumnName() {
-            return this.findHeaderIdx('column_name')
-        },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
         },
         idxOfCharset() {
             return this.findHeaderIdx('charset')
-        },
-        idxOfComment() {
-            return this.findHeaderIdx('comment')
         },
         idxOfAI() {
             return this.findHeaderIdx('AI')

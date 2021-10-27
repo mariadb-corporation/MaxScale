@@ -176,9 +176,9 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
         REGEXP_SUBSTR(UPPER(extra), 'VIRTUAL|STORED'),
         '(none)'
      ) AS generated,
+    COALESCE(generation_expression, column_default, '') as 'default/expression',
     IF(character_set_name IS NULL, '', character_set_name) as charset,
     IF(collation_name IS NULL, '', collation_name) as collation,
-    COALESCE(generation_expression, column_default, '') as 'default/expression',
     column_comment as comment
     `
     const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
