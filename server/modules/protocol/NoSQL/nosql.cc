@@ -1379,7 +1379,50 @@ string element_to_string(const document_element_or_array_item& x)
     return ss.str();
 }
 
-string convert_update_operator_set(const bsoncxx::document::element& element, const string& doc)
+void add_update_path(unordered_set<string>& paths, const string_view& field)
+{
+    string f = string(field.data(), field.length());
+
+    paths.insert(f);
+
+    auto i = f.find('.');
+
+    if (i != string::npos)
+    {
+        paths.insert(f.substr(0, i));
+    }
+}
+
+string check_update_path(const unordered_set<string>& paths, const string_view& field)
+{
+    string f = string(field.data(), field.length());
+
+    auto it = paths.find(f);
+
+    if (it == paths.end())
+    {
+        auto i = f.find('.');
+
+        if (i != string::npos)
+        {
+            it = paths.find(f.substr(0, i));
+        }
+    }
+
+    if (it != paths.end())
+    {
+        ostringstream ss;
+        ss << "Updating the path '" << field << "' would create a conflict at '" << *it << "'";
+
+        throw SoftError(ss.str(), error::CONFLICTING_UPDATE_OPERATORS);
+    }
+
+    return escape_essential_chars(std::move(f));
+}
+
+string convert_update_operator_set(const bsoncxx::document::element& element,
+                                   const string& doc,
+                                   unordered_set<string>& paths)
 {
     mxb_assert(element.key().compare("$set") == 0);
 
@@ -1393,10 +1436,12 @@ string convert_update_operator_set(const bsoncxx::document::element& element, co
     {
         ss << ", ";
 
-        string_view key = field.key();
+        string_view sv = field.key();
+        string key = check_update_path(paths, sv);
 
-        ss << "'$." << escape_essential_chars(string(key.data(), key.length())) << "', "
-           << element_to_value(field, ValueFor::JSON_NESTED);
+        ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+
+        add_update_path(paths, sv);
     }
 
     ss << ")";
@@ -1404,7 +1449,9 @@ string convert_update_operator_set(const bsoncxx::document::element& element, co
     return ss.str();
 }
 
-string convert_update_operator_unset(const bsoncxx::document::element& element, const string& doc)
+string convert_update_operator_unset(const bsoncxx::document::element& element,
+                                     const string& doc,
+                                     unordered_set<string>& paths)
 {
     mxb_assert(element.key().compare("$unset") == 0);
 
@@ -1418,9 +1465,12 @@ string convert_update_operator_unset(const bsoncxx::document::element& element, 
     {
         ss << ", ";
 
-        string_view key = field.key();
+        string_view sv = field.key();
+        string key = escape_essential_chars(string(sv.data(), sv.length()));
 
-        ss << "'$." << escape_essential_chars(string(key.data(), key.length())) << "'";
+        ss << "'$." << key << "'";
+
+        add_update_path(paths, sv);
     }
 
     ss << ")";
@@ -1431,7 +1481,8 @@ string convert_update_operator_unset(const bsoncxx::document::element& element, 
 string convert_update_operator_op(const bsoncxx::document::element& element,
                                   const string& doc,
                                   const char* zOperation,
-                                  const char* zOp)
+                                  const char* zOp,
+                                  unordered_set<string>& paths)
 {
 
     ostringstream ss;
@@ -1470,6 +1521,8 @@ string convert_update_operator_op(const bsoncxx::document::element& element,
 
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
+
+        add_update_path(paths, sv);
     }
 
     ss << ")";
@@ -1477,33 +1530,148 @@ string convert_update_operator_op(const bsoncxx::document::element& element,
     return ss.str();
 }
 
-string convert_update_operator_inc(const bsoncxx::document::element& element, const string& doc)
+string convert_update_operator_inc(const bsoncxx::document::element& element,
+                                   const string& doc,
+                                   unordered_set<string>& paths)
 {
     mxb_assert(element.key().compare("$inc") == 0);
 
-    return convert_update_operator_op(element, doc, "increment", " + ");
+    return convert_update_operator_op(element, doc, "increment", " + ", paths);
 }
 
-string convert_update_operator_mul(const bsoncxx::document::element& element, const string& doc)
+string convert_update_operator_mul(const bsoncxx::document::element& element,
+                                   const string& doc,
+                                   unordered_set<string>& paths)
 {
     mxb_assert(element.key().compare("$mul") == 0);
 
-    return convert_update_operator_op(element, doc, "multiply", " * ");
+    return convert_update_operator_op(element, doc, "multiply", " * ", paths);
 }
 
-using UpdateOperatorConverter = string (*)(const bsoncxx::document::element& element, const string& doc);
+string convert_update_operator_rename(const bsoncxx::document::element& element,
+                                      const string& doc,
+                                      unordered_set<string>& paths)
+{
+    mxb_assert(element.key().compare("$rename") == 0);
+
+    string rv;
+
+    auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+    for (auto field : fields)
+    {
+        auto from = field.key();
+
+        if (field.type() != bsoncxx::type::k_utf8)
+        {
+            ostringstream ss;
+            ss << "The 'to' field for $rename must be a string: "
+               << from << ":"
+               << element_to_string(element);
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        string_view to = field.get_utf8();
+
+        if (from == to)
+        {
+            ostringstream ss;
+            ss << "The source and target field for $rename must differ: " << from << ": \"" << to << "\"";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        if (from.length() == 0 || to.length() == 0)
+        {
+            throw SoftError("An empty update path is not valid.", error::CONFLICTING_UPDATE_OPERATORS);
+        }
+
+        if (from.front() == '.' || from.back() == '.' || to.front() == '.' || to.back() == '.')
+        {
+            string_view path;
+
+            if (from.front() == '.' || from.back() == '.')
+            {
+                path = from;
+            }
+            else
+            {
+                path = to;
+            }
+
+            ostringstream ss;
+            ss << "The update path '" << path << "' contains an empty field name, which is not allowed.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        if (from.substr(0, from.find('.')) == to.substr(0, to.find('.')))
+        {
+            ostringstream ss;
+            ss << "The source and target field for $rename must not be on the same path: "
+               << from << ": \"" << to << "\"";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        if (from.find('$') != string::npos)
+        {
+            ostringstream ss;
+            ss << "The source field for $rename may not be dynamic: " << from;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        if (to.find('$') != string::npos)
+        {
+            ostringstream ss;
+            ss << "The destination field for $rename may not be dynamic: " << to;
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        string t = check_update_path(paths, to);
+        string f = check_update_path(paths, from);
+
+        if (rv.empty())
+        {
+            rv = "doc";
+        }
+
+        ostringstream ss;
+
+        ss << "IF(JSON_EXTRACT(" << rv << ", '$." << f << "'), "
+           << "JSON_REMOVE(JSON_SET(" << rv << ", '$." << t << "',"
+           << "JSON_EXTRACT(doc, '$." << f << "')), '$." << f << "'), " << rv << ")";
+
+        rv = ss.str();
+
+        add_update_path(paths, from);
+        add_update_path(paths, to);
+    }
+
+    return rv;
+}
+
+using UpdateOperatorConverter = string (*)(const bsoncxx::document::element& element,
+                                           const string& doc,
+                                           unordered_set<string>& paths);
 
 static std::unordered_map<string, UpdateOperatorConverter> update_operator_converters =
 {
-    { "$set",   convert_update_operator_set },
-    { "$unset", convert_update_operator_unset },
-    { "$inc",   convert_update_operator_inc },
-    { "$mul",   convert_update_operator_mul }
+    { "$set",    convert_update_operator_set },
+    { "$unset",  convert_update_operator_unset },
+    { "$inc",    convert_update_operator_inc },
+    { "$mul",    convert_update_operator_mul },
+    { "$rename", convert_update_operator_rename }
 };
 
 string convert_update_operations(const bsoncxx::document::view& update_operations)
 {
     string rv;
+
+    unordered_set<string> paths;
 
     for (auto element : update_operations)
     {
@@ -1513,10 +1681,10 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
         }
 
         auto key = element.key();
-        auto it = update_operator_converters.find(string(key.data(), key.length()));;
+        auto it = update_operator_converters.find(string(key.data(), key.length()));
         mxb_assert(it != update_operator_converters.end());
 
-        rv = it->second(element, rv);
+        rv = it->second(element, rv, paths);
     }
 
     rv += " ";
