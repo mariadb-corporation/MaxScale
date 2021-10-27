@@ -1600,26 +1600,26 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
 
     for (auto element : update_operations)
     {
-        if (!rv.empty())
+        if (rv.empty())
         {
-            rv += ", ";
+            rv = "doc";
         }
 
         if (element.key().compare("$set") == 0)
         {
-            rv += convert_update_operator_set(element, "doc");
+            rv = convert_update_operator_set(element, rv);
         }
         else if (element.key().compare("$unset") == 0)
         {
-            rv += convert_update_operator_unset(element, "doc");
+            rv = convert_update_operator_unset(element, rv);
         }
         else if (element.key().compare("$inc") == 0)
         {
-            rv += convert_update_operator_inc(element, "doc");
+            rv = convert_update_operator_inc(element, rv);
         }
         else if (element.key().compare("$mul") == 0)
         {
-            rv += convert_update_operator_mul(element, "doc");
+            rv = convert_update_operator_mul(element, rv);
         }
         else
         {
