@@ -163,7 +163,7 @@
                     </template>
                     <div
                         v-if="!isYOverflowed"
-                        :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
+                        :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
                         class="dummy-cell color border-right-table-border border-bottom-table-border"
                     />
                 </div>
@@ -244,6 +244,9 @@ export default {
         }
     },
     computed: {
+        scrollBarThicknessOffset() {
+            return this.$help.getScrollbarWidth()
+        },
         lineHeight() {
             return `${this.itemHeight}px`
         },
@@ -254,13 +257,13 @@ export default {
             return this.isVertTable ? this.itemHeight * this.visHeaders.length : this.itemHeight
         },
         rowsHeight() {
-            return this.currRows.length * this.rowHeight
+            return this.currRows.length * this.rowHeight + this.scrollBarThicknessOffset
         },
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
         },
         tbodyHeight() {
-            return this.rowsHeight >= this.maxTbodyHeight ? this.maxTbodyHeight : this.rowsHeight
+            return this.rowsHeight > this.maxTbodyHeight ? this.maxTbodyHeight : this.rowsHeight
         },
         isYOverflowed() {
             return this.rowsHeight > this.tbodyHeight
