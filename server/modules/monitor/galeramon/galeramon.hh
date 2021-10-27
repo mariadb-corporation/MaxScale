@@ -47,16 +47,15 @@ public:
 
     ~GaleraMonitor();
     static GaleraMonitor* create(const std::string& name, const std::string& module);
-    json_t*               diagnostics() const;
+    json_t*               diagnostics() const override;
     json_t*               diagnostics(mxs::MonitorServer* server) const override;
 
 protected:
-    bool configure(const mxs::ConfigParameters* param);
-    bool has_sufficient_permissions();
-    void update_server_status(mxs::MonitorServer* monitored_server);
-    void pre_tick();
-    void post_tick();
-    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
+    bool configure(const mxs::ConfigParameters* param) override;
+    bool has_sufficient_permissions() override;
+    void update_server_status(mxs::MonitorServer* monitored_server) override;
+    void pre_tick() override;
+    void post_tick() override;
 
 private:
     int  m_disableMasterFailback;       /**< Monitor flag for Galera Cluster Master failback */
