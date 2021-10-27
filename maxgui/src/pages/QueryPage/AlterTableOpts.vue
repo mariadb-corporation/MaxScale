@@ -29,7 +29,7 @@
                             :rules="rules.table_name"
                             required
                             name="table_name"
-                            :height="32"
+                            :height="30"
                             class="std error--text__bottom"
                             hide-details="auto"
                             dense
@@ -37,6 +37,22 @@
                         />
                     </v-col>
                     <v-col cols="12" md="6" class="py-0 px-1">
+                        <label class="field__label color text-small-text">
+                            {{ $t('comment') }}
+                        </label>
+                        <v-text-field
+                            v-model="tableOptsData.table_comment"
+                            class="std error--text__bottom error--text__bottom--no-margin"
+                            single-line
+                            outlined
+                            dense
+                            :height="30"
+                            hide-details="auto"
+                        />
+                    </v-col>
+                </v-row>
+                <v-row class="ma-0">
+                    <v-col cols="6" md="4" class="py-0 px-1">
                         <label class="field__label color text-small-text label-required">
                             {{ $t('engine') }}
                         </label>
@@ -52,46 +68,30 @@
                                 offsetY: true,
                             }"
                             dense
-                            :height="32"
+                            :height="30"
                             hide-details="auto"
                         />
                     </v-col>
-                </v-row>
-                <v-row class="ma-0">
-                    <v-col cols="12" md="6" class="py-0 px-1">
+                    <v-col cols="6" md="4" class="py-0 px-1">
                         <label class="field__label color text-small-text label-required">
                             {{ $t('charset') }}
                         </label>
                         <charset-input
                             v-model="tableOptsData.table_charset"
                             :defCharset="defDbCharset"
+                            :height="30"
                             @on-input="onInputCharset"
                         />
                     </v-col>
-                    <v-col cols="12" md="6" class="py-0 px-1">
+                    <v-col cols="6" md="4" class="py-0 px-1">
                         <label class="field__label color text-small-text label-required">
                             {{ $t('collation') }}
                         </label>
                         <collation-input
                             v-model="tableOptsData.table_collation"
                             :defCollation="defCollation"
+                            :height="30"
                             :charset="tableOptsData.table_charset"
-                        />
-                    </v-col>
-                </v-row>
-                <v-row class="ma-0">
-                    <v-col cols="12" class="py-0 px-1">
-                        <label class="field__label color text-small-text">
-                            {{ $t('comment') }}
-                        </label>
-                        <v-textarea
-                            v-model="tableOptsData.table_comment"
-                            class="std txt-area"
-                            dense
-                            auto-grow
-                            outlined
-                            rows="1"
-                            hide-details="auto"
                         />
                     </v-col>
                 </v-row>
