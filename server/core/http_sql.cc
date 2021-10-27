@@ -288,10 +288,9 @@ json_t* all_connections_to_json(const std::string& host, const std::vector<int64
     return mxs_json_resource(host.c_str(), COLLECTION_NAME.c_str(), arr);
 }
 
-HttpResponse create_connect_response(const std::string& host, int64_t id, bool persist)
+HttpResponse create_connect_response(const std::string& host, int64_t id, bool persist, int age)
 {
-    // TODO: Figure out how long the connections should be kept valid
-    int max_age = 28800;
+    int max_age = age > 0 ? age : 28800;
     std::string id_str = std::to_string(id);
     auto token = mxs::jwt::create(TOKEN_ISSUER, id_str, max_age);
 
@@ -398,15 +397,16 @@ HttpResponse connect(const HttpRequest& request)
     }
 
     bool persist = request.get_option("persist") == "yes";
+    int max_age = atoi(request.get_option("max-age").c_str());
     std::string host = request.host();
 
     return HttpResponse(
-        [config, persist, host]() {
+        [config, persist, host, max_age]() {
             std::string err;
             int64_t new_id = create_connection(config, &err);
             if (new_id > 0)
             {
-                return create_connect_response(host, new_id, persist);
+                return create_connect_response(host, new_id, persist, max_age);
             }
             else
             {

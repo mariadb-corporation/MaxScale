@@ -150,6 +150,14 @@ describe("Query API ", function () {
       await c.delete(conn.links.self + "?token=" + conn.meta.token);
       conn = null;
     });
+
+    it("opens connection with custom max-age", async function () {
+      var res = await c.post(base_url + "/sql/?max-age=500", { ...db_credentials, target: "server1" });
+      var token = jwt.decode(res.data.meta.token);
+      expect(token).to.be.an("object");
+      expect(token.exp - token.iat).to.equal(500);
+      await c.delete(res.data.links.self + "?token=" + res.data.meta.token);
+    });
   });
 
   describe("Cookies", function () {
