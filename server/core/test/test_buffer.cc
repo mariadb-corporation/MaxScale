@@ -441,7 +441,6 @@ void test_clone()
 static int test1()
 {
     GWBUF* buffer, * extra, * clone, * partclone;
-    Hint* hint;
     size_t size = 100;
     size_t bite1 = 35;
     size_t bite2 = 60;

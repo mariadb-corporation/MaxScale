@@ -714,11 +714,11 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
     const auto& hints = querybuf->hints;
     for (auto it = hints.begin(); !target && it != hints.end(); it++)
     {
-        const Hint* hint = &*it;
-        if (hint->type == Hint::Type::ROUTE_TO_NAMED_SERVER)
+        const Hint& hint = *it;
+        if (hint.type == Hint::Type::ROUTE_TO_NAMED_SERVER)
         {
             // Set the name of searched backend server.
-            const char* named_server = hint->data.c_str();
+            const char* named_server = hint.data.c_str();
             MXS_INFO("Hint: route to server '%s'.", named_server);
             target = get_target_backend(BE_UNDEFINED, named_server, config_max_rlag);
             if (!target)
@@ -742,10 +742,10 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
                 }
             }
         }
-        else if (hint->type == Hint::Type::PARAMETER
-                 && (strncasecmp(hint->data.c_str(), rlag_hint_tag, comparelen) == 0))
+        else if (hint.type == Hint::Type::PARAMETER
+                 && (strncasecmp(hint.data.c_str(), rlag_hint_tag, comparelen) == 0))
         {
-            const char* str_val = hint->value.c_str();
+            const char* str_val = hint.value.c_str();
             int hint_max_rlag = (int)strtol(str_val, nullptr, 10);
             if (hint_max_rlag != 0 || errno == 0)
             {

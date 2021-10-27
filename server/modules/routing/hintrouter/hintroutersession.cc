@@ -87,9 +87,7 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
     for (auto it = hints.begin(); !success && it != hints.end(); it++)
     {
         // Look for matching hint.
-        // TODO: Remove the cast.
-        Hint* current_hint = const_cast<Hint*>(&*it);
-        success = route_by_hint(pPacket, current_hint, false);
+        success = route_by_hint(pPacket, *it, false);
     }
 
     if (!success)
@@ -101,7 +99,7 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
         {
             default_hint.data = m_router->get_default_server();
         }
-        success = route_by_hint(pPacket, &default_hint, true);
+        success = route_by_hint(pPacket, default_hint, true);
     }
 
     if (!success)
@@ -146,11 +144,11 @@ bool HintRouterSession::handleError(mxs::ErrorType type,
     return false;
 }
 
-bool HintRouterSession::route_by_hint(GWBUF* pPacket, Hint* hint, bool print_errors)
+bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool print_errors)
 {
     using Type = Hint::Type;
     bool success = false;
-    switch (hint->type)
+    switch (hint.type)
     {
     case Type::ROUTE_TO_MASTER:
         {
@@ -195,7 +193,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, Hint* hint, bool print_err
 
     case Type::ROUTE_TO_NAMED_SERVER:
         {
-            const string& backend_name = hint->data;
+            const string& backend_name = hint.data;
             BackendMap::const_iterator iter = m_backends.find(backend_name);
             if (iter != m_backends.end())
             {
@@ -251,7 +249,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, Hint* hint, bool print_err
         break;
 
     default:
-        MXS_ERROR("Unsupported hint type '%d'", (int)hint->type);
+        MXS_ERROR("Unsupported hint type '%s'", Hint::type_to_str(hint.type));
         break;
     }
     return success;
