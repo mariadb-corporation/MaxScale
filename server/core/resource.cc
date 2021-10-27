@@ -1051,6 +1051,11 @@ HttpResponse cb_sql_connect(const HttpRequest& request)
     return HttpSql::connect(request);
 }
 
+HttpResponse cb_sql_reconnect(const HttpRequest& request)
+{
+    return HttpSql::reconnect(request);
+}
+
 HttpResponse cb_sql_get_one(const HttpRequest& request)
 {
     return HttpSql::show_connection(request);
@@ -1386,6 +1391,7 @@ public:
 
         /** SQL connection management endpoints */
         m_post.emplace_back(REQ_BODY, cb_sql_connect, "sql");
+        m_post.emplace_back(cb_sql_reconnect, "sql", ":connection_id", "reconnect");
         m_post.emplace_back(REQ_BODY, cb_sql_query, "sql", ":connection_id", "queries");
 
         /** For all module commands that modify state/data */

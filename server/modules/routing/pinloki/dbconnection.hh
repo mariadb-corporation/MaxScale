@@ -77,7 +77,7 @@ public:
      * @brief ping - ping the server, and return mariadb_error()
      * @return
      */
-    uint ping();
+    uint64_t ping();
 
     /**
      * @brief begin_trx
@@ -134,7 +134,7 @@ public:
      *                        has timed out.
      * @return mysql_errno()
      */
-    uint mariadb_error();
+    uint64_t mariadb_error();
 
     /**
      * @brief mariadb_error_str

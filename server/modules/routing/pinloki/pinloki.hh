@@ -47,6 +47,8 @@ public:
     Pinloki(const Pinloki&) = delete;
     Pinloki& operator=(const Pinloki&) = delete;
 
+    static const int64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_OLD_PROTOCOL;
+
     ~Pinloki();
     static Pinloki*     create(SERVICE* pService);
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;

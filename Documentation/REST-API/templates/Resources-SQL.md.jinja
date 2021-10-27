@@ -227,6 +227,35 @@ Missing or invalid connection token:
 
 `Status: 403 Forbidden`
 
+### Reconnect an opened SQL connection
+
+```
+POST /v1/sql/:id/reconnect
+```
+
+Reconnects an existing connection. This can also be used if the connection to
+the backend server was lost due to a network error.
+
+The connection will use the same credentials that were passed to the `POST
+/v1/sql` endpoint. The new connection will still have the same ID in the REST
+API but will be treated as a new connection by the database. A reconnection
+re-initializes the connection and resets the session state. Reconnections cannot
+take place while a transaction is open.
+
+#### Response
+
+Reconnection was successful:
+
+`Status: 204 No Content`
+
+Reconnection failed or connection is already in use:
+
+`Status: 503 Service Unavailable`
+
+Missing or invalid connection token:
+
+`Status: 403 Forbidden`
+
 ### Execute SQL query
 
 ```

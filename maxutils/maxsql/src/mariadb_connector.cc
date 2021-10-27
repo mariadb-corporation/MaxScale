@@ -171,11 +171,13 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
     const char* dbc = db.c_str();
 
     bool connection_success = false;
+    int opts = CLIENT_REMEMBER_OPTIONS;
+
     if (host.empty() || host[0] != '/')
     {
         const char* hostc = host.empty() ? nullptr : host.c_str();
         // Assume the host is a normal address. Empty host is treated as "localhost".
-        if (mysql_real_connect(newconn, hostc, userc, passwdc, dbc, port, nullptr, 0) != nullptr)
+        if (mysql_real_connect(newconn, hostc, userc, passwdc, dbc, port, nullptr, opts) != nullptr)
         {
             connection_success = true;
         }
@@ -183,7 +185,7 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
     else
     {
         // The host looks like an unix socket.
-        if (mysql_real_connect(newconn, nullptr, userc, passwdc, dbc, 0, host.c_str(), 0) != nullptr)
+        if (mysql_real_connect(newconn, nullptr, userc, passwdc, dbc, 0, host.c_str(), opts) != nullptr)
         {
             connection_success = true;
         }
@@ -463,6 +465,37 @@ bool MariaDB::change_user(const string& user, const string& pw, const string& db
     {
         rval = (mysql_change_user(m_conn, user.c_str(), pw.c_str(), db.c_str()) == 0);
     }
+    return rval;
+}
+
+bool MariaDB::reconnect()
+{
+    bool rval = false;
+    if (m_conn)
+    {
+        const char yes = 1;
+        mysql_optionsv(m_conn, MYSQL_OPT_RECONNECT, &yes);
+
+        if (mariadb_reconnect(m_conn) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            m_errornum = mysql_errno(m_conn);
+            m_errormsg = mxb::string_printf("Reconnect failed. Error %li: %s",
+                                            m_errornum, mysql_error(m_conn));
+        }
+
+        const char no = 0;
+        mysql_optionsv(m_conn, MYSQL_OPT_RECONNECT, &no);
+    }
+    else
+    {
+        m_errornum = USER_ERROR;
+        m_errormsg = no_connection;
+    }
+
     return rval;
 }
 

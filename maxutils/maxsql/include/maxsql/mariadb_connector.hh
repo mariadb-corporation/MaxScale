@@ -166,6 +166,13 @@ public:
     bool change_user(const std::string& user, const std::string& pw, const std::string& db);
 
     /**
+     * Reconnect to the server.
+     *
+     * @return True on success
+     */
+    bool reconnect();
+
+    /**
      * Get latest error.
      *
      * @return Error string
