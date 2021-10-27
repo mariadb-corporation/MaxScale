@@ -138,12 +138,10 @@ public:
             {
             case Query::MULTI:
                 execution = interpret_multi(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
-                m_ok = 1;
                 break;
 
             case Query::COMPOUND:
                 execution = interpret_compound(pBuffer, pEnd, m_query.nStatements(), &pBuffer);
-                m_ok = 1;
                 break;
 
             case Query::SINGLE:
@@ -454,7 +452,6 @@ protected:
         {
         case ComResponse::OK_PACKET:
             {
-                m_ok = 1;
                 rv = interpret(ComOK(response), index);
 
                 if (rv == Execution::ABORT && !m_ordered)
@@ -468,11 +465,7 @@ protected:
             {
                 ComERR err(response);
 
-                if (is_acceptable_error(err))
-                {
-                    m_ok = true;
-                }
-                else
+                if (!is_acceptable_error(err))
                 {
                     if (m_ordered)
                     {
@@ -595,7 +588,7 @@ protected:
     vector<bsoncxx::document::view> m_documents;
     vector<string>::const_iterator  m_it;
     int32_t                         m_n { 0 };
-    int32_t                         m_ok { 0 };
+    int32_t                         m_ok { 1 };
     bsoncxx::builder::basic::array  m_write_errors;
 };
 
