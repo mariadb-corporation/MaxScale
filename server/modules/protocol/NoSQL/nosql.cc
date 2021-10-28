@@ -1647,7 +1647,7 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
 
         ostringstream ss;
 
-        ss << "IF(JSON_EXTRACT(" << rv << ", '$." << f << "'), "
+        ss << "IF(JSON_EXTRACT(" << rv << ", '$." << f << "') IS NOT NULL, "
            << "JSON_REMOVE(JSON_SET(" << rv << ", '$." << t << "',"
            << "JSON_EXTRACT(doc, '$." << f << "')), '$." << f << "'), " << rv << ")";
 
