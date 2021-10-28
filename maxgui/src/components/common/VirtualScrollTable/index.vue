@@ -15,6 +15,7 @@
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
+            :scrollBarThicknessOffset="scrollBarThicknessOffset"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @last-vis-header="lastVisHeader = $event"
@@ -44,6 +45,7 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :isYOverflowed="isYOverflowed"
+                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <template
@@ -78,6 +80,7 @@
                     :isCollapsed="isRowGroupCollapsed(row)"
                     :boundingWidth="boundingWidth"
                     :lineHeight="lineHeight"
+                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @update-collapsed-row-groups="collapsedRowGroups = $event"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 >

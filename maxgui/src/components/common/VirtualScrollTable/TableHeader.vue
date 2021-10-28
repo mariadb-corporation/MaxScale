@@ -103,7 +103,7 @@
             </div>
         </div>
         <div
-            :style="{ minWidth: `${$help.getScrollbarWidth()}px` }"
+            :style="{ minWidth: `${scrollBarThicknessOffset}px` }"
             class="d-inline-block dummy-header"
         />
     </div>
@@ -146,6 +146,7 @@ export default {
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
         areHeadersHidden: { type: Boolean, required: true },
+        scrollBarThicknessOffset: { type: Number, required: true },
     },
     data() {
         return {
@@ -164,7 +165,7 @@ export default {
     },
     computed: {
         headerWidth() {
-            return `calc(100% - ${this.$help.getScrollbarWidth()}px)`
+            return `calc(100% - ${this.scrollBarThicknessOffset}px)`
         },
         tableHeaders() {
             return this.isVertTable

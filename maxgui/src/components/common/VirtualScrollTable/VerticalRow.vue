@@ -43,7 +43,7 @@
                 </div>
                 <div
                     v-if="!isYOverflowed"
-                    :style="{ minWidth: `${$help.getScrollbarWidth()}px`, height: lineHeight }"
+                    :style="{ minWidth: `${scrollBarThicknessOffset}px`, height: lineHeight }"
                     class="dummy-cell color border-right-table-border"
                 />
             </div>
@@ -79,6 +79,7 @@ export default {
         lineHeight: { type: String, required: true },
         headerWidthMap: { type: Object, required: true },
         isYOverflowed: { type: Boolean, required: true },
+        scrollBarThicknessOffset: { type: Number, required: true },
     },
 }
 </script>

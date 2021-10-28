@@ -74,6 +74,7 @@ export default {
         isCollapsed: { type: Boolean, required: true },
         boundingWidth: { type: Number, required: true },
         lineHeight: { type: String, required: true },
+        scrollBarThicknessOffset: { type: Number, required: true },
     },
     computed: {
         maxRowGroupWidth() {
@@ -82,7 +83,7 @@ export default {
              * 28 is the width of toggle button
              * 32 is the width of ungroup button
              */
-            return this.boundingWidth - this.$help.getScrollbarWidth() - 17 - 28 - 32
+            return this.boundingWidth - this.scrollBarThicknessOffset - 17 - 28 - 32
         },
     },
     methods: {
