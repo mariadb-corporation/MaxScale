@@ -1461,27 +1461,41 @@ string convert_update_operator_unset(const bsoncxx::document::element& element,
 {
     mxb_assert(element.key().compare("$unset") == 0);
 
-    ostringstream ss;
+    // The prototype is JSON_REMOVE(doc, path[, path] ...) and if a particular
+    // path is not present in the document, there should be no effect. However,
+    // there is a bug https://jira.mariadb.org/browse/MDEV-22141 that causes
+    // NULL to be returned if a path is not present. To work around that bug,
+    // JSON_REMOVE(doc, a, b) is conceptually expressed like:
+    //
+    // (1) Z = IF(JSON_EXTRACT(doc, a) IS NOT NULL, JSON_REMOVE(doc, a), doc)
+    // (2) IF(JSON_EXTRACT(Z, b) IS NOT NULL, JSON_REMOVE(Z, b), Z)
+    //
+    // and in practice (take a deep breath) so that in (2) every occurence of
+    // Z is replaced with the IF-statement at (1). Note that in case there is
+    // a third path, then on that iteration, "doc" in (2) will be the entire
+    // expression we just got in (2). Also note that the "doc" we start with,
+    // may be a JSON-function expression in itself...
 
-    ss << "JSON_REMOVE(" << doc;
+    string rv = doc;
 
     auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
     for (auto field : fields)
     {
-        ss << ", ";
-
         string_view sv = field.key();
         string key = escape_essential_chars(string(sv.data(), sv.length()));
 
-        ss << "'$." << key << "'";
+        ostringstream ss;
+
+        ss << "IF(JSON_EXTRACT(" << rv << ", '$." << key << "') IS NOT NULL, "
+           << "JSON_REMOVE(" << rv << ", '$." << key << "'), " << rv << ")";
+
+        rv = ss.str();
 
         add_update_path(paths, sv);
     }
 
-    ss << ")";
-
-    return ss.str();
+    return rv;
 }
 
 string convert_update_operator_op(const bsoncxx::document::element& element,
