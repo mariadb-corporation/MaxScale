@@ -608,13 +608,20 @@ protected:
      * Can a server be disabled, that is, set to maintenance or draining mode.
      *
      * @param server      A server being monitored by this monitor.
+     * @param type        Type of disabling attempted.
      * @param errmsg_out  If cannot be, on return explanation why.
      *
      * @return True, if the server can be disabled, false otherwise.
      *
      * @note The default implementation return true.
      */
-    virtual bool can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const;
+    enum class DisableType
+    {
+        MAINTENANCE,
+        DRAIN,
+    };
+    virtual bool can_be_disabled(const MonitorServer& server, DisableType type,
+                                 std::string* errmsg_out) const;
 
 private:
     /**

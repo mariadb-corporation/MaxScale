@@ -156,7 +156,8 @@ public:
     bool fetch_cmd_result(json_t** output);
 
 protected:
-    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
+    bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
+                         std::string* errmsg_out) const override;
 
     void        pre_loop() override;
     void        tick() override;

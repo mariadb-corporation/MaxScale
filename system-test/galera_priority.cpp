@@ -97,6 +97,7 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
+            test.tprintf("Set master to maintenance, check that monitor changes master.");
             auto cmd = mxb::string_printf(set_maint, orig_master.name.c_str());
             mxs.maxctrl(cmd);
             mxs.wait_for_monitor(2);
@@ -109,7 +110,7 @@ void test_main(TestConnections& test)
 
             if (test.ok())
             {
-                // Try again.
+                test.tprintf("Again...");
                 cmd = mxb::string_printf(set_maint, second_master.name.c_str());
                 mxs.maxctrl(cmd);
                 mxs.wait_for_monitor(2);
@@ -127,6 +128,63 @@ void test_main(TestConnections& test)
 
             cmd = mxb::string_printf(clear_maint, orig_master.name.c_str());
             mxs.maxctrl(cmd);
+        }
+
+        if (test.ok())
+        {
+            // Finally, check that the master cannot be set to draining mode (MXS-3532).
+            auto info = mxs.get_servers();
+            auto master = info.get_master();
+            if (master.status & MASTER)
+            {
+                test.tprintf("Trying to set %s to drain, it should fail.", master.name.c_str());
+                const char set_drain[] = "set server %s drain";
+                auto cmd = mxb::string_printf(set_drain, master.name.c_str());
+                auto res = mxs.maxctrl(cmd);
+                test.expect(res.rc != 0, "Command '%s' succeeded when it should have failed.", cmd.c_str());
+                mxs.wait_for_monitor(2);
+                auto info_after = mxs.get_servers();
+                info_after.print();
+                auto master_status = info_after.get(master.name).status;
+                const auto drain_bits = mxt::ServerInfo::DRAINING | mxt::ServerInfo::DRAINED;
+                test.expect((master_status & drain_bits) == 0,
+                            "%s was set to draining/drained when it should not have.", master.name.c_str());
+
+                if (test.ok())
+                {
+                    test.tprintf("Check that a slave can be set to draining.");
+                    std::string slave_name;
+                    for (size_t i = 0; i < info_after.size(); i++)
+                    {
+                        if (info_after.get(i).status & mxt::ServerInfo::SLAVE)
+                        {
+                            slave_name = info_after.get(i).name;
+                            break;
+                        }
+                    }
+
+                    if (!slave_name.empty())
+                    {
+                        cmd = mxb::string_printf(set_drain, slave_name.c_str());
+                        mxs.maxctrl(cmd);
+                        mxs.wait_for_monitor(1);
+                        info_after = mxs.get_servers();
+                        info_after.print();
+                        auto slave_status = info_after.get(slave_name).status;
+                        test.expect(slave_status & drain_bits,
+                                    "%s is not draining/drained when it should be.", slave_name.c_str());
+                        mxs.maxctrl(mxb::string_printf("clear server %s drain", slave_name.c_str()));
+                    }
+                    else
+                    {
+                        test.add_failure("No slaves in cluster.");
+                    }
+                }
+            }
+            else
+            {
+                test.add_failure(no_master);
+            }
         }
     }
 }
