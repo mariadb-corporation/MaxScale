@@ -44,10 +44,10 @@
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
             <column-list
-                v-model="selectedColOpts"
+                v-model="selectedColSpecs"
                 returnObject
                 :label="$t('alterSpecs')"
-                :cols="colOpts"
+                :cols="colSpecs"
                 :maxHeight="tableMaxHeight - 20"
             />
 
@@ -199,7 +199,7 @@ export default {
             selectedItems: [],
             headerHeight: 0,
             isVertTable: false,
-            selectedColOpts: [],
+            selectedColSpecs: [],
         }
     },
     computed: {
@@ -245,12 +245,12 @@ export default {
                 return h
             })
         },
-        colOpts() {
+        colSpecs() {
             return this.headers.filter(h => !h.hidden)
         },
         visHeaders() {
             return this.headers.map(h => {
-                if (!this.selectedColOpts.find(col => col.text === h.text))
+                if (!this.selectedColSpecs.find(col => col.text === h.text))
                     return { ...h, hidden: true }
                 return h
             })
@@ -327,19 +327,30 @@ export default {
     },
     activated() {
         this.addInitialDataFirstCellIdWatcher()
+        this.addWidthBreakpointWatcher()
     },
     deactivated() {
         this.rmInitialDataFirstCellIdWatcher()
+        this.rmWidthBreakpointWatcherr()
     },
     methods: {
         addInitialDataFirstCellIdWatcher() {
             this.rmInitialDataFirstCellIdWatcher = this.$watch('initialDataFirstCellId', v => {
-                // show all column alter options
-                //TODO: detect small screen resolution to show all except charset,collation,comment
-                if (v) {
-                    this.selectedColOpts = this.$help.lodash.cloneDeep(this.colOpts)
-                }
+                if (v) this.handleShowColSpecs()
             })
+        },
+        addWidthBreakpointWatcher() {
+            this.rmWidthBreakpointWatcherr = this.$watch('$vuetify.breakpoint.width', () =>
+                this.handleShowColSpecs()
+            )
+        },
+        handleShowColSpecs() {
+            const colSpecs = this.$help.lodash.cloneDeep(this.colSpecs)
+            if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
+            else {
+                const hiddenSpecs = ['charset', 'collation', 'comment']
+                this.selectedColSpecs = colSpecs.filter(col => !hiddenSpecs.includes(col.text))
+            }
         },
         abbrHeaderSlotName(h) {
             if (this.isVertTable) return `vertical-header-${h}`
