@@ -1694,9 +1694,77 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
 
         ostringstream ss;
 
+        string json_set;
+
+        if (to_parts.size() == 1)
+        {
+            ostringstream ss2;
+            ss2 << "JSON_SET(" << rv << ", '$." << t << "', JSON_EXTRACT(" << rv << ", '$." << f << "'))";
+            json_set = ss2.str();
+        }
+        else
+        {
+            using Generate = std::function<void(ostream&,
+                                                const string&,
+                                                const string&,
+                                                vector<string>::iterator&,
+                                                const vector<string>::iterator&)>;
+
+            Generate generate = [&generate](ostream& out,
+                                           const string& rv,
+                                           const string& f,
+                                           vector<string>::iterator& it,
+                                           const vector<string>::iterator& end)
+            {
+                if (it != end)
+                {
+                    out << "\"" << *it << "\", JSON_OBJECT(";
+
+                    ++it;
+
+                    generate(out, rv, f, it, end);
+
+                    out << ")";
+                }
+                else
+                {
+                    out << "\"" << *it << "\", JSON_EXTRACT(" << rv << ", '$." << f << "')";
+                }
+            };
+
+            ostringstream ss2;
+
+            // If we have something like '{$rename: {'a.b': 'a.c'}', by explicitly checking whether
+            // 'a' is an object, we will end up renaming 'a.b' to 'a.c' (i.e. copy value at 'a.b' to 'a.c'
+            // and then delete 'a.b') instead of changing the value of 'a' to '{ c: ... }'. The difference
+            // is significant if the document at 'a' contains other fields in addition to 'b'.
+            // TODO: This should actually be done for every level.
+            string parent_of_t = t.substr(0, t.find_last_of('.'));
+
+            ss2 << "IF(JSON_QUERY(" << rv << ", '$." << parent_of_t << "') IS NOT NULL, "
+                << "JSON_SET(" << rv << ", '$." << t << "', JSON_EXTRACT(" << rv << ", '$." << f << "'))"
+                << ", "
+                << "JSON_SET(" << rv << ", ";
+
+            vector<string> parts = mxb::strtok(t, ".");
+
+            auto it = parts.begin();
+            auto end = parts.end() - 1;
+
+            ss2 << "'$." << *it << "', JSON_OBJECT(";
+
+            ++it;
+
+            generate(ss2, rv, f, it, end);
+
+            ss2 << ")))";
+
+            json_set = ss2.str();
+        }
+
         ss << "IF(JSON_EXTRACT(" << rv << ", '$." << f << "') IS NOT NULL, "
-           << "JSON_REMOVE(JSON_SET(" << rv << ", '$." << t << "',"
-           << "JSON_EXTRACT(" << rv << ", '$." << f << "')), '$." << f << "'), " << rv << ")";
+           << "JSON_REMOVE(" << json_set << ", '$." << f << "'), "
+           << rv << ")";
 
         rv = ss.str();
 
