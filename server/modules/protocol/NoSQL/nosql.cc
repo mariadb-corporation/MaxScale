@@ -1438,6 +1438,7 @@ string convert_update_operator_set(const bsoncxx::document::element& element,
 
     auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
+    vector<string_view> svs;
     for (auto field : fields)
     {
         ss << ", ";
@@ -1447,6 +1448,11 @@ string convert_update_operator_set(const bsoncxx::document::element& element,
 
         ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
 
+        svs.push_back(sv);
+    }
+
+    for (const auto& sv : svs)
+    {
         add_update_path(paths, sv);
     }
 
@@ -1480,6 +1486,7 @@ string convert_update_operator_unset(const bsoncxx::document::element& element,
 
     auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
+    vector<string_view> svs;
     for (auto field : fields)
     {
         string_view sv = field.key();
@@ -1492,6 +1499,11 @@ string convert_update_operator_unset(const bsoncxx::document::element& element,
 
         rv = ss.str();
 
+        svs.push_back(sv);
+    }
+
+    for (const auto& sv : svs)
+    {
         add_update_path(paths, sv);
     }
 
@@ -1511,6 +1523,7 @@ string convert_update_operator_op(const bsoncxx::document::element& element,
 
     auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
+    vector<string_view> svs;
     for (auto field : fields)
     {
         ss << ", ";
@@ -1542,6 +1555,11 @@ string convert_update_operator_op(const bsoncxx::document::element& element,
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
+        svs.push_back(sv);
+    }
+
+    for (const auto& sv : svs)
+    {
         add_update_path(paths, sv);
     }
 
@@ -1578,6 +1596,7 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
 
     auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
+    vector<string_view> svs;
     for (auto field : fields)
     {
         auto from = field.key();
@@ -1629,10 +1648,7 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
         auto from_parts = mxb::strtok(string(from.data(), from.length()), ".");
         auto to_parts = mxb::strtok(string(to.data(), to.length()), ".");
 
-        auto n = std::min(from_parts.size(), to_parts.size());
-
-        from_parts.resize(n);
-        to_parts.resize(n);
+        from_parts.resize(std::min(from_parts.size(), to_parts.size()));
 
         auto it = from_parts.begin();
         auto jt = to_parts.begin();
@@ -1643,7 +1659,7 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
             ++jt;
         }
 
-        if (it == from_parts.end())
+        if (jt == to_parts.end())
         {
             ostringstream ss;
             ss << "The source and target field for $rename must not be on the same path: "
@@ -1680,12 +1696,17 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
 
         ss << "IF(JSON_EXTRACT(" << rv << ", '$." << f << "') IS NOT NULL, "
            << "JSON_REMOVE(JSON_SET(" << rv << ", '$." << t << "',"
-           << "JSON_EXTRACT(doc, '$." << f << "')), '$." << f << "'), " << rv << ")";
+           << "JSON_EXTRACT(" << rv << ", '$." << f << "')), '$." << f << "'), " << rv << ")";
 
         rv = ss.str();
 
-        add_update_path(paths, from);
-        add_update_path(paths, to);
+        svs.push_back(from);
+        svs.push_back(to);
+    }
+
+    for (const auto& sv : svs)
+    {
+        add_update_path(paths, sv);
     }
 
     return rv;
