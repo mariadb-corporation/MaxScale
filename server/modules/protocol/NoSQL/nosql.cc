@@ -1383,6 +1383,12 @@ void add_update_path(unordered_set<string>& paths, const string_view& field)
 {
     string f = string(field.data(), field.length());
 
+    if (f == "_id")
+    {
+        throw SoftError("Performing an update on the path '_id' would modify the immutable field '_id'",
+                        error::IMMUTABLE_FIELD);
+    }
+
     paths.insert(f);
 
     auto i = f.find('.');
