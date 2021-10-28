@@ -18,7 +18,7 @@
                         v-on="on"
                         @click="deleteSelectedRows(selectedItems)"
                     >
-                        {{ $t('drop') }}
+                        {{ $t('drop') }} ({{ selectedItems.length }})
                     </v-btn>
                 </template>
                 <span>{{ $t('dropSelectedCols') }}</span>
@@ -34,7 +34,7 @@
                         class="mr-2 pa-1 text-capitalize"
                         outlined
                         depressed
-                        color="primary"
+                        color="accent-dark"
                         v-on="on"
                         @click="addNewCol"
                     >
