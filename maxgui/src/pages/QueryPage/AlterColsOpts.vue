@@ -70,6 +70,7 @@
                 <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
         </div>
+
         <virtual-scroll-table
             :headers="headers"
             :rows="rows"
@@ -105,15 +106,26 @@
                         @on-input-NN="onInputNN"
                         @on-input-AI="onInputAI"
                         @on-input-generated="onInputGenerated"
+                        @on-input-charset="onInputCharset"
                     />
                 </div>
             </template>
-            <!-- Add :key so that truncate-string rerender to evaluate truncation  -->
+            <!-- Add :key so that truncate-string rerender to evaluate truncation and fallback text-truncate class  -->
             <template v-slot:header-column_name="{ data: { maxWidth } }">
-                <truncate-string :key="maxWidth" text="Column Name" :maxWidth="maxWidth" />
+                <truncate-string
+                    :key="maxWidth"
+                    class="text-truncate"
+                    text="Column Name"
+                    :maxWidth="maxWidth"
+                />
             </template>
             <template v-slot:header-column_type="{ data: { maxWidth } }">
-                <truncate-string :key="maxWidth" text="Column Type" :maxWidth="maxWidth" />
+                <truncate-string
+                    :key="maxWidth"
+                    class="text-truncate"
+                    text="Column Type"
+                    :maxWidth="maxWidth"
+                />
             </template>
             <template
                 v-for="(value, key) in abbreviatedHeaders"
@@ -139,8 +151,6 @@
                 </v-tooltip>
             </template>
         </virtual-scroll-table>
-        <!-- TODO: Component to select column name to reveal additional
-             inputs .i.e. charset, collation and comment inputs -->
     </div>
 </template>
 
@@ -157,7 +167,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
@@ -168,6 +178,7 @@ export default {
     },
     props: {
         value: { type: Object, required: true },
+        initialData: { type: Object, required: true },
         height: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
         defTblCharset: { type: String, required: true },
@@ -184,9 +195,6 @@ export default {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
-        ...mapGetters({
-            getTblCreationInfo: 'query/getTblCreationInfo',
-        }),
         colsOptsData: {
             get() {
                 return this.value
@@ -194,9 +202,6 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
-        },
-        initialColsOptsData() {
-            return this.$typy(this.getTblCreationInfo, `data.cols_opts_data.data`).safeArray
         },
         headers() {
             return this.$typy(this.colsOptsData, 'fields').safeArray.map(field => {
@@ -222,11 +227,6 @@ export default {
                     case 'id':
                         h.hidden = true
                         break
-                    case 'charset':
-                    case 'collation':
-                    case 'comment':
-                        h.hidden = true
-                        break
                 }
                 return h
             })
@@ -242,7 +242,6 @@ export default {
                 generated: 'Generated column',
             }
         },
-
         rows() {
             return this.$typy(this.colsOptsData, 'data').safeArray
         },
@@ -254,17 +253,11 @@ export default {
             })
             return items
         },
-        idxOfColumnName() {
-            return this.findHeaderIdx('column_name')
-        },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
         },
         idxOfCharset() {
             return this.findHeaderIdx('charset')
-        },
-        idxOfComment() {
-            return this.findHeaderIdx('comment')
         },
         idxOfAI() {
             return this.findHeaderIdx('AI')
@@ -566,7 +559,7 @@ export default {
             // use initial expression value or empty string
             else {
                 defaultVal = this.$typy(
-                    this.initialColsOptsData,
+                    this.initialData.data,
                     `['${item.rowIdx}']['${this.idxOfDefAndExp}']`
                 ).safeString
             }

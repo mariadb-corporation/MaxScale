@@ -2,13 +2,13 @@
     <div class="fill-height">
         <v-card
             v-if="isLoading"
-            class="fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
+            class="fill-height color border-right-table-border border-bottom-table-border"
             :loading="isLoading"
         />
         <!-- Use v-show to always render it so that multiple worksheets would be kept alive -->
         <div
             v-show="!isLoading"
-            class="relative fill-height color border-top-table-border border-right-table-border border-bottom-table-border"
+            class="relative fill-height color border-right-table-border border-bottom-table-border"
         >
             <!-- Only render the portal when component is activated otherwise it has function reference issue -->
             <portal v-if="activated" to="wke-toolbar-right">
@@ -19,23 +19,20 @@
                     @on-apply="applyChanges"
                 />
             </portal>
-            <div class="pt-2 pl-3 pr-2 d-flex align-center justify-space-between">
-                <span class="text-body-2 color text-navigation font-weight-bold text-uppercase">
-                    {{ $t('alterTbl') }}
-                </span>
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <v-btn icon small v-on="on" @click="closeDDLEditor">
-                            <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
-                        </v-btn>
-                    </template>
-                    <span>{{ $t('closeDDLEditor') }}</span>
-                </v-tooltip>
-            </div>
+
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small class=" ddl-editor-close" v-on="on" @click="closeDDLEditor">
+                        <v-icon size="12" color="navigation"> $vuetify.icons.close</v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('closeDDLEditor') }}</span>
+            </v-tooltip>
+
             <ddl-editor-form
                 v-model="formData"
                 :dynDim="formDim"
@@ -556,5 +553,10 @@ export default {
             padding-right: 16px;
         }
     }
+}
+.ddl-editor-close {
+    position: absolute;
+    top: 4px;
+    right: 6px;
 }
 </style>

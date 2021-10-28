@@ -12,15 +12,21 @@
     >
         <div class="mb-1 d-flex align-center">
             <div class="d-flex align-center" :class="titleWrapperClass">
-                <v-btn icon class="arrow-toggle" @click="toggleOnClick">
-                    <v-icon
-                        :class="[isContentVisible ? 'arrow-down' : 'arrow-right']"
-                        size="32"
-                        color="deep-ocean"
-                    >
-                        $expand
-                    </v-icon>
-                </v-btn>
+                <slot
+                    name="arrow-toggle"
+                    :toggleOnClick="toggleOnClick"
+                    :isContentVisible="isContentVisible"
+                >
+                    <v-btn icon class="arrow-toggle" @click="toggleOnClick">
+                        <v-icon
+                            :class="[isContentVisible ? 'arrow-down' : 'arrow-right']"
+                            size="32"
+                            color="deep-ocean"
+                        >
+                            $expand
+                        </v-icon>
+                    </v-btn>
+                </slot>
                 <p
                     class="collapse-title mb-0 text-body-2 font-weight-bold color text-navigation text-uppercase"
                 >
