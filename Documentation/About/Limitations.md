@@ -39,32 +39,20 @@ where the `SELECT` of the `WITH` clause refers to forbidden columns.
 
 ## Query Classification
 
-Follow the [MXS-1350](https://jira.mariadb.org/browse/MXS-1350) Jira issue
-to track the progress on this limitation.
+### XA Transactions
 
-XA transactions are not detected as transactions by MaxScale. This means
-that all XA commands will be treated as unknown commands and will be
-treated as operations that potentially modify the database (in the case of
-readwritesplit, the statements are routed to the master).
+MaxScale will treat statements executed after `XA START` and before `XA END` as
+if they were executed in a normal read-write transaction started with `START
+TRANSACTION`. This means that only XA transactions in the ACTIVE state will be
+routed as transactions and all statements after `XA END` are routed normally.
 
-MaxScale **will not** track the XA transaction state which means that any
-SELECT queries done inside an XA transaction can be routed to servers that
-are not part of the XA transaction.
-
-This limitation can be avoided on the client side by disabling autocommit
-before any XA transactions are done. The following example shows how a
-simple XA transaction is done via MaxScale by disabling autocommit for the
-duration of the XA transaction.
-
-```
-SET autocommit=0;
-XA START 'MyXA';
-INSERT INTO test.t1 VALUES(1);
-XA END 'MyXA';
-XA PREPARE 'MyXA';
-XA COMMIT 'MyXA';
-SET autocommit=1;
-```
+XA transactions and normal transactions are mutually exclusive in MariaDB. This
+means that a `START TRANSACTION` command will fail if the connection already has
+an open XA transaction. MaxScale currently only inspects the SQL and deduces the
+transaction state from that. If a transaction fails to start due to an open XA
+transaction, the state in MaxScale and in MariaDB can be different and MaxScale
+will keep routing statements as if they were inside of a transaction. However,
+as this is an unlikely scenario, usually no action needs to be taken.
 
 ## Prepared Statements
 
