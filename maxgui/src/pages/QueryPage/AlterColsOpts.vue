@@ -324,15 +324,23 @@ export default {
         colsOptsData(v) {
             if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
         },
-        initialDataFirstCellId(v) {
-            // show all column alter options
-            //TODO: detect small screen resolution to show all except charset,collation,comment
-            if (v) {
-                this.selectedColOpts = this.$help.lodash.cloneDeep(this.colOpts)
-            }
-        },
+    },
+    activated() {
+        this.addInitialDataFirstCellIdWatcher()
+    },
+    deactivated() {
+        this.rmInitialDataFirstCellIdWatcher()
     },
     methods: {
+        addInitialDataFirstCellIdWatcher() {
+            this.rmInitialDataFirstCellIdWatcher = this.$watch('initialDataFirstCellId', v => {
+                // show all column alter options
+                //TODO: detect small screen resolution to show all except charset,collation,comment
+                if (v) {
+                    this.selectedColOpts = this.$help.lodash.cloneDeep(this.colOpts)
+                }
+            })
+        },
         abbrHeaderSlotName(h) {
             if (this.isVertTable) return `vertical-header-${h}`
             return `header-${h}`
