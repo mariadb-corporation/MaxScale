@@ -39,6 +39,9 @@ class SmartRouter : public mxs::Router
 public:
     ~SmartRouter();
 
+    static constexpr uint64_t CAPABILITIES = RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_INPUT
+        | RCAP_TYPE_STMT_OUTPUT | RCAP_TYPE_QUERY_CLASSIFICATION | RCAP_TYPE_OLD_PROTOCOL;
+
     class Config : public config::Configuration
     {
     public:
