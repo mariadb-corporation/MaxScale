@@ -1626,7 +1626,24 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        if (from.substr(0, from.find('.')) == to.substr(0, to.find('.')))
+        auto from_parts = mxb::strtok(string(from.data(), from.length()), ".");
+        auto to_parts = mxb::strtok(string(to.data(), to.length()), ".");
+
+        auto n = std::min(from_parts.size(), to_parts.size());
+
+        from_parts.resize(n);
+        to_parts.resize(n);
+
+        auto it = from_parts.begin();
+        auto jt = to_parts.begin();
+
+        while (*it == *jt && it != from_parts.end())
+        {
+            ++it;
+            ++jt;
+        }
+
+        if (it == from_parts.end())
         {
             ostringstream ss;
             ss << "The source and target field for $rename must not be on the same path: "
