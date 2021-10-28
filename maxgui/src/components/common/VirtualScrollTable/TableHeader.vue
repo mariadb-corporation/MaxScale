@@ -12,7 +12,6 @@
                     }"
                 >
                     <v-checkbox
-                        :disabled="!rowsLength"
                         :input-value="isAllselected"
                         :indeterminate="indeterminate"
                         dense
@@ -50,7 +49,9 @@
                     >
                         <template v-if="header.text === '#'">
                             <span> {{ header.text }}</span>
-                            <span class="ml-1 color text-field-text"> ({{ rowsLength }}) </span>
+                            <span class="ml-1 color text-field-text">
+                                ({{ curr2dRowsLength }})
+                            </span>
                         </template>
                         <slot
                             v-else
@@ -140,7 +141,7 @@ export default {
         boundingWidth: { type: Number, required: true },
         headerStyle: { type: Object, required: true },
         isVertTable: { type: Boolean, default: false },
-        rowsLength: { type: Number, required: true },
+        curr2dRowsLength: { type: Number, required: true },
         showSelect: { type: Boolean, required: true },
         isAllselected: { type: Boolean, required: true },
         indeterminate: { type: Boolean, required: true },
@@ -181,7 +182,7 @@ export default {
             return {}
         },
         enableSorting() {
-            return this.rowsLength <= 10000 && !this.isVertTable
+            return this.curr2dRowsLength <= 10000 && !this.isVertTable
         },
         enableGrouping() {
             return this.tableHeaders.filter(h => !h.hidden).length > 1
