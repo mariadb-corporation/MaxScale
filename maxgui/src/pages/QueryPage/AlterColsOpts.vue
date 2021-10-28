@@ -31,7 +31,7 @@
                 <template v-slot:activator="{ on }">
                     <v-btn
                         x-small
-                        class="pa-1 text-capitalize"
+                        class="mr-2 pa-1 text-capitalize"
                         outlined
                         depressed
                         color="primary"
@@ -43,6 +43,14 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
+            <column-list
+                v-model="selectedColOpts"
+                returnObject
+                :label="$t('alterSpecs')"
+                :cols="colOpts"
+                :maxHeight="tableMaxHeight - 20"
+            />
+
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -72,10 +80,10 @@
         </div>
 
         <virtual-scroll-table
-            :headers="headers"
+            :headers="visHeaders"
             :rows="rows"
             :itemHeight="40"
-            :maxHeight="height - headerHeight"
+            :maxHeight="tableMaxHeight"
             :boundingWidth="boundingWidth"
             showSelect
             :isVertTable="isVertTable"
@@ -83,8 +91,8 @@
             @item-selected="selectedItems = $event"
         >
             <template
-                v-for="h in headers"
-                v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
+                v-for="(h, colIdx) in visHeaders"
+                v-slot:[h.text]="{ data: { rowData, cell, rowIdx } }"
             >
                 <div :key="h.text" class="fill-height d-flex align-center">
                     <column-input
@@ -170,11 +178,13 @@
 import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
+import ColumnList from './ColumnList.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
     name: 'alter-cols-opts',
     components: {
         'column-input': ColumnInput,
+        'column-list': ColumnList,
     },
     props: {
         value: { type: Object, required: true },
@@ -189,12 +199,16 @@ export default {
             selectedItems: [],
             headerHeight: 0,
             isVertTable: false,
+            selectedColOpts: [],
         }
     },
     computed: {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
+        tableMaxHeight() {
+            return this.height - this.headerHeight
+        },
         colsOptsData: {
             get() {
                 return this.value
@@ -231,6 +245,16 @@ export default {
                 return h
             })
         },
+        colOpts() {
+            return this.headers.filter(h => !h.hidden)
+        },
+        visHeaders() {
+            return this.headers.map(h => {
+                if (!this.selectedColOpts.find(col => col.text === h.text))
+                    return { ...h, hidden: true }
+                return h
+            })
+        },
         abbreviatedHeaders() {
             return {
                 PK: 'PRIMARY KEY',
@@ -252,6 +276,9 @@ export default {
                 items = [...items, { header: item.header }, ...item.types, { divider: true }]
             })
             return items
+        },
+        idxOfId() {
+            return this.findHeaderIdx('id')
         },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
@@ -284,10 +311,25 @@ export default {
             })
             return count === 1
         },
+        /**
+         * a unique key of each table being altered.
+         * This key is used to handle show column options in the case when
+         * user alters a table then alter another table in the same worksheet
+         */
+        initialDataFirstCellId() {
+            return this.$typy(this.initialData.data, `[0]['${this.idxOfId}']`).safeString
+        },
     },
     watch: {
         colsOptsData(v) {
             if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
+        },
+        initialDataFirstCellId(v) {
+            // show all column alter options
+            //TODO: detect small screen resolution to show all except charset,collation,comment
+            if (v) {
+                this.selectedColOpts = this.$help.lodash.cloneDeep(this.colOpts)
+            }
         },
     },
     methods: {
