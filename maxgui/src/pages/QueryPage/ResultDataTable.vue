@@ -13,6 +13,7 @@
             />
             <column-list
                 v-model="filterHeaderIdxs"
+                selectAllOnActivated
                 :label="$t('filterBy')"
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
@@ -43,6 +44,7 @@
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
             <column-list
                 v-model="visHeaderIdxs"
+                selectAllOnActivated
                 :label="$t('columns')"
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
