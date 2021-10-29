@@ -29,9 +29,7 @@
                         :ref="`header__${i}`"
                         :style="{
                             ...headerStyle,
-                            maxWidth: header.width
-                                ? $help.handleAddPxUnit(header.width)
-                                : $help.handleAddPxUnit(headerWidthMap[i]),
+                            maxWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                         }"
                         class="th d-flex align-center px-3"
@@ -39,6 +37,7 @@
                             pointer: enableSorting && header.sortable !== false,
                             [`sort--active ${sortOrder}`]: activeSort === header.text,
                             'text-capitalize': header.capitalize,
+                            'th--resizable': !isResizerDisabled(header),
                         }"
                         @click="
                             () =>
@@ -59,13 +58,13 @@
                             :data="{
                                 header,
                                 // maxWidth: minus padding and sort-icon
-                                maxWidth: headerMaxWidth({ header, i }),
+                                maxWidth: headerTxtMaxWidth({ header, i }),
                                 colIdx: i,
                             }"
                         >
                             <truncate-string
                                 :text="`${header.text}`"
-                                :maxWidth="headerMaxWidth({ header, i })"
+                                :maxWidth="headerTxtMaxWidth({ header, i })"
                             />
                         </slot>
 
@@ -91,11 +90,10 @@
                         <div
                             v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                             class="header__resizer d-inline-block fill-height"
-                            :class="{ 'header__resizer--not-resizable': header.text === '#' }"
                             v-on="
-                                header.text !== '#'
-                                    ? { mousedown: e => resizerMouseDown(e, i) }
-                                    : null
+                                isResizerDisabled(header)
+                                    ? null
+                                    : { mousedown: e => resizerMouseDown(e, i) }
                             "
                         />
                     </div>
@@ -125,7 +123,8 @@
  *
  headers: {
   width?: string | number, default width when header is rendered
-  maxWidth?: string | number,
+  maxWidth?: string | number, if maxWidth is declared, it ignores width and use it as default width
+  minWidth?: string | number, allow resizing column to no smaller than provided value
   capitalize?: boolean, capitalize first letter of the header
   groupable?: boolean
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
@@ -152,12 +151,15 @@ export default {
         return {
             headerWidthMap: {},
             isResizing: false,
-            currCol: null,
-            nxtCol: null,
-            currPageX: 0,
-            nxtColWidth: 0,
-            currColWidth: 0,
-            currColIndex: 0,
+            resizingData: {
+                currCol: null,
+                nxtCol: null,
+                currPageX: 0,
+                nxtColWidth: 0,
+                currColWidth: 0,
+                currColIndex: 0,
+                nxtColIndex: 0,
+            },
             sortOrder: 'asc',
             activeSort: '',
             activeGroupBy: '',
@@ -221,7 +223,7 @@ export default {
         window.removeEventListener('mouseup', this.resizerMouseUp)
     },
     methods: {
-        headerMaxWidth({ header, i }) {
+        headerTxtMaxWidth({ header, i }) {
             return (
                 this.$typy(this.headerWidthMap[i]).safeNumber -
                 (this.enableSorting && header.sortable !== false ? 22 : 0) -
@@ -229,9 +231,12 @@ export default {
                 24 // padding
             )
         },
+        isResizerDisabled(header) {
+            return header.text === '#'
+        },
         //threshold, user cannot resize header smaller than this
         getMinHeaderWidth(header) {
-            if (header.maxWidth) return header.maxWidth
+            if (header.minWidth) return header.minWidth
             return this.$typy(header, 'groupable').safeBoolean ? 117 : 67
         },
         resetHeaderWidth() {
@@ -239,7 +244,7 @@ export default {
             for (const [i, header] of this.tableHeaders.entries()) {
                 headerWidthMap = {
                     ...headerWidthMap,
-                    [i]: header.maxWidth ? header.maxWidth : 'unset',
+                    [i]: header.maxWidth ? header.maxWidth : header.width ? header.width : 'unset',
                 }
             }
             this.headerWidthMap = headerWidthMap
@@ -264,33 +269,62 @@ export default {
             this.resetHeaderWidth()
             this.$nextTick(() => this.$nextTick(() => this.assignHeaderWidthMap()))
         },
+        hasClass({ ele, className }) {
+            let str = ` ${ele.className} `
+            let classToFind = ` ${className} `
+            return str.indexOf(classToFind) !== -1
+        },
+        getNxtColByClass({ node, className, nxtColIndex }) {
+            while ((node = node.nextSibling)) {
+                nxtColIndex++
+                if (this.hasClass({ ele: node, className })) return { node, nxtColIndex }
+            }
+            return { node: null, nxtColIndex }
+        },
         resizerMouseDown(e, i) {
-            this.currColIndex = i
-            this.currCol = e.target.parentElement
-            this.nxtCol = this.currCol.nextElementSibling
-            this.currPageX = e.pageX
-            this.currColWidth = this.currCol.offsetWidth
-            if (this.nxtCol) this.nxtColWidth = this.nxtCol.offsetWidth
+            let resizingData = {
+                currColIndex: i,
+                currCol: e.target.parentElement,
+                currPageX: e.pageX,
+                currColWidth: e.target.parentElement.offsetWidth,
+            }
+            const { node: nxtCol, nxtColIndex } = this.getNxtColByClass({
+                node: resizingData.currCol,
+                className: 'th--resizable',
+                nxtColIndex: i,
+            })
+            resizingData = { ...resizingData, nxtCol, nxtColIndex }
+            if (resizingData.nxtCol) resizingData.nxtColWidth = resizingData.nxtCol.offsetWidth
             this.isResizing = true
+            this.resizingData = { ...this.resizingData, ...resizingData }
         },
         resizerMouseMove(e) {
             if (this.isResizing) {
-                const diffX = e.pageX - this.currPageX
+                const {
+                    currPageX,
+                    currCol,
+                    currColWidth,
+                    currColIndex,
+                    nxtCol,
+                    nxtColWidth,
+                    nxtColIndex,
+                } = this.resizingData
+                const diffX = e.pageX - currPageX
                 if (
-                    this.currColWidth + diffX >=
-                    this.getMinHeaderWidth(this.tableHeaders[this.currColIndex])
+                    currColWidth + diffX >=
+                    this.getMinHeaderWidth(this.tableHeaders[currColIndex])
                 ) {
-                    const newCurrColW = `${this.currColWidth + diffX}px`
-                    this.currCol.style.maxWidth = newCurrColW
-                    this.currCol.style.minWidth = newCurrColW
+                    const newCurrColW = `${currColWidth + diffX}px`
+                    currCol.style.maxWidth = newCurrColW
+                    currCol.style.minWidth = newCurrColW
                     if (
-                        this.nxtCol &&
-                        this.nxtColWidth - diffX >=
-                            this.getMinHeaderWidth(this.tableHeaders[this.currColIndex])
+                        nxtCol &&
+                        nxtColWidth - diffX >=
+                            this.getMinHeaderWidth(this.tableHeaders[nxtColIndex])
                     ) {
-                        const newNxtColW = `${this.nxtColWidth - diffX}px`
-                        this.nxtCol.style.maxWidth == newNxtColW
-                        this.nxtCol.style.minWidth = newNxtColW
+                        const newNxtColW = `${nxtColWidth - diffX}px`
+                        nxtCol.style.maxWidth == newNxtColW
+                        nxtCol.style.minWidth = newNxtColW
                     }
                     this.$nextTick(() => this.assignHeaderWidthMap())
                 }
@@ -299,12 +333,7 @@ export default {
         resizerMouseUp() {
             if (this.isResizing) {
                 this.isResizing = false
-                this.currPageX = 0
-                this.currCol = null
-                this.nxtCol = null
-                this.nxtColWidth = 0
-                this.currColWidth = 0
-                this.currColIndex = 0
+                this.resizingData = {}
             }
         },
         /**
@@ -406,16 +435,21 @@ export default {
                 right: 0px;
                 width: 11px;
                 border-right: 1px solid $background;
-                cursor: ew-resize;
+                // disabled by default
+                cursor: initial;
                 &--hovered,
                 &:hover {
-                    border-right: 3px solid $background;
+                    border-right: 1px solid $background;
                 }
-                &--not-resizable {
-                    cursor: initial;
+            }
+            // Enable when have th--resizable class
+            &--resizable {
+                .header__resizer {
+                    cursor: ew-resize;
+                    border-right: 1px solid $background;
                     &--hovered,
                     &:hover {
-                        border-right: 1px solid $background;
+                        border-right: 3px solid $background;
                     }
                 }
             }
