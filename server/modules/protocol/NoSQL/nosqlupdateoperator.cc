@@ -25,54 +25,9 @@ using namespace nosql;
 class UpdateOperator
 {
 public:
-    void add_update_path(const string_view& field)
-    {
-        string f = string(field.data(), field.length());
+    UpdateOperator() = default;
 
-        if (f == "_id")
-        {
-            throw SoftError("Performing an update on the path '_id' would modify the immutable field '_id'",
-                            error::IMMUTABLE_FIELD);
-        }
-
-        m_paths.insert(f);
-
-        auto i = f.find('.');
-
-        if (i != string::npos)
-        {
-            m_paths.insert(f.substr(0, i));
-        }
-    }
-
-    string check_update_path(const string_view& field)
-    {
-        string f = string(field.data(), field.length());
-
-        auto it = m_paths.find(f);
-
-        if (it == m_paths.end())
-        {
-            auto i = f.find('.');
-
-            if (i != string::npos)
-            {
-                it = m_paths.find(f.substr(0, i));
-            }
-        }
-
-        if (it != m_paths.end())
-        {
-            ostringstream ss;
-            ss << "Updating the path '" << field << "' would create a conflict at '" << *it << "'";
-
-            throw SoftError(ss.str(), error::CONFLICTING_UPDATE_OPERATORS);
-        }
-
-        return escape_essential_chars(std::move(f));
-    }
-
-    string convert_update_operator_set(const bsoncxx::document::element& element, const string& doc)
+    string convert_set(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$set") == 0);
 
@@ -105,7 +60,7 @@ public:
         return ss.str();
     }
 
-    string convert_update_operator_unset(const bsoncxx::document::element& element, const string& doc)
+    string convert_unset(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$unset") == 0);
 
@@ -152,78 +107,21 @@ public:
         return rv;
     }
 
-    string convert_update_operator_op(const bsoncxx::document::element& element,
-                                      const string& doc,
-                                      const char* zOperation,
-                                      const char* zOp)
-    {
-
-        ostringstream ss;
-
-        ss << "JSON_SET(" << doc;
-
-        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
-
-        vector<string_view> svs;
-        for (auto field : fields)
-        {
-            ss << ", ";
-
-            string_view sv = field.key();
-            string key = escape_essential_chars(string(sv.data(), sv.length()));
-
-            ss << "'$." << key << "', ";
-
-            double d;
-            if (element_as(field, Conversion::RELAXED, &d))
-            {
-                auto value = double_to_string(d);
-
-                ss << "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, "
-                   << "JSON_VALUE(doc, '$." + key + "')" << zOp << value << ", "
-                   << value
-                   << ")";
-            }
-            else
-            {
-                DocumentBuilder value;
-                append(value, key, field);
-
-                ostringstream ss;
-                ss << "Cannot " << zOperation << " with non-numeric argument: "
-                   << bsoncxx::to_json(value.view());
-
-                throw SoftError(ss.str(), error::TYPE_MISMATCH);
-            }
-
-            svs.push_back(sv);
-        }
-
-        for (const auto& sv : svs)
-        {
-            add_update_path(sv);
-        }
-
-        ss << ")";
-
-        return ss.str();
-    }
-
-    string convert_update_operator_inc(const bsoncxx::document::element& element, const string& doc)
+    string convert_inc(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$inc") == 0);
 
-        return convert_update_operator_op(element, doc, "increment", " + ");
+        return convert_op(element, doc, "increment", " + ");
     }
 
-    string convert_update_operator_mul(const bsoncxx::document::element& element, const string& doc)
+    string convert_mul(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$mul") == 0);
 
-        return convert_update_operator_op(element, doc, "multiply", " * ");
+        return convert_op(element, doc, "multiply", " * ");
     }
 
-    string convert_update_operator_rename(const bsoncxx::document::element& element, const string& doc)
+    string convert_rename(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$rename") == 0);
 
@@ -339,34 +237,6 @@ public:
             }
             else
             {
-                using Generate = std::function<void(ostream&,
-                                                    const string&,
-                                                    const string&,
-                                                    vector<string>::iterator&,
-                                                    const vector<string>::iterator&)>;
-
-                Generate generate = [&generate](ostream& out,
-                                                const string& rv,
-                                                const string& f,
-                                                vector<string>::iterator& it,
-                                                const vector<string>::iterator& end)
-                    {
-                        if (it != end)
-                        {
-                            out << "\"" << *it << "\", JSON_OBJECT(";
-
-                            ++it;
-
-                            generate(out, rv, f, it, end);
-
-                            out << ")";
-                        }
-                        else
-                        {
-                            out << "\"" << *it << "\", JSON_EXTRACT(" << rv << ", '$." << f << "')";
-                        }
-                    };
-
                 ostringstream ss2;
 
                 // If we have something like '{$rename: {'a.b': 'a.c'}', by explicitly checking whether
@@ -390,7 +260,7 @@ public:
 
                 ++it;
 
-                generate(ss2, rv, f, it, end);
+                convert_rename(ss2, rv, f, it, end);
 
                 ss2 << ")))";
 
@@ -422,6 +292,132 @@ public:
     static bool is_supported(const string& name);
 
 private:
+    void convert_rename(ostream& out,
+                        const string& rv,
+                        const string& f,
+                        vector<string>::iterator& it,
+                        const vector<string>::iterator& end)
+    {
+        if (it != end)
+        {
+            out << "\"" << *it << "\", JSON_OBJECT(";
+
+            ++it;
+
+            convert_rename(out, rv, f, it, end);
+
+            out << ")";
+        }
+        else
+        {
+            out << "\"" << *it << "\", JSON_EXTRACT(" << rv << ", '$." << f << "')";
+        }
+    };
+
+    string convert_op(const bsoncxx::document::element& element,
+                      const string& doc,
+                      const char* zOperation,
+                      const char* zOp)
+    {
+
+        ostringstream ss;
+
+        ss << "JSON_SET(" << doc;
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        vector<string_view> svs;
+        for (auto field : fields)
+        {
+            ss << ", ";
+
+            string_view sv = field.key();
+            string key = escape_essential_chars(string(sv.data(), sv.length()));
+
+            ss << "'$." << key << "', ";
+
+            double d;
+            if (element_as(field, Conversion::RELAXED, &d))
+            {
+                auto value = double_to_string(d);
+
+                ss << "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, "
+                   << "JSON_VALUE(doc, '$." + key + "')" << zOp << value << ", "
+                   << value
+                   << ")";
+            }
+            else
+            {
+                DocumentBuilder value;
+                append(value, key, field);
+
+                ostringstream ss;
+                ss << "Cannot " << zOperation << " with non-numeric argument: "
+                   << bsoncxx::to_json(value.view());
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            svs.push_back(sv);
+        }
+
+        for (const auto& sv : svs)
+        {
+            add_update_path(sv);
+        }
+
+        ss << ")";
+
+        return ss.str();
+    }
+
+    void add_update_path(const string_view& field)
+    {
+        string f = string(field.data(), field.length());
+
+        if (f == "_id")
+        {
+            throw SoftError("Performing an update on the path '_id' would modify the immutable field '_id'",
+                            error::IMMUTABLE_FIELD);
+        }
+
+        m_paths.insert(f);
+
+        auto i = f.find('.');
+
+        if (i != string::npos)
+        {
+            m_paths.insert(f.substr(0, i));
+        }
+    }
+
+    string check_update_path(const string_view& field)
+    {
+        string f = string(field.data(), field.length());
+
+        auto it = m_paths.find(f);
+
+        if (it == m_paths.end())
+        {
+            auto i = f.find('.');
+
+            if (i != string::npos)
+            {
+                it = m_paths.find(f.substr(0, i));
+            }
+        }
+
+        if (it != m_paths.end())
+        {
+            ostringstream ss;
+            ss << "Updating the path '" << field << "' would create a conflict at '" << *it << "'";
+
+            throw SoftError(ss.str(), error::CONFLICTING_UPDATE_OPERATORS);
+        }
+
+        return escape_essential_chars(std::move(f));
+    }
+
     using Converter = std::string (UpdateOperator::*)(const bsoncxx::document::element& element,
                                                       const std::string& doc);
 
@@ -432,11 +428,11 @@ private:
 
 unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
 {
-    { "$set",    &UpdateOperator::convert_update_operator_set },
-    { "$unset",  &UpdateOperator::convert_update_operator_unset },
-    { "$inc",    &UpdateOperator::convert_update_operator_inc },
-    { "$mul",    &UpdateOperator::convert_update_operator_mul },
-    { "$rename", &UpdateOperator::convert_update_operator_rename }
+    { "$set",    &UpdateOperator::convert_set },
+    { "$unset",  &UpdateOperator::convert_unset },
+    { "$inc",    &UpdateOperator::convert_inc },
+    { "$mul",    &UpdateOperator::convert_mul },
+    { "$rename", &UpdateOperator::convert_rename }
 };
 
 //static
