@@ -36,7 +36,7 @@
                         v-on="on"
                         @click="$emit('on-delete-selected', selectedItems)"
                     >
-                        {{ $t('delete') }}
+                        {{ $t('delete') }} ({{ selectedItems.length }})
                     </v-btn>
                 </template>
                 <span>{{ $t('deleteSelectedRows') }}</span>
@@ -100,6 +100,9 @@
                     v-slot:[h.text]="{ data: { cell, header, maxWidth } }"
                 >
                     <slot :name="`${h.text}`" :data="{ cell, header, maxWidth }" />
+                </template>
+                <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
+                    <slot :name="`header-${h.text}`" :data="data" />
                 </template>
             </virtual-scroll-table>
         </keep-alive>

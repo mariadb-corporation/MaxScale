@@ -41,6 +41,14 @@
                     @on-row-right-click="openCtxMenu"
                     v-on="$listeners"
                 >
+                    <template v-slot:header-connection_name="{ data: { maxWidth } }">
+                        <truncate-string
+                            :key="maxWidth"
+                            class="text-truncate"
+                            text="Connection Name"
+                            :maxWidth="maxWidth"
+                        />
+                    </template>
                     <template v-slot:date="{ data: { cell, maxWidth } }">
                         <truncate-string
                             :text="
