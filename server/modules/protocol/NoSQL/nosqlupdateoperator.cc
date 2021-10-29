@@ -37,7 +37,7 @@ public:
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
-        vector<string_view> svs;
+        FieldRecorder rec(this);
         for (auto field : fields)
         {
             ss << ", ";
@@ -47,15 +47,12 @@ public:
 
             ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
 
-            svs.push_back(sv);
-        }
-
-        for (const auto& sv : svs)
-        {
-            add_update_path(sv);
+            rec.push_back(sv);
         }
 
         ss << ")";
+
+        rec.flush();
 
         return ss.str();
     }
@@ -83,7 +80,7 @@ public:
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
-        vector<string_view> svs;
+        FieldRecorder rec(this);
         for (auto field : fields)
         {
             string_view sv = field.key();
@@ -96,13 +93,10 @@ public:
 
             rv = ss.str();
 
-            svs.push_back(sv);
+            rec.push_back(sv);
         }
 
-        for (const auto& sv : svs)
-        {
-            add_update_path(sv);
-        }
+        rec.flush();
 
         return rv;
     }
@@ -129,7 +123,7 @@ public:
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
-        vector<string_view> svs;
+        FieldRecorder rec(this);
         for (auto field : fields)
         {
             auto from = field.key();
@@ -273,14 +267,11 @@ public:
 
             rv = ss.str();
 
-            svs.push_back(from);
-            svs.push_back(to);
+            rec.push_back(from);
+            rec.push_back(to);
         }
 
-        for (const auto& sv : svs)
-        {
-            add_update_path(sv);
-        }
+        rec.flush();
 
         return rv;
     }
@@ -292,6 +283,34 @@ public:
     static bool is_supported(const string& name);
 
 private:
+    class FieldRecorder
+    {
+    public:
+        FieldRecorder(UpdateOperator* pParent)
+            : m_parent(*pParent)
+        {
+        }
+
+        void flush()
+        {
+            for (const auto& field : m_fields)
+            {
+                m_parent.add_update_path(field);
+            }
+
+            m_fields.clear();
+        }
+
+        void push_back(const string_view& field)
+        {
+            m_fields.push_back(field);
+        }
+
+    private:
+        UpdateOperator&     m_parent;
+        vector<string_view> m_fields;
+    };
+
     void convert_rename(ostream& out,
                         const string& rv,
                         const string& f,
@@ -326,7 +345,7 @@ private:
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
-        vector<string_view> svs;
+        FieldRecorder rec(this);
         for (auto field : fields)
         {
             ss << ", ";
@@ -358,12 +377,7 @@ private:
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
 
-            svs.push_back(sv);
-        }
-
-        for (const auto& sv : svs)
-        {
-            add_update_path(sv);
+            rec.push_back(sv);
         }
 
         ss << ")";
