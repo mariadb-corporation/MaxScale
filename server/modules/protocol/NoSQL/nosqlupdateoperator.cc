@@ -423,10 +423,9 @@ string convert_update_operator_rename(const bsoncxx::document::element& element,
     return rv;
 }
 
-}
-
-namespace nosql
-{
+using UpdateOperatorConverter = std::string (*)(const bsoncxx::document::element& element,
+                                                const std::string& doc,
+                                                std::unordered_set<std::string>& paths);
 
 unordered_map<string, UpdateOperatorConverter> update_operator_converters =
 {
@@ -460,6 +459,32 @@ string convert_update_operations(const bsoncxx::document::view& update_operation
     rv += " ";
 
     return rv;
+}
+
+}
+
+namespace nosql
+{
+
+bool update_operator::is_supported(const std::string& name)
+{
+    return update_operator_converters.find(name) != update_operator_converters.end();
+}
+
+std::vector<std::string> update_operator::supported_operators()
+{
+    vector<string> operators;
+    for (auto kv: update_operator_converters)
+    {
+        operators.push_back(kv.first);
+    }
+
+    return operators;
+}
+
+std::string update_operator::convert(const bsoncxx::document::view& update_operators)
+{
+    return convert_update_operations(update_operators);
 }
 
 }

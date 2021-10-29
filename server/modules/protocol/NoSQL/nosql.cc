@@ -1300,7 +1300,7 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
             {
                 if (kind == UpdateKind::INVALID || kind == UpdateKind::UPDATE_OPERATORS)
                 {
-                    if (update_operator_converters.find(name) == update_operator_converters.end())
+                    if (!update_operator::is_supported(name))
                     {
                         ostringstream ss;
                         ss << "Unknown modifier: " << name
@@ -1308,13 +1308,7 @@ UpdateKind get_update_kind(const bsoncxx::document::view& update_specification)
                            << "pipeline-style update specified as an array. "
                            << "Currently the only supported update operators are: ";
 
-                        vector<string> operators;
-                        for (auto kv: update_operator_converters)
-                        {
-                            operators.push_back(kv.first);
-                        }
-
-                        ss << mxb::join(operators);
+                        ss << mxb::join(update_operator::supported_operators());
 
                         throw SoftError(ss.str(), error::COMMAND_FAILED);
                     }
@@ -1411,7 +1405,7 @@ void update_specification_to_set_value(UpdateKind kind,
                 throw SoftError(ss.str(), error::LOCATION17419);
             }
 
-            sql << convert_update_operations(update_specification);
+            sql << update_operator::convert(update_specification);
         }
         break;
 

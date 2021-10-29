@@ -13,21 +13,21 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
-#include <unordered_map>
-#include <unordered_set>
-#include <bsoncxx/document/element.hpp>
 #include <bsoncxx/document/view.hpp>
 
 namespace nosql
 {
 
-using UpdateOperatorConverter = std::string (*)(const bsoncxx::document::element& element,
-                                                const std::string& doc,
-                                                std::unordered_set<std::string>& paths);
+namespace update_operator
+{
 
-extern std::unordered_map<std::string, UpdateOperatorConverter> update_operator_converters;
+bool is_supported(const std::string& name);
 
-std::string convert_update_operations(const bsoncxx::document::view& update_operations);
+std::vector<std::string> supported_operators();
+
+std::string convert(const bsoncxx::document::view& update_operators);
+
+}
 
 }
 
