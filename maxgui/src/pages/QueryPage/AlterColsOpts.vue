@@ -231,12 +231,13 @@ export default {
                     case 'UQ':
                     case 'ZF':
                     case 'AI':
-                        h.width = 50
+                        h.minWidth = 50
                         h.maxWidth = 50
+                        h.resizable = false
                         break
                     case 'generated':
                         h.width = 144
-                        h.maxWidth = 144
+                        h.minWidth = 126
                         break
                     case 'id':
                         h.hidden = true

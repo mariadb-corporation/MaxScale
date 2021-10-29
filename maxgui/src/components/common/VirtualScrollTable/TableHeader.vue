@@ -125,6 +125,7 @@
   width?: string | number, default width when header is rendered
   maxWidth?: string | number, if maxWidth is declared, it ignores width and use it as default width
   minWidth?: string | number, allow resizing column to no smaller than provided value
+  resizable?: boolean, true by default
   capitalize?: boolean, capitalize first letter of the header
   groupable?: boolean
   hasCustomGroup?: boolean, if true, virtual-scroll-table emits custom-group event
@@ -232,7 +233,7 @@ export default {
             )
         },
         isResizerDisabled(header) {
-            return header.text === '#'
+            return header.text === '#' || header.resizable === false
         },
         //threshold, user cannot resize header smaller than this
         getMinHeaderWidth(header) {
