@@ -5,6 +5,7 @@ no_file.ini: e=-1 user=0
 ... [ section 2 ]
 ... happy=4;
 ... sad=;
+... [empty]
 ... [comment_test]
 ... test1=1;2;3;
 ... test2=2;3;4;this won't be a comment, needs whitespace before ';';
@@ -54,9 +55,11 @@ bom.ini: e=0 user=107
 ... [section1]
 ... single1=abc;
 ... single2=xyz;
+... [section1]
 ... single1=def;
 ... single2=qrs;
 duplicate_sections.ini: e=0 user=108
+... [section_list]
 ... [section0]
 ... key0=val0;
 ... [section1]

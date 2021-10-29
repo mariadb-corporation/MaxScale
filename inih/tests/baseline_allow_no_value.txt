@@ -25,7 +25,8 @@ normal.ini: e=0 user=101
 ... name1=value1;
 ... name2=value2;
 bad_section.ini: e=3 user=102
-bad_comment.ini: e=1 user=102
+... This is an error;
+bad_comment.ini: e=0 user=103
 ... [section]
 ... a=b;
 ... user=parse_error;
@@ -46,7 +47,8 @@ user_error.ini: e=3 user=104
 ... multi=brown fox;
 ... name=bob smith;
 multi_line.ini: e=0 user=105
-bad_multi.ini: e=1 user=105
+... indented;
+bad_multi.ini: e=0 user=106
 ... [bom_section]
 ... bom_name=bom_value;
 ... key“=value“;
@@ -57,8 +59,11 @@ bom.ini: e=0 user=107
 ... single1=def;
 ... single2=qrs;
 duplicate_sections.ini: e=0 user=108
+... [section_list]
+... section0;
+... section1;
 ... [section0]
 ... key0=val0;
 ... [section1]
 ... key1=val1;
-no_value.ini: e=2 user=109
+no_value.ini: e=0 user=109

@@ -10,10 +10,16 @@ no_file.ini: e=-1 user=0
 ... test2=2;3;4;this won't be a comment, needs whitespace before ';';
 ... test;3=345;
 ... test4=4#5#6;
+... test7=;
+... test8=; not a comment, needs whitespace before ';';
 ... [colon_tests]
 ... Content-Type=text/html;
 ... foo=bar;
 ... adams=42;
+... funny1=with = equals;
+... funny2=with : colons;
+... funny3=two = equals;
+... funny4=two : colons;
 normal.ini: e=0 user=101
 ... [section1]
 ... name1=value1;
@@ -41,3 +47,14 @@ bad_multi.ini: e=1 user=105
 ... bom_name=bom_value;
 ... key“=value“;
 bom.ini: e=0 user=107
+... [section1]
+... single1=abc;
+... single2=xyz;
+... single1=def;
+... single2=qrs;
+duplicate_sections.ini: e=0 user=108
+... [section0]
+... key0=val0;
+... [section1]
+... key1=val1;
+no_value.ini: e=2 user=109

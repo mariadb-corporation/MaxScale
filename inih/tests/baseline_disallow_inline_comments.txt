@@ -1,16 +1,16 @@
 no_file.ini: e=-1 user=0
 ... [section1]
-... one=This is a test;
+... one=This is a test  ; name=value comment;
 ... two=1234;
 ... [ section 2 ]
 ... happy=4;
 ... sad=;
 ... [comment_test]
-... test1=1;2;3;
+... test1=1;2;3 ; only this will be a comment;
 ... test2=2;3;4;this won't be a comment, needs whitespace before ';';
-... test;3=345;
-... test4=4#5#6;
-... test7=;
+... test;3=345 ; key should be "test;3";
+... test4=4#5#6 ; '#' only starts a comment at start of line;
+... test7=; blank value, except if inline comments disabled;
 ... test8=; not a comment, needs whitespace before ';';
 ... [colon_tests]
 ... Content-Type=text/html;
@@ -23,6 +23,7 @@ no_file.ini: e=-1 user=0
 normal.ini: e=0 user=101
 ... [section1]
 ... name1=value1;
+... [section3   ; comment ]
 ... name2=value2;
 bad_section.ini: e=3 user=102
 bad_comment.ini: e=1 user=102
@@ -44,7 +45,7 @@ user_error.ini: e=3 user=104
 ... single=ghi;
 ... multi=the quick;
 ... multi=brown fox;
-... name=bob smith;
+... name=bob smith  ; comment line 1;
 multi_line.ini: e=0 user=105
 bad_multi.ini: e=1 user=105
 ... [bom_section]
