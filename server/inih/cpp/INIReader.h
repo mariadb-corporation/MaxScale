@@ -25,8 +25,7 @@ public:
     int ParseError();
 
     // Get a string value from INI file, returning default_value if not found.
-    std::string Get(std::string section,
-                    std::string name,
+    std::string Get(std::string section, std::string name,
                     std::string default_value);
 
     // Get an integer (long) value from INI file, returning default_value if
@@ -39,13 +38,11 @@ public:
     bool GetBoolean(std::string section, std::string name, bool default_value);
 
 private:
-    int                                _error;
+    int _error;
     std::map<std::string, std::string> _values;
     static std::string MakeKey(std::string section, std::string name);
-    static int         ValueHandler(void*       user,
-                                    const char* section,
-                                    const char* name,
-                                    const char* value);
+    static int ValueHandler(void* user, const char* section, const char* name,
+                            const char* value);
 };
 
-#endif      // __INIREADER_H__
+#endif  // __INIREADER_H__
