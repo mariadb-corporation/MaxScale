@@ -13,34 +13,20 @@
 
 #include "avrorouter.hh"
 
-#include <ctype.h>
-#include <ini.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <glob.h>
-#include <ini.h>
-#include <sys/stat.h>
-#include <maxbase/atomic.h>
-#include <maxscale/cn_strings.hh>
 #include <maxscale/maxscale.h>
 #include <maxbase/worker.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/random.h>
 #include <maxscale/router.hh>
-#include <maxscale/server.hh>
 #include <maxscale/service.hh>
-#include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 #include <maxscale/config2.hh>
-
-#include "avro_converter.hh"
 
 using namespace maxbase;
 namespace cfg = mxs::config;
