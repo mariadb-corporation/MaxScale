@@ -19,10 +19,10 @@
 
 #include <blr_constants.hh>
 #include <fcntl.h>
-#include <ini.h>
 #include <stdlib.h>
 
 #include <maxbase/alloc.h>
+#include <maxbase/ini.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.h>
@@ -197,7 +197,7 @@ bool avro_load_conversion_state(Avro* router)
 
     MXS_NOTICE("[%s] Loading stored conversion state: %s", router->service->name(), filename);
 
-    int rc = ini_parse(filename, conv_state_handler, router);
+    int rc = mxb::ini::ini_parse(filename, conv_state_handler, router);
 
     switch (rc)
     {

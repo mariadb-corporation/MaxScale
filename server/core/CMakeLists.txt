@@ -70,7 +70,6 @@ target_link_libraries(maxscale-common
   pthread
   crypt
   crypto
-  inih
   z
   rt
   m

@@ -35,7 +35,6 @@
 #include <map>
 #include <fstream>
 
-#include <ini.h>
 #include <openssl/opensslconf.h>
 #include <pwd.h>
 #include <sys/file.h>
@@ -46,6 +45,7 @@
 #include <sys/sysinfo.h>
 
 #include <maxbase/maxbase.hh>
+#include <maxbase/ini.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
@@ -59,10 +59,8 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/random.h>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
-#include <maxscale/session.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/threadpool.hh>
 #include <maxscale/utils.h>
@@ -75,7 +73,6 @@
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
-#include "internal/poll.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
 #include "internal/secrets.hh"
@@ -3017,7 +3014,7 @@ static bool sniff_configuration(const char* filepath)
 {
     char* s = NULL;
 
-    int rv = ini_parse(filepath, cnf_preparser, &s);
+    int rv = mxb::ini::ini_parse(filepath, cnf_preparser, &s);
 
     if (rv != 0)
     {

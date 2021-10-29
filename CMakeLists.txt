@@ -193,7 +193,6 @@ include_directories(maxutils/maxbase/include)
 include_directories(maxutils/maxsql/include)
 include_directories(maxutils/maxsimd/include)
 
-include_directories(inih)
 add_subdirectory(inih)
 add_subdirectory(maxutils)
 add_subdirectory(query_classifier)
