@@ -39,6 +39,19 @@ where the `SELECT` of the `WITH` clause refers to forbidden columns.
 
 ## Query Classification
 
+### Transaction Boundary Detection
+
+If a module in MaxScale requires tracking of transaction boundaries but does not
+require query classification, a custom parser is used to detect them. Currently
+the only situation in which this parser is used is when a `readconnroute`
+service uses the `cache` filter.
+
+The custom parser detects a subset of the full SQL syntax used to start
+transactions. This means that more complex statements will not be fully parsed
+and will cause the transaction state to not match the real state on the
+database. For example, `SET @my_var = (SELECT 1), autocommit = 0` is not parsed
+by the custom parser and causes the autocommit modification to not be noticed.
+
 ### XA Transactions
 
 MaxScale will treat statements executed after `XA START` and before `XA END` as
