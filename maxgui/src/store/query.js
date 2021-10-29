@@ -373,7 +373,7 @@ export default {
         async openConnect({ state, dispatch, commit }, { body, resourceType }) {
             const active_wke_id = state.active_wke_id
             try {
-                let res = await this.vue.$axios.post(`/sql?persist=yes`, body)
+                let res = await this.vue.$axios.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',

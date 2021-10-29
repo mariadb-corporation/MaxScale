@@ -34,7 +34,7 @@ the same credentials as `maxctrl`, so by default, the username is
 MaxGUI uses [JSON Web Tokens](https://jwt.io/introduction/) as the
 authentication method for persisting the user's session.
 If the _Remember me_ checkbox is ticked, the session will persist for
-8 hours, otherwise, as soon as MaxGUI is closed, the session will expire.
+24 hours, otherwise, as soon as MaxGUI is closed, the session will expire.
 
 To log out, simply click the username section in the top right corner of
 the page header to access the logout menu.

@@ -125,7 +125,7 @@ describe('LoginForm.vue', async () => {
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
 
-        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=28800', {
+        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=86400', {
             auth: { username: 'maxskysql', password: 'skysql' },
         })
     })

@@ -60,7 +60,7 @@ export default {
                 this.vue.$refreshAxiosToken()
                 let url = '/auth?persist=yes'
                 let res = await this.vue.$loginAxios.get(
-                    `${url}${rememberMe ? '&max-age=28800' : ''}`,
+                    `${url}${rememberMe ? '&max-age=86400' : ''}`,
                     {
                         auth,
                     }
