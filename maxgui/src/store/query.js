@@ -135,6 +135,7 @@ export default {
         // connection related states
         is_querying_map: {},
         // sidebar states
+        sysSchemas: ['information_schema', 'performance_schema', 'mysql', 'sys'],
         db_tree_map: {},
         // editor states
         curr_editor_mode_map: {},
@@ -558,11 +559,16 @@ export default {
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
          */
-        async getDbs({ state, commit }) {
+        async getDbs({ state, commit, rootState }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
+                let sql = 'SELECT * FROM information_schema.SCHEMATA'
+                if (!rootState.persisted.query_show_sys_schemas_flag)
+                    sql += ` WHERE SCHEMA_NAME NOT IN(${state.sysSchemas
+                        .map(db => `'${db}'`)
+                        .join(',')})`
                 const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                    sql: 'SELECT * FROM information_schema.SCHEMATA;',
+                    sql,
                 })
                 let cmpList = []
                 let db_tree = []
@@ -677,12 +683,7 @@ export default {
                         draggable: true,
                         data: row,
                         level: 2,
-                        isSysTbl: [
-                            'information_schema',
-                            'performance_schema',
-                            'mysql',
-                            'sys',
-                        ].includes(dbName.toLowerCase()),
+                        isSysTbl: state.sysSchemas.includes(dbName.toLowerCase()),
                     }
                     // For child node of Tables, it has canBeHighlighted and children props
                     if (node.type === 'Tables') {

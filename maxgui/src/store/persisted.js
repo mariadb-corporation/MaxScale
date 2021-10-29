@@ -21,6 +21,7 @@ export default {
         query_history: [],
         query_favorite: [],
         query_history_expired_time: addDaysToNow(30),
+        query_show_sys_schemas_flag: 1,
     },
     mutations: {
         SET_QUERY_MAX_ROW(state, payload) {
@@ -45,6 +46,9 @@ export default {
         },
         SET_QUERY_FAVORITE(state, payload) {
             state.query_favorite = payload
+        },
+        SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(state, payload) {
+            state.query_show_sys_schemas_flag = payload
         },
     },
     actions: {
