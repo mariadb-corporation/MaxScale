@@ -225,6 +225,7 @@ export default {
             return Object.keys(this.$typy(data[0]).safeObjectOrEmpty).map(field => {
                 let header = {
                     text: field,
+                    capitalize: true,
                 }
                 // assign default width to each column to have better view
                 switch (field) {
