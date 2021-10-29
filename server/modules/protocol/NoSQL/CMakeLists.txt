@@ -9,6 +9,7 @@ add_library(nosqlprotocol SHARED
   clientconnection.cc
   config.cc
   nosql.cc
+  nosqlbase.cc
   nosqlcommand.cc
   nosqlcursor.cc
   nosqldatabase.cc
