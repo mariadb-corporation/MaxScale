@@ -31,7 +31,6 @@ export const APP_CONFIG = Object.freeze({
     }),
     SQL_DDL_ALTER_SPECS: Object.freeze({
         COLUMNS: 'COLUMNS',
-        TRIGGERS: 'TRIGGERS',
     }),
     SQL_EDITOR_MODES: Object.freeze({
         TXT_EDITOR: 'TXT_EDITOR',

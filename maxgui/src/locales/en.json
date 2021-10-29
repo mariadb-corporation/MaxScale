@@ -185,7 +185,6 @@
     "inDays": "in days",
     "replicationStatus": "Replication status",
     "slaveRepStatus": "Slave replication status",
-    "triggers": "triggers",
     "alterTbl": "Alter Table",
     "engine": "Engine",
     "closeDDLEditor": "Close DDL editor",
