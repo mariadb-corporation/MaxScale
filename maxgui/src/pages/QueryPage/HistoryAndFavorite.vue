@@ -52,6 +52,48 @@
                             :maxWidth="maxWidth"
                         />
                     </template>
+                    <template v-slot:action="{ data: { cell, maxWidth } }">
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation pa-2 pb-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <span
+                                    class="d-inline-block text-truncate"
+                                    :style="{ maxWidth: `${maxWidth}px` }"
+                                    v-on="on"
+                                >
+                                    {{ cell.name }}
+                                </span>
+                            </template>
+                            <table class="action-table-tooltip px-1">
+                                <caption class="text-left font-weight-bold mb-3 pl-1">
+                                    {{
+                                        $t('queryResInfo')
+                                    }}
+                                    <v-divider class="color border-separator" />
+                                </caption>
+
+                                <tr v-for="(value, key) in cell" :key="`${key}`">
+                                    <td>
+                                        {{ key }}
+                                    </td>
+                                    <td
+                                        :class="{
+                                            'text-truncate': key !== 'response',
+                                        }"
+                                        :style="{
+                                            maxWidth: `600px`,
+                                            whiteSpace: key !== 'response' ? 'nowrap' : 'pre-line',
+                                        }"
+                                    >
+                                        {{ value }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </v-tooltip>
+                    </template>
                 </table-list>
             </template>
             <span
@@ -197,9 +239,9 @@ export default {
                         header.width = 90
                         header.groupable = false
                         break
-                    case 'execution_time':
-                        header.width = 150
+                    case 'action':
                         header.groupable = false
+                        header.draggable = true
                         break
                     case 'sql':
                         header.draggable = true
@@ -294,18 +336,43 @@ export default {
                 columns: this.headers.map(h => h.text),
                 rows: [this.activeCtxItem.filter((_, i) => i !== 0)], // Remove # col
             })
-            const sql = data[0].sql
+            let sql, name
+            switch (this.activeView) {
+                case this.SQL_QUERY_MODES.HISTORY: {
+                    name = data[0].action.name
+                    sql = data[0].action.sql
+                    break
+                }
+                case this.SQL_QUERY_MODES.FAVORITE:
+                    sql = data[0].sql
+            }
+            // if no name is defined when storing the query, sql query is stored to name
+            let sqlTxt = sql ? sql : name
             switch (opt) {
                 case this.$t('copySqlToClipboard'): {
-                    this.$help.copyTextToClipboard(sql)
+                    this.$help.copyTextToClipboard(sqlTxt)
                     break
                 }
                 case this.$t('placeSqlInEditor'):
-                    //TODO: add handler for this event on the parent component
-                    this.$emit('place-sql-in-editor', sql)
+                    this.$emit('place-sql-in-editor', sqlTxt)
                     break
             }
         },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.action-table-tooltip {
+    border-spacing: 0;
+    td {
+        font-size: 0.875rem;
+        color: $navigation;
+        height: 24px;
+        vertical-align: middle;
+        &:first-of-type {
+            padding-right: 16px;
+        }
+    }
+}
+</style>

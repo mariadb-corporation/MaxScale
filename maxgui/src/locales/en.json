@@ -202,6 +202,7 @@
     "drop": "Drop",
     "dropSelectedCols": "Drop selected columns",
     "alterSpecs": "Alter Specifications",
+    "queryResInfo": "Query results information",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

@@ -923,12 +923,15 @@ export default {
                     })
                     let sql
                     const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
+                    let queryName
                     switch (prvwMode) {
                         case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
                             sql = `SELECT * FROM ${escapedTblId};`
+                            queryName = `Preview ${escapedTblId} data`
                             break
                         case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
                             sql = `DESCRIBE ${escapedTblId};`
+                            queryName = `View ${escapedTblId} details`
                             break
                     }
 
@@ -950,7 +953,8 @@ export default {
                         'persisted/pushQueryLog',
                         {
                             startTime: now,
-                            query: sql,
+                            name: queryName,
+                            sql,
                             res,
                             connection_name: curr_cnct_resource.name,
                         },
@@ -1007,7 +1011,12 @@ export default {
                     if (query.match(USE_REG)) await dispatch('updateActiveDb')
                     dispatch(
                         'persisted/pushQueryLog',
-                        { startTime: now, query, res, connection_name: curr_cnct_resource.name },
+                        {
+                            startTime: now,
+                            sql: query,
+                            res,
+                            connection_name: curr_cnct_resource.name,
+                        },
                         { root: true }
                     )
                 },
@@ -1023,13 +1032,17 @@ export default {
         /**
          * @param {String} db - database name
          */
-        async useDb({ state, commit }, db) {
+        async useDb({ state, commit, dispatch }, db) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             try {
+                const now = new Date().valueOf()
+                const escapedDb = this.vue.$help.escapeIdentifiers(db)
+                const sql = `USE ${escapedDb};`
                 let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                    sql: `USE ${this.vue.$help.escapeIdentifiers(db)};`,
+                    sql,
                 })
+                let queryName = `Change default database to ${escapedDb}`
                 if (res.data.data.attributes.results[0].errno) {
                     const errObj = res.data.data.attributes.results[0]
                     commit(
@@ -1040,7 +1053,19 @@ export default {
                         },
                         { root: true }
                     )
+                    queryName = `Failed to change default database to ${escapedDb}`
                 } else commit('SET_ACTIVE_DB', { payload: db, active_wke_id })
+                dispatch(
+                    'persisted/pushQueryLog',
+                    {
+                        startTime: now,
+                        name: queryName,
+                        sql,
+                        res,
+                        connection_name: curr_cnct_resource.name,
+                    },
+                    { root: true }
+                )
             } catch (e) {
                 const logger = this.vue.$logger('store-query-useDb')
                 logger.error(e)
@@ -1180,7 +1205,7 @@ export default {
             })
         },
 
-        async alterTable({ state, rootState, dispatch, commit }, sql) {
+        async alterTable({ state, rootState, dispatch, commit, getters }, sql) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
@@ -1206,6 +1231,10 @@ export default {
                     const isQueryFailed = Boolean(
                         this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
                     )
+                    const tblToBeAltered = this.vue.$help.escapeIdentifiers(
+                        getters.getAlteredActiveNode.id
+                    )
+                    let queryName = `Apply changes to ${tblToBeAltered}`
                     if (!isQueryFailed)
                         commit(
                             'SET_SNACK_BAR_MESSAGE',
@@ -1215,11 +1244,15 @@ export default {
                             },
                             { root: true }
                         )
+                    else {
+                        queryName = `Failed to apply changes to ${tblToBeAltered}`
+                    }
                     dispatch(
                         'persisted/pushQueryLog',
                         {
                             startTime: request_sent_time,
-                            query: sql,
+                            name: queryName,
+                            sql,
                             res,
                             connection_name: curr_cnct_resource.name,
                         },
