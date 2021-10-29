@@ -10,11 +10,12 @@
             :headers="tableHeaders"
             :boundingWidth="boundingWidth"
             :headerStyle="headerStyle"
-            :rowsLength="rowsLength"
+            :curr2dRowsLength="curr2dRowsLength"
             :showSelect="showSelect"
             :isAllselected="isAllselected"
             :indeterminate="indeterminate"
             :areHeadersHidden="areHeadersHidden"
+            :scrollBarThicknessOffset="scrollBarThicknessOffset"
             @get-header-width-map="headerWidthMap = $event"
             @is-resizing="isResizing = $event"
             @last-vis-header="lastVisHeader = $event"
@@ -27,7 +28,7 @@
             </template>
         </table-header>
         <v-virtual-scroll
-            v-if="rowsLength && !areHeadersHidden"
+            v-if="initialRowsLength && !areHeadersHidden"
             ref="vVirtualScroll"
             :bench="isVertTable ? 1 : bench"
             :items="currRows"
@@ -44,6 +45,7 @@
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :isYOverflowed="isYOverflowed"
+                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <template
@@ -78,6 +80,7 @@
                     :isCollapsed="isRowGroupCollapsed(row)"
                     :boundingWidth="boundingWidth"
                     :lineHeight="lineHeight"
+                    :scrollBarThicknessOffset="scrollBarThicknessOffset"
                     @update-collapsed-row-groups="collapsedRowGroups = $event"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                 >
@@ -257,7 +260,7 @@ export default {
             return this.isVertTable ? this.itemHeight * this.visHeaders.length : this.itemHeight
         },
         rowsHeight() {
-            return this.currRows.length * this.rowHeight + this.scrollBarThicknessOffset
+            return this.currRowsLength * this.rowHeight + this.scrollBarThicknessOffset
         },
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
@@ -268,7 +271,16 @@ export default {
         isYOverflowed() {
             return this.rowsHeight > this.tbodyHeight
         },
-        rowsLength() {
+        // initial rows length
+        initialRowsLength() {
+            return this.rows.length
+        },
+        // indicates the number of current rows (rows after being filtered), excluding rows group
+        curr2dRowsLength() {
+            return this.currRows.filter(row => !this.isRowGroup(row)).length
+        },
+        // indicates the number of current rows (rows after being filtered) including rows group
+        currRowsLength() {
             return this.currRows.length
         },
         tableRows() {
@@ -291,11 +303,11 @@ export default {
         },
         isAllselected() {
             if (!this.selectedItems.length) return false
-            return this.selectedItems.length === this.rowsLength
+            return this.selectedItems.length === this.initialRowsLength
         },
         indeterminate() {
             if (!this.selectedItems.length) return false
-            return !this.isAllselected && this.selectedItems.length < this.rowsLength
+            return !this.isAllselected && this.selectedItems.length < this.initialRowsLength
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0

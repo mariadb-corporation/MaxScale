@@ -18,7 +18,7 @@
                         v-on="on"
                         @click="deleteSelectedRows(selectedItems)"
                     >
-                        {{ $t('drop') }}
+                        {{ $t('drop') }} ({{ selectedItems.length }})
                     </v-btn>
                 </template>
                 <span>{{ $t('dropSelectedCols') }}</span>
@@ -31,10 +31,10 @@
                 <template v-slot:activator="{ on }">
                     <v-btn
                         x-small
-                        class="pa-1 text-capitalize"
+                        class="mr-2 pa-1 text-capitalize"
                         outlined
                         depressed
-                        color="primary"
+                        color="accent-dark"
                         v-on="on"
                         @click="addNewCol"
                     >
@@ -43,6 +43,14 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
+            <column-list
+                v-model="selectedColSpecs"
+                returnObject
+                :label="$t('alterSpecs')"
+                :cols="colSpecs"
+                :maxHeight="tableMaxHeight - 20"
+            />
+
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -72,10 +80,10 @@
         </div>
 
         <virtual-scroll-table
-            :headers="headers"
+            :headers="visHeaders"
             :rows="rows"
             :itemHeight="40"
-            :maxHeight="height - headerHeight"
+            :maxHeight="tableMaxHeight"
             :boundingWidth="boundingWidth"
             showSelect
             :isVertTable="isVertTable"
@@ -83,8 +91,8 @@
             @item-selected="selectedItems = $event"
         >
             <template
-                v-for="h in headers"
-                v-slot:[h.text]="{ data: { rowData, cell, rowIdx, colIdx } }"
+                v-for="(h, colIdx) in visHeaders"
+                v-slot:[h.text]="{ data: { rowData, cell, rowIdx } }"
             >
                 <div :key="h.text" class="fill-height d-flex align-center">
                     <column-input
@@ -170,11 +178,13 @@
 import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
+import ColumnList from './ColumnList.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
     name: 'alter-cols-opts',
     components: {
         'column-input': ColumnInput,
+        'column-list': ColumnList,
     },
     props: {
         value: { type: Object, required: true },
@@ -189,12 +199,16 @@ export default {
             selectedItems: [],
             headerHeight: 0,
             isVertTable: false,
+            selectedColSpecs: [],
         }
     },
     computed: {
         ...mapState({
             charset_collation_map: state => state.query.charset_collation_map,
         }),
+        tableMaxHeight() {
+            return this.height - this.headerHeight
+        },
         colsOptsData: {
             get() {
                 return this.value
@@ -217,17 +231,28 @@ export default {
                     case 'UQ':
                     case 'ZF':
                     case 'AI':
-                        h.width = 50
+                        h.minWidth = 50
                         h.maxWidth = 50
+                        h.resizable = false
                         break
                     case 'generated':
                         h.width = 144
-                        h.maxWidth = 144
+                        h.minWidth = 126
                         break
                     case 'id':
                         h.hidden = true
                         break
                 }
+                return h
+            })
+        },
+        colSpecs() {
+            return this.headers.filter(h => !h.hidden)
+        },
+        visHeaders() {
+            return this.headers.map(h => {
+                if (!this.selectedColSpecs.find(col => col.text === h.text))
+                    return { ...h, hidden: true }
                 return h
             })
         },
@@ -252,6 +277,9 @@ export default {
                 items = [...items, { header: item.header }, ...item.types, { divider: true }]
             })
             return items
+        },
+        idxOfId() {
+            return this.findHeaderIdx('id')
         },
         idxOfCollation() {
             return this.findHeaderIdx('collation')
@@ -284,13 +312,47 @@ export default {
             })
             return count === 1
         },
+        /**
+         * a unique key of each table being altered.
+         * This key is used to handle show column options in the case when
+         * user alters a table then alter another table in the same worksheet
+         */
+        initialDataFirstCellId() {
+            return this.$typy(this.initialData.data, `[0]['${this.idxOfId}']`).safeString
+        },
     },
     watch: {
         colsOptsData(v) {
             if (!this.$typy(v).isEmptyObject) this.setHeaderHeight()
         },
     },
+    activated() {
+        this.addInitialDataFirstCellIdWatcher()
+        this.addWidthBreakpointWatcher()
+    },
+    deactivated() {
+        this.rmInitialDataFirstCellIdWatcher()
+        this.rmWidthBreakpointWatcherr()
+    },
     methods: {
+        addInitialDataFirstCellIdWatcher() {
+            this.rmInitialDataFirstCellIdWatcher = this.$watch('initialDataFirstCellId', v => {
+                if (v) this.handleShowColSpecs()
+            })
+        },
+        addWidthBreakpointWatcher() {
+            this.rmWidthBreakpointWatcherr = this.$watch('$vuetify.breakpoint.width', () =>
+                this.handleShowColSpecs()
+            )
+        },
+        handleShowColSpecs() {
+            const colSpecs = this.$help.lodash.cloneDeep(this.colSpecs)
+            if (this.$vuetify.breakpoint.width >= 1680) this.selectedColSpecs = colSpecs
+            else {
+                const hiddenSpecs = ['charset', 'collation', 'comment']
+                this.selectedColSpecs = colSpecs.filter(col => !hiddenSpecs.includes(col.text))
+            }
+        },
         abbrHeaderSlotName(h) {
             if (this.isVertTable) return `vertical-header-${h}`
             return `header-${h}`

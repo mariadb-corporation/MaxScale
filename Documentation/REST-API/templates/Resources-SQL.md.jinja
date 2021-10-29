@@ -181,6 +181,14 @@ This endpoint supports the following request parameters.
     retrieve the connection ID from the cookies if the browser session is
     closed.
 
+- `max-age`
+
+  - Sets the connection token maximum age in seconds. The default is
+    `max-age=28800`. Only positive values are accepted and if a non-positive or
+    a non-integer value is found, the parameter is ignored. Once the token age
+    exceeds the configured maximum value, the token can no longer be used and a
+    new connection must be created.
+
 #### Response
 
 Connection was opened:

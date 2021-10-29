@@ -54,22 +54,23 @@
             </v-list-item>
             <v-divider />
             <v-list-item
-                v-for="item in columnList"
-                :key="`${item.name}_${item.index}`"
+                v-for="(item, index) in columnList"
+                :key="`${item.text}`"
                 class="px-2"
                 dense
                 link
             >
+                <!-- value of checkbox cannot be object, so using text then get object via colsMapByName -->
                 <v-checkbox
-                    v-model="selectedIdxs"
+                    v-model="selectedCols"
                     dense
                     color="primary"
                     class="pa-0 ma-0 checkbox d-flex align-center"
-                    :value="item.index"
+                    :value="returnObject ? item.text : index"
                     hide-details
                 >
                     <template v-slot:label>
-                        <truncate-string :text="item.name" />
+                        <truncate-string :text="item.text" />
                     </template>
                 </v-checkbox>
             </v-list-item>
@@ -90,6 +91,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+ *
+ cols?: Array of objects. This props accepts `virtual-scroll-table` headers
+ or at least the object needs to have `text` property in order to make the search
+ filter work.
+ returnObject?: boolean, by default this component returns selected index, if true,
+ it returns selected objects.
+ */
 export default {
     name: 'columns-list',
     props: {
@@ -104,6 +114,8 @@ export default {
             required: true,
         },
         maxHeight: { type: Number, required: true },
+        returnObject: { type: Boolean, default: false },
+        selectAllOnActivated: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -111,34 +123,47 @@ export default {
         }
     },
     computed: {
-        selectedIdxs: {
+        colsMapByName() {
+            const map = {}
+            this.cols.forEach(col => {
+                map[col.text] = col
+            })
+            return map
+        },
+        selectedCols: {
             get() {
+                if (this.returnObject) return this.value.map(col => col.text)
                 return this.value
             },
             set(v) {
-                this.$emit('input', v)
+                if (this.returnObject) {
+                    const cols = v.reduce((arr, name) => {
+                        arr.push(this.colsMapByName[name])
+                        return arr
+                    }, [])
+                    this.$emit('input', cols)
+                } else this.$emit('input', v)
             },
         },
         columnList() {
-            let list = this.$help.lodash
-                .cloneDeep(this.cols)
-                .map((h, i) => ({ index: i, name: h.text }))
-            return list.filter(obj => this.$help.ciStrIncludes(`${obj.name}`, this.filterHeader))
+            let list = this.$help.lodash.cloneDeep(this.cols)
+            return list.filter(obj => this.$help.ciStrIncludes(`${obj.text}`, this.filterHeader))
         },
         isAllHeaderChecked() {
-            return this.selectedIdxs.length === this.cols.length
+            return this.selectedCols.length === this.cols.length
         },
     },
     activated() {
-        this.showAllHeaders()
+        if (this.selectAllOnActivated) this.showAllHeaders()
     },
     methods: {
         toggleAllHeaders(v) {
-            if (!v) this.selectedIdxs = []
+            if (!v) this.selectedCols = []
             else this.showAllHeaders()
         },
         showAllHeaders() {
-            this.selectedIdxs = this.cols.map((h, i) => i)
+            //When returnObject, value of checkbox cannot be object, so using text here
+            this.selectedCols = this.cols.map((h, i) => (this.returnObject ? h.text : i))
         },
     },
 }

@@ -544,6 +544,7 @@ export default {
 </script>
 <style lang="scss" scoped>
 .alter-err-tbl {
+    width: 100%;
     background-color: $reflection;
     td {
         color: $code-color;

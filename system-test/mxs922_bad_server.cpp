@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < 4; i++)
     {
         test->check_maxctrl("create server server" + std::to_string(i + 1)
-                            + " this-address-does-not-exist 330" + std::to_string(i + 1));
+                            + " 127.0.0.1 999" + std::to_string(i + 1));
     }
 
     /** Add the servers to the monitor and service */

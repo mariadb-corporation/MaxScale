@@ -32,7 +32,7 @@
                         </v-icon>
                         <small v-html="$t('info.maxRows')" />
                     </v-col>
-                    <v-col cols="12" class="pa-1">
+                    <v-col cols="12" class="pa-1 mb-3">
                         <label class="field__label color text-small-text label-required">
                             {{ $t('queryHistoryRetentionPeriod') }} ({{ $t('inDays') }})
                         </label>
@@ -49,17 +49,21 @@
                             @keypress="$help.preventNonNumericalVal($event)"
                         />
                     </v-col>
-
-                    <v-col cols="12" class="pa-1 mt-3">
-                        <v-switch
-                            v-model="config.showQueryConfirm"
-                            :label="
-                                $t('info.queryShowConfirm', {
-                                    action: config.showQueryConfirm ? $t('show') : $t('hide'),
-                                })
-                            "
+                    <v-col
+                        v-for="(value, key) in $help.lodash.pick(config, [
+                            'showQueryConfirm',
+                            'showSysSchemas',
+                        ])"
+                        :key="key"
+                        cols="12"
+                        class="pa-1"
+                    >
+                        <v-checkbox
+                            v-model="config[key]"
+                            class="config-checkbox pa-0 ma-0"
+                            :label="$t(key)"
+                            color="primary"
                             hide-details="auto"
-                            class="show-confirm-switch mt-0 pa-0"
                         />
                     </v-col>
                 </v-row>
@@ -105,6 +109,7 @@ export default {
                 maxRows: 10000,
                 showQueryConfirm: true,
                 queryHistoryRetentionPeriod: 0,
+                showSysSchemas: true,
             },
         }
     },
@@ -113,6 +118,7 @@ export default {
             query_max_rows: state => state.persisted.query_max_rows,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             query_history_expired_time: state => state.persisted.query_history_expired_time,
+            query_show_sys_schemas_flag: state => state.persisted.query_show_sys_schemas_flag,
         }),
         isOpened: {
             get() {
@@ -141,6 +147,7 @@ export default {
             SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_QUERY_HISTORY_EXPIRED_TIME: 'persisted/SET_QUERY_HISTORY_EXPIRED_TIME',
+            SET_QUERY_SHOW_SYS_SCHEMAS_FLAG: 'persisted/SET_QUERY_SHOW_SYS_SCHEMAS_FLAG',
         }),
         validatePositiveNumber({ v, inputName }) {
             if (this.$typy(v).isEmptyString) return this.$t('errors.requiredInput', { inputName })
@@ -152,6 +159,7 @@ export default {
                 maxRows: this.query_max_rows,
                 showQueryConfirm: Boolean(this.query_confirm_flag),
                 queryHistoryRetentionPeriod: this.$help.daysDiff(this.query_history_expired_time),
+                showSysSchemas: Boolean(this.query_show_sys_schemas_flag),
             }
         },
         onSave() {
@@ -160,13 +168,14 @@ export default {
             this.SET_QUERY_HISTORY_EXPIRED_TIME(
                 this.$help.addDaysToNow(this.config.queryHistoryRetentionPeriod)
             )
+            this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(Number(this.config.showSysSchemas))
         },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-::v-deep .show-confirm-switch {
+::v-deep .config-checkbox {
     label {
         font-size: $label-control-size;
         color: $small-text;
