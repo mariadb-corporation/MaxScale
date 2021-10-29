@@ -25,7 +25,7 @@ using namespace nosql;
 class UpdateOperator
 {
 public:
-    void add_update_path(unordered_set<string>& paths, const string_view& field)
+    void add_update_path(const string_view& field)
     {
         string f = string(field.data(), field.length());
 
@@ -35,33 +35,33 @@ public:
                             error::IMMUTABLE_FIELD);
         }
 
-        paths.insert(f);
+        m_paths.insert(f);
 
         auto i = f.find('.');
 
         if (i != string::npos)
         {
-            paths.insert(f.substr(0, i));
+            m_paths.insert(f.substr(0, i));
         }
     }
 
-    string check_update_path(const unordered_set<string>& paths, const string_view& field)
+    string check_update_path(const string_view& field)
     {
         string f = string(field.data(), field.length());
 
-        auto it = paths.find(f);
+        auto it = m_paths.find(f);
 
-        if (it == paths.end())
+        if (it == m_paths.end())
         {
             auto i = f.find('.');
 
             if (i != string::npos)
             {
-                it = paths.find(f.substr(0, i));
+                it = m_paths.find(f.substr(0, i));
             }
         }
 
-        if (it != paths.end())
+        if (it != m_paths.end())
         {
             ostringstream ss;
             ss << "Updating the path '" << field << "' would create a conflict at '" << *it << "'";
@@ -72,9 +72,7 @@ public:
         return escape_essential_chars(std::move(f));
     }
 
-    string convert_update_operator_set(const bsoncxx::document::element& element,
-                                       const string& doc,
-                                       unordered_set<string>& paths)
+    string convert_update_operator_set(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$set") == 0);
 
@@ -90,7 +88,7 @@ public:
             ss << ", ";
 
             string_view sv = field.key();
-            string key = check_update_path(paths, sv);
+            string key = check_update_path(sv);
 
             ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
 
@@ -99,7 +97,7 @@ public:
 
         for (const auto& sv : svs)
         {
-            add_update_path(paths, sv);
+            add_update_path(sv);
         }
 
         ss << ")";
@@ -107,9 +105,7 @@ public:
         return ss.str();
     }
 
-    string convert_update_operator_unset(const bsoncxx::document::element& element,
-                                         const string& doc,
-                                         unordered_set<string>& paths)
+    string convert_update_operator_unset(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$unset") == 0);
 
@@ -150,7 +146,7 @@ public:
 
         for (const auto& sv : svs)
         {
-            add_update_path(paths, sv);
+            add_update_path(sv);
         }
 
         return rv;
@@ -159,8 +155,7 @@ public:
     string convert_update_operator_op(const bsoncxx::document::element& element,
                                       const string& doc,
                                       const char* zOperation,
-                                      const char* zOp,
-                                      unordered_set<string>& paths)
+                                      const char* zOp)
     {
 
         ostringstream ss;
@@ -206,7 +201,7 @@ public:
 
         for (const auto& sv : svs)
         {
-            add_update_path(paths, sv);
+            add_update_path(sv);
         }
 
         ss << ")";
@@ -214,27 +209,21 @@ public:
         return ss.str();
     }
 
-    string convert_update_operator_inc(const bsoncxx::document::element& element,
-                                       const string& doc,
-                                       unordered_set<string>& paths)
+    string convert_update_operator_inc(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$inc") == 0);
 
-        return convert_update_operator_op(element, doc, "increment", " + ", paths);
+        return convert_update_operator_op(element, doc, "increment", " + ");
     }
 
-    string convert_update_operator_mul(const bsoncxx::document::element& element,
-                                       const string& doc,
-                                       unordered_set<string>& paths)
+    string convert_update_operator_mul(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$mul") == 0);
 
-        return convert_update_operator_op(element, doc, "multiply", " * ", paths);
+        return convert_update_operator_op(element, doc, "multiply", " * ");
     }
 
-    string convert_update_operator_rename(const bsoncxx::document::element& element,
-                                          const string& doc,
-                                          unordered_set<string>& paths)
+    string convert_update_operator_rename(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$rename") == 0);
 
@@ -330,8 +319,8 @@ public:
                 throw SoftError(ss.str(), error::BAD_VALUE);
             }
 
-            string t = check_update_path(paths, to);
-            string f = check_update_path(paths, from);
+            string t = check_update_path(to);
+            string f = check_update_path(from);
 
             if (rv.empty())
             {
@@ -420,7 +409,7 @@ public:
 
         for (const auto& sv : svs)
         {
-            add_update_path(paths, sv);
+            add_update_path(sv);
         }
 
         return rv;
@@ -433,18 +422,15 @@ public:
     static bool is_supported(const string& name);
 
 private:
-    using UpdateOperatorConverter = std::string (UpdateOperator::*)(const bsoncxx::document::element& element,
-                                                                    const std::string& doc,
-                                                                    std::unordered_set<std::string>& paths);
+    using Converter = std::string (UpdateOperator::*)(const bsoncxx::document::element& element,
+                                                      const std::string& doc);
 
-    static unordered_map<string, UpdateOperatorConverter> s_converters;
+    static unordered_map<string, Converter> s_converters;
+
+    unordered_set<string> m_paths;
 };
 
-using UpdateOperatorConverter = std::string (UpdateOperator::*)(const bsoncxx::document::element& element,
-                                                                const std::string& doc,
-                                                                std::unordered_set<std::string>& paths);
-
-unordered_map<string, UpdateOperatorConverter> UpdateOperator::s_converters =
+unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
 {
     { "$set",    &UpdateOperator::convert_update_operator_set },
     { "$unset",  &UpdateOperator::convert_update_operator_unset },
@@ -459,7 +445,6 @@ string UpdateOperator::convert(const bsoncxx::document::view& update_operations)
     string rv;
 
     UpdateOperator update_operator;
-    unordered_set<string> paths;
 
     for (auto element : update_operations)
     {
@@ -474,7 +459,7 @@ string UpdateOperator::convert(const bsoncxx::document::view& update_operations)
 
         auto mem_fun = it->second;
 
-        rv = (update_operator.*mem_fun)(element, rv, paths);
+        rv = (update_operator.*mem_fun)(element, rv);
     }
 
     rv += " ";
