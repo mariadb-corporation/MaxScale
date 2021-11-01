@@ -46,7 +46,6 @@ enum class Op
     LT,
     LTE,
     NE,
-    NIN, // TO BE REMOVED
 };
 
 const char* to_string(Op op);
@@ -1400,6 +1399,7 @@ public:
         std::string elemMatch_to_condition(const bsoncxx::document::element& element) const;
         std::string exists_to_condition(const bsoncxx::document::element& element) const;
         std::string mod_to_condition(const bsoncxx::document::element& element) const;
+        std::string nin_to_condition(const bsoncxx::document::element& element) const;
         std::string type_to_condition(const bsoncxx::document::element& element) const;
 
     private:

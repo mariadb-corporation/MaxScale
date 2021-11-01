@@ -639,10 +639,6 @@ string timestamp_to_condition(const Path::Incarnation& p,
            << "(JSON_VALUE(doc, '" << f << ".t') = " << ts.timestamp << " AND "
            << "JSON_VALUE(doc, '" << f << ".i') = " << ts.increment << "))";
         break;
-
-    case mariadb::Op::NIN:
-        // TODO: NIN should be removed altogether.
-        throw SoftError("$nin needs an array", error::BAD_VALUE);
     }
 
     ss << ")";
@@ -717,27 +713,6 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
     return rv;
 }
 
-string field_and_value_to_nin_comparison(const Path::Incarnation& p,
-                                         const bsoncxx::document::element& element,
-                                         mariadb::Op mariadb_op,
-                                         const string& nosql_op,
-                                         ElementValueToString value_to_string)
-{
-    string rv;
-    string s = value_to_string(element, ValueFor::SQL, nosql_op);
-
-    if (!s.empty())
-    {
-        rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') " + mariadb::to_string(mariadb_op) + " " + s + ")";
-    }
-    else
-    {
-        rv = "(true)";
-    }
-
-    return rv;
-}
-
 string field_and_value_to_eq_comparison(const Path::Incarnation& p,
                                         const bsoncxx::document::element& element,
                                         mariadb::Op mariadb_op,
@@ -777,7 +752,6 @@ const unordered_map<string, ElementValueInfo> converters =
     { "$lt",     { mariadb::Op::LT,  &element_to_value, default_field_and_value_to_comparison } },
     { "$lte",    { mariadb::Op::LTE, &element_to_value, default_field_and_value_to_comparison } },
     { "$ne",     { mariadb::Op::NE,  &element_to_value, field_and_value_to_eq_comparison } },
-    { "$nin",    { mariadb::Op::NIN, &element_to_array, field_and_value_to_nin_comparison } },
 };
 
 inline const char* to_description(Path::Incarnation::ArrayOp op)
@@ -1530,9 +1504,6 @@ const char* to_string(Op op)
 
     case Op::NE:
         return "!=";
-
-    case Op::NIN:
-        return "NOT IN";
     };
 
     mxb_assert(!true);
@@ -2069,6 +2040,10 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
             condition = jt->second.field_and_value_to_comparison(*this, element, mariadb_op,
                                                                  nosql_op, value_to_string);
         }
+        else if (nosql_op == "$nin")
+        {
+            condition = nin_to_condition(element);
+        }
         else if (nosql_op == "$not")
         {
             if (element.type() != bsoncxx::type::k_document)
@@ -2367,6 +2342,31 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
     }
 
     return ss.str();
+}
+
+string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& element) const
+{
+    string condition;
+
+    if (element.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("$nin needs an array", error::BAD_VALUE);
+    }
+
+    string s = element_to_array(element, ::ValueFor::SQL, "$nin");
+
+    if (!s.empty())
+    {
+        condition = "(JSON_EXTRACT(doc, '$." + path() + "') IS NULL OR "
+            + "JSON_EXTRACT(doc, '$." + path() + "') NOT IN " + s + ")";
+    }
+    else
+    {
+        condition = "(true)";
+    }
+
+    return condition;
+
 }
 
 string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
