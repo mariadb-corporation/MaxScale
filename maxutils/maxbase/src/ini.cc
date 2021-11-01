@@ -12,6 +12,8 @@
  */
 
 #include <maxbase/ini.hh>
+
+#define INI_HANDLER_LINENO 1
 #include "../../../inih/ini.h"
 
 namespace maxbase

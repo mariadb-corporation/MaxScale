@@ -2578,8 +2578,14 @@ void set_log_augmentation(const char* value)
  * @param value   Parameter value
  * @return 0 on error, 1 when successful
  */
-static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
+static int cnf_preparser(void* data, const char* section, const char* name, const char* value, int lineno)
 {
+    if (!name && !value)
+    {
+        // Ignore section name updates.
+        return 1;
+    }
+
     mxs::Config& cnf = mxs::Config::get();
 
     std::string tmp;

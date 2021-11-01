@@ -1374,15 +1374,18 @@ static bool is_maxscale_section(const char* section)
     return strcasecmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0;
 }
 
-static int ini_global_handler(void* userdata, const char* section, const char* name, const char* value)
+static int ini_global_handler(void* userdata, const char* section, const char* name, const char* value,
+                              int lineno)
 {
-    mxs::ConfigParameters* params = static_cast<mxs::ConfigParameters*>(userdata);
-
-    if (is_maxscale_section(section))
+    // Ignore section name updates.
+    if (name || value)
     {
-        params->set(name, value);
+        auto* params = static_cast<mxs::ConfigParameters*>(userdata);
+        if (is_maxscale_section(section))
+        {
+            params->set(name, value);
+        }
     }
-
     return 1;
 }
 
@@ -1395,8 +1398,13 @@ static int ini_global_handler(void* userdata, const char* section, const char* n
  * @param value         The Parameter value
  * @return zero on error
  */
-static int ini_handler(void* userdata, const char* section, const char* name, const char* value)
+static int ini_handler(void* userdata, const char* section, const char* name, const char* value, int lineno)
 {
+    if (!name && !value)
+    {
+        // Ignore section name updates.
+        return 1;
+    }
     CONFIG_CONTEXT* cntxt = (CONFIG_CONTEXT*)userdata;
     CONFIG_CONTEXT* ptr = cntxt;
 

@@ -19,7 +19,8 @@ namespace ini
 {
 // This should match the type expected by inih. The type can change depending on compilation settings
 // so best define it here and hide the library type.
-using IniHandler = int (*)(void* userdata, const char* section, const char* name, const char* value);
+using IniHandler = int (*)(void* userdata, const char* section, const char* name, const char* value,
+    int lineno);
 
 /**
  * Calls ini_parse.
