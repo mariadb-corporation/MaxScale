@@ -698,8 +698,16 @@ string default_field_and_value_to_comparison(const Path::Incarnation& p,
     if (rv.empty())
     {
         ostringstream ss;
-        ss << "(JSON_EXTRACT(doc, '$." << path << "') IS NOT NULL AND "
-           << "(JSON_EXTRACT(doc, '$." << path << "') " << mariadb_op << " "
+        if (mariadb_op == mariadb::Op::NE)
+        {
+            ss << "(JSON_EXTRACT(doc, '$." << path << "') IS NULL OR ";
+        }
+        else
+        {
+            ss << "(JSON_EXTRACT(doc, '$." << path << "') IS NOT NULL AND ";
+        }
+
+        ss << "(JSON_EXTRACT(doc, '$." << path << "') " << mariadb_op << " "
            << value_to_string(element, ValueFor::SQL, nosql_op)
            << "))";
 
