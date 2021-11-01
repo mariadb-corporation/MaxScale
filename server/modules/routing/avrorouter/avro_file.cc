@@ -203,7 +203,7 @@ bool avro_load_conversion_state(Avro* router)
 
     MXS_NOTICE("[%s] Loading stored conversion state: %s", router->service->name(), filename);
 
-    int rc = mxb::ini::ini_parse(filename, conv_state_handler, router);
+    int rc = mxb::ini::parse_file(filename, conv_state_handler, router);
 
     switch (rc)
     {

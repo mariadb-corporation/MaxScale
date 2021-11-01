@@ -13,18 +13,55 @@
 
 #pragma once
 
+#include <maxbase/ccdefs.hh>
+#include <string>
+#include <vector>
+
 namespace maxbase
 {
 namespace ini
 {
+// The types in the array_result-namespace contains parse results in array form with minimal
+// processing or checking.
+namespace array_result
+{
+struct ValueDef
+{
+    std::string name;
+    std::string value;
+    int         lineno {-1};
+
+    ValueDef(std::string name, std::string value, int lineno = -1);
+};
+
+struct ConfigSection
+{
+    std::string           header;
+    std::vector<ValueDef> key_values;
+    int                   lineno {-1};
+};
+
+using Configuration = std::vector<ConfigSection>;
+
+struct ParseResult
+{
+    bool success {false};
+    int  err_lineno {-1};
+
+    Configuration sections;
+};
+}
+
 // This should match the type expected by inih. The type can change depending on compilation settings
 // so best define it here and hide the library type.
 using IniHandler = int (*)(void* userdata, const char* section, const char* name, const char* value,
-    int lineno);
+                           int lineno);
 
 /**
  * Calls ini_parse.
  */
-int ini_parse(const char* filename, IniHandler handler, void* userdata);
+int parse_file(const char* filename, IniHandler handler, void* userdata);
+
+array_result::ParseResult parse_config_text(const std::string& config_text);
 }
 }

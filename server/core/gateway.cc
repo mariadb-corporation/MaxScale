@@ -3020,7 +3020,7 @@ static bool sniff_configuration(const char* filepath)
 {
     char* s = NULL;
 
-    int rv = mxb::ini::ini_parse(filepath, cnf_preparser, &s);
+    int rv = mxb::ini::parse_file(filepath, cnf_preparser, &s);
 
     if (rv != 0)
     {

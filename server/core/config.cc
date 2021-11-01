@@ -1597,7 +1597,7 @@ bool config_load_single_file(const char* file,
 
     if (!config_has_duplicate_sections(file, dcontext))
     {
-        if ((rval = mxb::ini::ini_parse(file, ini_handler, ccontext)) != 0)
+        if ((rval = mxb::ini::parse_file(file, ini_handler, ccontext)) != 0)
         {
             log_config_error(file, rval);
         }
@@ -1964,7 +1964,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 bool config_load_global(const char* filename)
 {
     mxs::ConfigParameters params;
-    bool rval = (mxb::ini::ini_parse(filename, ini_global_handler, &params) == 0);
+    bool rval = (mxb::ini::parse_file(filename, ini_global_handler, &params) == 0);
 
     if (!rval)
     {

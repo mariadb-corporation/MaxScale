@@ -41,3 +41,7 @@ add_test(test_worker test_worker)
 add_executable(test_threadpool test_threadpool.cc)
 target_link_libraries(test_threadpool maxbase)
 add_test(test_threadpool test_threadpool)
+
+add_executable(test_ini_parser test_ini_parser.cc)
+target_link_libraries(test_ini_parser maxbase)
+add_test(test_ini_parser test_ini_parser)
