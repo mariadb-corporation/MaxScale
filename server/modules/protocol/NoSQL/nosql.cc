@@ -3091,92 +3091,106 @@ void nosql::append(DocumentBuilder& doc,
                    const core::string_view& key,
                    const bsoncxx::document::element& element)
 {
-    // bsoncxx should simply allow the addition of an element, and do this internally.
-    switch (element.type())
+    auto i = key.find('.');
+
+    if (i != string::npos)
     {
-    case bsoncxx::type::k_array:
-        doc.append(kvp(key, element.get_array()));
-        break;
+        auto head = key.substr(0, i);
+        auto tail = key.substr(i + 1);
 
-    case bsoncxx::type::k_binary:
-        doc.append(kvp(key, element.get_binary()));
-        break;
+        DocumentBuilder child;
+        append(child, tail, element);
 
-    case bsoncxx::type::k_bool:
-        doc.append(kvp(key, element.get_bool()));
-        break;
+        doc.append(kvp(head, child.extract()));
+    }
+    else
+    {
+        switch (element.type())
+        {
+        case bsoncxx::type::k_array:
+            doc.append(kvp(key, element.get_array()));
+            break;
 
-    case bsoncxx::type::k_code:
-        doc.append(kvp(key, element.get_code()));
-        break;
+        case bsoncxx::type::k_binary:
+            doc.append(kvp(key, element.get_binary()));
+            break;
 
-    case bsoncxx::type::k_codewscope:
-        doc.append(kvp(key, element.get_codewscope()));
-        break;
+        case bsoncxx::type::k_bool:
+            doc.append(kvp(key, element.get_bool()));
+            break;
 
-    case bsoncxx::type::k_date:
-        doc.append(kvp(key, element.get_date()));
-        break;
+        case bsoncxx::type::k_code:
+            doc.append(kvp(key, element.get_code()));
+            break;
 
-    case bsoncxx::type::k_dbpointer:
-        doc.append(kvp(key, element.get_dbpointer()));
-        break;
+        case bsoncxx::type::k_codewscope:
+            doc.append(kvp(key, element.get_codewscope()));
+            break;
 
-    case bsoncxx::type::k_decimal128:
-        doc.append(kvp(key, element.get_decimal128()));
-        break;
+        case bsoncxx::type::k_date:
+            doc.append(kvp(key, element.get_date()));
+            break;
 
-    case bsoncxx::type::k_document:
-        doc.append(kvp(key, element.get_document()));
-        break;
+        case bsoncxx::type::k_dbpointer:
+            doc.append(kvp(key, element.get_dbpointer()));
+            break;
 
-    case bsoncxx::type::k_double:
-        doc.append(kvp(key, element.get_double()));
-        break;
+        case bsoncxx::type::k_decimal128:
+            doc.append(kvp(key, element.get_decimal128()));
+            break;
 
-    case bsoncxx::type::k_int32:
-        doc.append(kvp(key, element.get_int32()));
-        break;
+        case bsoncxx::type::k_document:
+            doc.append(kvp(key, element.get_document()));
+            break;
 
-    case bsoncxx::type::k_int64:
-        doc.append(kvp(key, element.get_int64()));
-        break;
+        case bsoncxx::type::k_double:
+            doc.append(kvp(key, element.get_double()));
+            break;
 
-    case bsoncxx::type::k_maxkey:
-        doc.append(kvp(key, element.get_maxkey()));
-        break;
+        case bsoncxx::type::k_int32:
+            doc.append(kvp(key, element.get_int32()));
+            break;
 
-    case bsoncxx::type::k_minkey:
-        doc.append(kvp(key, element.get_minkey()));
-        break;
+        case bsoncxx::type::k_int64:
+            doc.append(kvp(key, element.get_int64()));
+            break;
 
-    case bsoncxx::type::k_null:
-        doc.append(kvp(key, element.get_null()));
-        break;
+        case bsoncxx::type::k_maxkey:
+            doc.append(kvp(key, element.get_maxkey()));
+            break;
 
-    case bsoncxx::type::k_oid:
-        doc.append(kvp(key, element.get_oid()));
-        break;
+        case bsoncxx::type::k_minkey:
+            doc.append(kvp(key, element.get_minkey()));
+            break;
 
-    case bsoncxx::type::k_regex:
-        doc.append(kvp(key, element.get_regex()));
-        break;
+        case bsoncxx::type::k_null:
+            doc.append(kvp(key, element.get_null()));
+            break;
 
-    case bsoncxx::type::k_symbol:
-        doc.append(kvp(key, element.get_symbol()));
-        break;
+        case bsoncxx::type::k_oid:
+            doc.append(kvp(key, element.get_oid()));
+            break;
 
-    case bsoncxx::type::k_timestamp:
-        doc.append(kvp(key, element.get_timestamp()));
-        break;
+        case bsoncxx::type::k_regex:
+            doc.append(kvp(key, element.get_regex()));
+            break;
 
-    case bsoncxx::type::k_undefined:
-        doc.append(kvp(key, element.get_undefined()));
-        break;
+        case bsoncxx::type::k_symbol:
+            doc.append(kvp(key, element.get_symbol()));
+            break;
 
-    case bsoncxx::type::k_utf8:
-        doc.append(kvp(key, element.get_utf8()));
-        break;
+        case bsoncxx::type::k_timestamp:
+            doc.append(kvp(key, element.get_timestamp()));
+            break;
+
+        case bsoncxx::type::k_undefined:
+            doc.append(kvp(key, element.get_undefined()));
+            break;
+
+        case bsoncxx::type::k_utf8:
+            doc.append(kvp(key, element.get_utf8()));
+            break;
+        }
     }
 }
 
