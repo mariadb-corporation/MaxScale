@@ -59,11 +59,11 @@
 
             <base-dialog
                 v-model="showConfirmDialog"
-                :onCancel="cancelEdit"
                 :onSave="acceptEdit"
                 :title="`${$t('implementChanges')}`"
                 saveText="thatsRight"
                 :hasChanged="hasChanged"
+                @on-cancel="cancelEdit"
             >
                 <template v-slot:form-body>
                     <span class="d-block confirmation-text mb-4">

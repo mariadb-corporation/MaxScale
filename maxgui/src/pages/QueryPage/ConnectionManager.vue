@@ -76,8 +76,8 @@
             v-model="isConnDialogOpened"
             :connOptions="connOptions"
             :handleSave="handleOpenConn"
-            :onCancel="assignActiveConn"
-            :onClose="assignActiveConn"
+            @on-cancel="assignActiveConn"
+            @on-close="assignActiveConn"
         />
         <confirm-dialog
             ref="confirmDialog"

@@ -1,12 +1,12 @@
 <template>
     <base-dialog
         v-model="isDialogOpen"
-        :onCancel="onCancelHandler"
         :onSave="onSaveHandler"
-        :onClose="onCloseHandler"
         :title="title"
         :saveText="mode"
         :hasChanged="hasChanged"
+        @on-cancel="onCancelHandler"
+        @on-close="onCloseHandler"
     >
         <template v-slot:form-body>
             <p class="select-label">

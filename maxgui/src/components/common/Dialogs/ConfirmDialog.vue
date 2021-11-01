@@ -1,15 +1,15 @@
 <template>
     <base-dialog
         v-model="isDialogOpen"
-        :onCancel="onCancelHandler"
         :onSave="onSave"
-        :onClose="onCloseHandler"
         :title="title"
         :saveText="type"
         :minBodyWidth="minBodyWidth"
         :closeImmediate="closeImmediate"
         :hasSavingErr="hasSavingErr"
         :allowEnterToSubmit="allowEnterToSubmit"
+        @on-cancel="onCancelHandler"
+        @on-close="onCloseHandler"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">

@@ -1,6 +1,6 @@
 <template>
     <v-dialog
-        v-model="value"
+        v-model="isDlgOpened"
         overlay-color="navigation"
         overlay-opacity="0.6"
         width="unset"
@@ -94,8 +94,6 @@ export default {
         isDynamicWidth: { type: Boolean, default: false },
         scrollable: { type: Boolean, default: true },
         title: { type: String, required: true },
-        onClose: { type: Function },
-        onCancel: { type: Function },
         onSave: { type: Function, required: true },
         cancelText: { type: String, default: 'cancel' },
         saveText: { type: String, default: 'save' },
@@ -119,6 +117,14 @@ export default {
         }
     },
     computed: {
+        isDlgOpened: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
         isSaveDisabled() {
             return this.hasSavingErr || !this.hasChanged || !this.isFormValid
         },
@@ -134,12 +140,12 @@ export default {
             this.$emit('input', false)
         },
         cancel() {
-            if (this.onCancel) this.onCancel()
+            this.$emit('on-cancel')
             this.cleanUp()
             this.closeDialog()
         },
         close() {
-            if (this.onClose) this.onClose()
+            this.$emit('on-close')
             this.closeDialog()
         },
         async keydownHandler() {

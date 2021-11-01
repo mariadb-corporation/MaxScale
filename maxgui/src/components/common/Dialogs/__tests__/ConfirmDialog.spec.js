@@ -23,8 +23,6 @@ describe('ConfirmDialog.vue', () => {
         title: 'Unlink server', // translate before passing
 
         onSave: () => wrapper.setProps({ value: false }),
-        onClose: () => wrapper.setProps({ value: false }),
-        onCancel: () => wrapper.setProps({ value: false }),
 
         //optional props
         item: { id: 'row_server_1', type: 'servers' },
