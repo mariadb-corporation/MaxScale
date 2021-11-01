@@ -222,13 +222,6 @@ string get_logical_condition(const bsoncxx::document::element& element)
     return condition;
 }
 
-enum class ValueFor
-{
-    JSON,
-    JSON_NESTED,
-    SQL
-};
-
 using ElementValueToString = string (*)(const bsoncxx::document::element& element,
                                         ValueFor,
                                         const string& op);
@@ -266,204 +259,6 @@ string double_to_string(double d)
     ostringstream ss;
     double_to_string(d, ss);
     return ss.str();
-}
-
-template<class document_element_or_array_item>
-string element_to_value(const document_element_or_array_item& x, ValueFor value_for, const string& op = "")
-{
-    ostringstream ss;
-
-    switch (x.type())
-    {
-    case bsoncxx::type::k_double:
-        double_to_string(x.get_double(), ss);
-        break;
-
-    case bsoncxx::type::k_utf8:
-        {
-            const auto& utf8 = x.get_utf8();
-            string_view s(utf8.value.data(), utf8.value.size());
-
-            switch (value_for)
-            {
-            case ValueFor::JSON:
-                ss << "'\"" << s << "\"'";
-                break;
-
-            case ValueFor::JSON_NESTED:
-            case ValueFor::SQL:
-                ss << "\"" << s << "\"";
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_int32:
-        ss << x.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        ss << x.get_int64();
-        break;
-
-    case bsoncxx::type::k_binary:
-        {
-            auto b = x.get_binary();
-
-            string_view s(reinterpret_cast<const char*>(b.bytes), b.size);
-
-            ss << "'" << s << "'";
-        }
-        break;
-
-    case bsoncxx::type::k_bool:
-        ss << x.get_bool();
-        break;
-
-    case bsoncxx::type::k_date:
-        ss << x.get_date();
-        break;
-
-    case bsoncxx::type::k_array:
-        {
-            ss << "JSON_ARRAY(";
-
-            bsoncxx::array::view a = x.get_array();
-
-            bool first = true;
-            for (auto element : a)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ss << ", ";
-                }
-
-                ss << element_to_value(element, ValueFor::JSON_NESTED, op);
-            }
-
-            ss << ")";
-        }
-        break;
-
-    case bsoncxx::type::k_document:
-        {
-            ss << "JSON_OBJECT(";
-
-            bsoncxx::document::view d = x.get_document();
-
-            bool first = true;
-            for (auto element : d)
-            {
-                if (first)
-                {
-                    first = false;
-                }
-                else
-                {
-                    ss << ", ";
-                }
-
-                ss << "\"" << element.key() << "\", " << element_to_value(element, ValueFor::JSON, op);
-            }
-
-            ss << ")";
-        }
-        break;
-
-    case bsoncxx::type::k_null:
-        switch (value_for)
-        {
-        case ValueFor::JSON:
-        case ValueFor::JSON_NESTED:
-            ss << "null";
-            break;
-
-        case ValueFor::SQL:
-            ss << "'null'";
-        }
-        break;
-
-    case bsoncxx::type::k_regex:
-        {
-            ostringstream ss2;
-
-            auto r = x.get_regex();
-            if (r.options.length() != 0)
-            {
-                ss2 << "(?" << r.options << ")";
-            }
-
-            ss2 << r.regex;
-
-            ss << "REGEXP '" << escape_essential_chars(ss2.str()) << "'";
-        }
-        break;
-
-    case bsoncxx::type::k_minkey:
-        ss << std::numeric_limits<int64_t>::min();
-        break;
-
-    case bsoncxx::type::k_maxkey:
-        ss << std::numeric_limits<int64_t>::max();
-        break;
-
-    case bsoncxx::type::k_code:
-        ss << "'" << x.get_code().code << "'";
-        break;
-
-    case bsoncxx::type::k_undefined:
-        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
-
-    default:
-        {
-            ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
-
-            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
-        }
-    }
-
-    return ss.str();
-}
-
-string element_to_array(const bsoncxx::document::element& element,
-                        ValueFor,
-                        const string& op = "")
-{
-    vector<string> values;
-
-    if (element.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view array = element.get_array();
-
-        for (auto it = array.begin(); it != array.end(); ++it)
-        {
-            const auto& item = *it;
-
-            string value = element_to_value(item, ValueFor::SQL, op);
-            mxb_assert(!value.empty());
-
-            values.push_back(value);
-        }
-    }
-    else
-    {
-        ostringstream ss;
-        ss << op << " needs an array";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-
-    string rv;
-
-    if (!values.empty())
-    {
-        rv = "(" + mxb::join(values) + ")";
-    }
-
-    return rv;
 }
 
 string elemMatch_to_json_contain(const string& subfield,
@@ -2353,10 +2148,24 @@ string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& ele
         throw SoftError("$nin needs an array", error::BAD_VALUE);
     }
 
-    string s = element_to_array(element, ::ValueFor::SQL, "$nin");
+    vector<string> values;
 
-    if (!s.empty())
+    bsoncxx::array::view array = element.get_array();
+
+    for (auto it = array.begin(); it != array.end(); ++it)
     {
+        const auto& array_element = *it;
+
+        string value = element_to_value(array_element, ValueFor::SQL, "$nin");
+        mxb_assert(!value.empty());
+
+        values.push_back(value);
+    }
+
+    if (!values.empty())
+    {
+        string s = "(" + mxb::join(values) + ")";
+
         condition = "(JSON_EXTRACT(doc, '$." + path() + "') IS NULL OR "
             + "JSON_EXTRACT(doc, '$." + path() + "') NOT IN " + s + ")";
     }
