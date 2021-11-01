@@ -235,7 +235,7 @@
         "runQuery": "Run the following statements?",
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
-        "alterTable": "Executing the following statements?"
+        "alterTable": "Execute the following statements?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",
