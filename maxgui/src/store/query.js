@@ -926,7 +926,7 @@ export default {
                     let queryName
                     switch (prvwMode) {
                         case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
-                            sql = `SELECT * FROM ${escapedTblId};`
+                            sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
                             queryName = `Preview ${escapedTblId} data`
                             break
                         case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
