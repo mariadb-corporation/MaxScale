@@ -1,6 +1,7 @@
 <template>
     <div>
         <div ref="tableTools" class="table-tools pb-2 d-inline-flex align-center">
+            <slot name="left-table-tools-prepend" />
             <v-text-field
                 v-model="filterKeyword"
                 name="filter"
@@ -18,8 +19,9 @@
                 :cols="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
+            <slot name="left-table-tools-append" />
             <v-spacer />
-
+            <slot name="right-table-tools-prepend" />
             <v-tooltip
                 v-if="selectedItems.length"
                 top
@@ -76,6 +78,7 @@
                 </template>
                 <span>{{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}</span>
             </v-tooltip>
+            <slot name="right-table-tools-append" />
         </div>
         <!-- Keep it in memory, negative height crashes v-virtual-scroll -->
         <keep-alive>
