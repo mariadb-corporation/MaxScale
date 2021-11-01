@@ -957,6 +957,7 @@ export default {
                             sql,
                             res,
                             connection_name: curr_cnct_resource.name,
+                            queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                         },
                         { root: true }
                     )
@@ -1016,6 +1017,7 @@ export default {
                             sql: query,
                             res,
                             connection_name: curr_cnct_resource.name,
+                            queryType: rootState.app_config.QUERY_LOG_TYPES.USER_LOGS,
                         },
                         { root: true }
                     )
@@ -1032,7 +1034,7 @@ export default {
         /**
          * @param {String} db - database name
          */
-        async useDb({ state, commit, dispatch }, db) {
+        async useDb({ state, commit, dispatch, rootState }, db) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             try {
@@ -1063,6 +1065,7 @@ export default {
                         sql,
                         res,
                         connection_name: curr_cnct_resource.name,
+                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -1255,6 +1258,7 @@ export default {
                             sql,
                             res,
                             connection_name: curr_cnct_resource.name,
+                            queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                         },
                         { root: true }
                     )

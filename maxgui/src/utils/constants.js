@@ -36,4 +36,8 @@ export const APP_CONFIG = Object.freeze({
         TXT_EDITOR: 'TXT_EDITOR',
         DDL_EDITOR: 'DDL_EDITOR',
     }),
+    QUERY_LOG_TYPES: Object.freeze({
+        USER_LOGS: i18n.t('userQueryLogs'),
+        ACTION_LOGS: i18n.t('actionLogs'),
+    }),
 })
