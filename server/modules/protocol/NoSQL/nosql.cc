@@ -898,8 +898,9 @@ string regex_to_condition(const Path::Incarnation& p,
 
     ss1 << "REGEXP '" << escape_essential_chars(ss2.str()) << "' OR ";
 
-    ss1 << "JSON_COMPACT(JSON_QUERY(doc, '$." << p.path() << "')) = "
-        << "JSON_COMPACT(JSON_OBJECT(\"$regex\", \"" << regex << "\", \"$options\", \"" << options <<"\")))";
+    ss1 << "(JSON_QUERY(doc, '$." << p.path() << "') IS NOT NULL AND "
+        << "JSON_COMPACT(JSON_QUERY(doc, '$." << p.path() << "')) = "
+        << "JSON_COMPACT(JSON_OBJECT(\"$regex\", \"" << regex << "\", \"$options\", \"" << options <<"\"))))";
 
     return ss1.str();
 }
@@ -2170,17 +2171,44 @@ string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& ele
 
 string Path::Incarnation::not_to_condition(const bsoncxx::document::element& element) const
 {
-    if (element.type() != bsoncxx::type::k_document)
+    string condition;
+
+    auto type = element.type();
+
+    if (type != bsoncxx::type::k_document && type != bsoncxx::type::k_regex)
     {
         ostringstream ss;
-        ss << "$not needs a document (regex not yet supported)";
+        ss << "$not needs a document or a regex";
 
         throw SoftError(ss.str(), error::BAD_VALUE);
     }
 
-    auto doc = element.get_document();
+    bsoncxx::document::view doc;
 
-    return "(NOT " + get_comparison_condition(doc) + ")";
+    if (type == bsoncxx::type::k_document)
+    {
+        doc = element.get_document();
+
+        if (doc.begin() == doc.end())
+        {
+            throw SoftError("$not cannot be empty", error::BAD_VALUE);
+        }
+    }
+
+    condition += "(NOT ";
+
+    if (type == bsoncxx::type::k_document)
+    {
+        condition += get_comparison_condition(doc);
+    }
+    else
+    {
+        condition += regex_to_condition(*this, element.get_regex());
+    }
+
+    condition += ")";
+
+    return condition;
 }
 
 string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
@@ -2664,19 +2692,26 @@ string Path::not_to_condition(const bsoncxx::document::element& element) const
 {
     string condition;
 
-    if (element.type() != bsoncxx::type::k_document)
+    auto type = element.type();
+
+    if (type != bsoncxx::type::k_document && type != bsoncxx::type::k_regex)
     {
         ostringstream ss;
-        ss << "$not needs a document (regex not yet supported)";
+        ss << "$not needs a document or a regex";
 
         throw SoftError(ss.str(), error::BAD_VALUE);
     }
 
-    bsoncxx::document::view doc = element.get_document();
+    bsoncxx::document::view doc;
 
-    if (doc.begin() == doc.end())
+    if (type == bsoncxx::type::k_document)
     {
-        throw SoftError("$not cannot be empty", error::BAD_VALUE);
+        doc = element.get_document();
+
+        if (doc.begin() == doc.end())
+        {
+            throw SoftError("$not cannot be empty", error::BAD_VALUE);
+        }
     }
 
     condition += "(NOT ";
@@ -2698,7 +2733,14 @@ string Path::not_to_condition(const bsoncxx::document::element& element) const
             condition += " OR ";
         }
 
-        condition += "(" + p.get_comparison_condition(doc) + ")";
+        if (type == bsoncxx::type::k_document)
+        {
+            condition += "(" + p.get_comparison_condition(doc) + ")";
+        }
+        else
+        {
+            condition += "(" + regex_to_condition(p, element.get_regex()) + ")";
+        }
     }
 
     if (m_paths.size() > 1)
