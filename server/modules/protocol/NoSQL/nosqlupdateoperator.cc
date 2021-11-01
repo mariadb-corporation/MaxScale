@@ -351,7 +351,7 @@ private:
             ss << ", ";
 
             string_view sv = field.key();
-            string key = escape_essential_chars(string(sv.data(), sv.length()));
+            string key = get_key(sv);
 
             ss << "'$." << key << "', ";
 
@@ -382,7 +382,58 @@ private:
 
         ss << ")";
 
+        rec.flush();
+
         return ss.str();
+    }
+
+    string get_key(const string_view& field)
+    {
+        string key;
+
+        auto i = field.find('.');
+
+        if (i != string::npos)
+        {
+            auto copy = string(field.data(), field.length());
+            key += copy.substr(0, i);
+
+            ++i;
+            string::size_type j;
+
+            do
+            {
+                j = copy.find('.', i);
+
+                if (is_number(&copy[i]))
+                {
+                    key += "[";
+                    key += copy.substr(i, j - i);
+                    key += "]";
+                }
+                else
+                {
+                    key += ".";
+                    key += copy.substr(i, j - i);
+                }
+
+                i = j;
+
+                if (j != string::npos)
+                {
+                    ++i;
+                }
+            }
+            while (i != string::npos);
+
+            key = escape_essential_chars(std::move(key));
+        }
+        else
+        {
+            key = escape_essential_chars(field);
+        }
+
+        return key;
     }
 
     void add_update_path(const string_view& field)
@@ -417,7 +468,10 @@ private:
 
             if (i != string::npos)
             {
-                it = m_paths.find(f.substr(0, i));
+                if (!is_number(f.substr(i + 1, f.find('.', i + 2))))
+                {
+                    it = m_paths.find(f.substr(0, i));
+                }
             }
         }
 
@@ -429,7 +483,20 @@ private:
             throw SoftError(ss.str(), error::CONFLICTING_UPDATE_OPERATORS);
         }
 
-        return escape_essential_chars(std::move(f));
+        return escape_essential_chars(get_key(field));
+    }
+
+    bool is_number(const char* z)
+    {
+        char* zEnd;
+        auto l = strtol(z, &zEnd, 10);
+
+        return ((*zEnd == 0 || *zEnd == '.') && l >= 0 && l != LONG_MAX) ? true : false;
+    }
+
+    bool is_number(const string& s)
+    {
+        return is_number(s.c_str());
     }
 
     using Converter = std::string (UpdateOperator::*)(const bsoncxx::document::element& element,

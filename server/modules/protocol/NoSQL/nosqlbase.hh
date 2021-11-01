@@ -177,6 +177,11 @@ private:
  */
 std::string escape_essential_chars(std::string&& from);
 
+inline std::string escape_essential_chars(const string_view& sv)
+{
+    return escape_essential_chars(std::string(sv.data(), sv.length()));
+}
+
 enum class ValueFor
 {
     JSON,
