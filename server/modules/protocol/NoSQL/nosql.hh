@@ -1400,6 +1400,7 @@ public:
         std::string exists_to_condition(const bsoncxx::document::element& element) const;
         std::string mod_to_condition(const bsoncxx::document::element& element) const;
         std::string nin_to_condition(const bsoncxx::document::element& element) const;
+        std::string not_to_condition(const bsoncxx::document::element& element) const;
         std::string type_to_condition(const bsoncxx::document::element& element) const;
 
     private:
@@ -1494,6 +1495,8 @@ public:
 private:
     std::string get_element_condition(const bsoncxx::document::element& element) const;
     std::string get_document_condition(const bsoncxx::document::view& doc) const;
+
+    std::string not_to_condition(const bsoncxx::document::element& element) const;
 
     static void add_part(std::vector<Incarnation>& rv, const std::string& part);
 

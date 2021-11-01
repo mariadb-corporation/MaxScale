@@ -1841,17 +1841,7 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         }
         else if (nosql_op == "$not")
         {
-            if (element.type() != bsoncxx::type::k_document)
-            {
-                ostringstream ss;
-                ss << "$not needs a document (regex not yet supported)";
-
-                throw SoftError(ss.str(), error::BAD_VALUE);
-            }
-
-            auto doc = element.get_document();
-
-            condition = "(NOT " + get_comparison_condition(doc) + ")";
+            condition = not_to_condition(element);
         }
         else if (nosql_op == "$elemMatch")
         {
@@ -2176,6 +2166,21 @@ string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& ele
 
     return condition;
 
+}
+
+string Path::Incarnation::not_to_condition(const bsoncxx::document::element& element) const
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        ostringstream ss;
+        ss << "$not needs a document (regex not yet supported)";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    auto doc = element.get_document();
+
+    return "(NOT " + get_comparison_condition(doc) + ")";
 }
 
 string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
@@ -2643,49 +2648,7 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
 
             if (nosql_op == "$not")
             {
-                if (element.type() != bsoncxx::type::k_document)
-                {
-                    ostringstream ss;
-                    ss << "$not needs a document (regex not yet supported)";
-
-                    throw SoftError(ss.str(), error::BAD_VALUE);
-                }
-
-                bsoncxx::document::view doc = element.get_document();
-
-                if (doc.begin() == doc.end())
-                {
-                    throw SoftError("$not cannot be empty", error::BAD_VALUE);
-                }
-
-                condition += "(NOT ";
-
-                if (m_paths.size() > 1)
-                {
-                    condition += "(";
-                }
-
-                bool first = true;
-                for (const auto& p : m_paths)
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        condition += " OR ";
-                    }
-
-                    condition += "(" + p.get_comparison_condition(doc) + ")";
-                }
-
-                if (m_paths.size() > 1)
-                {
-                    condition += ")";
-                }
-
-                condition += ")";
+                condition += not_to_condition(element);
             }
             else
             {
@@ -2695,6 +2658,57 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
     }
 
     return "(" + condition + ")";
+}
+
+string Path::not_to_condition(const bsoncxx::document::element& element) const
+{
+    string condition;
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        ostringstream ss;
+        ss << "$not needs a document (regex not yet supported)";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    bsoncxx::document::view doc = element.get_document();
+
+    if (doc.begin() == doc.end())
+    {
+        throw SoftError("$not cannot be empty", error::BAD_VALUE);
+    }
+
+    condition += "(NOT ";
+
+    if (m_paths.size() > 1)
+    {
+        condition += "(";
+    }
+
+    bool first = true;
+    for (const auto& p : m_paths)
+    {
+        if (first)
+        {
+            first = false;
+        }
+        else
+        {
+            condition += " OR ";
+        }
+
+        condition += "(" + p.get_comparison_condition(doc) + ")";
+    }
+
+    if (m_paths.size() > 1)
+    {
+        condition += ")";
+    }
+
+    condition += ")";
+
+    return condition;
 }
 
 //
