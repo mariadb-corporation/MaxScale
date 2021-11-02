@@ -468,13 +468,16 @@ std::string element_to_string(const document_element_or_array_item& x)
         ss << "{\"$maxKey\":1}";
         break;
 
+    case bsoncxx::type::k_undefined:
+        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
+        break;
+
     case bsoncxx::type::k_binary:
     case bsoncxx::type::k_codewscope:
     case bsoncxx::type::k_dbpointer:
     case bsoncxx::type::k_timestamp:
-    case bsoncxx::type::k_undefined:
         {
-            ss << "A " << bsoncxx::to_string(x.type()) << " cannot be coverted to a string.";
+            ss << "A " << bsoncxx::to_string(x.type()) << " cannot be converted to a string.";
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
         break;
