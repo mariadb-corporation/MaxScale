@@ -62,32 +62,30 @@ enum qc_collect_info_t
  */
 enum qc_query_type_t
 {
-    QUERY_TYPE_UNKNOWN       = 0x000000,    /*< Initial value, can't be tested bitwisely */
-    QUERY_TYPE_LOCAL_READ    = 0x000001,    /*< Read non-database data, execute in MaxScale:any */
-    QUERY_TYPE_READ          = 0x000002,    /*< Read database data:any */
-    QUERY_TYPE_WRITE         = 0x000004,    /*< Master data will be  modified:master */
-    QUERY_TYPE_MASTER_READ   = 0x000008,    /*< Read from the master:master */
-    QUERY_TYPE_SESSION_WRITE = 0x000010,    /*< Session data will be modified:master or all */
-    QUERY_TYPE_USERVAR_WRITE = 0x000020,    /*< Write a user variable:master or all */
-    QUERY_TYPE_USERVAR_READ  = 0x000040,    /*< Read a user variable:master or any */
-    QUERY_TYPE_SYSVAR_READ   = 0x000080,    /*< Read a system variable:master or any */
-    /** Not implemented yet */
-    // QUERY_TYPE_SYSVAR_WRITE       = 0x000100, /*< Write a system variable:master or all */
-    QUERY_TYPE_GSYSVAR_READ       = 0x000200,   /*< Read global system variable:master or any */
-    QUERY_TYPE_GSYSVAR_WRITE      = 0x000400,   /*< Write global system variable:master or all */
-    QUERY_TYPE_BEGIN_TRX          = 0x000800,   /*< BEGIN or START TRANSACTION */
-    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x001000,   /*< SET autocommit=1 */
-    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x002000,   /*< SET autocommit=0 */
-    QUERY_TYPE_ROLLBACK           = 0x004000,   /*< ROLLBACK */
-    QUERY_TYPE_COMMIT             = 0x008000,   /*< COMMIT */
-    QUERY_TYPE_PREPARE_NAMED_STMT = 0x010000,   /*< Prepared stmt with name from user:all */
-    QUERY_TYPE_PREPARE_STMT       = 0x020000,   /*< Prepared stmt with id provided by server:all */
-    QUERY_TYPE_EXEC_STMT          = 0x040000,   /*< Execute prepared statement:master or any */
-    QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000,   /*< Create temporary table:master (could be all) */
-    QUERY_TYPE_READ_TMP_TABLE     = 0x100000,   /*< Read temporary table:master (could be any) */
-    QUERY_TYPE_SHOW_DATABASES     = 0x200000,   /*< Show list of databases */
-    QUERY_TYPE_SHOW_TABLES        = 0x400000,   /*< Show list of tables */
-    QUERY_TYPE_DEALLOC_PREPARE    = 0x1000000   /*< Dealloc named prepare stmt:all */
+    QUERY_TYPE_UNKNOWN            = 0,      /*< Initial value, can't be tested bitwisely */
+    QUERY_TYPE_LOCAL_READ         = 1 << 0, /*< Read non-database data, execute in MaxScale:any */
+    QUERY_TYPE_READ               = 1 << 1, /*< Read database data:any */
+    QUERY_TYPE_WRITE              = 1 << 2, /*< Master data will be  modified:master */
+    QUERY_TYPE_MASTER_READ        = 1 << 3, /*< Read from the master:master */
+    QUERY_TYPE_SESSION_WRITE      = 1 << 4, /*< Session data will be modified:master or all */
+    QUERY_TYPE_USERVAR_WRITE      = 1 << 5, /*< Write a user variable:master or all */
+    QUERY_TYPE_USERVAR_READ       = 1 << 6, /*< Read a user variable:master or any */
+    QUERY_TYPE_SYSVAR_READ        = 1 << 7, /*< Read a system variable:master or any */
+    QUERY_TYPE_GSYSVAR_READ       = 1 << 8, /*< Read global system variable:master or any */
+    QUERY_TYPE_GSYSVAR_WRITE      = 1 << 9, /*< Write global system variable:master or all */
+    QUERY_TYPE_BEGIN_TRX          = 1 << 10,/*< BEGIN or START TRANSACTION */
+    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 1 << 11,/*< SET autocommit=1 */
+    QUERY_TYPE_DISABLE_AUTOCOMMIT = 1 << 12,/*< SET autocommit=0 */
+    QUERY_TYPE_ROLLBACK           = 1 << 13,/*< ROLLBACK */
+    QUERY_TYPE_COMMIT             = 1 << 14,/*< COMMIT */
+    QUERY_TYPE_PREPARE_NAMED_STMT = 1 << 15,/*< Prepared stmt with name from user:all */
+    QUERY_TYPE_PREPARE_STMT       = 1 << 16,/*< Prepared stmt with id provided by server:all */
+    QUERY_TYPE_EXEC_STMT          = 1 << 17,/*< Execute prepared statement:master or any */
+    QUERY_TYPE_CREATE_TMP_TABLE   = 1 << 18,/*< Create temporary table:master (could be all) */
+    QUERY_TYPE_READ_TMP_TABLE     = 1 << 19,/*< Read temporary table:master (could be any) */
+    QUERY_TYPE_SHOW_DATABASES     = 1 << 20,/*< Show list of databases */
+    QUERY_TYPE_SHOW_TABLES        = 1 << 21,/*< Show list of tables */
+    QUERY_TYPE_DEALLOC_PREPARE    = 1 << 22 /*< Dealloc named prepare stmt:all */
 };
 
 /**
