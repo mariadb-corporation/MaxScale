@@ -27,9 +27,9 @@ class UpdateOperator
 public:
     UpdateOperator() = default;
 
-    string convert_set(const bsoncxx::document::element& element, const string& doc)
+    string convert_current_date(const bsoncxx::document::element& element, const string& doc)
     {
-        mxb_assert(element.key().compare("$set") == 0);
+        mxb_assert(element.key().compare("$currentDate") == 0);
 
         ostringstream ss;
 
@@ -45,9 +45,59 @@ public:
             string_view sv = field.key();
             string key = check_update_path(sv);
 
-            ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+            ss << "'$." << key << "', ";
 
-            rec.push_back(sv);
+            auto now = std::chrono::system_clock::now().time_since_epoch().count();
+
+            auto type = field.type();
+            switch (type)
+            {
+            case bsoncxx::type::k_bool:
+                ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                break;
+
+            case bsoncxx::type::k_document:
+                {
+                    bsoncxx::document::view spec_doc = field.get_document();
+                    auto spec_value = spec_doc["$type"];
+
+                    if (!spec_value || spec_value.type() != bsoncxx::type::k_utf8)
+                    {
+                        throw SoftError("The '$type' string field is required to be 'date' or "
+                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
+                                        error::BAD_VALUE);
+                    }
+
+                    string_view what = spec_value.get_utf8();
+
+                    if (what.compare("date") == 0)
+                    {
+                        ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                    }
+                    else if (what.compare("timestamp") == 0)
+                    {
+                        ss << "JSON_OBJECT(\"$timestamp\", JSON_OBJECT("
+                           << "\"t\", " << now << ", \"i\", 0))";
+                    }
+                    else
+                    {
+                        throw SoftError("The '$type' string field is required to be 'date' or "
+                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
+                                        error::BAD_VALUE);
+                    }
+                }
+                break;
+
+            default:
+                {
+                    ostringstream ss;
+                    ss << bsoncxx::to_string(type) << " is not valid type for $currentDate. "
+                       << "Please use a boolean ('true') or a $type expression ({$type: 'timestamp/date'}).";
+
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
+                break;
+            }
         }
 
         ss << ")";
@@ -55,50 +105,6 @@ public:
         rec.flush();
 
         return ss.str();
-    }
-
-    string convert_unset(const bsoncxx::document::element& element, const string& doc)
-    {
-        mxb_assert(element.key().compare("$unset") == 0);
-
-        // The prototype is JSON_REMOVE(doc, path[, path] ...) and if a particular
-        // path is not present in the document, there should be no effect. However,
-        // there is a bug https://jira.mariadb.org/browse/MDEV-22141 that causes
-        // NULL to be returned if a path is not present. To work around that bug,
-        // JSON_REMOVE(doc, a, b) is conceptually expressed like:
-        //
-        // (1) Z = IF(JSON_EXTRACT(doc, a) IS NOT NULL, JSON_REMOVE(doc, a), doc)
-        // (2) IF(JSON_EXTRACT(Z, b) IS NOT NULL, JSON_REMOVE(Z, b), Z)
-        //
-        // and in practice (take a deep breath) so that in (2) every occurence of
-        // Z is replaced with the IF-statement at (1). Note that in case there is
-        // a third path, then on that iteration, "doc" in (2) will be the entire
-        // expression we just got in (2). Also note that the "doc" we start with,
-        // may be a JSON-function expression in itself...
-
-        string rv = doc;
-
-        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
-
-        FieldRecorder rec(this);
-        for (auto field : fields)
-        {
-            string_view sv = field.key();
-            string key = escape_essential_chars(string(sv.data(), sv.length()));
-
-            ostringstream ss;
-
-            ss << "IF(JSON_EXTRACT(" << rv << ", '$." << key << "') IS NOT NULL, "
-               << "JSON_REMOVE(" << rv << ", '$." << key << "'), " << rv << ")";
-
-            rv = ss.str();
-
-            rec.push_back(sv);
-        }
-
-        rec.flush();
-
-        return rv;
     }
 
     string convert_inc(const bsoncxx::document::element& element, const string& doc)
@@ -113,6 +119,39 @@ public:
         mxb_assert(element.key().compare("$mul") == 0);
 
         return convert_op(element, doc, "multiply", " * ");
+    }
+
+    string convert_push(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$push") == 0);
+
+        string rv = doc;
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            ostringstream ss;
+
+            string_view sv = field.key();
+            string key = check_update_path(sv);
+
+            auto value = element_to_value(field, ValueFor::JSON_NESTED);
+
+            ss << "IF(JSON_QUERY(" << rv << ", '$." << key << "') IS NOT NULL, "
+               << "JSON_ARRAY_APPEND(" << rv << ", '$." << key << "', " << value << "), "
+               << "JSON_SET(" << rv << ", '$." << key << "', JSON_ARRAY("
+               << value
+               << ")))";
+
+            rv = ss.str();
+
+            rec.push_back(sv);
+        }
+
+        rec.flush();
+
+        return rv;
     }
 
     string convert_rename(const bsoncxx::document::element& element, const string& doc)
@@ -271,42 +310,9 @@ public:
         return rv;
     }
 
-    string convert_push(const bsoncxx::document::element& element, const string& doc)
+    string convert_set(const bsoncxx::document::element& element, const string& doc)
     {
-        mxb_assert(element.key().compare("$push") == 0);
-
-        string rv = doc;
-        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
-
-        FieldRecorder rec(this);
-        for (auto field : fields)
-        {
-            ostringstream ss;
-
-            string_view sv = field.key();
-            string key = check_update_path(sv);
-
-            auto value = element_to_value(field, ValueFor::JSON_NESTED);
-
-            ss << "IF(JSON_QUERY(" << rv << ", '$." << key << "') IS NOT NULL, "
-               << "JSON_ARRAY_APPEND(" << rv << ", '$." << key << "', " << value << "), "
-               << "JSON_SET(" << rv << ", '$." << key << "', JSON_ARRAY("
-               << value
-               << ")))";
-
-            rv = ss.str();
-
-            rec.push_back(sv);
-        }
-
-        rec.flush();
-
-        return rv;
-    }
-
-    string convert_current_date(const bsoncxx::document::element& element, const string& doc)
-    {
-        mxb_assert(element.key().compare("$currentDate") == 0);
+        mxb_assert(element.key().compare("$set") == 0);
 
         ostringstream ss;
 
@@ -322,59 +328,9 @@ public:
             string_view sv = field.key();
             string key = check_update_path(sv);
 
-            ss << "'$." << key << "', ";
+            ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
 
-            auto now = std::chrono::system_clock::now().time_since_epoch().count();
-
-            auto type = field.type();
-            switch (type)
-            {
-            case bsoncxx::type::k_bool:
-                ss << "JSON_OBJECT(\"$date\", " << now << ")";
-                break;
-
-            case bsoncxx::type::k_document:
-                {
-                    bsoncxx::document::view spec_doc = field.get_document();
-                    auto spec_value = spec_doc["$type"];
-
-                    if (!spec_value || spec_value.type() != bsoncxx::type::k_utf8)
-                    {
-                        throw SoftError("The '$type' string field is required to be 'date' or "
-                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
-                                        error::BAD_VALUE);
-                    }
-
-                    string_view what = spec_value.get_utf8();
-
-                    if (what.compare("date") == 0)
-                    {
-                        ss << "JSON_OBJECT(\"$date\", " << now << ")";
-                    }
-                    else if (what.compare("timestamp") == 0)
-                    {
-                        ss << "JSON_OBJECT(\"$timestamp\", JSON_OBJECT("
-                           << "\"t\", " << now << ", \"i\", 0))";
-                    }
-                    else
-                    {
-                        throw SoftError("The '$type' string field is required to be 'date' or "
-                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
-                                        error::BAD_VALUE);
-                    }
-                }
-                break;
-
-            default:
-                {
-                    ostringstream ss;
-                    ss << bsoncxx::to_string(type) << " is not valid type for $currentDate. "
-                       << "Please use a boolean ('true') or a $type expression ({$type: 'timestamp/date'}).";
-
-                    throw SoftError(ss.str(), error::BAD_VALUE);
-                }
-                break;
-            }
+            rec.push_back(sv);
         }
 
         ss << ")";
@@ -382,6 +338,50 @@ public:
         rec.flush();
 
         return ss.str();
+    }
+
+    string convert_unset(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$unset") == 0);
+
+        // The prototype is JSON_REMOVE(doc, path[, path] ...) and if a particular
+        // path is not present in the document, there should be no effect. However,
+        // there is a bug https://jira.mariadb.org/browse/MDEV-22141 that causes
+        // NULL to be returned if a path is not present. To work around that bug,
+        // JSON_REMOVE(doc, a, b) is conceptually expressed like:
+        //
+        // (1) Z = IF(JSON_EXTRACT(doc, a) IS NOT NULL, JSON_REMOVE(doc, a), doc)
+        // (2) IF(JSON_EXTRACT(Z, b) IS NOT NULL, JSON_REMOVE(Z, b), Z)
+        //
+        // and in practice (take a deep breath) so that in (2) every occurence of
+        // Z is replaced with the IF-statement at (1). Note that in case there is
+        // a third path, then on that iteration, "doc" in (2) will be the entire
+        // expression we just got in (2). Also note that the "doc" we start with,
+        // may be a JSON-function expression in itself...
+
+        string rv = doc;
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            string_view sv = field.key();
+            string key = escape_essential_chars(string(sv.data(), sv.length()));
+
+            ostringstream ss;
+
+            ss << "IF(JSON_EXTRACT(" << rv << ", '$." << key << "') IS NOT NULL, "
+               << "JSON_REMOVE(" << rv << ", '$." << key << "'), " << rv << ")";
+
+            rv = ss.str();
+
+            rec.push_back(sv);
+        }
+
+        rec.flush();
+
+        return rv;
     }
 
     static string convert(const bsoncxx::document::view& update_operations);
@@ -617,13 +617,13 @@ private:
 
 unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
 {
-    { "$set",         &UpdateOperator::convert_set },
-    { "$unset",       &UpdateOperator::convert_unset },
+    { "$currentDate", &UpdateOperator::convert_current_date },
     { "$inc",         &UpdateOperator::convert_inc },
     { "$mul",         &UpdateOperator::convert_mul },
-    { "$rename",      &UpdateOperator::convert_rename },
     { "$push",        &UpdateOperator::convert_push },
-    { "$currentDate", &UpdateOperator::convert_current_date }
+    { "$rename",      &UpdateOperator::convert_rename },
+    { "$set",         &UpdateOperator::convert_set },
+    { "$unset",       &UpdateOperator::convert_unset }
 };
 
 //static
