@@ -947,7 +947,7 @@ add_test_executable(avro_gtid.cc avro_gtid avro_gtid LABELS avrorouter REPL_BACK
 # Crash in case of backend node in Galera cluster stopping and then reconnect to Maxscale
 add_test_executable(bug676.cpp bug676 galera LABELS galeramon GALERA_BACKEND)
 
-# Galera node priority test
+# Galera node priority test. Also tests MXS-3826 and MXS-3532.
 add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
 
 # INSERT extremelly big number of rows

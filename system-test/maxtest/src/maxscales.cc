@@ -1076,6 +1076,14 @@ void ServerInfo::status_from_string(const string& source)
         {
             status |= MAINT;
         }
+        else if (flag == "Draining")
+        {
+            status |= DRAINING;
+        }
+        else if (flag == "Drained")
+        {
+            status |= DRAINED;
+        }
         else if (flag == "Relay Master")
         {
             status |= RELAY;
@@ -1113,6 +1121,14 @@ std::string ServerInfo::status_to_string(bitfield status)
         if (status & MAINT)
         {
             items.emplace_back("Maintenance");
+        }
+        if (status & DRAINING)
+        {
+            items.emplace_back("Draining");
+        }
+        if (status & DRAINED)
+        {
+            items.emplace_back("Drained");
         }
         if (status & SERVER_SLAVE_OF_EXT_MASTER)
         {
