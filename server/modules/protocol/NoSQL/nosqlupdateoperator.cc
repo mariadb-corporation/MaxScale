@@ -304,7 +304,85 @@ public:
         return rv;
     }
 
+    string convert_current_date(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$currentDate") == 0);
 
+        ostringstream ss;
+
+        ss << "JSON_SET(" << doc;
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            ss << ", ";
+
+            string_view sv = field.key();
+            string key = check_update_path(sv);
+
+            ss << "'$." << key << "', ";
+
+            auto now = std::chrono::system_clock::now().time_since_epoch().count();
+
+            auto type = field.type();
+            switch (type)
+            {
+            case bsoncxx::type::k_bool:
+                ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                break;
+
+            case bsoncxx::type::k_document:
+                {
+                    bsoncxx::document::view spec_doc = field.get_document();
+                    auto spec_value = spec_doc["$type"];
+
+                    if (!spec_value || spec_value.type() != bsoncxx::type::k_utf8)
+                    {
+                        throw SoftError("The '$type' string field is required to be 'date' or "
+                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
+                                        error::BAD_VALUE);
+                    }
+
+                    string_view what = spec_value.get_utf8();
+
+                    if (what.compare("date") == 0)
+                    {
+                        ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                    }
+                    else if (what.compare("timestamp") == 0)
+                    {
+                        ss << "JSON_OBJECT(\"$timestamp\", JSON_OBJECT("
+                           << "\"t\", " << now << ", \"i\", 0))";
+                    }
+                    else
+                    {
+                        throw SoftError("The '$type' string field is required to be 'date' or "
+                                        "'timestamp': {$currentDate: {field : {$type: 'date'}}}",
+                                        error::BAD_VALUE);
+                    }
+                }
+                break;
+
+            default:
+                {
+                    ostringstream ss;
+                    ss << bsoncxx::to_string(type) << " is not valid type for $currentDate. "
+                       << "Please use a boolean ('true') or a $type expression ({$type: 'timestamp/date'}).";
+
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
+                break;
+            }
+        }
+
+        ss << ")";
+
+        rec.flush();
+
+        return ss.str();
+    }
 
     static string convert(const bsoncxx::document::view& update_operations);
 
@@ -539,12 +617,13 @@ private:
 
 unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
 {
-    { "$set",    &UpdateOperator::convert_set },
-    { "$unset",  &UpdateOperator::convert_unset },
-    { "$inc",    &UpdateOperator::convert_inc },
-    { "$mul",    &UpdateOperator::convert_mul },
-    { "$rename", &UpdateOperator::convert_rename },
-    { "$push",   &UpdateOperator::convert_push },
+    { "$set",         &UpdateOperator::convert_set },
+    { "$unset",       &UpdateOperator::convert_unset },
+    { "$inc",         &UpdateOperator::convert_inc },
+    { "$mul",         &UpdateOperator::convert_mul },
+    { "$rename",      &UpdateOperator::convert_rename },
+    { "$push",        &UpdateOperator::convert_push },
+    { "$currentDate", &UpdateOperator::convert_current_date }
 };
 
 //static
