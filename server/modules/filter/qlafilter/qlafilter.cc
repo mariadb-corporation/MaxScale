@@ -471,11 +471,8 @@ bool QlaFilterSession::routeQuery(GWBUF* queue)
         m_first_reply = true;
         m_qc_type_mask = 0;     // only set if needed
 
-        m_sql.assign(query, query_len);
-        if (m_log->settings().use_canonical_form)
-        {
-            maxsimd::get_canonical(&m_sql, &m_markers);
-        }
+        m_sql = m_log->settings().use_canonical_form ?
+            queue->get_canonical() : queue->get_sql();
 
         m_begin_time = m_pSession->worker()->epoll_tick_now();
 

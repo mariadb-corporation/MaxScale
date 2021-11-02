@@ -248,8 +248,6 @@ private:
     std::string          m_wall_time_str;       // Wall time as a string when query began
     std::chrono::seconds m_last_wall_second;
 
-    maxsimd::Markers m_markers;     /* maxsimd::get_canonical needs these, kept outside for re-use */
-
     void        write_log_entries(const LogEventElems& elems);
     void        write_session_log_entry(const std::string& entry);
     std::string generate_log_entry(uint64_t data_flags, const LogEventElems& elems);

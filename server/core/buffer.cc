@@ -187,6 +187,17 @@ const std::string& GWBUF::get_sql() const
     return m_sql;
 }
 
+const std::string& GWBUF::get_canonical() const
+{
+    if (m_canonical.empty())
+    {
+        m_canonical = get_sql();
+        maxsimd::get_canonical(&m_canonical, &m_markers);
+    }
+
+    return m_canonical;
+}
+
 GWBUF::GWBUF(uint64_t size)
     : sbuf(std::make_shared<SHARED_BUF>(size))
 {

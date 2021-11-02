@@ -103,6 +103,5 @@ private:
         maxbase::TimePoint start;
         std::string        canonical;
     };
-    Measurement      m_measurement;
-    maxsimd::Markers m_markers;
+    Measurement m_measurement;
 };

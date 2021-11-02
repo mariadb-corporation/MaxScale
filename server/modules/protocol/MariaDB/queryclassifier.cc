@@ -824,6 +824,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      */
     if (m_route_info.have_tmp_tables() && is_packet_a_query(packet_type))
     {
+
         check_drop_tmp_table(querybuf);
         if (is_read_tmp_table(querybuf, *qtype))
         {

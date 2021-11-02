@@ -21,6 +21,7 @@
 #include <vector>
 #include <maxbase/assert.h>
 #include <maxscale/hint.hh>
+#include <maxsimd/canonical.hh>
 
 class SERVER;
 
@@ -104,13 +105,17 @@ public:
 #endif
 
     const std::string& get_sql() const;
+    const std::string& get_canonical() const;
 
     explicit GWBUF(uint64_t size);
     explicit GWBUF(const GWBUF& rhs);
 
     GWBUF(GWBUF&&) = delete;
 private:
-    mutable std::string m_sql;
+    std::shared_ptr<SHARED_BUF> m_payload;
+    mutable std::string         m_sql;
+    mutable std::string         m_canonical;
+    mutable maxsimd::Markers    m_markers;
 };
 
 inline bool gwbuf_is_type_undefined(const GWBUF* b)
