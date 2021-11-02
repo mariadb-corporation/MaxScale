@@ -28,7 +28,7 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                ref="listenerConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentListener"
@@ -75,6 +75,7 @@ export default {
         return {
             dialogTitle: '',
             dialogType: 'destroy',
+            isConfDlgOpened: false,
         }
     },
 
@@ -98,7 +99,7 @@ export default {
         handleDelete() {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('listeners', 1)}`
-            this.$refs.listenerConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
     },
 }

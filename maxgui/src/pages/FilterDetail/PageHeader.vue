@@ -28,7 +28,7 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                ref="filterConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentFilter"
@@ -65,6 +65,7 @@ export default {
         return {
             dialogTitle: '',
             dialogType: 'destroy',
+            isConfDlgOpened: false,
         }
     },
 
@@ -88,7 +89,7 @@ export default {
         handleDelete() {
             this.dialogType = 'destroy'
             this.dialogTitle = `${this.$t('destroy')} ${this.$tc('filters', 1)}`
-            this.$refs.filterConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
     },
 }

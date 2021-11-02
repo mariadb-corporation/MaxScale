@@ -39,18 +39,18 @@
                 @is-form-valid="isFormValid = $event"
             />
             <confirm-dialog
-                ref="confirmAlterDialog"
+                v-model="isConfDlgOpened"
                 :title="
                     isErrDialogShown ? $t('errors.alterFailed') : $t('confirmations.alterTable')
                 "
                 :smallInfo="isErrDialogShown ? '' : $t('info.alterTableInfo')"
                 type="execute"
-                :onSave="confirmAlter"
                 minBodyWidth="768px"
                 :hasSavingErr="isAlterFailed"
-                :onCancel="clearAlterResult"
-                :onClose="clearAlterResult"
                 :allowEnterToSubmit="false"
+                :onSave="confirmAlter"
+                @on-close="onCloseConfDlg"
+                @on-cancel="onCloseConfDlg"
             >
                 <template v-slot:body-prepend>
                     <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
@@ -136,6 +136,7 @@ export default {
              */
             isErrDialogShown: false,
             activated: true,
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -521,7 +522,7 @@ export default {
             this.sql = formatSQL(`${sql};`)
             // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
             this.isErrDialogShown = false
-            this.$refs.confirmAlterDialog.open()
+            this.isConfDlgOpened = true
         },
         async confirmAlter() {
             await this.alterTable(this.sql)
@@ -534,7 +535,7 @@ export default {
                 })
             else this.isErrDialogShown = true
         },
-        clearAlterResult() {
+        onCloseConfDlg() {
             this.UPDATE_ALTERING_TABLE_RESULT_MAP({
                 id: this.active_wke_id,
             })

@@ -132,7 +132,7 @@
             />
         </keep-alive>
         <confirm-dialog
-            ref="confirmDelDialog"
+            v-model="isConfDlgOpened"
             :title="
                 $t('clearSelectedQueries', {
                     targetType: $t(
@@ -141,8 +141,8 @@
                 })
             "
             type="delete"
-            :onSave="deleteSelectedRows"
             minBodyWidth="624px"
+            :onSave="deleteSelectedRows"
         >
             <template v-slot:body-prepend>
                 <p>
@@ -221,6 +221,7 @@ export default {
             ctxClientPos: { x: 0, y: 0 },
             ctxOptions: [this.$t('copySqlToClipboard'), this.$t('placeSqlInEditor')],
             selectedLogTypes: [],
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -354,7 +355,7 @@ export default {
         },
         handleDeleteSelectedRows(itemsToBeDeleted) {
             this.itemsToBeDeleted = itemsToBeDeleted
-            this.$refs.confirmDelDialog.open()
+            this.isConfDlgOpened = true
         },
         deleteSelectedRows() {
             const { cloneDeep, xorWith, isEqual } = this.$help.lodash

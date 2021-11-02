@@ -1,6 +1,6 @@
 <template>
     <base-dialog
-        v-model="isDialogOpen"
+        v-model="isDlgOpened"
         :onSave="onSave"
         :title="title"
         :saveText="type"
@@ -8,8 +8,7 @@
         :closeImmediate="closeImmediate"
         :hasSavingErr="hasSavingErr"
         :allowEnterToSubmit="allowEnterToSubmit"
-        @on-cancel="onCancelHandler"
-        @on-close="onCloseHandler"
+        v-on="$listeners"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
@@ -71,11 +70,10 @@
 export default {
     name: 'confirm-dialog',
     props: {
+        value: { type: Boolean, required: true },
         type: { type: String, required: true }, //delete, unlink, destroy, stop, start
         title: { type: String, required: true },
         onSave: { type: Function, required: true },
-        onClose: { type: Function },
-        onCancel: { type: Function },
         item: { type: Object, default: null },
         smallInfo: { type: String, default: '' },
         minBodyWidth: { type: String, default: '466px' },
@@ -83,25 +81,14 @@ export default {
         hasSavingErr: { type: Boolean, default: false },
         allowEnterToSubmit: { type: Boolean, default: true },
     },
-    data() {
-        return {
-            isDialogOpen: false,
-        }
-    },
-    methods: {
-        closeDialog() {
-            this.isDialogOpen = false
-        },
-        open() {
-            this.isDialogOpen = true
-        },
-        onCancelHandler() {
-            this.onCancel && this.onCancel()
-            this.closeDialog()
-        },
-        onCloseHandler() {
-            this.onClose && this.onClose()
-            this.closeDialog()
+    computed: {
+        isDlgOpened: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
         },
     },
 }

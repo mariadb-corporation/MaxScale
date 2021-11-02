@@ -74,7 +74,7 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                ref="serviceConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentService"
@@ -122,6 +122,7 @@ export default {
         return {
             dialogTitle: '',
             dialogType: 'destroy',
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -135,8 +136,7 @@ export default {
         actionHandle(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('services', 1)}`
-
-            this.$refs.serviceConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
 
         async confirmSave() {

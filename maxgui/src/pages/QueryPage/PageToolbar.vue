@@ -75,11 +75,11 @@
         <query-config-dialog v-model="queryConfigDialog" />
 
         <confirm-dialog
-            ref="favoriteConfirmDialog"
+            v-model="isConfDlgOpened"
             :title="$t('confirmations.addToFavorite')"
             type="add"
-            :onSave="addToFavorite"
             minBodyWidth="768px"
+            :onSave="addToFavorite"
         >
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
@@ -141,6 +141,7 @@ export default {
                 date: '',
                 name: '',
             },
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -174,7 +175,7 @@ export default {
                     formatType: 'DATE_RFC2822',
                 })}
                            `
-                this.$refs.favoriteConfirmDialog.open()
+                this.isConfDlgOpened = true
             }
         },
         addToFavorite() {

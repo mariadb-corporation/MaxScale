@@ -80,7 +80,7 @@
             @on-close="assignActiveConn"
         />
         <confirm-dialog
-            ref="confirmDialog"
+            v-model="isConfDlgOpened"
             :title="$t('disconnectConn')"
             type="disconnect"
             closeImmediate
@@ -120,7 +120,8 @@ export default {
             newConnOption: {
                 name: this.$t('newConnection'),
             },
-            targetConn: {}, // target connection to be deleted
+            targetConn: {}, // target connection to be deleted,
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -222,7 +223,7 @@ export default {
             this.isConnDialogOpened = true
         },
         unlinkConn(item) {
-            this.$refs.confirmDialog.open()
+            this.isConfDlgOpened = true
             this.targetConn = item
         },
         async handleOpenConn(opts) {

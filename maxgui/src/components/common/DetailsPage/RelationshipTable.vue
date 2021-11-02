@@ -45,7 +45,7 @@
             <!-- Avaiable dialogs for editable table -->
             <confirm-dialog
                 v-if="!readOnly"
-                ref="relationshipConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="deleteDialogType"
                 :item="Array.isArray(targetItem) ? {} : targetItem"
@@ -123,6 +123,7 @@ export default {
             //select dialog
             itemsList: [],
             isMounting: true,
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -222,7 +223,7 @@ export default {
             this.targetItem = item
             this.deleteDialogType = 'unlink'
             this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
-            this.$refs.relationshipConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
 
         async confirmDelete() {
