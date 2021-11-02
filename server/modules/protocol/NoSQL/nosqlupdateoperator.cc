@@ -109,6 +109,7 @@ public:
 
                 string_view sv = field.key();
                 string key = check_update_path(sv);
+                rec.push_back(sv);
 
                 ostringstream ss;
 
@@ -143,6 +144,7 @@ public:
 
             string_view sv = field.key();
             string key = check_update_path(sv);
+            rec.push_back(sv);
 
             ss << "'$." << key << "', ";
 
@@ -210,14 +212,28 @@ public:
     {
         mxb_assert(element.key().compare("$inc") == 0);
 
-        return convert_op(element, doc, "increment", " + ");
+        return convert_math_op(element, doc, "increment", " + ");
+    }
+
+    string convert_max(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$max") == 0);
+
+        return convert_min_max(element, doc, "$max", " > ");
+    }
+
+    string convert_min(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$min") == 0);
+
+        return convert_min_max(element, doc, "$min", " < ");
     }
 
     string convert_mul(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$mul") == 0);
 
-        return convert_op(element, doc, "multiply", " * ");
+        return convert_math_op(element, doc, "multiply", " * ");
     }
 
     string convert_push(const bsoncxx::document::element& element, const string& doc)
@@ -234,6 +250,7 @@ public:
 
             string_view sv = field.key();
             string key = check_update_path(sv);
+            rec.push_back(sv);
 
             auto value = element_to_value(field, ValueFor::JSON_NESTED);
 
@@ -244,8 +261,6 @@ public:
                << ")))";
 
             rv = ss.str();
-
-            rec.push_back(sv);
         }
 
         rec.flush();
@@ -426,10 +441,9 @@ public:
 
             string_view sv = field.key();
             string key = check_update_path(sv);
+            rec.push_back(sv);
 
             ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
-
-            rec.push_back(sv);
         }
 
         ss << ")";
@@ -467,6 +481,7 @@ public:
         {
             string_view sv = field.key();
             string key = escape_essential_chars(string(sv.data(), sv.length()));
+            rec.push_back(sv);
 
             ostringstream ss;
 
@@ -474,8 +489,6 @@ public:
                << "JSON_REMOVE(" << rv << ", '$." << key << "'), " << rv << ")";
 
             rv = ss.str();
-
-            rec.push_back(sv);
         }
 
         rec.flush();
@@ -540,10 +553,10 @@ private:
         }
     };
 
-    string convert_op(const bsoncxx::document::element& element,
-                      const string& doc,
-                      const char* zOperation,
-                      const char* zOp)
+    string convert_math_op(const bsoncxx::document::element& element,
+                           const string& doc,
+                           const char* zOperation,
+                           const char* zOp)
     {
 
         ostringstream ss;
@@ -559,6 +572,7 @@ private:
 
             string_view sv = field.key();
             string key = get_key(sv);
+            rec.push_back(sv);
 
             ss << "'$." << key << "', ";
 
@@ -583,8 +597,6 @@ private:
 
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
-
-            rec.push_back(sv);
         }
 
         ss << ")";
@@ -592,6 +604,57 @@ private:
         rec.flush();
 
         return ss.str();
+    }
+
+    string convert_min_max(const bsoncxx::document::element& element,
+                           const string& doc,
+                           const string& op_name,
+                           const char* zOp)
+    {
+        string rv = doc;
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            string_view sv = field.key();
+            string key = check_update_path(sv);
+            rec.push_back(sv);
+
+            auto type = field.type();
+            string value;
+
+            switch (type)
+            {
+            case bsoncxx::type::k_int32:
+            case bsoncxx::type::k_int64:
+            case bsoncxx::type::k_double:
+                value = element_to_value(element, ValueFor::SQL);
+                break;
+
+            default:
+                {
+                    ostringstream ss;
+                    ss << "The " << op_name << " modifier is currently not compatible with a "
+                       << bsoncxx::to_string(type)
+                       << ", only NumberInt, NumberLong and double are supported.";
+                }
+            }
+
+            ostringstream ss;
+
+            ss << "IF(JSON_VALUE(" << rv << ", '$." << key << "') IS NOT NULL AND "
+               << "JSON_VALUE(" << rv << ", '$." << key << "') " << zOp << " " << value << ", "
+               << rv
+               << ", JSON_SET(" << rv << ", '$." << key << "', " << value << "))";
+
+            rv = ss.str();
+        }
+
+        rec.flush();
+
+        return rv;
     }
 
     string get_key(const string_view& field)
@@ -719,6 +782,8 @@ unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
     { "$bit",         &UpdateOperator::convert_bit },
     { "$currentDate", &UpdateOperator::convert_current_date },
     { "$inc",         &UpdateOperator::convert_inc },
+    { "$max",         &UpdateOperator::convert_max },
+    { "$min",         &UpdateOperator::convert_min },
     { "$mul",         &UpdateOperator::convert_mul },
     { "$push",        &UpdateOperator::convert_push },
     { "$rename",      &UpdateOperator::convert_rename },
