@@ -38,58 +38,18 @@
                 :dynDim="formDim"
                 @is-form-valid="isFormValid = $event"
             />
-            <confirm-dialog
+            <execute-sql-dialog
                 v-model="isConfDlgOpened"
-                :title="
-                    isErrDialogShown ? $t('errors.alterFailed') : $t('confirmations.alterTable')
-                "
-                :smallInfo="isErrDialogShown ? '' : $t('info.alterTableInfo')"
-                type="execute"
-                minBodyWidth="768px"
+                :title="isAlterFailed ? $t('errors.alterFailed') : $t('confirmations.alterTable')"
+                :smallInfo="isAlterFailed ? '' : $t('info.alterTableInfo')"
                 :hasSavingErr="isAlterFailed"
-                :allowEnterToSubmit="false"
+                :executedSql="alterSql"
+                :errMsgObj="alterResult"
+                :sqlTobeExecuted.sync="sql"
                 :onSave="confirmAlter"
-                @on-close="onCloseConfDlg"
-                @on-cancel="onCloseConfDlg"
-            >
-                <template v-slot:body-prepend>
-                    <table v-if="isErrDialogShown" class="alter-err-tbl pa-4">
-                        <tr>
-                            <td><b>sql</b></td>
-                            <td>
-                                {{ alterSql }}
-                            </td>
-                        </tr>
-                        <tr v-for="(v, key) in alterResult" :key="key">
-                            <td>
-                                <b>{{ key }}</b>
-                            </td>
-                            <td>
-                                {{ v }}
-                            </td>
-                        </tr>
-                    </table>
-
-                    <div
-                        v-else
-                        class="mb-4 pt-2 pl-2 color border-all-table-border"
-                        style="height:250px"
-                    >
-                        <query-editor
-                            v-if="sql"
-                            ref="queryEditor"
-                            v-model="sql"
-                            :class="`fill-height`"
-                            :cmplList="getDbCmplList"
-                            :options="{
-                                fontSize: 10,
-                                contextmenu: false,
-                                wordWrap: 'on',
-                            }"
-                        />
-                    </div>
-                </template>
-            </confirm-dialog>
+                @after-close="clearAlterResult"
+                @after-cancel="clearAlterResult"
+            />
         </div>
     </div>
 </template>
@@ -110,13 +70,13 @@
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import DDLEditorForm from './DDLEditorForm.vue'
 import AlterTableToolbar from './AlterTableToolbar.vue'
-import QueryEditor from '@/components/QueryEditor'
+import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 export default {
     name: 'ddl-editor-container',
     components: {
         'ddl-editor-form': DDLEditorForm,
         'alter-table-toolbar': AlterTableToolbar,
-        'query-editor': QueryEditor,
+        'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {
         dynDim: { type: Object, required: true },
@@ -126,15 +86,6 @@ export default {
             formData: {},
             isFormValid: true,
             sql: '',
-            /**
-             * Using isErrDialogShown instead of isAlterFailed because
-             * when closing the dialog with error message, the action to clear
-             * `isAlterFailed` is dispatched immediately but dialog is still in the transition
-             * of closing. As a result, the query-editor is rendered while closing. This
-             * state helps to keep error dialog content even when dialog is closed.
-             *
-             */
-            isErrDialogShown: false,
             activated: true,
             isConfDlgOpened: false,
         }
@@ -189,7 +140,7 @@ export default {
             return Boolean(this.$typy(this.alterResult, 'errno').safeObject)
         },
         alterResult() {
-            return this.$typy(this.getAlteringTableResultMap, 'data.results[0]').safeObject
+            return this.$typy(this.getAlteringTableResultMap, 'data.results[0]').safeObjectOrEmpty
         },
         alterSql() {
             return this.$typy(this.getAlteringTableResultMap, 'data.sql').safeString
@@ -520,8 +471,6 @@ export default {
                 sql += colsAlterSql
             }
             this.sql = formatSQL(`${sql};`)
-            // before opening dialog, manually clear isErrDialogShown so that query-editor can be shown
-            this.isErrDialogShown = false
             this.isConfDlgOpened = true
         },
         async confirmAlter() {
@@ -533,9 +482,8 @@ export default {
                         data: this.$help.lodash.cloneDeep(this.formData),
                     },
                 })
-            else this.isErrDialogShown = true
         },
-        onCloseConfDlg() {
+        clearAlterResult() {
             this.UPDATE_ALTERING_TABLE_RESULT_MAP({
                 id: this.active_wke_id,
             })
@@ -544,18 +492,6 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.alter-err-tbl {
-    width: 100%;
-    background-color: $reflection;
-    td {
-        color: $code-color;
-        vertical-align: top;
-        padding-bottom: 4px;
-        &:first-of-type {
-            padding-right: 16px;
-        }
-    }
-}
 .ddl-editor-close {
     position: absolute;
     top: 4px;
