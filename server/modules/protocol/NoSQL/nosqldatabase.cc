@@ -191,7 +191,14 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
     }
     catch (const Exception& x)
     {
-        MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", x.what());
+        const char* zMessage = x.what();
+
+        // If there is no message, the error was 1) stored in the returned 'writeErrors'
+        // array and 2) already warned for.
+        if (*zMessage != 0)
+        {
+            MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", zMessage);
+        }
 
         m_context.set_last_error(x.create_last_error());
 

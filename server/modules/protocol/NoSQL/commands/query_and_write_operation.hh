@@ -412,10 +412,12 @@ protected:
         }
         catch (const Exception& x)
         {
+            MXS_WARNING("nosql exception occurred when converting document: %s", x.what());
             x.append_write_error(write_errors, i);
         }
         catch (const bsoncxx::exception& x)
         {
+            MXS_WARNING("bsoncxx exception occurred when converting document: %s", x.what());
             DocumentBuilder write_error;
             write_error.append(kvp(key::INDEX, i));
             write_error.append(kvp(key::CODE, (int)error::FAILED_TO_PARSE));
@@ -425,6 +427,7 @@ protected:
         }
         catch (const std::exception& x)
         {
+            MXS_WARNING("std exception occurred when converting document: %s", x.what());
             DocumentBuilder write_error;
             write_error.append(kvp(key::INDEX, i));
             write_error.append(kvp(key::CODE, (int)error::INTERNAL_ERROR));
@@ -1139,10 +1142,12 @@ protected:
         }
         catch (const Exception& x)
         {
+            MXS_WARNING("nosql exception occurred when converting document: %s", x.what());
             x.append_write_error(write_errors, i);
         }
         catch (const bsoncxx::exception& x)
         {
+            MXS_WARNING("bsoncxx exception occurred when converting document: %s", x.what());
             DocumentBuilder write_error;
             write_error.append(kvp(key::INDEX, i));
             write_error.append(kvp(key::CODE, (int)error::FAILED_TO_PARSE));
@@ -1152,6 +1157,7 @@ protected:
         }
         catch (const std::exception& x)
         {
+            MXS_WARNING("std exception occurred when converting document: %s", x.what());
             DocumentBuilder write_error;
             write_error.append(kvp(key::INDEX, i));
             write_error.append(kvp(key::CODE, (int)error::INTERNAL_ERROR));
