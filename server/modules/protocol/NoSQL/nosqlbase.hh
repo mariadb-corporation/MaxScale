@@ -313,7 +313,7 @@ std::string element_to_value(const document_element_or_array_item& x,
                     ss << ", ";
                 }
 
-                ss << "\"" << element.key() << "\", " << element_to_value(element, ValueFor::JSON, op);
+                ss << "\"" << element.key() << "\", " << element_to_value(element, ValueFor::JSON_NESTED, op);
             }
 
             ss << ")";
