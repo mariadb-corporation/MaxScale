@@ -119,7 +119,7 @@ public:
     {
         mxb_assert(element.key().compare("$rename") == 0);
 
-        string rv;
+        string rv = doc;
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
@@ -214,11 +214,6 @@ public:
             string t = check_update_path(to);
             string f = check_update_path(from);
 
-            if (rv.empty())
-            {
-                rv = "doc";
-            }
-
             ostringstream ss;
 
             string json_set;
@@ -275,6 +270,41 @@ public:
 
         return rv;
     }
+
+    string convert_push(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$push") == 0);
+
+        string rv = doc;
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            ostringstream ss;
+
+            string_view sv = field.key();
+            string key = check_update_path(sv);
+
+            auto value = element_to_value(field, ValueFor::JSON_NESTED);
+
+            ss << "IF(JSON_QUERY(" << rv << ", '$." << key << "') IS NOT NULL, "
+               << "JSON_ARRAY_APPEND(" << rv << ", '$." << key << "', " << value << "), "
+               << "JSON_SET(" << rv << ", '$." << key << "', JSON_ARRAY("
+               << value
+               << ")))";
+
+            rv = ss.str();
+
+            rec.push_back(sv);
+        }
+
+        rec.flush();
+
+        return rv;
+    }
+
+
 
     static string convert(const bsoncxx::document::view& update_operations);
 
@@ -360,8 +390,8 @@ private:
             {
                 auto value = double_to_string(d);
 
-                ss << "IF(JSON_EXTRACT(doc, '$." + key + "') IS NOT NULL, "
-                   << "JSON_VALUE(doc, '$." + key + "')" << zOp << value << ", "
+                ss << "IF(JSON_EXTRACT(" << doc << ", '$." + key + "') IS NOT NULL, "
+                   << "JSON_VALUE(" << doc << ", '$." + key + "')" << zOp << value << ", "
                    << value
                    << ")";
             }
@@ -513,7 +543,8 @@ unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
     { "$unset",  &UpdateOperator::convert_unset },
     { "$inc",    &UpdateOperator::convert_inc },
     { "$mul",    &UpdateOperator::convert_mul },
-    { "$rename", &UpdateOperator::convert_rename }
+    { "$rename", &UpdateOperator::convert_rename },
+    { "$push",   &UpdateOperator::convert_push },
 };
 
 //static
