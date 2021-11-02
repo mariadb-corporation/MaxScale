@@ -500,7 +500,8 @@ json_t* MariaDBMonitor::to_json() const
     return rval;
 }
 
-bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, std::string* errmsg_out) const
+bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, DisableType type,
+                                     std::string* errmsg_out) const
 {
     // If the server is the master, it cannot be disabled.
     bool can_be = !status_is_master(mserver.server->status());

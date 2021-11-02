@@ -888,17 +888,19 @@ void GaleraMonitor::set_galera_cluster()
     }
 }
 
-bool GaleraMonitor::can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const
+bool GaleraMonitor::can_be_disabled(const MonitorServer& server, DisableType type,
+                                    std::string* errmsg_out) const
 {
-    // If the server is the master, it cannot be disabled.
-    bool can_disable = !status_is_master(server.server->status());
-    if (!can_disable)
+    // If the server is the master, it cannot be drained. It can be set to maintenance, though.
+    bool rval = true;
+    if (type == DisableType::DRAIN && status_is_master(server.server->status()))
     {
-        // Is there a way for the user to change the master?
-        *errmsg_out = "The server is master, so it cannot be set in maintenance or draining mode.";
+        rval = false,
+        *errmsg_out = "The server is master, so it cannot be set to draining mode.";
     }
-    return can_disable;
+    return rval;
 }
+
 
 /**
  * The module entry point routine. It is this routine that
