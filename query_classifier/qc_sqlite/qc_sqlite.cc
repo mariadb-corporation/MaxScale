@@ -3010,17 +3010,6 @@ public:
 
         switch (kind)
         {
-        case MXS_SET_TRANSACTION:
-            if ((scope == TK_GLOBAL) || (scope == TK_SESSION))
-            {
-                m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-            }
-            else
-            {
-                mxb_assert(scope == 0);
-            }
-            break;
-
         case MXS_SET_VARIABLES:
             {
                 for (int i = 0; i < pList->nExpr; ++i)
@@ -3175,6 +3164,20 @@ public:
         }
 
         exposed_sqlite3ExprListDelete(pParse->db, pList);
+    }
+
+    void maxscaleSetTransaction(Parse* pParse, int scope, int access_mode)
+    {
+        mxb_assert(this_thread.initialized);
+
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_operation = QUERY_OP_SET;
+
+        if (scope == TK_GLOBAL)
+        {
+            m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+        }
     }
 
     void maxscaleShow(Parse* pParse, MxsShow* pShow)
@@ -3650,6 +3653,7 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
@@ -4747,6 +4751,16 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleSet(pParse, scope, kind, pList));
+}
+
+void maxscaleSetTransaction(Parse* pParse, int scope, int access_mode)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSetTransaction(pParse, scope, access_mode));
 }
 
 void maxscaleShow(Parse* pParse, MxsShow* pShow)

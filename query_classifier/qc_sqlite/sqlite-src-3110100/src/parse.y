@@ -130,6 +130,7 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
@@ -623,17 +624,17 @@ columnid(A) ::= nm(X). {
   // TODO: BINARY is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
-  CACHE /*CASCADE*/ CAST CHARSET_NAME_KW CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/ CONNECTION
+  CACHE /*CASCADE*/ CAST CHARSET_NAME_KW CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/ CONNECTION COMMITTED
   DATA DATABASE DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/ EXTENDED
   FIELDS FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
   HANDLER
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
-  IF IMMEDIATE INITIALLY INSTEAD
+  IF IMMEDIATE INITIALLY INSTEAD ISOLATION
   /*KEY*/
   /*LIKE_KW*/
-  LOCAL
+  LOCAL LEVEL
   MASTER /*MATCH*/ MERGE MODE
   // TODO: MOD is a keyword that should not decay into an id. However, now that is does,
   // TODO: also "mod(a, 2)" kind of usage will be accepted. Incorrect use will anyway be
@@ -642,16 +643,16 @@ columnid(A) ::= nm(X). {
   NAMES NEXT
   NO
   NOWAIT
-  OF OFFSET OPEN
+  OF OFFSET OPEN ONLY
   PARTITIONS PASSWORD PREVIOUS
   QUERY QUICK
-  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW
-  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
+  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW REPEATABLE
+  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS SERIALIZABLE
   TABLES TEMP TEMPTABLE /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
-  UNSIGNED
+  UNSIGNED UNCOMMITTED
   VALUE VIEW /*VIRTUAL*/
   WAIT
   /*WITH*/
@@ -3261,19 +3262,31 @@ cmd ::= SET variable_assignments(Y). {
   maxscaleSet(pParse, 0, MXS_SET_VARIABLES, Y);
 }
 
-transaction_characteristic ::= READ WRITE.
-transaction_characteristic ::= READ id.                 // READ ONLY
-transaction_characteristic ::= id id transaction_level. // ISOLATION LEVEL transaction_level
+%type trx_access_mode {int}
 
-transaction_level ::= id READ. // REPEATABLE READ
-transaction_level ::= READ id. // {READ COMMITTED|READ UNCOMMITTED}
-transaction_level ::= id.      // SERIALIZABLE
+trx_access_mode(A) ::= READ WRITE. {A = TK_WRITE;}
+trx_access_mode(A) ::= READ ONLY.  {A = TK_READ;}
 
-transaction_characteristics ::= transaction_characteristic.
-transaction_characteristics ::= transaction_characteristics COMMA transaction_characteristic.
+trx_isolation ::= ISOLATION LEVEL isolation_type.
 
-cmd ::= SET set_scope(X) TRANSACTION transaction_characteristics. {
-  maxscaleSet(pParse, X, MXS_SET_TRANSACTION, 0);
+isolation_type ::= REPEATABLE READ.
+isolation_type ::= READ COMMITTED.
+isolation_type ::= READ UNCOMMITTED.
+isolation_type ::= SERIALIZABLE.
+
+%type transaction_characteristics {int}
+
+// The syntax for SET TRANSACTION allows only one isolation level and one
+// access mode. They can be in either order but they must repeat only
+// once.
+
+transaction_characteristics(A) ::= trx_isolation.                          {A = 0;}
+transaction_characteristics(A) ::= trx_isolation COMMA trx_access_mode(X). {A = X;}
+transaction_characteristics(A) ::= trx_access_mode(X).                     {A = X;}
+transaction_characteristics(A) ::= trx_access_mode(X) COMMA trx_isolation. {A = X;}
+
+cmd ::= SET set_scope(X) TRANSACTION transaction_characteristics(Y). {
+  maxscaleSetTransaction(pParse, X, Y);
 }
 
 cmd ::= SET STATEMENT variable_assignments(X) FOR cmd. {
@@ -3488,7 +3501,7 @@ start_transaction_characteristic(A) ::= READ WRITE. {
   A = QUERY_TYPE_WRITE;
 }
 
-start_transaction_characteristic(A) ::= READ id. { // READ ONLY
+start_transaction_characteristic(A) ::= READ ONLY. {
   A = QUERY_TYPE_READ;
 }
 

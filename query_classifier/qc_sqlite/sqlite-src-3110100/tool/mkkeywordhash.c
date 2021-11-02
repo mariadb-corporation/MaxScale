@@ -201,6 +201,7 @@ static Keyword aKeywordTable[] = {
   { "COMMENT",          "TK_COMMENT",      ALWAYS                 },
 #endif
   { "COMMIT",           "TK_COMMIT",       ALWAYS                 },
+  { "COMMITTED",        "TK_COMMITTED",    ALWAYS                 },
 #ifndef MAXSCALE
   { "CONFLICT",         "TK_CONFLICT",     CONFLICT               },
 #endif
@@ -336,6 +337,7 @@ static Keyword aKeywordTable[] = {
   { "INTO",             "TK_INTO",         ALWAYS                 },
   { "IS",               "TK_IS",           ALWAYS                 },
   { "ISNULL",           "TK_ISNULL",       ALWAYS                 },
+  { "ISOLATION",        "TK_ISOLATION",    ALWAYS                 },
   { "JOIN",             "TK_JOIN",         ALWAYS                 },
   { "KEY",              "TK_KEY",          ALWAYS                 },
 #ifdef MAXSCALE
@@ -344,6 +346,7 @@ static Keyword aKeywordTable[] = {
   { "LEADING",          "TK_TRIM_ARG"  ,   ALWAYS                 },
 #endif
   { "LEFT",             "TK_JOIN_KW",      ALWAYS                 },
+  { "LEVEL",            "TK_LEVEL",        ALWAYS                 },
   { "LIKE",             "TK_LIKE_KW",      ALWAYS                 },
   { "LIMIT",            "TK_LIMIT",        ALWAYS                 },
 #ifdef MAXSCALE
@@ -376,6 +379,7 @@ static Keyword aKeywordTable[] = {
   { "OF",               "TK_OF",           ALWAYS                 },
   { "OFFSET",           "TK_OFFSET",       ALWAYS                 },
   { "ON",               "TK_ON",           ALWAYS                 },
+  { "ONLY",             "TK_ONLY",         ALWAYS                 },
 #ifdef MAXSCALE
   { "OPEN",             "TK_OPEN",         ALWAYS                 },
 #endif
@@ -430,6 +434,7 @@ static Keyword aKeywordTable[] = {
   { "RENAME",           "TK_RENAME",       ALTER                  },
   { "REPLACE",          "TK_REPLACE",      CONFLICT               },
 #ifdef MAXSCALE
+  { "REPEATABLE",       "TK_REPEATABLE",   ALWAYS                 },
   { "RESET",            "TK_RESET",        ALWAYS                 },
 #endif
   { "RESTRICT",         "TK_RESTRICT",     FKEY                   },
@@ -472,6 +477,7 @@ static Keyword aKeywordTable[] = {
   { "SUSPEND",          "TK_SUSPEND",      ALWAYS                 },
 #endif
   { "SET",              "TK_SET",          ALWAYS                 },
+  { "SERIALIZABLE",     "TK_SERIALIZABLE", ALWAYS                 },
 #ifdef MAXSCALE
   { "START",            "TK_START",        ALWAYS                 },
   { "STATEMENT",        "TK_STATEMENT",    ALWAYS                 },
@@ -501,6 +507,7 @@ static Keyword aKeywordTable[] = {
   { "TRIM",             "TK_TRIM",         ALWAYS                 },
   { "TRUNCATE",         "TK_TRUNCATE",     ALWAYS                 },
   { "UNBOUNDED",        "TK_UNBOUNDED",    ALWAYS                 },
+  { "UNCOMMITTED",      "TK_UNCOMMITTED",  ALWAYS                 },
 #endif
   { "UNION",            "TK_UNION",        COMPOUND               },
   { "UNSIGNED",         "TK_UNSIGNED",     ALWAYS                 },
