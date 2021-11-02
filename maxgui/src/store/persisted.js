@@ -52,7 +52,15 @@ export default {
         },
     },
     actions: {
-        pushQueryLog({ commit }, { startTime, connection_name, name, sql, res }) {
+        /**
+         * @param {Number} payload.startTime - time when executing the query
+         * @param {String} payload.connection_name - connection_name
+         * @param {String} payload.name - name of the query, required when queryType is ACTION_LOGS
+         * @param {String} payload.sql - sql
+         * @param {Object} payload.res - query response
+         * @param {String} payload.queryType - query type in APP_CONFIG.QUERY_LOG_TYPES
+         */
+        pushQueryLog({ commit }, { startTime, connection_name, name, sql, res, queryType }) {
             try {
                 const { capitalizeFirstLetter } = this.vue.$help
                 const { execution_time, results } = this.vue.$typy(
@@ -87,6 +95,7 @@ export default {
                     name: sql, // if no name is defined, use sql as name
                     execution_time: execution_time.toFixed(4),
                     response,
+                    type: queryType,
                 }
                 if (name) {
                     action.sql = sql

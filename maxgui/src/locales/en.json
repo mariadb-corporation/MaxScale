@@ -121,7 +121,7 @@
     "filterSchemaObjects": "Filter schema objects",
     "data": "Data",
     "resultTabGuide": "Click <b>Run</b> button to see query results",
-    "prvwTabGuide": "On the left sidebar, hover on the table name then left click to show <b>Preview Data</b> or right click and choose either <b>Preview Data</b> or <b>View Details</b> to generate data",
+    "prvwTabGuide": "On the left sidebar, hover on the table name then left-click to show <b>Preview Data</b> or right-click and choose either <b>Preview Data</b> or <b>View Details</b> to generate data.</br> When previewing data, top 1000 rows is returned.",
     "results": "Results",
     "dataPrvw": "Data Preview",
     "queryTxt": "Query Text",
@@ -203,6 +203,9 @@
     "dropSelectedCols": "Drop selected columns",
     "alterSpecs": "Alter Specifications",
     "queryResInfo": "Query results information",
+    "logTypes": "Log Types",
+    "userQueryLogs": "User query logs",
+    "actionLogs": "Action logs",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -232,7 +235,7 @@
         "runQuery": "Run the following statements?",
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
-        "alterTable": "Executing the following statements?"
+        "alterTable": "Execute the following statements?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",

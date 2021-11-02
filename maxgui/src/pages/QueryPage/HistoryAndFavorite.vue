@@ -21,7 +21,7 @@
             </v-tabs>
         </div>
         <keep-alive>
-            <template v-if="rows.length">
+            <template v-if="persistedQueryData.length">
                 <table-list
                     v-if="
                         activeView === SQL_QUERY_MODES.HISTORY ||
@@ -31,7 +31,7 @@
                     :height="dynDim.height - headerHeight"
                     :width="dynDim.width"
                     :headers="headers"
-                    :rows="rows"
+                    :rows="currRows"
                     showSelect
                     showGroupBy
                     groupBy="date"
@@ -84,23 +84,41 @@
                                 </caption>
 
                                 <tr v-for="(value, key) in cell" :key="`${key}`">
-                                    <td>
-                                        {{ key }}
-                                    </td>
-                                    <td
-                                        :class="{
-                                            'text-truncate': key !== 'response',
-                                        }"
-                                        :style="{
-                                            maxWidth: `600px`,
-                                            whiteSpace: key !== 'response' ? 'nowrap' : 'pre-line',
-                                        }"
-                                    >
-                                        {{ value }}
-                                    </td>
+                                    <template v-if="key !== 'type'">
+                                        <td>
+                                            {{ key }}
+                                        </td>
+                                        <td
+                                            :class="{
+                                                'text-truncate': key !== 'response',
+                                            }"
+                                            :style="{
+                                                maxWidth: '600px',
+                                                whiteSpace:
+                                                    key !== 'response' ? 'nowrap' : 'pre-line',
+                                            }"
+                                        >
+                                            {{ value }}
+                                        </td>
+                                    </template>
                                 </tr>
                             </table>
                         </v-tooltip>
+                    </template>
+                    <template
+                        v-if="activeView === SQL_QUERY_MODES.HISTORY"
+                        v-slot:left-table-tools-append
+                    >
+                        <div class="ml-2">
+                            <item-list
+                                v-model="selectedLogTypes"
+                                selectAllOnActivated
+                                :label="$t('logTypes')"
+                                :cols="queryLogTypes"
+                                returnObject
+                                :maxHeight="200"
+                            />
+                        </div>
                     </template>
                 </table-list>
             </template>
@@ -177,10 +195,12 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import ResultDataTable from './ResultDataTable'
+import ColumnList from './ColumnList.vue'
 export default {
     name: 'history-and-favorite',
     components: {
         'table-list': ResultDataTable,
+        'item-list': ColumnList,
     },
     props: {
         dynDim: {
@@ -200,11 +220,13 @@ export default {
             activeCtxItem: null,
             ctxClientPos: { x: 0, y: 0 },
             ctxOptions: [this.$t('copySqlToClipboard'), this.$t('placeSqlInEditor')],
+            selectedLogTypes: [],
         }
     },
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            QUERY_LOG_TYPES: state => state.app_config.QUERY_LOG_TYPES,
             curr_query_mode: state => state.query.curr_query_mode,
             query_history: state => state.persisted.query_history,
             query_favorite: state => state.persisted.query_favorite,
@@ -220,6 +242,9 @@ export default {
                 )
                     this.SET_CURR_QUERY_MODE(value)
             },
+        },
+        queryLogTypes() {
+            return Object.values(this.QUERY_LOG_TYPES).map(type => ({ text: type }))
         },
         headers() {
             let data = []
@@ -258,14 +283,29 @@ export default {
                 return header
             })
         },
-        rows() {
-            let data = []
+        persistedQueryData() {
             switch (this.activeView) {
                 case this.SQL_QUERY_MODES.HISTORY:
-                    data = this.query_history
-                    break
+                    return this.query_history
                 case this.SQL_QUERY_MODES.FAVORITE:
-                    data = this.query_favorite
+                    return this.query_favorite
+                default:
+                    return []
+            }
+        },
+        rows() {
+            return this.persistedQueryData.map(item => Object.values(item))
+        },
+        currRows() {
+            let data = this.persistedQueryData
+            switch (this.activeView) {
+                case this.SQL_QUERY_MODES.HISTORY: {
+                    const types = this.selectedLogTypes.map(log => log.text)
+                    data = data.filter(log => {
+                        return types.includes(log.action.type)
+                    })
+                    break
+                }
             }
             return data.map(item => Object.values(item))
         },
