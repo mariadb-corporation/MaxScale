@@ -32,9 +32,9 @@ describe('BaseDialog.vue', () => {
             shallow: false,
             component: BaseDialog,
             props: {
-                value: true,
+                value: false,
                 title: 'dialog title',
-                onSave: () => wrapper.setProps({ value: false }),
+                onSave: () => null,
             },
         })
     })
@@ -63,7 +63,7 @@ describe('BaseDialog.vue', () => {
         expect(count).to.be.equals(1)
     })
 
-    it('dialog closes when save button is pressed', async () => {
+    it('When save button is pressed, dialog waits 600ms before closing', async () => {
         // make dialog open
         await showDialogMock(wrapper)
         let count = 0
@@ -72,8 +72,20 @@ describe('BaseDialog.vue', () => {
             ++count
         })
         await wrapper.find('.save').trigger('click')
-        // onSave is an async cb fb, so input event will be called in the nextTick
-        await wrapper.vm.$nextTick()
+        await wrapper.vm.$help.delay(600) // stub waitClose
+        expect(count).to.be.equals(1)
+    })
+
+    it('dialog closes immediately when save button is pressed', async () => {
+        wrapper.setProps({ closeImmediate: true })
+        // make dialog open
+        await showDialogMock(wrapper)
+        let count = 0
+        wrapper.vm.$on('input', isOpen => {
+            expect(isOpen).to.be.false
+            ++count
+        })
+        await wrapper.find('.save').trigger('click')
         expect(count).to.be.equals(1)
     })
 })
