@@ -40,8 +40,14 @@
             />
             <execute-sql-dialog
                 v-model="isConfDlgOpened"
-                :title="isAlterFailed ? $t('errors.alterFailed') : $t('confirmations.alterTable')"
-                :smallInfo="isAlterFailed ? '' : $t('info.alterTableInfo')"
+                :title="
+                    isAlterFailed
+                        ? $tc('errors.failedToExeStatements', stmtI18nPluralization)
+                        : $tc('confirmations.exeStatements', stmtI18nPluralization)
+                "
+                :smallInfo="
+                    isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
+                "
                 :hasSavingErr="isAlterFailed"
                 :executedSql="alterSql"
                 :errMsgObj="alterResult"
@@ -156,6 +162,10 @@ export default {
         },
         initialPkCols() {
             return this.getPKCols(this.initialColsData)
+        },
+        stmtI18nPluralization() {
+            const statementCounts = (this.sql.match(/;/g) || []).length
+            return statementCounts > 1 ? 2 : 1
         },
     },
     activated() {
