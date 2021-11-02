@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-08-17
+ * Change Date: 2025-10-29
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -52,8 +52,46 @@ export default {
         },
     },
     actions: {
-        pushQueryLog({ commit }, { startTime, connection_name, query, res }) {
+        pushQueryLog({ commit }, { startTime, connection_name, name, sql, res }) {
             try {
+                const { capitalizeFirstLetter } = this.vue.$help
+                const { execution_time, results } = this.vue.$typy(
+                    res,
+                    'data.data.attributes'
+                ).safeObject
+
+                let resultData = {}
+                let resSetCount = 0
+                let resCount = 0
+                for (const res of results) {
+                    if (this.vue.$typy(res, 'data').isDefined) {
+                        ++resSetCount
+                        resultData[`Result set ${resSetCount}`] = `${res.data.length} rows in set.`
+                    } else if (this.vue.$typy(res, 'errno').isDefined) {
+                        let msg = ''
+                        Object.keys(res).forEach(
+                            key => (msg += `${capitalizeFirstLetter(key)}: ${res[key]}. `)
+                        )
+                        resultData[`Error`] = msg
+                    } else {
+                        ++resCount
+                        resultData[`Result ${resCount}`] = `${res.affected_rows} rows affected.`
+                    }
+                }
+
+                let response = ''
+                Object.keys(resultData).forEach(key => {
+                    response += `${key}: ${resultData[key]} \n`
+                })
+                let action = {
+                    name: sql, // if no name is defined, use sql as name
+                    execution_time: execution_time.toFixed(4),
+                    response,
+                }
+                if (name) {
+                    action.sql = sql
+                    action.name = name
+                }
                 commit('UPDATE_QUERY_HISTORY', {
                     payload: {
                         date: startTime, // Unix time
@@ -62,8 +100,7 @@ export default {
                             value: startTime,
                             formatType: 'HH:mm:ss',
                         }),
-                        execution_time: res.data.data.attributes.execution_time.toFixed(4),
-                        sql: query,
+                        action,
                     },
                 })
             } catch (e) {
