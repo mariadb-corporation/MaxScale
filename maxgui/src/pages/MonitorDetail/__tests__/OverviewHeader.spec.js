@@ -75,9 +75,9 @@ describe('OverviewHeader index', () => {
 
     it(`Should open select-dialog when switchover-edit-btn is clicked`, async () => {
         const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
-        expect(selectDialog.vm.$data.isDialogOpen).to.be.false
+        expect(selectDialog.vm.isDlgOpened).to.be.false
         await mockOpenSwitchOverDialog(wrapper)
-        expect(selectDialog.vm.$data.isDialogOpen).to.be.true
+        expect(selectDialog.vm.isDlgOpened).to.be.true
     })
 
     it(`Should pass necessary props to select-dialog`, async () => {

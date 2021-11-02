@@ -53,13 +53,13 @@
             />
             <select-dialog
                 v-if="!readOnly"
-                ref="relationshipSelectDialog"
+                v-model="isSelectDlgOpened"
                 :title="dialogTitle"
                 mode="add"
                 multiple
                 :entityName="relationshipType"
-                :onSave="confirmAdd"
                 :itemsList="itemsList"
+                :onSave="confirmAdd"
                 @selected-items="targetItem = $event"
                 @on-open="getAllEntities"
             />
@@ -124,6 +124,7 @@ export default {
             itemsList: [],
             isMounting: true,
             isConfDlgOpened: false,
+            isSelectDlgOpened: false,
         }
     },
     computed: {
@@ -266,7 +267,7 @@ export default {
                 entityName: this.$tc(this.relationshipType, 2),
             })}`
 
-            if (this.relationshipType !== 'listeners') this.$refs.relationshipSelectDialog.open()
+            if (this.relationshipType !== 'listeners') this.isSelectDlgOpened = true
             else this.$emit('open-listener-form-dialog')
         },
 

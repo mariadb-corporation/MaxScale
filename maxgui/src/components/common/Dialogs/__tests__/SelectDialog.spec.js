@@ -38,9 +38,6 @@ describe('SelectDialog.vue', () => {
             shallow: false,
             component: SelectDialog,
             props: initialProps,
-            computed: {
-                computeShowDialog: () => true,
-            },
         })
     })
 
@@ -75,8 +72,7 @@ describe('SelectDialog.vue', () => {
         wrapper.vm.$on('on-open', () => {
             count++
         })
-        // open dialog
-        await wrapper.vm.open()
+        await wrapper.setProps({ value: true }) // open dialog
         expect(count).to.be.equal(1)
     })
 
@@ -85,16 +81,22 @@ describe('SelectDialog.vue', () => {
         wrapper.vm.$on('selected-items', items => {
             chosenItems = items
         })
-        // open dialog
-        await wrapper.vm.open()
+        await wrapper.setProps({ value: true }) // open dialog
         // mockup onchange event when selecting item
         await itemSelectMock(wrapper, { id: 'Monitor-test', type: 'monitors' })
 
         expect(chosenItems).to.be.an('array')
         expect(chosenItems[0].id).to.be.equal('Monitor-test')
-        // save selected item
-        await wrapper.vm.onSaveHandler()
-        // reactivity data should be cleared
+    })
+
+    it(`Should clear selectedItems when dialog is closed`, async () => {
+        await wrapper.setProps({ value: true }) // open dialog
+        // stub selecting an item
+        await wrapper.setData({
+            selectedItems: [{ id: 'Monitor-test', type: 'monitors' }],
+        })
+        expect(wrapper.vm.$data.selectedItems.length).to.be.equal(1)
+        await wrapper.setProps({ value: false }) // close dialog
         expect(wrapper.vm.$data.selectedItems.length).to.be.equal(0)
     })
 
@@ -130,9 +132,6 @@ describe('SelectDialog.vue', () => {
             shallow: false,
             component: SelectDialog,
             props: initialProps,
-            computed: {
-                computeShowDialog: () => true,
-            },
             slots: {
                 'body-append': '<small class="body-append">body append</small>',
             },
