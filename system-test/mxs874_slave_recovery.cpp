@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     test.maxscale->connect_maxscale();
 
     test.reset_timeout();
-    test.try_query(test.maxscale->conn_rwsplit[0], (char*) "SET @a=1");
+    test.try_query(test.maxscale->conn_rwsplit, (char*) "SET @a=1");
     sleep(1);
     test.reset_timeout();
     test.tprintf("Blocking first slave\n");
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     int real_id = test.repl->get_server_id(1);
 
     char server_id[200] = "";
-    find_field(test.maxscale->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", server_id);
+    find_field(test.maxscale->conn_rwsplit, "SELECT @@server_id", "@@server_id", server_id);
     int queried_id = atoi(server_id);
 
     test.add_result(queried_id != real_id,
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
                     real_id);
 
     char userval[200] = "";
-    find_field(test.maxscale->conn_rwsplit[0], "SELECT @a", "@a", userval);
+    find_field(test.maxscale->conn_rwsplit, "SELECT @a", "@a", userval);
 
     test.add_result(atoi(userval) != 1, "User variable @a is not 1, it is '%s'", userval);
 

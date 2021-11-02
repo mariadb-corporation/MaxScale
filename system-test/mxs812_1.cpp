@@ -13,7 +13,7 @@ void run_test(TestConnections& test, size_t size, int chunks)
 {
     test.reset_timeout();
     const char* insert_stmt = "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
-    MYSQL* conn = test.maxscale->conn_rwsplit[0];
+    MYSQL* conn = test.maxscale->conn_rwsplit;
     MYSQL_STMT* stmt = mysql_stmt_init(conn);
 
     test.add_result(mysql_stmt_prepare(stmt, insert_stmt, strlen(insert_stmt)),

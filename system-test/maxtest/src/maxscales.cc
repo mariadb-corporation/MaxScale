@@ -77,19 +77,19 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
 
 int MaxScale::connect_rwsplit(const std::string& db)
 {
-    mysql_close(conn_rwsplit[0]);
+    mysql_close(conn_rwsplit);
 
-    conn_rwsplit[0] = open_conn_db(rwsplit_port, ip(), db, m_user_name, m_password, m_ssl);
-    routers[0] = conn_rwsplit[0];
+    conn_rwsplit = open_conn_db(rwsplit_port, ip(), db, m_user_name, m_password, m_ssl);
+    routers[0] = conn_rwsplit;
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_rwsplit[0]);
+    int my_errno = mysql_errno(conn_rwsplit);
 
     if (my_errno)
     {
         if (verbose())
         {
-            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit[0]));
+            printf("Failed to connect to readwritesplit: %d, %s\n", my_errno, mysql_error(conn_rwsplit));
         }
         rc = my_errno;
     }
@@ -623,8 +623,8 @@ Connection MaxScale::readconn_slave(const std::string& db)
 
 void MaxScale::close_rwsplit()
 {
-    mysql_close(conn_rwsplit[0]);
-    conn_rwsplit[0] = NULL;
+    mysql_close(conn_rwsplit);
+    conn_rwsplit = NULL;
 }
 
 void MaxScale::close_readconn_master()

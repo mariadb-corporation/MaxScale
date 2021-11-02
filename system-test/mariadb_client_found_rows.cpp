@@ -75,14 +75,14 @@ int main(int argc, char* argv[])
                                          test.maxscale_ssl);
 
     test.reset_timeout();
-    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    execute_query(test.maxscale->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS t1");
+    execute_query(test.maxscale->conn_rwsplit,
                   "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
-    execute_query(test.maxscale->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit,
                   "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     test.reset_timeout();
-    execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
+    execute_query_affected_rows(test.maxscale->conn_rwsplit,
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
     test.tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
     }
 
     test.reset_timeout();
-    execute_query_affected_rows(test.maxscale->conn_rwsplit[0],
+    execute_query_affected_rows(test.maxscale->conn_rwsplit,
                                 "UPDATE t1 SET msg='xyz' WHERE val=2",
                                 &rows);
     test.tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);

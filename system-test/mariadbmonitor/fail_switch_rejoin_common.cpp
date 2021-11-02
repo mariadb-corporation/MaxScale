@@ -93,7 +93,7 @@ void basic_test(TestConnections& test)
 {
     test.tprintf("Creating table and inserting data.");
     test.maxscale->connect_maxscale();
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
 
     check(test);

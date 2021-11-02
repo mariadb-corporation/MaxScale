@@ -1017,7 +1017,7 @@ int TestConnections::check_maxscale_alive()
     add_result(maxscale->connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
-    try_query(maxscale->conn_rwsplit[0], "show databases;");
+    try_query(maxscale->conn_rwsplit, "show databases;");
     tprintf("ReadConn Master \n");
     try_query(maxscale->conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
@@ -1035,7 +1035,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     int rc;
 
     tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
-    rc = execute_query(maxscale->conn_rwsplit[0], "select 1");
+    rc = execute_query(maxscale->conn_rwsplit, "select 1");
     if ((rc == 0) != rw_split)
     {
         tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
@@ -1325,14 +1325,14 @@ int TestConnections::insert_select(int N)
     int result = 0;
 
     tprintf("Create t1\n");
-    create_t1(maxscale->conn_rwsplit[0]);
+    create_t1(maxscale->conn_rwsplit);
 
     tprintf("Insert data into t1\n");
-    insert_into_t1(maxscale->conn_rwsplit[0], N);
+    insert_into_t1(maxscale->conn_rwsplit, N);
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
-    result += select_from_t1(maxscale->conn_rwsplit[0], N);
+    result += select_from_t1(maxscale->conn_rwsplit, N);
 
     tprintf("SELECT: master\n");
     result += select_from_t1(maxscale->conn_master, N);
@@ -1350,7 +1350,7 @@ int TestConnections::use_db(char* db)
 
     sprintf(sql, "USE %s;", db);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    local_result += execute_query(maxscale->conn_rwsplit[0], "%s", sql);
+    local_result += execute_query(maxscale->conn_rwsplit, "%s", sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
     local_result += execute_query(maxscale->conn_master, "%s", sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
@@ -1373,7 +1373,7 @@ int TestConnections::check_t1_table(bool presence, char* db)
     repl->sync_slaves();
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
-    int exists = check_if_t1_exists(maxscale->conn_rwsplit[0]);
+    int exists = check_if_t1_exists(maxscale->conn_rwsplit);
 
     if (exists == presence)
     {

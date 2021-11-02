@@ -34,11 +34,11 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
 
-    Test->expect(mysql_errno(Test->maxscale->conn_rwsplit[0]) == 0,
+    Test->expect(mysql_errno(Test->maxscale->conn_rwsplit) == 0,
                  "RWSplit connection should not fail");
 
     Test->tprintf("Trying query to RWSplit");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], "show processlist;");
+    Test->try_query(Test->maxscale->conn_rwsplit, "show processlist;");
     Test->tprintf("Trying query to ReadConn master\n");
     Test->try_query(Test->maxscale->conn_master, "show processlist;");
     Test->tprintf("Trying query to ReadConn slave\n");

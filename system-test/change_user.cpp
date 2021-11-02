@@ -56,14 +56,14 @@ int main(int argc, char *argv[])
 
     test.maxscale->connect();
     test.tprintf("Testing readwritesplit");
-    run_test(test, test.maxscale->conn_rwsplit[0]);
+    run_test(test, test.maxscale->conn_rwsplit);
     test.tprintf("Testing readconnroute");
     run_test(test, test.maxscale->conn_master);
     test.maxscale->disconnect();
 
     // Test MXS-3366.
     test.maxscale->connect_rwsplit("");
-    auto conn = test.maxscale->conn_rwsplit[0];
+    auto conn = test.maxscale->conn_rwsplit;
     test.expect(mysql_change_user(conn, "user", "pass2", "test") == 0,
                 "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(conn));
     test.maxscale->disconnect();

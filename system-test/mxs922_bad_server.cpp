@@ -42,7 +42,7 @@ void do_query(TestConnections* test, bool should_fail)
 
     test->maxscale->connect_maxscale();
 
-    bool failed = execute_query(test->maxscale->conn_rwsplit[0], "select @@server_id") == 0;
+    bool failed = execute_query(test->maxscale->conn_rwsplit, "select @@server_id") == 0;
 
     const char* msg = should_fail ?
         "Query was successful when failure was expected." :

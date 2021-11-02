@@ -147,12 +147,12 @@ void verify_throttling_performace(TestConnections& test)
               << " rows which should take about " << 3 * throttling_duration / 4
               << " seconds.\nThrottling should keep qps around "
               << max_qps << ".\n";
-    auto rs1 = read_rows(test.maxscale->conn_rwsplit[0], three_quarter, 0, false);
+    auto rs1 = read_rows(test.maxscale->conn_rwsplit, three_quarter, 0, false);
     std::cout << "1: " << rs1.qps << "qps " << " duration " << rs1.duration << '\n';
     std::cout << "Sleep for " << continuous_duration << "s (continuous_duration)\n";
     usleep(continuous_duration * 1000000);
     std::cout << "Run the same read again. Should be throttled, but not disconnected.\n";
-    auto rs2 = read_rows(test.maxscale->conn_rwsplit[0], three_quarter, 0, false);
+    auto rs2 = read_rows(test.maxscale->conn_rwsplit, three_quarter, 0, false);
     std::cout << "2: " << rs2.qps << "qps " << " duration " << rs2.duration << '\n';
 
     if (std::abs(rs1.qps - max_qps) > 0.1 * max_qps
@@ -172,7 +172,7 @@ void verify_throttling_disconnect(TestConnections& test)
     std::cout << "\n****\nRead " << 3 * half_rows
               << " rows which should cause a disconnect at a little\nbelow "
               << half_rows << " rows to go, in about " << throttling_duration << "s.\n";
-    auto rs = read_rows(test.maxscale->conn_rwsplit[0], 3 * half_rows, 0, true);
+    auto rs = read_rows(test.maxscale->conn_rwsplit, 3 * half_rows, 0, true);
     std::cout << rs.qps << "qps " << " duration " << rs.duration << '\n';
 
     if (!rs.error)

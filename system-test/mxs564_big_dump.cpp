@@ -58,8 +58,8 @@ int main(int argc, char* argv[])
     }
 
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE t1 (x1 int, fl int)");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS t1");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE t1 (x1 int, fl int)");
     test.maxscale->disconnect();
 
     std::vector<std::thread> threads;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     }
 
     test.maxscale->connect();
-    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE t1");
+    execute_query(test.maxscale->conn_rwsplit, "DROP TABLE t1");
     test.maxscale->disconnect();
 
     return test.global_result;

@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 
     test.reset_timeout();
     test.tprintf("SELECT SLEEP(10)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT SLEEP(10)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT SLEEP(10)");
 
     test.tprintf("disconnect");
     test.maxscale->disconnect();

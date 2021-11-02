@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     do_test(test, test.repl->nodes[0], true);
 
     test.tprintf("Running test through readwritesplit");
-    do_test(test, test.maxscale->conn_rwsplit[0], false);
+    do_test(test, test.maxscale->conn_rwsplit, false);
 
     test.try_query(test.repl->nodes[0], "DROP TABLE IF EXISTS double_execute;");
 

@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    int rv = execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql);
+                    int rv = execute_query(Test->maxscale->conn_rwsplit, "%s", sql);
                     Test->add_result(rv, "Query should succeed: %s", sql);
                     local_result += rv;
                 }
@@ -103,12 +103,12 @@ int main(int argc, char* argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    execute_query_silent(Test->maxscale->conn_rwsplit[0], sql);
-                    if (mysql_errno(Test->maxscale->conn_rwsplit[0]) != 1141)
+                    execute_query_silent(Test->maxscale->conn_rwsplit, sql);
+                    if (mysql_errno(Test->maxscale->conn_rwsplit) != 1141)
                     {
                         Test->tprintf("Expected 1141, Access Denied but got %d, %s instead: %s",
-                                      mysql_errno(Test->maxscale->conn_rwsplit[0]),
-                                      mysql_error(Test->maxscale->conn_rwsplit[0]),
+                                      mysql_errno(Test->maxscale->conn_rwsplit),
+                                      mysql_error(Test->maxscale->conn_rwsplit),
                                       sql);
                         local_result++;
                     }
@@ -159,20 +159,20 @@ int main(int argc, char* argv[])
     sleep(10);
 
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
-    execute_query_silent(Test->maxscale->conn_rwsplit[0], "DELETE FROM t1");
+    execute_query_silent(Test->maxscale->conn_rwsplit, "DELETE FROM t1");
 
-    if (mysql_errno(Test->maxscale->conn_rwsplit[0]) != 1141)
+    if (mysql_errno(Test->maxscale->conn_rwsplit) != 1141)
     {
         Test->add_result(1,
                          "Query succeded, but fail expected, error is %d",
-                         mysql_errno(Test->maxscale->conn_rwsplit[0]));
+                         mysql_errno(Test->maxscale->conn_rwsplit));
     }
 
     Test->tprintf("Waiting 30 seconds and trying 'DELETE FROM t1', expecting OK");
 
     sleep(30);
     Test->reset_timeout();
-    Test->try_query(Test->maxscale->conn_rwsplit[0], "DELETE FROM t1");
+    Test->try_query(Test->maxscale->conn_rwsplit, "DELETE FROM t1");
 
     Test->maxscale->stop();
 
@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Trying 10 quries as fast as possible");
     for (i = 0; i < 10; i++)
     {
-        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1"),
+        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit, "SELECT * FROM t1"),
                          "%d -query failed",
                          i);
     }
@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
         elapsedTime = (t2.tv_sec - t1.tv_sec);
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
     }
-    while ((execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1") != 0)
+    while ((execute_query_silent(Test->maxscale->conn_rwsplit, "SELECT * FROM t1") != 0)
            && (elapsedTime < 10));
 
     Test->tprintf("Quries were blocked during %f (using clock_gettime())", elapsedTime);
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < 12; i++)
     {
         sleep(1);
-        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT * FROM t1"),
+        Test->add_result(execute_query_silent(Test->maxscale->conn_rwsplit, "SELECT * FROM t1"),
                          "query failed");
         if (verbose)
         {

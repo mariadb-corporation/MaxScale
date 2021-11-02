@@ -22,9 +22,9 @@ int main(int argc, char* argv[])
 
     printf("Connecting to RWsplit\n");
     Test->maxscale->connect_rwsplit();
-    Test->add_result(create_t1(Test->maxscale->conn_rwsplit[0]), "Error creating 't1'\n");
+    Test->add_result(create_t1(Test->maxscale->conn_rwsplit), "Error creating 't1'\n");
 
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
     Test->tprintf("Changing master to node 1\n");
     Test->repl->change_master(1, 0);
     Test->tprintf("executing 3 INSERTs\n");
@@ -32,10 +32,10 @@ int main(int argc, char* argv[])
     {
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);
         Test->tprintf("Trying: %d\n", i);
-        execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql);
+        execute_query(Test->maxscale->conn_rwsplit, "%s", sql);
     }
     Test->tprintf("executing SELECT\n");
-    execute_query(Test->maxscale->conn_rwsplit[0], (char*) "SELECT * FROM t1;");
+    execute_query(Test->maxscale->conn_rwsplit, (char*) "SELECT * FROM t1;");
 
     Test->maxscale->close_rwsplit();
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_rwsplit();
     Test->tprintf("Reconnecting and executing SELECT again\n");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "SELECT * FROM t1;");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "SELECT * FROM t1;");
 
     Test->tprintf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);

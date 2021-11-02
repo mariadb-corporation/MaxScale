@@ -28,8 +28,8 @@ int main(int argc, char* argv[])
     test.reset_timeout();
 
     test.maxscale->connect_maxscale();
-    test.try_query(test.maxscale->conn_rwsplit[0], "USE test");
-    test.try_query(test.maxscale->conn_rwsplit[0], "show processlist;");
+    test.try_query(test.maxscale->conn_rwsplit, "USE test");
+    test.try_query(test.maxscale->conn_rwsplit, "show processlist;");
     test.maxscale->close_maxscale_connections();
 
     test.galera->unblock_node(0);

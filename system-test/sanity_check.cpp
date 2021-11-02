@@ -133,19 +133,19 @@ void test_rwsplit(TestConnections& test)
     test.maxscale->connect();
     for (int i = 0; i < 10; i++)
     {
-        mysql_stat(test.maxscale->conn_rwsplit[0]);
-        test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 1");
+        mysql_stat(test.maxscale->conn_rwsplit);
+        test.try_query(test.maxscale->conn_rwsplit, "SELECT 1");
     }
 
     //
     // MXS-3229: Hang with COM_SET_OPTION
     //
 
-    mysql_set_server_option(test.maxscale->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_ON);
-    mysql_set_server_option(test.maxscale->conn_rwsplit[0], MYSQL_OPTION_MULTI_STATEMENTS_OFF);
+    mysql_set_server_option(test.maxscale->conn_rwsplit, MYSQL_OPTION_MULTI_STATEMENTS_ON);
+    mysql_set_server_option(test.maxscale->conn_rwsplit, MYSQL_OPTION_MULTI_STATEMENTS_OFF);
 
     // Make sure the connection is still OK
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 1");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT 1");
 
     test.maxscale->disconnect();
 }
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
     {
         for (int i = 0; i < 10; i++)
         {
-            test.try_query(test.maxscale->conn_rwsplit[0], "%s", a);
+            test.try_query(test.maxscale->conn_rwsplit, "%s", a);
             test.try_query(test.maxscale->conn_master, "%s", a);
         }
     }
