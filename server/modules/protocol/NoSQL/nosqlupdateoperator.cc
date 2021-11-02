@@ -27,6 +27,105 @@ class UpdateOperator
 public:
     UpdateOperator() = default;
 
+    string convert_bit(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$bit") == 0);
+
+        string rv = doc;
+
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            auto type = field.type();
+
+            if (type != bsoncxx::type::k_document)
+            {
+                ostringstream ss;
+                ss << "The $bit modifier is not compatible with a " << bsoncxx::to_string(type)
+                   << ". You must pass in an embedded document: {$bit: {field: {and/or/xor: #}}";
+
+                throw SoftError(ss.str(), error::BAD_VALUE);
+            }
+
+            bsoncxx::document::view ops = field.get_document();
+
+            if (ops.begin() == ops.end())
+            {
+                throw SoftError("You must pass in at least one bitwise operation. "
+                                "The format is: {$bit: {field: {and/or/xor: #}}",
+                                error::BAD_VALUE);
+            }
+
+            for (auto op : ops)
+            {
+                const char* zOp = nullptr;
+                auto name = op.key();
+
+                if (name.compare("and") == 0)
+                {
+                    zOp = " & ";
+                }
+                else if (name.compare("or") == 0)
+                {
+                    zOp = " | ";
+                }
+                else if (name.compare("xor") == 0)
+                {
+                    zOp = " ^ ";
+                }
+                else
+                {
+                    ostringstream ss;
+                    ss << "The $bit modifier only supports 'and', 'or', and 'xor', not '"
+                       << name << "' which is an unknown operator: " << bsoncxx::to_json(ops);
+
+                    throw SoftError(ss.str(), error::BAD_VALUE);
+                }
+
+                int64_t bits = 0;
+
+                type = op.type();
+
+                switch (type)
+                {
+                case bsoncxx::type::k_int32:
+                    bits = op.get_int32();
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    bits = op.get_int64();
+                    break;
+
+                default:
+                    {
+                        ostringstream ss;
+                        ss << "The $bit modifier field must be an Integer(32/64 bit); a '"
+                           << bsoncxx::to_string(type) << " is not supported here: "
+                           << bsoncxx::to_json(ops);
+                    }
+                }
+
+                string_view sv = field.key();
+                string key = check_update_path(sv);
+
+                ostringstream ss;
+
+                ss << "IF(JSON_TYPE(JSON_VALUE(" << rv << ", '$." << key << "')) = 'INTEGER',"
+                   << "JSON_SET(" << rv << ", '$." << key << "', "
+                   << "JSON_VALUE(" << rv << ", '$." << key << "') " << zOp << bits << "), "
+                   << rv << ")";
+
+                rv = ss.str();
+            }
+        }
+
+        rec.flush();
+
+        return rv;
+    }
+
     string convert_current_date(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$currentDate") == 0);
@@ -617,6 +716,7 @@ private:
 
 unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
 {
+    { "$bit",         &UpdateOperator::convert_bit },
     { "$currentDate", &UpdateOperator::convert_current_date },
     { "$inc",         &UpdateOperator::convert_inc },
     { "$mul",         &UpdateOperator::convert_mul },
