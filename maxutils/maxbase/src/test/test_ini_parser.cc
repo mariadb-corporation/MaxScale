@@ -15,16 +15,28 @@
 #include <string>
 
 using std::move;
-using mxb::ini::array_result::Configuration;
-using mxb::ini::array_result::ConfigSection;
+using namespace mxb::ini;
 
 namespace
 {
-int compare_configs(const Configuration& found, const Configuration& expected);
+int compare_configs(const array_result::Configuration& found, const array_result::Configuration& expected);
+int compare_maps(const map_result::Configuration& found, const map_result::Configuration& expected);
+int test1();
+int test2();
+int test3();
 }
 
 int main(int argc, char* argv[])
 {
+    return test1() + test2() + test3();
+}
+
+namespace
+{
+
+int test1()
+{
+    using namespace mxb::ini::array_result;
     const std::string test_text =
         R"(
 #qwerty
@@ -52,8 +64,11 @@ k2 = v2
 k1 =    v3
   v3continued=v3continued
 k3=v4
+a=
+=b
+c
 )";
-    auto res = mxb::ini::parse_config_text(test_text);
+    auto res = parse_config_text(test_text);
 
     int rval = 0;
     if (res.success)
@@ -86,9 +101,19 @@ k3=v4
         s4.key_values.emplace_back("k2", "v2");
         s4.key_values.emplace_back("k1", "v3v3continued=v3continued");
         s4.key_values.emplace_back("k3", "v4");
+        s4.key_values.emplace_back("a", "");
+        s4.key_values.emplace_back("", "b");
+        s4.key_values.emplace_back("c", "");
         expected.push_back(move(s4));
 
-        rval = compare_configs(res.sections, expected);
+        rval += compare_configs(res.sections, expected);
+
+        auto conv_res = maxbase::ini::map_result::convert_to_map(move(res.sections));
+        if (conv_res.errors.empty())
+        {
+            printf("Conversion to map should fail.\n");
+            rval++;
+        }
     }
     else if (res.err_lineno > 0)
     {
@@ -103,9 +128,113 @@ k3=v4
     return rval;
 }
 
-namespace
+int test2()
 {
-int compare_configs(const Configuration& found, const Configuration& expected)
+    using namespace mxb::ini::map_result;
+    const std::string test_text =
+        R"(
+[section1]
+s1k1=s1v1
+s1k2             =s1v2
+
+[section_2]
+s2k1=s2v1
+
+#asdf
+
+[SectioN3]
+k1=part1
+ part2
+#zxcv
+
+)";
+    auto res = parse_config_text_to_map(test_text);
+    int rval = 0;
+    if (res.errors.empty())
+    {
+        auto& config = res.config;
+        Configuration expected;
+
+        ConfigSection s1;
+        s1.key_values.emplace("s1k1", "s1v1");
+        s1.key_values.emplace("s1k2", "s1v2");
+        expected["section1"] = move(s1);
+
+        ConfigSection s2;
+        s2.key_values.emplace("s2k1", "s2v1");
+        expected["section_2"] = move(s2);
+
+        ConfigSection s3;
+        s3.key_values.emplace("k1", "part1part2");
+        expected["SectioN3"] = move(s3);
+
+        rval += compare_maps(res.config, expected);
+    }
+    else
+    {
+        printf("Parsing to configuration map failed. Errors:\n");
+        for (auto& error : res.errors)
+        {
+            printf("%s\n", error.c_str());
+            rval++;
+        }
+    }
+    return rval;
+}
+
+int test3()
+{
+    using namespace mxb::ini::map_result;
+    const std::string test_text =
+        R"(
+[section1]
+s1k1=s1v1
+s1k2=s1v2
+s1k1 = s1v3
+
+[section2]
+s2k1=s2v1
+
+[section1]
+
+[section3]
+=s3k1
+
+)";
+    // Should have three errors: "s1k1" is duplicated, "section1" is duplicated and "=s3k1" has no key.
+    auto res = parse_config_text_to_map(test_text);
+    int rval = 0;
+    if (res.errors.size() != 3)
+    {
+        printf("Expected %i errors, found %zu. Errors:\n", 3, res.errors.size());
+        for (auto& error : res.errors)
+        {
+            printf("%s\n", error.c_str());
+            rval++;
+        }
+    }
+    else
+    {
+        Configuration expected;
+
+        ConfigSection s1;
+        s1.key_values.emplace("s1k1", "s1v1");
+        s1.key_values.emplace("s1k2", "s1v2");
+        expected["section1"] = move(s1);
+
+        ConfigSection s2;
+        s2.key_values.emplace("s2k1", "s2v1");
+        expected["section2"] = move(s2);
+
+        ConfigSection s3;
+        expected["section3"] = move(s3);
+
+        rval += compare_maps(res.config, expected);
+    }
+    return rval;
+}
+
+int compare_configs(const array_result::Configuration& found, const array_result::Configuration& expected)
 {
     int rval = 0;
     if (found.size() == expected.size())
@@ -153,6 +282,54 @@ int compare_configs(const Configuration& found, const Configuration& expected)
     {
         printf("Found %zu sections, expected %zu.\n", found.size(), expected.size());
         rval++;
+    }
+    return rval;
+}
+
+int compare_maps(const map_result::Configuration& found, const map_result::Configuration& expected)
+{
+    int rval = 0;
+    if (found.size() != expected.size())
+    {
+        printf("Map sizes differ. Found %lu, expected %lu.\n", found.size(), expected.size());
+        rval++;
+    }
+    else
+    {
+        for (auto& sec_expected : expected)
+        {
+            auto it_section = found.find(sec_expected.first);
+            if (it_section != found.end())
+            {
+                auto& kvs_found = it_section->second.key_values;
+                auto& kvs_expected = sec_expected.second.key_values;
+                if (kvs_found.size() == kvs_expected.size())
+                {
+                    for (auto& kv_exp : kvs_expected)
+                    {
+                        auto it_kv = kvs_found.find(kv_exp.first);
+                        if (it_kv == kvs_found.end() || it_kv->second.value != kv_exp.second.value)
+                        {
+                            printf("Key '%s' was not found in section '%s' or its value was not '%s'.\n",
+                                   kv_exp.first.c_str(), sec_expected.first.c_str(),
+                                   kv_exp.second.value.c_str());
+                            rval++;
+                        }
+                    }
+                }
+                else
+                {
+                    printf("Section '%s' contains %lu key-values when %lu was expected.\n",
+                           it_section->first.c_str(), kvs_found.size(), kvs_expected.size());
+                    rval++;
+                }
+            }
+            else
+            {
+                printf("Header '%s' is not in the map.\n", sec_expected.first.c_str());
+                rval++;
+            }
+        }
     }
     return rval;
 }
