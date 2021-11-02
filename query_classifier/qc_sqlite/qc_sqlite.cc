@@ -3172,11 +3172,28 @@ public:
 
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_SESSION_WRITE;
-        m_operation = QUERY_OP_SET;
+        m_operation = QUERY_OP_SET_TRANSACTION;
 
         if (scope == TK_GLOBAL)
         {
             m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+        }
+        else
+        {
+            if (access_mode == TK_WRITE)
+            {
+                m_type_mask |= QUERY_TYPE_READWRITE;
+            }
+            else if (access_mode == TK_READ)
+            {
+                m_type_mask |= QUERY_TYPE_READONLY;
+            }
+
+            if (scope != TK_SESSION)
+            {
+                // The SET TRANSACTION affects only the next transaction
+                m_type_mask |= QUERY_TYPE_NEXT_TRX;
+            }
         }
     }
 

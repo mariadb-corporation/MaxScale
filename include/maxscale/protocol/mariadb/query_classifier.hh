@@ -85,7 +85,10 @@ enum qc_query_type_t
     QUERY_TYPE_READ_TMP_TABLE     = 1 << 19,/*< Read temporary table:master (could be any) */
     QUERY_TYPE_SHOW_DATABASES     = 1 << 20,/*< Show list of databases */
     QUERY_TYPE_SHOW_TABLES        = 1 << 21,/*< Show list of tables */
-    QUERY_TYPE_DEALLOC_PREPARE    = 1 << 22 /*< Dealloc named prepare stmt:all */
+    QUERY_TYPE_DEALLOC_PREPARE    = 1 << 22,/*< Dealloc named prepare stmt:all */
+    QUERY_TYPE_READONLY           = 1 << 23,/*< The READ ONLY part of SET TRANSACTION */
+    QUERY_TYPE_READWRITE          = 1 << 24,/*< The READ WRITE part of SET TRANSACTION  */
+    QUERY_TYPE_NEXT_TRX           = 1 << 25,/*< SET TRANSACTION that's only for the next transaction */
 };
 
 /**
@@ -110,6 +113,7 @@ enum qc_query_op_t
     QUERY_OP_REVOKE,
     QUERY_OP_SELECT,
     QUERY_OP_SET,
+    QUERY_OP_SET_TRANSACTION,
     QUERY_OP_SHOW,
     QUERY_OP_TRUNCATE,
     QUERY_OP_UPDATE,

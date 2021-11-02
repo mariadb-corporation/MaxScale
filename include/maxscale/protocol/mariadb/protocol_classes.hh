@@ -163,6 +163,18 @@ public:
     };
 
     /**
+     * The default mode for transactions. Set with SET SESSION TRANSACTION with the access mode set to either
+     * READ ONLY or READ WRITE. The default is READ WRITE.
+     */
+    uint32_t default_trx_mode {0};
+
+    /**
+     * The access mode for the next transaction. Set with SET TRANSACTION and it only affects the next one.
+     * All transactions after it will use the default transaction access mode.
+     */
+    uint32_t next_trx_mode {0};
+
+    /**
      * The transaction state of the session.
      *
      * This tells only the state of @e explicitly started transactions.

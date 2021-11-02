@@ -875,7 +875,8 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else
         {
             // Without autocommit the end of a transaction starts a new one
-            ses_trx_state = trx_starting_active;
+            ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
+            m_session_data->next_trx_mode = m_session_data->default_trx_mode;
         }
     }
     else if (ses_trx_state & TrxState::TRX_STARTING)
@@ -885,14 +886,14 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     else if (!m_session_data->is_autocommit && ses_trx_state == TrxState::TRX_INACTIVE)
     {
         // This state is entered when autocommit was disabled
-        ses_trx_state = trx_starting_active;
+        ses_trx_state = trx_starting_active | m_session_data->next_trx_mode;
+        m_session_data->next_trx_mode = m_session_data->default_trx_mode;
     }
 
     if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
     {
-        const auto parser_type = rcap_type_required(
-            m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION) ?
-            QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
+        bool use_qc = rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION);
+        const auto parser_type = use_qc ? QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
 
         uint32_t type = qc_get_trx_type_mask_using(packetbuf, parser_type);
 
@@ -906,10 +907,15 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             }
             else
             {
-                auto new_trx_state = trx_starting_active;
+                auto new_trx_state = trx_starting_active | m_session_data->next_trx_mode;
+                m_session_data->next_trx_mode = m_session_data->default_trx_mode;
                 if (type & QUERY_TYPE_READ)
                 {
                     new_trx_state |= TrxState::TRX_READ_ONLY;
+                }
+                else if (type & QUERY_TYPE_WRITE)
+                {
+                    new_trx_state &= ~TrxState::TRX_READ_ONLY;
                 }
                 ses_trx_state = new_trx_state;
             }
@@ -924,6 +930,19 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
             {
                 m_session_data->is_autocommit = true;
+            }
+        }
+        else if (type & (QUERY_TYPE_READWRITE | QUERY_TYPE_READONLY))
+        {
+            // Currently only qc_sqlite should return these types
+            mxb_assert(use_qc && qc_get_operation(packetbuf) == QUERY_OP_SET_TRANSACTION);
+            uint32_t mode = type & QUERY_TYPE_READONLY ? TrxState::TRX_READ_ONLY : 0;
+            m_session_data->next_trx_mode = mode;
+
+            if ((type & QUERY_TYPE_NEXT_TRX) == 0)
+            {
+                // All future transactions will use this access mode
+                m_session_data->default_trx_mode = mode;
             }
         }
     }

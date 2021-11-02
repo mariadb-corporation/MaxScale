@@ -873,6 +873,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_SET:
         return "QUERY_OP_SET";
 
+    case QUERY_OP_SET_TRANSACTION:
+        return "QUERY_OP_SET_TRANSACTION";
+
     case QUERY_OP_SHOW:
         return "QUERY_OP_SHOW";
 
@@ -1090,6 +1093,30 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
         }
         break;
 
+    case QUERY_TYPE_READONLY:
+        {
+            static const char name[] = "QUERY_TYPE_READONLY";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+        }
+        break;
+
+    case QUERY_TYPE_READWRITE:
+        {
+            static const char name[] = "QUERY_TYPE_READWRITE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+        }
+        break;
+
+    case QUERY_TYPE_NEXT_TRX:
+        {
+            static const char name[] = "QUERY_TYPE_NEXT_TRX";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+        }
+        break;
+
     default:
         {
             static const char name[] = "UNKNOWN_QUERY_TYPE";
@@ -1137,6 +1164,9 @@ static const qc_query_type_t QUERY_TYPES[] =
     QUERY_TYPE_SHOW_DATABASES,
     QUERY_TYPE_SHOW_TABLES,
     QUERY_TYPE_DEALLOC_PREPARE,
+    QUERY_TYPE_READONLY,
+    QUERY_TYPE_READWRITE,
+    QUERY_TYPE_NEXT_TRX,
 };
 
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
@@ -1227,7 +1257,10 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
                       | QUERY_TYPE_COMMIT
                       | QUERY_TYPE_ROLLBACK
                       | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+                      | QUERY_TYPE_DISABLE_AUTOCOMMIT
+                      | QUERY_TYPE_READONLY
+                      | QUERY_TYPE_READWRITE
+                      | QUERY_TYPE_NEXT_TRX);
     }
 
     return type_mask;
