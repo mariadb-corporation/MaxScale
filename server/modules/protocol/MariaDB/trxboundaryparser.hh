@@ -49,6 +49,7 @@ public:
         TK_BEGIN,
         TK_COMMA,
         TK_COMMIT,
+        TK_COMMITTED,
         TK_CONSISTENT,
         TK_DOT,
         TK_END,
@@ -56,17 +57,22 @@ public:
         TK_FALSE,
         TK_GLOBAL,
         TK_GLOBAL_VAR,
+        TK_ISOLATION,
+        TK_LEVEL,
         TK_ONE,
         TK_ONLY,
         TK_READ,
+        TK_REPEATABLE,
         TK_ROLLBACK,
         TK_SESSION,
         TK_SESSION_VAR,
         TK_SET,
+        TK_SERIALIZABLE,
         TK_SNAPSHOT,
         TK_START,
         TK_TRANSACTION,
         TK_TRUE,
+        TK_UNCOMMITTED,
         TK_WITH,
         TK_WORK,
         TK_WRITE,
@@ -366,9 +372,142 @@ private:
         return type_mask;
     }
 
+    uint32_t parse_isolation_level(uint32_t type_mask)
+    {
+        token_t token = next_token(TOKEN_REQUIRED);
+
+        switch (token)
+        {
+        case TK_REPEATABLE:
+            if (next_token(TOKEN_REQUIRED) != TK_READ)
+            {
+                type_mask = 0;
+                log_unexpected();
+            }
+            break;
+
+        case TK_READ:
+            switch (next_token(TOKEN_REQUIRED))
+            {
+            case TK_COMMITTED:
+            case TK_UNCOMMITTED:
+                break;
+
+            case PARSER_EXHAUSTED:
+                type_mask = 0;
+                break;
+
+            default:
+                type_mask = 0;
+                log_unexpected();
+                break;
+            }
+            break;
+
+        case TK_SERIALIZABLE:
+            break;
+
+        case PARSER_EXHAUSTED:
+            type_mask = 0;
+            break;
+
+        default:
+            type_mask = 0;
+            log_unexpected();
+            break;
+        }
+
+        return type_mask;
+    }
+
+    uint32_t parse_access_mode(uint32_t type_mask)
+    {
+        token_t token = next_token(TOKEN_REQUIRED);
+
+        switch (token)
+        {
+        case TK_WRITE:
+        case TK_ONLY:
+            type_mask |= (token == TK_WRITE ? QUERY_TYPE_READWRITE : QUERY_TYPE_READONLY);
+            break;
+
+        case PARSER_EXHAUSTED:
+            type_mask = 0;
+            break;
+
+        default:
+            type_mask = 0;
+            log_unexpected();
+            break;
+        }
+
+        return type_mask;
+    }
+
+    uint32_t parse_set_transaction(uint32_t type_mask)
+    {
+        token_t token = next_token(TOKEN_REQUIRED);
+
+        switch (token)
+        {
+        case TK_READ:
+            type_mask = parse_access_mode(type_mask);
+
+            if (next_token() == TK_COMMA)
+            {
+                if (next_token(TOKEN_REQUIRED) == TK_ISOLATION && next_token(TOKEN_REQUIRED) == TK_LEVEL)
+                {
+                    type_mask = parse_isolation_level(type_mask);
+                }
+                else
+                {
+                    type_mask = 0;
+                }
+            }
+            break;
+
+        case TK_ISOLATION:
+            token = next_token(TOKEN_REQUIRED);
+
+            if (token == TK_LEVEL)
+            {
+                type_mask = parse_isolation_level(type_mask);
+
+                if (next_token() == TK_COMMA)
+                {
+                    if (next_token(TOKEN_REQUIRED) == TK_READ)
+                    {
+                        type_mask = parse_access_mode(type_mask);
+                    }
+                    else
+                    {
+                        type_mask = 0;
+                    }
+                }
+            }
+            else
+            {
+                type_mask = 0;
+            }
+            break;
+
+        case PARSER_EXHAUSTED:
+            type_mask = 0;
+            break;
+
+        default:
+            type_mask = 0;
+            log_unexpected();
+            break;
+        }
+
+        return type_mask;
+    }
+
     uint32_t parse_set(uint32_t type_mask)
     {
         token_t token = next_token(TOKEN_REQUIRED);
+        token_t prev_token;
 
         switch (token)
         {
@@ -378,10 +517,19 @@ private:
 
         case TK_GLOBAL:
         case TK_SESSION:
+            prev_token = token;
             token = next_token(TOKEN_REQUIRED);
             if (token == TK_AUTOCOMMIT)
             {
                 type_mask = parse_set_autocommit(type_mask);
+            }
+            else if (token == TK_TRANSACTION)
+            {
+                // TODO: Ignore all SET GLOBAL commands, they don't affect the current session
+                if (prev_token != TK_GLOBAL)
+                {
+                    type_mask = parse_set_transaction(type_mask);
+                }
             }
             else
             {
@@ -420,6 +568,11 @@ private:
                     log_unexpected();
                 }
             }
+            break;
+
+        case TK_TRANSACTION:
+            type_mask |= QUERY_TYPE_NEXT_TRX;
+            type_mask = parse_set_transaction(type_mask);
             break;
 
         case PARSER_EXHAUSTED:
@@ -689,7 +842,12 @@ private:
                 {
                     if (is_next_alpha('M', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("COMMIT"), TK_COMMIT);
+                        token = expect_token(TBP_EXPECT_TOKEN("COMMITTED"), TK_COMMITTED);
+
+                        if (token == PARSER_UNKNOWN_TOKEN)
+                        {
+                            token = expect_token(TBP_EXPECT_TOKEN("COMMIT"), TK_COMMIT);
+                        }
                     }
                     else if (is_next_alpha('N', 2))
                     {
@@ -734,6 +892,16 @@ private:
                 }
                 break;
 
+            case 'i':
+            case 'I':
+                token = expect_token(TBP_EXPECT_TOKEN("ISOLATION"), TK_ISOLATION);
+                break;
+
+            case 'l':
+            case 'L':
+                token = expect_token(TBP_EXPECT_TOKEN("LEVEL"), TK_LEVEL);
+                break;
+
             case 'o':
             case 'O':
                 if (is_next_alpha('F'))
@@ -757,7 +925,14 @@ private:
             case 'R':
                 if (is_next_alpha('E'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("READ"), TK_READ);
+                    if (is_next_alpha('P', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("REPEATABLE"), TK_REPEATABLE);
+                    }
+                    else
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("READ"), TK_READ);
+                    }
                 }
                 else if (is_next_alpha('O'))
                 {
@@ -772,6 +947,10 @@ private:
                     if (is_next_alpha('S', 2))
                     {
                         token = expect_token(TBP_EXPECT_TOKEN("SESSION"), TK_SESSION);
+                    }
+                    else if (is_next_alpha('R', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("SERIALIZABLE"), TK_SERIALIZABLE);
                     }
                     else
                     {
@@ -801,6 +980,11 @@ private:
                         token = expect_token(TBP_EXPECT_TOKEN("TRUE"), TK_TRUE);
                     }
                 }
+                break;
+
+            case 'u':
+            case 'U':
+                token = expect_token(TBP_EXPECT_TOKEN("UNCOMMITTED"), TK_UNCOMMITTED);
                 break;
 
             case 'w':
