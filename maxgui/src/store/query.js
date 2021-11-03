@@ -135,7 +135,6 @@ export default {
         // connection related states
         is_querying_map: {},
         // sidebar states
-        sysSchemas: ['information_schema', 'performance_schema', 'mysql', 'sys'],
         db_tree_map: {},
         exe_stmt_result_map: {},
         // editor states
@@ -572,17 +571,18 @@ export default {
         async getDbs({ state, commit, rootState }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
+                const {
+                    SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.persisted.query_show_sys_schemas_flag)
-                    sql += ` WHERE SCHEMA_NAME NOT IN(${state.sysSchemas
-                        .map(db => `'${db}'`)
-                        .join(',')})`
+                    sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
                 const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let cmpList = []
                 let db_tree = []
-                const { SCHEMA, TABLES, SPS } = rootState.app_config.SQL_NODE_TYPES
                 if (res.data.data.attributes.results[0].data) {
                     const dataRows = this.vue.$help.getObjectRows({
                         columns: res.data.data.attributes.results[0].fields,
@@ -597,6 +597,7 @@ export default {
                             data: row,
                             draggable: true,
                             level: 0,
+                            isSys: SYS_S.includes(row.SCHEMA_NAME.toLowerCase()),
                             children: [
                                 {
                                     key: uniqueId('node_key_'),
@@ -655,13 +656,9 @@ export default {
             try {
                 let dbName, grandChildNodeType, rowName, query
                 const {
-                    TABLES,
-                    TABLE,
-                    SPS,
-                    SP,
-                    COLS,
-                    TRIGGERS,
-                } = rootState.app_config.SQL_NODE_TYPES
+                    SQL_NODE_TYPES: { TABLES, TABLE, SPS, SP, COLS, TRIGGERS },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
                 // a db node id is formed by dbName.node_type So getting dbName by removing node type part from id.
                 let reg = `\\b.${node.type}\\b`
                 dbName = node.id.replace(new RegExp(reg, 'g'), '')
@@ -698,7 +695,7 @@ export default {
                         draggable: true,
                         data: row,
                         level: 2,
-                        isSysTbl: state.sysSchemas.includes(dbName.toLowerCase()),
+                        isSys: SYS_S.includes(dbName.toLowerCase()),
                     }
                     // For child node of TABLES, it has canBeHighlighted and children props
                     if (node.type === TABLES) {
@@ -750,7 +747,10 @@ export default {
             try {
                 const dbName = node.id.split('.')[0]
                 const tblName = node.id.split('.')[1]
-                const { COLS, COL, TRIGGERS, TRIGGER } = rootState.app_config.SQL_NODE_TYPES
+                const {
+                    SQL_NODE_TYPES: { COLS, COL, TRIGGERS, TRIGGER },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
                 let grandChildNodeType, rowName, query
                 switch (node.type) {
                     case TRIGGERS:
@@ -787,6 +787,7 @@ export default {
                         draggable: true,
                         data: row,
                         level: 4,
+                        isSys: SYS_S.includes(dbName.toLowerCase()),
                     })
                     cmpList.push({
                         label: row[rowName],

@@ -334,7 +334,7 @@ export default {
                 case 'Schema':
                     return this.schemaOptions
                 case 'Table':
-                    if (node.isSysTbl) return this.tableOptions
+                    if (node.isSys) return this.tableOptions
                     else return [...this.tableOptions, ...this.userTblOptions]
                 case 'Stored Procedure':
                     return this.spOptions

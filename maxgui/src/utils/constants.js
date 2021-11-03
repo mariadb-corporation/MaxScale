@@ -33,6 +33,7 @@ export const APP_CONFIG = Object.freeze({
         SPS: 'Stored Procedures',
         SP: 'Stored Procedure',
     }),
+    SQL_SYS_SCHEMAS: ['information_schema', 'performance_schema', 'mysql', 'sys'],
     SQL_QUERY_MODES: Object.freeze({
         PRVW_DATA: 'PRVW_DATA',
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
