@@ -130,6 +130,7 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleSetVariable(Parse*, int scope, Expr*);
 extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
@@ -3216,20 +3217,23 @@ variable(A) ::= variable_head(X) variable_tail(Y). {
 %type variable_assignment {Expr*}
 %destructor variable_assignment {sqlite3ExprDelete(pParse->db, $$);}
 
-variable_assignment(A) ::= set_scope variable(X) EQ expr(Y). {
+variable_assignment(A) ::= set_scope(Z) variable(X) EQ expr(Y). {
   A = sqlite3PExpr(pParse, TK_EQ, X.pExpr, Y.pExpr, 0);
+  maxscaleSetVariable(pParse, Z, A);
 }
 
-variable_assignment(A) ::= set_scope variable(X) EQ ON. {
+variable_assignment(A) ::= set_scope(Z) variable(X) EQ ON. {
   Expr* pOn = sqlite3PExpr(pParse, TK_INTEGER, 0, 0, 0);
   pOn->u.iValue = 1;
   A = sqlite3PExpr(pParse, TK_EQ, X.pExpr, pOn, 0);
+  maxscaleSetVariable(pParse, Z, A);
 }
 
-variable_assignment(A) ::= set_scope variable(X) EQ ALL. {
+variable_assignment(A) ::= set_scope(Z) variable(X) EQ ALL. {
   Expr* pOn = sqlite3PExpr(pParse, TK_INTEGER, 0, 0, 0);
   pOn->u.iValue = 1;
   A = sqlite3PExpr(pParse, TK_EQ, X.pExpr, pOn, 0);
+  maxscaleSetVariable(pParse, Z, A);
 }
 
 set_names_arg ::= ids.             // 'charset_name'

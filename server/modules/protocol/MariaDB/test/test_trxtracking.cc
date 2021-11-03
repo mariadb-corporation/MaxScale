@@ -120,8 +120,7 @@ struct test_case
      QUERY_TYPE_BEGIN_TRX
      | QUERY_TYPE_DISABLE_AUTOCOMMIT},
     {"SET GLOBAL AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     0},
     {"SET SESSION AUTOCOMMIT=0",
      QUERY_TYPE_BEGIN_TRX
      | QUERY_TYPE_DISABLE_AUTOCOMMIT},
@@ -129,8 +128,7 @@ struct test_case
      QUERY_TYPE_BEGIN_TRX
      | QUERY_TYPE_DISABLE_AUTOCOMMIT},
     {"SET @@GLOBAL . AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+     0},
 };
 
 const size_t N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);

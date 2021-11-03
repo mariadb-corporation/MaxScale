@@ -507,7 +507,6 @@ private:
     uint32_t parse_set(uint32_t type_mask)
     {
         token_t token = next_token(TOKEN_REQUIRED);
-        token_t prev_token;
 
         switch (token)
         {
@@ -515,9 +514,7 @@ private:
             type_mask = parse_set_autocommit(type_mask);
             break;
 
-        case TK_GLOBAL:
         case TK_SESSION:
-            prev_token = token;
             token = next_token(TOKEN_REQUIRED);
             if (token == TK_AUTOCOMMIT)
             {
@@ -525,11 +522,7 @@ private:
             }
             else if (token == TK_TRANSACTION)
             {
-                // TODO: Ignore all SET GLOBAL commands, they don't affect the current session
-                if (prev_token != TK_GLOBAL)
-                {
-                    type_mask = parse_set_transaction(type_mask);
-                }
+                type_mask = parse_set_transaction(type_mask);
             }
             else
             {
@@ -541,7 +534,6 @@ private:
             }
             break;
 
-        case TK_GLOBAL_VAR:
         case TK_SESSION_VAR:
             token = next_token(TOKEN_REQUIRED);
             if (token == TK_DOT)
@@ -568,6 +560,12 @@ private:
                     log_unexpected();
                 }
             }
+            break;
+
+        case TK_GLOBAL_VAR:
+        case TK_GLOBAL:
+            // Modifications to global variables do not affect the current session.
+            type_mask = 0;
             break;
 
         case TK_TRANSACTION:

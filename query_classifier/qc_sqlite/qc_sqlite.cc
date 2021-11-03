@@ -3005,154 +3005,12 @@ public:
         m_status = QC_QUERY_PARSED;
         // The following must be set anew as there will be no SET in case of
         // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
-        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_type_mask |= QUERY_TYPE_SESSION_WRITE;
         m_operation = QUERY_OP_SET;
 
         switch (kind)
         {
         case MXS_SET_VARIABLES:
-            {
-                for (int i = 0; i < pList->nExpr; ++i)
-                {
-                    const ExprList::ExprList_item* pItem = &pList->a[i];
-
-                    switch (pItem->pExpr->op)
-                    {
-                    case TK_CHARACTER:
-                    case TK_NAMES:
-                        i = pList->nExpr;
-                        break;
-
-                    case TK_EQ:
-                        {
-                            const Expr* pEq = pItem->pExpr;
-                            const Expr* pVariable;
-                            const Expr* pValue = pEq->pRight;
-
-                            // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
-                            // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
-                            // is either TK_DOT, TK_VARIABLE or TK_ID.
-
-                            pVariable = pEq->pLeft;
-
-                            // But first we explicitly check for the case "SET PASSWORD ..."
-                            if (i == 0
-                                && pVariable->op == TK_ID
-                                && strcasecmp(pVariable->u.zToken, "password") == 0)
-                            {
-                                // Even though SET PASSWORD looks like a session command it
-                                // is not, the password change will be replicated to slaves.
-                                m_type_mask = QUERY_TYPE_WRITE;
-                                // Ok, it was, so we break out.
-                                i = pList->nExpr;
-                                break;
-                            }
-
-                            // Now find the left-most part.
-                            while (pVariable->op == TK_DOT)
-                            {
-                                pVariable = pVariable->pLeft;
-                                mxb_assert(pVariable);
-                            }
-
-                            // Check what kind of variable it is.
-                            size_t n_at = 0;
-                            const char* zName = pVariable->u.zToken;
-
-                            while (*zName == '@')
-                            {
-                                ++n_at;
-                                ++zName;
-                            }
-
-                            if (n_at == 1)
-                            {
-                                m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
-                            }
-                            else
-                            {
-                                m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-                            }
-
-                            // Set pVariable to point to the rightmost part of the name.
-                            pVariable = pEq->pLeft;
-                            while (pVariable->op == TK_DOT)
-                            {
-                                pVariable = pVariable->pRight;
-                            }
-
-                            mxb_assert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
-
-                            if (n_at != 1)
-                            {
-                                // If it's not a user-variable we need to check whether it might
-                                // be 'autocommit'.
-                                const char* zName = pVariable->u.zToken;
-
-                                while (*zName == '@')
-                                {
-                                    ++zName;
-                                }
-
-                                // As pVariable points to the rightmost part, we'll catch both
-                                // "autocommit" and "@@global.autocommit".
-                                if (strcasecmp(zName, "autocommit") == 0)
-                                {
-                                    int enable = -1;
-
-                                    switch (pValue->op)
-                                    {
-                                    case TK_INTEGER:
-                                        if (pValue->u.iValue == 1)
-                                        {
-                                            enable = 1;
-                                        }
-                                        else if (pValue->u.iValue == 0)
-                                        {
-                                            enable = 0;
-                                        }
-                                        break;
-
-                                    case TK_ID:
-                                        enable = string_to_truth(pValue->u.zToken);
-                                        break;
-
-                                    default:
-                                        break;
-                                    }
-
-                                    switch (enable)
-                                    {
-                                    case 0:
-                                        m_type_mask |= QUERY_TYPE_BEGIN_TRX;
-                                        m_type_mask |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
-                                        break;
-
-                                    case 1:
-                                        m_type_mask |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-                                        m_type_mask |= QUERY_TYPE_COMMIT;
-                                        break;
-
-                                    default:
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (pValue->op == TK_SELECT)
-                            {
-                                QcAliases aliases;
-                                uint32_t context = 0;
-                                update_field_infos_from_select(aliases, context, pValue->x.pSelect, NULL);
-                            }
-                        }
-                        break;
-
-                    default:
-                        mxb_assert(!true);
-                    }
-                }
-            }
             break;
 
         case MXS_SET_DEFAULT_ROLE:
@@ -3161,9 +3019,153 @@ public:
 
         default:
             mxb_assert(!true);
+            break;
         }
 
+        // TODO: This isn't needed anymore and should be removed
         exposed_sqlite3ExprListDelete(pParse->db, pList);
+    }
+
+    void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
+    {
+        switch (pExpr->op)
+        {
+        case TK_CHARACTER:
+        case TK_NAMES:
+            break;
+
+        case TK_EQ:
+            {
+                const Expr* pEq = pExpr;
+                const Expr* pVariable;
+                const Expr* pValue = pEq->pRight;
+
+                // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
+                // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
+                // is either TK_DOT, TK_VARIABLE or TK_ID.
+
+                pVariable = pEq->pLeft;
+
+                // But first we explicitly check for the case "SET PASSWORD ..."
+                if (pVariable->op == TK_ID && strcasecmp(pVariable->u.zToken, "password") == 0)
+                {
+                    // Even though SET PASSWORD looks like a session command it
+                    // is not, the password change will be replicated to slaves.
+                    m_type_mask = QUERY_TYPE_WRITE;
+                    break;
+                }
+
+                // Now find the left-most part.
+                while (pVariable->op == TK_DOT)
+                {
+                    pVariable = pVariable->pLeft;
+                    mxb_assert(pVariable);
+                }
+
+                // Check what kind of variable it is.
+                size_t n_at = 0;
+                const char* zName = pVariable->u.zToken;
+
+                while (*zName == '@')
+                {
+                    ++n_at;
+                    ++zName;
+                }
+
+                if (n_at == 1)
+                {
+                    m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
+                }
+                else
+                {
+                    m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+
+                    if (n_at == 2 && strcasecmp(zName, "GLOBAL") == 0)
+                    {
+                        scope = TK_GLOBAL;
+                    }
+                }
+
+                // Set pVariable to point to the rightmost part of the name.
+                pVariable = pEq->pLeft;
+                while (pVariable->op == TK_DOT)
+                {
+                    pVariable = pVariable->pRight;
+                }
+
+                mxb_assert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
+
+                if (n_at != 1)
+                {
+                    // If it's not a user-variable we need to check whether it might
+                    // be 'autocommit'.
+                    const char* zName = pVariable->u.zToken;
+
+                    while (*zName == '@')
+                    {
+                        ++zName;
+                    }
+
+                    // As pVariable points to the rightmost part, we'll catch both
+                    // "autocommit" and "@@global.autocommit".
+                    if (strcasecmp(zName, "autocommit") == 0)
+                    {
+                        int enable = -1;
+
+                        switch (pValue->op)
+                        {
+                        case TK_INTEGER:
+                            if (pValue->u.iValue == 1)
+                            {
+                                enable = 1;
+                            }
+                            else if (pValue->u.iValue == 0)
+                            {
+                                enable = 0;
+                            }
+                            break;
+
+                        case TK_ID:
+                            enable = string_to_truth(pValue->u.zToken);
+                            break;
+
+                        default:
+                            break;
+                        }
+
+                        if (scope != TK_GLOBAL)
+                        {
+                            switch (enable)
+                            {
+                            case 0:
+                                m_type_mask |= QUERY_TYPE_BEGIN_TRX;
+                                m_type_mask |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                                break;
+
+                            case 1:
+                                m_type_mask |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                                m_type_mask |= QUERY_TYPE_COMMIT;
+                                break;
+
+                            default:
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (pValue->op == TK_SELECT)
+                {
+                    QcAliases aliases;
+                    uint32_t context = 0;
+                    update_field_infos_from_select(aliases, context, pValue->x.pSelect, NULL);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
     }
 
     void maxscaleSetTransaction(Parse* pParse, int scope, int access_mode)
@@ -3670,6 +3672,7 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr);
 extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
@@ -4768,6 +4771,16 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleSet(pParse, scope, kind, pList));
+}
+
+void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSetVariable(pParse, scope, pExpr));
 }
 
 void maxscaleSetTransaction(Parse* pParse, int scope, int access_mode)
