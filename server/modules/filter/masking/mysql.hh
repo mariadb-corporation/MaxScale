@@ -1477,12 +1477,12 @@ public:
     {
     }
 
-    iterator begin()
+    iterator begin() const
     {
         return iterator(m_pData, m_types);
     }
 
-    iterator end()
+    iterator end() const
     {
         uint8_t* pEnd = m_pBuffer + MYSQL_HEADER_LEN + m_payload_len;
         return iterator(pEnd);

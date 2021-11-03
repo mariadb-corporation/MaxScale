@@ -29,6 +29,7 @@
 #include <maxscale/target.hh>
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
+#include "../../filter/masking/mysql.hh"
 
 class DCB;
 
@@ -1552,5 +1553,16 @@ bsoncxx::document::value bson_from_json(json_t* pObject);
  * @return The corresponding BSON object.
  */
 bsoncxx::document::value bson_from_json(const std::string& json);
+
+/**
+ * Given a resultset row, converts it into the corresponding JSON.
+ *
+ * @param row          A result set row.
+ * @param extractions  The extractions to perform, *MUST* match what the row contains.
+ *
+ * @return The row as JSON.
+ */
+std::string resultset_row_to_json(const CQRTextResultsetRow& row,
+                                  const std::vector<std::string>& extractions);
 
 }

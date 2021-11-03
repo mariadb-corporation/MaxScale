@@ -3859,3 +3859,91 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
     DocumentBuilder doc;
     return doc.extract();
 }
+
+namespace
+{
+
+void add_value(json_t* pParent, const string& key, const string& value)
+{
+    json_error_t error;
+    json_t* pItem = json_loadb(value.data(), value.length(), JSON_DECODE_ANY, &error);
+
+    if (pItem)
+    {
+        json_object_set_new(pParent, key.c_str(), pItem);
+    }
+    else
+    {
+        MXS_ERROR("Could not decode JSON value '%s': %s", value.c_str(), error.text);
+    }
+}
+
+void create_entry(json_t* pRoot, const string& extraction, const std::string& value)
+{
+    string key = extraction;
+    json_t* pParent = pRoot;
+
+    string::size_type i;
+
+    while ((i = key.find('.')) != string::npos)
+    {
+        auto child = key.substr(0, i);
+        key = key.substr(i + 1);
+
+        json_t* pChild = json_object_get(pParent, child.c_str());
+
+        if (!pChild)
+        {
+            pChild = json_object();
+            json_object_set_new(pParent, child.c_str(), pChild);
+        }
+
+        pParent = pChild;
+    }
+
+    add_value(pParent, key, value);
+}
+
+}
+
+std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
+                                         const std::vector<std::string>& extractions)
+{
+    string json;
+
+    auto it = row.begin();
+
+    if (extractions.empty())
+    {
+        const auto& value = *it++;
+        mxb_assert(it == row.end());
+        // The value is now a JSON object.
+        json = value.as_string().to_string();
+    }
+    else
+    {
+        json_t* pJson = json_object();
+
+        auto jt = extractions.begin();
+
+        for (; it != row.end(); ++it, ++jt)
+        {
+            const auto& value = *it;
+            auto extraction = *jt;
+
+            auto s = value.as_string();
+
+            if (!s.is_null())
+            {
+                create_entry(pJson, extraction, value.as_string().to_string());
+            }
+        }
+
+        char* zJson = json_dumps(pJson, 0);
+        json = zJson;
+        MXS_FREE(zJson);
+        json_decref(pJson);
+    }
+
+    return json;
+}
