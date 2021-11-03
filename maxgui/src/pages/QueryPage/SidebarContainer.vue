@@ -161,6 +161,7 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
@@ -252,17 +253,18 @@ export default {
         async onDropAction({ id, type }) {
             const { escapeIdentifiers: escape } = this.$help
             let sql = 'DROP'
+            const { SCHEMA, TABLE, SP, TRIGGER } = this.SQL_NODE_TYPES
             switch (type) {
-                case 'Schema':
-                    sql += ' DATABASE'
+                case SCHEMA:
+                    sql += ' SCHEMA'
                     break
-                case 'Table':
+                case TABLE:
                     sql += ' TABLE'
                     break
-                case 'Stored Procedure':
+                case SP:
                     sql += ' PROCEDURE'
                     break
-                case 'Trigger':
+                case TRIGGER:
                     sql += ' TRIGGER'
                     break
             }

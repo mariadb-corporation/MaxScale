@@ -34,7 +34,7 @@
             </template>
             <template v-slot:append="{ isHover, item }">
                 <v-btn
-                    v-show="nodesHasCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
+                    v-show="nodesHaveCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
                     :id="`ctx-menu-activator-${item.key}`"
                     icon
                     x-small
@@ -45,7 +45,7 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
+            v-if="hoveredItem && nodesHaveCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
             :disabled="isDragging"
             right
@@ -74,7 +74,7 @@
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
             :activator="`#ctx-menu-activator-${activeCtxItem.key}`"
         >
-            <v-list v-for="option in getOptions(activeCtxItem)" :key="option">
+            <v-list v-for="option in getNodeOpts(activeCtxItem)" :key="option">
                 <v-list-item
                     dense
                     link
@@ -110,24 +110,9 @@ export default {
              *  TODO: Refactor and dry ctx menu. A menu option named `Insert to editor`
              *  has sub-menu `insertSchemaToEditor` and `insertNameToEditor`
              */
-            tableOptions: [
-                this.$t('previewData'),
-                this.$t('viewDetails'),
-                this.$t('placeSchemaInEditor'),
-            ],
-            userTblOptions: [this.$t('alterTbl'), this.$t('dropTbl')],
-            schemaOptions: [
-                this.$t('useDb'),
-                this.$t('placeSchemaInEditor'),
-                this.$t('dropSchema'),
-            ],
-            columnOptions: [this.$t('placeColumnNameInEditor')],
-            spOptions: [this.$t('placeSchemaInEditor'), this.$t('dropSp')],
-            triggerOptions: [this.$t('placeSchemaInEditor'), this.$t('dropTrigger')],
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
-            nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             expandedNodes: [],
         }
     },
@@ -135,6 +120,7 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
         }),
@@ -143,6 +129,36 @@ export default {
             getActiveTreeNode: 'query/getActiveTreeNode',
             getAlteredActiveNode: 'query/getAlteredActiveNode',
         }),
+        nodesHaveCtxMenu() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            return [SCHEMA, TABLE, SP, COL, TRIGGER]
+        },
+        // basic node options for different node types
+        baseOptsMap() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            return {
+                [SCHEMA]: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
+                [TABLE]: [
+                    this.$t('previewData'),
+                    this.$t('viewDetails'),
+                    this.$t('placeSchemaInEditor'),
+                ],
+                [SP]: [this.$t('placeSchemaInEditor')],
+                [COL]: [this.$t('placeColumnNameInEditor')],
+                [TRIGGER]: [this.$t('placeSchemaInEditor')],
+            }
+        },
+        // more node options for user's nodes
+        userNodeOptsMap() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            return {
+                [SCHEMA]: [this.$t('dropSchema')],
+                [TABLE]: [this.$t('alterTbl'), this.$t('dropTbl')],
+                [SP]: [this.$t('dropSp')],
+                [COL]: [],
+                [TRIGGER]: [this.$t('dropTrigger')],
+            }
+        },
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
         },
@@ -318,37 +334,27 @@ export default {
             }
         },
         iconSheet(item) {
+            const { SCHEMA, TABLES, SPS } = this.SQL_NODE_TYPES
             switch (item.type) {
-                case 'Schema':
+                case SCHEMA:
                     return '$vuetify.icons.database'
                 //TODO: a separate icon for Tables
-                case 'Tables':
+                case TABLES:
                     return '$vuetify.icons.table'
-                case 'Stored Procedures':
+                case SPS:
                     return '$vuetify.icons.storedProcedures'
                 //TODO: an icon for Column
             }
         },
-        getOptions(node) {
-            switch (node.type) {
-                case 'Schema':
-                    return this.schemaOptions
-                case 'Table':
-                    if (node.isSys) return this.tableOptions
-                    else return [...this.tableOptions, ...this.userTblOptions]
-                case 'Stored Procedure':
-                    return this.spOptions
-                case 'Column':
-                    return this.columnOptions
-                case 'Trigger':
-                    return this.triggerOptions
-            }
+        getNodeOpts(node) {
+            if (node.isSys) return this.baseOptsMap[node.type]
+            return [...this.baseOptsMap[node.type], ...this.userNodeOptsMap[node.type]]
         },
         onNodeClick(item) {
             if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0].id)
         },
         onContextMenu({ e, item }) {
-            if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
+            if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
         onNodeDragStart(e) {
             e.preventDefault()

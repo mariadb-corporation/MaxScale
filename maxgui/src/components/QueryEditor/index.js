@@ -12,6 +12,7 @@
  */
 import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.css'
+import { mapState } from 'vuex'
 export default {
     name: 'query-editor',
     props: {
@@ -39,6 +40,7 @@ export default {
         },
     },
     computed: {
+        ...mapState({ SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES }),
         builtInCmplItems() {
             const keywordCmplItems = languageTokens.keywords.map(s => ({
                 label: s,
@@ -56,13 +58,14 @@ export default {
         },
         custCmplList() {
             const dist = this.$help.lodash.cloneDeep(this.cmplList)
+            const { SCHEMA, TABLE, SP, TRIGGER, COL } = this.SQL_NODE_TYPES
             for (const item of dist) {
                 switch (item.type) {
-                    case 'Table':
-                    case 'Column':
-                    case 'Schema':
-                    case 'Stored Procedure':
-                    case 'Trigger':
+                    case SCHEMA:
+                    case TABLE:
+                    case SP:
+                    case COL:
+                    case TRIGGER:
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }
