@@ -726,25 +726,7 @@ public:
         {
             m_extractions = projection_to_extractions(projection);
 
-            if (!m_extractions.empty())
-            {
-                string s;
-                for (auto extraction : m_extractions)
-                {
-                    if (!s.empty())
-                    {
-                        s += ", ";
-                    }
-
-                    s += "JSON_EXTRACT(doc, '$." + extraction + "')";
-                }
-
-                sql << s;
-            }
-            else
-            {
-                sql << "doc";
-            }
+            sql << extractions_to_columns(m_extractions);
         }
         else
         {

@@ -3547,6 +3547,30 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
     return extractions;
 }
 
+string nosql::extractions_to_columns(const vector<string>& extractions)
+{
+    string columns;
+
+    if (!extractions.empty())
+    {
+        for (auto extraction : extractions)
+        {
+            if (!columns.empty())
+            {
+                columns += ", ";
+            }
+
+            columns += "JSON_EXTRACT(doc, '$." + extraction + "')";
+        }
+    }
+    else
+    {
+        columns = "doc";
+    }
+
+    return columns;
+}
+
 string nosql::to_string(const bsoncxx::document::element& element)
 {
     return element_to_string(element);
