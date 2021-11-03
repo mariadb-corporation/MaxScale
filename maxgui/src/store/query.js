@@ -582,7 +582,7 @@ export default {
                 })
                 let cmpList = []
                 let db_tree = []
-                const nodeType = 'Schema'
+                const { SCHEMA, TABLES, SPS } = rootState.app_config.SQL_NODE_TYPES
                 if (res.data.data.attributes.results[0].data) {
                     const dataRows = this.vue.$help.getObjectRows({
                         columns: res.data.data.attributes.results[0].fields,
@@ -591,7 +591,7 @@ export default {
                     dataRows.forEach(row => {
                         db_tree.push({
                             key: uniqueId('node_key_'),
-                            type: nodeType,
+                            type: SCHEMA,
                             name: row.SCHEMA_NAME,
                             id: row.SCHEMA_NAME,
                             data: row,
@@ -600,20 +600,20 @@ export default {
                             children: [
                                 {
                                     key: uniqueId('node_key_'),
-                                    type: 'Tables',
-                                    name: 'Tables',
+                                    type: TABLES,
+                                    name: TABLES,
                                     // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.Tables`,
+                                    id: `${row.SCHEMA_NAME}.${TABLES}`,
                                     draggable: false,
                                     level: 1,
                                     children: [],
                                 },
                                 {
                                     key: uniqueId('node_key_'),
-                                    type: 'Stored Procedures',
-                                    name: 'Stored Procedures',
+                                    type: SPS,
+                                    name: SPS,
                                     // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                    id: `${row.SCHEMA_NAME}.${SPS}`,
                                     draggable: false,
                                     level: 1,
                                     children: [],
@@ -624,7 +624,7 @@ export default {
                             label: row.SCHEMA_NAME,
                             detail: 'SCHEMA',
                             insertText: `\`${row.SCHEMA_NAME}\``,
-                            type: nodeType,
+                            type: SCHEMA,
                         })
                     })
                 } else {
@@ -647,33 +647,38 @@ export default {
             }
         },
         /**
-         * @param {Object} node - node child of db node object. Either type `Tables` or `Stored Procedures`
+         * @param {Object} node - node child of db node object. Either type TABLES or SPS
          * @returns {Object} { dbName, gch, cmpList }
          */
-        async getDbGrandChild({ state }, node) {
+        async getDbGrandChild({ state, rootState }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
-                let dbName
-                let query
-                let grandChildNodeType
-                let rowName
+                let dbName, grandChildNodeType, rowName, query
+                const {
+                    TABLES,
+                    TABLE,
+                    SPS,
+                    SP,
+                    COLS,
+                    TRIGGERS,
+                } = rootState.app_config.SQL_NODE_TYPES
+                // a db node id is formed by dbName.node_type So getting dbName by removing node type part from id.
+                let reg = `\\b.${node.type}\\b`
+                dbName = node.id.replace(new RegExp(reg, 'g'), '')
                 switch (node.type) {
-                    case 'Tables':
-                        dbName = node.id.replace(/\.Tables/g, '')
-                        grandChildNodeType = 'Table'
+                    case TABLES:
+                        grandChildNodeType = TABLE
                         rowName = 'TABLE_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
                         break
-                    case 'Stored Procedures':
-                        dbName = node.id.replace(/\.Stored Procedures/g, '')
-                        grandChildNodeType = 'Stored Procedure'
+                    case SPS:
+                        grandChildNodeType = SP
                         rowName = 'ROUTINE_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
                         break
                 }
-                // eslint-disable-next-line vue/max-len
                 const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: query,
                 })
@@ -695,26 +700,26 @@ export default {
                         level: 2,
                         isSysTbl: state.sysSchemas.includes(dbName.toLowerCase()),
                     }
-                    // For child node of Tables, it has canBeHighlighted and children props
-                    if (node.type === 'Tables') {
+                    // For child node of TABLES, it has canBeHighlighted and children props
+                    if (node.type === TABLES) {
                         grandChildNode.canBeHighlighted = true
                         grandChildNode.children = [
                             {
                                 key: uniqueId('node_key_'),
-                                type: 'Columns',
-                                name: 'Columns',
+                                type: COLS,
+                                name: COLS,
                                 // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.Columns`,
+                                id: `${dbName}.${row[rowName]}.${COLS}`,
                                 draggable: false,
                                 children: [],
                                 level: 3,
                             },
                             {
                                 key: uniqueId('node_key_'),
-                                type: 'Triggers',
-                                name: 'Triggers',
+                                type: TRIGGERS,
+                                name: TRIGGERS,
                                 // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.Triggers`,
+                                id: `${dbName}.${row[rowName]}.${TRIGGERS}`,
                                 draggable: false,
                                 children: [],
                                 level: 3,
@@ -740,23 +745,22 @@ export default {
          * @param {Object} node - node object. Either type `Triggers` or `Columns`
          * @returns {Object} { dbName, tblName, gch, cmpList }
          */
-        async getTableGrandChild({ state }, node) {
+        async getTableGrandChild({ state, rootState }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
                 const dbName = node.id.split('.')[0]
                 const tblName = node.id.split('.')[1]
-                let query
-                let nodeType
-                let rowName
+                const { COLS, COL, TRIGGERS, TRIGGER } = rootState.app_config.SQL_NODE_TYPES
+                let grandChildNodeType, rowName, query
                 switch (node.type) {
-                    case 'Triggers':
-                        nodeType = 'Trigger'
+                    case TRIGGERS:
+                        grandChildNodeType = TRIGGER
                         rowName = 'TRIGGER_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
                         break
-                    case 'Columns':
-                        nodeType = 'Column'
+                    case COLS:
+                        grandChildNodeType = COL
                         rowName = 'COLUMN_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
@@ -777,7 +781,7 @@ export default {
                 dataRows.forEach(row => {
                     gch.push({
                         key: uniqueId('node_key_'),
-                        type: nodeType,
+                        type: grandChildNodeType,
                         name: row[rowName],
                         id: `${dbName}.${row[rowName]}`,
                         draggable: true,
@@ -786,9 +790,9 @@ export default {
                     })
                     cmpList.push({
                         label: row[rowName],
-                        detail: nodeType.toUpperCase(),
+                        detail: grandChildNodeType.toUpperCase(),
                         insertText: row[rowName],
-                        type: nodeType,
+                        type: grandChildNodeType,
                     })
                 })
                 return { dbName, tblName, gch, cmpList }
@@ -803,11 +807,12 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getTreeData({ dispatch }, { node, db_tree, cmpList }) {
+        async getTreeData({ dispatch, rootState }, { node, db_tree, cmpList }) {
             try {
+                const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
                 switch (node.type) {
-                    case 'Tables':
-                    case 'Stored Procedures': {
+                    case TABLES:
+                    case SPS: {
                         const { gch, cmpList: partCmpList, dbName } = await dispatch(
                             'getDbGrandChild',
                             node
@@ -818,11 +823,10 @@ export default {
                             childType: node.type,
                             gch,
                         })
-
                         return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
                     }
-                    case 'Columns':
-                    case 'Triggers': {
+                    case COLS:
+                    case TRIGGERS: {
                         const { gch, cmpList: partCmpList, dbName, tblName } = await dispatch(
                             'getTableGrandChild',
                             node
@@ -863,7 +867,7 @@ export default {
                 actionName: 'updateTreeNodes',
             })
         },
-        async reloadTreeNodes({ commit, dispatch, state }) {
+        async reloadTreeNodes({ commit, dispatch, state, rootState }) {
             const active_wke_id = state.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
             await dispatch('queryingActionWrapper', {
@@ -878,16 +882,13 @@ export default {
                     if (db_tree.length) {
                         let tree = db_tree
                         let completionList = cmpList
-                        const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
-                        for (let i = 0; i < expanded_nodes.length; i++) {
-                            if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                        const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
+                        const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
+                        for (const node of expanded_nodes) {
+                            if (nodesHaveChild.includes(node.type)) {
                                 const { new_db_tree, new_cmp_list } = await dispatch(
                                     'getTreeData',
-                                    {
-                                        node: expanded_nodes[i],
-                                        db_tree: tree,
-                                        cmpList: completionList,
-                                    }
+                                    { node, db_tree: tree, cmpList: completionList }
                                 )
                                 if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
                                 if (completionList.length) completionList = new_cmp_list

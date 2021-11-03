@@ -22,6 +22,17 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    SQL_NODE_TYPES: Object.freeze({
+        SCHEMA: 'Schema',
+        TABLES: 'Tables',
+        TABLE: 'Table',
+        COLS: 'Columns',
+        COL: 'Column',
+        TRIGGERS: 'Triggers',
+        TRIGGER: 'Trigger',
+        SPS: 'Stored Procedures',
+        SP: 'Stored Procedure',
+    }),
     SQL_QUERY_MODES: Object.freeze({
         PRVW_DATA: 'PRVW_DATA',
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
