@@ -137,6 +137,7 @@ export default {
         // sidebar states
         sysSchemas: ['information_schema', 'performance_schema', 'mysql', 'sys'],
         db_tree_map: {},
+        exe_stmt_result_map: {},
         // editor states
         curr_editor_mode_map: {},
         tbl_creation_info_map: {},
@@ -212,6 +213,15 @@ export default {
                 scope: this,
                 active_wke_id: state.active_wke_id,
             })
+        },
+        //TODO: DRY mutations that store states in memory
+        UPDATE_EXE_STMT_RESULT_MAP(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state.exe_stmt_result_map, id)
+            else
+                state.exe_stmt_result_map = {
+                    ...state.exe_stmt_result_map,
+                    ...{ [id]: { ...state.exe_stmt_result_map[id], ...payload } },
+                }
         },
 
         // editor mutations
@@ -1276,6 +1286,73 @@ export default {
             })
         },
 
+        /**
+         * @param {String} payload.sql - sql to be executed
+         * @param {String} payload.action - action name. e.g. DROP TABLE table_name
+         * @param {Boolean} payload.showSnackbar - show successfully snackbar message
+         */
+        async exeStmtAction(
+            { state, rootState, dispatch, commit },
+            { sql, action, showSnackbar = true }
+        ) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            const active_wke_id = state.active_wke_id
+            const request_sent_time = new Date().valueOf()
+            await dispatch('queryingActionWrapper', {
+                action: async () => {
+                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                        sql,
+                        max_rows: rootState.persisted.query_max_rows,
+                    })
+                    commit('UPDATE_EXE_STMT_RESULT_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            data: res.data.data.attributes,
+                        },
+                    })
+                    const isFailed = Boolean(
+                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
+                    )
+                    let queryAction = action
+                    if (isFailed) queryAction = this.i18n.t('errors.failedToExeAction', { action })
+                    else if (showSnackbar)
+                        commit(
+                            'SET_SNACK_BAR_MESSAGE',
+                            {
+                                text: [
+                                    this.i18n.t('info.exeActionSuccessfully', {
+                                        action: queryAction,
+                                    }),
+                                ],
+                                type: 'success',
+                            },
+                            { root: true }
+                        )
+                    dispatch(
+                        'persisted/pushQueryLog',
+                        {
+                            startTime: request_sent_time,
+                            name: queryAction,
+                            sql,
+                            res,
+                            connection_name: curr_cnct_resource.name,
+                            queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        },
+                        { root: true }
+                    )
+                },
+                actionName: 'exeStmtAction',
+                catchAction: e => {
+                    commit('UPDATE_EXE_STMT_RESULT_MAP', {
+                        id: active_wke_id,
+                        payload: {
+                            result: this.vue.$help.getErrorsArr(e),
+                        },
+                    })
+                },
+            })
+        },
+
         changeWkeName({ state, getters, commit }, name) {
             let newWke = this.vue.$help.lodash.cloneDeep(getters.getActiveWke)
             newWke.name = name
@@ -1294,6 +1371,7 @@ export default {
             commit('SET_CURR_EDITOR_MODE_MAP', payload)
             commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
             commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
+            commit('UPDATE_EXE_STMT_RESULT_MAP', payload)
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -1455,5 +1533,7 @@ export default {
             const { is_altering_table = false } = getters.getAlteringTableResultMap
             return is_altering_table
         },
+        // exe_stmt_result_map getters
+        getExeStmtResultMap: state => state.exe_stmt_result_map[state.active_wke_id] || {},
     },
 }

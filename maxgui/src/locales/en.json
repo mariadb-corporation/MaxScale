@@ -206,6 +206,10 @@
     "logTypes": "Log Types",
     "userQueryLogs": "User query logs",
     "actionLogs": "Action logs",
+    "dropTbl": "Drop Table",
+    "dropSchema": "Drop Schema",
+    "dropSp": "Drop Stored Procedure",
+    "dropTrigger": "Drop Trigger",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -220,7 +224,8 @@
         "largerThanZero": "{inputName} must be larger than zero",
         "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones",
         "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Favorite tab and delete some to create more space.",
-        "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements."
+        "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements.",
+        "failedToExeAction": "Failed to {action}"
     },
     "confirmations": {
         "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
@@ -249,7 +254,8 @@
         "disconnSuccessfully": "Disconnect successfully",
         "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
         "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
-        "alterTableSuccessfully": "Alter table successfully"
+        "alterTableSuccessfully": "Alter table successfully",
+        "exeActionSuccessfully": "Successfully {action}"
     },
 
     "$vuetify": {

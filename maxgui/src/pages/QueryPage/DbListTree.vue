@@ -115,11 +115,15 @@ export default {
                 this.$t('viewDetails'),
                 this.$t('placeSchemaInEditor'),
             ],
-            userTblOptions: [this.$t('alterTbl')],
-            schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
+            userTblOptions: [this.$t('alterTbl'), this.$t('dropTbl')],
+            schemaOptions: [
+                this.$t('useDb'),
+                this.$t('placeSchemaInEditor'),
+                this.$t('dropSchema'),
+            ],
             columnOptions: [this.$t('placeColumnNameInEditor')],
-            spOptions: [this.$t('placeSchemaInEditor')],
-            triggerOptions: [this.$t('placeSchemaInEditor')],
+            spOptions: [this.$t('placeSchemaInEditor'), this.$t('dropSp')],
+            triggerOptions: [this.$t('placeSchemaInEditor'), this.$t('dropTrigger')],
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
@@ -306,6 +310,11 @@ export default {
                         this.$emit('alter-tbl', alterActiveNode)
                     }
                     break
+                case this.$t('dropTbl'):
+                case this.$t('dropSchema'):
+                case this.$t('dropSp'):
+                case this.$t('dropTrigger'):
+                    this.$emit('drop-action', { id: schema, type: item.type })
             }
         },
         iconSheet(item) {
