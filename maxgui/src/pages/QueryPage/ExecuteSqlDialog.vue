@@ -11,7 +11,7 @@
         v-on="$listeners"
     >
         <template v-slot:body-prepend>
-            <table v-show="hasSavingErr" class="alter-err-tbl pa-4">
+            <table v-if="hasSavingErr" class="alter-err-tbl pa-4">
                 <tr>
                     <td><b>sql</b></td>
                     <td>{{ executedSql }}</td>
@@ -25,11 +25,18 @@
             </table>
 
             <div
-                v-show="!hasSavingErr"
+                v-else
                 class="mb-4 pt-2 pl-2 color border-all-table-border"
                 :style="{ height: `${editorHeight}px` }"
             >
+                <!-- Workaround: assign true to skipRegCompleters props when getCurrEditorMode is TXT_EDITOR
+               in order to not call regCompleters. In other words, when multiple editors are visible
+               on the same page, they all re-call registerCompletionItemProvider which causes duplicated
+               completion items
+               https://github.com/microsoft/monaco-editor/issues/1957
+                -->
                 <query-editor
+                    v-if="isConfDlgOpened"
                     v-model="currSql"
                     :class="`fill-height`"
                     :cmplList="getDbCmplList"
@@ -38,6 +45,7 @@
                         contextmenu: false,
                         wordWrap: 'on',
                     }"
+                    :skipRegCompleters="isTxtEditor"
                 />
             </div>
         </template>
@@ -60,7 +68,7 @@
  * Events
  * update:sqlTobeExecuted?: (string)
  */
-import { mapGetters } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 import QueryEditor from '@/components/QueryEditor'
 export default {
     name: 'execute-sql-dialog',
@@ -79,9 +87,16 @@ export default {
         onSave: { type: Function, required: true },
     },
     computed: {
+        ...mapState({
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+        }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
+            getCurrEditorMode: 'query/getCurrEditorMode',
         }),
+        isTxtEditor() {
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
+        },
         isConfDlgOpened: {
             get() {
                 return this.value
