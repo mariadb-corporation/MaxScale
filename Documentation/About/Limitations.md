@@ -37,6 +37,14 @@ collect columns, functions and tables used in the `SELECT` defining the
 Consequently, the database firewall will **not** block `WITH` statements
 where the `SELECT` of the `WITH` clause refers to forbidden columns.
 
+## MariaDB Default Values
+
+MaxScale assumes that certain configuration parameters in MariaDB are set to
+their default values. These include but are not limited to:
+
+* `autocommit`: Autocommit is enabled for all new connections.
+* `tx_read_only`: Transactions use `READ WRITE` permissions by default.
+
 ## Query Classification
 
 Follow the [MXS-1350](https://jira.mariadb.org/browse/MXS-1350) Jira issue
