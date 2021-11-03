@@ -27,7 +27,7 @@
             <div
                 v-show="!hasSavingErr"
                 class="mb-4 pt-2 pl-2 color border-all-table-border"
-                style="height:250px"
+                :style="{ height: `${editorHeight}px` }"
             >
                 <query-editor
                     v-model="currSql"
@@ -75,6 +75,7 @@ export default {
         executedSql: { type: String, required: true },
         errMsgObj: { type: Object, required: true },
         sqlTobeExecuted: { type: String, required: true },
+        editorHeight: { type: Number, default: 250 },
         onSave: { type: Function, required: true },
     },
     computed: {
