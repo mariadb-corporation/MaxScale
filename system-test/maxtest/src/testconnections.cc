@@ -11,6 +11,7 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
+#include <maxbase/ini.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
@@ -689,6 +690,7 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
         };
 
     replace_text("###threads###", std::to_string(m_threads));
+    replace_text("###access_homedir###", mxs.access_homedir());
 
     MariaDBCluster* clusters[] = {repl, galera, xpand};
     for (auto cluster : clusters)
@@ -727,42 +729,64 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
     }
 
     bool rval = false;
-    // Do the remaining replacements with sed, for now.
-    const string target_file = "maxscale.cnf";
-    std::ofstream output_file(target_file);
-    if (output_file.is_open())
+    // Simple replacements are done. Parse the config file, and enable ssl for servers if required.
+    auto parse_res = mxb::ini::parse_config_text_to_map(file_contents);
+    if (parse_res.errors.empty())
     {
-        output_file << file_contents;
-        output_file.close();
+        auto& config = parse_res.config;
 
-        const string edit_failed = "Config file edit failed";
         if (backend_ssl)
         {
-            tprintf("Adding ssl settings\n");
-            const string sed_cmd = "sed -i "
-                                   "\"s|type *= *server|type=server\\nssl=true\\nssl_cert=/###access_homedir###/"
-                                   "certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem"
-                                   "\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9"
-                                   "\\nssl_version=MAX|g\" maxscale.cnf";
-            run_shell_command(sed_cmd, edit_failed);
+            tprintf("Adding ssl settings.");
+            string ssl_cert = mxb::string_printf("%s/certs/client-cert.pem", mxs.access_homedir());
+            string ssl_key = mxb::string_printf("%s/certs/client-key.pem", mxs.access_homedir());
+            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.pem", mxs.access_homedir());
+            // Check every section with a "type=server".
+            for (auto& section : config)
+            {
+                auto& kvs = section.second.key_values;
+                auto it = kvs.find("type");
+                if (it != kvs.end() && it->second.value == "server")
+                {
+                    // Only edit the section if "ssl" is not set.
+                    if (kvs.count("ssl") == 0)
+                    {
+                        kvs.emplace("ssl", "true");
+                        kvs.emplace("ssl_cert", ssl_cert);
+                        kvs.emplace("ssl_key", ssl_key);
+                        kvs.emplace("ssl_ca_cert", ssl_ca_cert);
+                        kvs.emplace("ssl_cert_verify_depth", "9");
+                        kvs.emplace("ssl_version", "MAX");
+                    }
+                }
+            }
         }
 
-        string sed_cmd = mxb::string_printf("sed -i \"s/###access_user###/%s/g\" %s",
-                                            mxs.access_user(), target_file.c_str());
-        run_shell_command(sed_cmd, edit_failed);
-
-        sed_cmd = mxb::string_printf("sed -i \"s|###access_homedir###|%s|g\" %s",
-                                     mxs.access_homedir(), target_file.c_str());
-        run_shell_command(sed_cmd, edit_failed);
-
-        mxs.vm_node().copy_to_node("maxscale.cnf", dest);
-        rval = true;
+        // TODO: Add more "smartness". Listener ssl, check which routers are enabled, etc ...
+        const string target_file = "maxscale.cnf";
+        std::ofstream output_file(target_file);
+        if (output_file.is_open())
+        {
+            output_file << mxb::ini::config_map_to_string(config);
+            output_file.close();
+            mxs.vm_node().copy_to_node("maxscale.cnf", dest);
+            rval = true;
+        }
+        else
+        {
+            int eno = errno;
+            add_failure("Could not write to '%s'. Error %i, %s", target_file.c_str(), eno, mxb_strerror(eno));
+        }
     }
     else
     {
-        int eno = errno;
-        add_failure("Could not write to '%s'. Error %i, %s", target_file.c_str(), eno, mxb_strerror(eno));
+        add_failure("Could not parse MaxScale configuration. Errors:");
+        for (auto& s : parse_res.errors)
+        {
+            tprintf("%s", s.c_str());
+        }
     }
+
     return rval;
 }
 
