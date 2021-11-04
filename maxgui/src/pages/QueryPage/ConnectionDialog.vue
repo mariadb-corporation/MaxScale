@@ -3,8 +3,6 @@
         ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
-        :onCancel="onCancel"
-        :onClose="onClose"
         :title="`${$t('connectTo')}...`"
         :hasChanged="hasChanged"
         :lazyValidation="false"
@@ -12,6 +10,7 @@
         :hasSavingErr="hasSavingErr"
         hasFormDivider
         @is-form-valid="isFormValid = $event"
+        v-on="$listeners"
     >
         <template v-slot:actions="{ cancel, save }">
             <v-spacer />
@@ -193,8 +192,6 @@ export default {
         value: { type: Boolean, required: true },
         connOptions: { type: Array, required: true },
         handleSave: { type: Function, required: true },
-        onCancel: { type: Function, required: true },
-        onClose: { type: Function, required: true },
     },
     data() {
         return {

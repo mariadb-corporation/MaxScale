@@ -1,6 +1,6 @@
 <template>
     <v-dialog
-        v-model="value"
+        v-model="isDlgOpened"
         overlay-color="navigation"
         overlay-opacity="0.6"
         width="unset"
@@ -83,6 +83,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+ * Events
+ * is-form-valid?: (boolean)
+ * on-cancel?: (function)
+ * on-close?: (function)
+ * after-cancel?: (function)
+ * after-close: (function)
+ */
 import { mapMutations } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 
@@ -94,8 +103,6 @@ export default {
         isDynamicWidth: { type: Boolean, default: false },
         scrollable: { type: Boolean, default: true },
         title: { type: String, required: true },
-        onClose: { type: Function },
-        onCancel: { type: Function },
         onSave: { type: Function, required: true },
         cancelText: { type: String, default: 'cancel' },
         saveText: { type: String, default: 'save' },
@@ -119,6 +126,14 @@ export default {
         }
     },
     computed: {
+        isDlgOpened: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
         isSaveDisabled() {
             return this.hasSavingErr || !this.hasChanged || !this.isFormValid
         },
@@ -130,17 +145,23 @@ export default {
     },
     methods: {
         ...mapMutations(['SET_OVERLAY_TYPE']),
-        closeDialog() {
+        async closeDialog() {
             this.$emit('input', false)
+            /** Workaround to ensure dialog is closed completely to emit after close events
+             * https://github.com/vuetifyjs/vuetify/blob/master/packages/vuetify/src/components/VDialog/VDialog.sass
+             */
+            await this.$help.delay(300) // wait until dialog transition is done
         },
-        cancel() {
-            if (this.onCancel) this.onCancel()
+        async cancel() {
+            this.$emit('on-cancel')
             this.cleanUp()
-            this.closeDialog()
+            await this.closeDialog()
+            this.$emit('after-cancel')
         },
-        close() {
-            if (this.onClose) this.onClose()
-            this.closeDialog()
+        async close() {
+            this.$emit('on-close')
+            await this.closeDialog()
+            this.$emit('after-close')
         },
         async keydownHandler() {
             if (this.isFormValid && this.hasChanged) await this.save()
@@ -155,10 +176,10 @@ export default {
             // wait time out for loading animation
             await this.$help.delay(600).then(() => this.SET_OVERLAY_TYPE(null))
             this.cleanUp()
-            this.closeDialog()
+            await this.closeDialog()
         },
-        handleCloseImmediate() {
-            this.closeDialog()
+        async handleCloseImmediate() {
+            await this.closeDialog()
             this.SET_OVERLAY_TYPE(null)
         },
         async save() {
@@ -172,7 +193,7 @@ export default {
                 })
             } else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
-                if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
+                if (!this.hasSavingErr && this.closeImmediate) await this.handleCloseImmediate()
                 await this.onSave()
                 if (!this.closeImmediate) {
                     if (!this.hasSavingErr) await this.waitClose()

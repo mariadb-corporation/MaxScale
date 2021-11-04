@@ -51,13 +51,13 @@
         </outlined-overview-card>
 
         <select-dialog
-            ref="selectDialog"
+            v-model="isSelectDlgOpened"
             :title="dialogTitle"
             mode="swap"
             :entityName="targetSelectItemType"
-            :onSave="confirmChange"
             :itemsList="itemsList"
             :defaultItems="defaultItems"
+            :onSave="confirmChange"
             @selected-items="targetItem = $event"
             @on-open="getAllEntities"
         >
@@ -94,6 +94,7 @@ export default {
             dialogTitle: '',
             targetItem: [],
             //select dialog
+            isSelectDlgOpened: false,
             targetSelectItemType: 'servers',
             itemsList: [],
             defaultItems: {},
@@ -156,7 +157,7 @@ export default {
                     this.targetSelectItemType = 'servers'
                     break
             }
-            this.$refs.selectDialog.open()
+            this.isSelectDlgOpened = true
         },
 
         async confirmChange() {

@@ -19,13 +19,13 @@
         >
             <worksheets ref="wkesRef" :ctrDim="ctrDim" />
             <confirm-dialog
-                ref="confirmDialog"
+                v-model="isConfDlgOpened"
                 :title="$t('confirmations.leavePage')"
                 type="thatsRight"
                 minBodyWidth="624px"
                 :onSave="onLeave"
-                :onClose="cancelLeave"
-                :onCancel="cancelLeave"
+                @on-close="cancelLeave"
+                @on-cancel="cancelLeave"
             >
                 <template v-slot:body-append>
                     <v-checkbox
@@ -68,6 +68,7 @@ export default {
         return {
             ctrDim: {},
             confirmDelAll: true,
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -123,7 +124,7 @@ export default {
                         break
                     default:
                         this.confirmDelAll = true
-                        this.$refs.confirmDialog.open()
+                        this.isConfDlgOpened = true
                 }
         }
     },

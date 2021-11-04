@@ -99,7 +99,7 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                ref="serverConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
                 :smallInfo="smallInfo"
@@ -165,6 +165,7 @@ export default {
             type: 'set', //set or clear
             currentStateMode: '',
             forceClosing: false,
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -234,7 +235,7 @@ export default {
                     }
                     break
             }
-            this.$refs.serverConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
 
         async confirmSave() {

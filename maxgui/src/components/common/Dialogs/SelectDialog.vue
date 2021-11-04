@@ -1,12 +1,11 @@
 <template>
     <base-dialog
-        v-model="isDialogOpen"
-        :onCancel="onCancelHandler"
-        :onSave="onSaveHandler"
-        :onClose="onCloseHandler"
+        v-model="isDlgOpened"
         :title="title"
         :saveText="mode"
         :hasChanged="hasChanged"
+        :onSave="onSave"
+        v-on="$listeners"
     >
         <template v-slot:form-body>
             <p class="select-label">
@@ -52,26 +51,34 @@ This component emits two events
 export default {
     name: 'select-dialog',
     props: {
+        value: { type: Boolean, required: true },
         mode: { type: String, required: true }, // change or add
         title: { type: String, required: true },
         entityName: { type: String, required: true },
         clearable: { type: Boolean, default: false },
         onSave: { type: Function, required: true },
-        onClose: { type: Function },
-        onCancel: { type: Function },
         multiple: { type: Boolean, default: false },
         itemsList: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },
     data() {
         return {
-            isDialogOpen: false,
             selectedItems: [],
             hasChanged: false,
         }
     },
+    computed: {
+        isDlgOpened: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
+    },
     watch: {
-        isDialogOpen: function(val) {
+        isDlgOpened: function(val) {
             if (val) {
                 this.$emit('on-open')
                 // set default hasChanged data
@@ -85,28 +92,6 @@ export default {
                 else if (this.$typy(v).isArray) this.$emit('selected-items', v)
                 else this.$emit('selected-items', [v])
             },
-        },
-    },
-
-    methods: {
-        closeDialog() {
-            this.isDialogOpen = false
-        },
-        open() {
-            this.isDialogOpen = true
-        },
-        onCancelHandler() {
-            if (this.onCancel) this.onCancel()
-            this.closeDialog()
-        },
-        onCloseHandler() {
-            if (this.onClose) this.onClose()
-            this.closeDialog()
-        },
-
-        async onSaveHandler() {
-            await this.onSave()
-            this.closeDialog()
         },
     },
 }

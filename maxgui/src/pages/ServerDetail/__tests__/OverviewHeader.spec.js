@@ -162,7 +162,7 @@ describe('ServerDetail - OverviewHeader', () => {
         const selectDialog = wrapper.findComponent({
             name: 'select-dialog',
         })
-        expect(selectDialog.vm.$data.isDialogOpen).to.be.true
+        expect(selectDialog.vm.isDlgOpened).to.be.true
         const title = selectDialog.find('h3')
         expect(title.text()).to.be.equals('Change monitor')
         const label = selectDialog.find('.select-label')

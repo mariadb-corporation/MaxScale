@@ -220,7 +220,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
         await mockupOpenConfirmDeletingDialog(wrapper, serviceStateTableRowsStub[0].id)
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-        expect(confirmDialog.vm.$data.isDialogOpen).to.be.true
+        expect(confirmDialog.vm.isDlgOpened).to.be.true
     })
 
     it(`Should display accurate delete dialog title`, async () => {
@@ -256,7 +256,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
     it(`Should open select-dialog when add button is clicked`, async () => {
         await mockupOpenSelectDialog(wrapper)
         const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
-        expect(selectDialog.vm.$data.isDialogOpen).to.be.true
+        expect(selectDialog.vm.isDlgOpened).to.be.true
     })
 
     it(`Should display accurate select dialog title`, async () => {

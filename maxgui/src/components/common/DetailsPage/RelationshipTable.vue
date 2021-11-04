@@ -45,7 +45,7 @@
             <!-- Avaiable dialogs for editable table -->
             <confirm-dialog
                 v-if="!readOnly"
-                ref="relationshipConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="deleteDialogType"
                 :item="Array.isArray(targetItem) ? {} : targetItem"
@@ -53,13 +53,13 @@
             />
             <select-dialog
                 v-if="!readOnly"
-                ref="relationshipSelectDialog"
+                v-model="isSelectDlgOpened"
                 :title="dialogTitle"
                 mode="add"
                 multiple
                 :entityName="relationshipType"
-                :onSave="confirmAdd"
                 :itemsList="itemsList"
+                :onSave="confirmAdd"
                 @selected-items="targetItem = $event"
                 @on-open="getAllEntities"
             />
@@ -123,6 +123,8 @@ export default {
             //select dialog
             itemsList: [],
             isMounting: true,
+            isConfDlgOpened: false,
+            isSelectDlgOpened: false,
         }
     },
     computed: {
@@ -222,7 +224,7 @@ export default {
             this.targetItem = item
             this.deleteDialogType = 'unlink'
             this.dialogTitle = `${this.$t('unlink')} ${this.$tc(this.relationshipType, 1)}`
-            this.$refs.relationshipConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
 
         async confirmDelete() {
@@ -265,7 +267,7 @@ export default {
                 entityName: this.$tc(this.relationshipType, 2),
             })}`
 
-            if (this.relationshipType !== 'listeners') this.$refs.relationshipSelectDialog.open()
+            if (this.relationshipType !== 'listeners') this.isSelectDlgOpened = true
             else this.$emit('open-listener-form-dialog')
         },
 

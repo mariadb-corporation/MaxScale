@@ -74,7 +74,7 @@
         </template>
         <template v-slot:append>
             <confirm-dialog
-                ref="monitorConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :type="dialogType"
                 :item="currentMonitor"
@@ -126,6 +126,7 @@ export default {
         return {
             dialogTitle: '',
             dialogType: 'destroy',
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -167,7 +168,7 @@ export default {
         actionHandle(type) {
             this.dialogType = type
             this.dialogTitle = `${this.$t(type)} ${this.$tc('monitors', 1)}`
-            this.$refs.monitorConfirmDialog.open()
+            this.isConfDlgOpened = true
         },
     },
 }

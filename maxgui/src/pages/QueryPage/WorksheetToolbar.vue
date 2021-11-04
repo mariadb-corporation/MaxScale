@@ -139,12 +139,12 @@
             </v-tooltip>
             <confirm-dialog
                 v-if="query_confirm_flag"
-                ref="runConfirmDialog"
+                v-model="isConfDlgOpened"
                 :title="$t('confirmations.runQuery')"
                 type="run"
-                :onSave="confirmRunning"
                 minBodyWidth="768px"
                 closeImmediate
+                :onSave="confirmRunning"
             >
                 <template v-slot:body-prepend>
                     <div class="mb-4 readonly-sql-code-wrapper pa-2">
@@ -202,6 +202,7 @@ export default {
         return {
             dontShowConfirm: false,
             activeRunMode: 'all',
+            isConfDlgOpened: false,
         }
     },
     computed: {
@@ -257,7 +258,7 @@ export default {
                 else if (this.shouldOpenDialog(mode)) {
                     this.activeRunMode = mode
                     this.dontShowConfirm = false // clear checkbox state
-                    this.$refs.runConfirmDialog.open()
+                    this.isConfDlgOpened = true
                 }
         },
         async confirmRunning() {
