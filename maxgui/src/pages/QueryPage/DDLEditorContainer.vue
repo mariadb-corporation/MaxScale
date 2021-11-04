@@ -180,7 +180,7 @@ export default {
         ...mapMutations({
             UPDATE_ALTERING_TABLE_RESULT_MAP: 'query/UPDATE_ALTERING_TABLE_RESULT_MAP',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
+            UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
             alterTable: 'query/alterTable',
@@ -207,9 +207,9 @@ export default {
                     altered_active_node: null,
                 },
             })
-            this.SET_CURR_EDITOR_MODE_MAP({
+            this.UPDATE_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
-                mode: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
             })
         },
         revertChanges() {

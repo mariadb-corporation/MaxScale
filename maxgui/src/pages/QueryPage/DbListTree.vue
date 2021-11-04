@@ -208,7 +208,7 @@ export default {
         ...mapMutations({
             UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
+            UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
@@ -272,9 +272,9 @@ export default {
                 this.$t('placeColumnNameInEditor'),
             ]
             if (txtEditorOptions.includes(option))
-                this.SET_CURR_EDITOR_MODE_MAP({
+                this.UPDATE_CURR_EDITOR_MODE_MAP({
                     id: this.active_wke_id,
-                    mode: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                    payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
                 })
 
             const prvwDataOpts = [this.$t('previewData'), this.$t('viewDetails')]
@@ -318,9 +318,9 @@ export default {
                                 altered_active_node: alterActiveNode,
                             },
                         })
-                        this.SET_CURR_EDITOR_MODE_MAP({
+                        this.UPDATE_CURR_EDITOR_MODE_MAP({
                             id: this.active_wke_id,
-                            mode: this.SQL_EDITOR_MODES.DDL_EDITOR,
+                            payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
                         })
                         this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
                         this.$emit('alter-tbl', alterActiveNode)

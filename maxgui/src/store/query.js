@@ -82,6 +82,30 @@ export function defWorksheetState() {
         ...saWkeStates(),
     }
 }
+/**
+ * Below states are stored in hash map structure.
+ * Using worksheet's id as key. This helps to preserve
+ * multiple worksheet's data in memory.
+ * Use `memStatesMutationCreator` to create corresponding mutations
+ * @returns {Object} - returns states that are stored in memory
+ */
+function memStates() {
+    return {
+        // connection related states
+        is_querying_map: {},
+        // sidebar states
+        db_tree_map: {},
+        exe_stmt_result_map: {},
+        // editor states
+        curr_editor_mode_map: {},
+        tbl_creation_info_map: {},
+        altering_table_result_map: {},
+        // results states
+        prvw_data_map: {},
+        prvw_data_details_map: {},
+        query_results_map: {},
+    }
+}
 
 /**
  * This helps to update standalone worksheet state
@@ -110,6 +134,37 @@ function patch_wke_property(state, { obj, scope, active_wke_id }) {
     update_standalone_wke_state(state, obj)
 }
 
+/**
+ * This function helps to generate vuex mutations for states are
+ * stored in memory, i.e. states return from memStates().
+ * The name of mutation follows this pattern UPDATE_STATE_NAME. e.g. mutation
+ * for is_querying_map state is UPDATE_IS_QUERYING_MAP
+ * @returns {Object} - returns vuex mutations
+ */
+function memStatesMutationCreator() {
+    let mutations = {}
+    Object.keys(memStates()).forEach(key => {
+        // Use function instead of arrow func in order to access `this.vue`
+        mutations[`UPDATE_${key.toUpperCase()}`] = function(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state[key], id)
+            else {
+                switch (key) {
+                    case 'is_querying_map':
+                    case 'curr_editor_mode_map':
+                        state[key] = { ...state[key], [id]: payload }
+                        break
+                    default:
+                        state[key] = {
+                            ...state[key],
+                            ...{ [id]: { ...state[key][id], ...payload } },
+                        }
+                        break
+                }
+            }
+        }
+    })
+    return mutations
+}
 export default {
     namespaced: true,
     state: {
@@ -127,24 +182,7 @@ export default {
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
         cnct_resources: [],
-        /**
-         * Below states are stored in hash map structure.
-         * Using worksheet's id as key. This helps to preserve
-         * multiple worksheet's data in memory
-         */
-        // connection related states
-        is_querying_map: {},
-        // sidebar states
-        db_tree_map: {},
-        exe_stmt_result_map: {},
-        // editor states
-        curr_editor_mode_map: {},
-        tbl_creation_info_map: {},
-        altering_table_result_map: {},
-        // results states
-        prvw_data_map: {},
-        prvw_data_details_map: {},
-        query_results_map: {},
+        ...memStates(),
         /**
          * Below is standalone wke states. The value
          * of each state is replicated from current active
@@ -158,6 +196,7 @@ export default {
         ...saWkeStates(),
     },
     mutations: {
+        ...memStatesMutationCreator(),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
@@ -173,14 +212,6 @@ export default {
                 scope: this,
                 active_wke_id,
             })
-        },
-        UPDATE_IS_QUERYING_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.is_querying_map, id)
-            else
-                state.is_querying_map = {
-                    ...state.is_querying_map,
-                    [id]: payload,
-                }
         },
 
         // Sidebar tree schema mutations
@@ -198,14 +229,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_DB_TREE_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.db_tree_map, id)
-            else
-                state.db_tree_map = {
-                    ...state.db_tree_map,
-                    ...{ [id]: { ...state.db_tree_map[id], ...payload } },
-                }
-        },
         SET_EXPANDED_NODES(state, payload) {
             patch_wke_property(state, {
                 obj: { expanded_nodes: payload },
@@ -213,25 +236,8 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        //TODO: DRY mutations that store states in memory
-        UPDATE_EXE_STMT_RESULT_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.exe_stmt_result_map, id)
-            else
-                state.exe_stmt_result_map = {
-                    ...state.exe_stmt_result_map,
-                    ...{ [id]: { ...state.exe_stmt_result_map[id], ...payload } },
-                }
-        },
 
         // editor mutations
-        SET_CURR_EDITOR_MODE_MAP(state, { id, mode }) {
-            if (!mode) this.vue.$delete(state.curr_editor_mode_map, id)
-            else
-                state.curr_editor_mode_map = {
-                    ...state.curr_editor_mode_map,
-                    ...{ [id]: mode },
-                }
-        },
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, {
                 obj: { query_txt: payload },
@@ -249,14 +255,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_TBL_CREATION_INFO_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.tbl_creation_info_map, id)
-            else
-                state.tbl_creation_info_map = {
-                    ...state.tbl_creation_info_map,
-                    ...{ [id]: { ...state.tbl_creation_info_map[id], ...payload } },
-                }
-        },
         SET_CHARSET_COLLATION_MAP(state, payload) {
             state.charset_collation_map = payload
         },
@@ -265,14 +263,6 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
-        },
-        UPDATE_ALTERING_TABLE_RESULT_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.altering_table_result_map, id)
-            else
-                state.altering_table_result_map = {
-                    ...state.altering_table_result_map,
-                    ...{ [id]: { ...state.altering_table_result_map[id], ...payload } },
-                }
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
@@ -315,31 +305,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.prvw_data_map, id)
-            else
-                state.prvw_data_map = {
-                    ...state.prvw_data_map,
-                    ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
-                }
-        },
-        UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.prvw_data_details_map, id)
-            else
-                state.prvw_data_details_map = {
-                    ...state.prvw_data_details_map,
-                    ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
-                }
-        },
-        UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.query_results_map, id)
-            else
-                state.query_results_map = {
-                    ...state.query_results_map,
-                    ...{ [id]: { ...state.query_results_map[id], ...payload } },
-                }
-        },
-
         // worksheet mutations
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())
@@ -1364,16 +1329,9 @@ export default {
             })
         },
         releaseMemory({ commit }, wkeId) {
-            const payload = { id: wkeId }
-            commit('UPDATE_QUERY_RESULTS_MAP', payload)
-            commit('UPDATE_DB_TREE_MAP', payload)
-            commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
-            commit('UPDATE_PRVW_DATA_MAP', payload)
-            commit('UPDATE_IS_QUERYING_MAP', payload)
-            commit('SET_CURR_EDITOR_MODE_MAP', payload)
-            commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
-            commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
-            commit('UPDATE_EXE_STMT_RESULT_MAP', payload)
+            Object.keys(memStates()).forEach(key => {
+                commit(`UPDATE_${key.toUpperCase()}`, { id: wkeId })
+            })
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
