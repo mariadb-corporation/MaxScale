@@ -49,7 +49,7 @@ void load(long int* new_inserts,
     data.rwsplit_only = rwsplit_only;
     // connect to the MaxScale server (rwsplit)
 
-    if (Test->maxscale->conn_rwsplit[0] == NULL)
+    if (Test->maxscale->conn_rwsplit == NULL)
     {
         if (report_errors)
         {
@@ -60,10 +60,10 @@ void load(long int* new_inserts,
     }
     else
     {
-        create_t1(Test->maxscale->conn_rwsplit[0]);
+        create_t1(Test->maxscale->conn_rwsplit);
         create_insert_string(sql, sql_l, 1);
 
-        if ((execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql) != 0) && (report_errors))
+        if ((execute_query(Test->maxscale->conn_rwsplit, "%s", sql) != 0) && (report_errors))
         {
             Test->add_result(1, "Query %s failed\n", sql);
         }

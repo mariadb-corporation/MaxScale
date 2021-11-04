@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     for (int i = 0; queries[i].query; i++)
     {
         char str[1024];
-        find_field(test->maxscale->conn_rwsplit[0], queries[i].query, "@@server_id", str);
+        find_field(test->maxscale->conn_rwsplit, queries[i].query, "@@server_id", str);
         if (queries[i].reply == NOT_MASTER)
         {
             test->expect(strcmp(server_id[0], str) != 0,

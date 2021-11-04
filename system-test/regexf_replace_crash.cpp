@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("RWSplit: \n");
     fflush(stdout);
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
     Test->tprintf("ReadConn master: \n");
     fflush(stdout);
     Test->try_query(Test->maxscale->conn_master, (char*) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");

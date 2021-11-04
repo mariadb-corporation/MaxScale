@@ -227,7 +227,7 @@ int main(int argc, char** argv)
     test.tprintf("Testing column-wise binding with a direct connection");
     test.add_result(bind_by_column(test.repl->nodes[0]), "Bulk inserts with a direct connection should work");
     test.tprintf("Testing column-wise binding with readwritesplit");
-    test.add_result(bind_by_column(test.maxscale->conn_rwsplit[0]),
+    test.add_result(bind_by_column(test.maxscale->conn_rwsplit),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing column-wise binding with readconnroute");
     test.add_result(bind_by_column(test.maxscale->conn_master),
@@ -236,7 +236,7 @@ int main(int argc, char** argv)
     test.tprintf("Testing row-wise binding with a direct connection");
     test.add_result(bind_by_row(test.repl->nodes[0]), "Bulk inserts with a direct connection should work");
     test.tprintf("Testing row-wise binding with readwritesplit");
-    test.add_result(bind_by_row(test.maxscale->conn_rwsplit[0]),
+    test.add_result(bind_by_row(test.maxscale->conn_rwsplit),
                     "Bulk inserts with readwritesplit should work");
     test.tprintf("Testing row-wise binding with readconnroute");
     test.add_result(bind_by_row(test.maxscale->conn_master),

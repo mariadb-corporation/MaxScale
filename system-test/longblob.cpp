@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit[0], (char*) "LONGBLOB", 1000000, 20, 1);
+    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "LONGBLOB", 1000000, 20, 1);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("BLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit[0], (char*) "BLOB", 1000, 8, 1);
+    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "BLOB", 1000, 8, 1);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("MEDIUMBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit[0], (char*) "MEDIUMBLOB", 1000000, 2, 1);
+    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "MEDIUMBLOB", 1000000, 2, 1);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 

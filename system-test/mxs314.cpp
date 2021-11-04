@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
     test.maxscale->connect();
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit);
 
     for (int i = 0; i < 50; i++)
     {
@@ -23,9 +23,9 @@ int main(int argc, char** argv)
         test.reset_timeout();
         test.add_result(mysql_stmt_prepare(stmt, query.c_str(), query.length()),
                         "Failed at %d: %s\n", i,
-                        mysql_error(test.maxscale->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit));
         test.add_result(mysql_stmt_reset(stmt), "Failed at %d: %s\n", i,
-                        mysql_error(test.maxscale->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit));
 
         for (int x = 0; x < 17; x++)
         {

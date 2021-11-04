@@ -13,12 +13,12 @@ int main(int argc, char** argv)
     test.reset_timeout();
     test.maxscale->connect();
 
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1), (2), (3)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1 INTO OUTFILE '/tmp/test.csv'");
-    test.try_query(test.maxscale->conn_rwsplit[0], "LOAD DATA INFILE '/tmp/test.csv' INTO TABLE test.t1");
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1), (2), (3)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1 INTO OUTFILE '/tmp/test.csv'");
+    test.try_query(test.maxscale->conn_rwsplit, "LOAD DATA INFILE '/tmp/test.csv' INTO TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
 
     test.maxscale->disconnect();
 

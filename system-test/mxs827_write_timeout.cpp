@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
     Test->reset_timeout();
     Test->maxscale->connect_maxscale();
 
-    Test->try_query(Test->maxscale->conn_rwsplit[0], "SET wait_timeout=20");
+    Test->try_query(Test->maxscale->conn_rwsplit, "SET wait_timeout=20");
 
-    create_t1(Test->maxscale->conn_rwsplit[0]);
+    create_t1(Test->maxscale->conn_rwsplit);
 
     Test->tprintf("Doing reads for 30 seconds");
     time_t start = time(NULL);
@@ -29,11 +29,11 @@ int main(int argc, char* argv[])
     while (time(NULL) - start < 30)
     {
         Test->reset_timeout();
-        Test->try_query(Test->maxscale->conn_rwsplit[0], "SELECT 1");
+        Test->try_query(Test->maxscale->conn_rwsplit, "SELECT 1");
     }
 
     Test->tprintf("Doing one write");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], "INSERT INTO t1 VALUES (1, 1)");
+    Test->try_query(Test->maxscale->conn_rwsplit, "INSERT INTO t1 VALUES (1, 1)");
 
     Test->check_maxscale_alive();
 

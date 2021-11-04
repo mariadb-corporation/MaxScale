@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 123");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT 123");
     test.maxscale->disconnect();
     return test.global_result;
 }

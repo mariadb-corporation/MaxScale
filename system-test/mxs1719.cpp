@@ -21,7 +21,7 @@ namespace
 
 void init(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS MXS_1719");
     test.try_query(pMysql, "CREATE TABLE MXS_1719 (a TEXT, b TEXT)");
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     }
 
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE MXS_1719");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE MXS_1719");
     test.maxscale->disconnect();
 
     return test.global_result;

@@ -73,7 +73,7 @@ bool stop_memcached(TestConnections& test)
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_distributed");
 
@@ -85,7 +85,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "CREATE TABLE cache_distributed (f INT)");
 }

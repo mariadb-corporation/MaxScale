@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.reset_timeout();
-    test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit[0],
+    test.add_result(execute_select_query_and_check(test.maxscale->conn_rwsplit,
                                                    (char*) "SELECT * FROM t1;",
                                                    iterations),
                     "t1 is wrong");

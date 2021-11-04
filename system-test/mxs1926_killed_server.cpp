@@ -37,19 +37,19 @@ void tune_rowcount(TestConnections& test)
     milliseconds dur {1};
     test.tprintf("Tuning data size so that an insert takes 10 seconds");
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "SET sql_log_bin=0");
+    test.try_query(test.maxscale->conn_rwsplit, "SET sql_log_bin=0");
 
     while (dur < seconds(10))
     {
         std::string filename = create_tmpfile();
 
         auto start = Clock::now();
-        test.try_query(test.maxscale->conn_rwsplit[0],
+        test.try_query(test.maxscale->conn_rwsplit,
                        "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
                        filename.c_str());
         auto end = Clock::now();
         dur = duration_cast<milliseconds>(end - start);
-        test.try_query(test.maxscale->conn_rwsplit[0], "TRUNCATE TABLE test.t1");
+        test.try_query(test.maxscale->conn_rwsplit, "TRUNCATE TABLE test.t1");
 
         remove(filename.c_str());
 
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     test.maxscale->connect();
 
     // Disable replication of the LOAD DATA LOCAL INFILE
-    test.try_query(test.maxscale->conn_rwsplit[0], "SET sql_log_bin=0");
+    test.try_query(test.maxscale->conn_rwsplit, "SET sql_log_bin=0");
 
     test.tprintf("Loading %d rows of data while stopping a slave", ROWCOUNT.load());
     std::thread thr([&]() {
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
                         test.repl->stop_node(3);
                         test.repl->start_node(3);
                     });
-    test.try_query(test.maxscale->conn_rwsplit[0],
+    test.try_query(test.maxscale->conn_rwsplit,
                    "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.t1",
                    filename.c_str());
     test.tprintf("Load complete");

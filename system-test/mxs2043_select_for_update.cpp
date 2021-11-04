@@ -115,7 +115,7 @@ void run_test(TestConnections& test)
     // some slave.
 
     test.tprintf("Running test with default user.");
-    select_for_update(test, test.maxscale->conn_rwsplit[0]);
+    select_for_update(test, test.maxscale->conn_rwsplit);
 
     auto& maxscales = *test.maxscale;
 
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 
     maxscales.connect();
 
-    MYSQL* pMysql = maxscales.conn_rwsplit[0];
+    MYSQL* pMysql = maxscales.conn_rwsplit;
 
     if (create_table(test, pMysql))
     {

@@ -39,22 +39,22 @@ void test_replaced_master(TestConnections& test, std::ostream& out)
 {
     out << "Sanity check that reads and writes work" << endl;
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor();
 
     out << "Reads should still work even if no master is available" << endl;
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.repl->unblock_node(0);
     change_master(1, 0);
     test.maxscale->wait_for_monitor();
 
     out << "Reads and writes after master change should work" << endl;
-    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (2)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (2)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.maxscale->disconnect();
     change_master(0, 1);
@@ -68,14 +68,14 @@ void test_new_master(TestConnections& test, std::ostream& out)
 
     out << "Connect and check that read-only mode works" << endl;
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     change_master(1, 0);
     test.maxscale->wait_for_monitor(2);
 
     out << "Both reads and writes after master change should work" << endl;
-    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (2)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (2)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.repl->unblock_node(0);
     test.maxscale->disconnect();
@@ -86,17 +86,17 @@ void test_master_failure(TestConnections& test, std::ostream& out)
 {
     out << "Sanity check that reads and writes work" << endl;
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     test.repl->block_node(0);
     test.maxscale->wait_for_monitor();
 
     out << "Reads should still work even if no master is available" << endl;
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT * FROM test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.t1");
 
     out << "Writes should fail" << endl;
-    int rc = execute_query_silent(test.maxscale->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    int rc = execute_query_silent(test.maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test.expect(rc != 0, "Write after master failure should fail");
 
     test.repl->unblock_node(0);
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
 
     // Create a table for testing
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscale->disconnect();
 
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     sleep(5);
 
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
     test.maxscale->disconnect();
 
     return test.global_result;

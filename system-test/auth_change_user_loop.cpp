@@ -36,10 +36,10 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
     Test->tprintf("Creating one user 'user@%%'");
-    execute_query_silent(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER user@'%'");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "CREATE USER user@'%%' identified by 'pass2'");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "GRANT SELECT ON test.* TO user@'%%';");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "FLUSH PRIVILEGES;");
+    execute_query_silent(Test->maxscale->conn_rwsplit, (char*) "DROP USER user@'%'");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "CREATE USER user@'%%' identified by 'pass2'");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "GRANT SELECT ON test.* TO user@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "FLUSH PRIVILEGES;");
 
     Test->tprintf("Starting parallel thread which opens/closes session in the loop");
 
@@ -54,13 +54,13 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < iterations; i++)
     {
-        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0], "user", "pass2", (char*) "test"),
-                         "change_user failed! %s", mysql_error(Test->maxscale->conn_rwsplit[0]));
-        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit[0],
+        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit, "user", "pass2", (char*) "test"),
+                         "change_user failed! %s", mysql_error(Test->maxscale->conn_rwsplit));
+        Test->add_result(mysql_change_user(Test->maxscale->conn_rwsplit,
                                            mxs_user,
                                            mxs_pw,
                                            (char*) "test"), "change_user failed! %s",
-                         mysql_error(Test->maxscale->conn_rwsplit[0]));
+                         mysql_error(Test->maxscale->conn_rwsplit));
     }
 
     Test->tprintf("Waiting for all threads to finish");
@@ -72,13 +72,13 @@ int main(int argc, char* argv[])
     Test->tprintf("All threads are finished");
 
     Test->tprintf("Change user to '%s' in order to be able to DROP user", mxs_user);
-    mysql_change_user(Test->maxscale->conn_rwsplit[0],
+    mysql_change_user(Test->maxscale->conn_rwsplit,
                       mxs_user,
                       mxs_pw,
                       NULL);
 
     Test->tprintf("Dropping user");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER user@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "DROP USER user@'%%';");
 
     Test->set_verbose(true);
     Test->check_maxscale_alive();

@@ -16,11 +16,11 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&test](std::string q) {
-            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str());
+            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str());
         };
 
     auto error_matches = [&test](std::string q) {
-            std::string err = mysql_error(test.maxscale->conn_rwsplit[0]);
+            std::string err = mysql_error(test.maxscale->conn_rwsplit);
             return err.find(q) != std::string::npos;
         };
 

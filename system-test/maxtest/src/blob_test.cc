@@ -90,10 +90,10 @@ int check_longblob_data(TestConnections* Test,
 {
     // char *select_stmt = (char *) "SELECT id, x, b FROM long_blob_table WHERE id = ?";
     char* select_stmt = (char*) "SELECT id, x, b FROM long_blob_table ";
-    MYSQL_STMT* stmt = mysql_stmt_init(Test->maxscale->conn_rwsplit[0]);
+    MYSQL_STMT* stmt = mysql_stmt_init(Test->maxscale->conn_rwsplit);
     if (stmt == NULL)
     {
-        Test->add_result(1, "stmt init error: %s\n", mysql_error(Test->maxscale->conn_rwsplit[0]));
+        Test->add_result(1, "stmt init error: %s\n", mysql_error(Test->maxscale->conn_rwsplit));
     }
 
     Test->add_result(mysql_stmt_prepare(stmt, select_stmt, strlen(select_stmt)),
@@ -154,7 +154,7 @@ int check_longblob_data(TestConnections* Test,
 
     if (mysql_stmt_execute(stmt) != 0)
     {
-        Test->tprintf("Error executing stmt %s\n", mysql_error(Test->maxscale->conn_rwsplit[0]));
+        Test->tprintf("Error executing stmt %s\n", mysql_error(Test->maxscale->conn_rwsplit));
     }
 
     if (mysql_stmt_store_result(stmt) != 0)

@@ -88,7 +88,7 @@ void create_event(TestConnections& test)
 void try_delete_event(TestConnections& test)
 {
     test.maxscale->connect_maxscale();
-    MYSQL* conn = test.maxscale->conn_rwsplit[0];
+    MYSQL* conn = test.maxscale->conn_rwsplit;
 
     execute_query(conn, EVENT_SHCEDULER, "OFF");
     execute_query(conn, USE_TEST);
@@ -127,7 +127,7 @@ void set_event_state(TestConnections& test, const string& event_name, const stri
 {
     bool success = false;
     test.maxscale->connect_maxscale();
-    MYSQL* conn = test.maxscale->conn_rwsplit[0];
+    MYSQL* conn = test.maxscale->conn_rwsplit;
     const char query_fmt[] = "ALTER EVENT %s %s;";
 
     if ((test.try_query(conn, USE_TEST) == 0)

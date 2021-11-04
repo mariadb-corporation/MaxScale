@@ -146,8 +146,8 @@ namespace
 
 void create_table(XTestConnections& test)
 {
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE test.t1(id INT)");
 }
 
 static int i_start = 0;
@@ -156,7 +156,7 @@ static int i_end = 0;
 
 void insert_data(XTestConnections& test)
 {
-    test.try_query(test.maxscale->conn_rwsplit[0], "BEGIN");
+    test.try_query(test.maxscale->conn_rwsplit, "BEGIN");
 
     i_end = i_start + n_rows;
 
@@ -164,9 +164,9 @@ void insert_data(XTestConnections& test)
     {
         stringstream ss;
         ss << "INSERT INTO test.t1 VALUES (" << i << ")";
-        test.try_query(test.maxscale->conn_rwsplit[0], ss.str().c_str());
+        test.try_query(test.maxscale->conn_rwsplit, ss.str().c_str());
     }
-    test.try_query(test.maxscale->conn_rwsplit[0], "COMMIT");
+    test.try_query(test.maxscale->conn_rwsplit, "COMMIT");
 
     i_start = i_end;
 }

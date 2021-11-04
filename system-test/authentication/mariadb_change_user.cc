@@ -40,14 +40,14 @@ void test_main(TestConnections& test)
 
     mxs.connect();
     test.tprintf("Testing readwritesplit");
-    test_connection(test, mxs.conn_rwsplit[0]);
+    test_connection(test, mxs.conn_rwsplit);
     test.tprintf("Testing readconnroute");
     test_connection(test, mxs.conn_master);
     mxs.disconnect();
 
     // Test MXS-3366.
     mxs.connect_rwsplit("");
-    auto rwsplit_conn = mxs.conn_rwsplit[0];
+    auto rwsplit_conn = mxs.conn_rwsplit;
     test.expect(mysql_change_user(rwsplit_conn, "user", "pass2", "test") == 0,
                 "changing user without CLIENT_CONNECT_WITH_DB-flag failed: %s", mysql_error(rwsplit_conn));
     mxs.disconnect();

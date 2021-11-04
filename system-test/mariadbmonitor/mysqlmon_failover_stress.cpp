@@ -322,7 +322,7 @@ private:
     {
         cout << "\nCreating tables." << endl;
 
-        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit;
 
         string drop_head("DROP TABLE IF EXISTS test.t");
         string create_head("CREATE TABLE test.t");
@@ -344,7 +344,7 @@ private:
     {
         cout << "\nInserting data." << endl;
 
-        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit;
 
         for (size_t i = 0; i < s_nClients; ++i)
         {

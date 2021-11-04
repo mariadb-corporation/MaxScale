@@ -246,12 +246,12 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
 
     Test->tprintf("Creating 'root'@'%%'\n");
-    // global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER 'root'@'%'; SET
+    // global_result += execute_query(Test->maxscales->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET
     // PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
 
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' IDENTIFIED BY 'skysqlroot';");
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' IDENTIFIED BY 'skysqlroot';");
     sleep(10);
 
@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
     }
 
     Test->tprintf("Dropping 'root'@'%%'\n");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP USER 'root'@'%%';");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "DROP USER 'root'@'%%';");
 
     Test->maxscale->close_maxscale_connections();
 

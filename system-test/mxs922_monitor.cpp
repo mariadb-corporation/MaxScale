@@ -37,9 +37,9 @@ int main(int argc, char* argv[])
 
     /** Try to alter the monitor user */
     test->maxscale->connect_maxscale();
-    execute_query(test->maxscale->conn_rwsplit[0], "DROP USER 'test'@'%%'");
-    execute_query(test->maxscale->conn_rwsplit[0], "CREATE USER 'test'@'%%' IDENTIFIED BY 'test'");
-    execute_query(test->maxscale->conn_rwsplit[0], "GRANT ALL ON *.* TO 'test'@'%%'");
+    execute_query(test->maxscale->conn_rwsplit, "DROP USER 'test'@'%%'");
+    execute_query(test->maxscale->conn_rwsplit, "CREATE USER 'test'@'%%' IDENTIFIED BY 'test'");
+    execute_query(test->maxscale->conn_rwsplit, "GRANT ALL ON *.* TO 'test'@'%%'");
     test->maxscale->close_maxscale_connections();
 
     config.alter_monitor("mysql-monitor2", "user", "test");
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     /** Remove the user */
     test->maxscale->connect_maxscale();
-    execute_query(test->maxscale->conn_rwsplit[0], "DROP USER 'test'@'%%'");
+    execute_query(test->maxscale->conn_rwsplit, "DROP USER 'test'@'%%'");
 
     config.restart_monitors();
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     test->maxscale->ssh_node("for i in 0 1 2 3; do maxctrl clear server server$i running; done", true);
 
     test->maxscale->wait_for_monitor();
-    test->add_result(execute_query_silent(test->maxscale->conn_rwsplit[0], "SELECT 1") == 0,
+    test->add_result(execute_query_silent(test->maxscale->conn_rwsplit, "SELECT 1") == 0,
                      "Query should fail when monitor has wrong credentials");
     test->maxscale->close_maxscale_connections();
 

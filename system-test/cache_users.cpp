@@ -26,7 +26,7 @@ const char* zPwd  = "maxuser";
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS cache_users");
 }
@@ -35,7 +35,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "CREATE TABLE cache_users (f INT)");
 }

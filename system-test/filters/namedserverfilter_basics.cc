@@ -117,7 +117,7 @@ void test_main(TestConnections& test)
             {
                 test.tprintf("Test prepared statements.");
                 mxs.connect_rwsplit("");
-                auto* conn = mxs.conn_rwsplit[0];
+                auto* conn = mxs.conn_rwsplit;
 
                 auto* stmt_s2 = mysql_stmt_init(conn);
                 string query_s2 = "SELECT @@server_id, 'second server';";

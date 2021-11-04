@@ -15,14 +15,14 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&](string q) {
-            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
         };
 
     auto ok = [&](string q) {
             test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit));
         };
 
     auto kill_master = [&]() {
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 
     test.maxscale->connect_rwsplit();
     cout << "Checking results" << endl;
-    Row r = get_row(test.maxscale->conn_rwsplit[0], "SELECT SUM(id), @@last_insert_id FROM t1");
+    Row r = get_row(test.maxscale->conn_rwsplit, "SELECT SUM(id), @@last_insert_id FROM t1");
     test.expect(!r.empty() && r[0] == "6", "All rows were not inserted: %s",
                 r.empty() ? "No rows" : r[0].c_str());
     test.maxscale->disconnect();

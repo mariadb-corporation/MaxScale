@@ -55,7 +55,7 @@ void set_max_packet(TestConnections* Test, bool binlog, char* cmd)
     else
     {
         Test->maxscale->connect_maxscale();
-        Test->try_query(Test->maxscale->conn_rwsplit[0], "%s", cmd);
+        Test->try_query(Test->maxscale->conn_rwsplit, "%s", cmd);
         Test->maxscale->close_maxscale_connections();
     }
     Test->tprintf(".. done\n");

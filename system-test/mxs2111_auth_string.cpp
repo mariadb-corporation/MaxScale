@@ -13,7 +13,7 @@ int main(int argc, char** argv)
             test.maxscale->connect();
             for (const auto& a : queries)
             {
-                test.try_query(test.maxscale->conn_rwsplit[0], "%s", a.c_str());
+                test.try_query(test.maxscale->conn_rwsplit, "%s", a.c_str());
             }
             test.maxscale->disconnect();
         };

@@ -37,23 +37,23 @@ void do_test(Test pre, Test post)
 
     if (pre.query)
     {
-        rc = execute_query_silent(test.maxscale->conn_rwsplit[0], pre.query);
+        rc = execute_query_silent(test.maxscale->conn_rwsplit, pre.query);
         test.expect((rc == 0) == pre.should_work,
                     "Expected query '%s' to %s: %s",
                     pre.query,
                     pre.should_work ? "succeed" : "fail",
-                    mysql_error(test.maxscale->conn_rwsplit[0]));
+                    mysql_error(test.maxscale->conn_rwsplit));
     }
 
     change_master(1, 0);
     sleep(5);
 
-    rc = execute_query_silent(test.maxscale->conn_rwsplit[0], post.query);
+    rc = execute_query_silent(test.maxscale->conn_rwsplit, post.query);
     test.expect((rc == 0) == post.should_work,
                 "Expected query '%s' to %s: %s",
                 post.query,
                 post.should_work ? "succeed" : "fail",
-                mysql_error(test.maxscale->conn_rwsplit[0]));
+                mysql_error(test.maxscale->conn_rwsplit));
 
     change_master(0, 1);
     test.maxscale->disconnect();
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
 
     // Prepare a table for testing
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscale->disconnect();
 
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     do_test({"SET autocommit=0"}, {"INSERT INTO test.t1 VALUES (1)"});
 
     test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
     test.maxscale->disconnect();
 
     return test.global_result;

@@ -28,19 +28,19 @@ int main(int argc, char** argv)
         };
 
     auto query = [&](string q) {
-            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
         };
 
     auto ok = [&](string q) {
             test.expect(query(q),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit));
         };
 
     auto check = [&](string q) {
             ok("START TRANSACTION");
-            Row row = get_row(test.maxscale->conn_rwsplit[0], q.c_str());
+            Row row = get_row(test.maxscale->conn_rwsplit, q.c_str());
             ok("COMMIT");
             test.expect(!row.empty() && row[0] == "1", "Query should return 1: %s", q.c_str());
         };
