@@ -108,7 +108,7 @@ export default {
             isLoading: false,
 
             isPwdVisible: false,
-            rememberMe: false,
+            rememberMe: true,
             credential: {
                 username: '',
                 password: '',
