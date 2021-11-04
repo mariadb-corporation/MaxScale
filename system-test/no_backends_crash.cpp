@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf(
         "Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
-    execute_query(Test->maxscale->conn_rwsplit[0], "show processlist;");
+    execute_query(Test->maxscale->conn_rwsplit, "show processlist;");
     execute_query(Test->maxscale->conn_master, "show processlist;");
     execute_query(Test->maxscale->conn_slave, "show processlist;");
     Test->maxscale->close_maxscale_connections();

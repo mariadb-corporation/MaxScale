@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     test.repl->execute_query_all_nodes("CREATE TABLE duplicate.duplicate (a int, b int);");
 
     test.maxscale->connect_maxscale();
-    test.add_result(execute_query(test.maxscale->conn_rwsplit[0], "SELECT 1") == 0,
+    test.add_result(execute_query(test.maxscale->conn_rwsplit, "SELECT 1") == 0,
                     "Query should fail when duplicate table is found.");
     sleep(10);
     test.log_includes("Duplicate tables found");

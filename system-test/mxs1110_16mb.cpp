@@ -37,14 +37,14 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit[0], (char*) "LONGBLOB", chunk_size, chunk_num, 2);
+    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "LONGBLOB", chunk_size, chunk_num, 2);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 
     Test->repl->sync_slaves();
     Test->maxscale->connect_maxscale();
     Test->tprintf("Checking data via RWSplit\n");
-    check_longblob_data(Test, Test->maxscale->conn_rwsplit[0], chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscale->conn_rwsplit, chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn master\n");
     check_longblob_data(Test, Test->maxscale->conn_master, chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");

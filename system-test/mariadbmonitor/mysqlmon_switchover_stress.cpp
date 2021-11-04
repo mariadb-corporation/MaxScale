@@ -322,7 +322,7 @@ private:
     {
         cout << "\nCreating tables." << endl;
 
-        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit;
 
         string drop_head("DROP TABLE IF EXISTS test.t");
         string create_head("CREATE TABLE test.t");
@@ -344,7 +344,7 @@ private:
     {
         cout << "\nInserting data." << endl;
 
-        MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+        MYSQL* pConn = test.maxscale->conn_rwsplit;
 
         for (size_t i = 0; i < s_nClients; ++i)
         {
@@ -514,7 +514,7 @@ void create_client_user(TestConnections& test)
     stmt += "'";
     stmt += CLIENT_USER;
     stmt += "'@'%%'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 
     // Create user
     stmt = "CREATE USER ";
@@ -525,16 +525,16 @@ void create_client_user(TestConnections& test)
     stmt += "'";
     stmt += CLIENT_PASSWORD;
     stmt += "'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 
     // Grant access
     stmt = "GRANT SELECT, INSERT, UPDATE ON *.* TO ";
     stmt += "'";
     stmt += CLIENT_USER;
     stmt += "'@'%%'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 
-    test.try_query(test.maxscale->conn_rwsplit[0], "FLUSH PRIVILEGES");
+    test.try_query(test.maxscale->conn_rwsplit, "FLUSH PRIVILEGES");
 }
 
 void switchover(TestConnections& test, int next_master_id, int current_master_id)

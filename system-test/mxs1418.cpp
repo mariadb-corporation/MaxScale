@@ -13,7 +13,7 @@ void* thr(void* data)
     while (running && test->global_result == 0)
     {
         test->reset_timeout();
-        if (test->try_query(test->maxscale->conn_rwsplit[0], "SELECT 1"))
+        if (test->try_query(test->maxscale->conn_rwsplit, "SELECT 1"))
         {
             test->tprintf("Failed to select via readwritesplit");
         }

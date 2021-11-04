@@ -54,9 +54,9 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
 
     Test->tprintf("Creating user with old style password\n");
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'");
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION");
     sleep(10);
 
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "DROP USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org'");
     Test->maxscale->close_maxscale_connections();
 

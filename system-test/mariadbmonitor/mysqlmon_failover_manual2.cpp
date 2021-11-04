@@ -41,7 +41,7 @@ void connect_maxscale(TestConnections& test)
 
 void try_query(TestConnections& test, const char* zQuery)
 {
-    if (test.try_query(test.maxscale->conn_rwsplit[0], "%s", zQuery) != 0)
+    if (test.try_query(test.maxscale->conn_rwsplit, "%s", zQuery) != 0)
     {
         string s("Could not execute query: ");
         s += zQuery;
@@ -65,7 +65,7 @@ void stop_node(MariaDBCluster& nodes, int node)
 
 void fail_query(TestConnections& test)
 {
-    int rv = execute_query(test.maxscale->conn_rwsplit[0], "BEGIN");
+    int rv = execute_query(test.maxscale->conn_rwsplit, "BEGIN");
 
     if (rv == 0)
     {

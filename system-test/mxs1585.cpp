@@ -38,8 +38,8 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.maxscale->connect_maxscale();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS test.mxs1585");
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE TABLE test.mxs1585(id INT) ENGINE=MEMORY");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS test.mxs1585");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE TABLE test.mxs1585(id INT) ENGINE=MEMORY");
     test.maxscale->close_maxscale_connections();
 
     std::vector<pthread_t> threads;
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
     }
 
     test.maxscale->connect_maxscale();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.mxs1585");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.mxs1585");
     test.check_maxscale_alive();
 
     return test.global_result;

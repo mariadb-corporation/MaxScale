@@ -26,11 +26,11 @@ int main(int argc, char** argv)
 
     auto query = [&test](string q, int t = 0) {
             sleep(t);
-            return execute_query_silent(test.maxscale->conn_rwsplit[0], q.c_str()) == 0;
+            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
         };
 
     auto compare = [&test](string q, string res) {
-            auto rc = execute_query_check_one(test.maxscale->conn_rwsplit[0], q.c_str(), res.c_str()) == 0;
+            auto rc = execute_query_check_one(test.maxscale->conn_rwsplit, q.c_str(), res.c_str()) == 0;
             test.expect(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
         };
 
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
             test.expect(query(q, t),
                         "Query '%s' should work: %s",
                         q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit[0]));
+                        mysql_error(test.maxscale->conn_rwsplit));
         };
 
     auto err = [&test, &query](string q, int t = 0) {

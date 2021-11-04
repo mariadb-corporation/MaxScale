@@ -89,10 +89,10 @@ int main(int argc, char* argv[])
     Test->repl->connect();
 
     Test->tprintf("Create t1\n");
-    create_t1(Test->maxscale->conn_rwsplit[0]);
+    create_t1(Test->maxscale->conn_rwsplit);
     Test->tprintf("Insert data into t1\n");
     Test->reset_timeout();
-    insert_into_t1(Test->maxscale->conn_rwsplit[0], N);
+    insert_into_t1(Test->maxscale->conn_rwsplit, N);
     Test->repl->sync_slaves();
     Test->reset_timeout();
 
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Copying data from t1 to file...\n");
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");
-    Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+    Test->try_query(Test->maxscale->conn_rwsplit, (char*) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
     Test->tprintf("using ReadConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
     Test->try_query(rc_master, (char*) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
     Test->tprintf("using ReadConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
@@ -118,25 +118,25 @@ int main(int argc, char* argv[])
 
     MYSQL* srv[2];
 
-    srv[0] = Test->maxscale->conn_rwsplit[0];
+    srv[0] = Test->maxscale->conn_rwsplit;
     srv[1] = rc_master;
     for (int i = 0; i < iterations; i++)
     {
         Test->reset_timeout();
         Test->tprintf("Dropping t1 \n");
-        Test->try_query(Test->maxscale->conn_rwsplit[0], (char*) "DROP TABLE t1;");
+        Test->try_query(Test->maxscale->conn_rwsplit, (char*) "DROP TABLE t1;");
         Test->repl->sync_slaves();
 
         Test->reset_timeout();
         Test->tprintf("Create t1\n");
-        create_t1(Test->maxscale->conn_rwsplit[0]);
+        create_t1(Test->maxscale->conn_rwsplit);
         Test->tprintf("Loading data to t1 from file\n");
         Test->try_query(srv[i], (char*) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
         Test->repl->sync_slaves();
 
         Test->reset_timeout();
         Test->tprintf("SELECT: rwsplitter\n");
-        Test->add_result(select_from_t1(Test->maxscale->conn_rwsplit[0], N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(Test->maxscale->conn_rwsplit, N), "Wrong data in 't1'");
         Test->tprintf("SELECT: master\n");
         Test->add_result(select_from_t1(rc_master, N), "Wrong data in 't1'");
         Test->tprintf("SELECT: slave\n");

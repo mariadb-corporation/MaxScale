@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
     Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
     Test->maxscale->connect_maxscale();
-    execute_query(Test->maxscale->conn_rwsplit[0], "SET GLOBAL max_connections=100");
+    execute_query(Test->maxscale->conn_rwsplit, "SET GLOBAL max_connections=100");
     Test->maxscale->close_maxscale_connections();
 
     /** Create connections to readwritesplit */

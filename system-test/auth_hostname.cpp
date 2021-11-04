@@ -13,15 +13,15 @@ int main(int argc, char* argv[])
 
     Test->tprintf("Creating user 'user' with 3 different passwords for different hosts\n");
     Test->maxscale->connect_maxscale();
-    execute_query(Test->maxscale->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit,
                   "CREATE USER 'user'@'non_existing_host1' IDENTIFIED BY 'pass1'");
-    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
-    execute_query(Test->maxscale->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit, "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
+    execute_query(Test->maxscale->conn_rwsplit,
                   "CREATE USER 'user'@'non_existing_host2' IDENTIFIED BY 'pass3'");
-    execute_query(Test->maxscale->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit,
                   "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host1'");
-    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT ALL PRIVILEGES ON *.* TO 'user'@'%%'");
-    execute_query(Test->maxscale->conn_rwsplit[0],
+    execute_query(Test->maxscale->conn_rwsplit, "GRANT ALL PRIVILEGES ON *.* TO 'user'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit,
                   "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host2'");
 
     Test->tprintf("Synchronizing slaves");
@@ -59,9 +59,9 @@ int main(int argc, char* argv[])
         mysql_close(conn);
     }
 
-    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host1'");
-    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'%%'");
-    execute_query(Test->maxscale->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host2'");
+    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'non_existing_host1'");
+    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'%%'");
+    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'non_existing_host2'");
     Test->maxscale->close_maxscale_connections();
 
     int rval = Test->global_result;

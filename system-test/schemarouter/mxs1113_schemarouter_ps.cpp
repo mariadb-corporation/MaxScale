@@ -66,14 +66,14 @@ int main(int argc, char* argv[])
     }
 
     test.maxscale->connect_maxscale();
-    conn = test.maxscale->conn_rwsplit[0];
+    conn = test.maxscale->conn_rwsplit;
 
     test.tprintf("Running text protocol test");
     test_text_protocol(test, conn);
     test.maxscale->disconnect();
 
     test.maxscale->connect_maxscale();
-    conn = test.maxscale->conn_rwsplit[0];
+    conn = test.maxscale->conn_rwsplit;
 
     test.tprintf("Running binary protocol test");
     test_binary_protocol(test, conn);

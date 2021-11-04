@@ -29,7 +29,7 @@ namespace
 
 void create_table(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit;
 
     test.try_query(pConn, "DROP TABLE IF EXISTS test.t1");
     test.try_query(pConn, "CREATE TABLE test.t1(id INT)");
@@ -41,7 +41,7 @@ static int i_end = 0;
 
 void insert_data(TestConnections& test)
 {
-    MYSQL* pConn = test.maxscale->conn_rwsplit[0];
+    MYSQL* pConn = test.maxscale->conn_rwsplit;
 
     test.try_query(pConn, "BEGIN");
 

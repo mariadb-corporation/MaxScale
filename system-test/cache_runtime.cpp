@@ -23,7 +23,7 @@ namespace
 
 void drop(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("DROP TABLE IF EXISTS cache_test");
 
@@ -35,7 +35,7 @@ void create(TestConnections& test)
 {
     drop(test);
 
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("CREATE TABLE cache_test (a INT)");
 
@@ -45,7 +45,7 @@ void create(TestConnections& test)
 
 void insert(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("INSERT INTO cache_test VALUES (1)");
 
@@ -55,7 +55,7 @@ void insert(TestConnections& test)
 
 void update(TestConnections& test, int value)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("UPDATE cache_test SET a=");
     stmt += std::to_string(value);
@@ -66,7 +66,7 @@ void update(TestConnections& test, int value)
 
 void select(TestConnections& test, int* pValue)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("SELECT * FROM cache_test");
 
@@ -109,7 +109,7 @@ enum What
 
 void set(TestConnections& test, Cache::What what, bool value)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     string stmt("SET @maxscale.cache.");
     stmt += ((what == Cache::POPULATE) ? "populate" : "use");

@@ -23,11 +23,11 @@ int main(int argc, char** argv)
 
     test.maxscale->connect_rwsplit();
 
-    Row server1 = get_row(test.maxscale->conn_rwsplit[0],
+    Row server1 = get_row(test.maxscale->conn_rwsplit,
                           "SELECT @@server_id, @@last_insert_id, id FROM test.t1");
-    Row server2 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t2");
-    Row server3 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t3");
-    Row server4 = get_row(test.maxscale->conn_rwsplit[0], "SELECT @@server_id, id FROM test.t4");
+    Row server2 = get_row(test.maxscale->conn_rwsplit, "SELECT @@server_id, id FROM test.t2");
+    Row server3 = get_row(test.maxscale->conn_rwsplit, "SELECT @@server_id, id FROM test.t3");
+    Row server4 = get_row(test.maxscale->conn_rwsplit, "SELECT @@server_id, id FROM test.t4");
 
     test.maxscale->disconnect();
 

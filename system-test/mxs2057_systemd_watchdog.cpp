@@ -26,7 +26,7 @@ bool staying_alive(TestConnections& test, const maxbase::Duration& dur)
     maxbase::StopWatch sw_loop_start;
     while (alive && sw_loop_start.split() < dur)
     {
-        if (execute_query_silent(test.maxscale->conn_rwsplit[0], "select 1"))
+        if (execute_query_silent(test.maxscale->conn_rwsplit, "select 1"))
         {
             alive = false;
             break;
@@ -49,7 +49,7 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
     test.reset_timeout();
 
     // Make one thread in maxscale hang
-    mysql_query(test.maxscale->conn_rwsplit[0], "select LUA_INFINITE_LOOP");
+    mysql_query(test.maxscale->conn_rwsplit, "select LUA_INFINITE_LOOP");
 
     // maxscale should get killed by systemd in less than duration(interval - epsilon).
     bool maxscale_alive = staying_alive(test, mxb::from_secs(1.2 * mxb::to_secs(watchdog_interval)));

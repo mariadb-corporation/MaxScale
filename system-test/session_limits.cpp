@@ -27,11 +27,11 @@ int main(int argc, char* argv[])
     test.tprintf("Open session, wait %d seconds and execute a query", first_sleep);
     test.maxscale->connect_maxscale();
     sleep(first_sleep);
-    test.try_query(test.maxscale->conn_rwsplit[0], "SELECT 1");
+    test.try_query(test.maxscale->conn_rwsplit, "SELECT 1");
 
     test.tprintf("Wait %d seconds and execute query, expecting failure", second_sleep);
     sleep(second_sleep);
-    test.add_result(execute_query(test.maxscale->conn_rwsplit[0], "SELECT 1") == 0,
+    test.add_result(execute_query(test.maxscale->conn_rwsplit, "SELECT 1") == 0,
                     "Session was not closed after %d seconds",
                     second_sleep);
     test.maxscale->close_maxscale_connections();
@@ -40,13 +40,13 @@ int main(int argc, char* argv[])
     test.maxscale->connect_maxscale();
     for (int i = 0; i < 10; i++)
     {
-        test.try_query(test.maxscale->conn_rwsplit[0],
+        test.try_query(test.maxscale->conn_rwsplit,
                        "%s",
                        std::string("set @test=" + std::to_string(i)).c_str());
     }
 
     test.tprintf("Execute one more session command");
-    execute_query(test.maxscale->conn_rwsplit[0], "set @test=11");
+    execute_query(test.maxscale->conn_rwsplit, "set @test=11");
     test.maxscale->close_maxscale_connections();
 
     return test.global_result;

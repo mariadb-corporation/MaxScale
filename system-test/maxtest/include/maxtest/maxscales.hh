@@ -173,7 +173,7 @@ public:
      */
     int port(enum service type = RWSPLIT) const;
 
-    MYSQL* conn_rwsplit[1] {nullptr};   /**< Connection to RWSplit */
+    MYSQL* conn_rwsplit {nullptr};      /**< Connection to RWSplit */
     MYSQL* conn_master {nullptr};       /**< Connection to ReadConnection in master mode */
     MYSQL* conn_slave {nullptr};        /**< Connection to ReadConnection in slave mode */
 
@@ -191,7 +191,7 @@ public:
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale
      * services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and
+     * Connections stored in maxscales->conn_rwsplit, maxscales->conn_master[0] and
      * maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
@@ -207,7 +207,7 @@ public:
 
     /**
      * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in
-     * maxscales->conn_rwsplit[0]
+     * maxscales->conn_rwsplit
      * @return 0 in case of success
      */
     int connect_rwsplit(const std::string& db = "test");
@@ -297,7 +297,7 @@ public:
     Connection readconn_slave(const std::string& db = "test");
 
     /**
-     * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
+     * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit
      */
     void close_rwsplit();
 

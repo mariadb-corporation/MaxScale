@@ -21,7 +21,7 @@ namespace
 
 void init(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     test.try_query(pMysql, "DROP TABLE IF EXISTS masking_auto_firewall");
     test.try_query(pMysql, "CREATE TABLE masking_auto_firewall (a TEXT, b TEXT)");
@@ -36,7 +36,7 @@ enum class Expect
 
 void test_one(TestConnections& test, const char* zQuery, Expect expect)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     const char* zExpect = (expect == Expect::SUCCESS ? "SHOULD" : "should NOT");
 
@@ -55,7 +55,7 @@ void test_one(TestConnections& test, const char* zQuery, Expect expect)
 
 void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     MYSQL_STMT* pPs = mysql_stmt_init(pMysql);
     int rv = mysql_stmt_prepare(pPs, zQuery, strlen(zQuery));
@@ -74,7 +74,7 @@ void test_one_ps(TestConnections& test, const char* zQuery, Expect expect)
 
 void run(TestConnections& test)
 {
-    MYSQL* pMysql = test.maxscale->conn_rwsplit[0];
+    MYSQL* pMysql = test.maxscale->conn_rwsplit;
 
     int rv;
 

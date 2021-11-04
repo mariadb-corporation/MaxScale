@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     test.maxscale->connect_rwsplit();
 
     // Make sure we have at least one fully opened connection
-    test.try_query(test.maxscale->conn_rwsplit[0], "select 1");
+    test.try_query(test.maxscale->conn_rwsplit, "select 1");
 
     // Block and unblock all nodes to sever all connections
     for (int i = 0; i < test.repl->N; i++)
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
     // Make sure that session commands trigger a reconnection if there are no open connections
     test.reset_timeout();
-    test.try_query(test.maxscale->conn_rwsplit[0], "set @a = 1");
+    test.try_query(test.maxscale->conn_rwsplit, "set @a = 1");
     test.maxscale->disconnect();
 
     return test.global_result;

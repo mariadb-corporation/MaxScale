@@ -36,21 +36,21 @@ int main(int argc, char* argv[])
 
     test.maxscale->connect();
 
-    execute_query(test.maxscale->conn_rwsplit[0], "USE test");
+    execute_query(test.maxscale->conn_rwsplit, "USE test");
 
     // Make sure the slaves don't have the procedure
-    execute_query(test.maxscale->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    execute_query(test.maxscale->conn_rwsplit[0], "DROP FUNCTION IF EXISTS f1");
-    execute_query(test.maxscale->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS p1");
+    execute_query(test.maxscale->conn_rwsplit, "DROP TABLE IF EXISTS t1");
+    execute_query(test.maxscale->conn_rwsplit, "DROP FUNCTION IF EXISTS f1");
+    execute_query(test.maxscale->conn_rwsplit, "DROP PROCEDURE IF EXISTS p1");
 
     // Disable binary log and create the tables
-    execute_query(test.maxscale->conn_rwsplit[0], "SET sql_log_bin = 0");
-    execute_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE t1 AS SELECT 1 AS id");
-    execute_query(test.maxscale->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit, "SET sql_log_bin = 0");
+    execute_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE t1 AS SELECT 1 AS id");
+    execute_query(test.maxscale->conn_rwsplit,
                   "CREATE OR REPLACE FUNCTION f1() RETURNS INT DETERMINISTIC BEGIN RETURN 1; END");
-    execute_query(test.maxscale->conn_rwsplit[0],
+    execute_query(test.maxscale->conn_rwsplit,
                   "CREATE OR REPLACE PROCEDURE p1(IN i INT, IN j INT) BEGIN SELECT i + j; END");
-    execute_query(test.maxscale->conn_rwsplit[0], "SET sql_log_bin = 1");
+    execute_query(test.maxscale->conn_rwsplit, "SET sql_log_bin = 1");
 
     test.maxscale->disconnect();
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     {
         test.maxscale->connect();
 
-        MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit[0]);
+        MYSQL_STMT* stmt = mysql_stmt_init(test.maxscale->conn_rwsplit);
         std::string query = "CALL p1((SELECT f1()), ?)";
         Bind bind;
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
         mysql_stmt_close(stmt);
 
-        test.expect(mysql_query(test.maxscale->conn_rwsplit[0], "SELECT 1") == 0,
+        test.expect(mysql_query(test.maxscale->conn_rwsplit, "SELECT 1") == 0,
                     "Normal queries should work");
         test.maxscale->disconnect();
     }
