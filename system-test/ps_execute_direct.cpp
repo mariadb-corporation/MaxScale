@@ -42,12 +42,12 @@ int main(int argc, char** argv)
 
     test.tprintf("MXS-2490: PS direct execution");
     test.tprintf("Testing readwritesplit");
-    mxs2490(test, test.maxscale->conn_rwsplit[0]);
+    mxs2490(test, test.maxscale->conn_rwsplit);
     test.tprintf("Testing readconnroute");
     mxs2490(test, test.maxscale->conn_master);
 
     test.tprintf("MXS-3392: mariadb_stmt_execute_direct sends send an extra error");
-    mxs3392(test, test.maxscale->conn_rwsplit[0]);
+    mxs3392(test, test.maxscale->conn_rwsplit);
 
     return test.global_result;
 }

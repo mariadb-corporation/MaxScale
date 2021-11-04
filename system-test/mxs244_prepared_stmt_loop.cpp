@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     Test->reset_timeout();
     Test->maxscale->connect_maxscale();
     MYSQL* router[3];
-    router[0] = Test->maxscale->conn_rwsplit[0];
+    router[0] = Test->maxscale->conn_rwsplit;
     router[1] = Test->maxscale->conn_master;
     router[2] = Test->maxscale->conn_slave;
 

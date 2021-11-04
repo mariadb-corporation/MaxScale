@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     cout << "Non-existent database" << endl;
     test.repl->connect(0, "non_existing_db");
     test.maxscale->connect("non_existing_db");
-    test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_rwsplit[0]), "readwritesplit returned wrong error");
+    test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_rwsplit), "readwritesplit returned wrong error");
     test.expect(is_equal_error(test.repl->nodes[0], test.maxscale->conn_master), "readconnroute returned wrong error");
     test.repl->disconnect();
     test.maxscale->disconnect();

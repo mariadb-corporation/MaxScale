@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         test.add_result(mxs->connect_maxscale(), "Error connecting to Maxscale\n");
         test.tprintf("Creating user %s", userhostc);
 
-        auto admin_conn = mxs->conn_rwsplit[0];
+        auto admin_conn = mxs->conn_rwsplit;
         test.add_result(execute_query(admin_conn, "CREATE USER %s identified by '%s';", userhostc, pw),
                         "Failed to create user");
 
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
             }
 
             test.maxscale->connect();
-            admin_conn = mxs->conn_rwsplit[0];
+            admin_conn = mxs->conn_rwsplit;
             const char drop_db_fmt[] = "drop database %s;";
             const char drop_db_failed[] = "DROP DATABASE failed";
             test.add_result(execute_query(admin_conn, drop_db_fmt, grant_db), drop_db_failed);

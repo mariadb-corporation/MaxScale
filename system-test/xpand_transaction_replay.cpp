@@ -206,7 +206,7 @@ void run_test(TestConnections& test)
     mxt::MaxScale* pMaxscales = test.maxscale;
     test.add_result(pMaxscales->connect_rwsplit(), "Could not connect to RWS.");
 
-    MYSQL* pMysql = pMaxscales->conn_rwsplit[0];
+    MYSQL* pMysql = pMaxscales->conn_rwsplit;
 
     MaxRest::Server server = get_current_server(test, pMysql);
 

@@ -22,9 +22,9 @@ void try_password(TestConnections* Test, char* pass)
      * Create the user
      */
     Test->maxscale->connect_maxscale();
-    execute_query_silent(Test->maxscale->conn_rwsplit[0], "DROP USER 'test'@'%'");
-    execute_query(Test->maxscale->conn_rwsplit[0], "CREATE USER 'test'@'%%' IDENTIFIED BY '%s'", pass);
-    execute_query(Test->maxscale->conn_rwsplit[0], "GRANT ALL ON *.* TO 'test'@'%%'");
+    execute_query_silent(Test->maxscale->conn_rwsplit, "DROP USER 'test'@'%'");
+    execute_query(Test->maxscale->conn_rwsplit, "CREATE USER 'test'@'%%' IDENTIFIED BY '%s'", pass);
+    execute_query(Test->maxscale->conn_rwsplit, "GRANT ALL ON *.* TO 'test'@'%%'");
     Test->maxscale->close_maxscale_connections();
 
     /**

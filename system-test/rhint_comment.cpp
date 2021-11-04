@@ -42,11 +42,11 @@ int main(int argc, char* argv[])
 
     Test->maxscale->connect_maxscale();
 
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "select /* maxscale hintname prepare route to master */ @@server_id;");
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "select /* maxscale hintname begin */ @@server_id;");
-    Test->try_query(Test->maxscale->conn_rwsplit[0],
+    Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "select /* maxscale route to master*/ @@server_id;");
 
     Test->log_excludes("Syntax error in hint");

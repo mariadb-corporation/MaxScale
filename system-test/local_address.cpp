@@ -104,7 +104,7 @@ void drop_user(TestConnections& test, const string& user, const string& host)
     stmt += "'@'";
     stmt += host;
     stmt += "'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 }
 
 void create_user(TestConnections& test, const string& user, const string& password, const string& host)
@@ -120,7 +120,7 @@ void create_user(TestConnections& test, const string& user, const string& passwo
     stmt += "'";
     stmt += password;
     stmt += "'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 }
 
 void grant_access(TestConnections& test, const string& user, const string& host)
@@ -132,9 +132,9 @@ void grant_access(TestConnections& test, const string& user, const string& host)
     stmt += "'@'";
     stmt += host;
     stmt += "'";
-    test.try_query(test.maxscale->conn_rwsplit[0], "%s", stmt.c_str());
+    test.try_query(test.maxscale->conn_rwsplit, "%s", stmt.c_str());
 
-    test.try_query(test.maxscale->conn_rwsplit[0], "FLUSH PRIVILEGES");
+    test.try_query(test.maxscale->conn_rwsplit, "FLUSH PRIVILEGES");
 }
 
 void create_user_and_grants(TestConnections& test,

@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
         Test->maxscale->connect_maxscale();
         for (j = 0; j < iter; j++)
         {
-            execute_query_silent(Test->maxscale->conn_rwsplit[0], "SELECT 1");
+            execute_query_silent(Test->maxscale->conn_rwsplit, "SELECT 1");
         }
         Test->maxscale->close_maxscale_connections();
         if (i > iter)

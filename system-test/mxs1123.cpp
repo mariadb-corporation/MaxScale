@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     test.tprintf("Waiting one second between queries, all queries should succeed");
 
     sleep(1);
-    test.try_query(test.maxscale->conn_rwsplit[0], "select 1");
+    test.try_query(test.maxscale->conn_rwsplit, "select 1");
     sleep(1);
     test.try_query(test.maxscale->conn_master, "select 1");
     sleep(1);

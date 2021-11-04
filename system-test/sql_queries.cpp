@@ -78,9 +78,9 @@ int main(int argc, char* argv[])
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
-        Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP TABLE t1");
-        Test->try_query(Test->maxscale->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
-        Test->try_query(Test->maxscale->conn_rwsplit[0], "CREATE DATABASE test1;");
+        Test->try_query(Test->maxscale->conn_rwsplit, "DROP TABLE t1");
+        Test->try_query(Test->maxscale->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
+        Test->try_query(Test->maxscale->conn_rwsplit, "CREATE DATABASE test1;");
         Test->reset_timeout();
         Test->repl->sync_slaves();
 

@@ -120,7 +120,7 @@ int main(int argc, char** argv)
 
     // Create a table for testing
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscale->disconnect();
 
@@ -135,13 +135,13 @@ int main(int argc, char** argv)
             t.func();
             for (auto q : t.queries)
             {
-                int rc = execute_query_silent(test.maxscale->conn_rwsplit[0], q.query);
+                int rc = execute_query_silent(test.maxscale->conn_rwsplit, q.query);
                 test.expect(q.should_work == (rc == 0),
                             "Step '%s': Query '%s' should %s: %s",
                             i.description,
                             q.query,
                             q.should_work ? "work" : "fail",
-                            mysql_error(test.maxscale->conn_rwsplit[0]));
+                            mysql_error(test.maxscale->conn_rwsplit));
             }
         }
 
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     sleep(5);
 
     test.maxscale->connect();
-    test.try_query(test.maxscale->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
     test.maxscale->disconnect();
 
     return test.global_result;

@@ -33,11 +33,11 @@ int main(int argc, char** argv)
     /** Test blacklisting functionality */
     test->tprintf("Trying matching query to blacklisted RWSplit, expecting failure\n");
     test->reset_timeout();
-    test->add_result(!execute_query_silent(test->maxscale->conn_rwsplit[0], "select 1"),
+    test->add_result(!execute_query_silent(test->maxscale->conn_rwsplit, "select 1"),
                      "Matching query to blacklist service should fail.\n");
     test->tprintf("Trying non-matching query to blacklisted RWSplit, expecting success\n");
     test->reset_timeout();
-    test->add_result(execute_query_silent(test->maxscale->conn_rwsplit[0], "show status"),
+    test->add_result(execute_query_silent(test->maxscale->conn_rwsplit, "show status"),
                      "Non-matching query to blacklist service should succeed.\n");
 
     /** Test whitelisting functionality */

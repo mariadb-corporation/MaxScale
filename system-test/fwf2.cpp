@@ -33,14 +33,14 @@ int read_and_execute_queries(TestConnections* Test, const char* filename, int ex
             if (strlen(sql) > 1)
             {
                 Test->tprintf("%s", sql);
-                if (execute_query(Test->maxscale->conn_rwsplit[0], "%s", sql) != expected
-                    && (expected == 1 || mysql_errno(Test->maxscale->conn_rwsplit[0]) == 1141))
+                if (execute_query(Test->maxscale->conn_rwsplit, "%s", sql) != expected
+                    && (expected == 1 || mysql_errno(Test->maxscale->conn_rwsplit) == 1141))
                 {
                     Test->tprintf("Query %s, but %s expected, MySQL error: %d, %s\n",
                                   expected ? "succeeded" : "failed",
                                   expected ? "failure" : "success",
-                                  mysql_errno(Test->maxscale->conn_rwsplit[0]),
-                                  mysql_error(Test->maxscale->conn_rwsplit[0]));
+                                  mysql_errno(Test->maxscale->conn_rwsplit),
+                                  mysql_error(Test->maxscale->conn_rwsplit));
                     local_result++;
                 }
             }

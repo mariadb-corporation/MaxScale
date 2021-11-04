@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     sleep(1);
 
     test->maxscale->connect_maxscale();
-    test->try_query(test->maxscale->conn_rwsplit[0], "select @@server_id");
+    test->try_query(test->maxscale->conn_rwsplit, "select @@server_id");
     config.create_ssl_listener(Config::SERVICE_RCONN_SLAVE);
 
     MYSQL* conn = open_conn(test->maxscale->readconn_master_port,
