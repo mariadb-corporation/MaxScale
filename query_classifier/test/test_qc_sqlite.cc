@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 
 #include <maxbase/assert.h>
 #include <maxscale/paths.hh>
@@ -495,6 +496,73 @@ void test_kill(Tester& tester)
     }
 }
 
+void test_set_transaction(Tester& tester)
+{
+    for (std::string scope : {"", "SESSION", "GLOBAL"})
+    {
+        for (std::string level : {"READ COMMITTED", "READ UNCOMMITTED", "SERIALIZABLE", "REPEATABLE READ"})
+        {
+            for (std::string trx : {"READ ONLY", "READ WRITE"})
+            {
+                std::string isolation_level = "ISOLATION LEVEL " + level;
+                std::vector<std::string> values {
+                    trx, isolation_level, trx + ", " + isolation_level, isolation_level + ", " + trx
+                };
+
+                for (auto v : values)
+                {
+                    std::ostringstream ss;
+                    ss << "SET " << scope << " TRANSACTION " << v;
+                    std::string sql = ss.str();
+
+                    auto op = tester.get_operation(sql);
+
+                    expect(op == QUERY_OP_SET_TRANSACTION, "Expected %s, got %s",
+                           qc_op_to_string(QUERY_OP_SET_TRANSACTION), qc_op_to_string(op));
+
+                    auto type = tester.get_type(sql);
+                    char* type_str = qc_typemask_to_string(type);
+
+                    expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
+
+                    if (scope == "")
+                    {
+                        expect(type & QUERY_TYPE_NEXT_TRX,
+                               "%s should be QUERY_TYPE_NEXT_TRX: %s", sql.c_str(), type_str);
+                    }
+                    else if (scope == "GLOBAL")
+                    {
+                        expect(type & QUERY_TYPE_GSYSVAR_WRITE,
+                               "%s should be QUERY_TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str);
+                    }
+
+                    if (scope != "GLOBAL" && v.find(trx) != std::string::npos)
+                    {
+                        if (trx == "READ ONLY")
+                        {
+                            expect(type & QUERY_TYPE_READONLY,
+                                   "%s should be QUERY_TYPE_READONLY: %s", sql.c_str(), type_str);
+                        }
+                        else
+                        {
+                            expect(type & QUERY_TYPE_READWRITE,
+                                   "%s should be QUERY_TYPE_READWRITE: %s", sql.c_str(), type_str);
+                        }
+                    }
+                    else
+                    {
+                        expect((type & (QUERY_TYPE_READONLY | QUERY_TYPE_READWRITE)) == 0,
+                               "%s should not be QUERY_TYPE_READONLY or QUERY_TYPE_READWRITE: %s",
+                               sql.c_str(), type_str);
+                    }
+
+                    free(type_str);
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     int rc = 0;
@@ -526,6 +594,7 @@ int main(int argc, char** argv)
         }
 
         test_kill(tester);
+        test_set_transaction(tester);
 
         rc = errors;
     }
