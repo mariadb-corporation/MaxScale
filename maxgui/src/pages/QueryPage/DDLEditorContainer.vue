@@ -50,7 +50,7 @@
                 "
                 :hasSavingErr="isAlterFailed"
                 :executedSql="alterSql"
-                :errMsgObj="alterResult"
+                :errMsgObj="stmtErrMsgObj"
                 :sqlTobeExecuted.sync="sql"
                 :onSave="confirmAlter"
                 @after-close="clearAlterResult"
@@ -104,7 +104,7 @@ export default {
         ...mapGetters({
             getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
             getTblCreationInfo: 'query/getTblCreationInfo',
-            getAlteringTableResultMap: 'query/getAlteringTableResultMap',
+            getExeStmtResultMap: 'query/getExeStmtResultMap',
             getDbCmplList: 'query/getDbCmplList',
         }),
         formDim() {
@@ -139,17 +139,17 @@ export default {
             )
         },
         notAlteredYet() {
-            return Boolean(this.$typy(this.getAlteringTableResultMap).isEmptyObject)
+            return Boolean(this.$typy(this.getExeStmtResultMap).isEmptyObject)
         },
         isAlterFailed() {
             if (this.notAlteredYet) return false
-            return Boolean(this.$typy(this.alterResult, 'errno').safeObject)
+            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
-        alterResult() {
-            return this.$typy(this.getAlteringTableResultMap, 'data.results[0]').safeObjectOrEmpty
+        stmtErrMsgObj() {
+            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
         alterSql() {
-            return this.$typy(this.getAlteringTableResultMap, 'data.sql').safeString
+            return this.$typy(this.getExeStmtResultMap, 'data.sql').safeString
         },
         currColsData() {
             return this.$typy(this.formData, 'cols_opts_data.data').safeArray
@@ -178,12 +178,12 @@ export default {
     },
     methods: {
         ...mapMutations({
-            UPDATE_ALTERING_TABLE_RESULT_MAP: 'query/UPDATE_ALTERING_TABLE_RESULT_MAP',
+            UPDATE_EXE_STMT_RESULT_MAP: 'query/UPDATE_EXE_STMT_RESULT_MAP',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
             UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
-            alterTable: 'query/alterTable',
+            exeStmtAction: 'query/exeStmtAction',
         }),
         //Watcher to work with multiple worksheets which are kept alive
         addInitialDataWatcher() {
@@ -484,7 +484,12 @@ export default {
             this.isConfDlgOpened = true
         },
         async confirmAlter() {
-            await this.alterTable(this.sql)
+            const { escapeIdentifiers: escape } = this.$help
+            const { dbName, table_name } = this.formData.table_opts_data
+            await this.exeStmtAction({
+                sql: this.sql,
+                action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
+            })
             if (!this.isAlterFailed)
                 this.UPDATE_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
@@ -494,9 +499,7 @@ export default {
                 })
         },
         clearAlterResult() {
-            this.UPDATE_ALTERING_TABLE_RESULT_MAP({
-                id: this.active_wke_id,
-            })
+            this.UPDATE_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
         },
     },
 }

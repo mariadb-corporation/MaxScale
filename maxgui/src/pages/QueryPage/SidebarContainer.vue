@@ -116,7 +116,7 @@
                     "
                     :hasSavingErr="isExeStatementsFailed"
                     :executedSql="executedSql"
-                    :errMsgObj="errMsgObj"
+                    :errMsgObj="stmtErrMsgObj"
                     :sqlTobeExecuted.sync="sql"
                     :editorHeight="200"
                     :onSave="confirmExeStatements"
@@ -192,13 +192,13 @@ export default {
         },
         isExeStatementsFailed() {
             if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
-            return Boolean(this.$typy(this.errMsgObj, 'errno').safeObject)
+            return !this.$typy(this.stmtErrMsgObj).isEmptyObject
         },
         executedSql() {
             return this.$typy(this.getExeStmtResultMap, 'data.sql').safeString
         },
-        errMsgObj() {
-            return this.$typy(this.getExeStmtResultMap, 'data.results[0]').safeObjectOrEmpty
+        stmtErrMsgObj() {
+            return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
         },
     },
     methods: {

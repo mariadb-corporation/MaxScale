@@ -99,7 +99,6 @@ function memStates() {
         // editor states
         curr_editor_mode_map: {},
         tbl_creation_info_map: {},
-        altering_table_result_map: {},
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -1185,75 +1184,12 @@ export default {
             })
         },
 
-        async alterTable({ state, rootState, dispatch, commit, getters }, sql) {
-            const curr_cnct_resource = state.curr_cnct_resource
-            const active_wke_id = state.active_wke_id
-            const request_sent_time = new Date().valueOf()
-            await dispatch('queryingActionWrapper', {
-                action: async () => {
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
-                        id: active_wke_id,
-                        payload: {
-                            is_altering_table: true,
-                        },
-                    })
-                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
-                        sql,
-                        max_rows: rootState.persisted.query_max_rows,
-                    })
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
-                        id: active_wke_id,
-                        payload: {
-                            is_altering_table: false,
-                            data: res.data.data.attributes,
-                        },
-                    })
-                    const isQueryFailed = Boolean(
-                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
-                    )
-                    const tblToBeAltered = this.vue.$help.escapeIdentifiers(
-                        getters.getAlteredActiveNode.id
-                    )
-                    let queryName = `Apply changes to ${tblToBeAltered}`
-                    if (!isQueryFailed)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.alterTableSuccessfully')],
-                                type: 'success',
-                            },
-                            { root: true }
-                        )
-                    else {
-                        queryName = `Failed to apply changes to ${tblToBeAltered}`
-                    }
-                    dispatch(
-                        'persisted/pushQueryLog',
-                        {
-                            startTime: request_sent_time,
-                            name: queryName,
-                            sql,
-                            res,
-                            connection_name: curr_cnct_resource.name,
-                            queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
-                        },
-                        { root: true }
-                    )
-                },
-                actionName: 'alterTable',
-                catchAction: e => {
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
-                        id: active_wke_id,
-                        payload: {
-                            is_altering_table: false,
-                            result: this.vue.$help.getErrorsArr(e),
-                        },
-                    })
-                },
-            })
-        },
-
         /**
+         * This action is used to execute statement or statements.
+         * Since users are allowed to modify the auto-generated SQL statement,
+         * they can add more SQL statements after or before the auto-generated statement
+         * which may receive error. As a result, the action log still log it as a failed action.
+         * This can be fixed if a SQL parser is introduced.
          * @param {String} payload.sql - sql to be executed
          * @param {String} payload.action - action name. e.g. DROP TABLE table_name
          * @param {Boolean} payload.showSnackbar - show successfully snackbar message
@@ -1267,34 +1203,34 @@ export default {
             const request_sent_time = new Date().valueOf()
             await dispatch('queryingActionWrapper', {
                 action: async () => {
+                    let stmt_err_msg_obj = {}
                     let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                         sql,
                         max_rows: rootState.persisted.query_max_rows,
                     })
+                    const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
+                    const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)
+                    // if multi statement mode, it'll still return only an err msg obj
+                    if (errMsgs.length) stmt_err_msg_obj = errMsgs[0]
                     commit('UPDATE_EXE_STMT_RESULT_MAP', {
                         id: active_wke_id,
                         payload: {
                             data: res.data.data.attributes,
+                            stmt_err_msg_obj,
                         },
                     })
-                    const isFailed = Boolean(
-                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
-                    )
-                    let queryAction = action
-                    if (isFailed) queryAction = this.i18n.t('errors.failedToExeAction', { action })
-                    else if (showSnackbar)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [
-                                    this.i18n.t('info.exeActionSuccessfully', {
-                                        action: queryAction,
-                                    }),
-                                ],
-                                type: 'success',
-                            },
-                            { root: true }
-                        )
+                    let queryAction
+                    if (!this.vue.$typy(stmt_err_msg_obj).isEmptyObject)
+                        queryAction = this.i18n.t('errors.failedToExeAction', { action })
+                    else {
+                        queryAction = this.i18n.t('info.exeActionSuccessfully', { action })
+                        if (showSnackbar)
+                            commit(
+                                'SET_SNACK_BAR_MESSAGE',
+                                { text: [queryAction], type: 'success' },
+                                { root: true }
+                            )
+                    }
                     dispatch(
                         'persisted/pushQueryLog',
                         {
@@ -1485,13 +1421,6 @@ export default {
         getAlteredActiveNode: (state, getters) => {
             const { altered_active_node = null } = getters.getTblCreationInfo
             return altered_active_node
-        },
-        // altering_table_result_map getters
-        getAlteringTableResultMap: state =>
-            state.altering_table_result_map[state.active_wke_id] || {},
-        getIsAlteringTable: (state, getters) => {
-            const { is_altering_table = false } = getters.getAlteringTableResultMap
-            return is_altering_table
         },
         // exe_stmt_result_map getters
         getExeStmtResultMap: state => state.exe_stmt_result_map[state.active_wke_id] || {},
