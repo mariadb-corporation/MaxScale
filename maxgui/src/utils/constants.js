@@ -34,6 +34,13 @@ export const APP_CONFIG = Object.freeze({
         SP: 'Stored Procedure',
     }),
     SQL_SYS_SCHEMAS: ['information_schema', 'performance_schema', 'mysql', 'sys'],
+    // schema tree node context option types
+    SQL_NODE_CTX_OPTS: Object.freeze({
+        SQL_TXT_EDITOR_OPT_TYPES: { INSERT: 'INSERT', QUERY: 'QUERY' },
+        SQL_DDL_OPT_TYPES: { DD: 'DD' }, // Data definition
+        SQL_ADMIN_OPT_TYPES: { USE: 'USE' }, // Data definition
+    }),
+
     SQL_QUERY_MODES: Object.freeze({
         PRVW_DATA: 'PRVW_DATA',
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
