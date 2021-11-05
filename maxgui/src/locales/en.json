@@ -213,6 +213,7 @@
     "dropSchema": "Drop Schema",
     "dropSp": "Drop Stored Procedure",
     "dropTrigger": "Drop Trigger",
+    "truncateTbl": "Truncate Table",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

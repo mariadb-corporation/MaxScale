@@ -99,6 +99,7 @@
                         @use-db="useDb"
                         @alter-tbl="onAlterTable"
                         @drop-action="onDropAction"
+                        @truncate-tbl="onTruncateTbl"
                         v-on="$listeners"
                     />
                 </keep-alive>
@@ -269,6 +270,15 @@ export default {
                     break
             }
             this.sql = `${sql} ${escape(id)};`
+            this.actionName = this.sql.slice(0, -1)
+            this.isExeDlgOpened = true
+        },
+        /**
+         * @param {String} id - identifier
+         */
+        async onTruncateTbl(id) {
+            const { escapeIdentifiers: escape } = this.$help
+            this.sql = `truncate ${escape(id)};`
             this.actionName = this.sql.slice(0, -1)
             this.isExeDlgOpened = true
         },

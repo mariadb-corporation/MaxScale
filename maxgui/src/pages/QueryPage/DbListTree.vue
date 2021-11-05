@@ -173,6 +173,7 @@ export default {
                 [TABLE]: [
                     { text: this.$t('alterTbl'), type: DD },
                     { text: this.$t('dropTbl'), type: DD },
+                    { text: this.$t('truncateTbl'), type: DD },
                 ],
                 [SP]: [{ text: this.$t('dropSp'), type: DD }],
                 [COL]: [],
@@ -365,6 +366,9 @@ export default {
                 case this.$t('dropSp'):
                 case this.$t('dropTrigger'):
                     this.$emit('drop-action', { id: schema, type: item.type })
+                    break
+                case this.$t('truncateTbl'):
+                    this.$emit('truncate-tbl', schema)
                     break
             }
         },
