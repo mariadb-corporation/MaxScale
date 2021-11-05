@@ -100,7 +100,7 @@
     "module": "module | modules",
     "forceClosing": "Force closing",
     "run": "Run",
-    "previewData": "Preview Data",
+    "previewData": "Preview Data (top 1000)",
     "viewDetails": "View Details",
     "placeSchemaInEditor": "Place Schema in Editor",
     "placeColumnNameInEditor": "Place Column Name in Editor",
