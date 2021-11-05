@@ -47,7 +47,7 @@ export default {
     props: {
         value: { type: String },
         defCharset: { type: String, required: true },
-        height: { type: Number, default: 32 },
+        height: { type: Number, default: 36 },
         disabled: { type: Boolean, default: false },
     },
     computed: {

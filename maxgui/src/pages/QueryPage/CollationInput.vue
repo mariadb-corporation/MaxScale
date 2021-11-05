@@ -48,7 +48,7 @@ export default {
         value: { type: String },
         defCollation: { type: String, required: true },
         charset: { type: String },
-        height: { type: Number, default: 32 },
+        height: { type: Number, default: 36 },
         disabled: { type: Boolean, default: false },
     },
     computed: {

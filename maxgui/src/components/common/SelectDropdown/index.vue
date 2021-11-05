@@ -9,6 +9,7 @@
         :clearable="clearable"
         outlined
         dense
+        :height="36"
         class="std mariadb-select-input"
         :class="[required && 'error--text__bottom']"
         :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"

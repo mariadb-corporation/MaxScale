@@ -13,6 +13,7 @@
         single-line
         outlined
         dense
+        :height="36"
         :rules="rules.requiredAddress"
         :disabled="targetItem.disabled"
         autocomplete="off"
@@ -29,6 +30,7 @@
         single-line
         outlined
         dense
+        :height="36"
         :rules="rules.requiredFieldEither"
         :disabled="targetItem.disabled"
         autocomplete="off"
@@ -45,6 +47,7 @@
         single-line
         outlined
         dense
+        :height="36"
         :rules="rules.requiredFieldEither"
         :disabled="targetItem.disabled"
         autocomplete="off"
@@ -64,6 +67,7 @@
         :items="[true, false]"
         outlined
         dense
+        :height="36"
         :disabled="targetItem.disabled"
         @change="handleChange"
     />
@@ -80,6 +84,7 @@
         :items="targetItem.enum_values"
         outlined
         dense
+        :height="36"
         :multiple="targetItem.type === 'enum_mask'"
         :disabled="targetItem.disabled"
         :rules="rules.required"
@@ -114,6 +119,7 @@
         single-line
         outlined
         dense
+        :height="36"
         :rules="rules.number"
         :disabled="targetItem.disabled"
         autocomplete="off"
@@ -139,6 +145,7 @@
                 :items="targetItem.type === 'duration' ? durationSuffixes : sizeSuffixes"
                 outlined
                 dense
+                :height="36"
             />
         </template>
     </v-text-field>
@@ -152,6 +159,7 @@
         class="std std-password error--text__bottom error--text__bottom--no-margin password-string"
         outlined
         dense
+        :height="36"
         :type="isPwdVisible ? 'text' : 'password'"
         :rules="rules.required"
         autocomplete="new-password"
@@ -175,6 +183,7 @@
         single-line
         outlined
         dense
+        :height="36"
         :rules="rules.required"
         :disabled="targetItem.disabled"
         autocomplete="off"

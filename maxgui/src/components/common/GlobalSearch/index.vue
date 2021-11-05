@@ -5,7 +5,7 @@
         class="search-restyle mr-4"
         :class="`route-${$route.name}`"
         name="search"
-        height="39"
+        :height="36"
         outlined
         required
         :placeholder="$t('search')"

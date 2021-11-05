@@ -300,7 +300,6 @@ input:-webkit-autofill:active {
         }
     }
     .v-input__control {
-        min-height: 30px;
         .v-select__selection--comma {
             font-size: 0.875rem !important;
             color: $navigation !important;
@@ -353,6 +352,9 @@ input:-webkit-autofill:active {
             &__action {
                 margin: 0px 0;
                 margin-right: 12px !important;
+                .v-simple-checkbox {
+                    line-height: 10px;
+                }
             }
         }
     }
