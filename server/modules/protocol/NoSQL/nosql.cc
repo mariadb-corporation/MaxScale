@@ -3235,6 +3235,7 @@ template<>
 bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string& command,
                                                                    const char* zKey,
                                                                    const bsoncxx::document::element& element,
+                                                                   int error_code,
                                                                    Conversion conversion)
 {
     if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
@@ -3243,7 +3244,7 @@ bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string&
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'object'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     bsoncxx::document::view doc;
@@ -3263,7 +3264,7 @@ bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string&
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
                << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
 
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            throw SoftError(ss.str(), error_code);
         }
     }
 
@@ -3274,6 +3275,7 @@ template<>
 bsoncxx::array::view nosql::element_as<bsoncxx::array::view>(const string& command,
                                                              const char* zKey,
                                                              const bsoncxx::document::element& element,
+                                                             int error_code,
                                                              Conversion)
 {
     if (element.type() != bsoncxx::type::k_array)
@@ -3282,7 +3284,7 @@ bsoncxx::array::view nosql::element_as<bsoncxx::array::view>(const string& comma
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'array'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     return element.get_array();
@@ -3292,6 +3294,7 @@ template<>
 string nosql::element_as<string>(const string& command,
                                  const char* zKey,
                                  const bsoncxx::document::element& element,
+                                 int error_code,
                                  Conversion)
 {
     if (element.type() != bsoncxx::type::k_utf8)
@@ -3300,7 +3303,7 @@ string nosql::element_as<string>(const string& command,
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'string'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     const auto& utf8 = element.get_utf8();
@@ -3311,6 +3314,7 @@ template<>
 int64_t nosql::element_as<int64_t>(const string& command,
                                    const char* zKey,
                                    const bsoncxx::document::element& element,
+                                   int error_code,
                                    Conversion conversion)
 {
     int64_t rv;
@@ -3321,7 +3325,7 @@ int64_t nosql::element_as<int64_t>(const string& command,
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     switch (element.type())
@@ -3344,7 +3348,7 @@ int64_t nosql::element_as<int64_t>(const string& command,
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
                << bsoncxx::to_string(element.type()) << "', expected a number";
 
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            throw SoftError(ss.str(), error_code);
         }
     }
 
@@ -3355,6 +3359,7 @@ template<>
 int32_t nosql::element_as<int32_t>(const string& command,
                                    const char* zKey,
                                    const bsoncxx::document::element& element,
+                                   int error_code,
                                    Conversion conversion)
 {
     int32_t rv;
@@ -3365,7 +3370,7 @@ int32_t nosql::element_as<int32_t>(const string& command,
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'int32'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     switch (element.type())
@@ -3388,7 +3393,7 @@ int32_t nosql::element_as<int32_t>(const string& command,
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
                << bsoncxx::to_string(element.type()) << "', expected a number";
 
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            throw SoftError(ss.str(), error_code);
         }
     }
 
@@ -3399,6 +3404,7 @@ template<>
 bool nosql::element_as<bool>(const string& command,
                              const char* zKey,
                              const bsoncxx::document::element& element,
+                             int error_code,
                              Conversion conversion)
 {
     bool rv = true;
@@ -3409,7 +3415,7 @@ bool nosql::element_as<bool>(const string& command,
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
            << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error_code);
     }
 
     switch (element.type())
@@ -3540,7 +3546,14 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
 
         if (!id_seen)
         {
-            extractions.push_back("_id");
+            // _id was not specifically mentioned, so it must be added, but it
+            // must be added to the front.
+            vector<string> e;
+            e.push_back("_id");
+
+            copy(extractions.begin(), extractions.end(), std::back_inserter(e));
+
+            extractions.swap(e);
         }
     }
 
@@ -3731,10 +3744,17 @@ bool nosql::get_number_as_double(const bsoncxx::document::element& element, doub
     return rv;
 }
 
-string nosql::table_create_statement(const std::string& table_name, int64_t id_length)
+string nosql::table_create_statement(const std::string& table_name, int64_t id_length, bool if_not_exists)
 {
     ostringstream ss;
-    ss << "CREATE TABLE " << table_name << " ("
+    ss << "CREATE TABLE ";
+
+    if (if_not_exists)
+    {
+        ss << "IF NOT EXISTS ";
+    }
+
+    ss << table_name << " ("
        << "id VARCHAR(" << id_length << ") "
        << "AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) UNIQUE KEY, "
        << "doc JSON, "

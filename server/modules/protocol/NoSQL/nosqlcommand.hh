@@ -462,7 +462,10 @@ protected:
 
     template<class Type>
     bool optional(const bsoncxx::document::view& doc,
-                  const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
+                  const char* zKey,
+                  Type* pElement,
+                  int error_code,
+                  Conversion conversion = Conversion::STRICT) const
     {
         bool rv = false;
 
@@ -470,7 +473,7 @@ protected:
 
         if (element)
         {
-            *pElement = element_as<Type>(m_name, zKey, element, conversion);
+            *pElement = element_as<Type>(m_name, zKey, element, error_code, conversion);
             rv = true;
         }
 
@@ -479,21 +482,62 @@ protected:
 
     template<class Type>
     bool optional(const bsoncxx::document::view& doc,
-                  const std::string& key, Type* pElement, Conversion conversion = Conversion::STRICT) const
+                  const char* zKey,
+                  Type* pElement,
+                  Conversion conversion = Conversion::STRICT) const
     {
-        return optional(doc, key.c_str(), pElement, conversion);
+        return optional(doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
     }
 
     template<class Type>
-    bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
+    bool optional(const bsoncxx::document::view& doc,
+                  const std::string& key,
+                  Type* pElement,
+                  Conversion conversion = Conversion::STRICT) const
     {
-        return optional(m_doc, zKey, pElement, conversion);
+        return optional(doc, key.c_str(), pElement, error::TYPE_MISMATCH, conversion);
+    }
+
+    template<class Type>
+    bool optional(const bsoncxx::document::view& doc,
+                  const std::string& key,
+                  Type* pElement,
+                  int error_code,
+                  Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(doc, key.c_str(), pElement, error_code, conversion);
+    }
+
+    template<class Type>
+    bool optional(const char* zKey,
+                  Type* pElement,
+                  Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(m_doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+    }
+
+    template<class Type>
+    bool optional(const char* zKey,
+                  Type* pElement,
+                  int error_code,
+                  Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(m_doc, zKey, pElement, error_code, conversion);
     }
 
     template<class Type>
     bool optional(const std::string& key, Type* pElement, Conversion conversion = Conversion::STRICT) const
     {
         return optional(m_doc, key.c_str(), pElement, conversion);
+    }
+
+    template<class Type>
+    bool optional(const std::string& key,
+                  Type* pElement,
+                  int error_code,
+                  Conversion conversion = Conversion::STRICT) const
+    {
+        return optional(m_doc, key.c_str(), pElement, error_code, conversion);
     }
 
     template<class Type>

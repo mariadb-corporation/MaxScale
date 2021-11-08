@@ -290,41 +290,57 @@ template<class T>
 T element_as(const std::string& command,
              const char* zKey,
              const bsoncxx::document::element& element,
+             int error_code,
              Conversion conversion = Conversion::STRICT);
+
+template<class T>
+T element_as(const std::string& command,
+             const char* zKey,
+             const bsoncxx::document::element& element,
+             Conversion conversion = Conversion::STRICT)
+{
+    return element_as<T>(command, zKey, element, error::TYPE_MISMATCH, conversion);
+}
 
 template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
+                                                            int error_code,
                                                             Conversion conversion);
 
 template<>
 bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
                                                       const char* zKey,
                                                       const bsoncxx::document::element& element,
+                                                      int error_code,
                                                       Conversion conversion);
 
 template<>
 std::string element_as<std::string>(const std::string& command,
                                     const char* zKey,
                                     const bsoncxx::document::element& element,
+                                    int error_code,
                                     Conversion conversion);
 
 template<>
 int64_t element_as<int64_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
+                            int error_code,
                             Conversion conversion);
 
 template<>
 int32_t element_as<int32_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
+                            int error_code,
                             Conversion conversion);
 template<>
 bool element_as<bool>(const std::string& command,
                       const char* zKey,
                       const bsoncxx::document::element& element,
+                      int error_code,
                       Conversion conversion);
 
 
@@ -1509,14 +1525,16 @@ private:
 /**
  * Get SQL statement for creating a document table.
  *
- * @param table_name  The name of the table. Will be used verbatim,
- *                    so all necessary quotes should be provided.
- * @param id_length   The VARCHAR length of the id column.
+ * @param table_name     The name of the table. Will be used verbatim,
+ *                       so all necessary quotes should be provided.
+ * @param id_length      The VARCHAR length of the id column.
+ * @param if_not_exists  If true, the statement will contain "IF NOT EXISTS".
  *
  * @return An SQL statement for creating the table.
  */
 std::string table_create_statement(const std::string& table_name,
-                                   int64_t id_length);
+                                   int64_t id_length,
+                                   bool if_not_exists = true);
 
 
 /**
