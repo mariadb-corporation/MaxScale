@@ -870,6 +870,947 @@ private:
 
 
 // https://docs.mongodb.com/v4.4/reference/command/findAndModify/
+class FindAndModify : public MultiCommand
+{
+public:
+    static constexpr const char* const KEY = "findAndModify";
+    static constexpr const char* const HELP = "";
+
+    using MultiCommand::MultiCommand;
+
+    ~FindAndModify()
+    {
+    }
+
+    State execute(GWBUF** ppNoSQL_response) override final
+    {
+        Query query = generate_sql();
+
+        send_downstream(query.statements().front());
+
+        return State::BUSY;
+    }
+
+protected:
+    Query generate_sql() override final
+    {
+        bool remove = false;
+        optional(key::REMOVE, &remove);
+
+        bsoncxx::document::view update;
+        if (optional(key::UPDATE, &update))
+        {
+            if (remove)
+            {
+                throw SoftError("Cannot specify both an update and remove=true", error::FAILED_TO_PARSE);
+            }
+
+            m_sSub_command.reset(new UpdateSubCommand(this));
+        }
+        else if (!remove)
+        {
+            throw SoftError("Either an update or remove=true must be specified", error::FAILED_TO_PARSE);
+        }
+        else
+        {
+            m_sSub_command.reset(new RemoveSubCommand(this));
+        }
+
+        return m_sSub_command->create_initial_select();
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    {
+        return m_sSub_command->translate(std::move(mariadb_response), ppResponse);
+    }
+
+private:
+    class SubCommand
+    {
+    public:
+        static const int32_t ACTION_INITIAL_SELECT = 1;
+        static const int32_t ACTION_COMMIT         = 2;
+
+        SubCommand(FindAndModify* pSuper)
+            : m_super(*pSuper)
+            , m_doc(pSuper->doc())
+        {
+        }
+
+        virtual ~SubCommand()
+        {
+            if (m_dcid)
+            {
+                m_super.worker().cancel_delayed_call(m_dcid);
+            }
+        }
+
+        Query create_initial_select()
+        {
+            ostringstream select;
+
+            select << "SELECT id, ";
+
+            bsoncxx::document::view fields;
+            if (optional(key::FIELDS, &fields, error::LOCATION31175))
+            {
+                m_extractions = projection_to_extractions(fields);
+
+                select << extractions_to_columns(m_extractions);
+            }
+            else
+            {
+                select << "doc";
+            }
+
+            select << " FROM " << table() << " ";
+
+            m_select_head = select.str();
+
+            ostringstream sql;
+
+            sql << "BEGIN; " << m_select_head;
+
+            bsoncxx::document::view query;
+            if (optional(key::QUERY, &query, error::LOCATION31160))
+            {
+                sql << query_to_where_clause(query);
+            }
+
+            bsoncxx::document::view sort;
+            if (optional(key::SORT, &sort, error::LOCATION31174))
+            {
+                string order_by = sort_to_order_by(sort);
+
+                if (!order_by.empty())
+                {
+                    sql << "ORDER BY " << order_by << " ";
+                }
+            }
+
+            sql << " LIMIT 1 FOR UPDATE";
+
+            return Query(Query::MULTI, 2, sql.str());
+        }
+
+        virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            State state = State::READY;
+
+            switch (m_action)
+            {
+            case ACTION_COMMIT:
+                state = translate_commit(std::move(mariadb_response), ppResponse);
+                break;
+
+            case ACTION_INITIAL_SELECT:
+                state = translate_initial_select(std::move(mariadb_response), ppResponse);
+                break;
+
+            default:
+                mxb_assert(!true);
+            }
+
+            return state;
+        }
+
+    protected:
+        template<class Type>
+        bool optional(const char* zKey, Type* pElement, Conversion conversion = Conversion::STRICT) const
+        {
+            return m_super.optional(zKey, pElement, conversion);
+        }
+
+        template<class Type>
+        bool optional(const char* zKey,
+                      Type* pElement,
+                      int error_code,
+                      Conversion conversion = Conversion::STRICT) const
+        {
+            return m_super.optional(zKey, pElement, error_code, conversion);
+        }
+
+        string table() const
+        {
+            return m_super.table();
+        }
+
+        virtual void initial_select_succeeded(const string& json) = 0;
+        virtual void initial_select_no_such_table() = 0;
+
+        void send_downstream_delayed(const string& sql, int32_t action)
+        {
+            m_action = action;
+            send_downstream_delayed(sql);
+        }
+
+        string interpret_resultset(uint8_t* pBuffer, uint8_t** ppEnd)
+        {
+            ComQueryResponse cqr(&pBuffer);
+
+            auto nFields = cqr.nFields();
+
+            mxb_assert((m_extractions.empty() && nFields == 2)
+                       || (m_extractions.size() + 1 == nFields));
+
+            vector<std::string> names;
+            vector<enum_field_types> types;
+            for (size_t i = 0; i < nFields; ++i)
+            {
+                ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                names.push_back(column_def.name().to_string());
+                types.push_back(column_def.type());
+            }
+
+            ComResponse eof(&pBuffer);
+            mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+            // Now pBuffer points at the beginning of rows of which there
+            // should be at most one.
+            string json;
+            if (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+            {
+                CQRTextResultsetRow row(&pBuffer, types);
+
+                auto it = row.begin();
+
+                string id = (*it).as_string().to_string();
+                if (m_id.empty())
+                {
+                    m_id = id;
+                }
+                else
+                {
+                    MXS_NOTICE("ID =%s", id.c_str());
+                    MXS_NOTICE("MID=%s", m_id.c_str());
+                    mxb_assert(id == m_id);
+                }
+                ++it;
+
+                json = resultset_row_to_json(row, it, m_extractions);
+            }
+
+            ComResponse last_eof(&pBuffer);
+            *ppEnd = pBuffer;
+
+            return json;
+        }
+
+        GWBUF* create_response(const bsoncxx::document::value& doc,
+                               Command::IsError is_error = Command::IsError::NO) const
+        {
+            return m_super.create_response(doc, is_error);
+        }
+
+        void set_response(GWBUF* pResponse)
+        {
+            m_sResponse.reset(pResponse);
+        }
+
+        void commit()
+        {
+            send_downstream_delayed("COMMIT", ACTION_COMMIT);
+        }
+
+        void throw_unexpected_packet()
+        {
+            m_super.throw_unexpected_packet();
+        }
+
+        void send_downstream_delayed(const string& sql)
+        {
+            mxb_assert(m_dcid == 0);
+
+            m_dcid = m_super.worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
+                    m_dcid = 0;
+
+                    if (action == Worker::Call::EXECUTE)
+                    {
+                        send_downstream(sql);
+                    }
+
+                    return false;
+                });
+        }
+
+    protected:
+        FindAndModify&                 m_super;
+        const bsoncxx::document::view& m_doc;
+        int32_t                        m_action { ACTION_INITIAL_SELECT };
+        string                         m_id;
+        vector<string>                 m_extractions;
+        string                         m_select_head;
+        DocumentBuilder                m_last_error_object;
+
+    private:
+        State translate_commit(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            ComResponse response(mariadb_response.data());
+
+            if (response.type() == ComResponse::ERR_PACKET)
+            {
+                // Hmm, the COMMIT failed.
+                set_response(MariaDBError(ComERR(response)).create_response(m_super));
+            }
+
+            *ppResponse = m_sResponse.release();
+            return State::READY;
+        }
+
+        State translate_initial_select(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            uint8_t* pBegin = mariadb_response.data();
+            uint8_t* pBuffer = pBegin;
+            ComResponse begin_response(&pBuffer);
+
+            switch (begin_response.type())
+            {
+            case ComResponse::ERR_PACKET:
+                throw MariaDBError(ComERR(begin_response));
+                break;
+
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse select_response(pBuffer);
+
+                    if (select_response.type() == ComResponse::ERR_PACKET)
+                    {
+                        ComERR err(select_response);
+
+                        if (err.code() == ER_NO_SUCH_TABLE)
+                        {
+                            initial_select_no_such_table();
+                        }
+                        else
+                        {
+                            set_response(MariaDBError(err).create_response(m_super));
+                            commit();
+                        }
+                    }
+                    else
+                    {
+                        // Ok, so it was a resultset.
+                        uint8_t *pNext;
+                        string json = interpret_resultset(pBuffer, &pNext);
+                        mxb_assert(pNext == pBegin + mariadb_response.length());
+
+                        initial_select_succeeded(json);
+                    }
+                }
+                break;
+
+            case ComResponse::LOCAL_INFILE_PACKET:
+            default:
+                throw_unexpected_packet();
+            }
+
+            *ppResponse = nullptr;
+            return State::BUSY;
+        }
+
+        void send_downstream(const string& sql, int32_t action)
+        {
+            m_action = action;
+            send_downstream(sql);
+        }
+
+        void send_downstream(const string& sql)
+        {
+            m_super.send_downstream(sql);
+        }
+
+    private:
+        uint32_t          m_dcid { 0 };
+        unique_ptr<GWBUF> m_sResponse;
+    };
+
+    class RemoveSubCommand : public SubCommand
+    {
+    public:
+        static const int32_t ACTION_DELETE = 101;
+
+        RemoveSubCommand(FindAndModify* pSuper)
+            : SubCommand(pSuper)
+        {
+            bool upsert;
+            if (optional(key::UPSERT, &upsert) && upsert)
+            {
+                throw SoftError("Cannot specify both upsert=true and remove=true", error::FAILED_TO_PARSE);
+            }
+
+            bool new_option;
+            if (optional(key::NEW, &new_option) && new_option)
+            {
+                throw SoftError("Cannot specify both new=true and remove=true; "
+                                "'remove' always returns the deleted document", error::FAILED_TO_PARSE);
+
+            }
+        }
+
+        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+        {
+            State state = State::READY;
+
+            switch (m_action)
+            {
+            case ACTION_DELETE:
+                state = translate_delete(std::move(mariadb_response), ppResponse);
+                break;
+
+            default:
+                state = SubCommand::translate(std::move(mariadb_response), ppResponse);
+            }
+
+            return state;
+        }
+
+    private:
+        State translate_delete(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            State state = State::BUSY;
+
+            uint8_t* pBuffer = mariadb_response.data();
+            uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+            ComResponse delete_response(&pBuffer);
+
+            switch (delete_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    // That was the OK for the delete. Now let's check the commit.
+                    ComResponse commit_response(&pBuffer);
+                    mxb_assert(pBuffer == pEnd);
+
+                    if (commit_response.is_ok())
+                    {
+                        m_last_error_object.append(kvp(key::N, 1));
+
+                        DocumentBuilder doc;
+                        doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+                        doc.append(kvp(key::VALUE, nosql::bson_from_json(m_json)));
+                        doc.append(kvp(key::OK, 1));
+
+                        *ppResponse = create_response(doc.extract());
+                    }
+                    else
+                    {
+                        mxb_assert(commit_response.is_err());
+
+                        *ppResponse = MariaDBError(commit_response).create_response(m_super);
+                    }
+                }
+                state = State::READY;
+                break;
+
+            case ComResponse::ERR_PACKET:
+                // Peculiar, the DELETE failed?
+                set_response(MariaDBError(ComERR(delete_response)).create_response(m_super));
+                commit();
+                break;
+
+            default:
+                throw_unexpected_packet();
+            }
+
+            return state;
+        }
+
+        void initial_select_succeeded(const string& json) override
+        {
+            if (m_id.empty())
+            {
+                // We were asked to delete a document that does not exist.
+                m_last_error_object.append(kvp(key::N, 0));
+
+                DocumentBuilder doc;
+                doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+                doc.append(kvp(key::VALUE, bsoncxx::types::b_null()));
+                doc.append(kvp(key::OK, 1));
+
+                set_response(create_response(doc.extract()));
+                commit();
+            }
+            else
+            {
+                // Document was found.
+                m_json = json;
+                delete_document();
+            }
+        }
+
+        void initial_select_no_such_table() override
+        {
+            m_last_error_object.append(kvp(key::N, 0));
+
+            DocumentBuilder doc;
+            doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+            doc.append(kvp(key::VALUE, bsoncxx::types::b_null()));
+            doc.append(kvp(key::OK, 1));
+
+            set_response(create_response(doc.extract()));
+
+            commit();
+        }
+
+        void delete_document()
+        {
+            mxb_assert(!m_id.empty());
+
+            ostringstream ss;
+            ss << "DELETE FROM " << table() << " WHERE id='" << m_id << "'; COMMIT";
+
+            send_downstream_delayed(ss.str(), ACTION_DELETE);
+        }
+
+    private:
+        string m_json;
+    };
+
+    class UpdateSubCommand : public SubCommand
+    {
+    public:
+        static const int32_t ACTION_UPDATE = 201;
+        static const int32_t ACTION_INSERT = 202;
+        static const int32_t ACTION_CREATE_TABLE = 203;
+
+        UpdateSubCommand(FindAndModify* pSuper)
+            : SubCommand(pSuper)
+        {
+            optional(key::NEW, &m_new);
+            optional(key::UPSERT, &m_upsert);
+        }
+
+        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+        {
+            State state = State::READY;
+
+            switch (m_action)
+            {
+            case ACTION_UPDATE:
+                state = translate_update(std::move(mariadb_response), ppResponse);
+                break;
+
+            case ACTION_INSERT:
+                state = translate_insert(std::move(mariadb_response), ppResponse);
+                break;
+
+            case ACTION_CREATE_TABLE:
+                state = translate_create_table(std::move(mariadb_response), ppResponse);
+                break;
+
+            default:
+                state = SubCommand::translate(std::move(mariadb_response), ppResponse);
+            }
+
+            return state;
+        }
+
+    private:
+        State translate_update(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            State state = State::BUSY;
+
+            uint8_t* pBuffer = mariadb_response.data();
+            uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+            ComResponse update_response(&pBuffer);
+
+            switch (update_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    if (m_new)
+                    {
+                        ComResponse select_response(pBuffer);
+
+                        if (select_response.type() == ComResponse::ERR_PACKET)
+                        {
+                            set_response(MariaDBError(ComERR(select_response)).create_response(m_super));
+                            commit();
+                        }
+                        else
+                        {
+                            m_json = interpret_resultset(pBuffer, &pBuffer);
+
+                            ComResponse commit_response(&pBuffer);
+                            mxb_assert(pBuffer == pEnd);
+
+                            if (commit_response.is_err())
+                            {
+                                throw MariaDBError(ComERR(commit_response));
+                            }
+
+                            *ppResponse = create_upsert_response();
+                            state = State::READY;
+                        }
+                    }
+                    else
+                    {
+                        ComResponse commit_response(&pBuffer);
+                        mxb_assert(pBuffer == pEnd);
+
+                        if (commit_response.is_err())
+                        {
+                            throw MariaDBError(ComERR(commit_response));
+                        }
+
+                        *ppResponse = create_upsert_response();
+                        state = State::READY;
+                    }
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                set_response(MariaDBError(ComERR(update_response)).create_response(m_super));
+                commit();
+                break;
+
+            default:
+                throw_unexpected_packet();
+            }
+
+            return state;
+        }
+
+        State translate_insert(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            State state = State::BUSY;
+
+            uint8_t* pBuffer = mariadb_response.data();
+            uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+            ComResponse insert_response(&pBuffer);
+
+            switch (insert_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse update_response(&pBuffer);
+
+                    if (update_response.is_err())
+                    {
+                        set_response(MariaDBError(ComERR(update_response)).create_response(m_super));
+                        commit();
+                    }
+                    else
+                    {
+                        if (m_new)
+                        {
+                            ComResponse select_response(pBuffer);
+
+                            if (select_response.is_err())
+                            {
+                                set_response(MariaDBError(ComERR(select_response)).create_response(m_super));
+                                commit();
+                            }
+                            else
+                            {
+                                m_json = interpret_resultset(pBuffer, &pBuffer);
+
+                                ComResponse commit_response(&pBuffer);
+                                mxb_assert(pBuffer == pEnd);
+
+                                if (commit_response.is_err())
+                                {
+                                    throw MariaDBError(ComERR(commit_response));
+                                }
+
+                                *ppResponse = create_upsert_response();
+                                state = State::READY;
+                            }
+                        }
+                        else
+                        {
+                            ComResponse commit_response(&pBuffer);
+                            mxb_assert(pBuffer == pEnd);
+
+                            if (commit_response.is_err())
+                            {
+                                throw MariaDBError(ComERR(commit_response));
+                            }
+
+                            *ppResponse = create_upsert_response();
+                            state = State::READY;
+                        }
+                    }
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                set_response(MariaDBError(ComERR(insert_response)).create_response(m_super));
+                commit();
+                break;
+
+            default:
+                throw_unexpected_packet();
+            }
+
+            return state;
+        }
+
+        State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+        {
+            State state = State::BUSY;
+
+            uint8_t* pBuffer = mariadb_response.data();
+            uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+            ComResponse commit_response(&pBuffer);
+
+            switch (commit_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse create_database_response(&pBuffer);
+
+                    if (create_database_response.type() == ComResponse::OK_PACKET)
+                    {
+                        ComResponse create_table_response(&pBuffer);
+
+                        if (create_table_response.is_ok())
+                        {
+                            table_created();
+                        }
+                    }
+                    else
+                    {
+                        mxb_assert(create_database_response.type() == ComResponse::ERR_PACKET);
+
+                        throw MariaDBError(ComERR(create_database_response));
+                    }
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                throw MariaDBError(ComERR(commit_response));
+                break;
+
+            default:
+                throw_unexpected_packet();
+            }
+
+            return state;
+        }
+
+
+        void initial_select_succeeded(const string& json) override
+        {
+            if (!m_id.empty())
+            {
+                m_updated_existing = true;
+
+                if (!m_new)
+                {
+                    m_json = json;
+                }
+
+                update();
+            }
+            else if (m_upsert)
+            {
+                insert();
+            }
+            else
+            {
+                m_last_error_object.append(kvp(key::N, 0));
+                m_last_error_object.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
+
+                DocumentBuilder doc;
+                doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+                doc.append(kvp(key::VALUE, bsoncxx::types::b_null()));
+                doc.append(kvp(key::OK, 1));
+
+                set_response(create_response(doc.extract()));
+                commit();
+            }
+        }
+
+        void initial_select_no_such_table() override
+        {
+            if (m_upsert)
+            {
+                create_table();
+            }
+            else
+            {
+                m_last_error_object.append(kvp(key::N, 0));
+                m_last_error_object.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
+
+                DocumentBuilder doc;
+                doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+                doc.append(kvp(key::VALUE, bsoncxx::types::b_null()));
+                doc.append(kvp(key::OK, 1));
+
+                set_response(create_response(doc.extract()));
+                commit();
+            }
+        }
+
+        void table_created()
+        {
+            send_downstream_delayed(m_aborted_statement, m_aborted_action);
+        }
+
+    private:
+        void create_table()
+        {
+            m_aborted_action = m_action;
+            m_aborted_statement = m_super.last_statement();
+
+            m_action = ACTION_CREATE_TABLE;
+
+
+            bool if_not_exists = true;
+
+            ostringstream sql;
+            sql << "COMMIT; "
+                << "CREATE DATABASE IF NOT EXISTS `" << m_super.m_database.name() << "`; "
+                << table_create_statement(table(), m_super.m_database.config().id_length, if_not_exists);
+
+            send_downstream_delayed(sql.str());
+        }
+
+        void update()
+        {
+            m_action = ACTION_UPDATE;
+
+            auto u = m_doc[key::UPDATE];
+
+            ostringstream sql;
+            sql << "UPDATE " << table() << " SET doc = ";
+
+            if (u)
+            {
+                sql << update_specification_to_set_value(m_doc, u)
+                    << " WHERE id = '" << m_id << "'; ";
+            }
+            else
+            {
+                // To make response handling simpler, we want to have an update statement.
+                sql << "doc WHERE true = false; ";
+            }
+
+            if (m_new)
+            {
+                sql << "SELECT id, " << extractions_to_columns(m_extractions) << " FROM " << table()
+                    << " WHERE id = '" << m_id << "'; ";
+            }
+
+            sql << "COMMIT";
+
+            send_downstream_delayed(sql.str());
+        }
+
+        void insert()
+        {
+            m_action = ACTION_INSERT;
+
+            ostringstream sql;
+            sql << "INSERT INTO " << table() << " (doc) VALUES ('";
+
+            bsoncxx::document::view query;
+            optional(key::QUERY, &query);
+
+            bsoncxx::document::view update;
+            optional(key::UPDATE, &update);
+
+            DocumentBuilder builder;
+
+            auto qid = query[key::_ID];
+            auto uid = update[key::_ID];
+
+            if (qid)
+            {
+                m_id = id_to_string(qid);
+                append(builder, key::_ID, qid);
+                append(m_last_error_object, key::UPSERTED, qid);
+            }
+            else
+            {
+                if (uid)
+                {
+                    m_id = id_to_string(uid);
+                    append(builder, key::_ID, uid);
+                    append(m_last_error_object, key::UPSERTED, uid);
+                }
+                else
+                {
+                    auto oid = bsoncxx::oid();
+                    m_id = "{\"$oid\":\"" + oid.to_string() + "\"}";
+                    builder.append(kvp(key::_ID, oid));
+                    m_last_error_object.append(kvp(key::UPSERTED, oid));
+                }
+            }
+
+            for (const auto& e : query)
+            {
+                if (e.key().compare(key::_ID) != 0)
+                {
+                    append(builder, e.key(), e);
+                }
+            }
+
+            sql << bsoncxx::to_json(builder.extract()) << "'); ";
+
+            sql << "UPDATE " << table() << " SET doc = ";
+
+            auto u = m_doc[key::UPDATE];
+
+            if (u)
+            {
+                sql << update_specification_to_set_value(m_doc, u)
+                    << " WHERE id = '" << m_id << "'; ";
+            }
+            else
+            {
+                // To make response handling simpler, we want to have an update statement.
+                sql << "doc WHERE true = false; ";
+            }
+
+            if (m_new)
+            {
+                sql << m_select_head << " WHERE id = '" << m_id << "'; ";
+            }
+
+            sql << "COMMIT";
+
+            send_downstream_delayed(sql.str());
+        }
+
+        GWBUF* create_upsert_response()
+        {
+            m_last_error_object.append(kvp(key::N, 1));
+            m_last_error_object.append(kvp(key::UPDATED_EXISTING, m_updated_existing));
+
+            DocumentBuilder doc;
+            doc.append(kvp(key::LAST_ERROR_OBJECT, m_last_error_object.extract()));
+            if (m_json.empty())
+            {
+                doc.append(kvp(key::VALUE, bsoncxx::types::b_null()));
+            }
+            else
+            {
+                MXS_NOTICE("JSON: %s", m_json.c_str());
+                doc.append(kvp(key::VALUE, bsoncxx::from_json(m_json)));
+            }
+            doc.append(kvp(key::OK, 1));
+
+            return create_response(doc.extract());
+        }
+
+    private:
+        bool    m_new { false };
+        bool    m_upsert { false };
+        bool    m_updated_existing { false};
+        string  m_json;
+        int32_t m_aborted_action { 0 };
+        string  m_aborted_statement;
+    };
+
+    unique_ptr<SubCommand> m_sSub_command;
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/getLastError/
 class GetLastError final : public ImmediateCommand

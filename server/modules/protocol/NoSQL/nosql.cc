@@ -3953,9 +3953,14 @@ void create_entry(json_t* pRoot, const string& extraction, const std::string& va
 std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
                                          const std::vector<std::string>& extractions)
 {
-    string json;
+    return resultset_row_to_json(row, row.begin(), extractions);
+}
 
-    auto it = row.begin();
+std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
+                                         CQRTextResultsetRow::iterator it,
+                                         const std::vector<std::string>& extractions)
+{
+    string json;
 
     if (extractions.empty())
     {

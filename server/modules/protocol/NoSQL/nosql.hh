@@ -388,6 +388,7 @@ const char ERR[]                             = "err";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char EXTRA_INFO[]                      = "extraInfo";
 const char EXTRA[]                           = "extra";
+const char FIELDS[]                          = "fields";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
 const char FLOW_CONTROL[]                    = "flowControl";
@@ -408,6 +409,7 @@ const char KEY_VALUE[]                       = "keyValue";
 const char KEY[]                             = "key";
 const char KEYS_PER_INDEX[]                  = "keysPerIndex";
 const char KIND[]                            = "kind";
+const char LAST_ERROR_OBJECT[]               = "lastErrorObject";
 const char LIMIT[]                           = "limit";
 const char LOCAL_TIME[]                      = "localTime";
 const char LOGICAL_SESSION_TIMEOUT_MINUTES[] = "logicalSessionTimeoutMinutes";
@@ -428,6 +430,7 @@ const char MULTI[]                           = "multi";
 const char NAMES[]                           = "names";
 const char NAME[]                            = "name";
 const char NAME_ONLY[]                       = "nameOnly";
+const char NEW[]                             = "new";
 const char NEXT_BATCH[]                      = "nextBatch";
 const char NRECORDS[]                        = "nrecords";
 const char NS[]                              = "ns";
@@ -450,6 +453,7 @@ const char PROJECTION[]                      = "projection";
 const char QUERY[]                           = "query";
 const char Q[]                               = "q";
 const char READ_ONLY[]                       = "readOnly";
+const char REMOVE[]                          = "remove";
 const char RESPONSE[]                        = "response";
 const char REQUIRES_AUTH[]                   = "requiresAuth";
 const char RUNNING[]                         = "running";
@@ -469,6 +473,7 @@ const char TOTAL_LINES_WRITTEN[]             = "totalLinesWritten";
 const char TOTAL_SIZE[]                      = "totalSize";
 const char TYPE[]                            = "type";
 const char UPDATED_EXISTING[]                = "updatedExisting";
+const char UPDATE[]                          = "update";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
 const char UPSERTED[]                        = "upserted";
@@ -478,6 +483,7 @@ const char UPTIME_MILLIS[]                   = "uptimeMillis";
 const char U[]                               = "u";
 const char V[]                               = "v";
 const char VALID[]                           = "valid";
+const char VALUE[]                           = "value";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
 const char VIEW_ON[]                         = "viewOn";
@@ -1582,6 +1588,10 @@ bsoncxx::document::value bson_from_json(const std::string& json);
  * @return The row as JSON.
  */
 std::string resultset_row_to_json(const CQRTextResultsetRow& row,
+                                  const std::vector<std::string>& extractions);
+
+std::string resultset_row_to_json(const CQRTextResultsetRow& row,
+                                  CQRTextResultsetRow::iterator begin,
                                   const std::vector<std::string>& extractions);
 
 }

@@ -201,6 +201,7 @@ struct ThisUnit
         { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
         { tolower(command::FSync::KEY),                    create_info<command::FSync>() },
         { tolower(command::Find::KEY),                     create_info<command::Find>() },
+        { tolower(command::FindAndModify::KEY),            create_info<command::FindAndModify>() },
         { tolower(command::GetCmdLineOpts::KEY),           create_info<command::GetCmdLineOpts>() },
         { tolower(command::GetFreeMonitoringStatus::KEY),  create_info<command::GetFreeMonitoringStatus>() },
         { tolower(command::GetLastError::KEY),             create_info<command::GetLastError>() },
