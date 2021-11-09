@@ -61,7 +61,7 @@ private:
     WritePosition    m_current_pos;
     maxsql::Rotate   m_rotate;
 
-    bool               m_in_transaction = false;
-    std::ostringstream m_tx_buffer;
+    bool              m_in_transaction = false;
+    std::vector<char> m_tx_buffer;
 };
 }
