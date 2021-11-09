@@ -694,6 +694,19 @@ If the slave has not caught up to the master within the configured time, it will
 be retried on the master. In MaxScale 2.3.0 an error was returned to the client
 when the slave timed out.
 
+Starting with MaxScale 2.5.17, a failed causal read inside of a read-only
+transaction started with `START TRANSACTION READ ONLY` will return the following
+error:
+
+```
+Error:    1792
+SQLSTATE: 25006
+Message:  Causal read timed out while in a read-only transaction, cannot retry command.
+```
+
+Older versions of MaxScale attempted to retry the command on the current master
+server which would cause the connection to be closed and a warning to be logged.
+
 ### `causal_reads_timeout`
 
 The timeout for the slave synchronization done by `causal_reads`. The
