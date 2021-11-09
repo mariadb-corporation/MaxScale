@@ -443,7 +443,42 @@ public:
             string key = check_update_path(sv);
             rec.push_back(sv);
 
-            ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+            auto i = key.find(".");
+
+            if (i == string::npos)
+            {
+                ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+            }
+            else
+            {
+                auto head = key.substr(0, i);
+                key = key.substr(i + 1);
+
+                ss << "'$." << head << "', JSON_OBJECT(";
+                int nClose = 1;
+
+                i = key.find(".");
+
+                while (i != string::npos)
+                {
+                    head = key.substr(0, i);
+                    key = key.substr(i + 1);
+
+                    ss << "'" << head << "', ";
+
+                    i = key.find(".");
+
+                    ss << "JSON_OBJECT(";
+                    ++nClose;
+                }
+
+                ss << "'" << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+
+                while (nClose--)
+                {
+                    ss << ")";
+                }
+            }
         }
 
         ss << ")";
