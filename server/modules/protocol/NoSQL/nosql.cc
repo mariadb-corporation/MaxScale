@@ -211,6 +211,30 @@ string get_logical_condition(const bsoncxx::document::element& element)
     {
         condition = get_or_condition(get_array("$or", element));
     }
+    else if (key.compare("$alwaysFalse") == 0)
+    {
+        double d;
+        if (!get_number_as_double(element, &d) || d != 1)
+        {
+            ostringstream ss;
+            ss << "Expected a number in : $alwaysFalse: " << element_to_string(element);
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        condition = "(false)";
+    }
+    else if (key.compare("$alwaysTrue") == 0)
+    {
+        double d;
+        if (!get_number_as_double(element, &d) || d != 1)
+        {
+            ostringstream ss;
+            ss << "Expected a number in : $alwaysTrue: " << element_to_string(element);
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+
+        condition = "(true)";
+    }
     else
     {
         ostringstream ss;
