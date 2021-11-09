@@ -28,8 +28,50 @@ namespace nosql
 namespace
 {
 
+void type_check_id(const bsoncxx::document::element& id)
+{
+    auto type = id.type();
+
+    switch (type)
+    {
+    case bsoncxx::type::k_array:
+    case bsoncxx::type::k_regex:
+    case bsoncxx::type::k_undefined:
+        {
+            ostringstream ss;
+            ss << "can't use a " << bsoncxx::to_string(type) << " for _id";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            bsoncxx::document::view doc = id.get_document();
+            for (const auto& element : doc)
+            {
+                const auto& key = element.key();
+
+                if (key.length() > 0 && key.front() == '$')
+                {
+                    ostringstream ss;
+                    ss << key << " is not valid for storage.";
+
+                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                }
+            }
+        }
+        break;
+
+    default:
+        ;
+    }
+}
+
 string id_to_string(const bsoncxx::document::element& id)
 {
+    type_check_id(id);
+
     string rv;
 
     switch (id.type())
@@ -2160,14 +2202,7 @@ protected:
 
         if (element)
         {
-            if (element.type() == bsoncxx::type::k_undefined)
-            {
-                ostringstream ss;
-                ss << "can't use a undefined for _id";
-
-                // TODO: Should be returned as a write error for this particular document.
-                throw SoftError(ss.str(), error::BAD_VALUE);
-            }
+            type_check_id(element);
 
             for (const auto& e : doc)
             {
