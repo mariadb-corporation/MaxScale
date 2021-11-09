@@ -164,6 +164,10 @@ bool search_file(const std::string& file_name,
             {
                 result = GtidInPriorFile;
             }
+            else
+            {
+                break;
+            }
         }
     }
 
