@@ -66,13 +66,12 @@ void FileWriter::commit_txn()
     m_in_transaction = false;
 
     m_current_pos.file.seekp(m_current_pos.write_pos);
-    const auto& buf = m_tx_buffer.str();
-    m_current_pos.file.write(buf.data(), buf.size());
+    m_current_pos.file.write(m_tx_buffer.data(), m_tx_buffer.size());
 
     m_current_pos.write_pos = m_current_pos.file.tellp();
     m_current_pos.file.flush();
 
-    m_tx_buffer.str("");
+    m_tx_buffer.clear();
 }
 
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
@@ -114,11 +113,12 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
         if (!m_ignore_preamble)
         {
             rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
-                                   + m_tx_buffer.str().size());
+                                   + m_tx_buffer.size());
 
             if (m_in_transaction)
             {
-                m_tx_buffer.write(rpl_event.pBuffer(), rpl_event.buffer_size());
+                const char* ptr = rpl_event.pBuffer();
+                m_tx_buffer.insert(m_tx_buffer.end(), ptr, ptr + rpl_event.buffer_size());
             }
             else if (etype == GTID_LIST_EVENT)
             {
