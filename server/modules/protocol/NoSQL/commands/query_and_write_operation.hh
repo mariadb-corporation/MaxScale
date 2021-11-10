@@ -28,8 +28,17 @@ namespace nosql
 namespace
 {
 
-void type_check_id(const bsoncxx::document::element& id)
+enum class IdTypeCheck
 {
+    THROW_IF_NOT_VALID,
+    RETURN_FALSE_IF_NOT_VALID
+};
+
+bool type_check_id(const bsoncxx::document::element& id,
+                   IdTypeCheck id_type_check = IdTypeCheck::THROW_IF_NOT_VALID)
+{
+    bool rv = true;
+
     auto type = id.type();
 
     switch (type)
@@ -37,11 +46,16 @@ void type_check_id(const bsoncxx::document::element& id)
     case bsoncxx::type::k_array:
     case bsoncxx::type::k_regex:
     case bsoncxx::type::k_undefined:
+        if (id_type_check == IdTypeCheck::THROW_IF_NOT_VALID)
         {
             ostringstream ss;
             ss << "can't use a " << bsoncxx::to_string(type) << " for _id";
 
             throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        else
+        {
+            rv = false;
         }
         break;
 
@@ -54,10 +68,18 @@ void type_check_id(const bsoncxx::document::element& id)
 
                 if (key.length() > 0 && key.front() == '$')
                 {
-                    ostringstream ss;
-                    ss << key << " is not valid for storage.";
+                    if (id_type_check == IdTypeCheck::THROW_IF_NOT_VALID)
+                    {
+                        ostringstream ss;
+                        ss << key << " is not valid for storage.";
 
-                    throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                        throw SoftError(ss.str(), error::DOLLAR_PREFIXED_FIELD_NAME);
+                    }
+                    else
+                    {
+                        rv = false;
+                        break;
+                    }
                 }
             }
         }
@@ -66,6 +88,8 @@ void type_check_id(const bsoncxx::document::element& id)
     default:
         ;
     }
+
+    return rv;
 }
 
 string id_to_string(const bsoncxx::document::element& id)
@@ -111,6 +135,11 @@ string id_to_string(const bsoncxx::document::element& id)
     }
 
     return rv;
+}
+
+bool element_is_valid_as_id(const bsoncxx::document::element& element)
+{
+    return type_check_id(element, IdTypeCheck::RETURN_FALSE_IF_NOT_VALID);
 }
 
 }
@@ -1763,7 +1792,7 @@ private:
             auto qid = query[key::_ID];
             auto uid = update[key::_ID];
 
-            if (qid)
+            if (qid && element_is_valid_as_id(qid))
             {
                 m_id = id_to_string(qid);
                 append(builder, key::_ID, qid);
@@ -2653,11 +2682,11 @@ private:
         DocumentBuilder builder;
 
         auto qid = q[key::_ID];
-        if (qid)
+        if (qid && element_is_valid_as_id(qid))
         {
             // Id present in the query document, use it.
-            // Will be appended later when the fields of q are iterated.
             m_id = "'" + id_to_string(qid) + "'";
+            append(builder, key::_ID, qid);
             append(m_upsert, key::_ID, qid);
         }
         else
@@ -2684,7 +2713,11 @@ private:
 
         for (const auto& e : q)
         {
-            append(builder, e.key(), e);
+            // We skip the id, as it was added above.
+            if (e.key().compare(key::_ID) != 0)
+            {
+                append(builder, e.key(), e);
+            }
         }
 
         ss << bsoncxx::to_json(builder.extract());
