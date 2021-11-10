@@ -153,7 +153,6 @@ static struct option long_options[] =
 };
 #endif
 
-static int    cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static int    write_pid_file(); /* write MaxScale pidfile */
 static bool   lock_dir(const std::string& path);
 static bool   lock_directories();
@@ -163,8 +162,7 @@ static void   unlock_pidfile();
 static int    ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool   is_file_and_readable(const char* absolute_pathname);
 static bool   path_is_readable(const char* absolute_pathname);
-static bool   path_is_writable(const char* absolute_pathname);
-bool          handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr);
+static bool   handle_path_arg(std::string* dest, const char* path, const char* arg);
 static bool   handle_debug_args(char* args);
 static void   set_log_augmentation(const char* value);
 static void   usage(void);
@@ -178,7 +176,6 @@ static void   print_warning(const char* format, ...) mxb_attribute((format(print
 static void   log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void   log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static bool   resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
-static char*  check_dir_access(char* dirname, bool, bool);
 bool          check_paths();
 static int    set_user(const char* user);
 bool          pid_file_exists();
@@ -881,23 +878,6 @@ static bool path_is_readable(const char* absolute_pathname)
     return succp;
 }
 
-/**
- * Check if the file or directory is writable
- * @param absolute_pathname Path of the file or directory to check
- * @return True if file is writable
- */
-static bool path_is_writable(const char* absolute_pathname)
-{
-    bool succp = true;
-
-    if (access(absolute_pathname, W_OK) != 0)
-    {
-        log_startup_error(errno, "Opening file '%s' for writing failed.", absolute_pathname);
-        succp = false;
-    }
-    return succp;
-}
-
 
 /**
  * Get absolute pathname, given a relative path and a filename.
@@ -1295,42 +1275,42 @@ bool set_runtime_dirs(const char* basedir)
     bool rv = true;
     std::string path;
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_SHARE_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_SHARE_SUBPATH)))
     {
         set_sharedir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH)))
     {
         set_logdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH, true, true)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH)))
     {
         set_cachedir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH)))
     {
         set_configdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_MODULE_CONFIG_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_MODULE_CONFIG_SUBPATH)))
     {
         set_module_configdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH)))
     {
         mxs::set_datadir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH)))
     {
         mxs::set_langdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH, true, true)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH)))
     {
         set_piddir(path.c_str());
     }
@@ -1338,18 +1318,14 @@ bool set_runtime_dirs(const char* basedir)
     if (rv && (rv = handle_path_arg(&path,
                                     basedir,
                                     "var/" MXS_DEFAULT_DATA_SUBPATH "/"
-                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH,
-                                    true,
-                                    true)))
+                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH)))
     {
         set_config_persistdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path,
                                     basedir,
-                                    MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH,
-                                    true,
-                                    false)))
+                                    MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH)))
     {
         set_connector_plugindir(path.c_str());
     }
@@ -1375,12 +1351,12 @@ bool set_dirs(const char* basedir)
     // --runtimedir. The former is used with tarball installations and the latter is used to run multiple
     // MaxScale instances on the same server.
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH)))
     {
         set_libdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH, true, false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH)))
     {
         set_execdir(path.c_str());
     }
@@ -1563,7 +1539,7 @@ int main(int argc, char** argv)
             break;
 
         case 'L':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_logdir(tmp_path.c_str());
             }
@@ -1574,7 +1550,7 @@ int main(int argc, char** argv)
             break;
 
         case 'N':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 mxs::set_langdir(tmp_path.c_str());
             }
@@ -1585,7 +1561,7 @@ int main(int argc, char** argv)
             break;
 
         case 'P':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_piddir(tmp_path.c_str());
             }
@@ -1603,7 +1579,7 @@ int main(int argc, char** argv)
             break;
 
         case 'C':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_configdir(tmp_path.c_str());
             }
@@ -1614,7 +1590,7 @@ int main(int argc, char** argv)
             break;
 
         case 'B':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_libdir(tmp_path.c_str());
             }
@@ -1625,7 +1601,7 @@ int main(int argc, char** argv)
             break;
 
         case 'A':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_cachedir(tmp_path.c_str());
             }
@@ -1636,7 +1612,7 @@ int main(int argc, char** argv)
             break;
 
         case 'E':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_execdir(tmp_path.c_str());
             }
@@ -1647,7 +1623,7 @@ int main(int argc, char** argv)
             break;
 
         case 'H':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_connector_plugindir(tmp_path.c_str());
             }
@@ -1658,7 +1634,7 @@ int main(int argc, char** argv)
             break;
 
         case 'J':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_sharedir(tmp_path.c_str());
             }
@@ -1669,7 +1645,7 @@ int main(int argc, char** argv)
             break;
 
         case 'F':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_config_persistdir(tmp_path.c_str());
             }
@@ -1680,7 +1656,7 @@ int main(int argc, char** argv)
             break;
 
         case 'M':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 set_module_configdir(tmp_path.c_str());
             }
@@ -1691,7 +1667,7 @@ int main(int argc, char** argv)
             break;
 
         case 'R':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 succp = set_dirs(tmp_path.c_str());
             }
@@ -1702,7 +1678,7 @@ int main(int argc, char** argv)
             break;
 
         case 'r':
-            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            if (handle_path_arg(&tmp_path, optarg, NULL))
             {
                 succp = set_runtime_dirs(tmp_path.c_str());
             }
@@ -2500,33 +2476,25 @@ static int write_pid_file()
     return 0;
 }
 
-bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr)
+static bool handle_path_arg(std::string* dest, const char* path, const char* arg)
 {
-    char pathbuffer[PATH_MAX + 2];
-    char* errstr;
     bool rval = false;
-
-    if (path == NULL && arg == NULL)
-    {
-        return rval;
-    }
-
     if (path)
     {
-        snprintf(pathbuffer, PATH_MAX, "%s", path);
-        if (pathbuffer[strlen(path) - 1] != '/')
+        string tmp = path;
+        if (tmp.empty() || tmp.back() != '/')
         {
-            strcat(pathbuffer, "/");
-        }
-        if (arg && strlen(pathbuffer) + strlen(arg) + 1 < PATH_MAX)
-        {
-            strcat(pathbuffer, arg);
+            tmp += '/';
         }
 
-        *dest = pathbuffer;
+        if (arg)
+        {
+            tmp += arg;
+        }
+
+        *dest = move(tmp);
         rval = true;
     }
-
     return rval;
 }
 
@@ -2575,11 +2543,8 @@ void set_log_augmentation(const char* value)
  *
  * @param main_config Parsed [maxscale]-section from the main configuration file.
  */
-static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_config)
+static void apply_basic_config(const mxb::ini::map_result::ConfigSection& main_config)
 {
-    int errors = 0;
-
-    string tmp;
     const string* value = nullptr;
 
     auto find_helper = [&main_config, &value](const string& key) {
@@ -2594,19 +2559,24 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
             return rval;
         };
 
+    auto add_slash = [](const string* path) {
+            string rval;
+            rval.reserve(path->length() + 1);
+            rval += *path;
+            if (rval.empty() || rval.back() != '/')
+            {
+                rval += '/';
+            }
+            return rval;
+        };
+
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
         if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, true))
-            {
-                set_logdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_logdir(tmp.c_str());
         }
     }
 
@@ -2614,14 +2584,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_libdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_libdir(tmp.c_str());
         }
     }
 
@@ -2629,14 +2593,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_sharedir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_sharedir(tmp.c_str());
         }
     }
 
@@ -2644,14 +2602,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, true))
-            {
-                set_piddir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_piddir(tmp.c_str());
         }
     }
 
@@ -2659,17 +2611,11 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (!this_unit.datadir_defined)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
-                this_unit.datadir[PATH_MAX] = '\0';
-                mxs::set_datadir(tmp.c_str());
-                this_unit.datadir_defined = true;
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
+            this_unit.datadir[PATH_MAX] = '\0';
+            mxs::set_datadir(tmp.c_str());
+            this_unit.datadir_defined = true;
         }
     }
 
@@ -2677,14 +2623,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_cachedir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_cachedir(tmp.c_str());
         }
     }
 
@@ -2692,14 +2632,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                mxs::set_langdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            mxs::set_langdir(tmp.c_str());
         }
     }
 
@@ -2707,14 +2641,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_execdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_execdir(tmp.c_str());
         }
     }
 
@@ -2722,14 +2650,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_connector_plugindir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_connector_plugindir(tmp.c_str());
         }
     }
 
@@ -2737,14 +2659,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_config_persistdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_config_persistdir(tmp.c_str());
         }
     }
 
@@ -2752,14 +2668,8 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
         {
-            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
-            {
-                set_module_configdir(tmp.c_str());
-            }
-            else
-            {
-                errors++;
-            }
+            auto tmp = add_slash(value);
+            set_module_configdir(tmp.c_str());
         }
     }
 
@@ -2784,8 +2694,6 @@ static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_co
     {
         set_log_augmentation(value->c_str());
     }
-
-    return errors;
 }
 
 static int set_user(const char* user)
