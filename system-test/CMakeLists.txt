@@ -877,6 +877,9 @@ add_test_executable(mxs3458_ps_with_strict_sp.cc mxs3458_ps_with_strict_sp mxs34
 # Qlafilter test
 add_test_executable(test_qlafilter.cc test_qlafilter test_qlafilter LABELS REPL_BACKEND)
 
+# MXS-3769: Support for SET TRANSACTION
+add_test_executable(mxs3769_set_transaction.cc mxs3769_set_transaction mxs3769_set_transaction LABELS REPL_BACKEND readwritesplit)
+
 # MXS-3770: Bundled connector plugins
 add_test_executable(mxs3770_connector_plugins.cc mxs3770_connector_plugins mxs3770_connector_plugins LABELS REPL_BACKEND LIGHT)
 
