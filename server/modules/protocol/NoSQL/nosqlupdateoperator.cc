@@ -451,7 +451,9 @@ public:
                 ss << "JSON_MERGE_PATCH(";
             }
 
-            ss << rv << ", " << build_object(path, element_to_value(field, ValueFor::JSON_NESTED)) << ")";
+            auto value = element_to_value(field, ValueFor::JSON_NESTED);
+
+            ss << rv << ", " << set_value(rv, "", path, value) << ")";
 
             rv = ss.str();
         }
@@ -511,23 +513,53 @@ public:
     static bool is_supported(const string& name);
 
 private:
-    static string build_object(const string& path, const string& value)
+    static string set_value(const string& doc,
+                            string consumed_path,
+                            string remaining_path,
+                            const string& value)
     {
         ostringstream ss;
-        ss << "JSON_OBJECT(";
 
-        auto i = path.find('.');
+        auto i = remaining_path.find('.');
 
         if (i == string::npos)
         {
-            ss << "'" << path << "', " << value;
+            if (remaining_path.find('[') != string::npos)
+            {
+                // An array element.
+
+                string path;
+
+                if (!consumed_path.empty())
+                {
+                    path += consumed_path;
+                    path += ".";
+                }
+
+                path += remaining_path;
+
+                ss << "JSON_SET(" << doc << ", '$." << path << "', " << value << ")";
+            }
+            else
+            {
+                ss << "JSON_OBJECT('" << remaining_path << "', " << value << ")";
+            }
         }
         else
         {
-            ss << "'" << path.substr(0, i) << "', " << build_object(path.substr(i + 1), value);
-        }
+            if (!consumed_path.empty())
+            {
+                consumed_path += ".";
+            }
 
-        ss << ")";
+            string name = remaining_path.substr(0, i);
+            consumed_path += name;
+            remaining_path = remaining_path.substr(i + 1);
+
+            ss << "JSON_OBJECT('"
+               << name << "', " << set_value(doc, consumed_path, remaining_path, value)
+               << ")";
+        }
 
         return ss.str();
     }
