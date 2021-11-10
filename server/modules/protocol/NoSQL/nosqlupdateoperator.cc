@@ -428,64 +428,37 @@ public:
     {
         mxb_assert(element.key().compare("$set") == 0);
 
-        ostringstream ss;
-
-        ss << "JSON_SET(" << doc;
+        string rv = doc;
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
         FieldRecorder rec(this);
         for (auto field : fields)
         {
-            ss << ", ";
-
             string_view sv = field.key();
-            string key = check_update_path(sv);
+            string path = check_update_path(sv);
             rec.push_back(sv);
 
-            auto i = key.find(".");
+            ostringstream ss;
 
-            if (i == string::npos)
+            if (field.type() == bsoncxx::type::k_null)
             {
-                ss << "'$." << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
+                // JSON_MERGE_PATCH does not preserve fields that are 'null'.
+                ss << "JSON_MERGE_PRESERVE(";
             }
             else
             {
-                auto head = key.substr(0, i);
-                key = key.substr(i + 1);
-
-                ss << "'$." << head << "', JSON_OBJECT(";
-                int nClose = 1;
-
-                i = key.find(".");
-
-                while (i != string::npos)
-                {
-                    head = key.substr(0, i);
-                    key = key.substr(i + 1);
-
-                    ss << "'" << head << "', ";
-
-                    i = key.find(".");
-
-                    ss << "JSON_OBJECT(";
-                    ++nClose;
-                }
-
-                ss << "'" << key << "', " << element_to_value(field, ValueFor::JSON_NESTED);
-
-                while (nClose--)
-                {
-                    ss << ")";
-                }
+                ss << "JSON_MERGE_PATCH(";
             }
-        }
 
-        ss << ")";
+            ss << rv << ", " << build_object(path, element_to_value(field, ValueFor::JSON_NESTED)) << ")";
+
+            rv = ss.str();
+        }
 
         rec.flush();
 
-        return ss.str();
+        return rv;
     }
 
     string convert_unset(const bsoncxx::document::element& element, const string& doc)
@@ -538,6 +511,27 @@ public:
     static bool is_supported(const string& name);
 
 private:
+    static string build_object(const string& path, const string& value)
+    {
+        ostringstream ss;
+        ss << "JSON_OBJECT(";
+
+        auto i = path.find('.');
+
+        if (i == string::npos)
+        {
+            ss << "'" << path << "', " << value;
+        }
+        else
+        {
+            ss << "'" << path.substr(0, i) << "', " << build_object(path.substr(i + 1), value);
+        }
+
+        ss << ")";
+
+        return ss.str();
+    }
+
     class FieldRecorder
     {
     public:
