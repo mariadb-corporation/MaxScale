@@ -70,9 +70,9 @@ inline __m256i large_nines()
  */
 inline Markers* make_markers_sql_optimized(const std::string& sql, Markers* pMarkers)
 {
-    const char* pBegin = &*sql.begin();
+    const char* pBegin = sql.data();
     const char* pSource = pBegin;
-    const char* pEnd = &*sql.end();
+    const char* pEnd = pBegin + sql.length();
 
     pMarkers->clear();
     size_t index_offset = 0;
@@ -304,9 +304,9 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 
     std::reverse(begin(*pMarkers), end(*pMarkers));     // for pop_back(), an index would likely be better.
 
-    const char* read_begin = &*sql.begin();
+    const char* read_begin = sql.data();
     const char* read_ptr = read_begin;
-    const char* read_end = &*sql.end();
+    const char* read_end = read_begin + sql.length();
 
     const char* write_begin = read_begin;
     auto write_ptr = &*sql.begin();

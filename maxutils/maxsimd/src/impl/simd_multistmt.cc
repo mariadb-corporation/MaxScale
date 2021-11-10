@@ -148,9 +148,9 @@ bool is_multi_stmt_impl(const std::string& sql, std::vector<const char*>* pMarke
 
     std::reverse(begin(*pMarkers), end(*pMarkers));
 
-    const char* read_begin = &*sql.begin();
+    const char* read_begin = sql.data();
     const char* read_ptr = read_begin;
-    const char* read_end = &*sql.end();
+    const char* read_end = read_begin + sql.length();
 
     if (!pMarkers->empty())
     {   // advance to the first marker

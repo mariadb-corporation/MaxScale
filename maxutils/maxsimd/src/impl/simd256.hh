@@ -140,9 +140,9 @@ using Markers = std::vector<const char*>;
  */
 inline Markers* make_markers(const std::string& str, __m256i ascii_bitmap, Markers* pMarkers)
 {
-    const char* pBegin = &*str.begin();
+    const char* pBegin = str.data();
     const char* pSource = pBegin;
-    const char* pEnd = &*str.end();
+    const char* pEnd = pBegin + str.length();
 
     pMarkers->clear();
     size_t index_offset = 0;

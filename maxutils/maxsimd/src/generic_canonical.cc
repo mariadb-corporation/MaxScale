@@ -189,8 +189,8 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
     auto& sql = *pSql;
 
-    uint8_t* it = (uint8_t*) &*sql.begin();
-    uint8_t* end = (uint8_t*) &*sql.end();
+    uint8_t* it = (uint8_t*) sql.data();
+    uint8_t* end = (uint8_t*) it + sql.length();
 
     auto it_out = (uint8_t*) &*sql.begin();
     uint8_t* it_out_begin = it_out;
