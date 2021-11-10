@@ -1153,8 +1153,6 @@ private:
                 }
                 else
                 {
-                    MXS_NOTICE("ID =%s", id.c_str());
-                    MXS_NOTICE("MID=%s", m_id.c_str());
                     mxb_assert(id == m_id);
                 }
                 ++it;
@@ -1863,7 +1861,6 @@ private:
             }
             else
             {
-                MXS_NOTICE("JSON: %s", m_json.c_str());
                 doc.append(kvp(key::VALUE, bsoncxx::from_json(m_json)));
             }
             doc.append(kvp(key::OK, 1));

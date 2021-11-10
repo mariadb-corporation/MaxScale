@@ -3995,7 +3995,7 @@ std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
     }
     else
     {
-        json_t* pJson = json_object();
+        mxb::Json j;
 
         auto jt = extractions.begin();
 
@@ -4008,14 +4008,11 @@ std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
 
             if (!s.is_null())
             {
-                create_entry(pJson, extraction, value.as_string().to_string());
+                create_entry(j.get_json(), extraction, value.as_string().to_string());
             }
         }
 
-        char* zJson = json_dumps(pJson, 0);
-        json = zJson;
-        MXS_FREE(zJson);
-        json_decref(pJson);
+        json = j.to_string(mxb::Json::Format::NORMAL);
     }
 
     return json;

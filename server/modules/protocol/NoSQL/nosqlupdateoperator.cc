@@ -131,6 +131,10 @@ public:
     {
         mxb_assert(element.key().compare("$currentDate") == 0);
 
+        auto now = chrono::system_clock::now().time_since_epoch();
+        auto seconds = chrono::duration_cast<chrono::seconds>(now).count();
+        auto milliseconds = chrono::duration_cast<chrono::milliseconds>(now).count();
+
         ostringstream ss;
 
         ss << "JSON_SET(" << doc;
@@ -148,13 +152,11 @@ public:
 
             ss << "'$." << key << "', ";
 
-            auto now = std::chrono::system_clock::now().time_since_epoch().count();
-
             auto type = field.type();
             switch (type)
             {
             case bsoncxx::type::k_bool:
-                ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                ss << "JSON_OBJECT(\"$date\", " << milliseconds << ")";
                 break;
 
             case bsoncxx::type::k_document:
@@ -173,12 +175,12 @@ public:
 
                     if (what.compare("date") == 0)
                     {
-                        ss << "JSON_OBJECT(\"$date\", " << now << ")";
+                        ss << "JSON_OBJECT(\"$date\", " << milliseconds << ")";
                     }
                     else if (what.compare("timestamp") == 0)
                     {
                         ss << "JSON_OBJECT(\"$timestamp\", JSON_OBJECT("
-                           << "\"t\", " << now << ", \"i\", 0))";
+                           << "\"t\", " << seconds << ", \"i\", 0))";
                     }
                     else
                     {
