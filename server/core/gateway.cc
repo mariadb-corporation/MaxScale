@@ -183,7 +183,6 @@ void          write_child_exit_code(int fd, int code);
 static bool   change_cwd();
 static void   log_exit_status();
 static int    daemonize();
-static bool   sniff_configuration(const string& filepath);
 static void   disable_module_unloading(const char* arg);
 static void   enable_module_unloading(const char* arg);
 static void   enable_statement_logging(const char* arg);
@@ -197,6 +196,18 @@ static bool   init_base_libraries();
 static void   finish_base_libraries();
 static bool   redirect_stdout_and_stderr(const std::string& path);
 static bool   is_maxscale_already_running();
+
+namespace
+{
+struct SniffResult
+{
+    bool                                success {false};
+    mxb::ini::map_result::Configuration config;
+};
+
+SniffResult sniff_configuration(const string& filepath);
+bool        apply_main_config(const mxb::ini::map_result::Configuration& config_in);
+}
 
 #define VA_MESSAGE(message, format) \
     va_list ap ## __LINE__; \
@@ -1830,7 +1841,8 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (!sniff_configuration(cnf_file_path))
+    auto sniff_res = sniff_configuration(cnf_file_path);
+    if (!sniff_res.success)
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -1869,7 +1881,7 @@ int main(int argc, char** argv)
     mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
     MainWorker main_worker(&watchdog_notifier);
 
-    if (!config_load_global(cnf_file_path.c_str()))
+    if (!apply_main_config(sniff_res.config))
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -2538,12 +2550,12 @@ void set_log_augmentation(const char* value)
 }
 
 /**
- * Read various directory paths from configuration. Variable substitution is assumed to be already
- * performed.
+ * Read various directory paths and log settings from configuration. Variable substitution is
+ * assumed to be already performed.
  *
  * @param main_config Parsed [maxscale]-section from the main configuration file.
  */
-static void apply_basic_config(const mxb::ini::map_result::ConfigSection& main_config)
+static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config)
 {
     const string* value = nullptr;
 
@@ -2902,21 +2914,22 @@ static int daemonize(void)
     return child_pipe;
 }
 
+namespace
+{
 /**
- * Sniffs the configuration file, primarily for various directory paths,
- * so that certain settings take effect immediately.
+ * Sniffs the configuration file, primarily for various directory paths, so that certain settings
+ * take effect immediately.
  *
  * @param filepath The path of the configuration file.
- *
- * @return True, if the sniffing succeeded, false otherwise.
+ * @return Result object
  */
-static bool sniff_configuration(const string& filepath)
+SniffResult sniff_configuration(const string& filepath)
 {
-    bool rval = false;
+    SniffResult rval;
     auto load_res = mxb::ini::parse_config_file_to_map(filepath);
     if (load_res.errors.empty())
     {
-        rval = true;
+        rval.success = true;
         // At this point, we are only interested in the "maxscale"-section.
         auto& config = load_res.config;
         auto it = config.find(CN_MAXSCALE);
@@ -2948,9 +2961,14 @@ static bool sniff_configuration(const string& filepath)
 
             if (substitution_ok)
             {
-                apply_basic_config(it->second);
+                apply_dir_log_config(it->second);
             }
-            rval = substitution_ok;
+            rval.success = substitution_ok;
+        }
+
+        if (rval.success)
+        {
+            rval.config = move(load_res.config);
         }
     }
     else
@@ -2960,6 +2978,39 @@ static bool sniff_configuration(const string& filepath)
     }
     return rval;
 }
+
+/**
+ * Apply the [maxscale]-section from the main configuration file.
+ */
+bool apply_main_config(const mxb::ini::map_result::Configuration& config_in)
+{
+    // This sets and validates even the parameters that were sniffed earlier.
+    mxs::ConfigParameters params;
+    auto it = config_in.find(CN_MAXSCALE);
+    if (it != config_in.end())
+    {
+        auto& kvs = it->second.key_values;
+        for (const auto& kv : kvs)
+        {
+            params.set(kv.first, kv.second.value);
+        }
+    }
+
+    mxs::Config& config = mxs::Config::get();
+    bool rval = true;
+
+    if (!config.specification().validate(params))
+    {
+        rval = false;
+    }
+    else
+    {
+        rval = config.configure(params);
+    }
+    return rval;
+}
+}
+
 
 static void enable_module_unloading(const char* arg)
 {
