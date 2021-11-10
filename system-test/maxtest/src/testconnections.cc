@@ -659,9 +659,9 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
     string file_contents;
     if (config_file.is_open())
     {
-        file_contents.reserve(10000);
-        file_contents.assign((std::istreambuf_iterator<char>(config_file)),
-                             (std::istreambuf_iterator<char>()));
+        std::ostringstream ss;
+        ss << config_file.rdbuf();
+        file_contents = ss.str();
     }
 
     if (file_contents.empty())

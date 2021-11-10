@@ -22,6 +22,8 @@ namespace maxbase
 {
 namespace ini
 {
+using StringVector = std::vector<std::string>;
+
 // The types in the array_result-namespace contains parse results in array form with minimal
 // processing or checking.
 namespace array_result
@@ -73,7 +75,6 @@ struct ConfigSection
 };
 
 using Configuration = std::map<std::string, ConfigSection>;
-using StringVector = std::vector<std::string>;
 
 struct ParseResult
 {
@@ -96,6 +97,8 @@ int parse_file(const char* filename, IniHandler handler, void* userdata);
 
 array_result::ParseResult parse_config_text(const std::string& config_text);
 map_result::ParseResult   parse_config_text_to_map(const std::string& config_text);
+map_result::ParseResult   parse_config_file_to_map(const std::string& config_file);
+StringVector              substitute_env_vars(map_result::Configuration& config);
 std::string               config_map_to_string(const map_result::Configuration& input);
 }
 }

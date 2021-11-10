@@ -186,7 +186,7 @@ void          write_child_exit_code(int fd, int code);
 static bool   change_cwd();
 static void   log_exit_status();
 static int    daemonize();
-static bool   sniff_configuration(const char* filepath);
+static bool   sniff_configuration(const string& filepath);
 static void   disable_module_unloading(const char* arg);
 static void   enable_module_unloading(const char* arg);
 static void   enable_statement_logging(const char* arg);
@@ -1854,7 +1854,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (!sniff_configuration(cnf_file_path.c_str()))
+    if (!sniff_configuration(cnf_file_path))
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -2570,236 +2570,222 @@ void set_log_augmentation(const char* value)
 }
 
 /**
- * Pre-parse the configuration file for various directory paths.
- * @param data    Pointer to variable where custom dynamically allocated
- *                error message can be stored.
- * @param section Section name
- * @param name    Parameter name
- * @param value   Parameter value
- * @return 0 on error, 1 when successful
+ * Read various directory paths from configuration. Variable substitution is assumed to be already
+ * performed.
+ *
+ * @param main_config Parsed [maxscale]-section from the main configuration file.
  */
-static int cnf_preparser(void* data, const char* section, const char* name, const char* value, int lineno)
+static int apply_basic_config(const mxb::ini::map_result::ConfigSection& main_config)
 {
-    if (!name && !value)
+    int errors = 0;
+
+    string tmp;
+    const string* value = nullptr;
+
+    auto find_helper = [&main_config, &value](const string& key) {
+            bool rval = false;
+            const auto& kvs = main_config.key_values;
+            auto it = kvs.find(key);
+            if (it != kvs.end())
+            {
+                value = &it->second.value;
+                rval = true;
+            }
+            return rval;
+        };
+
+    // These will not override command line parameters but will override default values. */
+    if (find_helper(CN_LOGDIR))
     {
-        // Ignore section name updates.
-        return 1;
+        if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, true))
+            {
+                set_logdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_LIBDIR))
+    {
+        if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_libdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_SHAREDIR))
+    {
+        if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_sharedir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_PIDDIR))
+    {
+        if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, true))
+            {
+                set_piddir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_DATADIR))
+    {
+        if (!this_unit.datadir_defined)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
+                this_unit.datadir[PATH_MAX] = '\0';
+                mxs::set_datadir(tmp.c_str());
+                this_unit.datadir_defined = true;
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_CACHEDIR))
+    {
+        if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_cachedir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_LANGUAGE))
+    {
+        if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                mxs::set_langdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_EXECDIR))
+    {
+        if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_execdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_CONNECTOR_PLUGINDIR))
+    {
+        if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_connector_plugindir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_PERSISTDIR))
+    {
+        if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_config_persistdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
+    }
+
+    if (find_helper(CN_MODULE_CONFIGDIR))
+    {
+        if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
+        {
+            if (handle_path_arg(&tmp, value->c_str(), nullptr, true, false))
+            {
+                set_module_configdir(tmp.c_str());
+            }
+            else
+            {
+                errors++;
+            }
+        }
     }
 
     mxs::Config& cnf = mxs::Config::get();
-
-    std::string tmp;
-    /** These are read from the configuration file. These will not override
-     * command line parameters but will override default values. */
-    if (strcasecmp(section, "maxscale") == 0)
+    if (find_helper(CN_SYSLOG))
     {
-        if (cnf.substitute_variables)
+        if (!this_unit.syslog_configured)
         {
-            if (*value == '$')
-            {
-                char* env_value = getenv(value + 1);
-
-                if (!env_value)
-                {
-                    char** s = (char**)data;
-
-                    static const char FORMAT[] = "The environment variable %s does not exist.";
-                    *s = (char*)MXS_MALLOC(sizeof(FORMAT) + strlen(value));
-
-                    if (*s)
-                    {
-                        sprintf(*s, FORMAT, value + 1);
-                    }
-
-                    return 0;
-                }
-
-                value = env_value;
-            }
-        }
-
-        if (strcmp(name, CN_LOGDIR) == 0)
-        {
-            if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
-                {
-                    set_logdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_LIBDIR) == 0)
-        {
-            if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_libdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_SHAREDIR) == 0)
-        {
-            if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_sharedir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_PIDDIR) == 0)
-        {
-            if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
-                {
-                    set_piddir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_DATADIR) == 0)
-        {
-            if (!this_unit.datadir_defined)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
-                    this_unit.datadir[PATH_MAX] = '\0';
-                    mxs::set_datadir(tmp.c_str());
-                    this_unit.datadir_defined = true;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_CACHEDIR) == 0)
-        {
-            if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_cachedir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_LANGUAGE) == 0)
-        {
-            if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    mxs::set_langdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_EXECDIR) == 0)
-        {
-            if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_execdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_CONNECTOR_PLUGINDIR) == 0)
-        {
-            if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_connector_plugindir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_PERSISTDIR) == 0)
-        {
-            if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_config_persistdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_MODULE_CONFIGDIR) == 0)
-        {
-            if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
-            {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
-                {
-                    set_module_configdir(tmp.c_str());
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-        else if (strcmp(name, CN_SYSLOG) == 0)
-        {
-            if (!this_unit.syslog_configured)
-            {
-                cnf.syslog.set(config_truth_value((char*)value));
-            }
-        }
-        else if (strcmp(name, CN_MAXLOG) == 0)
-        {
-            if (!this_unit.maxlog_configured)
-            {
-                cnf.maxlog.set(config_truth_value((char*)value));
-            }
-        }
-        else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)
-        {
-            set_log_augmentation(value);
-        }
-        else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
-        {
-            cnf.substitute_variables = config_truth_value(value);
+            cnf.syslog.set(config_truth_value(*value));
         }
     }
 
-    return 1;
+    if (find_helper(CN_MAXLOG))
+    {
+        if (!this_unit.maxlog_configured)
+        {
+            cnf.maxlog.set(config_truth_value(*value));
+        }
+    }
+
+    if (find_helper(CN_LOG_AUGMENTATION))
+    {
+        set_log_augmentation(value->c_str());
+    }
+
+    return errors;
 }
 
 static int set_user(const char* user)
@@ -3016,41 +3002,55 @@ static int daemonize(void)
  *
  * @return True, if the sniffing succeeded, false otherwise.
  */
-static bool sniff_configuration(const char* filepath)
+static bool sniff_configuration(const string& filepath)
 {
-    char* s = NULL;
-
-    int rv = mxb::ini::parse_file(filepath, cnf_preparser, &s);
-
-    if (rv != 0)
+    bool rval = false;
+    auto load_res = mxb::ini::parse_config_file_to_map(filepath);
+    if (load_res.errors.empty())
     {
-        if (rv > 0)
+        rval = true;
+        // At this point, we are only interested in the "maxscale"-section.
+        auto& config = load_res.config;
+        auto it = config.find(CN_MAXSCALE);
+        if (it != config.end())
         {
-            if (s)
+            bool substitution_ok = true;
+
+            auto& mxs_section = it->second.key_values;
+            auto it2 = mxs_section.find(CN_SUBSTITUTE_VARIABLES);
+            if (it2 != mxs_section.end())
             {
-                print_alert("Failed to pre-parse configuration file %s. Error on line %d. %s",
-                            filepath, rv, s);
-                MXS_FREE(s);
+                bool subst_on = config_truth_value(it2->second.value);
+                // Substitution affects other config files as well so save the setting.
+                if (subst_on)
+                {
+                    mxs::Config& cnf = mxs::Config::get();
+                    cnf.substitute_variables = true;
+                    auto subst_errors = mxb::ini::substitute_env_vars(config);
+                    if (!subst_errors.empty())
+                    {
+                        string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
+                                                           filepath.c_str());
+                        errmsg += mxb::create_list_string(subst_errors, " ");
+                        print_alert("%s", errmsg.c_str());
+                        substitution_ok = false;
+                    }
+                }
             }
-            else
+
+            if (substitution_ok)
             {
-                print_alert("Failed to pre-parse configuration file %s. Error on line %d.",
-                            filepath, rv);
+                apply_basic_config(it->second);
             }
-        }
-        else if (rv == -1)
-        {
-            print_alert("Failed to pre-parse configuration file %s. Failed to open file.",
-                        filepath);
-        }
-        else
-        {
-            print_alert("Failed to pre-parse configuration file %s. Memory allocation failed.",
-                        filepath);
+            rval = substitution_ok;
         }
     }
-
-    return rv == 0;
+    else
+    {
+        string all_errors = mxb::create_list_string(load_res.errors, " ");
+        print_alert("Failed to read configuration file '%s'. %s", filepath.c_str(), all_errors.c_str());
+    }
+    return rval;
 }
 
 static void enable_module_unloading(const char* arg)

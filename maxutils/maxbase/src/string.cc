@@ -140,7 +140,9 @@ std::string create_list_string(const std::vector<string>& elements,
     }
     else if (n_elems == 1)
     {
-        return quote + elements[0] + quote;
+        string rval = quote;
+        rval.append(elements[0]).append(quote);
+        return rval;
     }
 
     const string& real_last_delim = last_delim.empty() ? delim : last_delim;

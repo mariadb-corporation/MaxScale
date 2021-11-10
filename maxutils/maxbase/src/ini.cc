@@ -11,8 +11,9 @@
  * Public License.
  */
 
-#include <maxbase/assert.h>
 #include <maxbase/ini.hh>
+#include <fstream>
+#include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 
@@ -186,6 +187,61 @@ std::string config_map_to_string(const map_result::Configuration& input)
         rval.push_back('\n');
     }
     return rval;
+}
+
+map_result::ParseResult parse_config_file_to_map(const string& config_file_path)
+{
+    map_result::ParseResult rval;
+    std::ifstream config_file(config_file_path);
+    string file_contents;
+    if (config_file.is_open())
+    {
+        // According to some simple testing, this seems to be a fast way to read small text files.
+        std::ostringstream ss;
+        ss << config_file.rdbuf();
+        file_contents = ss.str();
+        rval = parse_config_text_to_map(file_contents);
+    }
+    else
+    {
+        int eno = errno;
+        rval.errors.emplace_back(mxb::string_printf("Failed to open file. Error %i: %s",
+                                                    eno, mxb_strerror(eno)));
+    }
+
+    return rval;
+}
+
+StringVector substitute_env_vars(map_result::Configuration& config)
+{
+    StringVector errors;
+
+    // Check every value in every section.
+    for (auto& section_kv : config)
+    {
+        auto& kvs = section_kv.second.key_values;
+        for (auto& kv : kvs)
+        {
+            auto& val = kv.second.value;
+            if (val.length() > 1 && val[0] == '$')
+            {
+                const char* env_val_name = val.c_str() + 1;
+                const char* env_val = getenv(env_val_name);
+                if (env_val)
+                {
+                    // Found a matching environment variable.
+                    val = env_val;
+                }
+                else
+                {
+                    const char fmt[] = "Could not substitute environment variable '%s' at line %i. "
+                                       "The variable is not set.";
+                    errors.emplace_back(mxb::string_printf(fmt, env_val_name, kv.second.lineno));
+                }
+            }
+        }
+    }
+    return errors;
 }
 
 namespace map_result
