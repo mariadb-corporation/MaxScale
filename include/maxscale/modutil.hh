@@ -129,7 +129,8 @@ GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
  * @param       buf     The packet buffer
  * @param       sql     Pointer that is set to point at the SQL data
  * @param       length  Length of the SQL query data
- * @return      True if the packet is a COM_QUERY packet
+ * @return      True if the packet is a COM_QUERY or COM_STMT_PREPARE packet, and
+ *              sql was extracted.
  */
 inline bool modutil_extract_SQL(GWBUF* buf, char** pSql, int* length)
 {
@@ -138,5 +139,5 @@ inline bool modutil_extract_SQL(GWBUF* buf, char** pSql, int* length)
     *pSql = const_cast<char*>(sql.c_str());
     *length = sql.length();
 
-    return 1;   // TODO is this used? Not returning what is advertised
+    return *length;
 }
