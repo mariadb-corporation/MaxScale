@@ -113,9 +113,6 @@ static struct ThisUnit
 
 static const char* maxscale_commit = MAXSCALE_COMMIT;
 
-// The default configuration file name
-static const char* default_cnf_fname = "maxscale.cnf";
-
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
 static struct option long_options[] =
@@ -153,52 +150,55 @@ static struct option long_options[] =
 };
 #endif
 
-static int    write_pid_file(); /* write MaxScale pidfile */
-static bool   lock_dir(const std::string& path);
-static bool   lock_directories();
-static void   unlock_directories();
-static void   unlink_pidfile(void); /* remove pidfile */
-static void   unlock_pidfile();
-static int    ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool   is_file_and_readable(const char* absolute_pathname);
-static bool   path_is_readable(const char* absolute_pathname);
-static bool   handle_path_arg(std::string* dest, const char* path, const char* arg);
-static bool   handle_debug_args(char* args);
-static void   set_log_augmentation(const char* value);
-static void   usage(void);
-static string get_absolute_fname(const char* relative_path, const char* fname);
-static void   print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static bool   resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
-bool          check_paths();
-static int    set_user(const char* user);
-bool          pid_file_exists();
-void          write_child_exit_code(int fd, int code);
-static bool   change_cwd();
-static void   log_exit_status();
-static int    daemonize();
-static void   disable_module_unloading(const char* arg);
-static void   enable_module_unloading(const char* arg);
-static void   enable_statement_logging(const char* arg);
-static void   disable_statement_logging(const char* arg);
-static void   enable_cors(const char* arg);
-static void   allow_duplicate_servers(const char* arg);
-static void   redirect_output_to_file(const char* arg);
-static bool   user_is_acceptable(const char* specified_user);
-static bool   init_sqlite3();
-static bool   init_base_libraries();
-static void   finish_base_libraries();
-static bool   redirect_stdout_and_stderr(const std::string& path);
-static bool   is_maxscale_already_running();
+static int  write_pid_file();   /* write MaxScale pidfile */
+static bool lock_dir(const std::string& path);
+static bool lock_directories();
+static void unlock_directories();
+static void unlink_pidfile(void);   /* remove pidfile */
+static void unlock_pidfile();
+static int  ntfw_cb(const char*, const struct stat*, int, struct FTW*);
+static bool handle_path_arg(std::string* dest, const char* path, const char* arg);
+static bool handle_debug_args(char* args);
+static void set_log_augmentation(const char* value);
+static void usage(void);
+static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+bool        check_paths();
+static int  set_user(const char* user);
+bool        pid_file_exists();
+void        write_child_exit_code(int fd, int code);
+static bool change_cwd();
+static void log_exit_status();
+static int  daemonize();
+static void disable_module_unloading(const char* arg);
+static void enable_module_unloading(const char* arg);
+static void enable_statement_logging(const char* arg);
+static void disable_statement_logging(const char* arg);
+static void enable_cors(const char* arg);
+static void allow_duplicate_servers(const char* arg);
+static void redirect_output_to_file(const char* arg);
+static bool user_is_acceptable(const char* specified_user);
+static bool init_sqlite3();
+static bool init_base_libraries();
+static void finish_base_libraries();
+static bool redirect_stdout_and_stderr(const std::string& path);
+static bool is_maxscale_already_running();
 
 namespace
 {
+// The default configuration file name
+const char default_cnf_fname[] = "maxscale.cnf";
+
+string get_absolute_fname(const string& relative_path, const char* fname);
+bool   is_file_and_readable(const string& absolute_pathname);
+bool   path_is_readable(const string& absolute_pathname);
+
 struct SniffResult
 {
     bool                                success {false};
@@ -207,6 +207,7 @@ struct SniffResult
 
 SniffResult sniff_configuration(const string& filepath);
 bool        apply_main_config(const mxb::ini::map_result::Configuration& config_in);
+string      resolve_maxscale_conf_fname(const string& cnf_file_arg);
 }
 
 #define VA_MESSAGE(message, format) \
@@ -639,10 +640,11 @@ void cleanup_old_process_datadirs()
     nftw(mxs::datadir(), ntfw_cb, depth, flags);
 }
 
-static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg)
+namespace
 {
-    cnf_full_path->clear();
-
+string resolve_maxscale_conf_fname(const string& cnf_file_arg)
+{
+    string cnf_full_path;
     if (!cnf_file_arg.empty())
     {
         char resolved_path[PATH_MAX + 1];
@@ -652,23 +654,28 @@ static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf
         }
         else
         {
-            *cnf_full_path = resolved_path;
+            cnf_full_path = resolved_path;
         }
     }
-    else    /*< default config file name is used */
+    else
     {
+        /*< default config file name is used */
         string home_dir = mxs::configdir();
-
         if (home_dir.empty() || home_dir.back() != '/')
         {
             home_dir += '/';
         }
-
-        *cnf_full_path = get_absolute_fname(home_dir.c_str(), default_cnf_fname);
+        cnf_full_path = get_absolute_fname(home_dir, default_cnf_fname);
     }
 
-    return !cnf_full_path->empty() && is_file_and_readable(cnf_full_path->c_str());
+    if (!cnf_full_path.empty() && !is_file_and_readable(cnf_full_path))
+    {
+        cnf_full_path.clear();
+    }
+    return cnf_full_path;
 }
+}
+
 
 /**
  * Check read and write accessibility to a directory.
@@ -838,19 +845,20 @@ static void log_startup_error(const char* format, ...)
     log_startup_message(0, message);
 }
 
+namespace
+{
 /**
  * Check that a path refers to a readable file.
  *
  * @param absolute_pathname The path to check.
  * @return True if the path refers to a readable file. is readable
  */
-static bool is_file_and_readable(const char* absolute_pathname)
+bool is_file_and_readable(const string& absolute_pathname)
 {
     bool rv = false;
+    struct stat info {};
 
-    struct stat info;
-
-    if (stat(absolute_pathname, &info) == 0)
+    if (stat(absolute_pathname.c_str(), &info) == 0)
     {
         if ((info.st_mode & S_IFMT) == S_IFREG)
         {
@@ -861,12 +869,12 @@ static bool is_file_and_readable(const char* absolute_pathname)
         }
         else
         {
-            log_startup_error("'%s' does not refer to a regular file.", absolute_pathname);
+            log_startup_error("'%s' does not refer to a regular file.", absolute_pathname.c_str());
         }
     }
     else
     {
-        log_startup_error(errno, "Could not access '%s'", absolute_pathname);
+        log_startup_error(errno, "Could not access '%s'", absolute_pathname.c_str());
     }
 
     return rv;
@@ -877,13 +885,13 @@ static bool is_file_and_readable(const char* absolute_pathname)
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is readable
  */
-static bool path_is_readable(const char* absolute_pathname)
+bool path_is_readable(const string& absolute_pathname)
 {
     bool succp = true;
 
-    if (access(absolute_pathname, R_OK) != 0)
+    if (access(absolute_pathname.c_str(), R_OK) != 0)
     {
-        log_startup_error(errno, "Opening file '%s' for reading failed", absolute_pathname);
+        log_startup_error(errno, "Opening file '%s' for reading failed", absolute_pathname.c_str());
         succp = false;
     }
     return succp;
@@ -899,10 +907,8 @@ static bool path_is_readable(const char* absolute_pathname)
  * @return Absolute path if resulting path exists and the file is
  *         readable, otherwise an empty string.
  */
-static string get_absolute_fname(const char* relative_path,
-                                 const char* fname)
+string get_absolute_fname(const string& relative_path, const char* fname)
 {
-    mxb_assert(relative_path);
     mxb_assert(fname);
 
     string absolute_fname;
@@ -911,9 +917,9 @@ static string get_absolute_fname(const char* relative_path,
      * Expand possible relative pathname to absolute path
      */
     char expanded_path[PATH_MAX];
-    if (realpath(relative_path, expanded_path) == NULL)
+    if (realpath(relative_path.c_str(), expanded_path) == NULL)
     {
-        log_startup_error(errno, "Failed to read the directory '%s'.", relative_path);
+        log_startup_error(errno, "Failed to read the directory '%s'.", relative_path.c_str());
     }
     else
     {
@@ -926,13 +932,14 @@ static string get_absolute_fname(const char* relative_path,
         absolute_fname += "/";
         absolute_fname += fname;
 
-        if (!path_is_readable(absolute_fname.c_str()))
+        if (!path_is_readable(absolute_fname))
         {
             absolute_fname.clear();
         }
     }
 
     return absolute_fname;
+}
 }
 
 static void usage()
@@ -1834,8 +1841,8 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    string cnf_file_path;
-    if (!resolve_maxscale_conf_fname(&cnf_file_path, cnf_file_arg))
+    const string cnf_file_path = resolve_maxscale_conf_fname(cnf_file_arg);
+    if (cnf_file_path.empty())
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
