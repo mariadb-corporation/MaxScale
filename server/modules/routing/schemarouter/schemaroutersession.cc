@@ -533,34 +533,6 @@ void SchemaRouterSession::handle_default_db_response()
     }
 }
 
-namespace
-{
-
-mxs::Buffer::iterator skip_packet(mxs::Buffer::iterator it)
-{
-    uint32_t len = *it++;
-    len |= (*it++) << 8;
-    len |= (*it++) << 16;
-    it.advance(len + 1);    // Payload length plus the fourth header byte (packet sequence)
-    return it;
-}
-
-GWBUF* erase_last_packet(GWBUF* input)
-{
-    mxs::Buffer buf(input);
-    auto it = buf.begin();
-    auto end = it;
-
-    while ((end = skip_packet(it)) != buf.end())
-    {
-        it = end;
-    }
-
-    buf.erase(it, end);
-    return buf.release();
-}
-}
-
 void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
@@ -571,38 +543,30 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
         return;
     }
 
+    const auto& error = reply.error();
+
+    if (error.is_unexpected_error())
+    {
+        // All unexpected errors are related to server shutdown.
+        bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
+
+        // The server sent an error that we either didn't expect or we don't want. If retrying is going to
+        // take place, it'll be done in handleError.
+        if (!bref->is_waiting_result() || !reply.has_started())
+        {
+            // The buffer contains either an ERR packet, in which case the resultset hasn't started yet, or a
+            // resultset with a trailing ERR packet. The full resultset can be discarded as the client hasn't
+            // received it yet. In theory we could return this to the client but we don't know if it was
+            // interrupted or not so the safer option is to retry it.
+            gwbuf_free(pPacket);
+            return;
+        }
+    }
+
     if (reply.is_complete())
     {
         MXS_INFO("Reply complete from '%s'", bref->name());
         bref->ack_write();
-
-        const auto& error = reply.error();
-
-        if (error.is_unexpected_error())
-        {
-            // The connection was killed, we can safely ignore it. When the TCP connection is
-            // closed, the router's error handling will sort it out.
-            if (error.code() == ER_CONNECTION_KILLED)
-            {
-                bref->set_close_reason("Connection was killed");
-            }
-            else
-            {
-                mxb_assert(error.code() == ER_SERVER_SHUTDOWN
-                           || error.code() == ER_NORMAL_SHUTDOWN
-                           || error.code() == ER_SHUTDOWN_COMPLETE);
-                bref->set_close_reason(std::string("Server '") + bref->name() + "' is shutting down");
-            }
-
-            // The server sent an error that we didn't expect: treat it as if the connection was closed. The
-            // client shouldn't see this error as we can replace the closed connection.
-
-            if (!(pPacket = erase_last_packet(pPacket)))
-            {
-                // Nothing to route to the client
-                return;
-            }
-        }
     }
 
     if (m_state & INIT_MAPPING)
