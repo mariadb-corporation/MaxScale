@@ -148,7 +148,7 @@ std::string sql_update_status(const std::string& cluster, int64_t version, const
 
     std::ostringstream ss;
     ss << "UPDATE " << TABLE << " SET nodes = JSON_SET"
-       << "(nodes, '$." << hostname() << "', '" << escape_for_sql(status) << "') "
+       << "(nodes, CONCAT('$.', JSON_QUOTE('" << hostname() << "')), '" << escape_for_sql(status) << "') "
        << "WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
 }
