@@ -39,8 +39,20 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
     }
     else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
     {
-        // The MASTER_WAIT_GTID command failed and no further packets will come
-        m_wait_gtid = RETRYING_ON_MASTER;
+        if (trx_is_read_only())
+        {
+            // If a causal read fails inside of a read-only transaction, it cannot be retried on the master.
+            m_wait_gtid = NONE;
+            gwbuf_free(buffer);
+            buffer = modutil_create_mysql_err_msg(
+                0, 0, 1792, "25006",
+                "Causal read timed out while in a read-only transaction, cannot retry command.");
+        }
+        else
+        {
+            // The MASTER_WAIT_GTID command failed and no further packets will come
+            m_wait_gtid = RETRYING_ON_MASTER;
+        }
     }
 
     return buffer;

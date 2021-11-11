@@ -684,6 +684,19 @@ It is recommend that the session command history is enabled whenever prepared
 statements are used with `causal_reads`. This allows new connections to be
 created whenever a causal read times out.
 
+Starting with MaxScale 2.5.17, a failed causal read inside of a read-only
+transaction started with `START TRANSACTION READ ONLY` will return the following
+error:
+
+```
+Error:    1792
+SQLSTATE: 25006
+Message:  Causal read timed out while in a read-only transaction, cannot retry command.
+```
+
+Older versions of MaxScale attempted to retry the command on the current master
+server which would cause the connection to be closed and a warning to be logged.
+
 ### `causal_reads_timeout`
 
 The timeout for the slave synchronization done by `causal_reads`. The
