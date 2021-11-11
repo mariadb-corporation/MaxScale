@@ -23,6 +23,7 @@
 #include <unordered_set>
 
 #include <maxbase/jansson.h>
+#include <maxbase/ini.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/ssl.hh>
 
@@ -61,7 +62,7 @@ void config_finish();
 void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
 
 char* config_clean_string_list(const char* str);
-bool  config_load(const char*);
+bool  config_load(const char*, const mxb::ini::map_result::Configuration& cfg_file_contents);
 bool  config_load_global(const char* filename);
 
 /**

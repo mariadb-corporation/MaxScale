@@ -1585,6 +1585,60 @@ static void log_config_error(const char* file, int rval)
     MXS_ERROR("%s", errorbuffer);
 }
 
+static bool
+config_load_single_contents(const mxb::ini::map_result::Configuration& config, CONFIG_CONTEXT* cntxt)
+{
+    bool success = true;
+
+    auto is_url_unsafe = [](const string& str) {
+            return !std::all_of(str.begin(), str.end(), [](char c) {
+                                    return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
+                                });
+        };
+
+    for (const auto& section : config)
+    {
+        string reason;
+        if (config_is_valid_name(section.first, &reason))
+        {
+            auto new_ctx = config_context_create(section.first.c_str());
+            new_ctx->m_next = cntxt->m_next;
+            cntxt->m_next = new_ctx;
+
+            if (is_url_unsafe(new_ctx->m_name))
+            {
+                MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
+                            "the REST API or MaxCtrl.", new_ctx->name());
+            }
+
+            auto& kvs = section.second.key_values;
+            for (const auto& kv : kvs)
+            {
+                const string& name = kv.first;
+                const string& value = kv.second.value;
+
+                if (is_empty_string(value.c_str()))
+                {
+                    MXS_ERROR("Empty value given to parameter '%s'", name.c_str());
+                    success = false;
+                }
+                else
+                {
+                    mxb_assert(!new_ctx->m_parameters.contains(name));
+                    new_ctx->m_parameters.set(name, value);
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s", reason.c_str());
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 bool config_load_single_file(const char* file,
                              DUPLICATE_CONTEXT* dcontext,
                              CONFIG_CONTEXT* ccontext)
@@ -1871,12 +1925,12 @@ bool export_config_file(const char* filename)
  * validate the module parameters and finally turn it into a set of objects.
  *
  * @param filename        The filename of the configuration file
- * @param process_config  The function using which the successfully loaded
- *                        configuration should be processed.
+ * @param cfg_file_contents Main config file contents, with variable substitution performed.
  *
  * @return True on success, false on fatal error
  */
-static bool config_load_and_process(const char* filename, bool (* process_config)(CONFIG_CONTEXT*))
+static bool config_load_and_process(const char* filename,
+                                    const mxb::ini::map_result::Configuration& cfg_file_contents)
 {
     bool rval = false;
     DUPLICATE_CONTEXT dcontext;
@@ -1884,7 +1938,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
     if (duplicate_context_init(&dcontext))
     {
-        if (config_load_single_file(filename, &dcontext, &this_unit.config_context))
+        if (config_load_single_contents(cfg_file_contents, &this_unit.config_context))
         {
             this_unit.is_root_config_file = false;
             const char DIR_SUFFIX[] = ".d";
@@ -1942,7 +1996,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
             if (rval)
             {
                 if (!check_config_objects(this_unit.config_context.m_next)
-                    || !process_config(this_unit.config_context.m_next))
+                    || !process_config_context(this_unit.config_context.m_next))
                 {
                     rval = false;
                     if (have_persisted_configs)
@@ -1991,16 +2045,15 @@ bool config_load_global(const char* filename)
  * @brief Load the configuration file for the MaxScale
  *
  * @param filename The filename of the configuration file
+ * @param cfg_file_contents Contents of main config file
  * @return True on success, false on fatal error
  */
-bool config_load(const char* filename)
+bool config_load(const char* filename, const mxb::ini::map_result::Configuration& cfg_file_contents)
 {
     mxb_assert(!this_unit.config_file);
 
     this_unit.config_file = filename;
-    bool rval = config_load_and_process(filename, process_config_context);
-
-    return rval;
+    return config_load_and_process(filename, cfg_file_contents);
 }
 
 bool valid_object_type(std::string type)

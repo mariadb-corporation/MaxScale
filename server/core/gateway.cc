@@ -1848,8 +1848,8 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    auto sniff_res = sniff_configuration(cnf_file_path);
-    if (!sniff_res.success)
+    auto cfg_file_read_res = sniff_configuration(cnf_file_path);
+    if (!cfg_file_read_res.success)
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -1888,7 +1888,7 @@ int main(int argc, char** argv)
     mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
     MainWorker main_worker(&watchdog_notifier);
 
-    if (!apply_main_config(sniff_res.config))
+    if (!apply_main_config(cfg_file_read_res.config))
     {
         rc = MAXSCALE_BADCONFIG;
         return rc;
@@ -2044,7 +2044,7 @@ int main(int argc, char** argv)
 
             if (use_static_cnf)
             {
-                if (!config_load(cnf_file_path.c_str()))
+                if (!config_load(cnf_file_path.c_str(), cfg_file_read_res.config))
                 {
                     print_alert("Failed to open, read or process the MaxScale configuration "
                                 "file. See the error log for details.");
