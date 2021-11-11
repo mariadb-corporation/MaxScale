@@ -20,17 +20,16 @@
 #include <sstream>
 #include <stdexcept>
 #include <bsoncxx/array/view.hpp>
-#include <bsoncxx/builder/basic/array.hpp>
-#include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/json.hpp>
 #include <mongoc/mongoc.h>
 #include <maxbase/stopwatch.hh>
-#include <maxscale/buffer.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
+#include "nosqlbase.hh"
 #include "nosqlcursor.hh"
+#include "../../filter/masking/mysql.hh"
 
 class DCB;
 
@@ -48,7 +47,6 @@ enum class Op
     LT,
     LTE,
     NE,
-    NIN, // TO BE REMOVED
 };
 
 const char* to_string(Op op);
@@ -63,14 +61,6 @@ inline std::ostream& operator << (std::ostream& out, mariadb::Op op)
 
 namespace nosql
 {
-
-using bsoncxx::stdx::string_view;
-
-class Command;
-
-using DocumentBuilder = bsoncxx::builder::basic::document;
-using ArrayBuilder = bsoncxx::builder::basic::array;
-using bsoncxx::builder::basic::kvp;
 
 namespace protocol
 {
@@ -300,174 +290,59 @@ template<class T>
 T element_as(const std::string& command,
              const char* zKey,
              const bsoncxx::document::element& element,
+             int error_code,
              Conversion conversion = Conversion::STRICT);
+
+template<class T>
+T element_as(const std::string& command,
+             const char* zKey,
+             const bsoncxx::document::element& element,
+             Conversion conversion = Conversion::STRICT)
+{
+    return element_as<T>(command, zKey, element, error::TYPE_MISMATCH, conversion);
+}
 
 template<>
 bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
                                                             const char* zKey,
                                                             const bsoncxx::document::element& element,
+                                                            int error_code,
                                                             Conversion conversion);
 
 template<>
 bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
                                                       const char* zKey,
                                                       const bsoncxx::document::element& element,
+                                                      int error_code,
                                                       Conversion conversion);
 
 template<>
 std::string element_as<std::string>(const std::string& command,
                                     const char* zKey,
                                     const bsoncxx::document::element& element,
+                                    int error_code,
                                     Conversion conversion);
 
 template<>
 int64_t element_as<int64_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
+                            int error_code,
                             Conversion conversion);
 
 template<>
 int32_t element_as<int32_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
+                            int error_code,
                             Conversion conversion);
 template<>
 bool element_as<bool>(const std::string& command,
                       const char* zKey,
                       const bsoncxx::document::element& element,
+                      int error_code,
                       Conversion conversion);
 
-
-namespace error
-{
-
-#define NOSQL_ERROR(symbol, code, name) const int symbol = code;
-#include "nosqlerror.hh"
-#undef NOSQL_ERROR
-
-int from_mariadb_code(int code);
-
-const char* name(int code);
-
-}
-
-class LastError
-{
-public:
-    virtual ~LastError() {}
-
-    virtual void populate(DocumentBuilder& doc) = 0;
-};
-
-class ConcreteLastError: public LastError
-{
-public:
-    ConcreteLastError(const std::string& err, int32_t code)
-        : m_err(err)
-        , m_code(code)
-    {
-    }
-
-    void populate(DocumentBuilder& doc) override;
-
-private:
-    std::string m_err;
-    int32_t     m_code;
-    std::string m_code_name;
-};
-
-class NoError : public LastError
-{
-public:
-    class Id
-    {
-    public:
-        virtual ~Id() {};
-
-        virtual std::string to_string() const = 0;
-
-        virtual void append(DocumentBuilder& doc, const std::string& key) const = 0;
-    };
-
-    const static bsoncxx::oid null_oid;
-
-    NoError(int32_t n = 0);
-    NoError(int32_t n, bool updated_existing);
-    NoError(std::unique_ptr<Id>&& sUpserted);
-
-    void populate(DocumentBuilder& doc) override;
-
-private:
-    int32_t             m_n { -1 };
-    bool                m_updated_existing { false };
-    std::unique_ptr<Id> m_sUpserted;
-};
-
-class Exception : public std::runtime_error
-{
-public:
-    Exception(const std::string& message, int code)
-        : std::runtime_error(message)
-        , m_code(code)
-    {
-    }
-
-    virtual GWBUF* create_response(const Command& command) const = 0;
-    virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
-    void append_write_error(ArrayBuilder& write_errors, int index) const;
-
-    virtual std::unique_ptr<LastError> create_last_error() const = 0;
-
-protected:
-    int m_code;
-};
-
-class SoftError : public Exception
-{
-public:
-    using Exception::Exception;
-
-    GWBUF* create_response(const Command& command) const override final;
-    void create_response(const Command& command, DocumentBuilder& doc) const override final;
-
-    std::unique_ptr<LastError> create_last_error() const override final;
-};
-
-class HardError : public Exception
-{
-public:
-    using Exception::Exception;
-
-    GWBUF* create_response(const Command& command) const override final;
-    void create_response(const Command& command, DocumentBuilder& doc) const override final;
-
-    std::unique_ptr<LastError> create_last_error() const override final;
-};
-
-class MariaDBError : public Exception
-{
-public:
-    MariaDBError(const ComERR& err);
-
-    int code() const
-    {
-        return m_mariadb_code;
-    }
-
-    const std::string& message() const
-    {
-        return m_mariadb_message;
-    }
-
-    GWBUF* create_response(const Command& command) const override final;
-    void create_response(const Command& command, DocumentBuilder& doc) const override final;
-
-    std::unique_ptr<LastError> create_last_error() const override final;
-
-private:
-    int         m_mariadb_code;
-    std::string m_mariadb_message;
-};
 
 namespace key
 {
@@ -503,6 +378,7 @@ const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
 const char DOCUMENTS[]                       = "documents";
 const char DROPPED[]                         = "dropped";
+const char DROP_TARGET[]                     = "dropTarget";
 const char ELECTION_METRICS[]                = "electionMetrics";
 const char EMPTY[]                           = "empty";
 const char ERRMSG[]                          = "errmsg";
@@ -512,6 +388,7 @@ const char ERR[]                             = "err";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char EXTRA_INFO[]                      = "extraInfo";
 const char EXTRA[]                           = "extra";
+const char FIELDS[]                          = "fields";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";
 const char FLOW_CONTROL[]                    = "flowControl";
@@ -532,6 +409,7 @@ const char KEY_VALUE[]                       = "keyValue";
 const char KEY[]                             = "key";
 const char KEYS_PER_INDEX[]                  = "keysPerIndex";
 const char KIND[]                            = "kind";
+const char LAST_ERROR_OBJECT[]               = "lastErrorObject";
 const char LIMIT[]                           = "limit";
 const char LOCAL_TIME[]                      = "localTime";
 const char LOGICAL_SESSION_TIMEOUT_MINUTES[] = "logicalSessionTimeoutMinutes";
@@ -552,6 +430,7 @@ const char MULTI[]                           = "multi";
 const char NAMES[]                           = "names";
 const char NAME[]                            = "name";
 const char NAME_ONLY[]                       = "nameOnly";
+const char NEW[]                             = "new";
 const char NEXT_BATCH[]                      = "nextBatch";
 const char NRECORDS[]                        = "nrecords";
 const char NS[]                              = "ns";
@@ -574,6 +453,7 @@ const char PROJECTION[]                      = "projection";
 const char QUERY[]                           = "query";
 const char Q[]                               = "q";
 const char READ_ONLY[]                       = "readOnly";
+const char REMOVE[]                          = "remove";
 const char RESPONSE[]                        = "response";
 const char REQUIRES_AUTH[]                   = "requiresAuth";
 const char RUNNING[]                         = "running";
@@ -593,6 +473,7 @@ const char TOTAL_LINES_WRITTEN[]             = "totalLinesWritten";
 const char TOTAL_SIZE[]                      = "totalSize";
 const char TYPE[]                            = "type";
 const char UPDATED_EXISTING[]                = "updatedExisting";
+const char UPDATE[]                          = "update";
 const char UPDATES[]                         = "updates";
 const char UPSERT[]                          = "upsert";
 const char UPSERTED[]                        = "upserted";
@@ -602,6 +483,7 @@ const char UPTIME_MILLIS[]                   = "uptimeMillis";
 const char U[]                               = "u";
 const char V[]                               = "v";
 const char VALID[]                           = "valid";
+const char VALUE[]                           = "value";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
 const char VIEW_ON[]                         = "viewOn";
@@ -672,6 +554,7 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
+std::string extractions_to_columns(const std::vector<std::string>& extractions);
 
 std::string query_to_where_condition(const bsoncxx::document::view& filter);
 std::string query_to_where_clause(const bsoncxx::document::view& filter);
@@ -1540,6 +1423,8 @@ public:
         std::string elemMatch_to_condition(const bsoncxx::document::element& element) const;
         std::string exists_to_condition(const bsoncxx::document::element& element) const;
         std::string mod_to_condition(const bsoncxx::document::element& element) const;
+        std::string nin_to_condition(const bsoncxx::document::element& element) const;
+        std::string not_to_condition(const bsoncxx::document::element& element) const;
         std::string type_to_condition(const bsoncxx::document::element& element) const;
 
     private:
@@ -1635,6 +1520,8 @@ private:
     std::string get_element_condition(const bsoncxx::document::element& element) const;
     std::string get_document_condition(const bsoncxx::document::view& doc) const;
 
+    std::string not_to_condition(const bsoncxx::document::element& element) const;
+
     static void add_part(std::vector<Incarnation>& rv, const std::string& part);
 
     bsoncxx::document::element m_element;
@@ -1644,14 +1531,16 @@ private:
 /**
  * Get SQL statement for creating a document table.
  *
- * @param table_name  The name of the table. Will be used verbatim,
- *                    so all necessary quotes should be provided.
- * @param id_length   The VARCHAR length of the id column.
+ * @param table_name     The name of the table. Will be used verbatim,
+ *                       so all necessary quotes should be provided.
+ * @param id_length      The VARCHAR length of the id column.
+ * @param if_not_exists  If true, the statement will contain "IF NOT EXISTS".
  *
  * @return An SQL statement for creating the table.
  */
 std::string table_create_statement(const std::string& table_name,
-                                   int64_t id_length);
+                                   int64_t id_length,
+                                   bool if_not_exists = true);
 
 
 /**
@@ -1689,5 +1578,20 @@ bsoncxx::document::value bson_from_json(json_t* pObject);
  * @return The corresponding BSON object.
  */
 bsoncxx::document::value bson_from_json(const std::string& json);
+
+/**
+ * Given a resultset row, converts it into the corresponding JSON.
+ *
+ * @param row          A result set row.
+ * @param extractions  The extractions to perform, *MUST* match what the row contains.
+ *
+ * @return The row as JSON.
+ */
+std::string resultset_row_to_json(const CQRTextResultsetRow& row,
+                                  const std::vector<std::string>& extractions);
+
+std::string resultset_row_to_json(const CQRTextResultsetRow& row,
+                                  CQRTextResultsetRow::iterator begin,
+                                  const std::vector<std::string>& extractions);
 
 }

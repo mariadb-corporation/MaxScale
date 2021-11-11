@@ -767,6 +767,7 @@ Field | Type | Description
 ------|------|------------
 renameCollection | string | The namespace of the collection to rename. The namespace is a combination of the database name and the name of the collection.
 to | string | The new namespace of the collection. Moving a collection/table from one database to another succeeds provided the databases reside in the same filesystem.
+dropTarget| boolean | Optional. If `true`, the target collection/table will be dropped before the renaming is made. The default value is `false`.
 
 ## Diagnostic Commands
 

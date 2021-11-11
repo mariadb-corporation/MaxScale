@@ -1452,6 +1452,8 @@ public:
             throw SoftError(ss.str(), error::INVALID_NAMESPACE);
         }
 
+        m_from = quote_name(m_from, i);
+
         m_to = required<string>("to");
 
         auto j = m_to.find('.');
@@ -1463,12 +1465,35 @@ public:
             throw SoftError(ss.str(), error::INVALID_NAMESPACE);
         }
 
-        return "RENAME TABLE " + m_from + " TO " + m_to;
+        m_to = quote_name(m_to, j);
+
+        string sql;
+
+        bool drop_target = false;
+
+        if (optional(key::DROP_TARGET, &drop_target) && drop_target)
+        {
+            sql = "DROP TABLE IF EXISTS " + m_to + "; ";
+            m_nStatements++;
+        }
+
+        sql += "RENAME TABLE " + m_from + " TO " + m_to;
+
+        return sql;
     };
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
-        ComResponse response(mariadb_response.data());
+        uint8_t* pData = mariadb_response.data();
+
+        if (m_nStatements == 2)
+        {
+            // So, we were DROPing as well. We'll just jump past that result.
+            pData += ComPacket::packet_len(pData);
+            mxb_assert(pData < mariadb_response.data() + mariadb_response.length());
+        }
+
+        ComResponse response(pData);
 
         int32_t ok = 0;
 
@@ -1527,8 +1552,21 @@ public:
     }
 
 private:
+    static string quote_name(const string& name, string::size_type i)
+    {
+        string qname("`");
+
+        qname += name.substr(0, i);
+        qname += "`.`";
+        qname += name.substr(i + 1);
+        qname += "`";
+
+        return qname;
+    }
+
     string m_from;
     string m_to;
+    size_t m_nStatements = 1;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/setFeatureCompatibilityVersion/

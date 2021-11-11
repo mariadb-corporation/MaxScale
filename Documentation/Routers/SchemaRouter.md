@@ -196,6 +196,11 @@ in MaxScale 6.0.
 
 ### `refresh_databases`
 
+**Note:** This parameter does nothing in 2.4 and newer versions. The
+  database map is only created when the session starts. Follow
+  [MXS-3836](https://jira.mariadb.org/browse/MXS-3836) for more
+  information.
+
 Enable database map refreshing mid-session. These are triggered by a failure to
 change the database i.e. `USE ...` queries. This feature is enabled by default.
 
