@@ -864,9 +864,9 @@ public:
         bsoncxx::document::view projection;
         if (optional(key::PROJECTION, &projection))
         {
-            m_extractions = projection_to_extractions(projection);
+            m_extractions = extractions_from_projection(projection);
 
-            sql << extractions_to_columns(m_extractions);
+            sql << columns_from_extractions(m_extractions);
         }
         else
         {
@@ -884,7 +884,7 @@ public:
         bsoncxx::document::view sort;
         if (optional(key::SORT, &sort))
         {
-            string order_by = sort_to_order_by(sort);
+            string order_by = order_by_value_from_sort(sort);
 
             if (!order_by.empty())
             {
@@ -1052,9 +1052,9 @@ private:
             bsoncxx::document::view fields;
             if (optional(key::FIELDS, &fields, error::LOCATION31175))
             {
-                m_extractions = projection_to_extractions(fields);
+                m_extractions = extractions_from_projection(fields);
 
-                select << extractions_to_columns(m_extractions);
+                select << columns_from_extractions(m_extractions);
             }
             else
             {
@@ -1078,7 +1078,7 @@ private:
             bsoncxx::document::view sort;
             if (optional(key::SORT, &sort, error::LOCATION31174))
             {
-                string order_by = sort_to_order_by(sort);
+                string order_by = order_by_value_from_sort(sort);
 
                 if (!order_by.empty())
                 {
@@ -1779,7 +1779,7 @@ private:
 
             if (u)
             {
-                sql << update_specification_to_set_value(m_doc, u)
+                sql << set_value_from_update_specification(m_doc, u)
                     << " WHERE id = '" << m_id << "'; ";
             }
             else
@@ -1790,7 +1790,7 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << extractions_to_columns(m_extractions) << " FROM " << table()
+                sql << "SELECT id, " << columns_from_extractions(m_extractions) << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 
@@ -1856,7 +1856,7 @@ private:
 
             if (u)
             {
-                sql << update_specification_to_set_value(m_doc, u)
+                sql << set_value_from_update_specification(m_doc, u)
                     << " WHERE id = '" << m_id << "'; ";
             }
             else
@@ -2569,7 +2569,7 @@ private:
                             error::LOCATION40414);
         }
 
-        sql << update_specification_to_set_value(update, u) << " "
+        sql << set_value_from_update_specification(update, u) << " "
             << where_clause_from_query(q.get_document()) << " ";
 
         auto multi = update[key::MULTI];
@@ -2663,7 +2663,7 @@ private:
 
         ostringstream ss;
         ss << "UPDATE " << table() << " SET DOC = "
-           << update_specification_to_set_value(update, u)
+           << set_value_from_update_specification(update, u)
            << "WHERE id = " << m_id;
 
         string sql = ss.str();

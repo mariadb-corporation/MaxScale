@@ -1171,9 +1171,9 @@ UpdateKind get_update_kind(const bsoncxx::document::element& update_specificatio
     return kind;
 }
 
-void update_specification_to_set_value(UpdateKind kind,
-                                       const bsoncxx::document::view& update_specification,
-                                       ostream& sql)
+void set_value_from_update_specification(UpdateKind kind,
+                                         const bsoncxx::document::view& update_specification,
+                                         ostream& sql)
 {
     switch (kind)
     {
@@ -3508,7 +3508,7 @@ const char* nosql::opcode_to_string(int code)
     }
 }
 
-vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& projection)
+vector<string> nosql::extractions_from_projection(const bsoncxx::document::view& projection)
 {
     vector<string> extractions;
 
@@ -3584,7 +3584,7 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
     return extractions;
 }
 
-string nosql::extractions_to_columns(const vector<string>& extractions)
+string nosql::columns_from_extractions(const vector<string>& extractions)
 {
     string columns;
 
@@ -3632,7 +3632,7 @@ string nosql::where_clause_from_query(const bsoncxx::document::view& query)
 
 
 // https://docs.mongodb.com/manual/reference/method/cursor.sort/
-string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
+string nosql::order_by_value_from_sort(const bsoncxx::document::view& sort)
 {
     string order_by;
 
@@ -3681,8 +3681,8 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
-                                                const bsoncxx::document::element& update_specification)
+string nosql::set_value_from_update_specification(const bsoncxx::document::view& update_command,
+                                                  const bsoncxx::document::element& update_specification)
 {
     ostringstream sql;
 
@@ -3702,19 +3702,19 @@ string nosql::update_specification_to_set_value(const bsoncxx::document::view& u
         break;
 
     default:
-        update_specification_to_set_value(kind, update_specification.get_document(), sql);
+        set_value_from_update_specification(kind, update_specification.get_document(), sql);
     }
 
     return sql.str();
 }
 
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
+string nosql::set_value_from_update_specification(const bsoncxx::document::view& update_specification)
 {
     ostringstream sql;
 
     auto kind = get_update_kind(update_specification);
 
-    update_specification_to_set_value(kind, update_specification, sql);
+    set_value_from_update_specification(kind, update_specification, sql);
 
     return sql.str();
 }

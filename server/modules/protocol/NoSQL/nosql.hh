@@ -569,18 +569,18 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
  */
 std::string to_string(const bsoncxx::document::element& element);
 
-std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
-std::string extractions_to_columns(const std::vector<std::string>& extractions);
+std::vector<std::string> extractions_from_projection(const bsoncxx::document::view& projection);
+std::string columns_from_extractions(const std::vector<std::string>& extractions);
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);
 std::string where_clause_from_query(const bsoncxx::document::view& filter);
 
-std::string sort_to_order_by(const bsoncxx::document::view& sort);
+std::string order_by_value_from_sort(const bsoncxx::document::view& sort);
 
-std::string update_specification_to_set_value(const bsoncxx::document::view& update_command,
-                                              const bsoncxx::document::element& update_specification);
+std::string set_value_from_update_specification(const bsoncxx::document::view& update_command,
+                                                const bsoncxx::document::element& update_specification);
 
-std::string update_specification_to_set_value(const bsoncxx::document::view& update_specification);
+std::string set_value_from_update_specification(const bsoncxx::document::view& update_specification);
 
 namespace packet
 {

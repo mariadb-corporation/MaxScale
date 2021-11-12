@@ -807,7 +807,7 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 
     ostringstream ss;
     ss << "UPDATE " << table() << " SET DOC = "
-       << update_specification_to_set_value(m_req.update()) << " "
+       << set_value_from_update_specification(m_req.update()) << " "
        << where_clause_from_query(m_req.selector()) << " ";
 
     if (!m_req.is_multi())
@@ -958,7 +958,7 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
     {
         ostringstream ss;
         ss << "UPDATE " << table() << " SET DOC = "
-           << update_specification_to_set_value(m_req.update())
+           << set_value_from_update_specification(m_req.update())
            << " "
            << "WHERE id = '" << m_sId->to_string() << "'";
 
@@ -1279,7 +1279,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
     ostringstream sql;
     sql << "SELECT ";
 
-    m_extractions = projection_to_extractions(m_req.fields());
+    m_extractions = extractions_from_projection(m_req.fields());
 
     if (!m_extractions.empty())
     {
@@ -1310,7 +1310,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
 
     if (orderby)
     {
-        string s = sort_to_order_by(orderby.get_document());
+        string s = order_by_value_from_sort(orderby.get_document());
 
         if (!s.empty())
         {
