@@ -8,10 +8,9 @@
 
 #include <maxtest/testconnections.hh>
 
-int test_ps(TestConnections* Test, MYSQL* conn)
+int test_ps(TestConnections* Test, MYSQL_STMT* stmt)
 {
     const char select_stmt[] = "SELECT ?, ?, ?, ?";
-    MYSQL_STMT* stmt = mysql_stmt_init(conn);
 
     mysql_stmt_prepare(stmt, select_stmt, sizeof(select_stmt) - 1);
 
@@ -46,14 +45,19 @@ void* test_thr(void* data)
 
     while (running)
     {
-        MYSQL* mysql = Test->maxscale->open_rwsplit_connection();
+        auto rws = Test->maxscale->rwsplit();
 
-        for (int i = 0; i < 3; i++)
+        if (rws.connect())
         {
-            test_ps(Test, mysql);
+            for (int i = 0; i < 3; i++)
+            {
+                test_ps(Test, rws.stmt());
+            }
         }
-
-        mysql_close(mysql);
+        else
+        {
+            sleep(1);
+        }
     }
 
     return NULL;
