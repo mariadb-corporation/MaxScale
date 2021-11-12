@@ -199,6 +199,7 @@ struct ThisUnit
         { tolower(command::DropDatabase::KEY),             create_info<command::DropDatabase>() },
         { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
         { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
+        { tolower(command::Explain::KEY),                  create_info<command::Explain>() },
         { tolower(command::FSync::KEY),                    create_info<command::FSync>() },
         { tolower(command::Find::KEY),                     create_info<command::Find>() },
         { tolower(command::FindAndModify::KEY),            create_info<command::FindAndModify>() },

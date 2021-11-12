@@ -17,8 +17,10 @@
 
 #include "defs.hh"
 #include <openssl/opensslv.h>
+#include <map>
 #include <maxscale/config.hh>
 #include <maxscale/maxscale.h>
+#include "query_and_write_operation.hh"
 
 namespace nosql
 {
@@ -93,6 +95,297 @@ public:
 // https://docs.mongodb.com/v4.4/reference/command/driverOIDTest/
 
 // https://docs.mongodb.com/v4.4/reference/command/explain/
+class Explain final : public OpMsgCommand
+{
+public:
+    static constexpr const char* const KEY = "explain";
+    static constexpr const char* const HELP = "";
+
+    using OpMsgCommand::OpMsgCommand;
+
+    enum class Verbosity
+    {
+        QUERY_PLANNER,
+        EXECUTION_STATS,
+        ALL_PLANS_EXECUTION,
+    };
+
+    State execute(GWBUF** ppNoSQL_response) override final
+    {
+        string s;
+        if (optional(key::VERBOSITY, &s))
+        {
+            if (s == "queryPlanner")
+            {
+                m_verbosity = Verbosity::QUERY_PLANNER;
+            }
+            else if (s == "executionStats")
+            {
+                m_verbosity = Verbosity::EXECUTION_STATS;
+            }
+            else if (s == "allPlansExecution")
+            {
+                m_verbosity = Verbosity::ALL_PLANS_EXECUTION;
+            }
+            else
+            {
+                throw SoftError("verbosity string must be one of {'queryPlanner', "
+                                "'executionStats', 'allPlansExecution'}",
+                                error::FAILED_TO_PARSE);
+            }
+        }
+
+        auto explain = value_as<bsoncxx::document::view>();
+
+        auto it = explain.begin();
+
+        if (it != explain.end())
+        {
+            string_view sv = explain[it->key()].get_utf8();
+            string collection = static_cast<string>(sv);
+
+            auto create = command_creator_for(mxb::tolower(static_cast<string>(it->key())));
+
+            m_sSub_command.reset(create(this, collection, explain));
+        }
+        else
+        {
+            throw SoftError("Explain failed due to unknown command: ", error::COMMAND_NOT_FOUND);
+        }
+
+        return m_sSub_command->execute(ppNoSQL_response);
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    {
+        mxb_assert(m_sSub_command.get());
+
+        return m_sSub_command->translate(std::move(mariadb_response), ppNoSQL_response);
+    }
+
+    void diagnose(DocumentBuilder& doc) override final
+    {
+        // TODO: Add more.
+        doc.append(kvp(key::KIND, value::MULTI));
+        doc.append(kvp(key::OK, 1));
+    }
+
+private:
+    class SubCommand
+    {
+    public:
+        SubCommand(Explain* pSuper,
+                   const string& collection,
+                   const bsoncxx::document::view& doc)
+            : m_super(*pSuper)
+            , m_doc(doc)
+        {
+            initialize_query_planner(collection);
+        }
+
+        virtual ~SubCommand()
+        {
+        }
+
+        virtual State execute(GWBUF** ppNoSQL_response) = 0;
+        virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;
+
+    protected:
+        void add_execution_stats(DocumentBuilder& doc)
+        {
+            DocumentBuilder es;
+
+            if (m_super.m_verbosity == Verbosity::ALL_PLANS_EXECUTION)
+            {
+                ArrayBuilder ape;
+
+                doc.append(kvp(key::ALL_PLANS_EXECUTION, ape.extract()));
+            }
+
+            doc.append(kvp(key::EXECUTION_STATS, es.extract()));
+        }
+
+        void add_server_info(DocumentBuilder& doc, int ok)
+        {
+            const auto& config = mxs::Config::get();
+
+            DocumentBuilder server_info;
+            server_info.append(kvp(key::HOST, config.nodename));
+            server_info.append(kvp(key::PORT, 17017)); // TODO: Make the port available.
+            server_info.append(kvp(key::VERSION, NOSQL_ZVERSION));
+            server_info.append(kvp(key::GIT_VERSION, MAXSCALE_COMMIT));
+
+            doc.append(kvp(key::SERVER_INFO, server_info.extract()));
+
+            doc.append(kvp(key::OK, ok));
+        }
+
+        Explain&                 m_super;
+        bsoncxx::document::view  m_doc;
+        DocumentBuilder          m_query_planner;
+        DocumentArguments        m_arguments;
+        unique_ptr<OpMsgCommand> m_sCommand;
+
+    private:
+        void initialize_query_planner(const string& collection_name)
+        {
+            string ns = m_super.m_database.name() + "." + collection_name;
+            ArrayBuilder rejected_plans;
+
+            m_query_planner.append(kvp(key::PLANNER_VERSION, 1));
+            m_query_planner.append(kvp(key::NS, ns));
+            m_query_planner.append(kvp(key::INDEX_FILTER_SET, false));
+            m_query_planner.append(kvp(key::INDEX_FILTER_SET, false));
+            m_query_planner.append(kvp(key::REJECTED_PLANS, rejected_plans.extract()));
+        }
+    };
+
+    class DefaultSubCommand : public SubCommand
+    {
+    public:
+        using SubCommand::SubCommand;
+
+        static SubCommand* create(Explain* pSuper,
+                                  const string& collection,
+                                  const bsoncxx::document::view& doc)
+        {
+            return new DefaultSubCommand(pSuper, collection, doc);
+        }
+
+        State execute(GWBUF** ppResponse) override final
+        {
+            DocumentBuilder doc;
+
+            doc.append(kvp(key::QUERY_PLANNER, m_query_planner.extract()));
+
+            if (m_super.m_verbosity != Verbosity::QUERY_PLANNER)
+            {
+                add_execution_stats(doc);
+            }
+
+            add_server_info(doc, 1);
+
+            *ppResponse = m_super.create_response(doc.extract());
+            return State::READY;
+        }
+
+        State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+        {
+            mxb_assert(!true);
+            return State::READY;
+        }
+    };
+
+    class FindSubCommand : public SubCommand
+    {
+    public:
+        using SubCommand::SubCommand;
+
+        static SubCommand* create(Explain* pSuper,
+                                  const string& collection,
+                                  const bsoncxx::document::view& doc)
+        {
+            return new FindSubCommand(pSuper, collection, doc);
+        }
+
+        State execute(GWBUF** ppResponse) override final
+        {
+            auto filter = m_doc[key::FILTER];
+
+            if (filter)
+            {
+                append(m_query_planner, key::PARSED_QUERY, filter);
+            }
+
+            DocumentBuilder winning_plan;
+            winning_plan.append(kvp(key::STAGE, "COLLSCAN"));
+            if (filter)
+            {
+                append(winning_plan, key::FILTER, filter);
+            }
+            winning_plan.append(kvp(key::DIRECTION, "forward"));
+
+            m_query_planner.append(kvp(key::WINNING_PLAN, winning_plan.extract()));
+
+            packet::Msg req(m_super.m_req);
+            m_sCommand.reset(new Find(Find::KEY,
+                                      &m_super.m_database,
+                                      m_super.m_pRequest,
+                                      std::move(req),
+                                      m_doc,
+                                      m_arguments,
+                                      &m_find_stats));
+
+            return m_sCommand->execute(ppResponse);
+        }
+
+        State translate(mxs::Buffer&& response, GWBUF** ppResponse) override final
+        {
+            mxb_assert(m_sCommand.get());
+
+            GWBUF* pResponse = nullptr;
+            m_sCommand->translate(std::move(response), &pResponse);
+            gwbuf_free(pResponse);
+
+            DocumentBuilder doc;
+            doc.append(kvp(key::QUERY_PLANNER, m_query_planner.extract()));
+
+            if (m_super.m_verbosity != Verbosity::QUERY_PLANNER)
+            {
+                DocumentBuilder execution_stats;
+                execution_stats.append(kvp(key::EXECUTION_SUCCESS, true));
+                execution_stats.append(kvp(key::N_RETURNED, m_find_stats.nReturned));
+
+                doc.append(kvp(key::EXECUTION_STATS, execution_stats.extract()));
+            }
+
+            add_server_info(doc, 1);
+
+            *ppResponse = m_super.create_response(doc.extract());
+
+            return State::READY;
+        }
+
+    private:
+        Find::Stats m_find_stats;
+    };
+
+    using create_function = SubCommand* (*)(Explain*, const string&, const bsoncxx::document::view&);
+
+    create_function command_creator_for(const string& command)
+    {
+        auto it = s_commands.find(command);
+
+        if (it == s_commands.end())
+        {
+            ostringstream ss;
+            ss << "Explain failed due to unknown command: " << command;
+            throw SoftError(ss.str(), error::COMMAND_NOT_FOUND);
+        }
+
+        return it->second;
+    }
+
+    static map<string, create_function> s_commands;
+
+    Verbosity              m_verbosity = Verbosity::QUERY_PLANNER;
+    unique_ptr<SubCommand> m_sSub_command;
+};
+
+//static
+map<string, Explain::create_function> Explain::s_commands =
+{
+    // NOTE: All lower case.
+    { "aggregate",     &Explain::DefaultSubCommand::create },
+    { "count",         &Explain::DefaultSubCommand::create },
+    { "delete",        &Explain::DefaultSubCommand::create },
+    { "distinct",      &Explain::DefaultSubCommand::create },
+    { "find",          &Explain::FindSubCommand::create },
+    { "findandmodify", &Explain::DefaultSubCommand::create },
+    { "mapreduce",     &Explain::DefaultSubCommand::create },
+    { "update",        &Explain::DefaultSubCommand::create },
+};
+
 
 // https://docs.mongodb.com/v4.4/reference/command/features/
 
