@@ -76,7 +76,7 @@ public:
 
     using Config = MaxRowsConfig;
 
-    static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING;
+    static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_OLD_PROTOCOL;
 
     // Creates a new filter instance
     static MaxRows* create(const char* name);
