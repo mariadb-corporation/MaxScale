@@ -875,10 +875,39 @@ public:
 
         sql << " FROM " << table() << " ";
 
+        string where_condition;
+
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            sql << where_clause_from_query(filter) << " ";
+            where_condition += where_condition_from_query(filter);
+        }
+
+        bsoncxx::document::view min;
+        if (optional(key::MIN, &min))
+        {
+            if (!where_condition.empty())
+            {
+                where_condition += " AND ";
+            }
+
+            where_condition += where_condition_from_min(min);
+        }
+
+        bsoncxx::document::view max;
+        if (optional(key::MAX, &max))
+        {
+            if (!where_condition.empty())
+            {
+                where_condition += " AND ";
+            }
+
+            where_condition += where_condition_from_max(max);
+        }
+
+        if (!where_condition.empty())
+        {
+            sql << "WHERE " << where_condition << " ";
         }
 
         bsoncxx::document::view sort;
@@ -960,6 +989,40 @@ public:
     }
 
 private:
+    string where_condition_from_op(const bsoncxx::document::view& doc, const char* zOp)
+    {
+        ostringstream ss;
+
+        ss << "(";
+
+        for (auto it = doc.begin(); it != doc.end(); ++it)
+        {
+            const auto& field = *it;
+
+            if (it != doc.begin())
+            {
+                ss << " AND ";
+            }
+
+            ss << "JSON_EXTRACT(doc, '$." << field.key() << "') " << zOp
+               << element_to_value(field, ValueFor::SQL);
+        }
+
+        ss << ")";
+
+        return ss.str();
+    }
+
+    string where_condition_from_min(const bsoncxx::document::view& min)
+    {
+        return where_condition_from_op(min, " >= ");
+    }
+
+    string where_condition_from_max(const bsoncxx::document::view& max)
+    {
+        return where_condition_from_op(max, " < ");
+    }
+
     int32_t        m_batch_size { DEFAULT_CURSOR_RETURN };
     bool           m_single_batch { false };
     vector<string> m_extractions;
