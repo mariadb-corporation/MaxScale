@@ -572,8 +572,8 @@ std::string to_string(const bsoncxx::document::element& element);
 std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
 std::string extractions_to_columns(const std::vector<std::string>& extractions);
 
-std::string query_to_where_condition(const bsoncxx::document::view& filter);
-std::string query_to_where_clause(const bsoncxx::document::view& filter);
+std::string where_condition_from_query(const bsoncxx::document::view& filter);
+std::string where_clause_from_query(const bsoncxx::document::view& filter);
 
 std::string sort_to_order_by(const bsoncxx::document::view& sort);
 

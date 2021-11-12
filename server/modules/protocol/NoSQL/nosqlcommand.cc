@@ -541,11 +541,11 @@ std::string OpDeleteCommand::description() const
 State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
 {
     ostringstream ss;
-    ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
+    ss << "DELETE FROM " << table() << where_clause_from_query(m_req.selector()) << " ";
 
     if (m_req.is_single_remove())
     {
-        ss << " LIMIT 1";
+        ss << "LIMIT 1";
     }
 
     auto statement = ss.str();
@@ -807,13 +807,12 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 
     ostringstream ss;
     ss << "UPDATE " << table() << " SET DOC = "
-       << update_specification_to_set_value(m_req.update())
-       << " "
-       << query_to_where_clause(m_req.selector());
+       << update_specification_to_set_value(m_req.update()) << " "
+       << where_clause_from_query(m_req.selector()) << " ";
 
     if (!m_req.is_multi())
     {
-        ss << " LIMIT 1";
+        ss << "LIMIT 1";
     }
 
     auto sql = ss.str();
@@ -1306,12 +1305,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
 
     if (!query.empty())
     {
-        auto where = query_to_where_clause(query);
-
-        if (!where.empty())
-        {
-            sql << " " << where;
-        }
+        sql << where_clause_from_query(query) << " ";
     }
 
     if (orderby)
@@ -1320,11 +1314,11 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
 
         if (!s.empty())
         {
-            sql << " ORDER BY " << s;
+            sql << "ORDER BY " << s << " ";
         }
     }
 
-    sql << " LIMIT ";
+    sql << "LIMIT ";
 
     auto nSkip = m_req.nSkip();
 

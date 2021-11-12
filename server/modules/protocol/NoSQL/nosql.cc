@@ -3613,24 +3613,21 @@ string nosql::to_string(const bsoncxx::document::element& element)
     return element_to_string(element);
 }
 
-string nosql::query_to_where_condition(const bsoncxx::document::view& query)
+string nosql::where_condition_from_query(const bsoncxx::document::view& query)
 {
-    return get_condition(query);
-}
+    string condition = get_condition(query);
 
-string nosql::query_to_where_clause(const bsoncxx::document::view& query)
-{
-    string clause;
-    string condition = query_to_where_condition(query);
-
-    if (!condition.empty())
+    if (condition.empty())
     {
-        clause += "WHERE ";
-        clause += condition;
-        clause += " ";
+        condition = "true";
     }
 
-    return clause;
+    return condition;
+}
+
+string nosql::where_clause_from_query(const bsoncxx::document::view& query)
+{
+    return "WHERE " + where_condition_from_query(query);
 }
 
 

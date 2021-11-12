@@ -770,7 +770,7 @@ private:
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
-        sql << query_to_where_clause(q.get_document());
+        sql << where_clause_from_query(q.get_document()) << " ";
 
         auto limit = doc["limit"];
 
@@ -799,7 +799,7 @@ private:
 
             if (nLimit == 1)
             {
-                sql << " LIMIT 1";
+                sql << "LIMIT 1";
             }
         }
 
@@ -878,7 +878,7 @@ public:
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            sql << query_to_where_clause(filter);
+            sql << where_clause_from_query(filter) << " ";
         }
 
         bsoncxx::document::view sort;
@@ -1072,7 +1072,7 @@ private:
             bsoncxx::document::view query;
             if (optional(key::QUERY, &query, error::LOCATION31160))
             {
-                sql << query_to_where_clause(query);
+                sql << where_clause_from_query(query) << " ";
             }
 
             bsoncxx::document::view sort;
@@ -1086,7 +1086,7 @@ private:
                 }
             }
 
-            sql << " LIMIT 1 FOR UPDATE";
+            sql << "LIMIT 1 FOR UPDATE";
 
             return Query(Query::MULTI, 2, sql.str());
         }
@@ -2569,15 +2569,14 @@ private:
                             error::LOCATION40414);
         }
 
-        sql << update_specification_to_set_value(update, u);
-        sql << " ";
-        sql << query_to_where_clause(q.get_document());
+        sql << update_specification_to_set_value(update, u) << " "
+            << where_clause_from_query(q.get_document()) << " ";
 
         auto multi = update[key::MULTI];
 
         if (!multi || !multi.get_bool())
         {
-            sql << " LIMIT 1";
+            sql << "LIMIT 1";
         }
 
         return sql.str();
