@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#pragma once
+
 //
 // https://docs.mongodb.com/v4.4/reference/command/nav-crud/
 //
@@ -819,7 +821,26 @@ public:
     static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
 
+    class Stats
+    {
+    public:
+        int32_t nReturned { 0 };
+    };
+
     using SingleCommand::SingleCommand;
+
+    Find(const std::string& name,
+         Database* pDatabase,
+         GWBUF* pRequest,
+         packet::Msg&& req,
+         const bsoncxx::document::view& doc,
+         const DocumentArguments& arguments,
+         Stats* pStats)
+        : SingleCommand(name, pDatabase, pRequest, std::move(req), doc, arguments)
+        , m_pStats(pStats)
+    {
+    }
+
 
     void prepare() override
     {
@@ -917,6 +938,11 @@ public:
                                                                       m_extractions,
                                                                       std::move(mariadb_response));
 
+                if (m_pStats)
+                {
+                    m_pStats->nReturned = sCursor->nRemaining();
+                }
+
                 DocumentBuilder doc;
                 sCursor->create_first_batch(worker(), doc, m_batch_size, m_single_batch);
 
@@ -937,6 +963,7 @@ private:
     int32_t        m_batch_size { DEFAULT_CURSOR_RETURN };
     bool           m_single_batch { false };
     vector<string> m_extractions;
+    Stats*         m_pStats { nullptr };
 };
 
 
