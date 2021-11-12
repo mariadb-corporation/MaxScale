@@ -22,6 +22,7 @@ add_library(nosqlprotocol SHARED
   )
 add_dependencies(nosqlprotocol mariadbprotocol mongo-c-driver mongo-cxx-driver)
 target_link_libraries(nosqlprotocol
+  mariadbprotocol
   maxscale-common
   ${BSON_CXX_LIBRARIES}
   ${BSON_C_LIBRARIES}
