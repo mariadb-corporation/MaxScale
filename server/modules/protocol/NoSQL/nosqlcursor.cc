@@ -511,4 +511,23 @@ void NoSQLCursor::touch(mxb::Worker& worker)
     m_used = worker.epoll_tick_now();
 }
 
+int32_t NoSQLCursor::nRemaining() const
+{
+    int32_t n = 0;
+
+    auto pBuffer = m_pBuffer;
+    auto nBuffer = m_nBuffer;
+
+    if (pBuffer != pBuffer + nBuffer)
+    {
+        while (ComResponse(pBuffer, nBuffer).type() != ComResponse::EOF_PACKET)
+        {
+            ++n;
+            CQRTextResultsetRow row(&pBuffer, &nBuffer, m_types); // Advances pBuffer
+        }
+    }
+
+    return n;
+}
+
 }

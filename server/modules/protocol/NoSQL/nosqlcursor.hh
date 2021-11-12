@@ -88,6 +88,8 @@ public:
         return m_used;
     }
 
+    int32_t nRemaining() const;
+
 private:
     NoSQLCursor(const std::string& ns);
 
