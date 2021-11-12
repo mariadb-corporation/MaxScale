@@ -63,7 +63,14 @@ void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* pa
 
 char* config_clean_string_list(const char* str);
 bool  config_load(const char*, const mxb::ini::map_result::Configuration& cfg_file_contents);
-bool  config_load_global(const char* filename);
+
+/**
+ * Apply the [maxscale]-section from the main configuration file.
+ *
+ * @param config Parsed main config file, after variable substitution.
+ * @return True on success.
+ */
+bool apply_main_config(const mxb::ini::map_result::Configuration& config);
 
 /**
  * @brief Creates an empty configuration context

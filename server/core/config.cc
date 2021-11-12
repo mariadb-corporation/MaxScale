@@ -1739,13 +1739,26 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 mxb_assert(current_dcontext);
                 mxb_assert(current_ccontext);
 
-                if (strcmp(filename, "maxscale.cnf") == 0 && !config_load_global(fpath))
+                auto load_res = mxb::ini::parse_config_file_to_map(fpath);
+                if (load_res.errors.empty())
                 {
-                    rval = -1;
+                    // If the file looks like the main config file (likely runtime-generated?),
+                    // apply the main "maxscale"-section first.
+                    if (strcmp(filename, "maxscale.cnf") == 0 && !apply_main_config(load_res.config))
+                    {
+                        rval = -1;
+                    }
+                    else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+                    {
+                        rval = -1;
+                    }
                 }
-                else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+                else
                 {
-                    rval = -1;
+                    for (const auto& error_msg : load_res.errors)
+                    {
+                        MXB_ERROR("%s", error_msg.c_str());
+                    }
                 }
             }
         }
@@ -2015,29 +2028,30 @@ static bool config_load_and_process(const char* filename,
     return rval;
 }
 
-bool config_load_global(const char* filename)
+bool apply_main_config(const mxb::ini::map_result::Configuration& config)
 {
     mxs::ConfigParameters params;
-    bool rval = (mxb::ini::parse_file(filename, ini_global_handler, &params) == 0);
-
-    if (!rval)
+    auto it = config.find(CN_MAXSCALE);
+    if (it != config.end())
     {
-        log_config_error(filename, rval);
+        auto& kvs = it->second.key_values;
+        for (const auto& kv : kvs)
+        {
+            params.set(kv.first, kv.second.value);
+        }
+    }
+
+    mxs::Config& global_config = mxs::Config::get();
+    bool rval = true;
+
+    if (!global_config.specification().validate(params))
+    {
+        rval = false;
     }
     else
     {
-        mxs::Config& config = mxs::Config::get();
-
-        if (!config.specification().validate(params))
-        {
-            rval = false;
-        }
-        else
-        {
-            rval = config.configure(params);
-        }
+        rval = global_config.configure(params);
     }
-
     return rval;
 }
 

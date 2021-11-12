@@ -206,7 +206,6 @@ struct SniffResult
 };
 
 SniffResult sniff_configuration(const string& filepath);
-bool        apply_main_config(const mxb::ini::map_result::Configuration& config_in);
 string      resolve_maxscale_conf_fname(const string& cnf_file_arg);
 }
 
@@ -2985,39 +2984,7 @@ SniffResult sniff_configuration(const string& filepath)
     }
     return rval;
 }
-
-/**
- * Apply the [maxscale]-section from the main configuration file.
- */
-bool apply_main_config(const mxb::ini::map_result::Configuration& config_in)
-{
-    // This sets and validates even the parameters that were sniffed earlier.
-    mxs::ConfigParameters params;
-    auto it = config_in.find(CN_MAXSCALE);
-    if (it != config_in.end())
-    {
-        auto& kvs = it->second.key_values;
-        for (const auto& kv : kvs)
-        {
-            params.set(kv.first, kv.second.value);
-        }
-    }
-
-    mxs::Config& config = mxs::Config::get();
-    bool rval = true;
-
-    if (!config.specification().validate(params))
-    {
-        rval = false;
-    }
-    else
-    {
-        rval = config.configure(params);
-    }
-    return rval;
 }
-}
-
 
 static void enable_module_unloading(const char* arg)
 {
