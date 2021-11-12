@@ -267,9 +267,8 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context);
  *
  * @return True if the file could be parsed, false otherwise.
  */
-bool config_load_single_file(const char* file,
-                             DUPLICATE_CONTEXT* dcontext,
-                             CONFIG_CONTEXT* ccontext);
+bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext,
+                             const mxb::ini::map_result::Configuration& config);
 
 /**
  * Turn parameters into json.

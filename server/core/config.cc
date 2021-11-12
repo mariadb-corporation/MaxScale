@@ -1374,185 +1374,137 @@ static bool is_maxscale_section(const char* section)
     return strcasecmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0;
 }
 
-static int ini_global_handler(void* userdata, const char* section, const char* name, const char* value,
-                              int lineno)
+static int apply_configuration(CONFIG_CONTEXT* cntxt, const mxb::ini::map_result::Configuration& config)
 {
-    // Ignore section name updates.
-    if (name || value)
-    {
-        auto* params = static_cast<mxs::ConfigParameters*>(userdata);
-        if (is_maxscale_section(section))
-        {
-            params->set(name, value);
-        }
-    }
-    return 1;
-}
-
-/**
- * Config item handler for the ini file reader
- *
- * @param userdata      The config context element
- * @param section       The config file section
- * @param name          The Parameter name
- * @param value         The Parameter value
- * @return zero on error
- */
-static int ini_handler(void* userdata, const char* section, const char* name, const char* value, int lineno)
-{
-    if (!name && !value)
-    {
-        // Ignore section name updates.
-        return 1;
-    }
-    CONFIG_CONTEXT* cntxt = (CONFIG_CONTEXT*)userdata;
-    CONFIG_CONTEXT* ptr = cntxt;
+    int errors = 0;
 
     const std::set<std::string> legacy_parameters {"passwd"};
 
-    if (this_unit.is_persisted_config && legacy_parameters.count(name))
+    for (const auto& section : config)
     {
-        /**
-         * Ignore legacy parameters in persisted configurations. Needs to be
-         * done to make upgrades from pre-2.3 versions work.
-         */
-        return 1;
-    }
-
-    if (is_empty_string(value))
-    {
-        if (this_unit.is_persisted_config)
+        string reason;
+        if (!config_is_valid_name(section.first, &reason))
         {
-            /**
-             * Found old-style persisted configuration. These will be automatically
-             * upgraded on the next modification so we can safely ignore it.
+            /* A set that holds all the section names that are invalid. As the configuration file
+             * is parsed multiple times, we need to do this to prevent the same complaint from
+             * being logged multiple times.
              */
-            return 1;
+            static std::set<string> warned_invalid_names;
+
+            if (warned_invalid_names.find(reason) == warned_invalid_names.end())
+            {
+                MXS_ERROR("%s", reason.c_str());
+                warned_invalid_names.insert(reason);
+            }
+            errors++;
         }
         else
         {
-            MXS_ERROR("Empty value given to parameter '%s'", name);
-            return 0;
-        }
-    }
-
-    if (mxs::Config::get().substitute_variables)
-    {
-        if (*value == '$')
-        {
-            char* env_value = getenv(value + 1);
-
-            if (!env_value)
+            /*
+             * If we already have some parameters for the object
+             * add the parameters to that object. If not create
+             * a new object.
+             */
+            CONFIG_CONTEXT* ptr = cntxt;
+            while (ptr && strcmp(ptr->name(), section.first.c_str()) != 0)
             {
-                MXS_ERROR("The environment variable %s, used as value for parameter %s "
-                          "in section %s, does not exist.",
-                          value + 1,
-                          name,
-                          section);
-                return 0;
+                ptr = ptr->m_next;
             }
 
-            value = env_value;
-        }
-    }
-
-    if (strlen(section) == 0)
-    {
-        MXS_ERROR("Parameter '%s=%s' declared outside a section.", name, value);
-        return 0;
-    }
-
-    string reason;
-    if (!config_is_valid_name(section, &reason))
-    {
-        /* A set that holds all the section names that are invalid. As the configuration file
-         * is parsed multiple times, we need to do this to prevent the same complaint from
-         * being logged multiple times.
-         */
-        static std::set<string> warned_invalid_names;
-
-        if (warned_invalid_names.find(reason) == warned_invalid_names.end())
-        {
-            MXS_ERROR("%s", reason.c_str());
-            warned_invalid_names.insert(reason);
-        }
-        return 0;
-    }
-
-    /*
-     * If we already have some parameters for the object
-     * add the parameters to that object. If not create
-     * a new object.
-     */
-    while (ptr && strcmp(ptr->name(), section) != 0)
-    {
-        ptr = ptr->m_next;
-    }
-
-    if (!ptr)
-    {
-        ptr = config_context_create(section);
-        MXB_OOM_IFNULL(ptr);
-        ptr->m_next = cntxt->m_next;
-        cntxt->m_next = ptr;
-
-        if (!std::all_of(ptr->m_name.begin(), ptr->m_name.end(), [](char c) {
-                             return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
-                         }))
-        {
-            MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
-                        "the REST API or MaxCtrl.", ptr->name());
-        }
-    }
-
-    if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)
-    {
-        MXS_WARNING("Found static and runtime configurations for [%s], ignoring static "
-                    "configuration. Move the runtime changes into the static configuration "
-                    "file and remove the generated file in '%s' to remove this warning.",
-                    ptr->name(), mxs::config_persistdir());
-        ptr->m_was_persisted = true;
-        ptr->m_parameters.clear();
-    }
-
-    if (ptr->m_parameters.contains(name))
-    {
-        /** The values in the persisted configurations are updated versions of
-         * the ones in the main configuration file.  */
-        if (this_unit.is_persisted_config)
-        {
-            if (!config_replace_param(ptr, name, value))
+            if (!ptr)
             {
-                return 0;
+                ptr = config_context_create(section.first.c_str());
+                ptr->m_next = cntxt->m_next;
+                cntxt->m_next = ptr;
+
+                if (!std::all_of(ptr->m_name.begin(), ptr->m_name.end(), [](char c) {
+                                     return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
+                                 }))
+                {
+                    MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
+                                "the REST API or MaxCtrl.", ptr->name());
+                }
             }
-        }
-        /** Multi-line parameter */
-        else
-        {
-            MXS_WARNING("Multi-line parameters have been deprecated. "
-                        "Declare the value for '%s' on one line.", name);
 
-            if (!config_append_param(ptr, name, value))
+            if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)
             {
-                return 0;
+                MXS_WARNING("Found static and runtime configurations for [%s], ignoring static "
+                            "configuration. Move the runtime changes into the static configuration "
+                            "file and remove the generated file in '%s' to remove this warning.",
+                            ptr->name(), mxs::config_persistdir());
+                ptr->m_was_persisted = true;
+                ptr->m_parameters.clear();
+            }
+
+            if (is_maxscale_section(section.first.c_str()))
+            {
+                if (!this_unit.is_root_config_file && !this_unit.is_persisted_config)
+                {
+                    MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
+                    errors++;
+                    continue;
+                }
+            }
+
+            const auto& kvs = section.second.key_values;
+            for (const auto& kv : kvs)
+            {
+                const string& name = kv.first;
+                const string& value = kv.second.value;
+
+                if (this_unit.is_persisted_config && legacy_parameters.count(name))
+                {
+                    /**
+                     * Ignore legacy parameters in persisted configurations. Needs to be
+                     * done to make upgrades from pre-2.3 versions work.
+                     */
+                    continue;
+                }
+
+                if (is_empty_string(value.c_str()))
+                {
+                    if (this_unit.is_persisted_config)
+                    {
+                        /**
+                         * Found old-style persisted configuration. These will be automatically
+                         * upgraded on the next modification so we can safely ignore it.
+                         */
+                    }
+                    else
+                    {
+                        MXS_ERROR("Empty value given to parameter '%s'", name.c_str());
+                        errors++;
+                    }
+                }
+                else
+                {
+                    if (ptr->m_parameters.contains(name))
+                    {
+                        /** The values in the persisted configurations are updated versions of
+                         * the ones in the main configuration file.  */
+                        if (this_unit.is_persisted_config)
+                        {
+                            if (!config_replace_param(ptr, name.c_str(), value.c_str()))
+                            {
+                                errors++;
+                            }
+                        }
+                        else
+                        {
+                            MXB_ERROR("Duplicate definition for '%s' in section '%s'.",
+                                      name.c_str(), section.first.c_str());
+                            errors++;
+                        }
+                    }
+                    else if (!config_add_param(ptr, name.c_str(), value.c_str()))
+                    {
+                        errors++;
+                    }
+                }
             }
         }
     }
-    else if (!config_add_param(ptr, name, value))
-    {
-        return 0;
-    }
-
-    if (is_maxscale_section(section))
-    {
-        if (!this_unit.is_root_config_file && !this_unit.is_persisted_config)
-        {
-            MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
-            return 0;
-        }
-    }
-
-    return 1;
+    return errors;
 }
 
 static void log_config_error(const char* file, int rval)
@@ -1639,22 +1591,28 @@ config_load_single_contents(const mxb::ini::map_result::Configuration& config, C
     return success;
 }
 
-bool config_load_single_file(const char* file,
-                             DUPLICATE_CONTEXT* dcontext,
-                             CONFIG_CONTEXT* ccontext)
+bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext,
+                             const mxb::ini::map_result::Configuration& config)
 {
-    int rval = -1;
-
     // With multiple configuration files being loaded, we need to log the file
     // currently being loaded so that the context is clear in case of errors.
     MXS_NOTICE("Loading %s.", file);
 
-    if (!config_has_duplicate_sections(file, dcontext))
+    bool duplicate_found = false;
+    for (const auto& section : config)
     {
-        if ((rval = mxb::ini::parse_file(file, ini_handler, ccontext)) != 0)
+        auto insert_res = dcontext->sections->insert(section.first);
+        if (insert_res.second == false)
         {
-            log_config_error(file, rval);
+            MXS_ERROR("Duplicate section found: %s", section.first.c_str());
+            duplicate_found = true;
         }
+    }
+
+    int rval = -1;
+    if (!duplicate_found)
+    {
+        rval = apply_configuration(ccontext, config);
     }
 
     return rval == 0;
@@ -1675,6 +1633,7 @@ static std::unordered_set<std::string> hidden_dirs;
  */
 int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
 {
+    bool success = true;
     int rval = 0;
 
     if (typeflag == FTW_SL)     // A symbolic link; let's see what it points to.
@@ -1695,8 +1654,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
             case S_IFDIR:
                 // Points to a directory; we'll ignore that.
                 MXS_WARNING("Symbolic link %s in configuration directory points to a "
-                            "directory; it will be ignored.",
-                            fpath);
+                            "directory; it will be ignored.", fpath);
                 break;
 
             default:
@@ -1707,8 +1665,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         else
         {
             MXS_WARNING("Could not get information about the symbolic link %s; "
-                        "it will be ignored.",
-                        fpath);
+                        "it will be ignored.", fpath);
         }
     }
 
@@ -1744,17 +1701,21 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 {
                     // If the file looks like the main config file (likely runtime-generated?),
                     // apply the main "maxscale"-section first.
-                    if (strcmp(filename, "maxscale.cnf") == 0 && !apply_main_config(load_res.config))
+                    if (strcmp(filename, "maxscale.cnf") == 0
+                        && !apply_main_config(load_res.config))
                     {
-                        rval = -1;
+                        success = false;
                     }
-                    else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+
+                    if (success && !config_load_single_file(fpath, current_dcontext, current_ccontext,
+                                                            load_res.config))
                     {
-                        rval = -1;
+                        success = false;
                     }
                 }
                 else
                 {
+                    success = false;
                     for (const auto& error_msg : load_res.errors)
                     {
                         MXB_ERROR("%s", error_msg.c_str());
@@ -1764,7 +1725,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         }
     }
 
-    return rval;
+    return success ? 0 : 1;
 }
 
 /**
@@ -1781,12 +1742,6 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
  */
 static bool config_load_dir(const char* dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext)
 {
-    // Since there is no way to pass userdata to the callback, we need to store
-    // the current context into a static variable. Consequently, we need lock.
-    // Should not matter since config_load() is called once at startup.
-    static std::mutex lock;
-    std::lock_guard<std::mutex> guard(lock);
-
     int nopenfd = 5;    // Maximum concurrently opened directory descriptors
 
     current_dcontext = dcontext;

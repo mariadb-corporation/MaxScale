@@ -78,8 +78,8 @@ bool test_load_config(const char* input, Server* server)
     if (duplicate_context_init(&dcontext))
     {
         CONFIG_CONTEXT ccontext;
-
-        if (config_load_single_file(input, &dcontext, &ccontext))
+        auto load_res = mxb::ini::parse_config_file_to_map(input);
+        if (config_load_single_file(input, &dcontext, &ccontext, load_res.config))
         {
             CONFIG_CONTEXT* obj = ccontext.m_next;
             mxs::ConfigParameters* param = &obj->m_parameters;
