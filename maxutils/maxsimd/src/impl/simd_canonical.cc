@@ -299,18 +299,19 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  */
 std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
-    auto& sql = *pSql;
-    auto markers = make_markers_sql_optimized(sql, pMarkers);
-
-    std::reverse(begin(*pMarkers), end(*pMarkers));     // for pop_back(), an index would likely be better.
-
-    const char* read_begin = sql.data();
+    /* The call &*pSql->begin() ensures that a non-confirming
+     * std::string will copy the data (COW, CentOS7)
+     */
+    const char* read_begin = &*pSql->begin();
     const char* read_ptr = read_begin;
-    const char* read_end = read_begin + sql.length();
+    const char* read_end = read_begin + pSql->length();
 
     const char* write_begin = read_begin;
-    auto write_ptr = &*sql.begin();
+    auto write_ptr = const_cast<char*>(write_begin);
     bool was_converted = false;     // differentiates between a negative number and subtraction
+
+    auto markers = make_markers_sql_optimized(*pSql, pMarkers);
+    std::reverse(begin(*pMarkers), end(*pMarkers));     // for pop_back(), an index would likely be better.
 
     if (!pMarkers->empty())
     {   // advance to the first marker
@@ -466,7 +467,7 @@ break_out:
         write_ptr += len;
     }
 
-    sql.resize(write_ptr - write_begin);
+    pSql->resize(write_ptr - write_begin);
 
     return pSql;
 }

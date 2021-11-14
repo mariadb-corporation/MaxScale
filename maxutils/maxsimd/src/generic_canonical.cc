@@ -187,12 +187,13 @@ namespace generic
 
 std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
 {
-    auto& sql = *pSql;
+    /* The call &*pSql->begin() ensures that a non-confirming
+     * std::string will copy the data (COW, CentOS7)
+     */
+    uint8_t* it = (uint8_t*) &*pSql->begin();
+    uint8_t* end = (uint8_t*) it + pSql->length();
 
-    uint8_t* it = (uint8_t*) sql.data();
-    uint8_t* end = (uint8_t*) it + sql.length();
-
-    auto it_out = (uint8_t*) &*sql.begin();
+    auto it_out = (uint8_t*) it;
     uint8_t* it_out_begin = it_out;
     bool was_converted = false;
 
@@ -311,7 +312,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
             {
                 break;
             }
-            std::copy(start, it, &*it_out);
+            std::copy(start, it, it_out);
             it_out += it - start;
             *it_out++ = '`';
         }
@@ -332,7 +333,7 @@ std::string* get_canonical_impl(std::string* pSql, Markers* pMarkers)
     }
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
-    sql.resize(it_out - it_out_begin);
+    pSql->resize(it_out - it_out_begin);
 
     return pSql;
 }
