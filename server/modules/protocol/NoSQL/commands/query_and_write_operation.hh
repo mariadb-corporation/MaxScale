@@ -176,10 +176,6 @@ public:
 
     ~OrderedCommand()
     {
-        if (m_dcid)
-        {
-            worker().cancel_delayed_call(m_dcid);
-        }
     }
 
 
@@ -654,19 +650,9 @@ protected:
 
         m_mode = Mode::CREATING_TABLE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
+        auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
-
-                    send_downstream(sql);
-                }
-
-                return false;
-            });
+        send_downstream_via_loop(sql);
 
         return State::BUSY;
     }
@@ -686,26 +672,14 @@ protected:
 
         m_mode = Mode::CREATING_DATABASE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
+        string sql = "CREATE DATABASE `" + m_database.name() + "`";
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    ostringstream ss;
-                    ss << "CREATE DATABASE `" << m_database.name() << "`";
-
-                    send_downstream(ss.str());
-                }
-
-                return false;
-            });
+        send_downstream_via_loop(sql);
 
         return State::BUSY;
     }
 
     Mode                            m_mode = { Mode::DEFAULT };
-    uint32_t                        m_dcid { 0 };
     string                          m_key;
     bool                            m_ordered { true };
     Query                           m_query;
@@ -1100,10 +1074,6 @@ private:
 
         virtual ~SubCommand()
         {
-            if (m_dcid)
-            {
-                m_super.worker().cancel_delayed_call(m_dcid);
-            }
         }
 
         Query create_initial_select()
@@ -1279,18 +1249,7 @@ private:
 
         void send_downstream_delayed(const string& sql)
         {
-            mxb_assert(m_dcid == 0);
-
-            m_dcid = m_super.worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                    m_dcid = 0;
-
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        send_downstream(sql);
-                    }
-
-                    return false;
-                });
+            m_super.send_downstream_via_loop(sql);
         }
 
     protected:
@@ -1380,7 +1339,6 @@ private:
         }
 
     private:
-        uint32_t          m_dcid { 0 };
         unique_ptr<GWBUF> m_sResponse;
     };
 
@@ -2731,17 +2689,7 @@ private:
 
         string sql = ss.str();
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    send_downstream(sql);
-                }
-
-            return false;
-        });
+        send_downstream_via_loop(sql);
 
         return Execution::BUSY;
     }
@@ -2812,17 +2760,7 @@ private:
 
         m_insert = ss.str();
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    send_downstream(m_insert);
-                }
-
-            return false;
-        });
+        send_downstream_via_loop(m_insert);
 
         return Execution::BUSY;
     }
