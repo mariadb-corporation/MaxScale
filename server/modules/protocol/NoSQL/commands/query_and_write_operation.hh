@@ -178,14 +178,30 @@ protected:
 
     void create_table()
     {
+        const auto& config = T::m_database.config();
+
+        if (!config.auto_create_tables)
+        {
+            ostringstream ss;
+            ss << "Table " << T::table() << " does not exist, and 'auto_create_tables' "
+               << "is false.";
+
+            throw HardError(ss.str(), error::COMMAND_FAILED);
+        }
+
         mxb_assert(!m_creating_table);
         m_creating_table = true;
 
         bool if_not_exists = true;
 
         ostringstream sql;
-        sql << "CREATE DATABASE IF NOT EXISTS `" << T::m_database.name() << "`; "
-            << table_create_statement(T::table(), T::m_database.config().id_length, if_not_exists);
+
+        if (config.auto_create_databases)
+        {
+            sql << "CREATE DATABASE IF NOT EXISTS `" << T::m_database.name() << "`; ";
+        }
+
+        sql << table_create_statement(T::table(), config.id_length, if_not_exists);
 
         T::send_downstream_via_loop(sql.str());
     }
@@ -201,29 +217,50 @@ private:
         uint8_t* pBuffer = mariadb_response.data();
         uint8_t* pEnd = pBuffer + mariadb_response.length();
 
-        ComResponse create_database_response(&pBuffer);
+        if (T::m_database.config().auto_create_databases)
+        {
+            ComResponse create_database_response(&pBuffer);
 
-        switch (create_database_response.type())
+            switch (create_database_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse create_table_response(&pBuffer);
+
+                    state = translate_create_table(create_table_response, ppResponse);
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                throw MariaDBError(ComERR(create_database_response));
+                break;
+
+            default:
+                T::throw_unexpected_packet();
+            }
+        }
+        else
+        {
+            ComResponse create_table_response(&pBuffer);
+
+            state = translate_create_table(create_table_response, ppResponse);
+        }
+
+        return state;
+    }
+
+    State translate_create_table(const ComResponse& create_table_response, GWBUF** ppResponse)
+    {
+        State state = State::BUSY;
+
+        switch (create_table_response.type())
         {
         case ComResponse::OK_PACKET:
-            {
-                ComResponse create_table_response(&pBuffer);
-
-                if (create_table_response.is_ok())
-                {
-                    state = table_created(ppResponse);
-                }
-                else
-                {
-                    mxb_assert(create_table_response.type() == ComResponse::ERR_PACKET);
-
-                    throw MariaDBError(ComERR(create_table_response));
-                }
-            }
+            state = table_created(ppResponse);
             break;
 
         case ComResponse::ERR_PACKET:
-            throw MariaDBError(ComERR(create_database_response));
+            throw MariaDBError(ComERR(create_table_response));
             break;
 
         default:
@@ -237,7 +274,7 @@ private:
     bool m_creating_table { false };
 };
 
-class OrderedCommand : public MultiCommand
+class OrderedCommand : public TableCreating<MultiCommand>
 {
 public:
     OrderedCommand(const std::string& name,
@@ -245,7 +282,7 @@ public:
                    GWBUF* pRequest,
                    packet::Msg&& req,
                    const std::string& array_key)
-        : MultiCommand(name, pDatabase, pRequest, std::move(req))
+        : TableCreating<MultiCommand>(name, pDatabase, pRequest, std::move(req))
         , m_key(array_key)
     {
     }
@@ -257,7 +294,7 @@ public:
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
-        : MultiCommand(name, pDatabase, pRequest, std::move(req), doc, arguments)
+        : TableCreating<MultiCommand>(name, pDatabase, pRequest, std::move(req), doc, arguments)
         , m_key(array_key)
     {
     }
@@ -266,15 +303,7 @@ public:
     {
     }
 
-
 public:
-    enum class Mode
-    {
-        DEFAULT,
-        CREATING_TABLE,
-        CREATING_DATABASE
-    };
-
     enum class Execution
     {
         CONTINUE,
@@ -296,31 +325,7 @@ public:
         return State::BUSY;
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
-    {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-
-        State state = State::READY;
-
-        switch (m_mode)
-        {
-        case Mode::DEFAULT:
-            state = translate_default(std::move(mariadb_response), ppResponse);
-            break;
-
-        case Mode::CREATING_TABLE:
-            state = translate_creating_table(std::move(mariadb_response), ppResponse);
-            break;
-
-        case Mode::CREATING_DATABASE:
-            state = translate_creating_database(std::move(mariadb_response), ppResponse);
-            break;
-        }
-
-        return state;
-    }
-
-    State translate_default(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         State rv = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -331,7 +336,7 @@ public:
 
         if (response.is_err() && ComERR(response).code() == ER_NO_SUCH_TABLE && should_create_table())
         {
-            rv = create_table();
+            create_table();
         }
         else
         {
@@ -398,99 +403,15 @@ public:
         return rv;
     }
 
-    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-    {
-        mxb_assert(m_mode == Mode::CREATING_TABLE);
-
-        State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(mariadb_response.data());
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            MXS_INFO("Table created, now executing statment.");
-            m_mode = Mode::DEFAULT;
-            execute_one_statement();
-            break;
-
-        case ComResponse::ERR_PACKET:
-            {
-                ComERR err(response);
-
-                auto code = err.code();
-
-                if (code == ER_TABLE_EXISTS_ERROR)
-                {
-                    MXS_INFO("Table created by someone else, now executing statment.");
-                    m_mode = Mode::DEFAULT;
-                    execute_one_statement();
-                }
-                else if (code == ER_BAD_DB_ERROR && err.message().find("Unknown database") == 0)
-                {
-                    state = create_database();
-                }
-                else
-                {
-                    throw MariaDBError(err);
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-            throw_unexpected_packet();
-        }
-
-        *ppResponse = pResponse;
-        return state;
-    }
-
-    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-    {
-        mxb_assert(m_mode == Mode::CREATING_DATABASE);
-
-        State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(mariadb_response.data());
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            MXS_INFO("Database created, now creating table.");
-            create_table();
-            break;
-
-        case ComResponse::ERR_PACKET:
-            {
-                ComERR err(response);
-
-                auto code = err.code();
-
-                if (code == ER_DB_CREATE_EXISTS)
-                {
-                    MXS_INFO("Database created by someone else, now creating table.");
-                    create_table();
-                }
-                else
-                {
-                    throw MariaDBError(err);
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-            throw_unexpected_packet();
-        }
-
-        *ppResponse = pResponse;
-        return state;
-    }
-
 protected:
+    State table_created(GWBUF** ppResponse) override final
+    {
+        execute_one_statement();
+
+        *ppResponse = nullptr;
+        return State::BUSY;
+    }
+
     virtual bool should_create_table() const
     {
         return false;
@@ -723,51 +644,6 @@ protected:
         send_downstream(*m_it);
     }
 
-    State create_table()
-    {
-        mxb_assert(m_mode != Mode::CREATING_TABLE);
-
-        if (!m_database.config().auto_create_tables)
-        {
-            ostringstream ss;
-            ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
-               << "is false.";
-
-            throw HardError(ss.str(), error::COMMAND_FAILED);
-        }
-
-        m_mode = Mode::CREATING_TABLE;
-
-        auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
-
-        send_downstream_via_loop(sql);
-
-        return State::BUSY;
-    }
-
-    State create_database()
-    {
-        mxb_assert(m_mode != Mode::CREATING_DATABASE);
-
-        if (!m_database.config().auto_create_databases)
-        {
-            ostringstream ss;
-            ss << "Database " << m_database.name() << " does not exist, and "
-               << "'auto_create_databases' is false.";
-
-            throw HardError(ss.str(), error::COMMAND_FAILED);
-        }
-
-        m_mode = Mode::CREATING_DATABASE;
-
-        string sql = "CREATE DATABASE `" + m_database.name() + "`";
-
-        send_downstream_via_loop(sql);
-
-        return State::BUSY;
-    }
-
-    Mode                            m_mode = { Mode::DEFAULT };
     string                          m_key;
     bool                            m_ordered { true };
     Query                           m_query;
