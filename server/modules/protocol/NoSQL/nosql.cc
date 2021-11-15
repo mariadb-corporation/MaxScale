@@ -1712,7 +1712,6 @@ Msg::Msg(const Packet& packet)
                         if (pData + size <= pEnd)
                         {
                             bsoncxx::document::view doc { pData, size };
-                            MXB_INFO("DOC: %s", bsoncxx::to_json(doc).c_str());
                             documents.push_back(doc);
                             pData += size;
                         }
@@ -2961,7 +2960,7 @@ void NoSQL::kill_client()
 
 State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
+    log_in("Request(Delete)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -2978,7 +2977,7 @@ State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResp
 
 State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
+    log_in("Request(Insert)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -2995,7 +2994,7 @@ State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResp
 
 State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
+    log_in("Request(Update)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3012,7 +3011,7 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResp
 
 State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
+    log_in("Request(Query)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3029,7 +3028,7 @@ State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppRespon
 
 State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
+    log_in("Request(GetMore)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3046,7 +3045,7 @@ State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppR
 
 State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
+    log_in("Request(KillCursors)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
@@ -3063,7 +3062,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWB
 
 State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
+    log_in("Request(Msg)", req);
 
     State state = State::READY;
 

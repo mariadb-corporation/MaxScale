@@ -138,6 +138,8 @@ protected:
     uint32_t      m_dcid { 0 };
 
 private:
+    void log_back(const char* zContext, const bsoncxx::document::value& doc) const;
+
     static std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int32_t request_id,
                                                                     int32_t response_to,
                                                                     int64_t cursor_id,

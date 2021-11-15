@@ -27,6 +27,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
+#include "config.hh"
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
 #include "../../filter/masking/mysql.hh"
@@ -1346,6 +1347,15 @@ public:
     int32_t clientReply(GWBUF* sMariaDB_response, DCB* pDcb);
 
 private:
+    template<class T>
+    void log_in(const char* zContext, const T& req)
+    {
+        if (m_config.should_log_in())
+        {
+            MXS_NOTICE("%s: %s", zContext, req.to_string().c_str());
+        }
+    }
+
     void kill_client();
 
     using SDatabase = std::unique_ptr<Database>;

@@ -79,14 +79,10 @@ public:
         switch (m_database.config().on_unknown_command)
         {
         case GlobalConfig::RETURN_ERROR:
-            {
-                MXS_INFO("%s", s.c_str());
-                throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
-            }
+            throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
             break;
 
         case GlobalConfig::RETURN_EMPTY:
-            MXS_INFO("%s", s.c_str());
             break;
         }
     }
@@ -303,7 +299,10 @@ GWBUF* create_packet(const char* zSql, size_t sql_len, uint8_t seq_no)
 
 void Command::send_downstream(const string& sql)
 {
-    MXB_INFO("SQL: %s", sql.c_str());
+    if (m_database.config().should_log_out())
+    {
+        MXB_NOTICE("SQL: %s", sql.c_str());
+    }
 
     uint8_t seq_no = 0;
 
@@ -406,6 +405,14 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
     return pResponse;
 }
 
+void Command::log_back(const char* zContext, const bsoncxx::document::value& doc) const
+{
+    if (m_database.config().should_log_back())
+    {
+        MXS_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
+    }
+}
+
 //static
 pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
                                                              int32_t response_to,
@@ -493,7 +500,7 @@ GWBUF* Command::create_reply_response(int64_t cursor_id,
 
 GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
-    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
+    log_back("Response(Reply)", doc);
 
     auto doc_view = doc.view();
     size_t doc_len = doc_view.length();
@@ -511,7 +518,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsErr
 
 GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 {
-    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
+    log_back("Response(Msg)", doc);
 
     uint32_t flag_bits = 0;
     uint8_t kind = 0;
@@ -683,7 +690,6 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         {
             ComERR err(response);
             auto s = err.message();
-            MXS_INFO("%s", s.c_str());
 
             switch (err.code())
             {
