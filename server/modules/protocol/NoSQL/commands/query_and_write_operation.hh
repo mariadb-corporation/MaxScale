@@ -1268,10 +1268,10 @@ private:
         virtual void initial_select_succeeded(const string& json) = 0;
         virtual void initial_select_no_such_table() = 0;
 
-        void send_downstream_delayed(const string& sql, int32_t action)
+        void send_downstream_via_loop(const string& sql, int32_t action)
         {
             m_action = action;
-            send_downstream_delayed(sql);
+            send_downstream_via_loop(sql);
         }
 
         string interpret_resultset(uint8_t* pBuffer, uint8_t** ppEnd)
@@ -1338,7 +1338,7 @@ private:
 
         void commit()
         {
-            send_downstream_delayed("COMMIT", ACTION_COMMIT);
+            send_downstream_via_loop("COMMIT", ACTION_COMMIT);
         }
 
         void throw_unexpected_packet()
@@ -1346,7 +1346,7 @@ private:
             m_super.throw_unexpected_packet();
         }
 
-        void send_downstream_delayed(const string& sql)
+        void send_downstream_via_loop(const string& sql)
         {
             m_super.send_downstream_via_loop(sql);
         }
@@ -1577,7 +1577,7 @@ private:
             ostringstream ss;
             ss << "DELETE FROM " << table() << " WHERE id='" << m_id << "'; COMMIT";
 
-            send_downstream_delayed(ss.str(), ACTION_DELETE);
+            send_downstream_via_loop(ss.str(), ACTION_DELETE);
         }
 
     private:
@@ -1819,7 +1819,7 @@ private:
 
         State table_created(GWBUF** ppResponse) override
         {
-            send_downstream_delayed(m_aborted_statement, m_aborted_action);
+            send_downstream_via_loop(m_aborted_statement, m_aborted_action);
             *ppResponse = nullptr;
             return State::BUSY;
         }
@@ -1853,7 +1853,7 @@ private:
 
             sql << "COMMIT";
 
-            send_downstream_delayed(sql.str());
+            send_downstream_via_loop(sql.str());
         }
 
         void insert()
@@ -1929,7 +1929,7 @@ private:
 
             sql << "COMMIT";
 
-            send_downstream_delayed(sql.str());
+            send_downstream_via_loop(sql.str());
         }
 
         GWBUF* create_upsert_response()
