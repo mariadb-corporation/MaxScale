@@ -124,6 +124,8 @@ protected:
 
     void send_downstream(const std::string& sql);
 
+    void send_downstream_via_loop(const std::string& sql);
+
     void log_unexpected_packet();
     void throw_unexpected_packet();
 
@@ -133,6 +135,7 @@ protected:
     GWBUF*        m_pRequest;
     const int32_t m_request_id;
     std::string   m_last_statement;
+    uint32_t      m_dcid { 0 };
 
 private:
     static std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int32_t request_id,
