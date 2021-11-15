@@ -338,6 +338,13 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
         {
             if (!change_current_db(m_current_db, m_shard, pPacket))
             {
+                if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
+                {
+                    m_queue.push_back(pPacket);
+                    query_databases();
+                    return 1;
+                }
+
                 char db[MYSQL_DATABASE_MAXLEN + 1];
                 extract_database(pPacket, db);
                 gwbuf_free(pPacket);
