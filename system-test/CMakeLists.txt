@@ -965,18 +965,6 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 ############################################
 
 ############################################
-# BEGIN: ColumnStore tests                 #
-############################################
-
-# MXS-2146: Add test case for csmon
-# https://jira.mariadb.org/browse/MXS-2146
-add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND)
-
-############################################
-# END: ColumnStore tests                   #
-############################################
-
-############################################
 # BEGIN: tests for Xpand monitor        #
 ############################################
 
