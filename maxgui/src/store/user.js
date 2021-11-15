@@ -56,15 +56,12 @@ export default {
     actions: {
         async login({ commit }, { rememberMe, auth }) {
             try {
-                /* Using $loginAxios instance, instead of using $axios as it's configured to have global interceptor*/
+                /* Using $authHttp instance, instead of using $axios as it's configured to have global interceptor*/
                 this.vue.$refreshAxiosToken()
                 let url = '/auth?persist=yes'
-                let res = await this.vue.$loginAxios.get(
-                    `${url}${rememberMe ? '&max-age=86400' : ''}`,
-                    {
-                        auth,
-                    }
-                )
+                let res = await this.$authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
+                    auth,
+                })
                 if (res.status === 204) {
                     commit('SET_LOGGED_IN_USER', {
                         name: auth.username,

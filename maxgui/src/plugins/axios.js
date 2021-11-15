@@ -23,14 +23,16 @@ export const refreshAxiosToken = () => {
 export const cancelAllRequests = () => {
     cancelSource.cancel(CANCEL_MESSAGE)
 }
+const HEADERS = {
+    'X-Requested-With': 'XMLHttpRequest',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+}
+const BASE_URL = '/'
 
 let apiClient = ax.create({
-    baseURL: '/',
-    headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-    },
+    baseURL: BASE_URL,
+    headers: HEADERS,
 })
 
 apiClient.interceptors.request.use(
@@ -87,26 +89,12 @@ apiClient.interceptors.response.use(
         }
     }
 )
-
-const loginAxios = ax.create({
-    baseURL: '/',
-    headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-    },
-})
-
+//TODO: Move below properties from Vue.prototype to helpers
 // immutable axios instances
 Object.defineProperties(Vue.prototype, {
     $axios: {
         get() {
             return apiClient
-        },
-    },
-    $loginAxios: {
-        get() {
-            return loginAxios
         },
     },
     $refreshAxiosToken: {

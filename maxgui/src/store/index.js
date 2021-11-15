@@ -26,11 +26,12 @@ import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
 import createPersistedState from 'vuex-persistedstate'
-
+import { authHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
     store.i18n = i18n
+    store.$authHttp = authHttp
 }
 
 const store = new Vuex.Store({

@@ -15,6 +15,7 @@ import { createServer, Model } from 'miragejs'
 const resources = ['servers', 'monitors']
 export function makeServer({ environment = 'test' }) {
     let apiServer = createServer({
+        trackRequests: true,
         environment,
         models: {
             server: Model,
@@ -28,6 +29,9 @@ export function makeServer({ environment = 'test' }) {
                     schema[rsrc].create(JSON.parse(request.requestBody))
                 )
             })
+            this.get(`/`, () => new Response(200))
+            this.get(`/auth?persist=yes`, () => new Response(204))
+            this.get(`/auth?persist=yes&max-age=86400`, () => new Response(204))
         },
     })
 
