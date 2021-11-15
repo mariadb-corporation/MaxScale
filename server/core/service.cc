@@ -50,7 +50,7 @@
 #include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/modutil.hh>

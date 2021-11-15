@@ -19,7 +19,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdint.h>
 #include <maxbase/assert.h>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 
 namespace maxscale
 {

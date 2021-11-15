@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2018 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-10-29
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+#pragma once
+
+/**
+ * All of the following DEFAULT_* variables are defined in cmake/install_layout.cmake
+ */
+namespace cmake_defaults
+{
+constexpr char DEFAULT_PID_SUBPATH[] = "@DEFAULT_PID_SUBPATH@";
+constexpr char DEFAULT_LOG_SUBPATH[] = "@DEFAULT_LOG_SUBPATH@";
+constexpr char DEFAULT_DATA_SUBPATH[] = "@DEFAULT_DATA_SUBPATH@";
+constexpr char DEFAULT_LIB_SUBPATH[] = "@DEFAULT_LIB_SUBPATH@";
+constexpr char DEFAULT_SHARE_SUBPATH[] = "@DEFAULT_SHARE_SUBPATH@";
+constexpr char DEFAULT_CACHE_SUBPATH[] = "@DEFAULT_CACHE_SUBPATH@";
+constexpr char DEFAULT_LANG_SUBPATH[] = "@DEFAULT_LANG_SUBPATH@";
+constexpr char DEFAULT_EXEC_SUBPATH[] = "@DEFAULT_EXEC_SUBPATH@";
+constexpr char DEFAULT_CONFIG_SUBPATH[] = "@DEFAULT_CONFIG_SUBPATH@";
+constexpr char DEFAULT_CONFIG_PERSIST_SUBPATH[] = "@DEFAULT_DATA_SUBPATH@/@DEFAULT_CONFIG_PERSIST_SUBPATH@";
+constexpr char DEFAULT_MODULE_CONFIG_SUBPATH[] = "@DEFAULT_MODULE_CONFIG_SUBPATH@";
+constexpr char DEFAULT_CONNECTOR_PLUGIN_SUBPATH[] = "@DEFAULT_CONNECTOR_PLUGIN_SUBPATH@";
+
+/** Default file locations, configured by CMake */
+constexpr char DEFAULT_CONFIGDIR[] = "@DEFAULT_CONFIGDIR@";
+constexpr char DEFAULT_PIDDIR[] = "@DEFAULT_PIDDIR@";
+constexpr char DEFAULT_LOGDIR[] = "@DEFAULT_LOGDIR@";
+constexpr char DEFAULT_DATADIR[] = "@DEFAULT_DATADIR@";
+constexpr char DEFAULT_LIBDIR[] = "@DEFAULT_LIBDIR@";
+constexpr char DEFAULT_SHAREDIR[] = "@DEFAULT_SHAREDIR@";
+constexpr char DEFAULT_CACHEDIR[] = "@DEFAULT_CACHEDIR@";
+constexpr char DEFAULT_LANGDIR[] = "@DEFAULT_LANGDIR@";
+constexpr char DEFAULT_EXECDIR[] = "@DEFAULT_EXECDIR@";
+constexpr char DEFAULT_CONFIG_PERSISTDIR[] = "@DEFAULT_CONFIG_PERSISTDIR@";
+constexpr char DEFAULT_MODULE_CONFIGDIR[] = "@DEFAULT_MODULE_CONFIGDIR@";
+constexpr char DEFAULT_CONNECTOR_PLUGINDIR[] = "@DEFAULT_CONNECTOR_PLUGINDIR@";
+}

@@ -130,8 +130,6 @@ set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
 set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
-configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/version.h.in ${CMAKE_BINARY_DIR}/include/maxscale/version.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/paths.hh.in ${CMAKE_BINARY_DIR}/include/maxscale/paths.hh @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/include/maxscale/maxscale_test.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/prerm.in ${CMAKE_BINARY_DIR}/prerm @ONLY)

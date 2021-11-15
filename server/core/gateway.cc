@@ -64,11 +64,12 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/threadpool.hh>
 #include <maxscale/utils.h>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 
 #include "internal/admin.hh"
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
+#include "internal/defaults.hh"
 #include "internal/http_sql.hh"
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"
@@ -157,7 +158,7 @@ static void unlock_directories();
 static void unlink_pidfile(void);   /* remove pidfile */
 static void unlock_pidfile();
 static int  ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool handle_path_arg(std::string* dest, const char* path, const char* arg);
+static bool handle_path_arg(std::string* dest, const char* path, const char* arg, const char* arg2 = nullptr);
 static bool handle_debug_args(char* args);
 static void set_log_augmentation(const char* value);
 static void usage(void);
@@ -1292,57 +1293,52 @@ bool set_runtime_dirs(const char* basedir)
     bool rv = true;
     std::string path;
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_SHARE_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_SHARE_SUBPATH)))
     {
         set_sharedir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_LOG_SUBPATH)))
     {
         set_logdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_CACHE_SUBPATH)))
     {
         set_cachedir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_CONFIG_SUBPATH)))
     {
         set_configdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_MODULE_CONFIG_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_MODULE_CONFIG_SUBPATH)))
     {
         set_module_configdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_DATA_SUBPATH)))
     {
         mxs::set_datadir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_LANG_SUBPATH)))
     {
         mxs::set_langdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_PID_SUBPATH)))
     {
         set_piddir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path,
-                                    basedir,
-                                    "var/" MXS_DEFAULT_DATA_SUBPATH "/"
-                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, "var", cmake_defaults::DEFAULT_CONFIG_PERSIST_SUBPATH)))
     {
         set_config_persistdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path,
-                                    basedir,
-                                    MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_CONNECTOR_PLUGIN_SUBPATH)))
     {
         set_connector_plugindir(path.c_str());
     }
@@ -1368,12 +1364,12 @@ bool set_dirs(const char* basedir)
     // --runtimedir. The former is used with tarball installations and the latter is used to run multiple
     // MaxScale instances on the same server.
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_LIB_SUBPATH)))
     {
         set_libdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH)))
+    if (rv && (rv = handle_path_arg(&path, basedir, cmake_defaults::DEFAULT_EXEC_SUBPATH)))
     {
         set_execdir(path.c_str());
     }
@@ -1459,7 +1455,7 @@ int main(int argc, char** argv)
 
     maxscale_reset_starttime();
 
-    snprintf(this_unit.datadir, PATH_MAX, "%s", MXS_DEFAULT_DATADIR);
+    snprintf(this_unit.datadir, PATH_MAX, "%s", cmake_defaults::DEFAULT_DATADIR);
     this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
@@ -2494,7 +2490,7 @@ static int write_pid_file()
     return 0;
 }
 
-static bool handle_path_arg(std::string* dest, const char* path, const char* arg)
+static bool handle_path_arg(std::string* dest, const char* path, const char* arg, const char* arg2)
 {
     bool rval = false;
     if (path)
@@ -2509,6 +2505,10 @@ static bool handle_path_arg(std::string* dest, const char* path, const char* arg
         {
             tmp += arg;
         }
+        if (arg2)
+        {
+            tmp += arg2;
+        }
 
         *dest = move(tmp);
         rval = true;
@@ -2520,7 +2520,7 @@ bool check_paths()
 {
     // The default path for the connector_plugindir isn't valid. This doesn't matter that much as we don't
     // include the plugins in the installation.
-    if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) != 0)
+    if (strcmp(mxs::connector_plugindir(), cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR) != 0)
     {
         if (!check_dir_access(mxs::connector_plugindir(), true, false))
         {
@@ -2591,7 +2591,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
-        if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
+        if (strcmp(mxs::logdir(), cmake_defaults::DEFAULT_LOGDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_logdir(tmp.c_str());
@@ -2600,7 +2600,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_LIBDIR))
     {
-        if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
+        if (strcmp(mxs::libdir(), cmake_defaults::DEFAULT_LIBDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_libdir(tmp.c_str());
@@ -2609,7 +2609,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_SHAREDIR))
     {
-        if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
+        if (strcmp(mxs::sharedir(), cmake_defaults::DEFAULT_SHAREDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_sharedir(tmp.c_str());
@@ -2618,7 +2618,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_PIDDIR))
     {
-        if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
+        if (strcmp(mxs::piddir(), cmake_defaults::DEFAULT_PIDDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_piddir(tmp.c_str());
@@ -2639,7 +2639,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_CACHEDIR))
     {
-        if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
+        if (strcmp(mxs::cachedir(), cmake_defaults::DEFAULT_CACHEDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_cachedir(tmp.c_str());
@@ -2648,7 +2648,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_LANGUAGE))
     {
-        if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
+        if (strcmp(mxs::langdir(), cmake_defaults::DEFAULT_LANGDIR) == 0)
         {
             auto tmp = add_slash(value);
             mxs::set_langdir(tmp.c_str());
@@ -2657,7 +2657,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_EXECDIR))
     {
-        if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
+        if (strcmp(mxs::execdir(), cmake_defaults::DEFAULT_EXECDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_execdir(tmp.c_str());
@@ -2666,7 +2666,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_CONNECTOR_PLUGINDIR))
     {
-        if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
+        if (strcmp(mxs::connector_plugindir(), cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_connector_plugindir(tmp.c_str());
@@ -2675,7 +2675,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_PERSISTDIR))
     {
-        if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
+        if (strcmp(mxs::config_persistdir(), cmake_defaults::DEFAULT_CONFIG_PERSISTDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_config_persistdir(tmp.c_str());
@@ -2684,7 +2684,7 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
 
     if (find_helper(CN_MODULE_CONFIGDIR))
     {
-        if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
+        if (strcmp(mxs::module_configdir(), cmake_defaults::DEFAULT_MODULE_CONFIGDIR) == 0)
         {
             auto tmp = add_slash(value);
             set_module_configdir(tmp.c_str());

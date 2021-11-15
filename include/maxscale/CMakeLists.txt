@@ -1,3 +1,5 @@
+configure_file(version.hh.in version.hh @ONLY)
+
 # Install static C headers
 file(GLOB HEADERS "*.h")
 foreach(var ${HEADERS})

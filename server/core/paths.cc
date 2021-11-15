@@ -14,28 +14,26 @@
 #include <maxscale/paths.hh>
 
 #include <string>
-
-#include <maxbase/alloc.h>
 #include <maxscale/utils.hh>
-
+#include "internal/defaults.hh"
 
 namespace
 {
 struct
 {
-    std::string configdir = MXS_DEFAULT_CONFIGDIR;
-    std::string config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
-    std::string module_configdir = MXS_DEFAULT_MODULE_CONFIGDIR;
-    std::string logdir = MXS_DEFAULT_LOGDIR;
-    std::string libdir = MXS_DEFAULT_LIBDIR;
-    std::string sharedir = MXS_DEFAULT_SHAREDIR;
-    std::string cachedir = MXS_DEFAULT_CACHEDIR;
-    std::string datadir = MXS_DEFAULT_DATADIR;
-    std::string processdatadir = MXS_DEFAULT_DATADIR;
-    std::string langdir = MXS_DEFAULT_LANGDIR;
-    std::string piddir = MXS_DEFAULT_PIDDIR;
-    std::string execdir = MXS_DEFAULT_EXECDIR;
-    std::string connector_plugindir = MXS_DEFAULT_CONNECTOR_PLUGINDIR;
+    std::string configdir = cmake_defaults::DEFAULT_CONFIGDIR;
+    std::string config_persistdir = cmake_defaults::DEFAULT_CONFIG_PERSISTDIR;
+    std::string module_configdir = cmake_defaults::DEFAULT_MODULE_CONFIGDIR;
+    std::string logdir = cmake_defaults::DEFAULT_LOGDIR;
+    std::string libdir = cmake_defaults::DEFAULT_LIBDIR;
+    std::string sharedir = cmake_defaults::DEFAULT_SHAREDIR;
+    std::string cachedir = cmake_defaults::DEFAULT_CACHEDIR;
+    std::string datadir = cmake_defaults::DEFAULT_DATADIR;
+    std::string processdatadir = cmake_defaults::DEFAULT_DATADIR;
+    std::string langdir = cmake_defaults::DEFAULT_LANGDIR;
+    std::string piddir = cmake_defaults::DEFAULT_PIDDIR;
+    std::string execdir = cmake_defaults::DEFAULT_EXECDIR;
+    std::string connector_plugindir = cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR;
 } this_unit;
 }
 

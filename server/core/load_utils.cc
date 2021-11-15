@@ -38,7 +38,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 
 #include "internal/config.hh"
 #include "internal/listener.hh"

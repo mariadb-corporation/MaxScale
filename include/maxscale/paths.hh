@@ -12,39 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <stdlib.h>
-#include <string.h>
-
-/**
- * All of the following DEFAULT_* variables are defined in cmake/install_layout.cmake
- */
-#define MXS_DEFAULT_PID_SUBPATH              "@DEFAULT_PID_SUBPATH@"
-#define MXS_DEFAULT_LOG_SUBPATH              "@DEFAULT_LOG_SUBPATH@"
-#define MXS_DEFAULT_DATA_SUBPATH             "@DEFAULT_DATA_SUBPATH@"
-#define MXS_DEFAULT_LIB_SUBPATH              "@DEFAULT_LIB_SUBPATH@"
-#define MXS_DEFAULT_SHARE_SUBPATH            "@DEFAULT_SHARE_SUBPATH@"
-#define MXS_DEFAULT_CACHE_SUBPATH            "@DEFAULT_CACHE_SUBPATH@"
-#define MXS_DEFAULT_LANG_SUBPATH             "@DEFAULT_LANG_SUBPATH@"
-#define MXS_DEFAULT_EXEC_SUBPATH             "@DEFAULT_EXEC_SUBPATH@"
-#define MXS_DEFAULT_CONFIG_SUBPATH           "@DEFAULT_CONFIG_SUBPATH@"
-#define MXS_DEFAULT_CONFIG_PERSIST_SUBPATH   "@DEFAULT_CONFIG_PERSIST_SUBPATH@"
-#define MXS_DEFAULT_MODULE_CONFIG_SUBPATH    "@DEFAULT_MODULE_CONFIG_SUBPATH@"
-#define MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH "@DEFAULT_CONNECTOR_PLUGIN_SUBPATH@"
-
-/** Default file locations, configured by CMake */
-#define MXS_DEFAULT_CONFIGDIR           "@DEFAULT_CONFIGDIR@"
-#define MXS_DEFAULT_PIDDIR              "@DEFAULT_PIDDIR@"
-#define MXS_DEFAULT_LOGDIR              "@DEFAULT_LOGDIR@"
-#define MXS_DEFAULT_DATADIR             "@DEFAULT_DATADIR@"
-#define MXS_DEFAULT_LIBDIR              "@DEFAULT_LIBDIR@"
-#define MXS_DEFAULT_SHAREDIR            "@DEFAULT_SHAREDIR@"
-#define MXS_DEFAULT_CACHEDIR            "@DEFAULT_CACHEDIR@"
-#define MXS_DEFAULT_LANGDIR             "@DEFAULT_LANGDIR@"
-#define MXS_DEFAULT_EXECDIR             "@DEFAULT_EXECDIR@"
-#define MXS_DEFAULT_CONFIG_PERSISTDIR   "@DEFAULT_CONFIG_PERSISTDIR@"
-#define MXS_DEFAULT_MODULE_CONFIGDIR    "@DEFAULT_MODULE_CONFIGDIR@"
-#define MXS_DEFAULT_CONNECTOR_PLUGINDIR "@DEFAULT_CONNECTOR_PLUGINDIR@"
+#include <maxscale/ccdefs.hh>
 
 namespace maxscale
 {

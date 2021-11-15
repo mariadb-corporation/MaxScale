@@ -46,7 +46,7 @@
 #include <maxscale/utils.h>
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -77,7 +77,7 @@ const uint32_t MAX_SESCMD_ID = std::numeric_limits<uint32_t>::max();
 static_assert(MAX_SESCMD_ID == MARIADB_PS_DIRECT_EXEC_ID);
 
 // Default version string sent to clients
-const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
+const string default_version = string("5.5.5-10.2.12 ") + MAXSCALE_VERSION + "-maxscale";
 
 class ThisUnit
 {

@@ -26,7 +26,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 #include "internal/secrets.hh"
 
 using std::string;

@@ -1,3 +1,6 @@
+configure_file(internal/defaults.hh.in internal/defaults.hh @ONLY)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 add_library(maxscale-common SHARED
   admin.cc
   adminusers.cc

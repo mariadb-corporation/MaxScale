@@ -55,7 +55,7 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
-#include <maxscale/version.h>
+#include <maxscale/version.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
