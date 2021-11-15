@@ -57,6 +57,13 @@ int mysql_query_ex(MYSQL* conn, const std::string& query, int query_retries, tim
         rc = mysql_query(conn, query_cstr);
     }
 
+    log_statement(rc, conn, query);
+
+    return rc;
+}
+
+void log_statement(int rc, MYSQL* conn, const std::string& query)
+{
     if (this_unit.log_statements)
     {
         const char* host = "0.0.0.0";
@@ -64,10 +71,8 @@ int mysql_query_ex(MYSQL* conn, const std::string& query, int query_retries, tim
         MXB_AT_DEBUG(int rc1 = ) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
         MXB_AT_DEBUG(int rc2 = ) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
         mxb_assert(!rc1 && !rc2);
-        MXB_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query_cstr);
+        MXB_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query.c_str());
     }
-
-    return rc;
 }
 
 bool mysql_is_net_error(unsigned int errcode)
