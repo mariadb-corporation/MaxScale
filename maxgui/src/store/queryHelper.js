@@ -124,9 +124,10 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
  * @param {Object} curr_cnct_resource - current connecting resource
  * @param {String} nodeId - node id .i.e schema_name.tbl_name
  * @param {Object} vue - vue instance
+ * @param {Object} $http - $http axios instance
  * @returns {Object} - returns object row data
  */
-async function queryTblOptsData({ curr_cnct_resource, nodeId, vue }) {
+async function queryTblOptsData({ curr_cnct_resource, nodeId, vue, $http }) {
     const schemas = nodeId.split('.')
     const db = schemas[0]
     const tblName = schemas[1]
@@ -136,7 +137,7 @@ async function queryTblOptsData({ curr_cnct_resource, nodeId, vue }) {
     const sql = `SELECT ${cols} FROM information_schema.tables t
 JOIN information_schema.collations c ON t.table_collation = c.collation_name
 WHERE table_schema = "${db}" AND table_name = "${tblName}";`
-    let tblOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+    let tblOptsRes = await $http.post(`/sql/${curr_cnct_resource.id}/queries`, {
         sql,
     })
     const tblOptsRows = vue.$help.getObjectRows({
@@ -148,10 +149,10 @@ WHERE table_schema = "${db}" AND table_name = "${tblName}";`
 /**
  * @param {Object} curr_cnct_resource - current connecting resource
  * @param {String} nodeId - node id .i.e schema_name.tbl_name
- * @param {Object} vue - vue instance
+ * @param {Object} $http - $http axios instance
  * @returns {Object} - returns object data contains `data` and `fields`
  */
-async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
+async function queryColsOptsData({ curr_cnct_resource, nodeId, $http }) {
     const schemas = nodeId.split('.')
     const db = schemas[0]
     const tblName = schemas[1]
@@ -185,7 +186,7 @@ async function queryColsOptsData({ curr_cnct_resource, nodeId, vue }) {
     IF(collation_name IS NULL, '', collation_name) as collation,
     column_comment as comment
     `
-    const colsOptsRes = await vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+    const colsOptsRes = await $http.post(`/sql/${curr_cnct_resource.id}/queries`, {
         sql: `
         SELECT ${cols} FROM information_schema.columns a
             LEFT JOIN information_schema.statistics b ON (

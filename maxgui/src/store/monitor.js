@@ -32,7 +32,7 @@ export default {
     actions: {
         async fetchAllMonitors({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/monitors`)
+                let res = await this.$http.get(`/monitors`)
                 if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-fetchAllMonitors')
@@ -41,7 +41,7 @@ export default {
         },
         async fetchMonitorById({ commit }, id) {
             try {
-                let res = await this.vue.$axios.get(`/monitors/${id}`)
+                let res = await this.$http.get(`/monitors/${id}`)
                 if (res.data.data) commit('SET_CURRENT_MONITOR', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-fetchMonitorById')
@@ -50,7 +50,7 @@ export default {
         },
         async fetchMonitorDiagnosticsById({ commit }, id) {
             try {
-                let res = await this.vue.$axios.get(
+                let res = await this.$http.get(
                     `/monitors/${id}?fields[monitors]=monitor_diagnostics`
                 )
                 if (res.data.data) commit('SET_MONITOR_DIAGNOSTICS', res.data.data)
@@ -81,7 +81,7 @@ export default {
                         relationships: payload.relationships,
                     },
                 }
-                let res = await this.vue.$axios.post(`/monitors/`, body)
+                let res = await this.$http.post(`/monitors/`, body)
                 let message = [`Monitor ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -117,7 +117,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.vue.$axios.patch(`/monitors/${payload.id}`, body)
+                let res = await this.$http.patch(`/monitors/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -147,17 +147,17 @@ export default {
                     case 'destroy':
                         /*  Destroy a created monitor.
                         The monitor must not have relationships to any servers in order to be destroyed. */
-                        res = await this.vue.$axios.delete(`/monitors/${id}?force=yes`)
+                        res = await this.$http.delete(`/monitors/${id}?force=yes`)
                         message = [`Monitor ${id} is destroyed`]
                         break
                     case 'stop':
                         //Stops a started monitor.
-                        res = await this.vue.$axios.put(`/monitors/${id}/stop`)
+                        res = await this.$http.put(`/monitors/${id}/stop`)
                         message = [`Monitor ${id} is stopped`]
                         break
                     case 'start':
                         //Starts a stopped monitor.
-                        res = await this.vue.$axios.put(`/monitors/${id}/start`)
+                        res = await this.$http.put(`/monitors/${id}/start`)
                         message = [`Monitor ${id} is started`]
                         break
                 }
@@ -191,7 +191,7 @@ export default {
                 let res
                 let message
 
-                res = await this.vue.$axios.patch(`/monitors/${payload.id}/relationships/servers`, {
+                res = await this.$http.patch(`/monitors/${payload.id}/relationships/servers`, {
                     data: payload.servers,
                 })
                 message = [`Servers relationships of ${payload.id} is updated`]
@@ -223,7 +223,7 @@ export default {
         async switchOver(_, { monitorModule, monitorId, masterId, callback }) {
             try {
                 let res
-                res = await this.vue.$axios.post(
+                res = await this.$http.post(
                     `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${masterId}`
                 )
                 // response ok
@@ -241,7 +241,7 @@ export default {
          */
         async fetchAsyncResults(_, { monitorModule, monitorId }) {
             try {
-                return await this.vue.$axios.get(
+                return await this.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
                 )
             } catch (e) {

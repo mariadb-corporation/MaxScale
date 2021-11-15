@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-10-29
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
@@ -106,15 +118,19 @@ describe('LoginForm.vue', async () => {
         await inputChangeMock(wrapper, 'mariadb', '#password')
         await mockupCheckingTheBox(wrapper) // unchecked
         await wrapper.find('.login-btn').trigger('click') //submit
-        expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal('/auth?persist=yes')
+        await wrapper.vm.$nextTick(() =>
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal('/auth?persist=yes')
+        )
     })
 
     it('Should send auth request when remember me is chosen', async () => {
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-        expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-            '/auth?persist=yes&max-age=86400'
+        await wrapper.vm.$nextTick(() =>
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
+                '/auth?persist=yes&max-age=86400'
+            )
         )
     })
 
@@ -122,11 +138,11 @@ describe('LoginForm.vue', async () => {
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-        expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-            '/auth?persist=yes&max-age=86400'
-        )
-        await wrapper.vm.$nextTick(() =>
+        await wrapper.vm.$nextTick(() => {
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
+                '/auth?persist=yes&max-age=86400'
+            )
             expect(wrapper.vm.$route.path).to.be.equals('/dashboard/servers')
-        )
+        })
     })
 })

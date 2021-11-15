@@ -67,7 +67,7 @@ describe('Dashboard Services tab', () => {
                 all_services: () => dummy_all_services,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

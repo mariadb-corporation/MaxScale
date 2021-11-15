@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
+import store from 'store'
 import chai, { expect } from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import MonitorDetail from '@/pages/MonitorDetail'
@@ -57,13 +57,13 @@ describe('MonitorDetail index', () => {
     before(async () => {
         const monitorPath = `/dashboard/monitors/${dummy_all_monitors[0].id}`
         if (router.history.current.path !== monitorPath) await router.push(monitorPath)
-        axiosGetStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosGetStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })
         )
         wrapper = computedFactory()
-        axiosPatchStub = sinon.stub(wrapper.vm.$axios, 'patch').returns(Promise.resolve())
+        axiosPatchStub = sinon.stub(store.$http, 'patch').returns(Promise.resolve())
     })
 
     after(async () => {
@@ -137,7 +137,7 @@ describe('MonitorDetail index', () => {
             switchoverSpy = sinon.spy(MonitorDetail.methods, 'switchOver')
 
             wrapper = computedFactory()
-            axiosPostStub = sinon.stub(wrapper.vm.$axios, 'post').returns(
+            axiosPostStub = sinon.stub(store.$http, 'post').returns(
                 Promise.resolve({
                     status: 204,
                 })

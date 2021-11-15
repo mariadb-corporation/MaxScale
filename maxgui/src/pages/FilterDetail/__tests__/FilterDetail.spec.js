@@ -10,13 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
 import chai from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import FilterDetail from '@/pages/FilterDetail'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import { dummy_all_filters } from '@tests/unit/utils'
+import store from 'store'
+
 chai.should()
 chai.use(sinonChai)
 
@@ -24,7 +25,7 @@ describe('FilterDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })
@@ -41,7 +42,7 @@ describe('FilterDetail index', () => {
 
     beforeEach(async () => {
         await axiosStub.restore()
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })
