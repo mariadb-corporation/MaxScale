@@ -134,7 +134,11 @@ public:
     static int get_event_length(const std::vector<char>& header);
 
 private:
-    void        init();
+    // Initialize the raw buffer to size sz. Used with read_header_only()
+    // Note that the event will not be is_empty() after this call.
+    RplEvent(size_t sz);
+
+    void        init(bool with_body = true);
     void        recalculate_crc();
     std::string query_event_sql() const;
 

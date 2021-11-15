@@ -76,6 +76,11 @@ RplEvent::RplEvent(std::vector<char>&& raw)
     }
 }
 
+RplEvent::RplEvent(size_t sz)
+    : m_raw(sz)
+{
+}
+
 RplEvent::RplEvent(RplEvent&& rhs)
     : m_maria_rpl(std::move(rhs.m_maria_rpl))
     , m_raw(std::move(rhs.m_raw))
@@ -128,8 +133,7 @@ bool maxsql::RplEvent::is_empty() const
     return m_maria_rpl.is_empty() && m_raw.empty();
 }
 
-
-void RplEvent::init()
+void RplEvent::init(bool with_body)
 {
     auto buf = reinterpret_cast<const uint8_t*>(pBuffer());
 
@@ -144,10 +148,12 @@ void RplEvent::init()
     m_next_event_pos = mariadb::get_byte4(buf);
     buf += 4;
     m_flags = mariadb::get_byte2(buf);
-    buf += 2;
 
-    auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
-    m_checksum = mariadb::get_byte4(pCrc);
+    if (with_body)
+    {
+        auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
+        m_checksum = mariadb::get_byte4(pCrc);
+    }
 }
 
 void RplEvent::set_next_pos(uint32_t next_pos)
@@ -333,14 +339,25 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
 
 RplEvent RplEvent::read_event(std::istream& file, long* file_pos)
 {
-    std::vector<char> raw(RPL_HEADER_LEN);
+    RplEvent rpl = read_header_only(file, file_pos);
+    if (rpl)
+    {
+        rpl.read_body(file, file_pos);
+    }
+
+    return rpl;
+}
+
+RplEvent RplEvent::read_header_only(std::istream& file, long* file_pos)
+{
+    RplEvent rpl(RPL_HEADER_LEN);
 
     file.seekg(*file_pos);
-    file.read(raw.data(), RPL_HEADER_LEN);
+    file.read(rpl.m_raw.data(), RPL_HEADER_LEN);
 
     if (file.eof())
-    {
-        return maxsql::RplEvent();      // trying to read passed end of file
+    {   // trying to read passed end of file
+        return maxsql::RplEvent();
     }
     else if (!file.good())
     {
@@ -348,36 +365,49 @@ RplEvent RplEvent::read_event(std::istream& file, long* file_pos)
         return maxsql::RplEvent();
     }
 
-    auto event_length = maxsql::RplEvent::get_event_length(raw);
+    rpl.init(false);
 
-    raw.resize(event_length);
-    file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
+    *file_pos += RPL_HEADER_LEN;
+
+    return rpl;
+}
+
+bool RplEvent::read_body(std::istream& file, long* file_pos)
+{
+    mxb_assert(m_maria_rpl.is_empty());
+
+    auto event_length = maxsql::RplEvent::get_event_length(m_raw);
+
+    m_raw.resize(event_length);
+    file.read(m_raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
 
     if (file.eof())
-    {
-        return maxsql::RplEvent();      // trying to read passed end of file
+    {   // trying to read passed end of file
+        m_raw.clear();
+        return false;
     }
     else if (!file.good())
     {
         MXS_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
-        return maxsql::RplEvent();
+        m_raw.clear();
+        return false;
     }
 
-    maxsql::RplEvent rpl(std::move(raw));
+    auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
+    m_checksum = mariadb::get_byte4(pCrc);
 
-    if (*file_pos == rpl.next_event_pos())
+    if (*file_pos == next_event_pos())
     {
         file.seekg(0, std::ios_base::end);
         *file_pos = file.tellg();
     }
     else
     {
-        *file_pos = rpl.next_event_pos();
+        *file_pos = next_event_pos();
     }
 
-    return rpl;
+    return true;
 }
-
 
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)
 {
