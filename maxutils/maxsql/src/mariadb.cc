@@ -15,7 +15,6 @@
 #include <errmsg.h>
 #include <thread>
 #include <chrono>
-#include <mysql.h>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>

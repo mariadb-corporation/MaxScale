@@ -19,8 +19,7 @@
 #include <maxbase/ssl.hh>
 #include <maxsql/queryresult.hh>
 
-struct st_mysql;
-struct st_mysql_res;
+#include <mysql.h>
 
 namespace maxsql
 {
@@ -184,10 +183,10 @@ private:
     bool run_query(const std::string& query, const std::function<bool()>& result_handler);
     void update_multiq_result_type();
 
-    st_mysql* m_conn {nullptr};
+    MYSQL* m_conn {nullptr};
 
-    ResultType    m_current_result_type {ResultType::NONE};
-    st_mysql_res* m_current_result {nullptr};
+    ResultType m_current_result_type {ResultType::NONE};
+    MYSQL_RES* m_current_result {nullptr};
 
     std::string m_errormsg;
     int64_t     m_errornum {0};
@@ -209,7 +208,7 @@ public:
      *
      * @param resultset The results from mysql_query(). Must not be NULL.
      */
-    explicit MariaDBQueryResult(st_mysql_res* resultset);
+    explicit MariaDBQueryResult(MYSQL_RES* resultset);
 
     ~MariaDBQueryResult() override;
 
@@ -251,9 +250,9 @@ private:
     bool        advance_row() override;
     void        prepare_fields_info();
 
-    static std::vector<std::string> column_names(st_mysql_res* results);
+    static std::vector<std::string> column_names(MYSQL_RES* results);
 
-    st_mysql_res*      m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
+    MYSQL_RES*         m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
     const char* const* m_rowdata {nullptr};     /**< Data for current row */
     Fields             m_fields_info;           /**< Field names and types */
 };

@@ -16,7 +16,7 @@
 #include <time.h>
 #include <string>
 
-typedef struct st_mysql MYSQL;
+#include <mysql.h>
 
 namespace maxsql
 {
@@ -62,5 +62,4 @@ uint64_t leint_consume(uint8_t** c);
 /** Length-encoded strings */
 char* lestr_consume_dup(uint8_t** c);
 char* lestr_consume(uint8_t** c, size_t* size);
-
 }
