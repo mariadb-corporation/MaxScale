@@ -154,34 +154,6 @@ This parameter has been removed in MaxScale 6.0, use
 This parameter has been removed in MaxScale 6.0, use
 [ignore_tables_regex](#ignore_tables_regex) instead.
 
-
-## Table Family Sharding
-
-This functionality was introduced in 2.3.0.
-
-If the same database exists on multiple servers, but the database contains different
-tables in each server, SchemaRouter is capable of routing queries to the right server,
-depending on which table is being addressed.
-
-As an example, suppose the database `db` exists on servers _server1_ and _server2_, but
-that the database on _server1_ contains the table `tbl1` and on _server2_ contains the
-table `tbl2`. The query `SELECT * FROM db.tbl1` will be routed to _server1_ and the query
-`SELECT * FROM db.tbl2` will be routed to _server2_. As in the example queries, the table
-names must be qualified with the database names for table-level sharding to work.
-Specifically, the query series below is not supported.
-```
-USE db;
-SELECT * FROM tbl1; // May be routed to an incorrect backend if using table sharding.
-```
-
-## Router Options
-
-**Note:** Router options for the Schemarouter were deprecated in MaxScale 2.1.
-
-The following options are options for the `router_options` parameter of the
-service. Multiple router options are given as a comma separated list of key
-value pairs.
-
 ### `max_sescmd_history`
 
 This parameter has been moved to
@@ -214,6 +186,26 @@ is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
+
+## Table Family Sharding
+
+This functionality was introduced in 2.3.0.
+
+If the same database exists on multiple servers, but the database contains different
+tables in each server, SchemaRouter is capable of routing queries to the right server,
+depending on which table is being addressed.
+
+As an example, suppose the database `db` exists on servers _server1_ and _server2_, but
+that the database on _server1_ contains the table `tbl1` and on _server2_ contains the
+table `tbl2`. The query `SELECT * FROM db.tbl1` will be routed to _server1_ and the query
+`SELECT * FROM db.tbl2` will be routed to _server2_. As in the example queries, the table
+names must be qualified with the database names for table-level sharding to work.
+Specifically, the query series below is not supported.
+
+```
+USE db;
+SELECT * FROM tbl1; // May be routed to an incorrect backend if using table sharding.
+```
 
 ## Router Diagnostics
 
