@@ -1027,7 +1027,8 @@ std::string get_lenenc_str(uint8_t* ptr)
     }
 }
 
-static const std::set<std::string> always_ignore = {"mysql", "information_schema", "performance_schema"};
+static const std::set<std::string> always_ignore =
+{"mysql", "information_schema", "performance_schema", "sys"};
 
 bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
 {
