@@ -94,7 +94,7 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
     {
         auto this_pos = file_pos;
 
-        maxsql::RplEvent rpl = maxsql::read_event(file, &file_pos);
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, &file_pos);
         if (rpl.is_empty())
         {
             break;
@@ -133,7 +133,7 @@ bool search_file(const std::string& file_name,
 
     while (result == NotFound)
     {
-        maxsql::RplEvent rpl = maxsql::read_event(file, &file_pos);
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, &file_pos);
 
         if (rpl.is_empty())
         {

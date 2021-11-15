@@ -68,6 +68,9 @@ public:
     RplEvent(RplEvent&& rhs);
     RplEvent& operator=(RplEvent&& rhs);
 
+    /** Read an event */
+    static RplEvent read_event(std::istream& file, long* file_pos);
+
     bool     is_empty() const;
     explicit operator bool() const;
 
@@ -116,10 +119,6 @@ inline bool operator==(const RplEvent& lhs, const RplEvent& rhs)
     return lhs.buffer_size() == rhs.buffer_size()
            && std::memcmp(lhs.pBuffer(), rhs.pBuffer(), lhs.buffer_size()) == 0;
 }
-
-
-// TODO, turn this into an iterator. Used in find_gtid, but not yet in file_reader.
-maxsql::RplEvent read_event(std::istream& file, long* file_pos);
 
 enum class Kind {Real, Artificial};
 

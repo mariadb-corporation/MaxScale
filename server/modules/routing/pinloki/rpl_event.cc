@@ -331,8 +331,7 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
     return oss.str();
 }
 
-// TODO, turn this into an iterator. Use in file_reader as well.
-maxsql::RplEvent read_event(std::istream& file, long* file_pos)
+RplEvent RplEvent::read_event(std::istream& file, long* file_pos)
 {
     std::vector<char> raw(RPL_HEADER_LEN);
 

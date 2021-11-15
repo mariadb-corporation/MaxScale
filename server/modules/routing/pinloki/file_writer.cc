@@ -158,7 +158,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     // Read the first event which is always a format event
     long file_pos = pinloki::PINLOKI_MAGIC.size();
-    maxsql::RplEvent event = maxsql::read_event(log_file, &file_pos);
+    maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
 
     if (event == fmt_event)
     {
